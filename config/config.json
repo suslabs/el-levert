@@ -1,0 +1,21 @@
+{
+    "logFile": "./logs/debug.log",
+    "importLogFile": "./logs/import.log",
+    "eventsPath": "./events",
+    "commandsPath": "./commands/cmds",
+    "dbPath": "./database/db",
+    "cmdPrefix": "%",
+    "memLimit": 5000,
+    "timeLimit": 20,
+    "maxTagNameLength": 32,
+    "maxTagSize": 100,
+    "maxQuota": 1024,
+    "maxGroupNameLength": 16,
+    "owner": "0",
+    "enableSelfbot": true,
+    "enableSed": true,
+    "activity": {
+        "type": "Watching",
+        "text": "over Innerius's holy temple"
+    }
+}

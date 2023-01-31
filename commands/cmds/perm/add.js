@@ -1,0 +1,43 @@
+import Util from "../../../util/Util.js";
+import { getClient } from "../../../LevertClient.js";
+
+export default {
+    name: "add",
+    parent: "perm",
+    subcommand: true,
+    allowed: 2,
+    handler: async (args, msg) => {
+        const [g_name, u_name] = Util.splitArgs(args),
+              e = getClient().permManager.checkName(g_name);
+        
+        if(args.length === 0 || g_name.length === 0 || u_name.length === 0) {
+            return ":information_source: `perm add [group name] [ping/id/username]`";
+        }      
+
+        if(e) {
+            return ":warning: " + e;
+        }
+
+        const group = await getClient().permManager.fetchGroup(g_name);
+        
+        if(!group) {
+            return `:warning: Group **${g_name}** doesn't exist.`;
+        }
+        
+        const user = (await getClient().findUsers(u_name))[0].user;
+
+        if(!user) {
+            return `:warning: User \`${u_name}\` not found.`;
+        }
+        
+        const maxLevel = await getClient().permManager.maxLevel(msg.author.id);
+
+        if(maxLevel < group.level) {
+            return `:warning: Cannot add yourself to a group that is higher than yourself. (${maxLevel} -> ${group.level})`;
+        }
+
+        await getClient().permManager.add(group, user.id);
+
+        return `:white_check_mark: Added user \`${user.tag}\` (${user.id}) to group **${g_name}**.`;
+    }
+}
