@@ -5,7 +5,7 @@ export default {
     name: "search",
     parent: "t",
     subcommand: true,
-    handler: async (args, msg) => {
+    handler: async (args) => {
         if(args.length === 0) {
             return ":information_source: `t search query`";
         }

@@ -51,7 +51,7 @@ class SedHandler extends Handler {
         let regex, sedMsg;
 
         try {
-            regex = new RegExp(sedRegex, flag);
+            regex = new RegExp(sedRegex, flag || "" + "i");
         } catch(err) {
             this.addReply(await msg.reply(":warning: Invalid regex or flags."));
             return;
@@ -65,6 +65,7 @@ class SedHandler extends Handler {
 
         if(!sedMsg) {
             this.addReply(await msg.reply(":warning: No matching message found."));
+            return;
         }
 
         const embed = new EmbedBuilder()

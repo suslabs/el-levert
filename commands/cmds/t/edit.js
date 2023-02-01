@@ -1,8 +1,5 @@
-import axios from "axios";
-
 import Util from "../../../util/Util.js";
 import { getClient } from "../../../LevertClient.js";
-import Tag from "../../../database/Tag.js";
 
 export default {
     name: "edit",

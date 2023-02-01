@@ -5,7 +5,7 @@ export default {
     name: "quota",
     parent: "t",
     subcommand: true,
-    handler: async (args, msg) => {
+    handler: async (_, msg) => {
         const quota = await getClient().tagManager.getQuota(msg.author.id),
               perc = Util.round(quota / getClient().config.maxQuota * 100, 2);
 

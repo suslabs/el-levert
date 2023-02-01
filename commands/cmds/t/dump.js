@@ -5,7 +5,7 @@ export default {
     name: "dump",
     parent: "t",
     subcommand: true,
-    handler: async (args, msg) => {
+    handler: async _ => {
         const tags = await getClient().tagManager.dump();
         
         if(tags.length < 1) {

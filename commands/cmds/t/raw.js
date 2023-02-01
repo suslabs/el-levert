@@ -5,7 +5,7 @@ export default {
     name: "raw",
     parent: "t",
     subcommand: true,
-    handler: async function(args, msg) {
+    handler: async function(args) {
         if(args.length === 0) {
             return ":information_source: `t raw name`";
         }
