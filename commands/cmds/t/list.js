@@ -30,17 +30,22 @@ export default {
 
         const tags = await getClient().tagManager.list(owner);
         
-        if(tags.length < 1) {
+        if(tags.count === 0) {
             return `:information_source: User \`${tag}\` has no tags.`;
         }
-
+        
         let format = "";
         
-        if(typeof tags.newTags !== "undefined") {
-            format = "EL LEVERT tags:\n" + formatTagList(tags.newTags) +
-                     "\n\nLeveret 1 tags:\n" + formatTagList(tags.oldTags);
-        } else {
-            format = formatTagList(tags);
+        if(tags.newTags.length > 0) {
+            format += `EL LEVERT tags:\n${formatTagList(tags.newTags)}`;
+        }
+        
+        if(tags.oldTags.length > 0) {
+            if(format.length > 0) {
+                format += "\n\n";
+            }
+
+            format += `Leveret 1 tags:\n${formatTagList(tags.oldTags)}`;
         }
         
         return {

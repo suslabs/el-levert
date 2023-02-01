@@ -7,6 +7,8 @@
     "cmdPrefix": "%",
     "memLimit": 5000,
     "timeLimit": 20,
+    "outCharLimit": 2000,
+    "outNewlineLimit": 30,
     "maxTagNameLength": 32,
     "maxTagSize": 100,
     "maxQuota": 1024,

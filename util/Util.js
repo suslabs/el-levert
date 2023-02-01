@@ -25,6 +25,7 @@ const Util = {
         return files;
     },
     randElem: arr => arr[~~(Math.random() * arr.length)],
+    clamp: (x, a, b) => Math.max(Math.min(x, b), a),
     round: (num, digits) => Math.round((num + Number.EPSILON) * 10 ** digits) / (10 ** digits),
     splitArgs: str => {
         const ind = str.indexOf(" ");

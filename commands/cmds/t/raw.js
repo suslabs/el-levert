@@ -18,6 +18,7 @@ export default {
         }
 
         const tag = await getClient().tagManager.fetch(t_name);
+        tag.body = tag.body.trim();
 
         if(!tag) {
             return `:warning: Tag **${t_name}** doesn't exist.`;

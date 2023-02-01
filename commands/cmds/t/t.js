@@ -35,7 +35,7 @@ export default {
             let out = `:warning: Tag **${t_name}** doesn't exist.`;
             
             if(find.length > 0) {
-                out += `\nDid you mean: **${find.join("**, **")}**?`;
+                out += `\nDid you mean: **${find.slice(0, 5).join("**, **")}**?`;
             }
 
             return out;

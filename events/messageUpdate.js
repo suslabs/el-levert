@@ -9,8 +9,6 @@ export default {
             return;
         }
 
-        await msg.channel.sendTyping();
-        
         const promises = getClient().handlerList.map(x => x.resubmit(msg));
         await promises.reduce((a, b) => a.then(b), Promise.resolve());
     }

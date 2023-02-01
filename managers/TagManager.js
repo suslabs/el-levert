@@ -183,18 +183,14 @@ class TagManager {
 
     async list(id) {
         const tags = await this.tag_db.list(id),
+              newTags = tags.filter(x => (x.type & 1) === 1),
               oldTags = tags.filter(x => (x.type & 1) === 0);
 
-        if(oldTags.length !== 0) {
-            const newTags = tags.filter(x => (x.type & 1) === 1);
-
-            return {
-                oldTags: oldTags,
-                newTags: newTags
-            };
-        }
-        
-        return tags;
+        return {
+            newTags: newTags,
+            oldTags: oldTags,
+            count: tags.length
+        };
     }
 
     async search(name, minDist = 0.4) {

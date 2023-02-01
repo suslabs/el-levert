@@ -10,6 +10,9 @@ class CommandHandler extends Handler {
         this.cmdPrefix = getClient().config.cmdPrefix;
         this.commands = getClient().commands;
 
+        this.charLimit = Util.clamp(getClient().config.outCharLimit, 0, 2000);
+        this.newlineLimit = Util.clamp(getClient().config.outNewlineLimit, 0, 2000);
+
         this.trackedUsers = [];
     }
 
@@ -72,7 +75,7 @@ class CommandHandler extends Handler {
         if(typeof out === "string") {
             const split = out.split("\n");
             
-            if(out.length > 2000 || split.length > 30) {
+            if(out.length > this.charLimit || split.length > this.newlineLimit) {
                 out = Util.getFileAttach(out);
             }
         }
