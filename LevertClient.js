@@ -344,9 +344,17 @@ class LevertClient extends Client {
             const id = idMatch[1] || mentionMatch[1];
             
             for(let i = 0; i < guilds.size; i++) {
-                const user = await guilds.at(i).members.fetch({
-                    user: id
-                });
+                let user;
+                
+                try {
+                    user = await guilds.at(i).members.fetch({
+                        user: id
+                    });
+                } catch(err) {
+                    if(err.constructor.name !== "DiscordAPIError") {
+                        throw err;
+                    }
+                }
                 
                 if(typeof user !== "undefined") {
                     return [user];
