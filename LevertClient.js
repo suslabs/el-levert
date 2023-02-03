@@ -3,6 +3,7 @@ import URL from "url";
 import path from "path";
 import fs from "fs/promises";
 
+import SelfbotClient from "./SelfbotClient.js";
 import ClientError from "./errors/ClientError.js";
 
 import Util from "./util/Util.js";
@@ -15,11 +16,10 @@ import SedHandler from "./handlers/SedHandler.js";
 
 import TagManager from "./managers/TagManager.js";
 import PermissionManager from "./managers/PermissionManager.js";
+import ReminderManager from "./managers/ReminderManager.js";
 
 import Command from "./commands/Command.js";
 import TagVM from "./vm/TagVM.js";
-
-import SelfbotClient from "./SelfbotClient.js";
 
 import auth from "./config/auth.json" assert { type: "json" };
 import config from "./config/config.json" assert { type: "json" };
@@ -244,6 +244,13 @@ class LevertClient extends Client {
 
         await tagManager.loadDatabase();
         await permManager.loadDatabase();
+
+        if(this.config.enableReminders) {
+            const remindManager = new ReminderManager();
+            this.remindManager = remindManager;
+
+            await remindManager.loadDatabase();
+        }
     }
 
     async loadSelfbot() {
@@ -400,6 +407,34 @@ class LevertClient extends Client {
         }
     }
 
+    async sendReminders() {
+        const reminders = await this.remindManager.checkPast();
+
+        for(let i = 0; i < reminders.length; i++) {
+            const remind = reminders[i],
+                  user = await this.findUserById(remind.id);
+
+            if(!user) {
+                continue;
+            }
+
+            const date = new Date(remind.end),
+                  dateFormat = `${date.toLocaleDateString("en-UK")} at ${date.toLocaleTimeString("en-UK", {
+                timeStyle: "short"
+            })}`; 
+
+            let out = `You set a reminder for **${dateFormat}**`;
+
+            if(remind.msg.length > 0) {
+                out += ` with reason: **${remind.msg}**`;
+            } else {
+                out += ".";
+            }
+            
+            await user.send(out);
+        }
+    }
+
     async start() {
         this.loadHandlers();
         await this.loadManagers();
@@ -415,6 +450,11 @@ class LevertClient extends Client {
 
         if(this.config.enableSelfbot) {
             await this.loadSelfbot();
+        }
+
+        if(this.config.enableReminders) {
+            setInterval(this.sendReminders.bind(this), 60);
+            this.logger.info("Started reminder loop.");
         }
     }
 }

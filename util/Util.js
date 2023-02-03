@@ -25,6 +25,10 @@ const Util = {
         return files;
     },
     randElem: arr => arr[~~(Math.random() * arr.length)],
+    randString: len => {
+        const dict = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        return Array(len).fill().map(x => Util.randElem(dict)).join("");
+    },
     clamp: (x, a, b) => Math.max(Math.min(x, b), a),
     round: (num, digits) => Math.round((num + Number.EPSILON) * 10 ** digits) / (10 ** digits),
     splitArgs: str => {

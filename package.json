@@ -12,6 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "axios": "^1.2.1",
+    "chrono-node": "^2.5.0",
     "discord.js": "^14.6.0",
     "discord.js-selfbot-v13": "^2.9.20",
     "isolated-vm": "^4.4.2",

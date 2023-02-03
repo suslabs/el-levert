@@ -16,6 +16,7 @@
     "owner": "561157948924100634",
     "enableSelfbot": true,
     "enableSed": true,
+    "enableReminders": true,
     "activity": {
         "type": "Watching",
         "text": "over Innerius's holy temple"
