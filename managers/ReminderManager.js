@@ -89,7 +89,8 @@ class ReminderManager {
 
             const date = new Date(remind.end),
                   dateFormat = `${date.toLocaleDateString("en-UK")} at ${date.toLocaleTimeString("en-UK", {
-                timeStyle: "short"
+                timeStyle: "short",
+                timeZone: "UTC"
             })}`; 
 
             let out = `You set a reminder for **${dateFormat}**`;

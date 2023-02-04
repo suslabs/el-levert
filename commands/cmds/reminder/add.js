@@ -38,7 +38,8 @@ export default {
         await getClient().remindManager.add(msg.author.id, parsed.getTime(), remindMsg);
 
         return `:information_source: You will be reminded on **${parsed.toLocaleDateString("en-UK")}** at **${parsed.toLocaleTimeString("en-UK", {
-            timeStyle: "short"
+            timeStyle: "short",
+            timeZone: "UTC"
         })}**.`;
     }
 }
