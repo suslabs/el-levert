@@ -89,7 +89,7 @@ class PreviewHandler extends Handler {
             preview = await this.genPreview(msg);
         } catch(err) {
             this.addReply(await msg.reply({
-                content: `:no_entry_sign: Encountered exception while generating preview:`,
+                content: ":no_entry_sign: Encountered exception while generating preview:",
                 ...Util.getFileAttach(err.stack, "error.js")
             }));
 
@@ -105,7 +105,7 @@ class PreviewHandler extends Handler {
             this.addReply(await msg.reply(preview));
         } catch(err) {
             this.addReply(await msg.reply({
-                content: `:no_entry_sign: Encountered exception while sending preview:`,
+                content: ":no_entry_sign: Encountered exception while sending preview:",
                 ...Util.getFileAttach(err.stack, "error.js")
             }));
 

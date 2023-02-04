@@ -7,6 +7,8 @@
     "cmdPrefix": "%",
     "memLimit": 5000,
     "timeLimit": 20,
+    "otherMemLimit": 5000,
+    "otherTimeLimit": 20,
     "outCharLimit": 2000,
     "outNewlineLimit": 30,
     "maxTagNameLength": 32,
@@ -16,6 +18,7 @@
     "owner": "561157948924100634",
     "enableSelfbot": true,
     "enableSed": true,
+    "enableOtherLangs": true,
     "enableReminders": true,
     "activity": {
         "type": "Watching",

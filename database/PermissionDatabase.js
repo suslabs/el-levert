@@ -44,15 +44,15 @@ class PermissionDatabase {
     }
 
     async fetch(id) {
-        const row = await this.db.all(fetchSt, {
+        const rows = await this.db.all(fetchSt, {
             $id: id
         });
 
-        if(typeof row === "undefined" || row.length < 1) {
+        if(typeof rows === "undefined" || rows.length < 1) {
             return false;
         }
 
-        return row;
+        return rows;
     }
 
     add(group, id) {

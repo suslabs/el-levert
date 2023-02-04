@@ -1,7 +1,5 @@
 import discord from "discord.js";
 import URL from "url";
-import path from "path";
-import fs from "fs/promises";
 
 import SelfbotClient from "./SelfbotClient.js";
 import ClientError from "./errors/ClientError.js";
@@ -20,6 +18,7 @@ import ReminderManager from "./managers/ReminderManager.js";
 
 import Command from "./commands/Command.js";
 import TagVM from "./vm/TagVM.js";
+import ExternalVM from "./vm/ExternalVM.js";
 
 import auth from "./config/auth.json" assert { type: "json" };
 import config from "./config/config.json" assert { type: "json" };
@@ -407,34 +406,6 @@ class LevertClient extends Client {
         }
     }
 
-    async sendReminders() {
-        const reminders = await this.remindManager.checkPast();
-
-        for(let i = 0; i < reminders.length; i++) {
-            const remind = reminders[i],
-                  user = await this.findUserById(remind.id);
-
-            if(!user) {
-                continue;
-            }
-
-            const date = new Date(remind.end),
-                  dateFormat = `${date.toLocaleDateString("en-UK")} at ${date.toLocaleTimeString("en-UK", {
-                timeStyle: "short"
-            })}`; 
-
-            let out = `You set a reminder for **${dateFormat}**`;
-
-            if(remind.msg.length > 0) {
-                out += ` with reason: **${remind.msg}**`;
-            } else {
-                out += ".";
-            }
-            
-            await user.send(out);
-        }
-    }
-
     async start() {
         this.loadHandlers();
         await this.loadManagers();
@@ -442,7 +413,11 @@ class LevertClient extends Client {
         await this.loadEvents();
         await this.loadCommands();
 
-        this.tagVM = new TagVM(config.memLimit, config.timeLimit);
+        this.tagVM = new TagVM();
+
+        if(this.config.enableOtherLangs) {
+            this.externalVM = new ExternalVM();
+        }
 
         await this.login(auth.token);
 
@@ -453,7 +428,7 @@ class LevertClient extends Client {
         }
 
         if(this.config.enableReminders) {
-            setInterval(this.sendReminders.bind(this), 60);
+            setInterval(this.remindManager.sendReminders.bind(this.remindManager), 1000);
             this.logger.info("Started reminder loop.");
         }
     }

@@ -44,10 +44,10 @@ export default {
                     return ":warning: " + err.message;
                 }
 
-                return `:warning: Downloading attachment failed:
-\`\`\`js
-${err.message}
-\`\`\``;
+                return {
+                    content: ":no_entry_sign: Downloading attachment failed:",
+                    ...Util.getFileAttach(err.stack, "error.js")
+                }
             }
         }
 

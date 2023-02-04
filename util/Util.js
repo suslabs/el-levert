@@ -127,11 +127,8 @@ const Util = {
     },
     isScript: body => body.startsWith("```") && body.endsWith("```"),
     removeBlock: body => {
-        if(body.startsWith("```js\n")) {
-            return body.slice(6, -3);
-        }
-
-        return body.slice(3, -3);
+        const match = body.match(/^`{3}([\S]+)?\n([\s\S]+)`{3}$/);
+        return match[2];
     },
     removeCircRef: obj => {
         const obj2 = cloneDeep(obj);
@@ -174,7 +171,8 @@ const Util = {
         }
     
         return recRemove({}, obj2, [obj2]);
-    }
+    },
+    firstCharUpper: str => str[0].toUpperCase() + str.substring(1)
 };
 
 export default Util;

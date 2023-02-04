@@ -35,7 +35,7 @@ class ReminderManager {
 
     checkMsg(msg) {
         if(msg.length > this.maxMsgLength) {
-            return `Reminder messages can be at most ${this.this.maxMsgLength} characters long.`;
+            return `Reminder messages can be at most ${this.maxMsgLength} characters long.`;
         } else if(msg.indexOf("\n") !== -1) {
             return "Reminder messages can only contain a single line.";
         }
@@ -74,6 +74,34 @@ class ReminderManager {
         }
 
         return past;
+    }
+
+    async sendReminders() {
+        const reminders = await this.checkPast();
+
+        for(let i = 0; i < reminders.length; i++) {
+            const remind = reminders[i],
+                  user = await getClient().findUserById(remind.id);
+
+            if(!user) {
+                continue;
+            }
+
+            const date = new Date(remind.end),
+                  dateFormat = `${date.toLocaleDateString("en-UK")} at ${date.toLocaleTimeString("en-UK", {
+                timeStyle: "short"
+            })}`; 
+
+            let out = `You set a reminder for **${dateFormat}**`;
+
+            if(remind.msg.length > 0) {
+                out += ` with reason: **${remind.msg}**`;
+            } else {
+                out += ".";
+            }
+            
+            await user.send(out);
+        }
     }
 }
 

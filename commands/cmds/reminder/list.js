@@ -6,6 +6,10 @@ export default {
     parent: "reminder",
     subcommand: true,
     handler: async (_, msg) => {
+        if(!getClient().config.enableReminders) {
+            return ":warning: Reminders are disabled.";
+        }
+
         const reminders = await getClient().remindManager.fetch(msg.author.id);
 
         if(!reminders) {

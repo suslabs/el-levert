@@ -1,6 +1,8 @@
 import ivm from "isolated-vm";
 import Util from "../util/Util.js";
 
+import { getClient } from "../LevertClient.js";
+
 import FakeAxios from "./FakeAxios.js";
 import FakeMsg from "./FakeMsg.js";
 import FakeUtil from "./FakeUtil.js";
@@ -28,9 +30,9 @@ const FuncTypes = {
 };
 
 class TagVM {
-    constructor(memLimit, timeLimit) {
-        this.memLimit = memLimit;
-        this.timeLimit = timeLimit;
+    constructor() {
+        this.memLimit = getClient().config.memLimit;
+        this.timeLimit = getClient().config.timeLimit;
     }
 
     registerFunc(options) {

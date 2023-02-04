@@ -7,6 +7,10 @@ export default {
     parent: "reminder",
     subcommand: true,
     handler: async (args, msg) => {
+        if(!getClient().config.enableReminders) {
+            return ":warning: Reminders are disabled.";
+        }
+
         const match = args.match(/(.+?)\s*(?:(?:"((?:[^"\\]|\\.)*)")|$)/),
               date = match[1] || "",
               remindMsg = match[2] || "",
