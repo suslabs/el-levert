@@ -1,39 +1,53 @@
-const allTiers = {
-    tj: ["ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UMV", "UXV", "MAX"],
-    nomi: ["ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "MAX"],
-    ceu: ["LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UXV", "OpV", "MAX"]
+function getTier(eu) {
+    return Math.floor(Math.log(eu) / Math.log(4)) - 2;
 }
 
-function baseLog(x, b) {
-    return Math.log(x) / Math.log(b);
-}
+const GregicUtil = {
+    allTiers: {
+        tj: ["ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UMV", "UXV", "MAX"],
+        nomi: ["ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "MAX"],
+        ceu: ["LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UXV", "OpV", "MAX"]
+    },
+    oc: function(eu, dur, type) {
+        let t_dur = dur * 20,
+            currTier = getTier(eu), mult;
+    
+        const tiers = GregicUtil.allTiers[type],
+              out = [{
+            eu: eu,
+            dur: t_dur / 20,
+            t_dur: t_dur,
+            tier: tiers[currTier]
+        }];
 
-function oc(eu, dur, type) {
-    const tiers = allTiers[type],
-          out = [];
-
-    let t_dur = dur * 20,
-        currTier = Math.floor(baseLog(eu, 4));
-
-    while(t_dur > 1 && currTier < tiers.length) {
         switch(type) {
         case "tj":
         case "nomi":
-            t_dur /= 2.8;
+            if(eu <= 16) {
+                mult = 2;
+            } else {
+                mult = 2.8
+            }
             break;
         case "ceu":
-            t_dur /= 2;
+            mult = 2;
         }
-
-        eu *= 4;
-        currTier++;
-
-        out.push({
-            eu: eu,
-            dur: t_dur / 20,
-            tier: tiers[currTier]
-        });
+    
+        while(t_dur > 1 && currTier < tiers.length) {
+            t_dur = Math.floor(t_dur / mult);
+            eu *= 4;
+            currTier++;
+    
+            out.push({
+                eu: eu,
+                dur: t_dur / 20,
+                t_dur: t_dur,
+                tier: tiers[currTier]
+            });
+        }
+    
+        return out;
     }
 }
 
-export default oc;
+export default GregicUtil;

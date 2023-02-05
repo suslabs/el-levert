@@ -83,7 +83,6 @@ class PreviewHandler extends Handler {
         }
 
         let preview;
-        await msg.channel.sendTyping();
         
         try {
             preview = await this.genPreview(msg);
@@ -100,6 +99,8 @@ class PreviewHandler extends Handler {
         if(!preview) {
             return;
         }
+
+        await msg.channel.sendTyping();
 
         try {
             this.addReply(await msg.reply(preview));

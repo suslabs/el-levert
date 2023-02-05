@@ -280,7 +280,7 @@ class LevertClient extends Client {
         if(check) {
             const perms = channel.permissionsFor(user_id);
             
-            if(!perms.has(PermissionsBitField.Flags.ViewChannel)) {
+            if(perms === null || !perms.has(PermissionsBitField.Flags.ViewChannel)) {
                 return false;
             }
         }
