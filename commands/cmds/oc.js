@@ -31,7 +31,7 @@ export default {
             return ":warning: Invalid argument count.";
         }
 
-        if(isNaN(eu) || eu < 1 || Math.floor(eu) !== eu) {
+        if(isNaN(eu) || eu < 1) {
             return ":warning: Invalid EU/t.";
         }
 

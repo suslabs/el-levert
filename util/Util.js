@@ -172,7 +172,35 @@ const Util = {
     
         return recRemove({}, obj2, [obj2]);
     },
-    firstCharUpper: str => str[0].toUpperCase() + str.substring(1)
+    firstCharUpper: str => str[0].toUpperCase() + str.substring(1),
+    formatReply: (text, options) => {
+        let out = {};
+
+        if(typeof text === "object") {
+            options = text;
+        } else {
+            out.content = text || "";
+        }
+
+        if(typeof options !== "undefined") {
+            if(typeof options.embed !== "undefined") {
+                const embed = options.embed;
+                embed.description = embed.description || "";
+
+
+                
+                out.embeds = [
+                    embed
+                ];
+            }
+
+            if(typeof options.file !== "undefined") {
+                out.file = options.file;
+            }
+        }
+
+        return out;
+    }
 };
 
 export default Util;

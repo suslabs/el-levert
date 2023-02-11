@@ -18,6 +18,7 @@ import ReminderManager from "./managers/ReminderManager.js";
 
 import Command from "./commands/Command.js";
 import TagVM from "./vm/TagVM.js";
+import TagVM2 from "./vm/TagVM2.js";
 import ExternalVM from "./vm/ExternalVM.js";
 
 import auth from "./config/auth.json" assert { type: "json" };
@@ -163,14 +164,19 @@ class LevertClient extends Client {
 
         cmd = new Command(cmd);
 
-        cmd.handler = cmd.handler.bind(cmd);
-
         if(typeof cmd.load !== "undefined") {
             cmd.load = wrapEvent(cmd.load.bind(cmd));
-            cmd.load();
+            const res = cmd.load();
+
+            if(res === false) {
+                return false;
+            }
         }
 
+        cmd.handler = cmd.handler.bind(cmd);
         this.commands.push(cmd);
+
+        return true;
     }
 
     loadSubcommands() {
@@ -209,9 +215,9 @@ class LevertClient extends Client {
                 let cmd = await import(URL.pathToFileURL(file));
                 cmd = cmd.default;
 
-                this.loadCommand(cmd);
-
-                ok++;
+                if(this.loadCommand(cmd)) {
+                    ok++;
+                }
             } catch (err) {
                 this.logger.error("loadEvents: " + file, err);
                 bad++;
@@ -414,6 +420,7 @@ class LevertClient extends Client {
         await this.loadCommands();
 
         this.tagVM = new TagVM();
+        this.tagVM2 = new TagVM2();
 
         if(this.config.enableOtherLangs) {
             this.externalVM = new ExternalVM();

@@ -60,10 +60,14 @@ export default {
 
         let out = "", prev;
 
-        if(tag.type >> 1 === 0) {
-            out = tag.body;
+        if(tag.type & 1) {
+            if(tag.type & 4) {
+                out = await getClient().tagVM2.runScript(tag.body, msg, t_args + tag.args);
+            } else {
+                out = await getClient().tagVM.runScript(tag.body, msg, t_args + tag.args);
+            }
         } else {
-            out = await getClient().tagVM.runScript(tag.body, msg, t_args + tag.args);
+            out = tag.body;
         }
 
         if(typeof out === "string" && getClient().handlers.previewHandler.canPreview(out)) {

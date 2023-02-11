@@ -66,10 +66,11 @@ class ExternalVM {
 
     checkCode(token) {
         return new Promise((resolve, reject) => {
-            setInterval(async _ => {
+            const interval = setInterval(async _ => {
                 const status = (await axios.get(this.base + token + this.statusUrl)).data.status_id;
 
                 if(![1, 2].includes(status)) {
+                    clearInterval(interval);
                     resolve(status);
                 }
             }, 200);

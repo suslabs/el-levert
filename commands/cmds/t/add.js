@@ -7,6 +7,7 @@ export default {
     subcommand: true,
     handler: async function(args, msg) {
         const [t_name, t_args] = Util.splitArgs(args),
+              [t_type, t_body] = Util.splitArgs(t_args),
               e = getClient().tagManager.checkName(t_name);
 
         if(e) {
@@ -34,7 +35,12 @@ export default {
             return out + ` and is owned by \`${owner.tag}\``;
         }
 
-        let body = t_args, isScript;
+        let body = t_args, isScript, scriptType = 0;
+        
+        if(t_type === "vm2") {
+            body = t_body;
+            scriptType = 1;
+        }
 
         if(msg.attachments.size > 0) {
             try {
@@ -52,7 +58,7 @@ export default {
         }
 
         try {
-            await getClient().tagManager.add(t_name, body, msg.author.id, isScript);
+            await getClient().tagManager.add(t_name, body, msg.author.id, isScript, scriptType);
         } catch(err) {
             if(err.name === "TagError") {
                 return ":warning: " + err.message;

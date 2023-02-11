@@ -102,7 +102,7 @@ class TagManager {
         await this.tag_db.quotaSet(id, quota);
     }
 
-    async add(name, body, owner, isScript) {
+    async add(name, body, owner, isScript, scriptType) {
         if(typeof isScript === "undefined") {
             isScript = Util.isScript(body);
 
@@ -120,7 +120,7 @@ class TagManager {
             body: body,
             owner: owner,
             registered: Date.now(),
-            type: 1 | isScript << 1
+            type: 1 | isScript << 1 | scriptType << 2
         });
 
         await this.tag_db.add(newTag);
@@ -147,7 +147,7 @@ class TagManager {
         await this.tag_db.delete(tag.name);
     }
 
-    async edit(tag, body, isScript) {
+    async edit(tag, body, isScript, scriptType) {
         if(tag.body === body) {
             return;
         }
@@ -164,7 +164,7 @@ class TagManager {
             hops: tag.name,
             name: tag.name,
             body: body,
-            type: 1 | isScript << 1
+            type: 1 | isScript << 1 | scriptType << 2
         });
 
         let t_quota = (Util.getByteLen(body) - Util.getByteLen(tag.body)) / 1024;

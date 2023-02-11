@@ -5,10 +5,6 @@ export default {
     parent: "reminder",
     subcommand: true,
     handler: async (args, msg) => {
-        if(!getClient().config.enableReminders) {
-            return ":warning: Reminders are disabled.";
-        }
-
         const ind = parseInt(args);
 
         if(args.length === 0 || isNaN(ind) || ind !== Math.floor(ind)) {

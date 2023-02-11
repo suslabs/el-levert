@@ -71,5 +71,10 @@ export default {
         
         data = data.map(x => Util.removeCircRef(x));
         return new ivm.ExternalCopy(data).copyInto();
+    },
+    ctxVM2_eval: async (script, args) => {
+        const data = await getClient().tagVM2.runScript(script, args);
+
+        return new ivm.ExternalCopy(data).copyInto();
     }
 };

@@ -1,5 +1,5 @@
 function getTier(eu) {
-    return Math.floor(Math.log(eu) / Math.log(4)) - 2;
+    return Math.max(Math.floor(Math.log(eu) / Math.log(4)) - 2, 0);
 }
 
 const GregicUtil = {
@@ -33,7 +33,7 @@ const GregicUtil = {
             mult = 2;
         }
     
-        while(t_dur > 1 && currTier < tiers.length) {
+        while(t_dur > 1 && currTier < tiers.length - 1) {
             t_dur = Math.floor(t_dur / mult);
             eu *= 4;
             currTier++;

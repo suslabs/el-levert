@@ -8,11 +8,8 @@ export default {
         "remove",
         "removeall"
     ],
+    load: _ => getClient().config.enableReminders,
     handler: async function(args, msg) {
-        if(!getClient().config.enableReminders) {
-            return ":warning: Reminders are disabled.";
-        }
-
         return `:information_source: %reminder [${this.subNames.join("|")}]`;
     }
 }

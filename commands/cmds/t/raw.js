@@ -18,7 +18,6 @@ export default {
         }
 
         const tag = await getClient().tagManager.fetch(t_name);
-        tag.body = tag.body.trim();
 
         if(!tag) {
             return `:warning: Tag **${t_name}** doesn't exist.`;
@@ -34,8 +33,12 @@ export default {
             return out;
         }
 
-        if(tag.type >> 1 === 1) {
-            return Util.getFileAttach(tag.body, "script.js");
+        tag.body = tag.body.trim();
+        if(tag.type & 2) {
+            return {
+                content: `:information_source: Script type ${(tag.type & 4 >> 2) + 1}.`,
+                ...Util.getFileAttach(tag.body, "script.js")
+            };
         }
 
         return Util.getFileAttach(tag.body, "tag.txt");

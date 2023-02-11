@@ -93,6 +93,13 @@ class TagVM {
         });
 
         await this.registerFunc({
+            objName: "vm2",
+            funcName: "ctxVM2_eval",
+            type: FuncTypes.syncPromise,
+            funcRef: FakeUtil.ctxVM2_eval
+        });
+
+        await this.registerFunc({
             objName: "http",
             funcName: "request",
             type: FuncTypes.syncPromise,

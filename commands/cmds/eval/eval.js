@@ -7,37 +7,62 @@ export default {
         "c",
         "cpp",
         "py",
+        "vm2",
         "langs"
     ],
     load: function() {
-        this.altevalBase = async (args, msg, lang) => {
-            if(!getClient().config.enableOtherLangs) {
-                return ":warning: Other languages are disabled.";
-            }
-
+        this.evalBase = async (args, msg) => {
             let body = args;
-    
+
             if(msg.attachments.size > 0) {
                 try {
                     [body] = await getClient().tagManager.downloadBody(msg);
                 } catch(err) {
                     if(err.name === "TagError") {
-                        return ":warning: " + err.message;
+                        return {
+                            err: ":warning: " + err.message
+                        };
                     }
-    
+
                     return {
-                        content: ":no_entry_sign: Downloading attachment failed:",
-                        ...Util.getFileAttach(err.stack, "error.js")
+                        err: {
+                            content: ":no_entry_sign: Downloading attachment failed:",
+                            ...Util.getFileAttach(err.stack, "error.js")
+                        }
                     }
-                }
+                }   
             } else if(Util.isScript(body)) {
                 body = Util.removeBlock(body);
             }
-    
+
             if(body.length < 1) {
-                return ":no_entry_sign: Can't eval an empty script.";
+                return {
+                    err: ":no_entry_sign: Can't eval an empty script."
+                };
             }
-            
+
+            return {
+                body: body
+            };
+        }
+
+        this.langNames = {
+            "js": "By default"
+        };
+
+        if(!getClient().config.enableOtherLangs) {
+            return;
+        }
+
+        this.altevalBase = async function(args, msg, lang) {
+            const base = this.evalBase || this.parentCmd.evalBase,
+                  parsed = await base(args, msg),
+                  body = parsed.body;
+
+            if(typeof parsed.err !== "undefined") {
+                return parsed.err;
+            }
+    
             let evalOut, resCode;
             
             try {
@@ -88,35 +113,18 @@ export default {
             return out;
         };
 
-        this.langNames = {
-            "js": "By default",
+        Object.assign(this.langNames, {
             "c": "THE C PROGRAMMING LANGUAGE",
             "cpp": "C++ is a high-level programming language created by George Orwell",
-            "py": ":snake:"
-        };
+            "py": ":snake:",
+        });
     },
-    handler: async (args, msg) => {
-        let body = args;
+    handler: async function(args, msg) {
+        const parsed = await this.evalBase(args, msg),
+              body = parsed.body;
 
-        if(msg.attachments.size > 0) {
-            try {
-                [body] = await getClient().tagManager.downloadBody(msg);
-            } catch(err) {
-                if(err.name === "TagError") {
-                    return ":warning: " + err.message;
-                }
-
-                return {
-                    content: ":no_entry_sign: Downloading attachment failed:",
-                    ...Util.getFileAttach(err.stack, "error.js")
-                }
-            }
-        } else if(Util.isScript(body)) {
-            body = Util.removeBlock(body);
-        }
-
-        if(body.length < 1) {
-            return ":no_entry_sign: Can't eval an empty script.";
+        if(typeof parsed.err !== "undefined") {
+            return parsed.err;
         }
         
         return await getClient().tagVM.runScript(body, msg);
