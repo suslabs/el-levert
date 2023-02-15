@@ -12,10 +12,12 @@ export default {
 
         let [u_name] = Util.splitArgs(args);
         
-        let user = (await getClient().findUsers(u_name))[0].user,
-            format = "";
+        let find = (await getClient().findUsers(u_name))[0],
+            format = "", user;
         
-        if(!user) {
+        if(typeof find !== "undefined") {
+            user = find.user;
+        } else {
             user = {
                 id: u_name,
                 tag: u_name

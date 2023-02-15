@@ -29,7 +29,8 @@ const {
     Client,
     GatewayIntentBits,
     PermissionsBitField,
-    ActivityType
+    ActivityType,
+    Partials
 } = discord;
 
 const intents = [
@@ -37,8 +38,12 @@ const intents = [
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildInvites
-];
+    GatewayIntentBits.GuildInvites,
+    GatewayIntentBits.DirectMessages
+],
+      partials = [
+    Partials.Channel
+]
 
 let client;
 
@@ -69,6 +74,7 @@ class LevertClient extends Client {
     constructor() {
         super({
             intents: intents,
+            partials: partials
         });
 
         if(client) {

@@ -5,7 +5,7 @@ import { getClient } from "../LevertClient.js";
 export default {
     name: Events.MessageDelete,
     listener: async msg => {
-        if (!msg.guild || msg.author.bot) {
+        if (msg.author.bot) {
             return;
         }
         

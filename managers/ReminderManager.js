@@ -69,8 +69,8 @@ class ReminderManager {
         const reminders = await this.remind_db.list(),
               past = reminders.filter(x => x.end < date);
         
-        for(let i = 0; i < past.length; i++) {
-            await this.remind_db.remove(past[i].id, past[i].ind);
+        for(const remind of past) {
+            await this.remind_db.remove(remind.id, remind.ind);
         }
 
         return past;
@@ -79,9 +79,8 @@ class ReminderManager {
     async sendReminders() {
         const reminders = await this.checkPast();
 
-        for(let i = 0; i < reminders.length; i++) {
-            const remind = reminders[i],
-                  user = await getClient().findUserById(remind.id);
+        for(const remind of reminders) {
+            const user = await getClient().findUserById(remind.id);
 
             if(!user) {
                 continue;

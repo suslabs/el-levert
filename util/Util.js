@@ -2,7 +2,6 @@ import { Buffer } from "buffer";
 import { AttachmentBuilder } from "discord.js";
 import fs from "fs";
 import path from "path";
-import cloneDeep from "lodash.clonedeep";
 
 const Util = {
     getFilesRecSync: dir_path => {
@@ -25,10 +24,6 @@ const Util = {
         return files;
     },
     randElem: arr => arr[~~(Math.random() * arr.length)],
-    randString: len => {
-        const dict = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        return Array(len).fill().map(x => Util.randElem(dict)).join("");
-    },
     clamp: (x, a, b) => Math.max(Math.min(x, b), a),
     round: (num, digits) => Math.round((num + Number.EPSILON) * 10 ** digits) / (10 ** digits),
     splitArgs: str => {
@@ -129,48 +124,6 @@ const Util = {
     removeBlock: body => {
         const match = body.match(/^`{3}([\S]+)?\n([\s\S]+)`{3}$/);
         return match[2];
-    },
-    removeCircRef: obj => {
-        const obj2 = cloneDeep(obj);
-    
-        function recRemove(target, obj, references) {
-            for (const key in obj) {
-                const val = obj[key];
-                
-                if(typeof val !== "object") {
-                    let refFound = false;
-    
-                    for (const reference of references) {
-                        if (reference === val) {
-                            target[key] = undefined;
-                            refFound = true;
-    
-                            break;
-                        }
-                    }
-    
-                    if (!refFound) {
-                        if (val instanceof Map) {
-                            const entries = Array.from(val);
-                            target[key] = entries;
-    
-                            recRemove(entries, entries, [...references, entries]);
-                        } else {
-                            target[key] = Object.assign({}, val);
-    
-                            recRemove(target[key], val, [...references, val]);
-                        }
-                    }
-                } else {
-                    target[key] = val;
-                    continue;
-                }
-            }
-    
-            return target;
-        }
-    
-        return recRemove({}, obj2, [obj2]);
     },
     firstCharUpper: str => str[0].toUpperCase() + str.substring(1),
     formatReply: (text, options) => {

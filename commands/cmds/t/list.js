@@ -22,10 +22,14 @@ export default {
             tag = msg.author.tag;
 
         if(args.length > 0) {
-            const find = (await getClient().findUsers(args))[0].user;
+            const find = (await getClient().findUsers(args))[0];
 
-            owner = find.id;
-            tag = find.tag;
+            if(typeof find === "undefined") {
+                return `:warning: User \`${args}\` not found.`;
+            }
+
+            owner = find.user.id;
+            tag = find.user.tag;
         }
 
         const tags = await getClient().tagManager.list(owner);

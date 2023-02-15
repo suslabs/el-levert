@@ -24,9 +24,9 @@ export default {
             return `:warning: Group **${g_name}** doesn't exist.`;
         }
         
-        const user = (await getClient().findUsers(u_name))[0].user;
+        const find = (await getClient().findUsers(u_name))[0];
 
-        if(!user) {
+        if(typeof find === "undefined") {
             return `:warning: User \`${u_name}\` not found.`;
         }
         
@@ -36,8 +36,8 @@ export default {
             return `:warning: Cannot add yourself to a group that is higher than yourself. (${maxLevel} -> ${group.level})`;
         }
 
-        await getClient().permManager.add(group, user.id);
+        await getClient().permManager.add(group, find.user.id);
 
-        return `:white_check_mark: Added user \`${user.tag}\` (${user.id}) to group **${g_name}**.`;
+        return `:white_check_mark: Added user \`${find.user.tag}\` (${find.user.id}) to group **${g_name}**.`;
     }
 }

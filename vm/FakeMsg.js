@@ -1,9 +1,9 @@
-import Util from "../util/Util.js";
+import VMUtil from "../util/VMUtil.js";
 
 class FakeMsg {
     constructor(msg) {
         this.msg = msg;
-        this.fixedMsg = Util.removeCircRef(msg);
+        this.fixedMsg = VMUtil.removeCircRef(msg);
     }
 
     reply(text, options) {

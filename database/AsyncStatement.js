@@ -25,15 +25,13 @@ class AsyncStatement {
 
     run(...args) {
         return new Promise((resolve, reject) => {
-            const cb = function (err) {
+            this.st.run(...args, err => {
                 if(err) {
                     reject(err);
                 }
 
                 resolve(this);
-            }
-
-            this.st.run(...args, cb);
+            });
         });
     }
 

@@ -67,7 +67,9 @@ export default {
             ]);
 
         if(type === "nomi") {
-            embed.setFooter("MAX is only available in dev, and only for multiblocks.");
+            embed.setFooter({
+                text: "MAX is only available in dev, and only for multiblocks."
+            });
         }
 
         return {

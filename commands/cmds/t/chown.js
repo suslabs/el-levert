@@ -21,9 +21,9 @@ export default {
             return ":warning: Invalid target user. You must specifically mention the target user.";
         }
 
-        const newOwner = (await getClient().findUsers(t_args))[0].user;
+        const find = (await getClient().findUsers(t_args))[0];
 
-        if(!newOwner) {
+        if(typeof find === "undefined") {
             return `:warning: User \`${t_args}\` not found.`;
         }
 
@@ -44,7 +44,7 @@ export default {
             return out + ` Tag is owned by \`${owner.tag}\`.`;
         }
 
-        await getClient().tagManager.chown(tag, newOwner.id);
+        await getClient().tagManager.chown(tag, find.user.id);
 
         let out = "";
 

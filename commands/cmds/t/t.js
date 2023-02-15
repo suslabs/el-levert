@@ -60,7 +60,7 @@ export default {
 
         let out = "", prev;
 
-        if(tag.type & 1) {
+        if(tag.type & 2) {
             if(tag.type & 4) {
                 out = await getClient().tagVM2.runScript(tag.body, msg, t_args + tag.args);
             } else {

@@ -23,10 +23,9 @@ class TagVM2 {
             allowAsync: true,
             wrapper: "none",
             console: "inherit",
-            sourceType: "module",
             require: {
                 context: "host",
-                external: ["canvas", "webgl", "gif-encoder"],
+                external: ["three", "canvas.cjs"],
                 builtin: ["path", "url", "buffer"],
                 root: "../../",
                 mock: {
@@ -46,7 +45,7 @@ class TagVM2 {
 
         if(typeof args !== "undefined") {
             vmObjects.tag = {
-                args: args
+                args: args.length > 0 ? args : undefined
             };
         }
 
@@ -95,7 +94,7 @@ class TagVM2 {
         code = `return (async () => {${code};})();`;
 
         try {
-            const out = await this.procPool.run(code, vmObjects, this.vmOptions, vmFuncs);
+            const out = await this.procPool.run(code, vmObjects, this.vmOptions, vmFuncs, "../canvas-integration");
 
             if(typeof reply.reply !== "undefined") {
                 return reply.reply;

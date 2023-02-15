@@ -24,10 +24,17 @@ export default {
         }
 
         if(tag.hops.length > 1) {
-            let out = `:information_source: Tag **${t_name}** is an alias of **${tag.hops[1]}**`;
+            let out = {
+                content: `:information_source: Tag **${t_name}** is an alias of **${tag.hops[1]}**`
+            };
 
             if(tag.args.length > 0) {
-                out += ` (with args \`${tag.args}\`)`;
+                out.content += ` (with args: )`;
+
+                out = {
+                    ...out,
+                    ...Util.getFileAttach(tag.args, "args.txt")
+                };
             }
 
             return out;
@@ -36,7 +43,7 @@ export default {
         tag.body = tag.body.trim();
         if(tag.type & 2) {
             return {
-                content: `:information_source: Script type ${(tag.type & 4 >> 2) + 1}.`,
+                content: `:information_source: Script is of type ${(tag.type & 4 >> 2) + 1}.`,
                 ...Util.getFileAttach(tag.body, "script.js")
             };
         }

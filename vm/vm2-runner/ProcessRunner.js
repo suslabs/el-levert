@@ -1,35 +1,43 @@
 import { NodeVM } from "vm2";
-import net, { SocketAddress } from "net";
+import net from "net";
 import crypto from "crypto";
+import path from "path";
+
+import VMUtil from "../../util/VMUtil.js";
 
 const pendingFuncs = {};
 
-function sockWrite(socket, obj) {
-    socket.write(JSON.stringify(obj) + "\n");
-}
-
 function func_cb(socket, name, args) {
     return new Promise((resolve, reject) => {
-        sockWrite(socket, {
+        const uniqueName = name + "-" + crypto.randomBytes(5).toString("hex");
+
+        VMUtil.sockWrite(socket, "funcCall", {
             funcCall: {
                 name: name,
+                uniqueName: uniqueName,
                 args: args
             }
         });
 
-        pendingFuncs[name] = resolve;
+        pendingFuncs[uniqueName] = resolve;
     });
 }
 
-function runScript(socket, code, scope, options, funcs) {
-    funcs.forEach(x => scope[x] = func_cb.bind(undefined, socket, x));
+function runScript(socket, script) {
+    if(typeof script.funcs !== "undefined") {
+        script.funcs.forEach(x => script.scope[x] = func_cb.bind(undefined, socket, x));
+    }
+
+    if(typeof script.additionalPath !== "undefined") {
+        script.options.require.resolve = name => path.resolve(script.additionalPath, name);
+    }
 
     const vm = new NodeVM({
-        ...options,
-        sandbox: scope
+        ...script.options,
+        sandbox: script.scope
     });
 
-    return vm.run(code, "ISOLATED_SCRIPT.js");
+    return vm.run(script.code, "ISOLATED_SCRIPT.js");
 }
 
 function listener(socket) {
@@ -45,7 +53,7 @@ function listener(socket) {
                 data = JSON.parse(buf);
                 buf = "";
             } catch(err) {
-                sockWrite(socket, {
+                VMUtil.sockWrite(socket, {
                     error: {
                         name: err.constructor.name,
                         message: err.message,
@@ -56,17 +64,16 @@ function listener(socket) {
                 socket.end();
             }
 
-            if(typeof data.script !== "undefined") {
-                const { code, scope, options, funcs } = data.script;
-
+            switch(data.packetType) {
+            case "script":
                 try {
-                    const res = (await runScript(socket, code, scope, options, funcs)) ?? null;
+                    let res = await runScript(socket, data.script);
 
-                    sockWrite(socket, {
+                    VMUtil.sockWrite(socket, "return", {
                         result: res
                     });
                 } catch(err) {
-                    sockWrite(socket, {
+                    VMUtil.sockWrite(socket, "return", {
                         error: {
                             name: err.constructor.name,
                             message: err.message,
@@ -76,9 +83,13 @@ function listener(socket) {
                 } finally {
                     socket.end();
                 }
-            } else if(typeof data.funcReturn !== "undefined") {
-                pendingFuncs[data.funcReturn.name](data.funcReturn.data);
-                delete pendingFuncs[data.funcReturn.name];
+
+                break;
+            case "funcReturn":
+                pendingFuncs[data.funcReturn.uniqueName](data.funcReturn.data);
+                delete pendingFuncs[data.funcReturn.uniqueName];
+
+                break;
             }
         }
     }

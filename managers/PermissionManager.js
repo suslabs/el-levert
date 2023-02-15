@@ -109,13 +109,13 @@ class PermissionManager {
             return groups;
         }
         
-        for(let i = 0; i < users.length; i++) {
-            const fetch = (await getClient().findUsers(users[i].id))[0].user;
+        for(const user of users) {
+            const find = (await getClient().findUsers(user.id))[0];
 
-            if(fetch) {
-                users[i].tag = fetch.tag;
+            if(typeof find !== "undefined") {
+                user.tag = find.user.tag;
             } else {
-                users[i].tag = "NOT FOUND";
+                user.tag = "NOT FOUND";
             }
         }
 

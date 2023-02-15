@@ -213,16 +213,16 @@ class TagManager {
         let hops = [],
             args = [], tagHop;
 
-        for(let i = 0; i < tag.hops.length; i++) {
-            if(hops.includes(tag.hops[i])) {
+        for(const hop of tag.hops) {
+            if(hops.includes(hop)) {
                 throw new TagError("Tag recursion detected.", hops);
             }
 
-            hops.push(tag.hops[i]);
-            tagHop = await this.fetch(tag.hops[i]);
+            hops.push(hop);
+            tagHop = await this.fetch(hop);
 
             if(!tagHop) {
-                throw new TagError("Hop not found.", tag.hops[i]);
+                throw new TagError("Hop not found.", hop);
             }
 
             if(tagHop.args.length > 0) {

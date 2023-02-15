@@ -1,11 +1,12 @@
 import ivm from "isolated-vm";
-import Util from "../util/Util.js";
 
 import { getClient } from "../LevertClient.js";
 
 import FakeAxios from "./FakeAxios.js";
 import FakeMsg from "./FakeMsg.js";
 import FakeUtil from "./FakeUtil.js";
+
+import Util from "../util/Util.js";
 
 function parseReply(msg) {
     let out = JSON.parse(msg);

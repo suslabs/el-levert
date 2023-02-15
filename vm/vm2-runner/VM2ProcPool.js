@@ -2,11 +2,8 @@ import { spawn } from "child_process";
 import net from "net";
 import crypto from "crypto";
 import genericPool from "generic-pool";
-import waitUntil from "./waitUntil.js";
 
-function sockWrite(socket, obj) {
-    socket.write(JSON.stringify(obj) + "\n");
-}
+import VMUtil from "../../util/VMUtil.js";
 
 class VM2ProcPool {
     constructor({ min, max, ...limits }) {
@@ -37,6 +34,9 @@ class VM2ProcPool {
                 "-ql",
                 this.limits.cpu,
                 "--",
+                "xvfb-run",
+                "-as",
+                "-screen 0 1024x768x24 -ac +extension GLX +render -noreset",
                 "node",
                 `--max-old-space-size=${this.limits.memory}`,
                 "ProcessRunner.js",
@@ -47,7 +47,11 @@ class VM2ProcPool {
             });
 
             runner.stdout.on("data", (data) => {
-                runner.socket = runner.socket || data.toString().trim();
+                const str = data.toString().trim();
+
+                if(!str.toLowerCase().includes("debugger") && typeof runner.socket === "undefined") {
+                    runner.socket = runner.socket || str;
+                }
             });
 
             runner.stderr.on("data", (data) => {
@@ -70,6 +74,17 @@ class VM2ProcPool {
         this.pool = pool;
     }
 
+    async prepare_cp() {
+        if(typeof this.childProcess !== "undefined") {
+            this.pool.destroy(this.childProcess);
+        }
+
+        const childProcess = await this.pool.acquire();
+        await VMUtil.waitUntil(() => childProcess.socket);
+
+        this.childProcess = childProcess;
+    }
+
     listen(socket, funcs) {
         return new Promise((resolve, reject) => {
             let buf = "";
@@ -86,26 +101,32 @@ class VM2ProcPool {
                         reject(err.message);
                     }
 
-                    if(typeof data.result !== "undefined" || typeof data.error !== "undefined") {
-                        resolve(data);
-                    } else if(typeof data.funcCall !== "undefined") {
-                        let res;
+                    buf = "";
 
-                        try {
-                            res = await funcs[data.funcCall.name](data.funcCall.args);
-                        } catch(err) {
-                            reject(err.message);
+                    switch(data.packetType) {
+                    case "return":
+                        resolve(data);
+
+                        break;
+                    case "funcCall": {
+                            let res;
+
+                            try {
+                                res = await funcs[data.funcCall.name](data.funcCall.args);
+                            } catch(err) {
+                                reject(err.message);
+                            }
+
+                            VMUtil.sockWrite(socket, "funcReturn", {
+                                funcReturn: {
+                                    uniqueName: data.funcCall.uniqueName,
+                                    data: res
+                                }
+                            });
                         }
 
-                        sockWrite(socket, {
-                            funcReturn: {
-                                name: data.funcCall.name,
-                                data: res
-                            }
-                        });
+                        break;   
                     }
-
-                    buf = "";
                 }
             };
 
@@ -114,22 +135,24 @@ class VM2ProcPool {
         });
     }
 
-    async run(code, scope, options, funcs) {
-        const childProcess = await this.pool.acquire();
-        await waitUntil(() => childProcess.socket);
+    async run(code, scope, options, funcs, additionalPath) {
+        if(typeof this.childProcess === "undefined") {
+            await this.prepare_cp();
+        }
 
-        const socket = net.createConnection(childProcess.socket),
+        const socket = net.createConnection(this.childProcess.socket),
               timer = setTimeout(() => {
             this.limitError = "Code execution took too long and was killed.";
             this.kill();
         }, this.limits.time);
 
-        sockWrite(socket, {
+        VMUtil.sockWrite(socket, "script", {
             script: {
                 code: code,
                 scope: scope,
                 options: options,
-                funcs: Object.keys(funcs)
+                funcs: Object.keys(funcs),
+                additionalPath: additionalPath
             }
         });
 
@@ -141,10 +164,13 @@ class VM2ProcPool {
             const limit = this.limitError;
             this.limitError = null;
 
+            if(limit !== null) {
+                await this.prepare_cp();
+            }
+
             throw new Error(limit || error);
         } finally {
             clearTimeout(timer);
-            this.pool.destroy(childProcess);
         }
         
         if(data.error) {
@@ -152,7 +178,7 @@ class VM2ProcPool {
                 constructor(message, stack) {
                     super(message);
 
-                    this.message = message;
+                   this.message = message;
                     this.stack = stack;
                 }
             };

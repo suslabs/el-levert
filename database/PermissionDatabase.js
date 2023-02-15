@@ -1,27 +1,33 @@
 import { AsyncDatabase, Modes } from "./AsyncDatabase.js";
 import Util from "../util/Util.js";
 
-const createGroupSt = `CREATE TABLE "Groups" (
-	"name"	TEXT,
-	"level"	INTEGER
-);`,
-      createUsersSt = `CREATE TABLE "Users" (
-    "group"	TEXT,
-    "id"	TEXT
-);`;
-
-const fetchSt = "SELECT * FROM Groups WHERE name = (SELECT \"group\" FROM Users WHERE id = $id);",
-      addSt = "INSERT INTO Users VALUES ($group, $id);",
-      removeSt = "DELETE FROM Users WHERE \"group\" = $group AND id = $id;",
-      removeAllSt = "DELETE FROM Users WHERE id = $id;",
-      removeByGroupSt = "DELETE FROM Users WHERE \"group\" = $name;",
-      listSt = "SELECT * FROM Users";
-
-const fetchGroupSt = "SELECT * FROM Groups WHERE name = $name;",
-      fetchLevelSt = "SELECT * FROM Groups WHERE level = $level;",
-      addGroupSt = "INSERT INTO Groups VALUES ($name, $level);",
-      removeGroupSt = "DELETE FROM Groups WHERE name = $name;",
-      groupListSt = "SELECT * FROM Groups";
+const create_st = {
+    createGroupTable: `CREATE TABLE "Groups" (
+        "name"	TEXT,
+        "level"	INTEGER
+    );`,
+    createUserTable: `CREATE TABLE "Users" (
+        "group"	TEXT,
+        "id"	TEXT
+    );`
+},
+      exec_st = {
+    user_st: {
+        fetch: "SELECT * FROM Groups WHERE name = (SELECT \"group\" FROM Users WHERE id = $id);",
+        add: "INSERT INTO Users VALUES ($group, $id);",
+        remove: "DELETE FROM Users WHERE \"group\" = $group AND id = $id;",
+        removeAll: "DELETE FROM Users WHERE id = $id;",
+        removeByGroup: "DELETE FROM Users WHERE \"group\" = $name;",
+        list: "SELECT * FROM Users"
+    },
+    group_st: {
+        fetch: "SELECT * FROM Groups WHERE name = $name;",
+        fetchLevel: "SELECT * FROM Groups WHERE level = $level;",
+        add: "INSERT INTO Groups VALUES ($name, $level);",
+        remove: "DELETE FROM Groups WHERE name = $name;",
+        list: "SELECT * FROM Groups"
+    }
+};
 
 class PermissionDatabase {
     constructor(path) {
@@ -32,8 +38,8 @@ class PermissionDatabase {
         const db = new AsyncDatabase(this.dbPath, Modes.OPEN_RWCREATE);
         await db.open();
 
-        await db.run(createGroupSt);
-        await db.run(createUsersSt);
+        await db.run(create_st.createGroupTable);
+        await db.run(create_st.createUserTable);
 
         await db.close();
     }
@@ -41,10 +47,18 @@ class PermissionDatabase {
     async load() {
         this.db = new AsyncDatabase(this.dbPath, Modes.OPEN_READWRITE);
         await this.db.open();
+
+        for(const type in exec_st) {
+            this[type] = {};
+
+            for(const st in exec_st[type]) {
+                this[type][st] = await this.db.prepare(exec_st[type][st]);
+            }
+        }
     }
 
     async fetch(id) {
-        const rows = await this.db.all(fetchSt, {
+        const rows = await this.user_st.fetch.all({
             $id: id
         });
 
@@ -56,27 +70,27 @@ class PermissionDatabase {
     }
 
     add(group, id) {
-        return this.db.run(addSt, {
+        return this.user_st.add.run({
             $group: group,
             $id: id
         });
     }
 
     remove(group, id) {
-        return this.db.run(removeSt, {
+        return this.user_st.remove.run({
             $group: group,
             $id: id
         });
     }
 
     removeAll(id) {
-        return this.db.run(removeAllSt, {
+        return this.user_st.removeAll.run({
             $id: id
         });
     }
 
     async fetchGroup(name) {
-        const row = await this.db.get(fetchGroupSt, {
+        const row = await this.group_st.fetch.get({
             $name: name
         });
         
@@ -88,7 +102,7 @@ class PermissionDatabase {
     }
 
     async fetchByLevel(level) {
-        const row = await this.db.get(fetchLevelSt, {
+        const row = await this.group_st.fetchLevel.get({
             $level: level
         });
         
@@ -100,28 +114,28 @@ class PermissionDatabase {
     }
 
     addGroup(name, level) {
-        return this.db.run(addGroupSt, {
+        return this.group_st.add.run({
             $name: name,
             $level: level
         });
     }
 
     async removeGroup(name) {
-        await this.db.run(removeByGroupSt, {
+        await this.user_st.removeByGroup.run({
             $name: name
         });
 
-        await this.db.run(removeGroupSt, {
+        await this.group_st.remove.run({
             $name: name
         });
     }
 
     listUsers() {
-        return this.db.all(listSt);
+        return this.user_st.list.all();
     }
 
     listGroups() {
-        return this.db.all(groupListSt);
+        return this.group_st.list.all();
     }
 }
 

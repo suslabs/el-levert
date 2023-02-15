@@ -57,9 +57,11 @@ class CommandHandler extends Handler {
         getLogger().info(`User ${msg.author.id} ("${msg.author.tag}") used command ${name} in channel ${msg.channel.id} ("${msg.channel.name}").`);
         
         let out;
-
+        
         try {
+            const t1 = Date.now();
             out = await cmd.execute(args, msg);
+            getLogger().info(`Command execution took ${(Date.now() - t1).toLocaleString()} ms.`);
         } catch(err) {
             this.addReply(await msg.reply({
                 content: `:no_entry_sign: Encountered exception while executing command **${name}**:`,
@@ -71,7 +73,7 @@ class CommandHandler extends Handler {
             this.removeUser(msg);
             return;
         }
-
+        
         if(typeof out === "string") {
             const split = out.split("\n");
             

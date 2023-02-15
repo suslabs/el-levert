@@ -27,7 +27,7 @@ class AsyncDatabase {
                 reject(new DatabaseError("Cannot open database. Database is already open."));
             }
 
-            const db = new sqlite.Database(this.filename, this.mode, (err) => {
+            const db = new sqlite.Database(this.filename, this.mode, err => {
                 if(err) {
                     reject(err);
                 }
@@ -65,15 +65,13 @@ class AsyncDatabase {
                 reject(new DatabaseError("The database is not open."));
             }
 
-            const cb = function (err) {
+            this.db.run(...args, err => {
                 if(err) {
                     reject(err);
                 }
 
                 resolve(this);
-            }
-
-            this.db.run(...args, cb);
+            });
         });
     }
 

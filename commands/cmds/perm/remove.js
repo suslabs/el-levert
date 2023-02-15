@@ -24,20 +24,20 @@ export default {
             return `:warning: Group **${g_name}** doesn't exist.`;
         }
         
-        const user = (await getClient().findUsers(u_name))[0].user;
+        const find = (await getClient().findUsers(u_name))[0];
 
-        if(!user) {
+        if(typeof find === "undefined") {
             await getClient().permManager.remove(group, u_name);
 
             return `:warning: User \`${u_name}\` not found. Tried removing by verbatim input.`;
         }
 
-        const changes = (await getClient().permManager.remove(group, user.id)).changes;
+        const changes = (await getClient().permManager.remove(group, find.user.id)).changes;
 
         if(changes === 0) {
-            return `:warning: User \`${user.tag}\` (${user.id}) is not in group **${g_name}**.`;
+            return `:warning: User \`${find.user.tag}\` (${find.user.id}) is not in group **${g_name}**.`;
         }
 
-        return `:white_check_mark: Removed user \`${user.tag}\` (${user.id}) from group **${g_name}**.`;
+        return `:white_check_mark: Removed user \`${find.user.tag}\` (${find.user.id}) from group **${g_name}**.`;
     }
 }
