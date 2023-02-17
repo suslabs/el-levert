@@ -44,7 +44,7 @@ class SedHandler extends Handler {
               flag = match[3];
 
         if(match.length < 3) {
-            this.addReply(await msg.reply(":warning: Encountered invalid args."));
+            this.addMsg(await msg.reply(":warning: Encountered invalid args."), msg.id);
             return;
         }
 
@@ -53,7 +53,7 @@ class SedHandler extends Handler {
         try {
             regex = new RegExp(sedRegex, flag || "" + "i");
         } catch(err) {
-            this.addReply(await msg.reply(":warning: Invalid regex or flags."));
+            this.addMsg(await msg.reply(":warning: Invalid regex or flags."), msg.id);
             return;
         }
 
@@ -64,7 +64,7 @@ class SedHandler extends Handler {
         }
 
         if(!sedMsg) {
-            this.addReply(await msg.reply(":warning: No matching message found."));
+            this.addMsg(await msg.reply(":warning: No matching message found."), msg.id);
             return;
         }
 
@@ -80,16 +80,16 @@ class SedHandler extends Handler {
             });
         
         try {
-            this.addReply(await msg.reply({
+            this.addMsg(await msg.reply({
                 embeds: [
                     embed
                 ]
-            }));
+            }), msg.id);
         } catch(err) {
-            this.addReply(await msg.reply({
+            this.addMsg(await msg.reply({
                 content: `:no_entry_sign: Encountered exception while sending preview:`,
                 ...Util.getFileAttach(err.stack, "error.js")
-            }));
+            }), msg.id);
     
             getLogger().error("Reply failed", err);
             return false;

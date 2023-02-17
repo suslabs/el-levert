@@ -1,5 +1,4 @@
 import { AsyncDatabase, Modes } from "./AsyncDatabase.js";
-import Util from "../util/Util.js";
 
 const create_st = {
     createGroupTable: `CREATE TABLE "Groups" (

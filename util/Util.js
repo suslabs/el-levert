@@ -38,7 +38,7 @@ const Util = {
             args = str.slice(ind + 1);
         }
 
-        return [name.toLowerCase(), args]
+        return [name.toLowerCase(), args];
     },
     getIcon: user => `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.webp`,
     diceDist: (a, b) => {

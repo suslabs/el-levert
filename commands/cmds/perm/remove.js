@@ -11,7 +11,7 @@ export default {
               e = getClient().permManager.checkName(g_name);
 
         if(args.length === 0 || g_name.length === 0 || u_name.length === 0) {
-            return ":information_source: `perm add [group name] [ping/id/username]`";
+            return ":information_source: `perm remove [group name] [ping/id/username]`";
         }     
 
         if(e) {

@@ -87,10 +87,10 @@ class PreviewHandler extends Handler {
         try {
             preview = await this.genPreview(msg);
         } catch(err) {
-            this.addReply(await msg.reply({
+            this.addMsg(await msg.reply({
                 content: ":no_entry_sign: Encountered exception while generating preview:",
                 ...Util.getFileAttach(err.stack, "error.js")
-            }));
+            }), msg.id);
 
             getLogger().error("Preview gen failed", err);
             return;
@@ -103,12 +103,12 @@ class PreviewHandler extends Handler {
         await msg.channel.sendTyping();
 
         try {
-            this.addReply(await msg.reply(preview));
+            this.addMsg(await msg.reply(preview), msg.id);
         } catch(err) {
-            this.addReply(await msg.reply({
+            this.addMsg(await msg.reply({
                 content: ":no_entry_sign: Encountered exception while sending preview:",
                 ...Util.getFileAttach(err.stack, "error.js")
-            }));
+            }), msg.id);
 
             getLogger().error("Reply failed", err);
             return;

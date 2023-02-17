@@ -36,7 +36,7 @@ class CommandHandler extends Handler {
         }
 
         if(this.trackedUsers.includes(msg.author.id)) {
-            this.addReply(await msg.reply(":warning: Please wait for the previous command to finish."));
+            this.addMsg(await msg.reply(":warning: Please wait for the previous command to finish."));
 
             return;
         }
@@ -60,13 +60,15 @@ class CommandHandler extends Handler {
         
         try {
             const t1 = Date.now();
+            
             out = await cmd.execute(args, msg);
+
             getLogger().info(`Command execution took ${(Date.now() - t1).toLocaleString()} ms.`);
         } catch(err) {
-            this.addReply(await msg.reply({
+            this.addMsg(await msg.reply({
                 content: `:no_entry_sign: Encountered exception while executing command **${name}**:`,
                 ...Util.getFileAttach(err.stack, "error.js")
-            }));
+            }), msg.id);
 
             getLogger().error("Command execution failed", err);
 
@@ -83,19 +85,19 @@ class CommandHandler extends Handler {
         }
         
         try {
-            this.addReply(await msg.reply(out));
+            this.addMsg(await msg.reply(out), msg.id);
         } catch(err) {
             if(err.message === "Cannot send an empty message") {
-                this.addReply(await msg.reply(`:no_entry_sign: ${err.message}.`));
+                this.addMsg(await msg.reply(`:no_entry_sign: ${err.message}.`), msg.id);
 
                 this.removeUser(msg);
                 return;
             }
 
-            this.addReply(await msg.reply({
+            this.addMsg(await msg.reply({
                 content: ":no_entry_sign: Encountered exception while sending reply:",
                 ...Util.getFileAttach(err.stack, "error.js")
-            }));
+            }), msg.id);
 
             getLogger().error("Reply failed", err);
 

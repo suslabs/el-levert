@@ -97,11 +97,14 @@ class VM2ProcPool {
 
                     try {
                         data = JSON.parse(buf);
+                        buf = "";
                     } catch(err) {
                         reject(err.message);
                     }
 
-                    buf = "";
+                    if(typeof data === "undefined" || typeof data.packetType === "undefined") {
+                        return;
+                    }
 
                     switch(data.packetType) {
                     case "return":

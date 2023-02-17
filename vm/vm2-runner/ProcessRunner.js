@@ -1,11 +1,22 @@
 import { NodeVM } from "vm2";
 import net from "net";
 import crypto from "crypto";
-import path from "path";
+import path, { resolve } from "path";
 
 import VMUtil from "../../util/VMUtil.js";
 
 const pendingFuncs = {};
+
+function funcsResolved() {
+    return new Promise((resolve, reject) => {
+        const timer = setInterval(_ => {
+            if(Object.keys(pendingFuncs).length === 0) {
+                clearInterval(timer);
+                resolve();
+            }
+        });
+    });
+}
 
 function func_cb(socket, name, args) {
     return new Promise((resolve, reject) => {
@@ -31,6 +42,8 @@ function runScript(socket, script) {
     if(typeof script.additionalPath !== "undefined") {
         script.options.require.resolve = name => path.resolve(script.additionalPath, name);
     }
+
+    script.scope.sual_import = path => import(path);
 
     const vm = new NodeVM({
         ...script.options,
@@ -68,6 +81,7 @@ function listener(socket) {
             case "script":
                 try {
                     let res = await runScript(socket, data.script);
+                    await funcsResolved();
 
                     VMUtil.sockWrite(socket, "return", {
                         result: res

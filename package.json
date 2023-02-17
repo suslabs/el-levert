@@ -20,6 +20,7 @@
     "gl": "^6.0.2",
     "isolated-vm": "^4.4.2",
     "lodash.clonedeep": "^4.5.0",
+    "minimist-string": "^1.0.2",
     "sqlite3": "^5.1.4",
     "three": "^0.149.0",
     "vm2": "^3.9.14",

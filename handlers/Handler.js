@@ -1,9 +1,24 @@
-function addReply(msg) {
-    this.trackedMsgs.push(msg);
-
-    if(this.trackedMsgs.length > 100) {
-        this.trackedMsgs.pop();
+function addMsg(msg, trigger_id) {
+    if(this.trackedMsgs.size >= this.trackLimit) {
+        cosnt [key] = this.trackedMsgs.keys();
+        this.trackedMsgs.delete(key);
     }
+
+    this.trackedMsgs.set(trigger_id, msg);
+}
+
+function deleteMsg(trigger_id) {
+    if(!this.enabled) {
+        return;
+    }
+
+    const sentMsg = this.trackedMsgs.get(trigger_id);
+    
+    if(typeof sentMsg === "undefined") {
+        return;
+    }
+
+    return sentMsg;
 }
 
 class Handler {
@@ -11,25 +26,28 @@ class Handler {
         this.enabled = enabled;
 
         if(enabled && hasTracker) {
-            this.trackedMsgs = [];
-            this.addReply = addReply.bind(this);
+            this.trackLimit = 100;
+            this.trackedMsgs = new Map();
+
+            this.addMsg = addMsg.bind(this);
+            this.deleteMsg = deleteMsg.bind(this);
         }
     }
 
     async delete(msg) {
-        if(!this.enabled) {
+        const sentMsg = this.deleteMsg(msg.id);
+
+        if(typeof sentMsg === "undefined") {
             return;
         }
 
-        const ind = this.trackedMsgs.findIndex(x => x.reference.messageId === msg.id);
-
-        if(ind < 0) {
-            return;
+        if(sentMsg.constructor.name === "Array") {
+            for(const sent of sentMsg) {
+                await sent.delete();
+            }
+        } else {
+            await sentMsg.delete();
         }
-
-        await this.trackedMsgs[ind].delete();
-        this.trackedMsgs.splice(ind, 1);
-
     }
 
     async resubmit(msg) {

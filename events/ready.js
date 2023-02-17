@@ -6,6 +6,6 @@ export default {
     name: Events.ClientReady,
     once: true,
     listener: _ => {
-        getLogger().info("Logged in as " + getClient().user.tag);
+        getLogger().info(`The bot is online. Logged in as ${getClient().user.tag}.`);
     }
 };
