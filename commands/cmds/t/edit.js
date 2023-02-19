@@ -3,7 +3,7 @@ import { getClient } from "../../../LevertClient.js";
 
 export default {
     name: "edit",
-    parent: "t",
+    parent: "tag",
     subcommand: true,
     handler: async function(args, msg, perm) {
         if(args.length === 0) {
@@ -18,7 +18,7 @@ export default {
             return ":warning: " + e;
         }
 
-        if(this.parentCmd.subNames.includes(t_name)) {
+        if(this.parentCmd.subcommands.includes(t_name)) {
             return `:police_car: ${t_name} is a __command__, not a __tag__. You can't manipulate commands.`;
         }
 

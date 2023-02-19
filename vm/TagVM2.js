@@ -2,7 +2,7 @@ import axios from "axios";
 import { getClient } from "../LevertClient.js";
 
 import VM2ProcPool from "./vm2-runner/VM2ProcPool.js";
-import Util from "../util/Util.js";
+import VMUtil from "../util/VMUtil.js";
 
 class TagVM2 {
     constructor() {
@@ -51,7 +51,7 @@ class TagVM2 {
 
         const vmFuncs = {
             reply: function(reply, text, options) {
-                let format = Util.formatReply(text, options);
+                let format = VMUtil.formatReply(text, options);
 
                 if(typeof format.file !== "undefined") {
                     format = {

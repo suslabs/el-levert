@@ -1,6 +1,6 @@
 function addMsg(msg, trigger_id) {
     if(this.trackedMsgs.size >= this.trackLimit) {
-        cosnt [key] = this.trackedMsgs.keys();
+        const [key] = this.trackedMsgs.keys();
         this.trackedMsgs.delete(key);
     }
 

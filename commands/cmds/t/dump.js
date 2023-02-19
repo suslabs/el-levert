@@ -3,7 +3,7 @@ import { getClient } from "../../../LevertClient.js";
 
 export default {
     name: "dump",
-    parent: "t",
+    parent: "tag",
     subcommand: true,
     handler: async _ => {
         const tags = await getClient().tagManager.dump();

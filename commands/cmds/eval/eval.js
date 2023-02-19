@@ -3,6 +3,7 @@ import Util from "../../../util/Util.js";
 
 export default {
     name: "eval",
+    aliases: ["e"],
     subcommands: [
         "c",
         "cpp",
@@ -55,7 +56,7 @@ export default {
         }
 
         this.altevalBase = async function(args, msg, lang) {
-            const base = this.evalBase || this.parentCmd.evalBase,
+            const base = this.evalBase ?? this.parentCmd.evalBase,
                   parsed = await base(args, msg),
                   body = parsed.body;
 

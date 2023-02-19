@@ -42,7 +42,7 @@ class TagVM {
               type = options.type,
               funcRef = options.funcRef;
 
-        const body = options.body || `return $0.${type}(undefined, args, {
+        const body = options.body ?? `return $0.${type}(undefined, args, {
             arguments: {
                 copy: true
             }

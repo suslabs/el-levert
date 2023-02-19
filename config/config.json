@@ -9,7 +9,7 @@
     "timeLimit": 20,
     "otherMemLimit": 50,
     "otherTimeLimit": 20,
-    "outCharLimit": 20,
+    "outCharLimit": 2000,
     "outNewlineLimit": 30,
     "maxTagNameLength": 32,
     "maxTagSize": 100,

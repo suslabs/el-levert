@@ -80,11 +80,13 @@ class ExternalVM {
     }
 
     async getOutput(token) {
-        const data = (await axios.get(this.base + token + this.outputUrl)).data;
+        let data = (await axios.get(this.base + token + this.outputUrl)).data;
 
-        data.stdout = data.stdout || "";
-        data.stderr = data.stderr || "";
-        data.compile_output = data.compile_output || "";
+        data = Object.assign({
+            stdout: "",
+            stderr: "",
+            compile_output: ""
+        }, data);
 
         return {
             stdout: Buffer.from(data.stdout, "base64").toString("utf-8"),

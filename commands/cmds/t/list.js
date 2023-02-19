@@ -15,7 +15,7 @@ function formatTagList(tags) {
 
 export default {
     name: "list",
-    parent: "t",
+    parent: "tag",
     subcommand: true,
     handler: async (args, msg) => {
         let owner = msg.author.id,

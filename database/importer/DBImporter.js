@@ -133,9 +133,9 @@ class DBImporter {
         tag = {
             hops: tag.hops,
             name: tag.hops[0],
-            body: tag.body || "",
-            owner: tag.owner || "0",
-            args: tag.args || "",
+            body: tag.body ?? "",
+            owner: tag.owner ?? "0",
+            args: tag.args ?? "",
             registered: 0,
             lastEdited: 0
         };
@@ -178,7 +178,7 @@ class DBImporter {
 
     async deleteTag(tag) {
         let quota = await this.tag_db.quotaFetch(tag.owner);
-        quota -= Util.getByteLen(tag.body || "") / 1024;
+        quota -= Util.getByteLen(tag.body ?? "") / 1024;
             
         await this.tag_db.quotaSet(tag.owner, quota);
 

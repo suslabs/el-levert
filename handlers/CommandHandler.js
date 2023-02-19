@@ -22,6 +22,10 @@ class CommandHandler extends Handler {
 
     searchCmds(name) {
         return this.commands.find(x => {
+            if(x.aliases.length > 0) {
+                return (x.name === name || x.aliases.includes(name)) && !x.isSubcmd;
+            }
+            
             return x.name === name && !x.isSubcmd;
         });
     }
@@ -60,7 +64,7 @@ class CommandHandler extends Handler {
         
         try {
             const t1 = Date.now();
-            
+
             out = await cmd.execute(args, msg);
 
             getLogger().info(`Command execution took ${(Date.now() - t1).toLocaleString()} ms.`);

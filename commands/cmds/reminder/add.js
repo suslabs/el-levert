@@ -8,8 +8,8 @@ export default {
     subcommand: true,
     handler: async (args, msg) => {
         const match = args.match(/(.+?)\s*(?:(?:"((?:[^"\\]|\\.)*)")|$)/),
-              date = match[1] || "",
-              remindMsg = match[2] || "",
+              date = match[1] ?? "",
+              remindMsg = match[2] ?? "",
               e = getClient().remindManager.checkMsg(remindMsg);
 
         if(args.length === 0 || date.length === 0) {

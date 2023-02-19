@@ -145,7 +145,7 @@ class LevertClient extends Client {
 
                 const listener = wrapEvent(event.listener);
 
-                if (event.once || false) {
+                if (event.once ?? false) {
                     this.once(event.name, listener);
                 } else {
                     this.on(event.name, listener);
@@ -163,8 +163,7 @@ class LevertClient extends Client {
     }
 
     loadCommand(cmd) {
-        if (typeof cmd === "undefined" ||
-            typeof cmd.name === "undefined") {
+        if (typeof cmd === "undefined" || typeof cmd.name === "undefined") {
             return;
         }
 
@@ -187,11 +186,11 @@ class LevertClient extends Client {
 
     loadSubcommands() {
         this.commands.forEach(x => {
-            if(x.isSubcmd || x.subNames.length < 1) {
+            if(x.isSubcmd || x.subcommands.length < 1) {
                 return;
             }
 
-            x.subNames.forEach(n => {
+            x.subcommands.forEach(n => {
                 const find = this.commands.find(y => {
                     return y.name === n && y.parent === x.name;
                 });
@@ -202,7 +201,7 @@ class LevertClient extends Client {
                 }
 
                 find.parentCmd = x;
-                x.subcmds.push(find);
+                x.subcmds.set(find.name, find);
             });
         });
     }
@@ -325,7 +324,9 @@ class LevertClient extends Client {
             return false;
         }
 
-        options.limit = options.limit || 100;
+        options = Object.assign({
+            limit: 100
+        }, options);
 
         try {
             return await channel.messages.fetch(options);
@@ -358,8 +359,8 @@ class LevertClient extends Client {
             guilds = guilds.concat(this.selfbot.guilds.cache);
         }
 
-        if (idMatch || mentionMatch) {
-            const id = idMatch[1] || mentionMatch[1];
+        if (idMatch ?? mentionMatch) {
+            const id = idMatch[1] ?? mentionMatch[1];
             
             for(let i = 0; i < guilds.size; i++) {
                 let user;
@@ -381,7 +382,9 @@ class LevertClient extends Client {
         }
         
         let users = [], ids = [];
-        options.limit = options.limit || 10;
+        options = Object.assign({
+            limit: 10
+        }, options);
 
         for(let i = 0; i < guilds.size; i++) {
             let guildUsers = await guilds.at(i).members.fetch({
@@ -416,6 +419,11 @@ class LevertClient extends Client {
                 throw new ClientError("Invalid activity text.");
             }
         }
+    }
+
+    executeAllHandlers(func, ...args) {
+        const promises = this.handlerList.map(x => x[func](...args));
+        return promises.reduce((a, b) => a.then(b), Promise.resolve());
     }
 
     async start() {

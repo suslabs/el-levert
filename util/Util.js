@@ -125,35 +125,7 @@ const Util = {
         const match = body.match(/^`{3}([\S]+)?\n([\s\S]+)`{3}$/);
         return match[2];
     },
-    firstCharUpper: str => str[0].toUpperCase() + str.substring(1),
-    formatReply: (text, options) => {
-        let out = {};
-
-        if(typeof text === "object") {
-            options = text;
-        } else {
-            out.content = text || "";
-        }
-
-        if(typeof options !== "undefined") {
-            if(typeof options.embed !== "undefined") {
-                const embed = options.embed;
-                embed.description = embed.description || "";
-
-
-                
-                out.embeds = [
-                    embed
-                ];
-            }
-
-            if(typeof options.file !== "undefined") {
-                out.file = options.file;
-            }
-        }
-
-        return out;
-    }
+    firstCharUpper: str => str[0].toUpperCase() + str.substring(1)
 };
 
 export default Util;
