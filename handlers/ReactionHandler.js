@@ -102,7 +102,7 @@ class ReactionHandler extends Handler {
 
     async execute(msg) {
         if(!this.enabled) {
-            return;
+            return false;
         }
         
         await this.paransReact(msg);
@@ -111,13 +111,13 @@ class ReactionHandler extends Handler {
 
     async delete(msg) {
         if(!this.enable) {
-            return;
+            return false;
         }
 
         const botReacts = msg.reactions.cache.filter(react => react.users.cache.has(getClient().user.id));
 
         if(botReacts.size < 1) {
-            return;
+            return false;
         }
 
         try {
@@ -127,6 +127,8 @@ class ReactionHandler extends Handler {
         } catch (err) {
             getLogger().error("Failed to remove reactions from message.", err);
         }
+
+        return true;
     }
 }
 

@@ -38,7 +38,7 @@ class Handler {
         const sentMsg = this.deleteMsg(msg.id);
 
         if(typeof sentMsg === "undefined") {
-            return;
+            return false;
         }
 
         if(sentMsg.constructor.name === "Array") {
@@ -48,11 +48,13 @@ class Handler {
         } else {
             await sentMsg.delete();
         }
+
+        return true;
     }
 
     async resubmit(msg) {
         await this.delete(msg);
-        await this.execute(msg);
+        return this.execute(msg);
     }
 }
 

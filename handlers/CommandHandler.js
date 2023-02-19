@@ -36,13 +36,12 @@ class CommandHandler extends Handler {
 
     async execute(msg) {
         if(!this.isCmd(msg.content)) {
-            return;
+            return false;
         }
 
         if(this.trackedUsers.includes(msg.author.id)) {
             this.addMsg(await msg.reply(":warning: Please wait for the previous command to finish."));
-
-            return;
+            return false;
         }
 
         this.trackedUsers.push(msg.author.id);
@@ -54,7 +53,7 @@ class CommandHandler extends Handler {
 
         if(typeof cmd === "undefined") {
             this.removeUser(msg);
-            return;
+            return false;
         }
 
         await msg.channel.sendTyping();
@@ -77,7 +76,7 @@ class CommandHandler extends Handler {
             getLogger().error("Command execution failed", err);
 
             this.removeUser(msg);
-            return;
+            return false;
         }
         
         if(typeof out === "string") {
@@ -95,7 +94,7 @@ class CommandHandler extends Handler {
                 this.addMsg(await msg.reply(`:no_entry_sign: ${err.message}.`), msg.id);
 
                 this.removeUser(msg);
-                return;
+                return false;
             }
 
             this.addMsg(await msg.reply({
@@ -106,10 +105,11 @@ class CommandHandler extends Handler {
             getLogger().error("Reply failed", err);
 
             this.removeUser(msg);
-            return;
+            return false;
         }
 
         this.removeUser(msg);
+        return true;
     }
 }
 
