@@ -104,11 +104,7 @@ class TagManager {
 
     async add(name, body, owner, isScript, scriptType) {
         if(typeof isScript === "undefined") {
-            isScript = Util.isScript(body);
-
-            if(isScript) {
-                body = Util.removeBlock(body);
-            }
+            [body, isScript] = Util.formatScript(body);
         }
         
         if(body.length > 0) {
@@ -153,11 +149,7 @@ class TagManager {
         }
 
         if(typeof isScript === "undefined") {
-            isScript = Util.isScript(body);
-
-            if(isScript) {
-                body = Util.removeBlock(body);
-            }
+            [body, isScript] = Util.formatScript(body);
         }
 
         const newTag = new Tag({
