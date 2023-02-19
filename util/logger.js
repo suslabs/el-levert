@@ -70,7 +70,7 @@ function createLogger(config = {}) {
     }
     
     const logger = winston.createLogger({
-        level: config.level || "debug",
+        level: config.level ?? "debug",
         transports: [
             file
         ],

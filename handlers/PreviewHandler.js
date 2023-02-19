@@ -33,7 +33,7 @@ class PreviewHandler extends Handler {
                 name: prevMsg.author.username,
                 iconURL: Util.getIcon(prevMsg.author)
             })
-            .setTimestamp();
+            .setTimestamp(prevMsg.editedTimestamp ?? prevMsg.createdTimestamp);
         
         if(sv_id !== msg.guild.id) {
             embed.setFooter({

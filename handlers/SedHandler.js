@@ -22,7 +22,7 @@ async function fetchMatch(ch_id, regex, ignore_id, limit = 100) {
 
 class SedHandler extends Handler {
     constructor() {
-        super(getClient().config.enableSed || true);
+        super(getClient().config.enableSed ?? true);
 
         this.regex = /^sed\/(.+?)\/([^/]*)\/?(.{1,2})?/;
     }
@@ -51,7 +51,7 @@ class SedHandler extends Handler {
         let regex, sedMsg;
 
         try {
-            regex = new RegExp(sedRegex, flag || "" + "i");
+            regex = new RegExp(sedRegex, flag ?? "" + "i");
         } catch(err) {
             this.addMsg(await msg.reply(":warning: Invalid regex or flags."), msg.id);
             return;
@@ -73,8 +73,8 @@ class SedHandler extends Handler {
                 name: sedMsg.author.username,
                 iconURL: Util.getIcon(sedMsg.author)
             })
-            .setDescription(sedMsg.content.replace(regex, replace || ""))
-            .setTimestamp()
+            .setDescription(sedMsg.content.replace(regex, replace ?? ""))
+            .setTimestamp(sedMsg.editedTimestamp ?? sedMsg.createdTimestamp)
             .setFooter({
                 text: "From #" + sedMsg.channel.name
             });

@@ -3,7 +3,7 @@ import { getClient } from "../../../LevertClient.js";
 
 export default {
     name: "search",
-    parent: "t",
+    parent: "tag",
     subcommand: true,
     handler: async (args) => {
         if(args.length === 0) {

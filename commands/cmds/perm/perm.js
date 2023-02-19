@@ -3,6 +3,7 @@ import { getClient } from "../../../LevertClient.js";
 
 export default {
     name: "perm",
+    aliases: ["p"],
     subcommands: [
         "add",
         "remove",
@@ -12,6 +13,6 @@ export default {
         "check"
     ],
     handler: async function(args, msg) {
-        return `:information_source: %perm [${this.subNames.join("|")}]`;
+        return `:information_source: %perm [${this.subcommands.join("|")}]`;
     }
 }

@@ -64,7 +64,7 @@ class ReminderManager {
     }
 
     async checkPast(date) {
-        date = date || Date.now();
+        date = date ?? Date.now();
 
         const reminders = await this.remind_db.list(),
               past = reminders.filter(x => x.end < date);

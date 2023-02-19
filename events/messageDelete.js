@@ -4,12 +4,11 @@ import { getClient } from "../LevertClient.js";
 
 export default {
     name: Events.MessageDelete,
-    listener: async msg => {
+    listener: msg => {
         if (msg.author.bot) {
             return;
         }
         
-        const promises = getClient().handlerList.map(x => x.delete(msg));
-        await promises.reduce((a, b) => a.then(b), Promise.resolve());
+        getClient().executeAllHandlers("delete", msg);
     }
 };

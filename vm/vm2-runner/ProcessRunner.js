@@ -43,7 +43,7 @@ function runScript(socket, script) {
         script.options.require.resolve = name => path.resolve(script.additionalPath, name);
     }
 
-    script.scope.sual_import = path => import(path);
+    script.scope.es_require = path => import(path);
 
     const vm = new NodeVM({
         ...script.options,
@@ -51,6 +51,37 @@ function runScript(socket, script) {
     });
 
     return vm.run(script.code, "ISOLATED_SCRIPT.js");
+}
+
+async function processPacket(socket, data) {
+    switch(data.packetType) {
+    case "script":
+        try {
+            let res = await runScript(socket, data.script);
+            await funcsResolved();
+
+            VMUtil.sockWrite(socket, "return", {
+                result: res
+            });
+        } catch(err) {
+            VMUtil.sockWrite(socket, "return", {
+                error: {
+                    name: err.constructor.name,
+                    message: err.message,
+                    stack: err.stack
+                }
+            });
+        } finally {
+            socket.end();
+        }
+
+        break;
+    case "funcReturn":
+        pendingFuncs[data.funcReturn.uniqueName](data.funcReturn.data);
+        delete pendingFuncs[data.funcReturn.uniqueName];
+
+        break;
+    }
 }
 
 function listener(socket) {
@@ -77,45 +108,17 @@ function listener(socket) {
                 socket.end();
             }
 
-            switch(data.packetType) {
-            case "script":
-                try {
-                    let res = await runScript(socket, data.script);
-                    await funcsResolved();
-
-                    VMUtil.sockWrite(socket, "return", {
-                        result: res
-                    });
-                } catch(err) {
-                    VMUtil.sockWrite(socket, "return", {
-                        error: {
-                            name: err.constructor.name,
-                            message: err.message,
-                            stack: err.stack
-                        }
-                    });
-                } finally {
-                    socket.end();
-                }
-
-                break;
-            case "funcReturn":
-                pendingFuncs[data.funcReturn.uniqueName](data.funcReturn.data);
-                delete pendingFuncs[data.funcReturn.uniqueName];
-
-                break;
-            }
+            processPacket(socket, data);
         }
-    }
+    };
 
     socket.on("data", recieve);
 }
 
-const socketName = crypto.randomBytes(20).toString("hex");
+const server = net.createServer(listener),
+      socketName = crypto.randomBytes(20).toString("hex");
 
-const server = net.createServer(listener);
-
-server.on("listening", () => {
+server.on("listening", _ => {
     console.log(`/tmp/vm2-${socketName}.sock`);
 });
 

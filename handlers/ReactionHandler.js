@@ -3,8 +3,6 @@ import Handler from "./Handler.js";
 import Util from "../util/Util.js";
 import { getClient, getLogger } from "../LevertClient.js";
 
-
-
 class ReactionHandler extends Handler {
     constructor() {
         super(getClient().reactions.enableReacts, false);

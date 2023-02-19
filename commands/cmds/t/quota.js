@@ -3,7 +3,7 @@ import { getClient } from "../../../LevertClient.js";
 
 export default {
     name: "quota",
-    parent: "t",
+    parent: "tag",
     subcommand: true,
     handler: async (_, msg) => {
         const quota = await getClient().tagManager.getQuota(msg.author.id),

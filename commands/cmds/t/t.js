@@ -2,7 +2,8 @@ import Util from "../../../util/Util.js";
 import { getClient, getLogger } from "../../../LevertClient.js";
 
 export default {
-    name: "t",
+    name: "tag",
+    aliases: ["t"],
     subcommands: [
         "add",
         "alias",
@@ -18,7 +19,7 @@ export default {
     ],
     handler: async function(args, msg) {
         if(args.length === 0) {
-            return `:information_source: %t [${this.subNames.join("|")}] tag_name [tag_body]`;
+            return `:information_source: %t [${this.subcommands.join("|")}] tag_name [tag_body]`;
         }
 
         const [t_name, t_args] = Util.splitArgs(args),

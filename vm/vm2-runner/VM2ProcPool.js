@@ -5,11 +5,70 @@ import genericPool from "generic-pool";
 
 import VMUtil from "../../util/VMUtil.js";
 
+async function processPacket(socket, data, funcs, resolve, reject) {
+    switch(data.packetType) {
+    case "return":
+        resolve(data);
+
+        break;
+    case "funcCall": {
+            let res;
+
+            try {
+                res = await funcs[data.funcCall.name](data.funcCall.args);
+            } catch(err) {
+                reject(err.message);
+            }
+
+            VMUtil.sockWrite(socket, "funcReturn", {
+                funcReturn: {
+                    uniqueName: data.funcCall.uniqueName,
+                    data: res
+                }
+            });
+        }
+
+        break;   
+    }
+}
+
+function listener(socket, funcs) {
+    return new Promise((resolve, reject) => {
+        let buf = "";
+
+        const recieve = async data => {
+            buf += String(data);
+            
+            if(buf.endsWith("\n")) {
+                let data;
+
+                try {
+                    data = JSON.parse(buf);
+                    buf = "";
+                } catch(err) {
+                    reject(err.message);
+                }
+
+                if(typeof data === "undefined" || typeof data.packetType === "undefined") {
+                    return;
+                }
+
+                await processPacket(socket, data, funcs, resolve, reject);
+            }
+        };
+
+        socket.on("data", recieve);
+        socket.on("close", _ => reject(new Error("Socket was cabaled.")));
+    });
+}
+
 class VM2ProcPool {
     constructor({ min, max, ...limits }) {
-        limits.cpu = limits.cpu || 100;
-        limits.memory = limits.memory || 2000;
-        limits.time = limits.time || 4000;
+        limits = Object.assign({
+            cpu: 100,
+            memory: 200,
+            time: 4000
+        }, limits);
 
         this.limits = limits;
         this.limitError = null;
@@ -50,7 +109,7 @@ class VM2ProcPool {
                 const str = data.toString().trim();
 
                 if(!str.toLowerCase().includes("debugger") && typeof runner.socket === "undefined") {
-                    runner.socket = runner.socket || str;
+                    runner.socket = runner.socket ?? str;
                 }
             });
 
@@ -85,59 +144,6 @@ class VM2ProcPool {
         this.childProcess = childProcess;
     }
 
-    listen(socket, funcs) {
-        return new Promise((resolve, reject) => {
-            let buf = "";
-
-            const recieve = async data => {
-                buf += String(data);
-                
-                if(buf.endsWith("\n")) {
-                    let data;
-
-                    try {
-                        data = JSON.parse(buf);
-                        buf = "";
-                    } catch(err) {
-                        reject(err.message);
-                    }
-
-                    if(typeof data === "undefined" || typeof data.packetType === "undefined") {
-                        return;
-                    }
-
-                    switch(data.packetType) {
-                    case "return":
-                        resolve(data);
-
-                        break;
-                    case "funcCall": {
-                            let res;
-
-                            try {
-                                res = await funcs[data.funcCall.name](data.funcCall.args);
-                            } catch(err) {
-                                reject(err.message);
-                            }
-
-                            VMUtil.sockWrite(socket, "funcReturn", {
-                                funcReturn: {
-                                    uniqueName: data.funcCall.uniqueName,
-                                    data: res
-                                }
-                            });
-                        }
-
-                        break;   
-                    }
-                }
-            };
-
-            socket.on("data", recieve);
-            socket.on("close", _ => reject(new Error("Socket was cabaled.")));
-        });
-    }
-
     async run(code, scope, options, funcs, additionalPath) {
         if(typeof this.childProcess === "undefined") {
             await this.prepare_cp();
@@ -162,7 +168,7 @@ class VM2ProcPool {
         let data;
 
         try {
-            data = await this.listen(socket, funcs);
+            data = await listener(socket, funcs);
         } catch (error) {
             const limit = this.limitError;
             this.limitError = null;
@@ -171,7 +177,7 @@ class VM2ProcPool {
                 await this.prepare_cp();
             }
 
-            throw new Error(limit || error);
+            throw new Error(limit ?? error);
         } finally {
             clearTimeout(timer);
         }

@@ -4,18 +4,6 @@ import { getClient } from "../LevertClient.js";
 
 class Command {
     constructor(options) {
-        this.name = options.name;
-        this.parent = options.parent || "";
-
-        this.allowed = options.allowed || 0;
-        this.subNames = options.subcommands || [],
-        
-        this.description = options.description || "";
-        this.usage = options.usage || "";
-
-        this.load = options.load;
-        this.handler = options.handler;
-
         if(typeof options.name === "undefined") {
             throw new CommandError("Command must have a name.");
         }
@@ -24,21 +12,29 @@ class Command {
             throw new CommandError("Command must have a handler.");
         }
 
-        this.subcmds = [];
-        this.isSubcmd = options.subcommand || false;
+        Object.assign(this, {
+            parent: "",
+            allowed: 0,
+            subcommands: [],
+            description: "",
+            usage: "",
+            aliases: [],
+            helpArgs: ["-h", "-u", "-help", "help"],
+            ...options
+        });
 
+        this.subcmds = new Map();
+
+        this.isSubcmd = options.subcommand || false;
         this.hasHelp = typeof options.description !== "undefined" || typeof options.usage !== "undefined";
-        this.helpArgs = options.helpArgs || ["-h", "-u", "-help", "help"];
     }
 
-    searchSubcmds(name) {
-        if(this.subcmds.length < 1) {
+    getSubcmd(name) {
+        if(this.subcmds.size < 1) {
             return;
         }
 
-        return this.subcmds.find(x => {
-            return x.name === name;
-        });
+        return this.subcmds.get(name);
     }
 
     getHelp() {
@@ -60,11 +56,13 @@ class Command {
     }
 
     async execute(args, msg) {
-        const [subName, subArgs] = Util.splitArgs(args),
-              subCmd = this.searchSubcmds(subName);
+        if(!this.isSubcmd) {
+            const [subName, subArgs] = Util.splitArgs(args),
+                  subCmd = this.getSubcmd(subName);
 
-        if(typeof subCmd !== "undefined") {
-            return subCmd.execute(subArgs, msg);
+            if(typeof subCmd !== "undefined") {
+                return subCmd.execute(subArgs, msg);
+            }
         }
 
         const perm = await getClient().permManager.maxLevel(msg.author.id);
@@ -77,7 +75,7 @@ class Command {
             return this.getHelp();
         }
 
-        return await this.handler(args, msg, perm);
+        return this.handler(args, msg, perm);
     }
 }
 

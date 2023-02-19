@@ -2,6 +2,7 @@ import { getClient } from "../../../LevertClient.js";
 
 export default {
     name: "reminder",
+    aliases: ["r"],
     subcommands: [
         "add",
         "list",
@@ -10,6 +11,6 @@ export default {
     ],
     load: _ => getClient().config.enableReminders,
     handler: async function(args, msg) {
-        return `:information_source: %reminder [${this.subNames.join("|")}]`;
+        return `:information_source: %reminder [${this.subcommands.join("|")}]`;
     }
 }

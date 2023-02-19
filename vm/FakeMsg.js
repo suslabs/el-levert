@@ -7,7 +7,7 @@ class FakeMsg {
     }
 
     reply(text, options) {
-        return JSON.stringify(Util.formatReply(text, options));
+        return JSON.stringify(VMUtil.formatReply(text, options));
     }
 }
 
