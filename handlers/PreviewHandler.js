@@ -79,7 +79,7 @@ class PreviewHandler extends Handler {
 
     async execute(msg) {
         if(!this.canPreview(msg.content)) {
-            return;
+            return false;
         }
 
         let preview;
@@ -93,11 +93,11 @@ class PreviewHandler extends Handler {
             }), msg.id);
 
             getLogger().error("Preview gen failed", err);
-            return;
+            return false;
         }
 
         if(!preview) {
-            return;
+            return false;
         }
 
         await msg.channel.sendTyping();
@@ -111,8 +111,10 @@ class PreviewHandler extends Handler {
             }), msg.id);
 
             getLogger().error("Reply failed", err);
-            return;
+            return false;
         }
+
+        return true;
     }
 }
 

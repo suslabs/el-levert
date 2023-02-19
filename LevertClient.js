@@ -421,9 +421,13 @@ class LevertClient extends Client {
         }
     }
 
-    executeAllHandlers(func, ...args) {
-        const promises = this.handlerList.map(x => x[func](...args));
-        return promises.reduce((a, b) => a.then(b), Promise.resolve());
+    async executeAllHandlers(func, ...args) {
+        for(const handler of this.handlerList) {
+            const out = await handler[func](...args);
+            if(out) {
+                return;
+            }
+        }
     }
 
     async start() {

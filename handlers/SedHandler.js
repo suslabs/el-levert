@@ -33,7 +33,7 @@ class SedHandler extends Handler {
 
     async execute(msg) {
         if(!this.canSed(msg.content)) {
-            return;
+            return false;
         }
 
         await msg.channel.sendTyping();
@@ -45,7 +45,7 @@ class SedHandler extends Handler {
 
         if(match.length < 3) {
             this.addMsg(await msg.reply(":warning: Encountered invalid args."), msg.id);
-            return;
+            return false;
         }
 
         let regex, sedMsg;
@@ -54,7 +54,7 @@ class SedHandler extends Handler {
             regex = new RegExp(sedRegex, flag ?? "" + "i");
         } catch(err) {
             this.addMsg(await msg.reply(":warning: Invalid regex or flags."), msg.id);
-            return;
+            return false;
         }
 
         if(msg.type === MessageType.Reply) {
@@ -65,7 +65,7 @@ class SedHandler extends Handler {
 
         if(!sedMsg) {
             this.addMsg(await msg.reply(":warning: No matching message found."), msg.id);
-            return;
+            return false;
         }
 
         const embed = new EmbedBuilder()
