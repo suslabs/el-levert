@@ -32,8 +32,8 @@ export default {
                         }
                     }
                 }   
-            } else if(Util.isScript(body)) {
-                body = Util.removeBlock(body);
+            } else {
+                [body] = Util.formatScript(body);
             }
 
             if(body.length < 1) {

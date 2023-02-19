@@ -141,14 +141,11 @@ class DBImporter {
         };
 
         const find = await this.tag_db.fetch(tag.name),
-              isScript = Util.isScript(tag.body);
+              [body, isScript] = Util.formatScript(tag.body);
 
+        tag.body = body;
         tag.args = tag.args.split(" ")[0];
         tag.type = isScript << 1;
-
-        if(isScript) {
-            tag.body = Util.removeBlock(tag.body);
-        }
 
         let quota = await this.tag_db.quotaFetch(tag.owner);
 

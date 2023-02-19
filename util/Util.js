@@ -120,10 +120,14 @@ const Util = {
 
         return s;
     },
-    isScript: body => body.startsWith("```") && body.endsWith("```"),
-    removeBlock: body => {
+    formatScript: body => {
         const match = body.match(/^`{3}([\S]+)?\n([\s\S]+)`{3}$/);
-        return match[2];
+        
+        if(match) {
+            return [match[2], true];
+        }
+
+        return [body, false];
     },
     firstCharUpper: str => str[0].toUpperCase() + str.substring(1)
 };
