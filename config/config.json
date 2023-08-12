@@ -15,10 +15,10 @@
     "maxTagSize": 100,
     "maxQuota": 1024,
     "maxGroupNameLength": 16,
-    "owner": "561157948924100634",
-    "enableSelfbot": true,
+    "owner": "",
     "enableSed": true,
-    "enableOtherLangs": true,
+    "enableOtherLangs": false,
+    "enableVM2": false,
     "enableReminders": true,
     "activity": {
         "type": "Watching",

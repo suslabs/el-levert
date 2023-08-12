@@ -97,8 +97,7 @@ Allows for more advanced scripts than the pure js API, allowing for async functi
 `config/auth.json` must exist and contain the following lines:
 
     {
-        "token": "bot token",
-        "selfbotToken": "account token (for previewing other servers)"
+        "token": "bot token"
     }
 
 `config/config.json` must have the property `owner` set to your own Discord id.
