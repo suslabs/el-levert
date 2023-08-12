@@ -2,6 +2,7 @@ import axios from "axios";
 import { getClient } from "../LevertClient.js";
 
 import VM2ProcPool from "./vm2-runner/VM2ProcPool.js";
+import Util from "../util/Util.js";
 import VMUtil from "../util/VMUtil.js";
 
 class TagVM2 {
@@ -23,7 +24,6 @@ class TagVM2 {
             wrapper: "none",
             console: "inherit",
             require: {
-                external: ["three", "minimist-string", "three/*", "canvas.cjs"],
                 builtin: ["assert", "buffer", "crypto", "events", "path", "querystring", "url", "util", "zlib"],
                 root: "../../",
                 mock: {

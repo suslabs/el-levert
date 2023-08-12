@@ -1,7 +1,6 @@
 import discord from "discord.js";
 import URL from "url";
 
-import SelfbotClient from "./SelfbotClient.js";
 import ClientError from "./errors/ClientError.js";
 
 import Util from "./util/Util.js";
@@ -196,7 +195,7 @@ class LevertClient extends Client {
                 });
 
                 if(typeof find === "undefined") {
-                    this.logger.error(`Subcommand "${n}" of command "${x.name}" not found.`);
+                    this.logger.warn(`Subcommand "${n}" of command "${x.name}" not found.`);
                     return;
                 }
 
@@ -263,27 +262,10 @@ class LevertClient extends Client {
         }
     }
 
-    async loadSelfbot() {
-        this.selfbot = new SelfbotClient();
-        this.enableSelfbot = true;
-
-        try {
-            await this.selfbot.login(auth.selfbotToken);
-        } catch(err) {
-            this.logger.error("Logging in to selfbot account failed.", err);
-            this.logger.info("Switching off selfbot.");
-
-            this.enableSelfbot = false;
-            delete this.selfbot;
-        }
-    }
-
     getChannel(ch_id, user_id, check = true) {
         let channel;
         if(this.channels.cache.has(ch_id)) {
             channel = this.channels.cache.get(ch_id);
-        } else if(this.enableSelfbot) {
-            channel = this.selfbot.getChannel(ch_id);
         } else {
             return false;
         }
@@ -354,10 +336,6 @@ class LevertClient extends Client {
               mentionMatch = search.match(/<@(\d{17,20})>/);
         
         let guilds = this.guilds.cache;
-
-        if(this.enableSelfbot) {
-            guilds = guilds.concat(this.selfbot.guilds.cache);
-        }
 
         if (idMatch ?? mentionMatch) {
             const id = idMatch[1] ?? mentionMatch[1];
@@ -447,10 +425,6 @@ class LevertClient extends Client {
         await this.login(auth.token);
 
         this.setActivity(config.activity);
-
-        if(this.config.enableSelfbot) {
-            await this.loadSelfbot();
-        }
 
         if(this.config.enableReminders) {
             setInterval(this.remindManager.sendReminders.bind(this.remindManager), 1000);
