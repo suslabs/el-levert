@@ -113,9 +113,9 @@ class PermissionManager {
             const find = (await getClient().findUsers(user.id))[0];
 
             if(typeof find !== "undefined") {
-                user.tag = find.user.tag;
+                user.username = find.user.username;
             } else {
-                user.tag = "NOT FOUND";
+                user.username = "NOT FOUND";
             }
         }
 

@@ -57,7 +57,7 @@ class CommandHandler extends Handler {
         }
 
         await msg.channel.sendTyping();
-        getLogger().info(`User ${msg.author.id} ("${msg.author.tag}") used command ${name} in channel ${msg.channel.id} ("${msg.channel.name}").`);
+        getLogger().info(`User ${msg.author.id} ("${msg.author.username}") used command ${name} in channel ${msg.channel.id} ("${msg.channel.name}").`);
         
         let out;
         

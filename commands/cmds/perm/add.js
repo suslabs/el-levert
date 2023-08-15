@@ -38,6 +38,6 @@ export default {
 
         await getClient().permManager.add(group, find.user.id);
 
-        return `:white_check_mark: Added user \`${find.user.tag}\` (${find.user.id}) to group **${g_name}**.`;
+        return `:white_check_mark: Added user \`${find.user.username}\` (${find.user.id}) to group **${g_name}**.`;
     }
 }
