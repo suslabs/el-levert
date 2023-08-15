@@ -94,10 +94,17 @@ class TagVM {
         });
 
         await this.registerFunc({
-            objName: "vm2",
-            funcName: "ctxVM2_eval",
+            objName: "util",
+            funcName: "fetchMessages",
             type: FuncTypes.syncPromise,
-            funcRef: FakeUtil.ctxVM2_eval
+            funcRef: FakeUtil.fetchMessages.bind(undefined, msg.msg.author.id)
+        });
+
+        await this.registerFunc({
+            objName: "vm2",
+            funcName: "VM2_eval",
+            type: FuncTypes.syncPromise,
+            funcRef: FakeUtil.VM2_eval
         });
 
         await this.registerFunc({
