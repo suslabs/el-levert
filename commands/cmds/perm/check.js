@@ -27,7 +27,7 @@ export default {
         const groups = await getClient().permManager.fetch(user.id);
         
         if(!groups) {
-            return `:information_source: User \`${user.tag}\` has no permissions.`;
+            return `:information_source: User \`${user.username}\` has no permissions.`;
         }
 
         if(groups.length > 1) {
@@ -38,7 +38,7 @@ export default {
 
         const maxLevel = Math.max(...groups.map(x => x.level));
 
-        return `User \`${user.tag}\` has permissions:
+        return `User \`${user.username}\` has permissions:
 \`\`\`
 ${format}
 \`\`\`

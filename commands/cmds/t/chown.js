@@ -41,7 +41,7 @@ export default {
                 return out + " Tag owner not found.";
             }
             
-            return out + ` Tag is owned by \`${owner.tag}\`.`;
+            return out + ` Tag is owned by \`${owner.username}\`.`;
         }
 
         await getClient().tagManager.chown(tag, find.user.id);

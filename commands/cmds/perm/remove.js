@@ -35,9 +35,9 @@ export default {
         const changes = (await getClient().permManager.remove(group, find.user.id)).changes;
 
         if(changes === 0) {
-            return `:warning: User \`${find.user.tag}\` (${find.user.id}) is not in group **${g_name}**.`;
+            return `:warning: User \`${find.user.username}\` (${find.user.id}) is not in group **${g_name}**.`;
         }
 
-        return `:white_check_mark: Removed user \`${find.user.tag}\` (${find.user.id}) from group **${g_name}**.`;
+        return `:white_check_mark: Removed user \`${find.user.username}\` (${find.user.id}) from group **${g_name}**.`;
     }
 }

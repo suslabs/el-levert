@@ -33,7 +33,7 @@ export default {
             return ":information_source: Tag owner not found.";
         }
 
-        let out = `:information_source: \`${owner.tag}\``;
+        let out = `:information_source: \`${owner.username}\``;
 
         if(typeof owner.nickname !== "undefined") {
             out += ` (also known as \`${owner.nickname}\`)`;

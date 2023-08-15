@@ -32,7 +32,7 @@ export default {
                 return out + " tag owner not found.";
             }
             
-            return out + ` and is owned by \`${owner.tag}\``;
+            return out + ` and is owned by \`${owner.username}\``;
         }
 
         let body = t_args, isScript, scriptType = 0;

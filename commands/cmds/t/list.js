@@ -19,7 +19,7 @@ export default {
     subcommand: true,
     handler: async (args, msg) => {
         let owner = msg.author.id,
-            tag = msg.author.tag;
+            username = msg.author.username;
 
         if(args.length > 0) {
             const find = (await getClient().findUsers(args))[0];
@@ -29,13 +29,13 @@ export default {
             }
 
             owner = find.user.id;
-            tag = find.user.tag;
+            username = find.user.username;
         }
 
         const tags = await getClient().tagManager.list(owner);
         
         if(tags.count === 0) {
-            return `:information_source: User \`${tag}\` has no tags.`;
+            return `:information_source: User \`${username}\` has no tags.`;
         }
         
         let format = "";
@@ -53,7 +53,7 @@ export default {
         }
         
         return {
-            content: `:information_source: User \`${tag}\` has following tags:`,
+            content: `:information_source: User \`${username}\` has following tags:`,
             ...Util.getFileAttach(format)
         };
     }
