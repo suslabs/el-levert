@@ -1,7 +1,7 @@
 import ivm from "isolated-vm";
 
 import { getClient } from "../LevertClient.js";
-import Util from "../util/Util.js";
+import VMUtil from "../util/VMUtil.js";
 
 export default {
     findUsers: async search => {
@@ -59,7 +59,7 @@ export default {
             return undefined;
         }
 
-        data = Util.removeCircRef(data);
+        data = VMUtil.removeCircRef(data);
         return new ivm.ExternalCopy(data).copyInto();
     },
     fetchMessages: async (user_id, ch_id, options) => {
@@ -69,10 +69,10 @@ export default {
             return undefined;
         }
         
-        data = data.map(x => Util.removeCircRef(x));
+        data = data.map(x => VMUtil.removeCircRef(x));
         return new ivm.ExternalCopy(data).copyInto();
     },
-    ctxVM2_eval: async (script, args) => {
+    VM2_eval: async (script, args) => {
         const data = await getClient().tagVM2.runScript(script, args);
 
         return new ivm.ExternalCopy(data).copyInto();
