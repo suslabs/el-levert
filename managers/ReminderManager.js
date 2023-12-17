@@ -79,23 +79,17 @@ class ReminderManager {
     async sendReminders() {
         const reminders = await this.checkPast();
 
-        for(const remind of reminders) {
-            const user = await getClient().findUserById(remind.id);
+        for(const reminder of reminders) {
+            const user = await getClient().findUserById(reminder.id);
 
             if(!user) {
                 continue;
             }
 
-            const date = new Date(remind.end),
-                  dateFormat = `${date.toLocaleDateString("en-UK")} at ${date.toLocaleTimeString("en-UK", {
-                timeStyle: "short",
-                timeZone: "UTC"
-            })}`; 
+            let out = `You set a reminder for <t:${reminder.end}:T>`;
 
-            let out = `You set a reminder for **${dateFormat}**`;
-
-            if(remind.msg.length > 0) {
-                out += ` with reason: **${remind.msg}**`;
+            if(reminder.msg.length > 0) {
+                out += ` with message: **${reminder.msg}**`;
             } else {
                 out += ".";
             }

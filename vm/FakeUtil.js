@@ -6,6 +6,7 @@ import VMUtil from "../util/VMUtil.js";
 export default {
     findUsers: async search => {
         let data = await getClient().findUsers(search);
+
         data = data.map(x => ({
             guildId: x.guild.id,
             joinedTimestamp: x.joinedTimestamp,
@@ -70,11 +71,6 @@ export default {
         }
         
         data = data.map(x => VMUtil.removeCircRef(x));
-        return new ivm.ExternalCopy(data).copyInto();
-    },
-    VM2_eval: async (script, args) => {
-        const data = await getClient().tagVM2.runScript(script, args);
-
         return new ivm.ExternalCopy(data).copyInto();
     }
 };

@@ -1,9 +1,9 @@
 import axios from "axios";
-import { getClient } from "../LevertClient.js";
+import { getClient } from "../../LevertClient.js";
 
-import VM2ProcPool from "./vm2-runner/VM2ProcPool.js";
-import Util from "../util/Util.js";
-import VMUtil from "../util/VMUtil.js";
+import VM2ProcPool from "./process-pool/ProcessPool.js";
+import Util from "../../util/Util.js";
+import VMUtil from "../../util/VMUtil.js";
 
 class TagVM2 {
     constructor() {

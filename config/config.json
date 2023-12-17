@@ -9,6 +9,8 @@
     "timeLimit": 20,
     "otherMemLimit": 50,
     "otherTimeLimit": 20,
+    "enableInspector": false,
+    "inspectorPort": 10000,
     "outCharLimit": 2000,
     "outNewlineLimit": 30,
     "maxTagNameLength": 32,

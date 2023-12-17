@@ -4,9 +4,27 @@ const { transports, format } = winston;
 
 import LoggerError from "../errors/LoggerError.js";
 
-const validForm = Object.getOwnPropertyNames(format).filter(x =>
+const formatNames = Object.getOwnPropertyNames(format).filter(x =>
     !(["length", "combine"].includes(x))
 );
+
+const enumerateErrorFormat = format(info => {
+    if(info.message instanceof Error) {
+        info.message = Object.assign({
+            message: info.message.message,
+            stack: info.message.stack
+        }, info.message);
+    }
+  
+    if(info instanceof Error) {
+        return Object.assign({
+            message: info.message,
+            stack: info.stack
+        }, info);
+    }
+  
+    return info;
+});
 
 function getFormat(names) {
     if(typeof names === "undefined") {
@@ -27,7 +45,11 @@ function getFormat(names) {
             name = x;
         }
         
-        if(!validForm.includes(name)) {
+        if(name === "custom") {
+            return prop;
+        }
+        
+        if(!formatNames.includes(name)) {
             throw new LoggerError("Invalid format: " + x);
         }
         
@@ -71,6 +93,7 @@ function createLogger(config = {}) {
     
     const logger = winston.createLogger({
         level: config.level ?? "debug",
+        format: enumerateErrorFormat(),
         transports: [
             file
         ],
