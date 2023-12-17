@@ -3,34 +3,7 @@ import net from "net";
 import crypto from "crypto";
 import genericPool from "generic-pool";
 
-import VMUtil from "../../util/VMUtil.js";
-
-async function processPacket(socket, data, funcs, resolve, reject) {
-    switch(data.packetType) {
-    case "return":
-        resolve(data);
-
-        break;
-    case "funcCall": {
-            let res;
-
-            try {
-                res = await funcs[data.funcCall.name](data.funcCall.args);
-            } catch(err) {
-                reject(err.message);
-            }
-
-            VMUtil.sockWrite(socket, "funcReturn", {
-                funcReturn: {
-                    uniqueName: data.funcCall.uniqueName,
-                    data: res
-                }
-            });
-        }
-
-        break;   
-    }
-}
+import VMUtil from "../../../util/VMUtil.js";
 
 function listener(socket, funcs) {
     return new Promise((resolve, reject) => {
@@ -62,6 +35,33 @@ function listener(socket, funcs) {
     });
 }
 
+async function processPacket(socket, data, funcs, resolve, reject) {
+    switch(data.packetType) {
+    case "return":
+        resolve(data);
+
+        break;
+    case "funcCall": {
+            let res;
+
+            try {
+                res = await funcs[data.funcCall.name](data.funcCall.args);
+            } catch(err) {
+                reject(err.message);
+            }
+
+            VMUtil.sockWrite(socket, "funcReturn", {
+                funcReturn: {
+                    uniqueName: data.funcCall.uniqueName,
+                    data: res
+                }
+            });
+        }
+
+        break;   
+    }
+}
+
 class VM2ProcPool {
     constructor({ min, max, ...limits }) {
         limits = Object.assign({
@@ -89,13 +89,9 @@ class VM2ProcPool {
         let stderrCache = "";
 
         factory.create = function() {
-            const runner = spawn("cpulimit", [
-                "-ql",
-                this.limits.cpu,
-                "--",
-                "node",
-                `--max-old-space-size=${this.limits.memory}`,
-                "ProcessRunner.js",
+            const runner = spawn("node", [
+                
+                "ScriptRunner.js",
                 ref
             ], {
                 cwd: this.dirname,

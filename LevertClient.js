@@ -16,8 +16,8 @@ import PermissionManager from "./managers/PermissionManager.js";
 import ReminderManager from "./managers/ReminderManager.js";
 
 import Command from "./commands/Command.js";
-import TagVM from "./vm/TagVM.js";
-import TagVM2 from "./vm/TagVM2.js";
+import TagVM from "./vm/isolated-vm/TagVM.js";
+import TagVM2 from "./vm/vm2/TagVM2.js";
 import ExternalVM from "./vm/ExternalVM.js";
 
 import auth from "./config/auth.json" assert { type: "json" };
@@ -32,19 +32,14 @@ const {
     Partials
 } = discord;
 
-const intents = [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildInvites,
-    GatewayIntentBits.DirectMessages
-],
-      partials = [
-    Partials.Channel
-]
-
 let client;
+function getClient() {
+    return client;
+}
+
+function getLogger() {
+    return client.logger;
+}
 
 const wrapEvent = callback => function (...args) {
     try {
@@ -61,13 +56,65 @@ const wrapEvent = callback => function (...args) {
     }
 };
 
-function getClient() {
-    return client;
-}
+const intents = [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildInvites,
+    GatewayIntentBits.DirectMessages
+],
+      partials = [
+    Partials.Channel
+]
 
-function getLogger() {
-    return client.logger;
-}
+const loggerConfig = {
+    name: "El Levert",
+    filename: config.logFile,
+    fileFormat: [
+        "json",
+        {
+            name: "timestamp",
+            prop: {
+                format: "YYYY-MM-DD HH:mm:ss",
+            }
+        },
+        {
+            name: "errors",
+            prop: {
+                stack: true,
+            }
+        }
+    ],
+    consoleFormat: [
+        "colorize",
+        {
+            name: "timestamp",
+            prop: {
+                format: "YYYY-MM-DD HH:mm:ss",
+            }
+        },
+        {
+            name: "errors",
+            prop: {
+                stack: true,
+            }
+        },
+        {
+            name: "printf",
+            prop: (info) => {
+                const log = `[${info.timestamp}] - ${info.level}: ${info.message}`;
+
+                if(info.stack) {
+                    return ;
+                }
+
+                return log;
+            }
+        }
+    ],
+    console: true,
+};
 
 class LevertClient extends Client {
     constructor() {
@@ -80,48 +127,23 @@ class LevertClient extends Client {
             throw new ClientError("Client can only be constructed once.");
         }
 
+        this.setupLogger();
         client = this;
 
         this.config = config;
         this.reactions = reactions;
-
-        this.logger = createLogger({
-            name: "El Levert",
-            filename: config.logFile,
-            fileFormat: [
-                {
-                    name: "timestamp",
-                    prop: {
-                        format: "YYYY-MM-DD HH:mm:ss",
-                    },
-                },
-                {
-                    name: "errors",
-                    prop: {
-                        stack: true,
-                    },
-                },
-                "json",
-            ],
-            consoleFormat: [
-                {
-                    name: "timestamp",
-                    prop: {
-                        format: "YYYY-MM-DD HH:mm:ss",
-                    },
-                },
-                {
-                    name: "printf",
-                    prop: ({ level, message, timestamp, stack }) =>
-                        `[${timestamp}] - ${level}: ${message}  ${level == "error" ? stack : ""}`,
-                },
-                "colorize",
-            ],
-            console: true,
-        });
-
+        
         this.events = [];
         this.commands = [];
+    }
+
+    setupLogger() {
+        if(typeof this.logger !== "undefined") {
+            this.logger.end();
+            delete this.logger;
+        }
+
+        this.logger = createLogger(loggerConfig);
     }
 
     async loadEvents() {

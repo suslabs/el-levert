@@ -43,28 +43,28 @@ export default {
               embed = new EmbedBuilder()
             .setTitle(`${eu} EU/t for ${dur}s`)
             .addFields([
-                {
-                    name: "EU/t",
-                    value: `\`\`\`lua\n${oc.map(x => x.eu.toLocaleString() + " EU/t").join("\n")}\`\`\``,
-                    inline: true
-                },
-                {
-                    name: "Time",
-                    value: `\`\`\`lua\n${oc.map(x => {
-                        if(x.t_dur < 10) {
-                            return x.t_dur.toLocaleString() + "t";
-                        } else {
-                            return x.dur.toLocaleString() + "s";
-                        }
-                    }).join("\n")}\`\`\``,
-                    inline: true
-                },
-                {
-                    name: "Voltage",
-                    value: `\`\`\`\n${oc.map(x => x.tier).join("\n")}\`\`\``,
-                    inline: true
-                }
-            ]);
+            {
+                name: "EU/t",
+                value: `\`\`\`lua\n${oc.map(x => x.eu.toLocaleString() + " EU/t").join("\n")}\`\`\``,
+                inline: true
+            },
+            {
+                name: "Time",
+                value: `\`\`\`lua\n${oc.map(x => {
+                    if(x.t_dur < 10) {
+                        return x.t_dur.toLocaleString() + "t";
+                    } else {
+                        return x.dur.toLocaleString() + "s";
+                    }
+                }).join("\n")}\`\`\``,
+                inline: true
+            },
+            {
+                name: "Voltage",
+                value: `\`\`\`\n${oc.map(x => x.tier).join("\n")}\`\`\``,
+                inline: true
+            }
+        ]);
 
         if(type === "nomi") {
             embed.setFooter({

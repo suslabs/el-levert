@@ -1,12 +1,13 @@
 import ivm from "isolated-vm";
+import WebSocket from "ws";
 
-import { getClient } from "../LevertClient.js";
+import { getClient, getLogger } from "../../LevertClient.js";
 
-import FakeAxios from "./FakeAxios.js";
-import FakeMsg from "./FakeMsg.js";
-import FakeUtil from "./FakeUtil.js";
+import FakeAxios from "../FakeAxios.js";
+import FakeMsg from "../FakeMsg.js";
+import FakeUtil from "../FakeUtil.js";
 
-import Util from "../util/Util.js";
+import Util from "../../util/Util.js";
 
 function parseReply(msg) {
     let out = JSON.parse(msg);
@@ -30,10 +31,20 @@ const FuncTypes = {
     syncPromise: "applySyncPromise"
 };
 
+const filename = "script.js",
+      inspectorUrl = "devtools://devtools/bundled/inspector.html?experiments=true&v8only=true";
+
 class TagVM {
     constructor() {
         this.memLimit = getClient().config.memLimit;
         this.timeLimit = getClient().config.timeLimit;
+
+        this.enableInspector = getClient().config.enableInspector;
+        this.inspectorPort = getClient().config.inspectorPort;
+
+        if(this.enableInspector) {
+            this.setupDebugger(this.isolate);
+        }
     }
 
     registerFunc(options) {
@@ -101,13 +112,6 @@ class TagVM {
         });
 
         await this.registerFunc({
-            objName: "vm2",
-            funcName: "VM2_eval",
-            type: FuncTypes.syncPromise,
-            funcRef: FakeUtil.VM2_eval
-        });
-
-        await this.registerFunc({
             objName: "http",
             funcName: "request",
             type: FuncTypes.syncPromise,
@@ -131,13 +135,14 @@ class TagVM {
     }
     
     async setupContext(msg, args) {
-        this.context = await this.isolate.createContext();
-        const global = this.context.global;
+        this.context = await this.isolate.createContext({
+            inspector: this.enableInspector
+        });
 
+        const global = this.context.global;
         await global.set("global", global.derefInto());
 
         msg = new FakeMsg(msg);
-        
         await global.set("msg", new ivm.ExternalCopy(msg.fixedMsg).copyInto());
 
         if(typeof args !== "undefined") {
@@ -160,18 +165,85 @@ class TagVM {
         await this.registerFuncs(msg);
     }
 
-    async runScript(code, msg, args) {
-        this.isolate = new ivm.Isolate({
-            memoryLimit: this.memLimit
+    setupDebugger() {
+        let wss = new WebSocket.Server({
+            port: this.inspectorPort
         });
 
-        const script = await this.isolate.compileScript(code);
+        let handleConnection = function(ws) {
+            if(typeof this.isolate === "undefined") {
+                return;
+            }
+
+            let channel = this.isolate.createInspectorSession();
+
+            function dispose() {
+                try {
+                    channel.dispose();
+                } catch (err) {
+                    getLogger().error(err.message);
+                }
+            }
+
+            ws.on("error", (err) => {
+                getLogger().error(err.message);
+                dispose();
+            });
+
+            ws.on("close", (code, reason) => {
+                getLogger().info(`Websocket closed: ${code}, ${reason}`);
+                dispose();
+            });
+
+            ws.on("message", function(msg) {
+                try {
+                    const str = String(msg);
+                    channel.dispatchProtocolMessage(str);
+                } catch (err) {
+                    getLogger().error("Error message to inspector", err);
+                    ws.close();
+                }
+            });
+
+            function send(message) {
+                try {
+                    ws.send(message);
+                } catch (err) {
+                    getLogger().error(err);
+                    dispose();
+                }
+            }
+
+            channel.onResponse = (callId, message) => send(message);
+            channel.onNotification = send;
+        }
+
+        handleConnection = handleConnection.bind(this);
+        wss.on("connection", handleConnection);
+
+        this.wss = wss;
+        getLogger().info("Inspector: " + inspectorUrl + `&ws=127.0.0.1:${this.inspectorPort}`);
+    }
+
+    async runScript(code, msg, args) {
+        this.isolate = new ivm.Isolate({
+            memoryLimit: this.memLimit,
+            inspector: this.enableInspector
+        });
+
+        const script = await this.isolate.compileScript(code, {
+            filename: `file:///${filename}`
+        });
+
         await this.setupContext(msg, args);
              
         try {
             const res = await script.run(this.context, {
                 timeout: this.timeLimit * 1000
             });
+
+            this.isolate.dispose();
+            this.isolate = undefined;
             
             if(typeof res === "number") {
                 return res.toString();
@@ -179,6 +251,9 @@ class TagVM {
 
             return res;
         } catch(err) {
+            this.isolate.dispose();
+            this.isolate = undefined;
+
             if(err.name === "ManevraError") {
                 return parseReply(err.message);
             }
