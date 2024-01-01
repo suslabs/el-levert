@@ -47,6 +47,10 @@ class ReactionHandler extends Handler {
     }
 
     async paransReact(msg) {
+        if(typeof this.parans.left === "undefined" || typeof this.parans.right === "undefined") {
+            return;
+        }
+
         let parans = this.countParans(msg.content);
 
         if(parans > 0) {
@@ -81,7 +85,10 @@ class ReactionHandler extends Handler {
     }
 
     async funnyReact(msg) {
-        const words = msg.content.normalize("NFKD").split(" ");
+        let content = msg.content.toLowerCase();
+        content = content.normalize("NFKD");
+
+        const words = content.split(" ");
 
         try {
             for (const w of words) {

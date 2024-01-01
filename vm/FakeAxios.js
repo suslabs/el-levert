@@ -1,9 +1,18 @@
 import ivm from "isolated-vm";
 import axios from "axios";
 
+async function request(...args) {
+    try {
+        return await axios.request(...args);
+    } catch(err) {
+        console.log();
+        throw err;
+    }
+}
+
 export default {
     request: async (...args) => {
-        const res = await axios.request.apply(this, args);
+        let res = await request.apply(this, args);
         
         return new ivm.ExternalCopy({
             data: res.data,

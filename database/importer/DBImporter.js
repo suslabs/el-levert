@@ -2,7 +2,9 @@ import path from "path";
 import fs from "fs/promises";
 
 import TagDatabase from "../TagDatabase.js";
-import createLogger from "../../util/logger.js";
+
+import createLogger from "../../logger/CreateLogger.js";
+import getDefaultLoggerConfig from "../../logger/DefaultConfig.js";
 
 import config from "../../config/config.json" assert { type: "json" };
 import Util from "../../util/Util.js";
@@ -11,40 +13,8 @@ class DBImporter {
     constructor(jsonPath) {
         this.jsonPath = jsonPath;
 
-        this.logger = createLogger({
-            name: "Importer",
-            filename: config.importLogFile,
-            fileFormat: [
-                {
-                    name: "timestamp",
-                    prop: {
-                        format: "YYYY-MM-DD HH:mm:ss",
-                    },
-                },
-                {
-                    name: "errors",
-                    prop: {
-                        stack: true,
-                    },
-                },
-                "json",
-            ],
-            consoleFormat: [
-                {
-                    name: "timestamp",
-                    prop: {
-                        format: "YYYY-MM-DD HH:mm:ss",
-                    },
-                },
-                {
-                    name: "printf",
-                    prop: ({ level, message, timestamp, stack }) =>
-                        `[${timestamp}] - ${level}: ${message}  ${level == "error" ? stack : ""}`,
-                },
-                "colorize",
-            ],
-            console: true,
-        });
+        const config = getDefaultLoggerConfig(config.importLogFile, "Importer");
+        this.logger = createLogger(config);
     }
 
     async loadDatabase() {
@@ -126,7 +96,7 @@ class DBImporter {
     }
 
     async editAlias(tag, find, quota) {
-
+        this.logger.warn("Didn't edit alias " + tag.name);
     }
 
     async importTag(tag) {

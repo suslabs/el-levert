@@ -2,9 +2,10 @@ import discord from "discord.js";
 import URL from "url";
 
 import ClientError from "./errors/ClientError.js";
-
 import Util from "./util/Util.js";
-import createLogger from "./util/logger.js";
+
+import createLogger from "./logger/CreateLogger.js";
+import getDefaultLoggerConfig from "./logger/DefaultConfig.js";
 
 import ReactionHandler from "./handlers/ReactionHandler.js";
 import CommandHandler from "./handlers/CommandHandler.js";
@@ -41,21 +42,6 @@ function getLogger() {
     return client.logger;
 }
 
-const wrapEvent = callback => function (...args) {
-    try {
-        const out = callback(...args);
-
-        if(typeof out === "object" && typeof out.then === "function") {
-            out.catch(err => client.logger.error(err));
-        }
-
-        return out;
-    } catch (err) {
-        console.log(client)
-        client.logger.error(err);
-    }
-};
-
 const intents = [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
@@ -68,54 +54,6 @@ const intents = [
     Partials.Channel
 ]
 
-const loggerConfig = {
-    name: "El Levert",
-    filename: config.logFile,
-    fileFormat: [
-        "json",
-        {
-            name: "timestamp",
-            prop: {
-                format: "YYYY-MM-DD HH:mm:ss",
-            }
-        },
-        {
-            name: "errors",
-            prop: {
-                stack: true,
-            }
-        }
-    ],
-    consoleFormat: [
-        "colorize",
-        {
-            name: "timestamp",
-            prop: {
-                format: "YYYY-MM-DD HH:mm:ss",
-            }
-        },
-        {
-            name: "errors",
-            prop: {
-                stack: true,
-            }
-        },
-        {
-            name: "printf",
-            prop: (info) => {
-                let log = `[${info.timestamp}] - ${info.level}: ${info.message}`;
-
-                if(info.stack) {
-                    log += `\n${info.stack}`;
-                }
-
-                return log;
-            }
-        }
-    ],
-    console: true
-};
-
 class LevertClient extends Client {
     constructor() {
         super({
@@ -124,17 +62,17 @@ class LevertClient extends Client {
         });
 
         if(client) {
-            throw new ClientError("Client can only be constructed once.");
+            throw new ClientError("The client can only be constructed once.");
         }
-
-        this.setupLogger();
-        client = this;
         
         this.config = config;
         this.reactions = reactions;
         
         this.events = [];
         this.commands = [];
+
+        this.setupLogger();
+        client = this;
     }
 
     setupLogger() {
@@ -143,7 +81,8 @@ class LevertClient extends Client {
             delete this.logger;
         }
 
-        this.logger = createLogger(loggerConfig);
+        const config = getDefaultLoggerConfig(this.config.logFile, "El Levert");
+        this.logger = createLogger(config);
     }
 
     async loadEvents() {
@@ -445,14 +384,43 @@ class LevertClient extends Client {
         }
 
         await this.login(auth.token);
-
         this.setActivity(config.activity);
 
         if(this.config.enableReminders) {
             setInterval(this.remindManager.sendReminders.bind(this.remindManager), 1000);
             this.logger.info("Started reminder loop.");
         }
+
+        if(this.config.enableGlobalHandler) {
+            registerGlobalHandler();
+        }
     }
+}
+
+const wrapEvent = callback => function (...args) {
+    try {
+        const out = callback(...args);
+
+        if(typeof out === "object" && typeof out.then === "function") {
+            out.catch(err => client.logger.error(err));
+        }
+
+        return out;
+    } catch (err) {
+        console.log(client)
+        client.logger.error(err);
+    }
+};
+
+function registerGlobalHandler() {
+    process.on("uncaughtException", function (err1) {
+        try {
+            getLogger().error("Uncaught exception:", err1);
+        } catch(err2) {
+            console.error("Error occured while reporting uncaught error:", err2);
+            console.error("Uncaught error:", err1);
+        }
+    });
 }
 
 export { LevertClient, getClient, getLogger };
