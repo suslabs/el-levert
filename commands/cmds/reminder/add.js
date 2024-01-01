@@ -30,12 +30,9 @@ export default {
             }
         }
 
-        parsed = new Date(parsed);
-        await getClient().remindManager.add(msg.author.id, parsed.getTime(), remindMsg);
+        const end = new Date(parsed).getTime();
+        await getClient().remindManager.add(msg.author.id, end, remindMsg);
 
-        return `:information_source: You will be reminded on **${parsed.toLocaleDateString("en-UK")}** at **${parsed.toLocaleTimeString("en-UK", {
-            timeStyle: "short",
-            timeZone: "UTC"
-        })}**.`;
+        return `:information_source: You will be reminded on <t:${Math.floor(end / 1000)}:f>.`;
     }
 }

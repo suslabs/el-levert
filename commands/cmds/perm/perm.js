@@ -1,6 +1,3 @@
-import Util from "../../../util/Util.js";
-import { getClient } from "../../../LevertClient.js";
-
 export default {
     name: "perm",
     aliases: ["p"],
@@ -8,8 +5,8 @@ export default {
         "add",
         "remove",
         "list",
-        "addgroup",
-        "removegroup",
+        "add_group",
+        "remove_group",
         "check"
     ],
     handler: async function(args, msg) {

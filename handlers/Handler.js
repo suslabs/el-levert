@@ -1,3 +1,5 @@
+import { getLogger } from "../LevertClient.js";
+
 function addMsg(msg, trigger_id) {
     if(this.trackedMsgs.size >= this.trackLimit) {
         const [key] = this.trackedMsgs.keys();
@@ -43,10 +45,18 @@ class Handler {
 
         if(sentMsg.constructor.name === "Array") {
             for(const sent of sentMsg) {
-                await sent.delete();
+                try {
+                    await sent.delete();
+                } catch(err) {
+                    getLogger().error("Could not delete message", err);
+                }
             }
         } else {
-            await sentMsg.delete();
+            try {
+                await sentMsg.delete();
+            } catch(err) {
+                getLogger().error("Could not delete message", err);
+            }
         }
 
         return true;

@@ -1,7 +1,7 @@
 import { getClient } from "../../../LevertClient.js";
 
 export default {
-    name: "removeall",
+    name: "remove_all",
     parent: "reminder",
     subcommand: true,
     handler: async (_, msg) => {

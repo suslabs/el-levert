@@ -86,10 +86,10 @@ class ReminderManager {
                 continue;
             }
 
-            let out = `You set a reminder for <t:${reminder.end}:T>`;
+            let out = `You set a reminder for <t:${Math.floor(reminder.end / 1000)}:f>`;
 
             if(reminder.msg.length > 0) {
-                out += ` with message: **${reminder.msg}**`;
+                out += ` with the message: **${reminder.msg}**`;
             } else {
                 out += ".";
             }

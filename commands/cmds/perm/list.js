@@ -15,11 +15,8 @@ export default {
         const format = groups.map((x, i) => `${i + 1}. ${x.name} - Level ${x.level} - Users:\n` + (
                        x.users.length > 0 ?
                        x.users.map((y, j) => `    ${j + 1}. \`${y.username}\` (${y.id})`).join("\n")
-                       : "none")).join("\n");
+                       : "    none")).join("\n");
 
-        return {
-            content: `:information_source: Registered permissions:`,
-            ...Util.getFileAttach(format)
-        };
+        return `:information_source: Registered permissions:\n${format}`;
     }
 }
