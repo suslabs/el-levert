@@ -7,7 +7,7 @@ export default {
         "add",
         "list",
         "remove",
-        "removeall"
+        "remove_all"
     ],
     load: _ => getClient().config.enableReminders,
     handler: async function(args, msg) {

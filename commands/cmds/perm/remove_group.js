@@ -2,7 +2,7 @@ import Util from "../../../util/Util.js";
 import { getClient } from "../../../LevertClient.js";
 
 export default {
-    name: "removegroup",
+    name: "remove_group",
     parent: "perm",
     subcommand: true,
     allowed: 2,

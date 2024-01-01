@@ -103,17 +103,17 @@ const loggerConfig = {
         {
             name: "printf",
             prop: (info) => {
-                const log = `[${info.timestamp}] - ${info.level}: ${info.message}`;
+                let log = `[${info.timestamp}] - ${info.level}: ${info.message}`;
 
                 if(info.stack) {
-                    return ;
+                    log += `\n${info.stack}`;
                 }
 
                 return log;
             }
         }
     ],
-    console: true,
+    console: true
 };
 
 class LevertClient extends Client {
@@ -129,7 +129,7 @@ class LevertClient extends Client {
 
         this.setupLogger();
         client = this;
-
+        
         this.config = config;
         this.reactions = reactions;
         
