@@ -37,10 +37,10 @@ Subcommands:
 - add `(group_name)` `(user)` - Add `(user)` to `(group_name)`. Can be executed by admin and above. Cannot add yourself to a group with a level higher than your own.
 - remove `(group_name)` `(user)` - Remove `(user)` from `(group_name)`. Can be executed by admin and above.
 - list - Sends registered permissions. Can be executed by anyone.
-- addgroup `(group_name) (level)` - Add `(group_name)` with the specified level.
+- add_group `(group_name) (level)` - Add `(group_name)` with the specified level.
    Level 1 = Moderator
    Level 2 = Admin
-- removegroup `(group_name)` - Removes `(group_name)` from the group list and from the permission list of everyone added to it.
+- remove_group `(group_name)` - Removes `(group_name)` from the group list and from the permission list of everyone added to it.
 - check `(user)` - Sends permission details for `(user)`. Can be executed by anyone
 
 ## 5. oc `-version (EU/t) (duration)`
@@ -57,7 +57,7 @@ Subcommands:
 - add `(date) "message"` - Adds a reminder for the specified date.
 - list `user` - Lists all of your reminders. If `user` is specified, their reminders will be listed instead.
 - remove `(index)` - Removes reminder at the specified index in your list.
-- removeall - Removes all reminders.
+- remove_all - Removes all reminders.
 
 # Evaluation API
 ## 1. `eval` / pure js API
