@@ -6,9 +6,9 @@
     "dbPath": "./database/db",
     "cmdPrefix": "%",
     "memLimit": 50,
-    "timeLimit": 20,
+    "timeLimit": 15,
     "otherMemLimit": 50,
-    "otherTimeLimit": 20,
+    "otherTimeLimit": 15,
     "enableInspector": false,
     "inspectorPort": 10000,
     "outCharLimit": 2000,
@@ -17,7 +17,7 @@
     "maxTagSize": 100,
     "maxQuota": 1024,
     "maxGroupNameLength": 16,
-    "owner": "561157948924100634",
+    "owner": "",
     "enableSed": true,
     "enableOtherLangs": false,
     "enableVM2": false,
@@ -25,5 +25,6 @@
     "activity": {
         "type": "Watching",
         "text": "over Innerius's holy temple"
-    }
+    },
+    "enableGlobalHandler": true
 }

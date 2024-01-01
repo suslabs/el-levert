@@ -18,7 +18,9 @@ class PreviewHandler extends Handler {
 
     async genPreview(msg) {
         const match = msg.content.match(this.regex),
-              sv_id = match[1],
+              url = match[0];
+
+        const sv_id = match[1],
               ch_id = match[2],
               msg_id = match[3];
         
@@ -68,7 +70,7 @@ class PreviewHandler extends Handler {
             }
         }
 
-        embed.setDescription(`${content}\n\n[[Jump to Message]](${msg.content})`);
+        embed.setDescription(`${content}\n\n[[Jump to Message]](${url})`);
 
         return {
             embeds: [
