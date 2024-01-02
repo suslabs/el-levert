@@ -9,7 +9,7 @@ import Util from "../util/Util.js";
 import TagDatabase from "../database/TagDatabase.js";
 
 const isTagName = name => {
-    return /^[A-Za-z0-9\-_]+$/.test(name);
+    return /^[A-Za-z0-9\-_+^@<>*]+$/.test(name);
 }
 
 class TagManager {
