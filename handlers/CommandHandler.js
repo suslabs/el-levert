@@ -3,6 +3,25 @@ import Handler from "./Handler.js";
 import Util from "../util/Util.js";
 import { getClient, getLogger } from "../LevertClient.js";
 
+class TrackedUser {
+    constructor(id, time) {
+        this.id = id;
+        this.time = time;
+    }
+}
+
+function checkUsers() {
+    for(const user of this.trackedUsers) {
+        const timeDiff = Date.now() - user.time;
+
+        if(timeDiff > this.checkInterval) {
+            this.removeUser(user.id);
+        }
+    }
+}
+
+const checkInterval = 1000;
+
 class CommandHandler extends Handler {
     constructor() {
         super();
@@ -14,6 +33,10 @@ class CommandHandler extends Handler {
         this.newlineLimit = Util.clamp(getClient().config.outNewlineLimit, 0, 2000);
 
         this.trackedUsers = [];
+        this.checkInterval = checkInterval;
+
+        const checkUsersCb = checkUsers.bind(this);
+        setInterval(checkUsersCb, this.checkInterval);
     }
 
     isCmd(str) {
@@ -30,8 +53,18 @@ class CommandHandler extends Handler {
         });
     }
 
-    removeUser(msg) {
-        this.trackedUsers = this.trackedUsers.filter(x => x !== msg.author.id);
+    searchUser(id) {
+        return this.trackedUsers.find(x => x.id === id);
+    }
+
+    addUser(id) {
+        const user = new TrackedUser(id, Date.now())
+        this.trackedUsers.push(user);
+    }
+
+    removeUser(id) {
+        this.trackedUsers = this.trackedUsers.filter(x =>
+            x.id !== id);
     }
 
     async execute(msg) {
@@ -39,12 +72,12 @@ class CommandHandler extends Handler {
             return false;
         }
 
-        if(this.trackedUsers.includes(msg.author.id)) {
+        if(this.searchUser(msg.author.id)) {
             this.addMsg(await msg.reply(":warning: Please wait for the previous command to finish."));
             return false;
         }
 
-        this.trackedUsers.push(msg.author.id);
+        this.addUser(msg.author.id);
 
         const content = msg.content.slice(this.cmdPrefix.length),
               [name, args] = Util.splitArgs(content);
@@ -52,7 +85,7 @@ class CommandHandler extends Handler {
         const cmd = this.searchCmds(name);
 
         if(typeof cmd === "undefined") {
-            this.removeUser(msg);
+            this.removeUser(msg.author.id);
             return false;
         }
 
@@ -75,7 +108,7 @@ class CommandHandler extends Handler {
 
             getLogger().error("Command execution failed", err);
 
-            this.removeUser(msg);
+            this.removeUser(msg.author.id);
             return false;
         }
         
@@ -93,7 +126,7 @@ class CommandHandler extends Handler {
             if(err.message === "Cannot send an empty message") {
                 this.addMsg(await msg.reply(`:no_entry_sign: ${err.message}.`), msg.id);
 
-                this.removeUser(msg);
+                this.removeUser(msg.author.id);
                 return false;
             }
 
@@ -104,11 +137,11 @@ class CommandHandler extends Handler {
 
             getLogger().error("Reply failed", err);
 
-            this.removeUser(msg);
+            this.removeUser(msg.author.id);
             return false;
         }
 
-        this.removeUser(msg);
+        this.removeUser(msg.author.id);
         return true;
     }
 }
