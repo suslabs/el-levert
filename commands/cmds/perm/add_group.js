@@ -10,7 +10,7 @@ export default {
         let [g_name, level] = Util.splitArgs(args);
 
         if(args.length === 0 || g_name.length === 0 || level.length === 0) {
-            return ":information_source: `perm addgroup [group name] [level]`";
+            return ":information_source: `perm add_group [group name] [level]`";
         }
 
         const e = getClient().permManager.checkName(g_name);
