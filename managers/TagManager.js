@@ -8,15 +8,16 @@ import Tag from "../database/Tag.js";
 import Util from "../util/Util.js";
 import TagDatabase from "../database/TagDatabase.js";
 
-const isTagName = name => {
-    return /^[A-Za-z0-9\-_+^@<>*]+$/.test(name);
-}
-
 class TagManager {
     constructor() {
         this.maxQuota = getClient().config.maxQuota;
         this.maxTagSize = getClient().config.maxTagSize;
         this.maxTagNameLength = getClient().config.maxTagNameLength;
+
+        this.tagNameRegex = new RegExp(getClient().config.tagNameRegex),
+        this.isTagName = name => {
+            return this.tagNameRegex.test(name);
+        };
     }
 
     async loadDatabase() {
@@ -44,7 +45,7 @@ class TagManager {
     checkName(name) {
         if(name.length > this.maxTagNameLength) {
             return `The tag name can be at most ${this.maxTagNameLength} characters long.`;
-        } else if(!isTagName(name)) {
+        } else if(!this.isTagName(name)) {
             return "The tag name must consist of Latin characters, numbers, _ or -.";
         }
     }

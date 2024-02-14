@@ -15,6 +15,7 @@
     "outNewlineLimit": 30,
     "maxTagNameLength": 32,
     "maxTagSize": 100,
+    "tagNameRegex": "^[A-Za-z0-9\\-_]+$",
     "maxQuota": 1024,
     "maxGroupNameLength": 16,
     "owner": "",
