@@ -31,7 +31,7 @@ export default {
 
         let tag = await getClient().tagManager.fetch(t_name);
 
-        if(!tag) {            
+        if(!tag) {
             const find = await getClient().tagManager.search(t_name, 0.5);
             let out = `:warning: Tag **${t_name}** doesn't exist.`;
             
@@ -73,10 +73,7 @@ export default {
 
         if(typeof out === "string" && getClient().handlers.previewHandler.canPreview(out)) {
             try {
-                prev = await getClient().handlers.previewHandler.genPreview({
-                    ...msg,
-                    content: out
-                });
+                prev = await getClient().handlers.previewHandler.genPreview(msg, out);
             } catch(err) {
                 getLogger().error("Preview gen failed", err);
 
