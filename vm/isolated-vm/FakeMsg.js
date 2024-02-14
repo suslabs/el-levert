@@ -4,6 +4,7 @@ class FakeMsg {
     constructor(msg) {
         this.msg = msg;
         
+        const attachments = Array.from(msg.attachments.values());
         this.fixedMsg = {
             channelId: msg.channelId,
             guildId: msg.guildId,
@@ -18,7 +19,7 @@ class FakeMsg {
             nonce: msg.nonce,
             embeds: msg.embeds,
             components: msg.components,
-            attachments: msg.attachments,
+            attachments: attachments,
             stickers: msg.stickers,
             position: msg.position,
             roleSubscriptionData: msg.roleSubscriptionData,
