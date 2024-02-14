@@ -10,14 +10,19 @@ function parseReply(msg) {
     const client = getClient();
     let out = JSON.parse(msg);
 
-    const split = out.content.split("\n");
-    if(out.content.length > client.config.outCharLimit ||
-       split.length > client.config.outNewlineLimit) {
-        return Util.getFileAttach(out.content);
+    if(typeof out.content !== "undefined") {
+        const split = out.content.split("\n");
+
+        if(out.content.length > client.config.outCharLimit ||
+           split.length > client.config.outNewlineLimit) {
+            return Util.getFileAttach(out.content);
+        }
     }
-    
+
     if(typeof out.file !== "undefined") {
-        out.file.data = Object.values(out.file.data);
+        if(typeof out.file.data === "object") {
+            out.file.data = Object.values(out.file.data);
+        }
 
         out = {
             ...out,
@@ -139,18 +144,18 @@ class TagVM {
         } catch(err) {
             if(err.name === "ManevraError") {
                 res = parseReply(err.message);
+            } else {
+                switch(err.message) {
+                    case "Script execution timed out.":
+                        res = ":no_entry_sign: " + err.message;
+                        break;
+                    case "Isolate was disposed during execution due to memory limit":
+                        res = ":no_entry_sign: Memory limit reached.";
+                        break;
+                    }
+        
+                    throw err;
             }
-
-            switch(err.message) {
-            case "Script execution timed out.":
-                res = ":no_entry_sign: " + err.message;
-                break;
-            case "Isolate was disposed during execution due to memory limit":
-                res = ":no_entry_sign: Memory limit reached.";
-                break;
-            }
-
-            throw err;
         } finally {
             this.disposeIsolate();
             return res;
