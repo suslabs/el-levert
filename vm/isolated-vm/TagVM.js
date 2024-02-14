@@ -3,10 +3,7 @@ import WebSocket from "ws";
 
 import { getClient, getLogger } from "../../LevertClient.js";
 
-import FakeAxios from "../FakeAxios.js";
-import FakeMsg from "../FakeMsg.js";
-import FakeUtil from "../FakeUtil.js";
-
+import LevertContext from "./LevertContext.js";
 import Util from "../../util/Util.js";
 
 function parseReply(msg) {
@@ -32,12 +29,6 @@ function parseReply(msg) {
     return out;
 }
 
-const FuncTypes = {
-    regular: "applySync",
-    ignored: "applyIgnored",
-    syncPromise: "applySyncPromise"
-};
-
 const filename = "script.js",
       inspectorUrl = "devtools://devtools/bundled/inspector.html?experiments=true&v8only=true";
 
@@ -52,124 +43,6 @@ class TagVM {
         if(this.enableInspector) {
             this.setupDebugger(this.isolate);
         }
-    }
-
-    registerFunc(options) {
-        const objName = options.objName,
-              funcName = options.funcName,
-              type = options.type,
-              funcRef = options.funcRef;
-
-        const body = options.body ?? `return $0.${type}(undefined, args, {
-            arguments: {
-                copy: true
-            }
-        });`,
-              code = `(function() {
-    if(typeof ${objName} === "undefined") {
-        ${objName} = {};
-    }
-
-    ${objName}.${funcName} = (...args) => {
-        ${body}
-    }
-})();`;
-
-        return this.context.evalClosure(code, [funcRef], {
-            arguments: {
-                reference: true
-            }
-        });
-    }
-
-    async registerFuncs(msg) {
-        await this.registerFunc({
-            objName: "util",
-            funcName: "findUsers",
-            type: FuncTypes.syncPromise,
-            funcRef: FakeUtil.findUsers
-        });
-
-        await this.registerFunc({
-            objName: "util",
-            funcName: "dumpTags",
-            type: FuncTypes.syncPromise,
-            funcRef: FakeUtil.dumpTags
-        });
-
-        await this.registerFunc({
-            objName: "util",
-            funcName: "fetchTag",
-            type: FuncTypes.syncPromise,
-            funcRef: FakeUtil.fetchTag
-        });
-
-        await this.registerFunc({
-            objName: "util",
-            funcName: "fetchMessage",
-            type: FuncTypes.syncPromise,
-            funcRef: FakeUtil.fetchMessage.bind(undefined, msg.msg.author.id)
-        });
-
-        await this.registerFunc({
-            objName: "util",
-            funcName: "fetchMessages",
-            type: FuncTypes.syncPromise,
-            funcRef: FakeUtil.fetchMessages.bind(undefined, msg.msg.author.id)
-        });
-
-        await this.registerFunc({
-            objName: "http",
-            funcName: "request",
-            type: FuncTypes.syncPromise,
-            funcRef: FakeAxios.request
-        });
-
-        await this.registerFunc({
-            objName: "msg",
-            funcName: "reply",
-            funcRef: msg.reply,
-            body: `
-        const ret = $0.applySync(undefined, args, {
-            arguments: {
-                copy: true
-            }
-        });
-
-        throw new ManevraError(ret);
-`
-        });
-    }
-    
-    async setupContext(msg, args) {
-        this.context = await this.isolate.createContext({
-            inspector: this.enableInspector
-        });
-
-        const global = this.context.global;
-        await global.set("global", global.derefInto());
-
-        msg = new FakeMsg(msg);
-        await global.set("msg", new ivm.ExternalCopy(msg.fixedMsg).copyInto());
-
-        if(typeof args !== "undefined") {
-            args = args.length > 0 ? args : undefined;
-
-            await global.set("tag", new ivm.ExternalCopy({
-                args: args
-            }).copyInto());
-        }
-
-        await this.context.eval(`class ManevraError extends Error {
-    constructor(message = "", ...args) {
-        super(message, ...args);
-        
-        this.name = "ManevraError";
-        this.message = message;
-    }
-}`);
-
-        await this.registerFuncs(msg);
     }
 
     setupDebugger() {
@@ -232,47 +105,55 @@ class TagVM {
         getLogger().info("Inspector: " + inspectorUrl + `&ws=127.0.0.1:${this.inspectorPort}`);
     }
 
-    async runScript(code, msg, args) {
+    async setupIsolate(code, msg, args) {
         this.isolate = new ivm.Isolate({
             memoryLimit: this.memLimit,
             inspector: this.enableInspector
         });
 
-        const script = await this.isolate.compileScript(code, {
+        this.script = await this.isolate.compileScript(code, {
             filename: `file:///${filename}`
         });
 
-        await this.setupContext(msg, args);
+        const levertContext = new LevertContext(this.isolate);
+        this.context = await levertContext.getContext(msg, args);
+    }
+
+    disposeIsolate() {
+        this.isolate.dispose();
+        this.isolate = undefined;
+    }
+
+    async runScript(code, msg, args) {
+        await this.setupIsolate(code, msg, args);
+        let res;
              
         try {
-            const res = await script.run(this.context, {
+            res = await this.script.run(this.context, {
                 timeout: this.timeLimit * 1000
             });
 
-            this.isolate.dispose();
-            this.isolate = undefined;
-            
             if(typeof res === "number") {
-                return res.toString();
+                res = res.toString();
             }
-
-            return res;
         } catch(err) {
-            this.isolate.dispose();
-            this.isolate = undefined;
-
             if(err.name === "ManevraError") {
-                return parseReply(err.message);
+                res = parseReply(err.message);
             }
 
             switch(err.message) {
             case "Script execution timed out.":
-                return ":no_entry_sign: " + err.message;
+                res = ":no_entry_sign: " + err.message;
+                break;
             case "Isolate was disposed during execution due to memory limit":
-                return ":no_entry_sign: Memory limit reached.";
+                res = ":no_entry_sign: Memory limit reached.";
+                break;
             }
 
             throw err;
+        } finally {
+            this.disposeIsolate();
+            return res;
         }
     }
 }

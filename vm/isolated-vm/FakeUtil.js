@@ -1,9 +1,9 @@
 import ivm from "isolated-vm";
 
-import { getClient } from "../LevertClient.js";
-import VMUtil from "../util/VMUtil.js";
+import { getClient } from "../../LevertClient.js";
+import VMUtil from "../../util/VMUtil.js";
 
-export default {
+const FakeUtil = {
     findUsers: async search => {
         let data = await getClient().findUsers(search);
 
@@ -74,3 +74,5 @@ export default {
         return new ivm.ExternalCopy(data).copyInto();
     }
 };
+
+export default FakeUtil;

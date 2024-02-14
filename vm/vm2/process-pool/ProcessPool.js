@@ -73,7 +73,7 @@ class VM2ProcPool {
         this.limits = limits;
         this.limitError = null;
 
-        this.dirname = "./vm/vm2-runner";
+        this.dirname = "./vm/vm2/runner";
     }
 
     createPool() {
@@ -90,7 +90,6 @@ class VM2ProcPool {
 
         factory.create = function() {
             const runner = spawn("node", [
-                
                 "ScriptRunner.js",
                 ref
             ], {
