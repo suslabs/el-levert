@@ -10,7 +10,7 @@ async function request(...args) {
     }
 }
 
-export default {
+const FakeAxios = {
     request: async (...args) => {
         let res = await request.apply(this, args);
         
@@ -22,3 +22,5 @@ export default {
         }).copyInto();
     }
 };
+
+export default FakeAxios;

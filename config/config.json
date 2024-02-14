@@ -21,7 +21,7 @@
     "owner": "",
     "enableSed": true,
     "enableOtherLangs": false,
-    "enableVM2": false,
+    "enableVM2": true,
     "enableReminders": true,
     "activity": {
         "type": "Watching",
