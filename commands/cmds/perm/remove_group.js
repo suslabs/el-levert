@@ -8,7 +8,7 @@ export default {
     allowed: 2,
     handler: async (args, msg) => {
         if(args.length === 0) {
-            return ":information_source: `perm removegroup [group name]`";
+            return ":information_source: `perm remove_group [group name]`";
         }
 
         const [g_name] = Util.splitArgs(args),
