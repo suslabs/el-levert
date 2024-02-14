@@ -10,7 +10,14 @@ import FakeUtil from "../FakeUtil.js";
 import Util from "../../util/Util.js";
 
 function parseReply(msg) {
+    const client = getClient();
     let out = JSON.parse(msg);
+
+    const split = out.content.split("\n");
+    if(out.content.length > client.config.outCharLimit ||
+       split.length > client.config.outNewlineLimit) {
+        return Util.getFileAttach(out.content);
+    }
     
     if(typeof out.file !== "undefined") {
         out.file.data = Object.values(out.file.data);

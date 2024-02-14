@@ -115,7 +115,7 @@ class CommandHandler extends Handler {
         if(typeof out === "string") {
             const split = out.split("\n");
             
-            if(out.length > this.charLimit || split.length > this.newlineLimit) {
+            if(out.length > this.outCharLimit || split.length > this.outNewlineLimit) {
                 out = Util.getFileAttach(out);
             }
         }
