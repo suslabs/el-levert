@@ -8,7 +8,6 @@ import Util from "../util/Util.js";
 class PreviewHandler extends Handler {
     constructor() {
         super();
-
         this.regex = /https:\/\/discord.com\/channels\/(\d{18,19})\/(\d{18,19})\/(\d{18,19})/;
     }
 
@@ -16,9 +15,9 @@ class PreviewHandler extends Handler {
         return this.regex.test(str);
     }
 
-    async genPreview(msg) {
-        const match = msg.content.match(this.regex),
-              url = match[0];
+    async genPreview(msg, url) {
+        const match = url.match(this.regex),
+              msgUrl = match[0];
 
         const sv_id = match[1],
               ch_id = match[2],
@@ -87,7 +86,7 @@ class PreviewHandler extends Handler {
         let preview;
         
         try {
-            preview = await this.genPreview(msg);
+            preview = await this.genPreview(msg, msg.content);
         } catch(err) {
             this.addMsg(await msg.reply({
                 content: ":no_entry_sign: Encountered exception while generating preview:",
