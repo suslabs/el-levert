@@ -1,5 +1,7 @@
 import ivm from "isolated-vm";
 
+import { getLogger } from "../../LevertClient.js";
+
 import FakeMsg from "./FakeMsg.js";
 import FakeUtil from "./FakeUtil.js";
 import FakeAxios from "./FakeAxios.js";
@@ -10,9 +12,16 @@ const FuncTypes = {
     syncPromise: "applySyncPromise"
 };
 
+const filename = "script.js",
+    inspectorUrl = "devtools://devtools/bundled/inspector.html?experiments=true&v8only=true";
+
 class LevertContext {
-    constructor(isolate) {
-        this.isolate = isolate;
+    constructor(options) {
+        this.memLimit = options.memLimit;
+        this.timeLimit = options.timeLimit;
+
+        this.enableInspector = options.enableInspector;
+        this.inspectorPort = options.inspectorPort;
     }
 
     async setMsg(msg) {
@@ -150,6 +159,112 @@ class LevertContext {
     async getContext(msg, args) {
         await this.setupContext(msg, args);
         return this.context;
+    }
+
+    setupDebugger() {
+        let wss = new WebSocket.Server({
+            port: this.inspectorPort
+        });
+
+        let handleConnection = function (ws) {
+            if (typeof this.isolate === "undefined") {
+                return;
+            }
+
+            let channel = this.isolate.createInspectorSession();
+
+            function dispose() {
+                try {
+                    channel.dispose();
+                } catch (err) {
+                    getLogger().error(err.message);
+                }
+            }
+
+            ws.on("error", err => {
+                getLogger().error(err.message);
+                dispose();
+            });
+
+            ws.on("close", (code, reason) => {
+                getLogger().info(`Websocket closed: ${code}, ${reason}`);
+                dispose();
+            });
+
+            ws.on("message", function (msg) {
+                try {
+                    const str = String(msg);
+                    channel.dispatchProtocolMessage(str);
+                } catch (err) {
+                    getLogger().error("Error message to inspector", err);
+                    ws.close();
+                }
+            });
+
+            function send(message) {
+                try {
+                    ws.send(message);
+                } catch (err) {
+                    getLogger().error(err);
+                    dispose();
+                }
+            }
+
+            channel.onResponse = (callId, message) => send(message);
+            channel.onNotification = send;
+        };
+
+        handleConnection = handleConnection.bind(this);
+        wss.on("connection", handleConnection);
+
+        this.wss = wss;
+        getLogger().info("Inspector: " + inspectorUrl + `&ws=127.0.0.1:${this.inspectorPort}`);
+    }
+
+    async setupIsolate(msg, args) {
+        this.isolate = new ivm.Isolate({
+            memoryLimit: this.memLimit,
+            inspector: this.enableInspector
+        });
+
+        await this.setupContext(msg, args);
+
+        if (this.enableInspector) {
+            this.setupDebugger();
+        }
+    }
+
+    disposeIsolate() {
+        this.script.release();
+        this.context.release();
+        this.isolate.dispose();
+
+        delete this.script;
+        delete this.context;
+        delete this.isolate;
+    }
+
+    async compileScript(code) {
+        this.script = await this.isolate.compileScript(code, {
+            filename: `file:///${filename}`
+        });
+    }
+
+    async getIsolate(options) {
+        const { code, msg, args } = options;
+
+        await this.setupIsolate(msg, args);
+        await this.compileScript(code);
+
+        return this.isolate;
+    }
+
+    async runScript() {
+        const res = await this.script.run(this.context, {
+            timeout: this.timeLimit * 1000
+        });
+
+        return res;
     }
 }
 
