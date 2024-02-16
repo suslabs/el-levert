@@ -14,10 +14,10 @@ class TagManager {
         this.maxTagSize = getClient().config.maxTagSize;
         this.maxTagNameLength = getClient().config.maxTagNameLength;
 
-        this.tagNameRegex = new RegExp(getClient().config.tagNameRegex),
-        this.isTagName = name => {
-            return this.tagNameRegex.test(name);
-        };
+        (this.tagNameRegex = new RegExp(getClient().config.tagNameRegex)),
+            (this.isTagName = name => {
+                return this.tagNameRegex.test(name);
+            });
     }
 
     async loadDatabase() {
@@ -27,7 +27,7 @@ class TagManager {
 
         try {
             await fs.access(tag_dbPath);
-        } catch(err) {
+        } catch (err) {
             getLogger().info("Tag database not found. Creating at path " + tag_dbPath);
 
             await fs.mkdir(getClient().config.dbPath, {
@@ -43,9 +43,9 @@ class TagManager {
     }
 
     checkName(name) {
-        if(name.length > this.maxTagNameLength) {
+        if (name.length > this.maxTagNameLength) {
             return `The tag name can be at most ${this.maxTagNameLength} characters long.`;
-        } else if(!this.isTagName(name)) {
+        } else if (!this.isTagName(name)) {
             return "The tag name must consist of Latin characters, numbers, _ or -.";
         }
     }
@@ -63,9 +63,10 @@ class TagManager {
     }
 
     async downloadBody(msg) {
-        let body, isScript = false;
+        let body,
+            isScript = false;
         const attach = msg.attachments.at(0);
-        
+
         if (attach.contentType.startsWith("text/plain") || attach.contentType.startsWith("application/javascript")) {
             if (attach.size > this.maxTagSize * 1024) {
                 throw new TagError(`Scripts can take up at most ${this.maxTagSize}kb.`);
@@ -77,10 +78,10 @@ class TagManager {
                     responseType: "text"
                 })
             ).data;
-            
+
             isScript = true;
         } else {
-            body = attach.url
+            body = attach.url;
         }
 
         return [body, isScript];
@@ -89,14 +90,14 @@ class TagManager {
     async updateQuota(id, inc) {
         let quota = await this.tag_db.quotaFetch(id);
 
-        if(quota === false) {
+        if (quota === false) {
             await this.tag_db.quotaCreate(id);
             quota = 0;
         }
 
         quota += inc;
-        
-        if(quota > this.maxQuota) {
+
+        if (quota > this.maxQuota) {
             throw new TagError("Maximum quota of ${this.maxQuota}kb has been exceeded.");
         }
 
@@ -104,11 +105,11 @@ class TagManager {
     }
 
     async add(name, body, owner, isScript, scriptType) {
-        if(typeof isScript === "undefined") {
+        if (typeof isScript === "undefined") {
             [body, isScript] = Util.formatScript(body);
         }
-        
-        if(body.length > 0) {
+
+        if (body.length > 0) {
             await this.updateQuota(owner, Util.getByteLen(body) / 1024);
         }
 
@@ -117,7 +118,7 @@ class TagManager {
             body: body,
             owner: owner,
             registered: Date.now(),
-            type: 1 | isScript << 1 | scriptType << 2
+            type: 1 | (isScript << 1) | (scriptType << 2)
         });
 
         await this.tag_db.add(newTag);
@@ -126,7 +127,7 @@ class TagManager {
 
     async chown(tag, newOwner) {
         const t_quota = Util.getByteLen(tag.body) / 1024;
-        
+
         await this.updateQuota(tag.owner, -t_quota);
         await this.updateQuota(newOwner, t_quota);
 
@@ -136,7 +137,7 @@ class TagManager {
     async delete(tag) {
         let t_quota = -Util.getByteLen(tag.body) / 1024;
 
-        if(tag.args.length > 0) {
+        if (tag.args.length > 0) {
             t_quota -= Util.getByteLen(tag.args) / 1024;
         }
 
@@ -145,11 +146,11 @@ class TagManager {
     }
 
     async edit(tag, body, isScript, scriptType) {
-        if(tag.body === body) {
+        if (tag.body === body) {
             return;
         }
 
-        if(typeof isScript === "undefined") {
+        if (typeof isScript === "undefined") {
             [body, isScript] = Util.formatScript(body);
         }
 
@@ -157,16 +158,16 @@ class TagManager {
             hops: tag.name,
             name: tag.name,
             body: body,
-            type: 1 | isScript << 1 | scriptType << 2
+            type: 1 | (isScript << 1) | (scriptType << 2)
         });
 
         let t_quota = (Util.getByteLen(body) - Util.getByteLen(tag.body)) / 1024;
 
-        if(tag.args.length > 0) {
+        if (tag.args.length > 0) {
             t_quota -= Util.getByteLen(tag.args);
         }
 
-        if(t_quota !== 0) {
+        if (t_quota !== 0) {
             await this.updateQuota(tag.owner, t_quota);
         }
 
@@ -176,8 +177,8 @@ class TagManager {
 
     async list(id) {
         const tags = await this.tag_db.list(id),
-              newTags = tags.filter(x => (x.type & 1) === 1),
-              oldTags = tags.filter(x => (x.type & 1) === 0);
+            newTags = tags.filter(x => (x.type & 1) === 1),
+            oldTags = tags.filter(x => (x.type & 1) === 0);
 
         return {
             newTags: newTags,
@@ -187,15 +188,16 @@ class TagManager {
     }
 
     async search(name, minDist = 0.4) {
-        let tags = await this.dump(), find;
+        let tags = await this.dump(),
+            find;
         tags = tags.map(x => [x, Util.diceDist(x, name)]);
 
-        if(typeof minDist === "undefined") {
+        if (typeof minDist === "undefined") {
             tags.sort((a, b) => b[1] - a[1]);
 
             find = tags.slice(0, 5).map(x => x[0]);
         }
-        
+
         find = tags.filter(x => x[1] >= minDist).map(x => x[0]);
         find.sort();
 
@@ -204,25 +206,26 @@ class TagManager {
 
     async fetchAlias(tag) {
         let hops = [],
-            args = [], tagHop;
+            args = [],
+            tagHop;
 
-        for(const hop of tag.hops) {
-            if(hops.includes(hop)) {
+        for (const hop of tag.hops) {
+            if (hops.includes(hop)) {
                 throw new TagError("Tag recursion detected.", hops);
             }
 
             hops.push(hop);
             tagHop = await this.fetch(hop);
 
-            if(!tagHop) {
+            if (!tagHop) {
                 throw new TagError("Hop not found.", hop);
             }
 
-            if(tagHop.args.length > 0) {
+            if (tagHop.args.length > 0) {
                 args.push(tagHop.args);
             }
         }
-        
+
         tagHop.hops = tag.hops;
         tagHop.args = args.join(" ");
 
@@ -238,18 +241,18 @@ class TagManager {
         });
 
         let t_quota = (Util.getByteLen(args) - Util.getByteLen(tag.body)) / 1024;
-        
-        if(tag.args.length > 0) {
+
+        if (tag.args.length > 0) {
             t_quota -= Util.getByteLen(tag.args) / 1024;
         }
 
-        if(typeof a_hops === "undefined" || a_hops.length === 0) {
+        if (typeof a_hops === "undefined" || a_hops.length === 0) {
             a_hops = [a_name];
         }
 
         newTag.hops = [tag.name].concat(a_hops);
 
-        if(t_quota !== 0) {
+        if (t_quota !== 0) {
             await this.updateQuota(tag.owner, t_quota);
         }
 

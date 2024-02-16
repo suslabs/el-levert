@@ -5,42 +5,42 @@ export default {
     name: "chown",
     parent: "tag",
     subcommand: true,
-    handler: async function(args, msg, perm) {
-        if(args.length === 0) {
+    handler: async function (args, msg, perm) {
+        if (args.length === 0) {
             return ":information_source: `t chown name new_owner_mention`";
         }
 
         const [t_name, t_args] = Util.splitArgs(args),
-              e = getClient().tagManager.checkName(t_name);
+            e = getClient().tagManager.checkName(t_name);
 
-        if(e) {
+        if (e) {
             return ":warning: " + e;
         }
-        
-        if(t_args.length === 0) {
+
+        if (t_args.length === 0) {
             return ":warning: Invalid target user. You must specifically mention the target user.";
         }
 
         const find = (await getClient().findUsers(t_args))[0];
 
-        if(typeof find === "undefined") {
+        if (typeof find === "undefined") {
             return `:warning: User \`${t_args}\` not found.`;
         }
 
         const tag = await getClient().tagManager.fetch(t_name);
 
-        if(!tag) {
+        if (!tag) {
             return `:warning: Tag **${t_name}** doesn't exist.`;
         }
 
-        if(perm < 1 && tag.owner !== msg.author.id) {
+        if (perm < 1 && tag.owner !== msg.author.id) {
             const owner = await getClient().findUserById(tag.owner),
-                  out = ":warning: You can only chown your own tags.";
+                out = ":warning: You can only chown your own tags.";
 
-            if(!owner) {
+            if (!owner) {
                 return out + " Tag owner not found.";
             }
-            
+
             return out + ` Tag is owned by \`${owner.username}\`.`;
         }
 
@@ -48,10 +48,11 @@ export default {
 
         let out = "";
 
-        if((tag.type & 1) === 0) {
-            out = ":warning: Tag has been converted to EL LEVERT format. Updates on Leveret 1 will no longer apply.\n\n";
+        if ((tag.type & 1) === 0) {
+            out =
+                ":warning: Tag has been converted to EL LEVERT format. Updates on Leveret 1 will no longer apply.\n\n";
         }
 
         return out + `:white_check_mark: Transferred tag **${t_name}** to ${t_args}.`;
     }
-}
+};

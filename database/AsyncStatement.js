@@ -6,7 +6,7 @@ class AsyncStatement {
     bind(...args) {
         return new Promise((resolve, reject) => {
             this.st.bind(...args, err => {
-                if(err) {
+                if (err) {
                     reject(err);
                 }
 
@@ -26,7 +26,7 @@ class AsyncStatement {
     run(...args) {
         return new Promise((resolve, reject) => {
             this.st.run(...args, err => {
-                if(err) {
+                if (err) {
                     reject(err);
                 }
 
@@ -38,7 +38,7 @@ class AsyncStatement {
     get(...args) {
         return new Promise((resolve, reject) => {
             this.st.get(...args, (err, row) => {
-                if(err) {
+                if (err) {
                     reject(err);
                 }
 
@@ -50,7 +50,7 @@ class AsyncStatement {
     all(...args) {
         return new Promise((resolve, reject) => {
             this.st.all(...args, (err, rows) => {
-                if(err) {
+                if (err) {
                     reject(err);
                 }
 
@@ -62,7 +62,7 @@ class AsyncStatement {
     each(...args) {
         return new Promise((resolve, reject) => {
             this.st.each(...args, (err, nrows) => {
-                if(err) {
+                if (err) {
                     reject(err);
                 }
 

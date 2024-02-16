@@ -7,25 +7,25 @@ export default {
     subcommand: true,
     allowed: 2,
     handler: async (args, msg) => {
-        if(args.length === 0) {
+        if (args.length === 0) {
             return ":information_source: `perm remove_group [group name]`";
         }
 
         const [g_name] = Util.splitArgs(args),
-              e = getClient().permManager.checkName(g_name);
+            e = getClient().permManager.checkName(g_name);
 
-        if(e) {
+        if (e) {
             return ":warning: " + e;
         }
 
         const group = await getClient().permManager.fetchGroup(g_name);
 
-        if(!group) {
+        if (!group) {
             return `:warning: Group **${g_name}** doesn't exist.`;
         }
-        
+
         await getClient().permManager.removeGroup(g_name);
 
         return `:white_check_mark: Removed group **${g_name}** and all it's users.`;
     }
-}
+};

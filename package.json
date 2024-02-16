@@ -1,31 +1,32 @@
 {
-  "name": "el-levert",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "type": "module",
-  "scripts": {
-    "start": "node index.js",
-    "lint": "eslint \"**/*.js\" --ignore-pattern node_modules/"
-  },
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "axios": "^1.2.1",
-    "chrono-node": "^2.5.0",
-    "discord.js": "^14.6.0",
-    "generic-pool": "^3.9.0",
-    "isolated-vm": "^4.4.2",
-    "lodash.clonedeep": "^4.5.0",
-    "sqlite3": "^5.1.4",
-    "vm2": "^3.9.14",
-    "winston": "^3.8.2",
-    "yargs": "^17.6.2"
-  },
-  "devDependencies": {
-    "@babel/eslint-parser": "^7.19.1",
-    "@babel/plugin-syntax-import-assertions": "^7.20.0",
-    "eslint": "^8.33.0",
-    "prettier": "2.8.0"
-  }
+    "name": "el-levert",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "type": "module",
+    "scripts": {
+        "start": "node index.js",
+        "lint": "eslint \"**/*.js\" --ignore-pattern node_modules/",
+        "prettier-format": "prettier --config .prettierrc --write **/*.js"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "axios": "^1.2.1",
+        "chrono-node": "^2.5.0",
+        "discord.js": "^14.6.0",
+        "generic-pool": "^3.9.0",
+        "isolated-vm": "^4.4.2",
+        "lodash.clonedeep": "^4.5.0",
+        "sqlite3": "^5.1.4",
+        "vm2": "^3.9.14",
+        "winston": "^3.8.2",
+        "yargs": "^17.6.2"
+    },
+    "devDependencies": {
+        "@babel/eslint-parser": "^7.19.1",
+        "@babel/plugin-syntax-import-assertions": "^7.20.0",
+        "eslint": "^8.33.0",
+        "prettier": "2.8.0"
+    }
 }

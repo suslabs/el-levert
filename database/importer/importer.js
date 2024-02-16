@@ -17,13 +17,13 @@ import DBImporter from "./DBImporter.js";
             describe: "Purge Leveret 1 tags",
             nargs: 0
         }).argv;
-    
-    if(args.json) {
+
+    if (args.json) {
         const importer = new DBImporter(args.json);
 
         await importer.loadDatabase();
         await importer.updateDatabase();
-    } else if(args.p1) {
+    } else if (args.p1) {
         const importer = new DBImporter();
 
         await importer.loadDatabase();

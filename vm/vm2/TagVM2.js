@@ -46,7 +46,7 @@ class TagVM2 {
             msg: msg
         };
 
-        if(typeof args !== "undefined") {
+        if (typeof args !== "undefined") {
             vmObjects.tag = {
                 args: args.length > 0 ? args : undefined
             };
@@ -66,25 +66,24 @@ class TagVM2 {
         try {
             const out = await this.procPool.run(code, vmObjects, this.vmOptions, vmFuncs, "../canvas-integration");
 
-            if(typeof reply.reply !== "undefined") {
+            if (typeof reply.reply !== "undefined") {
                 return reply.reply;
             }
 
-            if(typeof out === "number") {
+            if (typeof out === "number") {
                 return out.toString();
             }
-    
+
             return out;
-        } catch(err) {
-            switch(err.message) {
-            case "Code execution took too long and was killed.":
-            case "Code execution exceeed allowed memory.":
-                return ":no_entry_sign: " + err.message;
+        } catch (err) {
+            switch (err.message) {
+                case "Code execution took too long and was killed.":
+                case "Code execution exceeed allowed memory.":
+                    return ":no_entry_sign: " + err.message;
             }
 
             throw err;
         }
-        
     }
 }
 

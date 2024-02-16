@@ -8,13 +8,13 @@ const createReminderTable = `CREATE TABLE "Reminders" (
     "msg"   TEXT,
 	"ind"	TEXT
 );`,
-      remind_st = {
-    fetch: "SELECT * FROM Reminders WHERE id = $id",
-    add: "INSERT INTO Reminders VALUES ($id, $end, $msg, $ind);",
-    remove: "DELETE FROM Reminders WHERE id = $id AND ind = $ind",
-    removeAll: "DELETE FROM Reminders WHERE id = $id;",
-    list: "SELECT * FROM Reminders"
-}
+    remind_st = {
+        fetch: "SELECT * FROM Reminders WHERE id = $id",
+        add: "INSERT INTO Reminders VALUES ($id, $end, $msg, $ind);",
+        remove: "DELETE FROM Reminders WHERE id = $id AND ind = $ind",
+        removeAll: "DELETE FROM Reminders WHERE id = $id;",
+        list: "SELECT * FROM Reminders"
+    };
 
 class ReminderDatabase {
     constructor(path) {
@@ -36,7 +36,7 @@ class ReminderDatabase {
 
         this.remind_st = {};
 
-        for(const st in remind_st) {
+        for (const st in remind_st) {
             this.remind_st[st] = await this.db.prepare(remind_st[st]);
         }
     }
@@ -46,7 +46,7 @@ class ReminderDatabase {
             $id: id
         });
 
-        if(typeof rows === "undefined" || rows.length < 1) {
+        if (typeof rows === "undefined" || rows.length < 1) {
             return false;
         }
 
@@ -55,7 +55,7 @@ class ReminderDatabase {
 
     add(id, end, msg) {
         const ind = crypto.randomBytes(5).toString("hex") + "-" + Math.floor(Date.now() / 1000).toString();
-       
+
         return this.remind_st.add.run({
             $id: id,
             $end: end,

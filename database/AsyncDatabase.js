@@ -23,12 +23,12 @@ class AsyncDatabase {
 
     open() {
         return new Promise((resolve, reject) => {
-            if(typeof this.db !== "undefined") {
+            if (typeof this.db !== "undefined") {
                 reject(new DatabaseError("Cannot open database. Database is already open."));
             }
 
             const db = new sqlite.Database(this.filename, this.mode, err => {
-                if(err) {
+                if (err) {
                     reject(err);
                 }
 
@@ -40,12 +40,12 @@ class AsyncDatabase {
 
     close() {
         return new Promise((resolve, reject) => {
-            if(typeof this.db === "undefined") {
+            if (typeof this.db === "undefined") {
                 reject(new DatabaseError("The database is not open."));
             }
 
             this.db.close(err => {
-                if(err) {
+                if (err) {
                     reject(err);
                 }
 
@@ -61,12 +61,12 @@ class AsyncDatabase {
 
     run(...args) {
         return new Promise((resolve, reject) => {
-            if(typeof this.db === "undefined") {
+            if (typeof this.db === "undefined") {
                 reject(new DatabaseError("The database is not open."));
             }
 
             this.db.run(...args, err => {
-                if(err) {
+                if (err) {
                     reject(err);
                 }
 
@@ -77,12 +77,12 @@ class AsyncDatabase {
 
     get(...args) {
         return new Promise((resolve, reject) => {
-            if(typeof this.db === "undefined") {
+            if (typeof this.db === "undefined") {
                 reject(new DatabaseError("The database is not open."));
             }
 
             this.db.get(...args, (err, row) => {
-                if(err) {
+                if (err) {
                     reject(err);
                 }
 
@@ -93,12 +93,12 @@ class AsyncDatabase {
 
     all(...args) {
         return new Promise((resolve, reject) => {
-            if(typeof this.db === "undefined") {
+            if (typeof this.db === "undefined") {
                 reject(new DatabaseError("The database is not open."));
             }
 
             this.db.all(...args, (err, rows) => {
-                if(err) {
+                if (err) {
                     reject(err);
                 }
 
@@ -109,12 +109,12 @@ class AsyncDatabase {
 
     each(...args) {
         return new Promise((resolve, reject) => {
-            if(typeof this.db === "undefined") {
+            if (typeof this.db === "undefined") {
                 reject(new DatabaseError("The database is not open."));
             }
 
             this.db.each(...args, (err, nrows) => {
-                if(err) {
+                if (err) {
                     reject(err);
                 }
 
@@ -125,12 +125,12 @@ class AsyncDatabase {
 
     resolve(...args) {
         return new Promise((resolve, reject) => {
-            if(typeof this.db === "undefined") {
+            if (typeof this.db === "undefined") {
                 reject(new DatabaseError("The database is not open."));
             }
 
             this.db.resolve(...args, err => {
-                if(err) {
+                if (err) {
                     reject(err);
                 }
 
@@ -141,13 +141,13 @@ class AsyncDatabase {
 
     prepare(...args) {
         return new Promise((resolve, reject) => {
-            if(typeof this.db === "undefined") {
+            if (typeof this.db === "undefined") {
                 reject(new DatabaseError("The database is not open."));
             }
 
             let statement;
 
-            let callback = (err) => {
+            let callback = err => {
                 if (err) {
                     reject(err);
                 }
@@ -166,7 +166,7 @@ class AsyncDatabase {
         try {
             const result = await op(this);
 
-            await this.exec('END TRANSACTION');
+            await this.exec("END TRANSACTION");
             return result;
         } catch (err) {
             await this.exec("ROLLBACK TRANSACTION");

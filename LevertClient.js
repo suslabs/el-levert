@@ -25,13 +25,7 @@ import auth from "./config/auth.json" assert { type: "json" };
 import config from "./config/config.json" assert { type: "json" };
 import reactions from "./config/reactions.json" assert { type: "json" };
 
-const { 
-    Client,
-    GatewayIntentBits,
-    PermissionsBitField,
-    ActivityType,
-    Partials
-} = discord;
+const { Client, GatewayIntentBits, PermissionsBitField, ActivityType, Partials } = discord;
 
 let client;
 function getClient() {
@@ -43,16 +37,14 @@ function getLogger() {
 }
 
 const intents = [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildInvites,
-    GatewayIntentBits.DirectMessages
-],
-      partials = [
-    Partials.Channel
-]
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildInvites,
+        GatewayIntentBits.DirectMessages
+    ],
+    partials = [Partials.Channel];
 
 class LevertClient extends Client {
     constructor() {
@@ -61,13 +53,13 @@ class LevertClient extends Client {
             partials: partials
         });
 
-        if(client) {
+        if (client) {
             throw new ClientError("The client can only be constructed once.");
         }
-        
+
         this.config = config;
         this.reactions = reactions;
-        
+
         this.events = [];
         this.commands = [];
 
@@ -76,7 +68,7 @@ class LevertClient extends Client {
     }
 
     setupLogger() {
-        if(typeof this.logger !== "undefined") {
+        if (typeof this.logger !== "undefined") {
             this.logger.end();
             delete this.logger;
         }
@@ -129,11 +121,11 @@ class LevertClient extends Client {
 
         cmd = new Command(cmd);
 
-        if(typeof cmd.load !== "undefined") {
+        if (typeof cmd.load !== "undefined") {
             cmd.load = wrapEvent(cmd.load.bind(cmd));
             const res = cmd.load();
 
-            if(res === false) {
+            if (res === false) {
                 return false;
             }
         }
@@ -146,7 +138,7 @@ class LevertClient extends Client {
 
     loadSubcommands() {
         this.commands.forEach(x => {
-            if(x.isSubcmd || x.subcommands.length < 1) {
+            if (x.isSubcmd || x.subcommands.length < 1) {
                 return;
             }
 
@@ -155,7 +147,7 @@ class LevertClient extends Client {
                     return y.name === n && y.parent === x.name;
                 });
 
-                if(typeof find === "undefined") {
+                if (typeof find === "undefined") {
                     this.logger.warn(`Subcommand "${n}" of command "${x.name}" not found.`);
                     return;
                 }
@@ -180,7 +172,7 @@ class LevertClient extends Client {
                 let cmd = await import(URL.pathToFileURL(file));
                 cmd = cmd.default;
 
-                if(this.loadCommand(cmd)) {
+                if (this.loadCommand(cmd)) {
                     ok++;
                 }
             } catch (err) {
@@ -207,7 +199,7 @@ class LevertClient extends Client {
 
     async loadManagers() {
         const tagManager = new TagManager(),
-              permManager = new PermissionManager();
+            permManager = new PermissionManager();
 
         this.tagManager = tagManager;
         this.permManager = permManager;
@@ -215,7 +207,7 @@ class LevertClient extends Client {
         await tagManager.loadDatabase();
         await permManager.loadDatabase();
 
-        if(this.config.enableReminders) {
+        if (this.config.enableReminders) {
             const remindManager = new ReminderManager();
             this.remindManager = remindManager;
 
@@ -225,16 +217,16 @@ class LevertClient extends Client {
 
     getChannel(ch_id, user_id, check = true) {
         let channel;
-        if(this.channels.cache.has(ch_id)) {
+        if (this.channels.cache.has(ch_id)) {
             channel = this.channels.cache.get(ch_id);
         } else {
             return false;
         }
 
-        if(check) {
+        if (check) {
             const perms = channel.permissionsFor(user_id);
-            
-            if(perms === null || !perms.has(PermissionsBitField.Flags.ViewChannel)) {
+
+            if (perms === null || !perms.has(PermissionsBitField.Flags.ViewChannel)) {
                 return false;
             }
         }
@@ -245,14 +237,14 @@ class LevertClient extends Client {
     async fetchMessage(ch_id, msg_id, user_id, check) {
         const channel = this.getChannel(ch_id, user_id, check);
 
-        if(!channel || typeof msg_id !== "string") {
+        if (!channel || typeof msg_id !== "string") {
             return false;
         }
 
         try {
             return await channel.messages.fetch(msg_id);
-        } catch(err) {
-            if(err.constructor.name === "DiscordAPIError") {
+        } catch (err) {
+            if (err.constructor.name === "DiscordAPIError") {
                 return false;
             }
 
@@ -263,18 +255,21 @@ class LevertClient extends Client {
     async fetchMessages(ch_id, options = {}, user_id, check) {
         const channel = this.getChannel(ch_id, user_id, check);
 
-        if(!channel || typeof options !== "object") {
+        if (!channel || typeof options !== "object") {
             return false;
         }
 
-        options = Object.assign({
-            limit: 100
-        }, options);
+        options = Object.assign(
+            {
+                limit: 100
+            },
+            options
+        );
 
         try {
             return await channel.messages.fetch(options);
-        } catch(err) {
-            if(err.constructor.name === "DiscordAPIError") {
+        } catch (err) {
+            if (err.constructor.name === "DiscordAPIError") {
                 return false;
             }
 
@@ -285,7 +280,7 @@ class LevertClient extends Client {
     async findUserById(id) {
         const user = await this.users.fetch(id);
 
-        if(typeof user === "undefined") {
+        if (typeof user === "undefined") {
             return false;
         }
 
@@ -294,63 +289,67 @@ class LevertClient extends Client {
 
     async findUsers(search, options = {}) {
         const idMatch = search.match(/(\d{17,20})/),
-              mentionMatch = search.match(/<@(\d{17,20})>/);
-        
+            mentionMatch = search.match(/<@(\d{17,20})>/);
+
         let guilds = this.guilds.cache;
 
         if (idMatch ?? mentionMatch) {
             const id = idMatch[1] ?? mentionMatch[1];
-            
-            for(let i = 0; i < guilds.size; i++) {
+
+            for (let i = 0; i < guilds.size; i++) {
                 let user;
-                
+
                 try {
                     user = await guilds.at(i).members.fetch({
                         user: id
                     });
-                } catch(err) {
-                    if(err.constructor.name !== "DiscordAPIError") {
+                } catch (err) {
+                    if (err.constructor.name !== "DiscordAPIError") {
                         throw err;
                     }
                 }
-                
-                if(typeof user !== "undefined") {
+
+                if (typeof user !== "undefined") {
                     return [user];
                 }
             }
         }
-        
-        let users = [], ids = [];
-        options = Object.assign({
-            limit: 10
-        }, options);
 
-        for(let i = 0; i < guilds.size; i++) {
+        let users = [],
+            ids = [];
+        options = Object.assign(
+            {
+                limit: 10
+            },
+            options
+        );
+
+        for (let i = 0; i < guilds.size; i++) {
             let guildUsers = await guilds.at(i).members.fetch({
                 query: search,
                 limit: options.limit
             });
-            
+
             guildUsers = guildUsers.filter(x => !ids.includes(x.id));
             ids.push(...guildUsers.map(x => x.id));
 
             guildUsers = guildUsers.map(x => [x, Util.diceDist(x.username, search)]);
             users.push(...guildUsers);
         }
-        
+
         users.sort((a, b) => b[1] - a[1]);
         users = users.slice(0, options.limit).map(x => x[0]);
-        
+
         return users;
     }
 
     setActivity(config) {
-        if(typeof config !== "undefined") {
-            if(!Object.keys(ActivityType).includes(config.type)) {
+        if (typeof config !== "undefined") {
+            if (!Object.keys(ActivityType).includes(config.type)) {
                 throw new ClientError("Invalid activity type: " + config.type);
             }
 
-            if(typeof config.text !== "undefined") {
+            if (typeof config.text !== "undefined") {
                 this.user.setActivity(config.text, {
                     type: ActivityType[config.type]
                 });
@@ -361,9 +360,9 @@ class LevertClient extends Client {
     }
 
     async executeAllHandlers(func, ...args) {
-        for(const handler of this.handlerList) {
+        for (const handler of this.handlerList) {
             const out = await handler[func](...args);
-            if(out) {
+            if (out) {
                 return;
             }
         }
@@ -379,44 +378,45 @@ class LevertClient extends Client {
         this.tagVM = new TagVM();
         this.tagVM2 = new TagVM2();
 
-        if(this.config.enableOtherLangs) {
+        if (this.config.enableOtherLangs) {
             this.externalVM = new ExternalVM();
         }
 
         await this.login(auth.token);
         this.setActivity(config.activity);
 
-        if(this.config.enableReminders) {
+        if (this.config.enableReminders) {
             setInterval(this.remindManager.sendReminders.bind(this.remindManager), 1000);
             this.logger.info("Started reminder loop.");
         }
 
-        if(this.config.enableGlobalHandler) {
+        if (this.config.enableGlobalHandler) {
             registerGlobalHandler();
         }
     }
 }
 
-const wrapEvent = callback => function (...args) {
-    try {
-        const out = callback(...args);
+const wrapEvent = callback =>
+    function (...args) {
+        try {
+            const out = callback(...args);
 
-        if(typeof out === "object" && typeof out.then === "function") {
-            out.catch(err => client.logger.error(err));
+            if (typeof out === "object" && typeof out.then === "function") {
+                out.catch(err => client.logger.error(err));
+            }
+
+            return out;
+        } catch (err) {
+            console.log(client);
+            client.logger.error(err);
         }
-
-        return out;
-    } catch (err) {
-        console.log(client)
-        client.logger.error(err);
-    }
-};
+    };
 
 function registerGlobalHandler() {
     process.on("uncaughtException", function (err1) {
         try {
             getLogger().error("Uncaught exception:", err1);
-        } catch(err2) {
+        } catch (err2) {
             console.error("Error occured while reporting uncaught error:", err2);
             console.error("Uncaught error:", err1);
         }

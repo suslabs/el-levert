@@ -7,11 +7,11 @@ export default {
     subcommand: true,
     handler: async _ => {
         const tags = await getClient().tagManager.dump();
-        
-        if(tags.length < 1) {
+
+        if (tags.length < 1) {
             return ":warning: There are no registered tags.";
         }
 
         return Util.getFileAttach(tags.join("\n"));
     }
-}
+};

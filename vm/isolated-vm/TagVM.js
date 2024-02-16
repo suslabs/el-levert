@@ -10,24 +10,23 @@ function parseReply(msg) {
     const client = getClient();
     let out = JSON.parse(msg);
 
-    if(typeof out.content !== "undefined") {
+    if (typeof out.content !== "undefined") {
         const split = out.content.split("\n");
 
-        if(out.content.length > client.config.outCharLimit ||
-           split.length > client.config.outNewlineLimit) {
+        if (out.content.length > client.config.outCharLimit || split.length > client.config.outNewlineLimit) {
             return Util.getFileAttach(out.content);
         }
     }
 
-    if(typeof out.file !== "undefined") {
-        if(typeof out.file.data === "object") {
+    if (typeof out.file !== "undefined") {
+        if (typeof out.file.data === "object") {
             out.file.data = Object.values(out.file.data);
         }
 
         out = {
             ...out,
             ...Util.getFileAttach(out.file.data, out.file.name)
-        }
+        };
     }
 
     delete out.file;
@@ -35,7 +34,7 @@ function parseReply(msg) {
 }
 
 const filename = "script.js",
-      inspectorUrl = "devtools://devtools/bundled/inspector.html?experiments=true&v8only=true";
+    inspectorUrl = "devtools://devtools/bundled/inspector.html?experiments=true&v8only=true";
 
 class TagVM {
     constructor() {
@@ -45,7 +44,7 @@ class TagVM {
         this.enableInspector = getClient().config.enableInspector;
         this.inspectorPort = getClient().config.inspectorPort;
 
-        if(this.enableInspector) {
+        if (this.enableInspector) {
             this.setupDebugger(this.isolate);
         }
     }
@@ -55,8 +54,8 @@ class TagVM {
             port: this.inspectorPort
         });
 
-        let handleConnection = function(ws) {
-            if(typeof this.isolate === "undefined") {
+        let handleConnection = function (ws) {
+            if (typeof this.isolate === "undefined") {
                 return;
             }
 
@@ -70,7 +69,7 @@ class TagVM {
                 }
             }
 
-            ws.on("error", (err) => {
+            ws.on("error", err => {
                 getLogger().error(err.message);
                 dispose();
             });
@@ -80,7 +79,7 @@ class TagVM {
                 dispose();
             });
 
-            ws.on("message", function(msg) {
+            ws.on("message", function (msg) {
                 try {
                     const str = String(msg);
                     channel.dispatchProtocolMessage(str);
@@ -101,7 +100,7 @@ class TagVM {
 
             channel.onResponse = (callId, message) => send(message);
             channel.onNotification = send;
-        }
+        };
 
         handleConnection = handleConnection.bind(this);
         wss.on("connection", handleConnection);
@@ -132,29 +131,29 @@ class TagVM {
     async runScript(code, msg, args) {
         await this.setupIsolate(code, msg, args);
         let res;
-             
+
         try {
             res = await this.script.run(this.context, {
                 timeout: this.timeLimit * 1000
             });
 
-            if(typeof res === "number") {
+            if (typeof res === "number") {
                 res = res.toString();
             }
-        } catch(err) {
-            if(err.name === "ManevraError") {
+        } catch (err) {
+            if (err.name === "ManevraError") {
                 res = parseReply(err.message);
             } else {
-                switch(err.message) {
+                switch (err.message) {
                     case "Script execution timed out.":
                         res = ":no_entry_sign: " + err.message;
                         break;
                     case "Isolate was disposed during execution due to memory limit":
                         res = ":no_entry_sign: Memory limit reached.";
                         break;
-                    }
-        
-                    throw err;
+                }
+
+                throw err;
             }
         } finally {
             this.disposeIsolate();

@@ -11,18 +11,18 @@ function listener(socket, funcs) {
 
         const recieve = async data => {
             buf += String(data);
-            
-            if(buf.endsWith("\n")) {
+
+            if (buf.endsWith("\n")) {
                 let data;
 
                 try {
                     data = JSON.parse(buf);
                     buf = "";
-                } catch(err) {
+                } catch (err) {
                     reject(err.message);
                 }
 
-                if(typeof data === "undefined" || typeof data.packetType === "undefined") {
+                if (typeof data === "undefined" || typeof data.packetType === "undefined") {
                     return;
                 }
 
@@ -36,39 +36,43 @@ function listener(socket, funcs) {
 }
 
 async function processPacket(socket, data, funcs, resolve, reject) {
-    switch(data.packetType) {
-    case "return":
-        resolve(data);
+    switch (data.packetType) {
+        case "return":
+            resolve(data);
 
-        break;
-    case "funcCall": {
-            let res;
+            break;
+        case "funcCall":
+            {
+                let res;
 
-            try {
-                res = await funcs[data.funcCall.name](data.funcCall.args);
-            } catch(err) {
-                reject(err.message);
+                try {
+                    res = await funcs[data.funcCall.name](data.funcCall.args);
+                } catch (err) {
+                    reject(err.message);
+                }
+
+                VMUtil.sockWrite(socket, "funcReturn", {
+                    funcReturn: {
+                        uniqueName: data.funcCall.uniqueName,
+                        data: res
+                    }
+                });
             }
 
-            VMUtil.sockWrite(socket, "funcReturn", {
-                funcReturn: {
-                    uniqueName: data.funcCall.uniqueName,
-                    data: res
-                }
-            });
-        }
-
-        break;   
+            break;
     }
 }
 
 class VM2ProcPool {
     constructor({ min, max, ...limits }) {
-        limits = Object.assign({
-            cpu: 100,
-            memory: 200,
-            time: 4000
-        }, limits);
+        limits = Object.assign(
+            {
+                cpu: 100,
+                memory: 200,
+                time: 4000
+            },
+            limits
+        );
 
         this.limits = limits;
         this.limitError = null;
@@ -78,9 +82,9 @@ class VM2ProcPool {
 
     createPool() {
         const ref = crypto.randomBytes(20).toString("hex"),
-              kill = () => {
-            spawn("sh", ["-c", `pkill -9 -f ${ref}`]);
-        };
+            kill = () => {
+                spawn("sh", ["-c", `pkill -9 -f ${ref}`]);
+            };
 
         const factory = {
             destroy: kill
@@ -88,27 +92,28 @@ class VM2ProcPool {
 
         let stderrCache = "";
 
-        factory.create = function() {
-            const runner = spawn("node", [
-                "ScriptRunner.js",
-                ref
-            ], {
+        factory.create = function () {
+            const runner = spawn("node", ["ScriptRunner.js", ref], {
                 cwd: this.dirname,
                 shell: false
             });
 
-            runner.stdout.on("data", (data) => {
+            runner.stdout.on("data", data => {
                 const str = data.toString().trim();
 
-                if(!str.toLowerCase().includes("debugger") && typeof runner.socket === "undefined") {
+                if (!str.toLowerCase().includes("debugger") && typeof runner.socket === "undefined") {
                     runner.socket = runner.socket ?? str;
                 }
             });
 
-            runner.stderr.on("data", (data) => {
+            runner.stderr.on("data", data => {
                 stderrCache = stderrCache + data.toString();
-                
-                if(stderrCache.includes("FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory")) {
+
+                if (
+                    stderrCache.includes(
+                        "FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory"
+                    )
+                ) {
                     this.limitError = "Code execution exceeed allowed memory.";
                 }
             });
@@ -126,7 +131,7 @@ class VM2ProcPool {
     }
 
     async prepare_cp() {
-        if(typeof this.childProcess !== "undefined") {
+        if (typeof this.childProcess !== "undefined") {
             this.pool.destroy(this.childProcess);
         }
 
@@ -137,15 +142,15 @@ class VM2ProcPool {
     }
 
     async run(code, scope, options, funcs, additionalPath) {
-        if(typeof this.childProcess === "undefined") {
+        if (typeof this.childProcess === "undefined") {
             await this.prepare_cp();
         }
 
         const socket = net.createConnection(this.childProcess.socket),
-              timer = setTimeout(() => {
-            this.limitError = "Code execution took too long and was killed.";
-            this.kill();
-        }, this.limits.time);
+            timer = setTimeout(() => {
+                this.limitError = "Code execution took too long and was killed.";
+                this.kill();
+            }, this.limits.time);
 
         VMUtil.sockWrite(socket, "script", {
             script: {
@@ -165,7 +170,7 @@ class VM2ProcPool {
             const limit = this.limitError;
             this.limitError = null;
 
-            if(limit !== null) {
+            if (limit !== null) {
                 await this.prepare_cp();
             }
 
@@ -173,13 +178,13 @@ class VM2ProcPool {
         } finally {
             clearTimeout(timer);
         }
-        
-        if(data.error) {
+
+        if (data.error) {
             const err = class extends Error {
                 constructor(message, stack) {
                     super(message);
 
-                   this.message = message;
+                    this.message = message;
                     this.stack = stack;
                 }
             };

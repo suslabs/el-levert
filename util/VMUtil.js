@@ -8,7 +8,7 @@ export default {
             for (const key in obj) {
                 const val = obj[key];
 
-                if(typeof val !== "object") {
+                if (typeof val !== "object") {
                     let refFound = false;
 
                     for (const reference of references) {
@@ -46,23 +46,21 @@ export default {
     formatReply: (text, options) => {
         let out = {};
 
-        if(typeof text === "object") {
+        if (typeof text === "object") {
             options = text;
         } else {
             out.content = text ?? "";
         }
 
-        if(typeof options !== "undefined") {
-            if(typeof options.embed !== "undefined") {
+        if (typeof options !== "undefined") {
+            if (typeof options.embed !== "undefined") {
                 const embed = options.embed;
                 embed.description = embed.description ?? "";
-                
-                out.embeds = [
-                    embed
-                ];
+
+                out.embeds = [embed];
             }
 
-            if(typeof options.file !== "undefined") {
+            if (typeof options.file !== "undefined") {
                 out.file = options.file;
             }
         }
@@ -70,16 +68,16 @@ export default {
         return out;
     },
     waitUntil: condition => {
-        if(condition()) {
+        if (condition()) {
             return Promise.resolve();
         }
-    
-        return new Promise((resolve) => {
+
+        return new Promise(resolve => {
             const interval = setInterval(() => {
-                if(!condition()) {
+                if (!condition()) {
                     return;
                 }
-    
+
                 clearInterval(interval);
                 resolve();
             }, 0);
