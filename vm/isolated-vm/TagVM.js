@@ -1,12 +1,9 @@
-import ivm from "isolated-vm";
-import WebSocket from "ws";
-
-import { getClient, getLogger } from "../../LevertClient.js";
+import { getClient } from "../../LevertClient.js";
 
 import LevertContext from "./LevertContext.js";
 import Util from "../../util/Util.js";
 
-function parseReply(msg) {
+function processReply(msg) {
     const client = getClient();
     let out = JSON.parse(msg);
 
@@ -33,8 +30,10 @@ function parseReply(msg) {
     return out;
 }
 
-const filename = "script.js",
-    inspectorUrl = "devtools://devtools/bundled/inspector.html?experiments=true&v8only=true";
+const Errors = {
+    timeout: "Script execution timed out.",
+    memLimit: "Isolate was disposed during execution due to memory limit"
+};
 
 class TagVM {
     constructor() {
@@ -43,120 +42,42 @@ class TagVM {
 
         this.enableInspector = getClient().config.enableInspector;
         this.inspectorPort = getClient().config.inspectorPort;
-
-        if (this.enableInspector) {
-            this.setupDebugger(this.isolate);
-        }
-    }
-
-    setupDebugger() {
-        let wss = new WebSocket.Server({
-            port: this.inspectorPort
-        });
-
-        let handleConnection = function (ws) {
-            if (typeof this.isolate === "undefined") {
-                return;
-            }
-
-            let channel = this.isolate.createInspectorSession();
-
-            function dispose() {
-                try {
-                    channel.dispose();
-                } catch (err) {
-                    getLogger().error(err.message);
-                }
-            }
-
-            ws.on("error", err => {
-                getLogger().error(err.message);
-                dispose();
-            });
-
-            ws.on("close", (code, reason) => {
-                getLogger().info(`Websocket closed: ${code}, ${reason}`);
-                dispose();
-            });
-
-            ws.on("message", function (msg) {
-                try {
-                    const str = String(msg);
-                    channel.dispatchProtocolMessage(str);
-                } catch (err) {
-                    getLogger().error("Error message to inspector", err);
-                    ws.close();
-                }
-            });
-
-            function send(message) {
-                try {
-                    ws.send(message);
-                } catch (err) {
-                    getLogger().error(err);
-                    dispose();
-                }
-            }
-
-            channel.onResponse = (callId, message) => send(message);
-            channel.onNotification = send;
-        };
-
-        handleConnection = handleConnection.bind(this);
-        wss.on("connection", handleConnection);
-
-        this.wss = wss;
-        getLogger().info("Inspector: " + inspectorUrl + `&ws=127.0.0.1:${this.inspectorPort}`);
-    }
-
-    async setupIsolate(code, msg, args) {
-        this.isolate = new ivm.Isolate({
-            memoryLimit: this.memLimit,
-            inspector: this.enableInspector
-        });
-
-        this.script = await this.isolate.compileScript(code, {
-            filename: `file:///${filename}`
-        });
-
-        const levertContext = new LevertContext(this.isolate);
-        this.context = await levertContext.getContext(msg, args);
-    }
-
-    disposeIsolate() {
-        this.isolate.dispose();
-        this.isolate = undefined;
     }
 
     async runScript(code, msg, args) {
-        await this.setupIsolate(code, msg, args);
+        const context = new LevertContext({
+            memLimit: this.memLimit,
+            timeLimit: this.timeLimit,
+            enableInspector: this.enableInspector,
+            inspectorPort: this.inspectorPort
+        });
+
+        await context.getIsolate({ code, msg, args });
         let res;
 
         try {
-            res = await this.script.run(this.context, {
-                timeout: this.timeLimit * 1000
-            });
+            res = await context.runScript();
 
             if (typeof res === "number") {
                 res = res.toString();
             }
         } catch (err) {
             if (err.name === "ManevraError") {
-                res = parseReply(err.message);
+                res = processReply(err.message);
             } else {
                 switch (err.message) {
-                    case "Script execution timed out.":
+                    case Errors.timeout:
                         res = ":no_entry_sign: " + err.message;
                         break;
-                    case "Isolate was disposed during execution due to memory limit":
+                    case Errors.memLimit:
                         res = ":no_entry_sign: Memory limit reached.";
                         break;
+                    default:
+                        throw err;
                 }
-
-                throw err;
             }
         } finally {
-            this.disposeIsolate();
+            context.disposeIsolate();
             return res;
         }
     }
