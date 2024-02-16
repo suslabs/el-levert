@@ -7,7 +7,7 @@ export default {
     handler: async (_, msg) => {
         const reminders = await getClient().remindManager.fetch(msg.author.id);
 
-        if(!reminders) {
+        if (!reminders) {
             return ":information_source: You have no reminders.";
         }
 
@@ -15,4 +15,4 @@ export default {
 
         return `:information_source: Removed all reminders.`;
     }
-}
+};

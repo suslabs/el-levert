@@ -6,7 +6,7 @@ import PermissionDatabase from "../database/PermissionDatabase.js";
 
 const isGroupName = name => {
     return /^[A-Za-z0-9\-_]+$/.test(name);
-}
+};
 
 class PermissionManager {
     constructor() {
@@ -20,7 +20,7 @@ class PermissionManager {
 
         try {
             await fs.access(perm_dbPath);
-        } catch(err) {
+        } catch (err) {
             getLogger().info("Permission database not found. Creating at path " + perm_dbPath);
 
             await fs.mkdir(getClient().config.dbPath, {
@@ -36,21 +36,21 @@ class PermissionManager {
     }
 
     checkName(name) {
-        if(name.length > this.maxGroupNameLength) {
+        if (name.length > this.maxGroupNameLength) {
             return `The group name can be at most ${this.maxGroupNameLength} characters long.`;
-        } else if(!isGroupName(name)) {
+        } else if (!isGroupName(name)) {
             return "The group name must consist of Latin characters, numbers, _ or -.";
         }
     }
 
     async fetch(id) {
-        if(id === this.owner) {
+        if (id === this.owner) {
             return [
                 {
                     name: "owner",
                     level: 2147483647
                 }
-            ]
+            ];
         }
 
         return await this.perm_db.fetch(id);
@@ -59,11 +59,11 @@ class PermissionManager {
     async maxLevel(id) {
         const groups = await this.fetch(id);
         let maxLevel = 0;
-        
-        if(groups) {
+
+        if (groups) {
             maxLevel = Math.max(...groups.map(x => x.level));
         }
-        
+
         return maxLevel;
     }
 
@@ -98,29 +98,29 @@ class PermissionManager {
     async list() {
         let users = await this.perm_db.listUsers(),
             groups = await this.perm_db.listGroups();
-        
-        if(groups.length < 1) {
+
+        if (groups.length < 1) {
             return false;
         }
 
-        if(users.length < 1) {
-            groups.forEach(x => x.users = []);
+        if (users.length < 1) {
+            groups.forEach(x => (x.users = []));
 
             return groups;
         }
-        
-        for(const user of users) {
+
+        for (const user of users) {
             const find = (await getClient().findUsers(user.id))[0];
 
-            if(typeof find !== "undefined") {
+            if (typeof find !== "undefined") {
                 user.username = find.user.username;
             } else {
                 user.username = "NOT FOUND";
             }
         }
 
-        groups.forEach(x => x.users = users.filter(y => y.group === x.name));
-        
+        groups.forEach(x => (x.users = users.filter(y => y.group === x.name)));
+
         return groups;
     }
 }

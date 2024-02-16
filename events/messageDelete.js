@@ -8,7 +8,7 @@ export default {
         if (msg.author.bot) {
             return;
         }
-        
+
         getClient().executeAllHandlers("delete", msg);
     }
 };

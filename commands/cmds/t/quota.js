@@ -7,12 +7,14 @@ export default {
     subcommand: true,
     handler: async (_, msg) => {
         const quota = await getClient().tagManager.getQuota(msg.author.id),
-              perc = Util.round(quota / getClient().config.maxQuota * 100, 2);
+            perc = Util.round((quota / getClient().config.maxQuota) * 100, 2);
 
-        if(quota === false) {
+        if (quota === false) {
             return ":information_source: You have no tags.";
         }
 
-        return `:information_source: You're using **${Util.round(quota, 2)}/${getClient().config.maxQuota}kb** of the available storage (**${perc}%**).`;
+        return `:information_source: You're using **${Util.round(quota, 2)}/${
+            getClient().config.maxQuota
+        }kb** of the available storage (**${perc}%**).`;
     }
-}
+};

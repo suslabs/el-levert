@@ -8,24 +8,24 @@ export default {
     subcommand: true,
     handler: async (args, msg) => {
         const match = args.match(/(.+?)\s*(?:(?:"((?:[^"\\]|\\.)*)")|$)/),
-              date = match[1] ?? "",
-              remindMsg = match[2] ?? "",
-              e = getClient().remindManager.checkMsg(remindMsg);
+            date = match[1] ?? "",
+            remindMsg = match[2] ?? "",
+            e = getClient().remindManager.checkMsg(remindMsg);
 
-        if(args.length === 0 || date.length === 0) {
-            return ":information_source: `reminder add [date] \"message\"`";
-        }      
+        if (args.length === 0 || date.length === 0) {
+            return ':information_source: `reminder add [date] "message"`';
+        }
 
-        if(e) {
+        if (e) {
             return ":warning: " + e;
         }
 
         let parsed = chrono.parseDate(date);
 
-        if(!parsed) {
+        if (!parsed) {
             parsed = chrono.parseDate("in " + date);
 
-            if(!parsed) {
+            if (!parsed) {
                 return `:warning: Invalid date: \`${date}\`.`;
             }
         }
@@ -35,4 +35,4 @@ export default {
 
         return `:information_source: You will be reminded on <t:${Math.floor(end / 1000)}:f>.`;
     }
-}
+};

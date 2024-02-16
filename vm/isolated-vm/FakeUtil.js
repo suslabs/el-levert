@@ -31,7 +31,7 @@ const FakeUtil = {
             createdTimestamp: x.user.createdTimestamp,
             defaultAvatarURL: x.user.defaultAvatarURL,
             hexAccentColor: x.user.hexAccentColor,
-            tag: x.user.tag,
+            tag: x.user.tag
         }));
 
         return new ivm.ExternalCopy(data).copyInto();
@@ -43,11 +43,11 @@ const FakeUtil = {
     fetchTag: async name => {
         let tag = await getClient().tagManager.fetch(name);
 
-        if(!tag) {
+        if (!tag) {
             return undefined;
         }
 
-        if(tag.hops.length > 1) {
+        if (tag.hops.length > 1) {
             tag = await getClient().tagManager.fetchAlias(tag);
         }
 
@@ -56,7 +56,7 @@ const FakeUtil = {
     fetchMessage: async (user_id, ch_id, msg_id) => {
         let data = await getClient().fetchMessage(ch_id, msg_id, user_id);
 
-        if(data === false) {
+        if (data === false) {
             return undefined;
         }
 
@@ -66,10 +66,10 @@ const FakeUtil = {
     fetchMessages: async (user_id, ch_id, options) => {
         let data = await getClient().fetchMessages(ch_id, options, user_id);
 
-        if(data === false) {
+        if (data === false) {
             return undefined;
         }
-        
+
         data = data.map(x => VMUtil.removeCircRef(x));
         return new ivm.ExternalCopy(data).copyInto();
     }

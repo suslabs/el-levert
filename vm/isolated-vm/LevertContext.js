@@ -21,7 +21,7 @@ class LevertContext {
     }
 
     async setArgs(args) {
-        if(typeof args !== "undefined") {
+        if (typeof args !== "undefined") {
             args = args.length > 0 ? args : undefined;
 
             const vmTag = new ivm.ExternalCopy({
@@ -33,19 +33,16 @@ class LevertContext {
     }
 
     registerFunc(options) {
-        const {
-            objName,
-            funcName,
-            type,
-            funcRef
-        } = options;
+        const { objName, funcName, type, funcRef } = options;
 
-        const body = options.body ?? `return $0.${type}(undefined, args, {
+        const body =
+                options.body ??
+                `return $0.${type}(undefined, args, {
             arguments: {
                 copy: true
             }
         });`,
-              code = `(function() {
+            code = `(function() {
     if(typeof ${objName} === "undefined") {
         ${objName} = {};
     }
@@ -131,7 +128,7 @@ class LevertContext {
             funcRef: FakeAxios.request
         });
     }
-    
+
     async setupContext(msg, args) {
         this.context = await this.isolate.createContext({
             inspector: this.enableInspector
@@ -142,7 +139,7 @@ class LevertContext {
         this.global = global;
 
         msg = new FakeMsg(msg);
-        
+
         await this.setMsg(msg);
         await this.setArgs(args);
 
@@ -154,6 +151,6 @@ class LevertContext {
         await this.setupContext(msg, args);
         return this.context;
     }
-};
+}
 
 export default LevertContext;

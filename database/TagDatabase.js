@@ -15,7 +15,7 @@ import Tag from "./Tag.js";
 */
 
 const create_st = {
-    tagTableCreate: `CREATE TABLE "Tags" (
+        tagTableCreate: `CREATE TABLE "Tags" (
         "hops"	TEXT,
         "name"	TEXT,
         "body"	TEXT,
@@ -25,27 +25,27 @@ const create_st = {
         "lastEdited"	INTEGER,
         "type"	INTEGER
     );`,
-    quotaTableCreate: `CREATE TABLE "Quotas" (
+        quotaTableCreate: `CREATE TABLE "Quotas" (
         "id"	TEXT,
         "quota"	REAL
     )`
-},
-      exec_st = {
-    tag_st: {
-        fetch: "SELECT * FROM Tags WHERE name = $name;",
-        add: "INSERT INTO Tags VALUES ($name, $name, $body, $owner, '', $registered, 0, $type);",
-        edit: "UPDATE Tags SET hops = $hops, body = $body, args = $args, lastEdited = $lastEdited, type = $type WHERE name = $name;",
-        chown: "UPDATE Tags SET owner = $owner, lastEdited = $lastEdited, type = $type WHERE name = $name;",
-        delete: "DELETE FROM Tags WHERE name = $name;",
-        dump: "SELECT name FROM Tags;",
-        list: "SELECT * FROM Tags WHERE owner = $owner;"
     },
-    quota_st: {
-        quotaSet: "UPDATE Quotas SET quota = $quota WHERE id = $id",
-        quotaCreate: "INSERT INTO Quotas VALUES ($id, 0)",
-        quota: "SELECT quota FROM Quotas WHERE id = $id;"
-    }
-};
+    exec_st = {
+        tag_st: {
+            fetch: "SELECT * FROM Tags WHERE name = $name;",
+            add: "INSERT INTO Tags VALUES ($name, $name, $body, $owner, '', $registered, 0, $type);",
+            edit: "UPDATE Tags SET hops = $hops, body = $body, args = $args, lastEdited = $lastEdited, type = $type WHERE name = $name;",
+            chown: "UPDATE Tags SET owner = $owner, lastEdited = $lastEdited, type = $type WHERE name = $name;",
+            delete: "DELETE FROM Tags WHERE name = $name;",
+            dump: "SELECT name FROM Tags;",
+            list: "SELECT * FROM Tags WHERE owner = $owner;"
+        },
+        quota_st: {
+            quotaSet: "UPDATE Quotas SET quota = $quota WHERE id = $id",
+            quotaCreate: "INSERT INTO Quotas VALUES ($id, 0)",
+            quota: "SELECT quota FROM Quotas WHERE id = $id;"
+        }
+    };
 
 class TagDatabase {
     constructor(path) {
@@ -66,10 +66,10 @@ class TagDatabase {
         this.db = new AsyncDatabase(this.dbPath, Modes.OPEN_READWRITE);
         await this.db.open();
 
-        for(const type in exec_st) {
+        for (const type in exec_st) {
             this[type] = {};
 
-            for(const st in exec_st[type]) {
+            for (const st in exec_st[type]) {
                 this[type][st] = await this.db.prepare(exec_st[type][st]);
             }
         }
@@ -79,8 +79,8 @@ class TagDatabase {
         const row = await this.tag_st.fetch.get({
             $name: name
         });
-        
-        if(typeof row === "undefined" || row.length < 1) {
+
+        if (typeof row === "undefined" || row.length < 1) {
             return false;
         }
 
@@ -109,7 +109,7 @@ class TagDatabase {
             $type: tag.type
         });
 
-        if(typeof res.changes !== "undefined" && res.changes > 0) {
+        if (typeof res.changes !== "undefined" && res.changes > 0) {
             return true;
         }
 
@@ -127,7 +127,7 @@ class TagDatabase {
             $type: tag.type | 1
         });
 
-        if(typeof res.changes !== "undefined" && res.changes > 0) {
+        if (typeof res.changes !== "undefined" && res.changes > 0) {
             return true;
         }
 
@@ -139,7 +139,7 @@ class TagDatabase {
             $name: name
         });
 
-        if(typeof res.changes !== "undefined" && res.changes > 0) {
+        if (typeof res.changes !== "undefined" && res.changes > 0) {
             return true;
         }
 
@@ -167,7 +167,7 @@ class TagDatabase {
             $id: id
         });
 
-        if(typeof quota === "undefined") {
+        if (typeof quota === "undefined") {
             return false;
         }
 

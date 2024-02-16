@@ -5,14 +5,14 @@ export default {
     parent: "eval",
     subcommand: true,
     load: _ => getClient().config.enableVM2,
-    handler: async function(args, msg) {
+    handler: async function (args, msg) {
         const parsed = await this.parentCmd.evalBase(args, msg),
-              body = parsed.body;
+            body = parsed.body;
 
-        if(typeof parsed.err !== "undefined") {
+        if (typeof parsed.err !== "undefined") {
             return parsed.err;
         }
-        
+
         return await getClient().tagVM2.runScript(body, msg);
     }
-}
+};

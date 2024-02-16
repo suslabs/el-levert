@@ -5,7 +5,7 @@ export default {
     parent: "eval",
     subcommand: true,
     load: _ => getClient().config.enableOtherLangs,
-    handler: function(args, msg) {
+    handler: function (args, msg) {
         return this.parentCmd.altevalBase(args, msg, 76);
     }
-}
+};

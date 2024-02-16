@@ -41,17 +41,17 @@ class ExternalVM {
             wall_time_limit: this.timeLimit
         };
 
-        if(typeof stdin !== "undefined") {
+        if (typeof stdin !== "undefined") {
             data.stdin = stdin;
         }
-        
+
         try {
             res = await axios.post(this.base + this.submitUrl, data);
-        } catch(err) {
-            if(typeof err.response !== "undefined") {
+        } catch (err) {
+            if (typeof err.response !== "undefined") {
                 const data = err.response.data;
 
-                if(err.response.status === 422) {
+                if (err.response.status === 422) {
                     throw new ExternalVMError(JSON.stringify(data));
                 } else {
                     throw new ExternalVMError(data.error);
@@ -69,7 +69,7 @@ class ExternalVM {
             const interval = setInterval(async _ => {
                 const status = (await axios.get(this.base + token + this.statusUrl)).data.status_id;
 
-                if(![1, 2].includes(status)) {
+                if (![1, 2].includes(status)) {
                     clearInterval(interval);
                     resolve(status);
                 }
@@ -82,11 +82,14 @@ class ExternalVM {
     async getOutput(token) {
         let data = (await axios.get(this.base + token + this.outputUrl)).data;
 
-        data = Object.assign({
-            stdout: "",
-            stderr: "",
-            compile_output: ""
-        }, data);
+        data = Object.assign(
+            {
+                stdout: "",
+                stderr: "",
+                compile_output: ""
+            },
+            data
+        );
 
         return {
             stdout: Buffer.from(data.stdout, "base64").toString("utf-8"),
@@ -97,7 +100,7 @@ class ExternalVM {
 
     async runScript(code, lang, stdin) {
         const token = await this.submit(code, lang, stdin),
-              resCode = await this.checkCode(token);
+            resCode = await this.checkCode(token);
 
         return [await this.getOutput(token), resCode];
     }

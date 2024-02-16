@@ -11,10 +11,10 @@ class TrackedUser {
 }
 
 function checkUsers() {
-    for(const user of this.trackedUsers) {
+    for (const user of this.trackedUsers) {
         const timeDiff = Date.now() - user.time;
 
-        if(timeDiff > this.checkInterval) {
+        if (timeDiff > this.checkInterval) {
             this.removeUser(user.id);
         }
     }
@@ -45,10 +45,10 @@ class CommandHandler extends Handler {
 
     searchCmds(name) {
         return this.commands.find(x => {
-            if(x.aliases.length > 0) {
+            if (x.aliases.length > 0) {
                 return (x.name === name || x.aliases.includes(name)) && !x.isSubcmd;
             }
-            
+
             return x.name === name && !x.isSubcmd;
         });
     }
@@ -58,21 +58,20 @@ class CommandHandler extends Handler {
     }
 
     addUser(id) {
-        const user = new TrackedUser(id, Date.now())
+        const user = new TrackedUser(id, Date.now());
         this.trackedUsers.push(user);
     }
 
     removeUser(id) {
-        this.trackedUsers = this.trackedUsers.filter(x =>
-            x.id !== id);
+        this.trackedUsers = this.trackedUsers.filter(x => x.id !== id);
     }
 
     async execute(msg) {
-        if(!this.isCmd(msg.content)) {
+        if (!this.isCmd(msg.content)) {
             return false;
         }
 
-        if(this.searchUser(msg.author.id)) {
+        if (this.searchUser(msg.author.id)) {
             this.addMsg(await msg.reply(":warning: Please wait for the previous command to finish."));
             return false;
         }
@@ -80,60 +79,68 @@ class CommandHandler extends Handler {
         this.addUser(msg.author.id);
 
         const content = msg.content.slice(this.cmdPrefix.length),
-              [name, args] = Util.splitArgs(content);
+            [name, args] = Util.splitArgs(content);
 
         const cmd = this.searchCmds(name);
 
-        if(typeof cmd === "undefined") {
+        if (typeof cmd === "undefined") {
             this.removeUser(msg.author.id);
             return false;
         }
 
         await msg.channel.sendTyping();
-        getLogger().info(`User ${msg.author.id} ("${msg.author.username}") used command ${name} in channel ${msg.channel.id} ("${msg.channel.name}").`);
-        
+        getLogger().info(
+            `User ${msg.author.id} ("${msg.author.username}") used command ${name} in channel ${msg.channel.id} ("${msg.channel.name}").`
+        );
+
         let out;
-        
+
         try {
             const t1 = Date.now();
 
             out = await cmd.execute(args, msg);
 
             getLogger().info(`Command execution took ${(Date.now() - t1).toLocaleString()} ms.`);
-        } catch(err) {
-            this.addMsg(await msg.reply({
-                content: `:no_entry_sign: Encountered exception while executing command **${name}**:`,
-                ...Util.getFileAttach(err.stack, "error.js")
-            }), msg.id);
+        } catch (err) {
+            this.addMsg(
+                await msg.reply({
+                    content: `:no_entry_sign: Encountered exception while executing command **${name}**:`,
+                    ...Util.getFileAttach(err.stack, "error.js")
+                }),
+                msg.id
+            );
 
             getLogger().error("Command execution failed", err);
 
             this.removeUser(msg.author.id);
             return false;
         }
-        
-        if(typeof out === "string") {
+
+        if (typeof out === "string") {
             const split = out.split("\n");
-            
-            if(out.length > this.outCharLimit || split.length > this.outNewlineLimit) {
+
+            if (out.length > this.outCharLimit || split.length > this.outNewlineLimit) {
                 out = Util.getFileAttach(out);
             }
         }
-        
+
         try {
             this.addMsg(await msg.reply(out), msg.id);
-        } catch(err) {
-            if(err.message === "Cannot send an empty message") {
+        } catch (err) {
+            if (err.message === "Cannot send an empty message") {
                 this.addMsg(await msg.reply(`:no_entry_sign: ${err.message}.`), msg.id);
 
                 this.removeUser(msg.author.id);
                 return false;
             }
 
-            this.addMsg(await msg.reply({
-                content: ":no_entry_sign: Encountered exception while sending reply:",
-                ...Util.getFileAttach(err.stack, "error.js")
-            }), msg.id);
+            this.addMsg(
+                await msg.reply({
+                    content: ":no_entry_sign: Encountered exception while sending reply:",
+                    ...Util.getFileAttach(err.stack, "error.js")
+                }),
+                msg.id
+            );
 
             getLogger().error("Reply failed", err);
 

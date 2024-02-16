@@ -1,7 +1,7 @@
 function printfTemplate(info) {
     let log = `[${info.timestamp}] - ${info.level}: ${info.message}`;
 
-    if(info.stack) {
+    if (info.stack) {
         log += `\n${info.stack}`;
     }
 

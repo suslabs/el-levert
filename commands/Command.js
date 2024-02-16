@@ -4,11 +4,11 @@ import { getClient } from "../LevertClient.js";
 
 class Command {
     constructor(options) {
-        if(typeof options.name === "undefined") {
+        if (typeof options.name === "undefined") {
             throw new CommandError("Command must have a name.");
         }
 
-        if(typeof options.handler === "undefined") {
+        if (typeof options.handler === "undefined") {
             throw new CommandError("Command must have a handler.");
         }
 
@@ -30,7 +30,7 @@ class Command {
     }
 
     getSubcmd(name) {
-        if(this.subcmds.size < 1) {
+        if (this.subcmds.size < 1) {
             return;
         }
 
@@ -40,38 +40,38 @@ class Command {
     getHelp() {
         let help = "";
 
-        if(this.description.length > 0) {
+        if (this.description.length > 0) {
             help += `Description:\n\`\`\`\n${this.description}\n\`\`\``;
 
-            if(typeof this.usage !== "undefined") {
+            if (typeof this.usage !== "undefined") {
                 help += "\n\n";
             }
         }
 
-        if(this.usage.length > 0) {
+        if (this.usage.length > 0) {
             help += `Usage:\n\`\`\`\n${this.usage}\n\`\`\``;
         }
-        
+
         return help;
     }
 
     async execute(args, msg) {
-        if(!this.isSubcmd) {
+        if (!this.isSubcmd) {
             const [subName, subArgs] = Util.splitArgs(args),
-                  subCmd = this.getSubcmd(subName);
+                subCmd = this.getSubcmd(subName);
 
-            if(typeof subCmd !== "undefined") {
+            if (typeof subCmd !== "undefined") {
                 return subCmd.execute(subArgs, msg);
             }
         }
 
         const perm = await getClient().permManager.maxLevel(msg.author.id);
 
-        if(perm < this.allowed) {
+        if (perm < this.allowed) {
             return `:warning: Access denied.\nOnly permission level ${this.allowed} and above can execute this command.`;
         }
 
-        if(this.hasHelp && this.helpArgs.includes(args.toLowerCase())) {
+        if (this.hasHelp && this.helpArgs.includes(args.toLowerCase())) {
             return this.getHelp();
         }
 
