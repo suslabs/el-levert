@@ -78,8 +78,9 @@ class TagVM {
             }
         } finally {
             context.disposeIsolate();
-            return res;
         }
+
+        return res;
     }
 }
 
