@@ -1,38 +1,17 @@
-import path from "path";
-import fs from "fs/promises";
+import DBManager from "./DBManager.js";
 
-import { getClient, getLogger } from "../LevertClient.js";
-import PermissionDatabase from "../database/PermissionDatabase.js";
+import { getClient } from "../LevertClient.js";
+import PermissionDatabase from "../database/permission/PermissionDatabase.js";
 
 const isGroupName = name => {
     return /^[A-Za-z0-9\-_]+$/.test(name);
 };
 
-class PermissionManager {
+class PermissionManager extends DBManager {
     constructor() {
+        super("permission", "perm_db.db", PermissionDatabase, "perm_db");
+
         this.owner = getClient().config.owner;
-    }
-
-    async loadDatabase() {
-        const perm_dbPath = path.join(getClient().config.dbPath, "perm_db.db");
-
-        this.perm_db = new PermissionDatabase(perm_dbPath);
-
-        try {
-            await fs.access(perm_dbPath);
-        } catch (err) {
-            getLogger().info("Permission database not found. Creating at path " + perm_dbPath);
-
-            await fs.mkdir(getClient().config.dbPath, {
-                recursive: true
-            });
-
-            await this.perm_db.create_db();
-        }
-
-        await this.perm_db.load();
-
-        getLogger().info("Successfully loaded permission database.");
     }
 
     checkName(name) {

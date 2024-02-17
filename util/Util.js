@@ -24,7 +24,7 @@ const Util = {
 
         return files;
     },
-    randElem: arr => arr[~~(Math.random() * arr.length)],
+    randElement: arr => arr[~~(Math.random() * arr.length)],
     clamp: (x, a, b) => Math.max(Math.min(x, b), a),
     round: (num, digits) => Math.round((num + Number.EPSILON) * 10 ** digits) / 10 ** digits,
     splitArgs: str => {
@@ -35,7 +35,8 @@ const Util = {
             name = str;
             args = "";
         } else {
-            (name = str.slice(0, ind)), (args = str.slice(ind + 1));
+            name = str.slice(0, ind);
+            args = str.slice(ind + 1);
         }
 
         return [name.toLowerCase(), args];

@@ -19,7 +19,7 @@ import ReminderManager from "./managers/ReminderManager.js";
 import Command from "./commands/Command.js";
 import TagVM from "./vm/isolated-vm/TagVM.js";
 import TagVM2 from "./vm/vm2/TagVM2.js";
-import ExternalVM from "./vm/ExternalVM.js";
+import ExternalVM from "./vm/judge0/ExternalVM.js";
 
 import auth from "./config/auth.json" assert { type: "json" };
 import config from "./config/config.json" assert { type: "json" };

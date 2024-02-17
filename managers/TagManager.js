@@ -1,45 +1,27 @@
-import path from "path";
-import fs from "fs/promises";
 import axios from "axios";
 
-import { getClient, getLogger } from "../LevertClient.js";
-import TagError from "../errors/TagError.js";
-import Tag from "../database/Tag.js";
-import Util from "../util/Util.js";
-import TagDatabase from "../database/TagDatabase.js";
+import DBManager from "./DBManager.js";
 
-class TagManager {
+import { getClient } from "../LevertClient.js";
+import Util from "../util/Util.js";
+
+import TagError from "../errors/TagError.js";
+import Tag from "../database/tag/Tag.js";
+import TagDatabase from "../database/tag/TagDatabase.js";
+
+class TagManager extends DBManager {
     constructor() {
+        super("tag", "tag_db.db", TagDatabase, "tag_db");
+
         this.maxQuota = getClient().config.maxQuota;
         this.maxTagSize = getClient().config.maxTagSize;
         this.maxTagNameLength = getClient().config.maxTagNameLength;
 
-        (this.tagNameRegex = new RegExp(getClient().config.tagNameRegex)),
-            (this.isTagName = name => {
-                return this.tagNameRegex.test(name);
-            });
+        this.tagNameRegex = new RegExp(getClient().config.tagNameRegex);
     }
 
-    async loadDatabase() {
-        const tag_dbPath = path.join(getClient().config.dbPath, "tag_db.db");
-
-        this.tag_db = new TagDatabase(tag_dbPath);
-
-        try {
-            await fs.access(tag_dbPath);
-        } catch (err) {
-            getLogger().info("Tag database not found. Creating at path " + tag_dbPath);
-
-            await fs.mkdir(getClient().config.dbPath, {
-                recursive: true
-            });
-
-            await this.tag_db.create_db();
-        }
-
-        await this.tag_db.load();
-
-        getLogger().info("Successfully loaded tag database.");
+    isTagName(name) {
+        return this.tagNameRegex.test(name);
     }
 
     checkName(name) {

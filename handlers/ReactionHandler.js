@@ -3,14 +3,14 @@ import Handler from "./Handler.js";
 import Util from "../util/Util.js";
 import { getClient, getLogger } from "../LevertClient.js";
 
+const emojiChars = ":;=-x+";
+
 class ReactionHandler extends Handler {
     constructor() {
         super(getClient().reactions.enableReacts, false);
 
         this.funnyWords = getClient().reactions.funnyWords;
         this.parans = getClient().reactions.parans;
-
-        this.emojiChars = ":;=-x+";
     }
 
     countParans(str) {
@@ -18,7 +18,7 @@ class ReactionHandler extends Handler {
             isEmoji = false;
 
         str.split("").forEach(c => {
-            if (this.emojiChars.includes(c)) {
+            if (emojiChars.includes(c)) {
                 isEmoji = true;
             } else {
                 switch (c) {
@@ -43,7 +43,8 @@ class ReactionHandler extends Handler {
             }
         });
 
-        return isEmoji ? 0 : Math.min(Math.max(parans, -this.parans.left.length), this.parans.right.length);
+        const count = Math.min(Math.max(parans, -this.parans.left.length), this.parans.right.length);
+        return isEmoji ? 0 : count;
     }
 
     async paransReact(msg) {
@@ -98,7 +99,7 @@ class ReactionHandler extends Handler {
                     if (typeof word.react === "string") {
                         await msg.react(word.react);
                     } else if (word.react.constructor.name == "Array") {
-                        await msg.react(Util.randElem(word.react));
+                        await msg.react(Util.randElement(word.react));
                     }
                 }
             }
@@ -133,6 +134,7 @@ class ReactionHandler extends Handler {
             }
         } catch (err) {
             getLogger().error("Failed to remove reactions from message.", err);
+            return false;
         }
 
         return true;

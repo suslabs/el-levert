@@ -1,5 +1,23 @@
-import Util from "../../../util/Util.js";
+import { EmbedBuilder, time, bold } from "discord.js";
+
 import { getClient } from "../../../LevertClient.js";
+
+function formatReminders(reminders) {
+    return reminders
+        .map((reminder, i) => {
+            let out = `${i + 1}. `;
+
+            const timestamp = Math.floor(reminder.end / 1000);
+            out += time(timestamp, "f");
+
+            if (reminder.msg.length > 0) {
+                out += `: ${bold(reminder.msg)}`;
+            }
+
+            return out;
+        })
+        .join("\n");
+}
 
 export default {
     name: "list",
@@ -30,32 +48,17 @@ export default {
             return `:information_source: \`${username}\` has no reminders.`;
         }
 
-        const format = reminders
-            .map((x, i) => {
-                const date = new Date(x.end);
-                let out = `${i + 1}. ${date.toLocaleDateString("en-UK")} at ${date.toLocaleTimeString("en-UK", {
-                    timeStyle: "short",
-                    timeZone: "UTC"
-                })}`;
+        const format = formatReminders(reminders),
+            embed = new EmbedBuilder().setDescription(format);
 
-                if (x.msg.length > 0) {
-                    out += `: ${x.msg}`;
-                }
-
-                return out;
-            })
-            .join("\n");
-
-        const out = {
-            ...Util.getFileAttach(format)
-        };
-
+        let out = {};
         if (owner === msg.author.id) {
-            out.content = ":information_source: Your reminders:";
+            out.content = ":information_source: Your Reminders:";
         } else {
             out.content = `:information_source: \`${username}\`'s reminders:`;
         }
 
+        out.embeds = [embed];
         return out;
     }
 };
