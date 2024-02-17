@@ -1,14 +1,22 @@
-# EL LEVERT JR
+<h1 align="center">
+    <a href="https://github.com/Alex31TheDev/el-levert"><img src="https://github.com/Alex31TheDev/el-levert/assets/" alt="EL LEVERT"></a>
+    EL LEVERT JR
+    <br>
+</h1>
 
-Romanian version of Leveret by Neeve. Includes many Romaniations such as "stealing", "cabal", "g" and "Jhon".
+<h4 align="center">Romanian version of Leveret by Neeve</h4>
 
 # Commands
 
-## 1. help
+### 1. help
 
 Sends list of base commands.
 
-## 2. t/tag `(name) args`
+### 2. version
+
+Displays bot version.
+
+### 3. t/tag `(name) args`
 
 Execute tag `(name)`, receiving `tag.args` = `args`.
 
@@ -26,7 +34,7 @@ Subcommands:
 -   raw `(name)` - Sends the source code of tag `(name)`.
 -   search `(query)` - Searches the tags list for `(query)`. Matches are approximated, suspicious results are to be expected.
 
-## 3. eval `(script)`
+### 4. eval `(script)`
 
 Evaluate specified script. See API section for more information.
 
@@ -36,7 +44,7 @@ Subcommands:
 -   vm2 `(script)` - Eval script with the vm2 backend. See API/vm2 for more information.
 -   c, cpp, py `(script)` - Eval script with the external vm backend, quite slow.
 
-## 4. perm
+### 5. perm
 
 Root command for the permission manager. Can be executed by anyone.
 For this feature to work properly, set the `owner` field in `config.json`.
@@ -52,7 +60,7 @@ Subcommands:
 -   remove_group `(group_name)` - Removes `(group_name)` from the group list and from the permission list of everyone added to it.
 -   check `(user)` - Sends permission details for `(user)`. Can be executed by anyone
 
-## 5. oc `-version (EU/t) (duration)`
+### 6. oc `-version (EU/t) (duration)`
 
 Calculates overclock EU, duration and tier for the specified parameters.
 If `-version` is not specified, the calculator defaults to `ceu`. Allowed versions are:
@@ -61,7 +69,7 @@ If `-version` is not specified, the calculator defaults to `ceu`. Allowed versio
 -   nomi
 -   tj
 
-## 6. reminder
+### 7. reminder
 
 Root command for the reminder manager.
 
@@ -74,11 +82,11 @@ Subcommands:
 
 # Evaluation API
 
-## 1. `eval` / pure js API
+### 1. `eval` / pure js API
 
 Mirrors the API of Leveret, see https://gist.github.com/NotMyWing/632d738644c17aa71931169af5cb2767. If the output is empty, `Cannot send an empty message.` will be sent instead.
 
-## 2. `vm2` / nodejs API
+### 2. `vm2` / nodejs API
 
 Allows for more advanced scripts than the pure js API, allowing for async functions and importing internal and external libraries.
 
@@ -149,6 +157,8 @@ To start the bot, navigate to the root directory and run `npm start`. Logs will 
 To download the tag database from the original bot run `%t fulldump` or `%eval JSON.stringify(util.dumpTags().map(x => util.fetchTag(x)))` and download the resulting file. To import these tags, navigate to the root directory and run `node ./scripts/importer/importer.js -i path-to-tags`.
 
 To delete all imported tags run `node ./scripts/importer/importer.js --p1`.
+
+# Amogus
 
 ```txt
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣤⣤⣤⣤⣤⣤⣤⣤⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀
