@@ -1,6 +1,6 @@
-import { getClient } from "../LevertClient.js";
+import { getClient } from "../../LevertClient.js";
 
-import ExternalVMError from "../errors/ExternalVMError.js";
+import ExternalVMError from "../../errors/ExternalVMError.js";
 
 import axios from "axios";
 

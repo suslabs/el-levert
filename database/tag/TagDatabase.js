@@ -1,4 +1,4 @@
-import { AsyncDatabase, Modes } from "./AsyncDatabase.js";
+import { AsyncDatabase, Modes } from "../sqlite/AsyncDatabase.js";
 import Tag from "./Tag.js";
 
 /*

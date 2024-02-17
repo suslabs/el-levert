@@ -1,18 +1,18 @@
-import crypto from "crypto";
+import { AsyncDatabase, Modes } from "../sqlite/AsyncDatabase.js";
 
-import { AsyncDatabase, Modes } from "./AsyncDatabase.js";
+import Reminder from "./Reminder.js";
 
 const createReminderTable = `CREATE TABLE "Reminders" (
-	"id"	TEXT,
+	"user"	TEXT,
 	"end"	INTEGER,
     "msg"   TEXT,
-	"ind"	TEXT
+	"id"	TEXT
 );`,
     remind_st = {
-        fetch: "SELECT * FROM Reminders WHERE id = $id",
-        add: "INSERT INTO Reminders VALUES ($id, $end, $msg, $ind);",
-        remove: "DELETE FROM Reminders WHERE id = $id AND ind = $ind",
-        removeAll: "DELETE FROM Reminders WHERE id = $id;",
+        fetch: "SELECT * FROM Reminders WHERE user = $user",
+        add: "INSERT INTO Reminders VALUES ($user, $end, $msg, $id);",
+        remove: "DELETE FROM Reminders WHERE user = $user AND id = $id",
+        removeAll: "DELETE FROM Reminders WHERE user = $user;",
         list: "SELECT * FROM Reminders"
     };
 
@@ -41,44 +41,43 @@ class ReminderDatabase {
         }
     }
 
-    async fetch(id) {
+    async fetch(user) {
         const rows = await this.remind_st.fetch.all({
-            $id: id
+            $user: user
         });
 
         if (typeof rows === "undefined" || rows.length < 1) {
             return false;
         }
 
-        return rows;
+        return rows.map(x => new Reminder(x));
     }
 
-    add(id, end, msg) {
-        const ind = crypto.randomBytes(5).toString("hex") + "-" + Math.floor(Date.now() / 1000).toString();
-
+    add(reminder) {
         return this.remind_st.add.run({
-            $id: id,
-            $end: end,
-            $msg: msg,
-            $ind: ind
+            $user: reminder.user,
+            $end: reminder.end,
+            $msg: reminder.msg,
+            $id: reminder.id
         });
     }
 
-    remove(id, ind) {
+    remove(reminder) {
         return this.remind_st.remove.run({
-            $id: id,
-            $ind: ind
+            $user: reminder.user,
+            $id: reminder.id
         });
     }
 
-    removeAll(id) {
+    removeAll(user) {
         return this.remind_st.removeAll.run({
-            $id: id
+            $user: user
         });
     }
 
-    list() {
-        return this.remind_st.list.all();
+    async list() {
+        const rows = await this.remind_st.list.all();
+        return rows.map(x => new Reminder(x));
     }
 }
 

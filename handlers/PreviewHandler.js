@@ -1,14 +1,16 @@
-import { EmbedBuilder } from "discord.js";
+import { EmbedBuilder, hyperlink } from "discord.js";
 
 import Handler from "./Handler.js";
 
 import { getClient, getLogger } from "../LevertClient.js";
 import Util from "../util/Util.js";
 
+const msgUrlRegex = /https:\/\/discord.com\/channels\/(\d{18,19})\/(\d{18,19})\/(\d{18,19})/;
+
 class PreviewHandler extends Handler {
     constructor() {
-        super();
-        this.regex = /https:\/\/discord.com\/channels\/(\d{18,19})\/(\d{18,19})\/(\d{18,19})/;
+        super(true, true);
+        this.regex = msgUrlRegex;
     }
 
     canPreview(str) {
@@ -64,12 +66,15 @@ class PreviewHandler extends Handler {
                 embed.setImage(attach.url);
 
                 if (content.length < 1) {
-                    content = `[[Image (${attach.name})]](${attach.url})`;
+                    content = hyperlink(`[Image (${attach.name})]`, attach.url);
                 }
             }
         }
 
-        embed.setDescription(`${content}\n\n[[Jump to Message]](${url})`);
+        content += "\n\n";
+        content += hyperlink("[Jump to Message]", url);
+
+        embed.setDescription(content);
 
         return {
             embeds: [embed]
@@ -86,13 +91,11 @@ class PreviewHandler extends Handler {
         try {
             preview = await this.genPreview(msg, msg.content);
         } catch (err) {
-            this.addMsg(
-                await msg.reply({
-                    content: ":no_entry_sign: Encountered exception while generating preview:",
-                    ...Util.getFileAttach(err.stack, "error.js")
-                }),
-                msg.id
-            );
+            const reply = await msg.reply({
+                content: ":no_entry_sign: Encountered exception while generating preview:",
+                ...Util.getFileAttach(err.stack, "error.js")
+            });
+            this.addMsg(reply, msg.id);
 
             getLogger().error("Preview gen failed", err);
             return false;
@@ -107,13 +110,11 @@ class PreviewHandler extends Handler {
         try {
             this.addMsg(await msg.reply(preview), msg.id);
         } catch (err) {
-            this.addMsg(
-                await msg.reply({
-                    content: ":no_entry_sign: Encountered exception while sending preview:",
-                    ...Util.getFileAttach(err.stack, "error.js")
-                }),
-                msg.id
-            );
+            const reply = await msg.reply({
+                content: ":no_entry_sign: Encountered exception while sending preview:",
+                ...Util.getFileAttach(err.stack, "error.js")
+            });
+            this.addMsg(reply, msg.id);
 
             getLogger().error("Reply failed", err);
             return false;

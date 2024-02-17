@@ -1,6 +1,6 @@
 import sqlite from "sqlite3";
 
-import DatabaseError from "../errors/DatabaseError.js";
+import DatabaseError from "../../errors/DatabaseError.js";
 import AsyncStatement from "./AsyncStatement.js";
 
 const Modes = {

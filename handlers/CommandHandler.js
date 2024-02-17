@@ -1,7 +1,13 @@
 import Handler from "./Handler.js";
 
-import Util from "../util/Util.js";
 import { getClient, getLogger } from "../LevertClient.js";
+import Util from "../util/Util.js";
+
+function logUsage(msg, name, args) {
+    getLogger().info(
+        `User ${msg.author.id} ("${msg.author.username}") used command ${name} in channel ${msg.channel.id} ("${msg.channel.name}").`
+    );
+}
 
 class TrackedUser {
     constructor(id, time) {
@@ -24,7 +30,7 @@ const checkInterval = 1000;
 
 class CommandHandler extends Handler {
     constructor() {
-        super();
+        super(true, true);
 
         this.cmdPrefix = getClient().config.cmdPrefix;
         this.commands = getClient().commands;
@@ -71,12 +77,14 @@ class CommandHandler extends Handler {
             return false;
         }
 
+        await msg.channel.sendTyping();
+
         if (this.searchUser(msg.author.id)) {
-            this.addMsg(await msg.reply(":warning: Please wait for the previous command to finish."));
+            const reply = await msg.reply(":warning: Please wait for the previous command to finish.");
+            this.addMsg(reply, msg.id);
+
             return false;
         }
-
-        this.addUser(msg.author.id);
 
         const content = msg.content.slice(this.cmdPrefix.length),
             [name, args] = Util.splitArgs(content);
@@ -84,15 +92,19 @@ class CommandHandler extends Handler {
         const cmd = this.searchCmds(name);
 
         if (typeof cmd === "undefined") {
-            this.removeUser(msg.author.id);
             return false;
         }
 
-        await msg.channel.sendTyping();
-        getLogger().info(
-            `User ${msg.author.id} ("${msg.author.username}") used command ${name} in channel ${msg.channel.id} ("${msg.channel.name}").`
-        );
+        this.addUser(msg.author.id);
+        logUsage(msg, name, args);
 
+        const ret = await this.executeCommand(msg, cmd, args);
+        this.removeUser(msg.author.id);
+
+        return ret;
+    }
+
+    async executeCommand(msg, cmd, args) {
         let out;
 
         try {
@@ -102,17 +114,14 @@ class CommandHandler extends Handler {
 
             getLogger().info(`Command execution took ${(Date.now() - t1).toLocaleString()} ms.`);
         } catch (err) {
-            this.addMsg(
-                await msg.reply({
-                    content: `:no_entry_sign: Encountered exception while executing command **${name}**:`,
-                    ...Util.getFileAttach(err.stack, "error.js")
-                }),
-                msg.id
-            );
+            const reply = await msg.reply({
+                content: `:no_entry_sign: Encountered exception while executing command **${cmd.name}**:`,
+                ...Util.getFileAttach(err.stack, "error.js")
+            });
 
+            this.addMsg(reply, msg.id);
             getLogger().error("Command execution failed", err);
 
-            this.removeUser(msg.author.id);
             return false;
         }
 
@@ -125,31 +134,25 @@ class CommandHandler extends Handler {
         }
 
         try {
-            this.addMsg(await msg.reply(out), msg.id);
+            const reply = await msg.reply(out);
+            this.addMsg(reply, msg.id);
         } catch (err) {
             if (err.message === "Cannot send an empty message") {
-                this.addMsg(await msg.reply(`:no_entry_sign: ${err.message}.`), msg.id);
+                const reply = await msg.reply(`:no_entry_sign: ${err.message}.`);
+                this.addMsg(reply, msg.id);
 
-                this.removeUser(msg.author.id);
                 return false;
             }
 
-            this.addMsg(
-                await msg.reply({
-                    content: ":no_entry_sign: Encountered exception while sending reply:",
-                    ...Util.getFileAttach(err.stack, "error.js")
-                }),
-                msg.id
-            );
+            const reply = await msg.reply({
+                content: ":no_entry_sign: Encountered exception while sending reply:",
+                ...Util.getFileAttach(err.stack, "error.js")
+            });
+            this.addMsg(reply, msg.id);
 
             getLogger().error("Reply failed", err);
-
-            this.removeUser(msg.author.id);
             return false;
         }
-
-        this.removeUser(msg.author.id);
-        return true;
     }
 }
 

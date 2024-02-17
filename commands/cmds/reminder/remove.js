@@ -7,7 +7,7 @@ export default {
     handler: async (args, msg) => {
         const ind = parseInt(args);
 
-        if (args.length === 0 || isNaN(ind) || ind !== Math.floor(ind)) {
+        if (args.length <= 0 || isNaN(ind)) {
             return ":information_source: `reminder remove [index]`";
         }
 

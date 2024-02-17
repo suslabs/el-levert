@@ -1,7 +1,7 @@
 import path from "path";
 import fs from "fs/promises";
 
-import TagDatabase from "../TagDatabase.js";
+import TagDatabase from "../tag/TagDatabase.js";
 
 import createLogger from "../../logger/CreateLogger.js";
 import getDefaultLoggerConfig from "../../logger/DefaultConfig.js";

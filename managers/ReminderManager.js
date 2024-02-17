@@ -1,36 +1,18 @@
-import path from "path";
-import fs from "fs/promises";
+import { time } from "discord.js";
 
-import { getClient, getLogger } from "../LevertClient.js";
-import ReminderDatabase from "../database/ReminderDatabase.js";
+import DBManager from "./DBManager.js";
 
-class ReminderManager {
+import { getClient } from "../LevertClient.js";
+import ReminderDatabase from "../database/reminder/ReminderDatabase.js";
+
+import Reminder from "../database/reminder/Reminder.js";
+
+class ReminderManager extends DBManager {
     constructor() {
+        super("reminder", "remind_db.db", ReminderDatabase, "remind_db");
+
         this.owner = getClient().config.owner;
-
         this.maxMsgLength = 512;
-    }
-
-    async loadDatabase() {
-        const remind_dbPath = path.join(getClient().config.dbPath, "remind_db.db");
-
-        this.remind_db = new ReminderDatabase(remind_dbPath);
-
-        try {
-            await fs.access(remind_dbPath);
-        } catch (err) {
-            getLogger().info("Reminder database not found. Creating at path " + remind_dbPath);
-
-            await fs.mkdir(getClient().config.dbPath, {
-                recursive: true
-            });
-
-            await this.remind_db.create_db();
-        }
-
-        await this.remind_db.load();
-
-        getLogger().info("Successfully loaded reminder database.");
     }
 
     checkMsg(msg) {
@@ -41,26 +23,27 @@ class ReminderManager {
         }
     }
 
-    fetch(id) {
-        return this.remind_db.fetch(id);
+    fetch(user) {
+        return this.remind_db.fetch(user);
     }
 
-    add(id, end, msg) {
-        return this.remind_db.add(id, end, msg);
+    add(user, end, msg) {
+        const reminder = new Reminder({ user, end, msg });
+        return this.remind_db.add(reminder);
     }
 
-    async remove(id, ind) {
-        const reminders = await this.fetch(id);
+    async remove(user, index) {
+        const reminders = await this.fetch(user);
 
-        if (ind >= reminders.length) {
+        if (index >= reminders.length) {
             return false;
         }
 
-        return this.remind_db.remove(id, reminders[ind].ind);
+        return this.remind_db.remove(reminders[index]);
     }
 
-    async removeAll(id) {
-        return await this.remind_db.removeAll(id);
+    async removeAll(user) {
+        return await this.remind_db.removeAll(user);
     }
 
     async checkPast(date) {
@@ -69,8 +52,8 @@ class ReminderManager {
         const reminders = await this.remind_db.list(),
             past = reminders.filter(x => x.end < date);
 
-        for (const remind of past) {
-            await this.remind_db.remove(remind.id, remind.ind);
+        for (const reminder of past) {
+            await this.remind_db.remove(reminder);
         }
 
         return past;
@@ -80,22 +63,27 @@ class ReminderManager {
         const reminders = await this.checkPast();
 
         for (const reminder of reminders) {
-            const user = await getClient().findUserById(reminder.id);
-
-            if (!user) {
-                continue;
-            }
-
-            let out = `You set a reminder for <t:${Math.floor(reminder.end / 1000)}:f>`;
-
-            if (reminder.msg.length > 0) {
-                out += ` with the message: **${reminder.msg}**`;
-            } else {
-                out += ".";
-            }
-
-            await user.send(out);
+            this.sendReminder(reminder);
         }
+    }
+
+    async sendReminder(reminder) {
+        const user = await getClient().findUserById(reminder.user);
+
+        if (!user) {
+            return false;
+        }
+
+        const timestamp = Math.floor(reminder.end / 1000);
+        let out = `You set a reminder for ${time(timestamp, "f")}`;
+
+        if (reminder.msg.length > 0) {
+            out += ` with the message: **${reminder.msg}**`;
+        } else {
+            out += ".";
+        }
+
+        await user.send(out);
     }
 }
 

@@ -20,45 +20,38 @@ async function fetchMatch(ch_id, regex, ignore_id, limit = 100) {
     }
 
     const msg = msgs.find(x => regex.test(x) && x.id !== ignore_id);
-
     return typeof msg === "undefined" ? false : msg;
 }
 
+const sedRegex = /^sed\/(.+?)\/([^/]*)\/?(.{1,2})?/;
+
 class SedHandler extends Handler {
     constructor() {
-        super(getClient().config.enableSed ?? true);
+        super(getClient().config.enableSed, true);
 
-        this.regex = /^sed\/(.+?)\/([^/]*)\/?(.{1,2})?/;
+        this.regex = sedRegex;
     }
 
     canSed(str) {
         return this.enabled && this.regex.test(str);
     }
 
-    async execute(msg) {
-        if (!this.canSed(msg.content)) {
-            return false;
-        }
-
-        await msg.channel.sendTyping();
-
+    async genSed(msg) {
         const match = msg.content.match(this.regex),
-            sedRegex = match[1],
+            parsedRegex = match[1],
             replace = match[2],
             flag = match[3];
 
         if (match.length < 3) {
-            this.addMsg(await msg.reply(":warning: Encountered invalid args."), msg.id);
-            return false;
+            return [undefined, ":warning: Encountered invalid args."];
         }
 
         let regex, sedMsg;
 
         try {
-            regex = new RegExp(sedRegex, flag ?? "" + "i");
+            regex = new RegExp(parsedRegex, flag ?? "" + "i");
         } catch (err) {
-            this.addMsg(await msg.reply(":warning: Invalid regex or flags."), msg.id);
-            return false;
+            return [undefined, ":warning: Invalid regex or flags."];
         }
 
         if (msg.type === MessageType.Reply) {
@@ -68,8 +61,7 @@ class SedHandler extends Handler {
         }
 
         if (!sedMsg) {
-            this.addMsg(await msg.reply(":warning: No matching message found."), msg.id);
-            return false;
+            return [undefined, ":warning: No matching message found."];
         }
 
         const embed = new EmbedBuilder()
@@ -83,21 +75,35 @@ class SedHandler extends Handler {
                 text: "From #" + sedMsg.channel.name
             });
 
+        return [embed, undefined];
+    }
+
+    async execute(msg) {
+        if (!this.canSed(msg.content)) {
+            return false;
+        }
+
+        await msg.channel.sendTyping();
+        const ret = await this.genSed(msg);
+
+        if (typeof ret[1] !== "undefined") {
+            const reply = msg.reply(ret[1]);
+            this.addMsg(reply, msg.id);
+        }
+
+        const embed = ret[0];
+
         try {
-            this.addMsg(
-                await msg.reply({
-                    embeds: [embed]
-                }),
-                msg.id
-            );
+            const reply = await msg.reply({
+                embeds: [embed]
+            });
+            this.addMsg(reply, msg.id);
         } catch (err) {
-            this.addMsg(
-                await msg.reply({
-                    content: `:no_entry_sign: Encountered exception while sending preview:`,
-                    ...Util.getFileAttach(err.stack, "error.js")
-                }),
-                msg.id
-            );
+            const reply = await msg.reply({
+                content: `:no_entry_sign: Encountered exception while sending preview:`,
+                ...Util.getFileAttach(err.stack, "error.js")
+            });
+            this.addMsg(reply, msg.id);
 
             getLogger().error("Reply failed", err);
             return false;
