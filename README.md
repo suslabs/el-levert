@@ -1,10 +1,41 @@
 <h1 align="center">
-    <a href="https://github.com/Alex31TheDev/el-levert"><img src="https://github.com/Alex31TheDev/el-levert/assets/" alt="EL LEVERT"></a>
+    <img src="https://bigrat.monster/media/bigrat.jpg" alt="EL LEVERT" style="width:35%;height:35%;">
+    <br>
     EL LEVERT JR
     <br>
 </h1>
 
 <h4 align="center">Romanian version of Leveret by Neeve</h4>
+
+<p align="center">
+    <a href="https://opensource.org/license/mit/">
+        <img src="https://img.shields.io/github/license/Alex31TheDev/el-levert" alt="License">
+    </a>
+    <a href="https://discord.js.org/#/">
+        <img src="https://img.shields.io/badge/discord-js-blue.svg" alt="discord.js">
+    </a>
+    <a href="https://nodejs.org/en">
+        <img src="https://img.shields.io/badge/node-js-lime.svg" alt="node.js">
+    </a>
+    <a href="https://github.com/WeslayCodes/BoarBot/main">
+        <img src="https://img.shields.io/github/last-commit/Alex31TheDev/el-levert" alt="Last commit">
+    </a>
+
+</p>
+
+<p align="center">
+  <a href="#commands">Commands</a>
+  •
+  <a href="#usage-example">Example</a>
+  •
+  <a href="#evaluation-api">API</a>
+  •
+  <a href="#config">Config</a>
+  •
+  <a href="#importing">Importing</a>
+  •
+  <a href="#amogus">Amogus</a>
+</p>
 
 # Commands
 
@@ -79,6 +110,10 @@ Subcommands:
 -   list `user` - Lists all of your reminders. If `user` is specified, their reminders will be listed instead.
 -   remove `(index)` - Removes reminder at the specified index in your list.
 -   remove_all - Removes all reminders.
+
+# Usage example
+
+<img src="https://github.com/Alex31TheDev/el-levert/blob/main/assets/firefox_Ic5C6kBteN.png?raw=true" alt="rat">
 
 # Evaluation API
 
