@@ -1,6 +1,8 @@
 import discord from "discord.js";
 import URL from "url";
 
+import version from "./version.js";
+
 import ClientError from "./errors/ClientError.js";
 import Util from "./util/Util.js";
 
@@ -56,6 +58,8 @@ class LevertClient extends Client {
         if (client) {
             throw new ClientError("The client can only be constructed once.");
         }
+
+        this.version = version;
 
         this.config = config;
         this.reactions = reactions;
