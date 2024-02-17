@@ -41,11 +41,11 @@
 
 ### 1. help
 
-Sends list of base commands.
+Sends the list of base commands.
 
 ### 2. version
 
-Displays bot version.
+Displays the bot version.
 
 ### 3. t/tag `(name) args`
 
@@ -53,9 +53,9 @@ Execute tag `(name)`, receiving `tag.args` = `args`.
 
 Subcommands:
 
--   add `type (name) (body)` - Add tag `(name)`. If `body` contains a code block it will be treated as a script tag. If an image file is attached, it will be added as a url. If a text file is attached, it will be added as a script. If the first argument is `vm2` the tag will be added as a vm2 script.
+-   add `type (name) (body)` - Adds the tag `(name)`. If `body` contains a code block, it will be treated as a script tag. If an image file is attached, it will be added as a url. If a text file is attached, it will be added as a script. If the first argument is `vm2` the tag will be added as a vm2 script.
 -   alias `(name) (alias_name) args` - If tag `(name)` doesn't exist, it will be created and aliased to `(alias_name)` with `args` being appended to `tag.args`. If `(name)` already exists and is owned by you, it will be updated to be an alias. Moderators can bypass ownership checks.
--   chown `(name) (new_owner)` - Transfers tag to another user, specified either as an username, tag, mention or id.
+-   chown `(name) (new_owner)` - Transfers the tag to another user, specified either as a username, tag, mention or id.
 -   delete `(name)` - Deletes tag `(name)` if it's owned by you or if you are a moderator.
 -   dump - Sends a list of all tags.
 -   edit `(name) (new_body)` - Edits tag `(name)` with a new body, same ownership and attachment rules as `add`.
@@ -67,7 +67,7 @@ Subcommands:
 
 ### 4. eval `(script)`
 
-Evaluate specified script. See API section for more information.
+Evaluate specified script. See the API section for more information.
 
 Subcommands:
 
@@ -89,11 +89,11 @@ Subcommands:
     Level 1 = Moderator
     Level 2 = Admin
 -   remove_group `(group_name)` - Removes `(group_name)` from the group list and from the permission list of everyone added to it.
--   check `(user)` - Sends permission details for `(user)`. Can be executed by anyone
+-   check `(user)` - Sends permission details for `(user)`. Can be executed by anyone.
 
 ### 6. oc `-version (EU/t) (duration)`
 
-Calculates overclock EU, duration and tier for the specified parameters.
+Calculates overclock EU, duration, and tier for the specified parameters.
 If `-version` is not specified, the calculator defaults to `ceu`. Allowed versions are:
 
 -   ceu
@@ -119,13 +119,14 @@ Subcommands:
 
 ### 1. `eval` / pure js API
 
-Mirrors the API of Leveret, see https://gist.github.com/NotMyWing/632d738644c17aa71931169af5cb2767. If the output is empty, `Cannot send an empty message.` will be sent instead.
+Mirrors the API of Leveret; see https://gist.github.com/NotMyWing/632d738644c17aa71931169af5cb2767.
+If the output is empty, `Cannot send an empty message.` will be sent instead.
 
 ### 2. `vm2` / nodejs API
 
 Allows for more advanced scripts than the pure js API, allowing for async functions and importing internal and external libraries.
 
-**When not using `reply`, script output must be send with `return`.**
+**When not using `reply`, script output must be sent with `return`.**
 
 ### Internal module whitelist:
 
@@ -184,14 +185,14 @@ Allows for more advanced scripts than the pure js API, allowing for async functi
 
 # Startup
 
-If running for the first time run `npm install` and hope isolated-vm decides to actually install without 50 errors (rare occurrence).
+If running for the first time, run `npm install` and hope isolated-vm decides to actually install without 50 errors (rare occurrence).
 To start the bot, navigate to the root directory and run `npm start`. Logs will be printed both to the console and to files in the `logs` folder.
 
 # Importing
 
-To download the tag database from the original bot run `%t fulldump` or `%eval JSON.stringify(util.dumpTags().map(x => util.fetchTag(x)))` and download the resulting file. To import these tags, navigate to the root directory and run `node ./scripts/importer/importer.js -i path-to-tags`.
+To download the tag database from the original bot, run `%t fulldump` or `%eval JSON.stringify(util.dumpTags().map(x => util.fetchTag(x)))` and download the resulting file. To import these tags, navigate to the root directory and run `node ./scripts/importer/importer.js -i path-to-tags`.
 
-To delete all imported tags run `node ./scripts/importer/importer.js --p1`.
+To delete all imported tags, run `node ./scripts/importer/importer.js --p1`.
 
 # Amogus
 
