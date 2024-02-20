@@ -53,7 +53,9 @@ class LevertClient extends Client {
         const { config, reactions, auth } = configs;
         this.config = config;
         this.reactions = reactions;
+
         token = auth.token;
+        this.owner = auth.owner ?? "";
 
         this.events = [];
         this.commands = [];

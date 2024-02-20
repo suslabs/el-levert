@@ -11,7 +11,6 @@ class ReminderManager extends DBManager {
     constructor() {
         super("reminder", ReminderDatabase, "remind_db");
 
-        this.owner = getClient().config.owner;
         this.maxMsgLength = 512;
     }
 
