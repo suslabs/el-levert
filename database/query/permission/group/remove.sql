@@ -1,0 +1,1 @@
+DELETE FROM Groups WHERE name = $name;

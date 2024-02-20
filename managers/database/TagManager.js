@@ -2,12 +2,12 @@ import axios from "axios";
 
 import DBManager from "./DBManager.js";
 
-import { getClient } from "../LevertClient.js";
-import Util from "../util/Util.js";
+import { getClient } from "../../LevertClient.js";
+import Util from "../../util/Util.js";
 
-import TagError from "../errors/TagError.js";
-import Tag from "../database/tag/Tag.js";
-import TagDatabase from "../database/tag/TagDatabase.js";
+import TagError from "../../errors/TagError.js";
+import Tag from "../../database/tag/Tag.js";
+import TagDatabase from "../../database/tag/TagDatabase.js";
 
 class TagManager extends DBManager {
     constructor() {

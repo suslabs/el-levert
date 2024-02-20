@@ -1,0 +1,1 @@
+INSERT INTO Groups VALUES ($name, $level);

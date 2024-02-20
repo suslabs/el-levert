@@ -4,6 +4,7 @@
     "eventsPath": "./events",
     "commandsPath": "./commands/cmds",
     "dbPath": "./database/db",
+    "queryPath": "./database/query",
     "cmdPrefix": "%",
     "memLimit": 50,
     "timeLimit": 15,

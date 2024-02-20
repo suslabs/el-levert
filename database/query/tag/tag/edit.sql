@@ -1,0 +1,1 @@
+UPDATE Tags SET hops = $hops, body = $body, args = $args, lastEdited = $lastEdited, type = $type WHERE name = $name;

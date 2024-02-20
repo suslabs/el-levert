@@ -1,0 +1,1 @@
+DELETE FROM Tags WHERE name = $name;

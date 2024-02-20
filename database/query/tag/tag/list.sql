@@ -1,0 +1,1 @@
+SELECT * FROM Tags WHERE owner = $owner;
