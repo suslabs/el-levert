@@ -1,4 +1,4 @@
-import BaseDatabase from "../sqlite/BaseDatabase.js";
+import BaseDatabase from "../BaseDatabase.js";
 
 class PermissionDatabase extends BaseDatabase {
     async fetch(id) {
