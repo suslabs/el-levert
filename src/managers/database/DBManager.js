@@ -4,6 +4,8 @@ import fs from "fs/promises";
 import { getClient, getLogger } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 
+import databaseFilenames from "./databaseFilenames.json" assert { type: "json" };
+
 async function directoryExists(path) {
     let stat;
 
@@ -23,10 +25,12 @@ async function directoryExists(path) {
 }
 
 class DBManager {
-    constructor(name, dbFilename, classType, fieldName) {
+    constructor(name, classType, fieldName) {
         this.name = name;
 
         this.dbDir = getClient().config.dbPath;
+
+        const dbFilename = databaseFilenames[name];
         this.dbPath = path.join(this.dbDir, dbFilename);
 
         const queryBase = getClient().config.queryPath;

@@ -11,7 +11,7 @@ import TagDatabase from "../../database/tag/TagDatabase.js";
 
 class TagManager extends DBManager {
     constructor() {
-        super("tag", "tag_db.db", TagDatabase, "tag_db");
+        super("tag", TagDatabase, "tag_db");
 
         this.maxQuota = getClient().config.maxQuota;
         this.maxTagSize = getClient().config.maxTagSize;
