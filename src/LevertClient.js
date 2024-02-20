@@ -77,7 +77,7 @@ class LevertClient extends Client {
             delete this.logger;
         }
 
-        const config = getDefaultLoggerConfig(this.config.logFile, "El Levert");
+        const config = getDefaultLoggerConfig("El Levert", true, true, this.config.logFile);
         this.logger = createLogger(config);
     }
 

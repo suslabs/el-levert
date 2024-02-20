@@ -1,4 +1,3 @@
-import { LevertClient } from "./src/LevertClient.js";
+import init from "./src/init.js";
 
-const client = new LevertClient();
-client.start();
+init();
