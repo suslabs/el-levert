@@ -9,7 +9,7 @@ const isGroupName = name => {
 
 class PermissionManager extends DBManager {
     constructor() {
-        super("permission", "perm_db.db", PermissionDatabase, "perm_db");
+        super("permission", PermissionDatabase, "perm_db");
 
         this.owner = getClient().config.owner;
     }

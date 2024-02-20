@@ -9,7 +9,7 @@ import Reminder from "../../database/reminder/Reminder.js";
 
 class ReminderManager extends DBManager {
     constructor() {
-        super("reminder", "remind_db.db", ReminderDatabase, "remind_db");
+        super("reminder", ReminderDatabase, "remind_db");
 
         this.owner = getClient().config.owner;
         this.maxMsgLength = 512;
