@@ -1,16 +1,16 @@
 import path from "path";
 import fs from "fs/promises";
 
+import configPaths from "./configPaths.json" assert { type: "json" };
+
 import LoadStatus from "./LoadStatus.js";
 
-const encoding = "utf-8";
-
 class BaseLoader {
-    constructor(name, basePath, logger) {
+    constructor(name, logger) {
         this.name = name;
 
-        const filePath = path.resolve(basePath, name + ".json");
-        this.path = filePath;
+        const configPath = path.join(configPaths.dir, configPaths[name]);
+        this.path = configPath;
 
         if (logger === undefined) {
             this.useLogger = false;
@@ -25,7 +25,7 @@ class BaseLoader {
         this.logger?.info(`Reading ${this.name} file...`);
 
         try {
-            config = await fs.readFile(this.path, { encoding });
+            config = await fs.readFile(this.path, { encoding: configPaths.encoding });
         } catch (err) {
             if (this.useLogger) {
                 this.logger?.error(`Error occured while reading ${this.name} file:`, err);

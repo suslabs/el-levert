@@ -1,0 +1,7 @@
+{
+    "dir": "./config",
+    "encoding": "utf-8",
+    "config": "config.json",
+    "reactions": "reactions.json",
+    "auth": "auth.json"
+}

@@ -23,20 +23,7 @@ import TagVM from "./vm/isolated-vm/TagVM.js";
 import TagVM2 from "./vm/vm2/TagVM2.js";
 import ExternalVM from "./vm/judge0/ExternalVM.js";
 
-import auth from "../config/auth.json" assert { type: "json" };
-import config from "../config/config.json" assert { type: "json" };
-import reactions from "../config/reactions.json" assert { type: "json" };
-
 const { Client, GatewayIntentBits, PermissionsBitField, ActivityType, Partials } = discord;
-
-let client;
-function getClient() {
-    return client;
-}
-
-function getLogger() {
-    return client.logger;
-}
 
 const intents = [
         GatewayIntentBits.Guilds,
@@ -49,7 +36,7 @@ const intents = [
     partials = [Partials.Channel];
 
 class LevertClient extends Client {
-    constructor() {
+    constructor(configs) {
         super({
             intents: intents,
             partials: partials
@@ -57,18 +44,21 @@ class LevertClient extends Client {
 
         if (client) {
             throw new ClientError("The client can only be constructed once.");
+        } else {
+            client = this;
         }
 
         this.version = version;
 
+        const { config, reactions, auth } = configs;
         this.config = config;
         this.reactions = reactions;
+        token = auth.token;
 
         this.events = [];
         this.commands = [];
 
         this.setupLogger();
-        client = this;
     }
 
     setupLogger() {
@@ -386,8 +376,8 @@ class LevertClient extends Client {
             this.externalVM = new ExternalVM();
         }
 
-        await this.login(auth.token);
-        this.setActivity(config.activity);
+        await this.login(token);
+        this.setActivity(this.config.activity);
 
         if (this.config.enableReminders) {
             setInterval(this.remindManager.sendReminders.bind(this.remindManager), 1000);
@@ -398,6 +388,16 @@ class LevertClient extends Client {
             registerGlobalHandler();
         }
     }
+}
+
+let token, client;
+
+function getClient() {
+    return client;
+}
+
+function getLogger() {
+    return client.logger;
 }
 
 const wrapEvent = callback =>
