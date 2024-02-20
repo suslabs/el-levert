@@ -1,5 +1,5 @@
 function printfTemplate(info) {
-    let log = `[${info.timestamp}] - ${info.level}: ${info.message}`;
+    let log = `[${info.timestamp}] - ${info.service} - ${info.level}: ${info.message}`;
 
     if (info.stack) {
         log += `\n${info.stack}`;
@@ -44,13 +44,14 @@ const consoleFormat = [
     }
 ];
 
-function getDefaultLoggerConfig(filename, name) {
+function getDefaultLoggerConfig(name, fileOutput, consoleOutput, filename) {
     const config = {
         name,
+        fileOutput,
+        consoleOutput,
         filename,
         fileFormat,
-        consoleFormat,
-        console: true
+        consoleFormat
     };
 
     return config;
