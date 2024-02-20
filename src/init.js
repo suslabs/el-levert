@@ -2,42 +2,55 @@ import createLogger from "./logger/CreateLogger.js";
 import getDefaultLoggerConfig from "./logger/DefaultConfig.js";
 
 import ConfigLoader from "./config/ConfigLoader.js";
+import ReactionsLoader from "./config/ReactionsLoader.js";
 import AuthLoader from "./config/AuthLoader.js";
+
 import LoadStatus from "./config/LoadStatus.js";
 
 import { LevertClient } from "./LevertClient.js";
 
 const logger = createLogger(getDefaultLoggerConfig("init", false, true));
 
-async function loadConfig() {
+function initLoaders() {
     const configLoader = new ConfigLoader(logger),
+        reactionsLoader = new ReactionsLoader(logger),
         authLoader = new AuthLoader(logger);
 
-    let config, auth, loadStatus;
+    const loaders = [];
+    loaders.push(configLoader);
+    loaders.push(reactionsLoader);
+    loaders.push(authLoader);
 
-    [config, loadStatus] = await configLoader.load();
-    if (loadStatus === LoadStatus.failed) {
-        return [undefined, undefined];
+    return loaders;
+}
+
+async function loadConfig() {
+    const loaders = initLoaders(),
+        configs = {};
+
+    for (const loader of loaders) {
+        let [config, loadStatus] = await loader.load();
+
+        if (loadStatus === LoadStatus.failed) {
+            return undefined;
+        }
+
+        configs[loader.name] = config;
     }
 
-    [auth, loadStatus] = await authLoader.load();
-    if (loadStatus === LoadStatus.failed) {
-        return [undefined, undefined];
-    }
-
-    return [config, auth];
+    return configs;
 }
 
 async function init() {
-    const [config, auth] = await loadConfig();
+    const configs = await loadConfig();
 
-    if (config === undefined || auth === undefined) {
+    if (typeof configs === "undefined") {
         return;
     }
 
     logger.end();
 
-    const client = new LevertClient(config, auth);
+    const client = new LevertClient(configs);
     await client.start();
 }
 
