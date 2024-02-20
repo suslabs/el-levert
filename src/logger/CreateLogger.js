@@ -1,12 +1,37 @@
 import winston from "winston";
 import path from "path";
-const { transports, format } = winston;
 
-import LoggerError from "../errors/LoggerError.js";
+import CreateLoggerError from "../errors/LoggerError.js";
 
-const formatNames = Object.getOwnPropertyNames(format).filter(x => !["length", "combine"].includes(x));
+const validForm = Object.getOwnPropertyNames(winston.format).filter(x => !["length", "combine"].includes(x));
 
-const enumerateErrorFormat = format(info => {
+function getFormat(names) {
+    if (names === undefined) {
+        return winston.format.simple();
+    } else if (typeof names === "string") {
+        names = [names];
+    }
+
+    const formats = names.map(x => {
+        let name, prop;
+
+        if (typeof x === "object") {
+            ({ name: name, prop: prop } = x);
+        } else {
+            name = x;
+        }
+
+        if (!validForm.includes(name)) {
+            throw new CreateLoggerError("Invalid format: " + x);
+        }
+
+        return winston.format[name](prop);
+    });
+
+    return winston.format.combine(...formats);
+}
+
+const enumerateErrorFormat = winston.format(info => {
     if (info.message instanceof Error) {
         info.message = Object.assign(
             {
@@ -30,36 +55,6 @@ const enumerateErrorFormat = format(info => {
     return info;
 });
 
-function getFormat(names) {
-    if (typeof names === "undefined") {
-        return format.simple();
-    } else if (typeof names === "string") {
-        names = [names];
-    }
-
-    const formats = names.map(x => {
-        let name, prop;
-
-        if (typeof x === "object") {
-            ({ name: name, prop: prop } = x);
-        } else {
-            name = x;
-        }
-
-        if (name === "custom") {
-            return prop;
-        }
-
-        if (!formatNames.includes(name)) {
-            throw new LoggerError("Invalid format: " + x);
-        }
-
-        return format[name](prop);
-    });
-
-    return format.combine(...formats);
-}
-
 function getFilename(name) {
     const file = path.basename(name),
         dir = path.dirname(name),
@@ -68,42 +63,71 @@ function getFilename(name) {
     return path.join(dir, date + "-" + file);
 }
 
-function addConsole(logger, format) {
-    logger.add(
-        new transports.Console({
-            format: format
-        })
-    );
-}
-
-function createLogger(config = {}) {
-    if (typeof config.filename === "undefined") {
-        return {};
+function getFileTransport(names, filename) {
+    if (names === undefined) {
+        throw new CreateLoggerError("A file format must be provided if outputting to a file");
     }
 
-    const file = new transports.File({
-        filename: getFilename(config.filename),
-        format: getFormat(config.fileFormat)
+    if (filename === undefined) {
+        throw new CreateLoggerError("A filename must be specified");
+    }
+
+    const format = getFormat(names),
+        timestampedFilename = getFilename(filename);
+
+    const file = new winston.transports.File({
+        filename: timestampedFilename,
+        format
     });
 
+    return file;
+}
+
+function getConsoleTransport(names) {
+    if (names === undefined) {
+        throw new CreateLoggerError("A console format must be provided if outputting to the console");
+    }
+
+    const format = getFormat(names),
+        console = new winston.transports.Console({
+            format
+        });
+
+    return console;
+}
+
+function createLogger(config) {
+    if (!config.fileOutput && !config.consoleOutput) {
+        throw new CreateLoggerError("Must provide an output method");
+    }
+
+    const transports = [];
+
+    if (config.fileOutput) {
+        const fileTransport = getFileTransport(config.fileFormat, config.filename);
+        transports.push(fileTransport);
+    }
+
+    if (config.consoleOutput) {
+        const consoleTransport = getConsoleTransport(config.consoleFormat);
+        transports.push(consoleTransport);
+    }
+
+    const level = config.level ?? "debug";
     let meta;
 
-    if (typeof config.name !== "undefined") {
+    if (config.name !== undefined) {
         meta = {
             service: config.name
         };
     }
 
     const logger = winston.createLogger({
-        level: config.level ?? "debug",
+        level,
         format: enumerateErrorFormat(),
-        transports: [file],
+        transports,
         defaultMeta: meta
     });
-
-    if (config.console) {
-        addConsole(logger, getFormat(config.consoleFormat));
-    }
 
     return logger;
 }
