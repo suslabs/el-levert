@@ -1,9 +1,9 @@
 import path, { dirname } from "path";
 import fs from "fs/promises";
 
-import Util from "../../util/Util.js";
+import Util from "../util/Util.js";
 
-import { AsyncDatabase, Modes } from "./AsyncDatabase.js";
+import { AsyncDatabase, Modes } from "./sqlite/AsyncDatabase.js";
 
 const extension = ".sql",
     encoding = "utf-8";

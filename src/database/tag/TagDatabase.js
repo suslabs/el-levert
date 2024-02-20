@@ -1,4 +1,4 @@
-import BaseDatabase from "../sqlite/BaseDatabase.js";
+import BaseDatabase from "../BaseDatabase.js";
 
 import Tag from "./Tag.js";
 
