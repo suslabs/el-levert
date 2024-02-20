@@ -1,7 +1,7 @@
 import discord from "discord.js";
 import URL from "url";
 
-import version from "./version.js";
+import version from "../version.js";
 
 import ClientError from "./errors/ClientError.js";
 import Util from "./util/Util.js";
@@ -23,9 +23,9 @@ import TagVM from "./vm/isolated-vm/TagVM.js";
 import TagVM2 from "./vm/vm2/TagVM2.js";
 import ExternalVM from "./vm/judge0/ExternalVM.js";
 
-import auth from "./config/auth.json" assert { type: "json" };
-import config from "./config/config.json" assert { type: "json" };
-import reactions from "./config/reactions.json" assert { type: "json" };
+import auth from "../config/auth.json" assert { type: "json" };
+import config from "../config/config.json" assert { type: "json" };
+import reactions from "../config/reactions.json" assert { type: "json" };
 
 const { Client, GatewayIntentBits, PermissionsBitField, ActivityType, Partials } = discord;
 
