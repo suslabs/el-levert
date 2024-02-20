@@ -13,13 +13,15 @@ class DBImporter {
     constructor(jsonPath) {
         this.jsonPath = jsonPath;
 
-        const config = getDefaultLoggerConfig(config.importLogFile, "Importer");
-        this.logger = createLogger(config);
+        const loggerConfig = getDefaultLoggerConfig(config.importLogFile, "Importer");
+        this.logger = createLogger(loggerConfig);
     }
 
     async loadDatabase() {
-        const dbPath = path.join(config.dbPath, "tag_db.db");
-        this.tag_db = new TagDatabase(dbPath);
+        const dbPath = path.join(config.dbPath, "tag_db.db"),
+            queryPath = path.join(config.queryPath, "tag");
+
+        this.tag_db = new TagDatabase(dbPath, queryPath);
 
         try {
             await fs.access(dbPath);
