@@ -1,4 +1,4 @@
-import path, { dirname } from "path";
+import path from "path";
 import fs from "fs/promises";
 
 import Util from "../util/Util.js";

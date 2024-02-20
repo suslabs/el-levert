@@ -11,7 +11,7 @@ class PermissionManager extends DBManager {
     constructor() {
         super("permission", PermissionDatabase, "perm_db");
 
-        this.owner = getClient().config.owner;
+        this.owner = getClient().owner;
     }
 
     checkName(name) {

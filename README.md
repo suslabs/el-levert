@@ -162,10 +162,10 @@ Allows for more advanced scripts than the pure js API, allowing for async functi
 `config/auth.json` must exist and contain the following lines:
 
     {
-        "token": "bot token"
+        "token": "bot token",
+        "owner": "your discord id"
     }
 
-`config/config.json` must have the property `owner` set to your own Discord id.
 `config/reactions.json` must contain at least `"enableReacts": false`. If `enableReacts` is set to true, the file must have the following structure:
 
     {
