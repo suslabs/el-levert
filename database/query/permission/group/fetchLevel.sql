@@ -1,0 +1,1 @@
+SELECT * FROM Groups WHERE level = $level;

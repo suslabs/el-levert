@@ -2,10 +2,10 @@ import { time } from "discord.js";
 
 import DBManager from "./DBManager.js";
 
-import { getClient } from "../LevertClient.js";
-import ReminderDatabase from "../database/reminder/ReminderDatabase.js";
+import { getClient } from "../../LevertClient.js";
+import ReminderDatabase from "../../database/reminder/ReminderDatabase.js";
 
-import Reminder from "../database/reminder/Reminder.js";
+import Reminder from "../../database/reminder/Reminder.js";
 
 class ReminderManager extends DBManager {
     constructor() {

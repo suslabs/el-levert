@@ -1,0 +1,1 @@
+INSERT INTO Tags VALUES ($name, $name, $body, $owner, '', $registered, 0, $type);

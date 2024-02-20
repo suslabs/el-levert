@@ -24,7 +24,7 @@ class AsyncDatabase {
     open() {
         return new Promise((resolve, reject) => {
             if (typeof this.db !== "undefined") {
-                reject(new DatabaseError("Cannot open database. Database is already open."));
+                reject(new DatabaseError("Cannot open database. The database is already open."));
             }
 
             const db = new sqlite.Database(this.filename, this.mode, err => {

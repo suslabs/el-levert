@@ -1,48 +1,10 @@
-import { AsyncDatabase, Modes } from "../sqlite/AsyncDatabase.js";
+import BaseDatabase from "../sqlite/BaseDatabase.js";
 
 import Reminder from "./Reminder.js";
 
-const createReminderTable = `CREATE TABLE "Reminders" (
-	"user"	TEXT,
-	"end"	INTEGER,
-    "msg"   TEXT,
-	"id"	TEXT
-);`,
-    remind_st = {
-        fetch: "SELECT * FROM Reminders WHERE user = $user",
-        add: "INSERT INTO Reminders VALUES ($user, $end, $msg, $id);",
-        remove: "DELETE FROM Reminders WHERE user = $user AND id = $id",
-        removeAll: "DELETE FROM Reminders WHERE user = $user;",
-        list: "SELECT * FROM Reminders"
-    };
-
-class ReminderDatabase {
-    constructor(path) {
-        this.dbPath = path;
-    }
-
-    async create_db() {
-        const db = new AsyncDatabase(this.dbPath, Modes.OPEN_RWCREATE);
-        await db.open();
-
-        await db.run(createReminderTable);
-
-        await db.close();
-    }
-
-    async load() {
-        this.db = new AsyncDatabase(this.dbPath, Modes.OPEN_READWRITE);
-        await this.db.open();
-
-        this.remind_st = {};
-
-        for (const st in remind_st) {
-            this.remind_st[st] = await this.db.prepare(remind_st[st]);
-        }
-    }
-
+class ReminderDatabase extends BaseDatabase {
     async fetch(user) {
-        const rows = await this.remind_st.fetch.all({
+        const rows = await this.queries.fetch.all({
             $user: user
         });
 
@@ -54,7 +16,7 @@ class ReminderDatabase {
     }
 
     add(reminder) {
-        return this.remind_st.add.run({
+        return this.queries.add.run({
             $user: reminder.user,
             $end: reminder.end,
             $msg: reminder.msg,
@@ -63,20 +25,20 @@ class ReminderDatabase {
     }
 
     remove(reminder) {
-        return this.remind_st.remove.run({
+        return this.queries.remove.run({
             $user: reminder.user,
             $id: reminder.id
         });
     }
 
     removeAll(user) {
-        return this.remind_st.removeAll.run({
+        return this.queries.removeAll.run({
             $user: user
         });
     }
 
     async list() {
-        const rows = await this.remind_st.list.all();
+        const rows = await this.queries.list.all();
         return rows.map(x => new Reminder(x));
     }
 }

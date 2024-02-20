@@ -1,0 +1,1 @@
+INSERT INTO Quotas VALUES ($id, 0)

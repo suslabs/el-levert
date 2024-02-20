@@ -14,9 +14,9 @@ import CommandHandler from "./handlers/CommandHandler.js";
 import PreviewHandler from "./handlers/PreviewHandler.js";
 import SedHandler from "./handlers/SedHandler.js";
 
-import TagManager from "./managers/TagManager.js";
-import PermissionManager from "./managers/PermissionManager.js";
-import ReminderManager from "./managers/ReminderManager.js";
+import TagManager from "./managers/database/TagManager.js";
+import PermissionManager from "./managers/database/PermissionManager.js";
+import ReminderManager from "./managers/database/ReminderManager.js";
 
 import Command from "./commands/Command.js";
 import TagVM from "./vm/isolated-vm/TagVM.js";
