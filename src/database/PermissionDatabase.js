@@ -1,6 +1,6 @@
-import BaseDatabase from "../BaseDatabase.js";
+import Database from "./Database.js";
 
-class PermissionDatabase extends BaseDatabase {
+class PermissionDatabase extends Database {
     async fetch(id) {
         const rows = await this.userQueries.fetch.all({
             $id: id
@@ -13,22 +13,22 @@ class PermissionDatabase extends BaseDatabase {
         return rows;
     }
 
-    add(group, id) {
-        return this.userQueries.add.run({
+    async add(group, id) {
+        return await this.userQueries.add.run({
             $group: group,
             $id: id
         });
     }
 
-    remove(group, id) {
-        return this.userQueries.remove.run({
+    async remove(group, id) {
+        return await this.userQueries.remove.run({
             $group: group,
             $id: id
         });
     }
 
-    removeAll(id) {
-        return this.userQueries.removeAll.run({
+    async removeAll(id) {
+        return await this.userQueries.removeAll.run({
             $id: id
         });
     }
@@ -57,8 +57,8 @@ class PermissionDatabase extends BaseDatabase {
         return row;
     }
 
-    addGroup(name, level) {
-        return this.groupQueries.add.run({
+    async addGroup(name, level) {
+        return await this.groupQueries.add.run({
             $name: name,
             $level: level
         });
@@ -74,12 +74,12 @@ class PermissionDatabase extends BaseDatabase {
         });
     }
 
-    listUsers() {
-        return this.userQueries.list.all();
+    async listUsers() {
+        return await this.userQueries.list.all();
     }
 
-    listGroups() {
-        return this.groupQueries.list.all();
+    async listGroups() {
+        return await this.groupQueries.list.all();
     }
 }
 

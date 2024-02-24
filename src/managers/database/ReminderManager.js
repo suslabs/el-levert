@@ -1,11 +1,9 @@
-import { time } from "discord.js";
-
 import DBManager from "./DBManager.js";
 
 import { getClient } from "../../LevertClient.js";
-import ReminderDatabase from "../../database/reminder/ReminderDatabase.js";
+import ReminderDatabase from "../../database/ReminderDatabase.js";
 
-import Reminder from "../../database/reminder/Reminder.js";
+import Reminder from "../../structures/Reminder.js";
 
 class ReminderManager extends DBManager {
     constructor() {
@@ -14,7 +12,7 @@ class ReminderManager extends DBManager {
         this.maxMsgLength = 512;
     }
 
-    checkMsg(msg) {
+    checkMessage(msg) {
         if (msg.length > this.maxMsgLength) {
             return `Reminder messages can be at most ${this.maxMsgLength} characters long.`;
         } else if (msg.indexOf("\n") !== -1) {
@@ -22,27 +20,31 @@ class ReminderManager extends DBManager {
         }
     }
 
-    fetch(user) {
-        return this.remind_db.fetch(user);
+    async fetch(user) {
+        return await this.remind_db.fetch(user);
     }
 
-    add(user, end, msg) {
+    async add(user, end, msg) {
         const reminder = new Reminder({ user, end, msg });
-        return this.remind_db.add(reminder);
+
+        await this.remind_db.add(reminder);
+        return reminder;
     }
 
     async remove(user, index) {
         const reminders = await this.fetch(user);
 
-        if (index >= reminders.length) {
+        if (typeof reminders === "undefined" || typeof reminders[user] === "undefined") {
             return false;
         }
 
-        return this.remind_db.remove(reminders[index]);
+        await this.remind_db.remove(reminders[index]);
+        return true;
     }
 
     async removeAll(user) {
-        return await this.remind_db.removeAll(user);
+        const res = await this.remind_db.removeAll(user);
+        return res.changes > 0;
     }
 
     async checkPast(date) {
@@ -73,8 +75,7 @@ class ReminderManager extends DBManager {
             return false;
         }
 
-        const timestamp = Math.floor(reminder.end / 1000);
-        let out = `You set a reminder for ${time(timestamp, "f")}`;
+        let out = `You set a reminder for ${reminder.getTimestamp()}`;
 
         if (reminder.msg.length > 0) {
             out += ` with the message: **${reminder.msg}**`;

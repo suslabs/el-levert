@@ -6,8 +6,8 @@ import { getClient } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 
 import TagError from "../../errors/TagError.js";
-import Tag from "../../database/tag/Tag.js";
-import TagDatabase from "../../database/tag/TagDatabase.js";
+import Tag from "../../structures/Tag.js";
+import TagDatabase from "../../database/TagDatabase.js";
 
 class TagManager extends DBManager {
     constructor() {
@@ -32,16 +32,16 @@ class TagManager extends DBManager {
         }
     }
 
-    fetch(name) {
-        return this.tag_db.fetch(name);
+    async fetch(name) {
+        return await this.tag_db.fetch(name);
     }
 
-    dump() {
-        return this.tag_db.dump();
+    async dump() {
+        return await this.tag_db.dump();
     }
 
-    getQuota(id) {
-        return this.tag_db.quotaFetch(id);
+    async getQuota(id) {
+        return await this.tag_db.quotaFetch(id);
     }
 
     async downloadBody(msg) {
@@ -69,21 +69,25 @@ class TagManager extends DBManager {
         return [body, isScript];
     }
 
-    async updateQuota(id, inc) {
-        let quota = await this.tag_db.quotaFetch(id);
+    async updateQuota(id, difference) {
+        if (difference === 0) {
+            return;
+        }
 
-        if (quota === false) {
+        let currentQuota = await this.tag_db.quotaFetch(id);
+
+        if (currentQuota === false) {
             await this.tag_db.quotaCreate(id);
-            quota = 0;
+            currentQuota = 0;
         }
 
-        quota += inc;
+        const newQuota = currentQuota + difference;
 
-        if (quota > this.maxQuota) {
-            throw new TagError("Maximum quota of ${this.maxQuota}kb has been exceeded.");
+        if (newQuota > this.maxQuota) {
+            throw new TagError(`Maximum quota of ${this.maxQuota}kb has been exceeded.`);
         }
 
-        await this.tag_db.quotaSet(id, quota);
+        await this.tag_db.quotaSet(id, newQuota);
     }
 
     async add(name, body, owner, isScript, scriptType) {
@@ -91,11 +95,7 @@ class TagManager extends DBManager {
             [body, isScript] = Util.formatScript(body);
         }
 
-        if (body.length > 0) {
-            await this.updateQuota(owner, Util.getByteLen(body) / 1024);
-        }
-
-        const newTag = new Tag({
+        const tag = new Tag({
             name: name,
             body: body,
             owner: owner,
@@ -103,27 +103,29 @@ class TagManager extends DBManager {
             type: 1 | (isScript << 1) | (scriptType << 2)
         });
 
-        await this.tag_db.add(newTag);
-        return newTag;
+        const tagSize = tag.getSize();
+        await this.updateQuota(owner, tagSize);
+
+        await this.tag_db.add(tag);
+
+        return tag;
     }
 
     async chown(tag, newOwner) {
-        const t_quota = Util.getByteLen(tag.body) / 1024;
+        const tagSize = tag.getSize();
 
-        await this.updateQuota(tag.owner, -t_quota);
-        await this.updateQuota(newOwner, t_quota);
+        await this.updateQuota(tag.owner, -tagSize);
+        await this.updateQuota(newOwner, tagSize);
 
         await this.tag_db.chown(tag, newOwner);
+
+        return tag;
     }
 
     async delete(tag) {
-        let t_quota = -Util.getByteLen(tag.body) / 1024;
+        const tagSize = tag.getSize();
 
-        if (tag.args.length > 0) {
-            t_quota -= Util.getByteLen(tag.args) / 1024;
-        }
-
-        await this.updateQuota(tag.owner, t_quota);
+        await this.updateQuota(tag.owner, -tagSize);
         await this.tag_db.delete(tag.name);
     }
 
@@ -143,17 +145,13 @@ class TagManager extends DBManager {
             type: 1 | (isScript << 1) | (scriptType << 2)
         });
 
-        let t_quota = (Util.getByteLen(body) - Util.getByteLen(tag.body)) / 1024;
+        const oldTagSize = tag.getSize(),
+            newTagSize = newTag.getSize(),
+            sizeDiff = newTagSize - oldTagSize;
 
-        if (tag.args.length > 0) {
-            t_quota -= Util.getByteLen(tag.args);
-        }
-
-        if (t_quota !== 0) {
-            await this.updateQuota(tag.owner, t_quota);
-        }
-
+        await this.updateQuota(tag.owner, sizeDiff);
         await this.tag_db.edit(newTag);
+
         return newTag;
     }
 
@@ -163,8 +161,8 @@ class TagManager extends DBManager {
             oldTags = tags.filter(x => (x.type & 1) === 0);
 
         return {
-            newTags: newTags,
-            oldTags: oldTags,
+            newTags,
+            oldTags,
             count: tags.length
         };
     }
@@ -189,7 +187,7 @@ class TagManager extends DBManager {
     async fetchAlias(tag) {
         let hops = [],
             args = [],
-            tagHop;
+            lastTag;
 
         for (const hop of tag.hops) {
             if (hops.includes(hop)) {
@@ -197,48 +195,44 @@ class TagManager extends DBManager {
             }
 
             hops.push(hop);
-            tagHop = await this.fetch(hop);
+            lastTag = await this.fetch(hop);
 
-            if (!tagHop) {
+            if (!lastTag) {
                 throw new TagError("Hop not found.", hop);
             }
 
-            if (tagHop.args.length > 0) {
-                args.push(tagHop.args);
+            if (lastTag.args.length > 0) {
+                args.push(lastTag.args);
             }
         }
 
-        tagHop.hops = tag.hops;
-        tagHop.args = args.join(" ");
+        lastTag.hops = tag.hops;
+        lastTag.args = args.join(" ");
 
-        return tagHop;
+        return lastTag;
     }
 
-    async alias(tag, a_name, a_hops, args) {
-        const newTag = new Tag({
-            name: tag.name,
-            body: "",
-            args: args,
-            type: 1
-        });
-
-        let t_quota = (Util.getByteLen(args) - Util.getByteLen(tag.body)) / 1024;
-
-        if (tag.args.length > 0) {
-            t_quota -= Util.getByteLen(tag.args) / 1024;
+    async alias(tag, aliasName, aliasHops, args) {
+        if (typeof aliasHops === "undefined" || aliasHops.length === 0) {
+            aliasHops = [aliasName];
         }
 
-        if (typeof a_hops === "undefined" || a_hops.length === 0) {
-            a_hops = [a_name];
-        }
+        const hops = [tag.name].concat(aliasHops),
+            newTag = new Tag({
+                name: tag.name,
+                body: "",
+                args: args,
+                type: 1,
+                hops
+            });
 
-        newTag.hops = [tag.name].concat(a_hops);
+        const oldTagSize = tag.getSize(),
+            newTagSize = newTag.getSize(),
+            sizeDiff = newTagSize - oldTagSize;
 
-        if (t_quota !== 0) {
-            await this.updateQuota(tag.owner, t_quota);
-        }
-
+        await this.updateQuota(tag.owner, sizeDiff);
         await this.tag_db.edit(newTag);
+
         return newTag;
     }
 }

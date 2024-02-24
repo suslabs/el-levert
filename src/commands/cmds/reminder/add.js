@@ -1,5 +1,4 @@
 import * as chrono from "chrono-node";
-import { time } from "discord.js";
 
 import { getClient } from "../../../LevertClient.js";
 
@@ -10,30 +9,32 @@ export default {
     handler: async (args, msg) => {
         const match = args.match(/(.+?)\s*(?:(?:"((?:[^"\\]|\\.)*)")|$)/),
             date = match[1] ?? "",
-            remindMsg = match[2] ?? "";
+            message = match[2] ?? "";
 
         if (args.length === 0 || date.length === 0) {
             return ':information_source: `reminder add [date] "message"`';
         }
 
-        const e = getClient().remindManager.checkMsg(remindMsg);
+        const e = getClient().reminderManager.checkMessage(message);
         if (e) {
             return ":warning: " + e;
         }
 
-        let parsed = chrono.parseDate(date);
-        if (!parsed) {
-            parsed = chrono.parseDate("in " + date);
+        let parsedDate = chrono.parseDate(date),
+            end;
 
-            if (!parsed) {
+        if (!parsedDate) {
+            parsedDate = chrono.parseDate("in " + date);
+
+            if (!parsedDate) {
                 return `:warning: Invalid date: \`${date}\`.`;
             }
+        } else {
+            end = new Date(parsedDate).getTime();
         }
 
-        const end = new Date(parsed).getTime();
-        await getClient().remindManager.add(msg.author.id, end, remindMsg);
+        const reminder = await getClient().reminderManager.add(msg.author.id, end, message);
 
-        const timestamp = Math.floor(end / 1000);
-        return `:information_source: You will be reminded on ${time(timestamp, "f")}.`;
+        return `:information_source: You will be reminded on ${reminder.getTimestamp()}.`;
     }
 };

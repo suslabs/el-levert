@@ -6,9 +6,7 @@ function formatReminders(reminders) {
     return reminders
         .map((reminder, i) => {
             let out = `${i + 1}. `;
-
-            const timestamp = Math.floor(reminder.end / 1000);
-            out += time(timestamp, "f");
+            out += reminder.getTimestamp();
 
             if (reminder.msg.length > 0) {
                 out += `: ${bold(reminder.msg)}`;
@@ -38,9 +36,9 @@ export default {
             username = find.user.username;
         }
 
-        const reminders = await getClient().remindManager.fetch(owner);
+        const reminders = await getClient().reminderManager.fetch(owner);
 
-        if (!reminders) {
+        if (typeof reminders === "undefined") {
             if (owner === msg.author.id) {
                 return ":information_source: You have no reminders.";
             }

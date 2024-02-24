@@ -5,16 +5,17 @@ export default {
     parent: "reminder",
     subcommand: true,
     handler: async (args, msg) => {
-        const ind = parseInt(args);
+        const index = parseInt(args);
 
-        if (args.length <= 0 || isNaN(ind)) {
+        if (args.length <= 0 || isNaN(index)) {
             return ":information_source: `reminder remove [index]`";
         }
 
-        if (!(await getClient().remindManager.remove(msg.author.id, ind - 1))) {
-            return `:warning: Reminder **${ind}** doesn't exist.`;
+        const res = await getClient().reminderManager.remove(msg.author.id, index - 1);
+        if (!res) {
+            return `:warning: Reminder **${index}** doesn't exist.`;
         }
 
-        return `:information_source: Removed reminder **${ind}**`;
+        return `:information_source: Removed reminder **${index}**.`;
     }
 };

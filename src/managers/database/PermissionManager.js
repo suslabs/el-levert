@@ -1,7 +1,7 @@
 import DBManager from "./DBManager.js";
 
 import { getClient } from "../../LevertClient.js";
-import PermissionDatabase from "../../database/permission/PermissionDatabase.js";
+import PermissionDatabase from "../../database/PermissionDatabase.js";
 
 const isGroupName = name => {
     return /^[A-Za-z0-9\-_]+$/.test(name);

@@ -206,10 +206,10 @@ class LevertClient extends Client {
         await permManager.loadDatabase();
 
         if (this.config.enableReminders) {
-            const remindManager = new ReminderManager();
-            this.remindManager = remindManager;
+            const reminderManager = new ReminderManager();
+            this.reminderManager = reminderManager;
 
-            await remindManager.loadDatabase();
+            await reminderManager.loadDatabase();
         }
     }
 
@@ -405,7 +405,7 @@ class LevertClient extends Client {
         this.setActivity(this.config.activity);
 
         if (this.config.enableReminders) {
-            setInterval(this.remindManager.sendReminders.bind(this.remindManager), 1000);
+            setInterval(this.reminderManager.sendReminders.bind(this.reminderManager), 1000);
             this.logger.info("Started reminder loop.");
         }
 
