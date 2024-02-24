@@ -1,6 +1,9 @@
 class AsyncStatement {
     constructor(statement) {
         this.st = statement;
+
+        this.lastID = statement?.lastID;
+        this.changes = statement?.changes;
     }
 
     bind(...args) {

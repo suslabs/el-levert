@@ -8,7 +8,7 @@ import { AsyncDatabase, Modes } from "./sqlite/AsyncDatabase.js";
 const extension = ".sql",
     encoding = "utf-8";
 
-class BaseDatabase {
+class Database {
     constructor(dbPath, queryPath) {
         this.dbPath = dbPath;
         this.queryPath = queryPath;
@@ -144,4 +144,4 @@ class BaseDatabase {
     }
 }
 
-export default BaseDatabase;
+export default Database;

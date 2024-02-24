@@ -1,10 +1,10 @@
-import BaseDatabase from "../BaseDatabase.js";
+import Database from "./Database.js";
 
-import Tag from "./Tag.js";
+import Tag from "../structures/Tag.js";
 
 /*
 {
-    $hops: tag.hops.join(","),
+    $hops: tag.getHopsString(),
     $name: tag.name,
     $body: tag.body,
     $owner: tag.owner,
@@ -15,7 +15,7 @@ import Tag from "./Tag.js";
 }
 */
 
-class TagDatabase extends BaseDatabase {
+class TagDatabase extends Database {
     async fetch(name) {
         const row = await this.tagQueries.fetch.get({
             $name: name
@@ -28,8 +28,8 @@ class TagDatabase extends BaseDatabase {
         return new Tag(row);
     }
 
-    add(tag) {
-        return this.tagQueries.add.run({
+    async add(tag) {
+        return await this.tagQueries.add.run({
             $name: tag.name,
             $body: tag.body,
             $owner: tag.owner,
@@ -42,7 +42,7 @@ class TagDatabase extends BaseDatabase {
         tag.lastEdited = Date.now();
 
         const res = this.tagQueries.edit.run({
-            $hops: tag.hops.join(","),
+            $hops: tag.getHopsString(),
             $name: tag.name,
             $body: tag.body,
             $args: tag.args,
@@ -57,9 +57,9 @@ class TagDatabase extends BaseDatabase {
         return false;
     }
 
-    async chown(tag, owner) {
+    async chown(tag, newOwner) {
         tag.lastEdited = Date.now();
-        tag.owner = owner;
+        tag.owner = newOwner;
 
         const res = this.tagQueries.chown.run({
             $name: tag.name,
@@ -75,9 +75,9 @@ class TagDatabase extends BaseDatabase {
         return false;
     }
 
-    async delete(name) {
+    async delete(tag) {
         const res = await this.tagQueries.delete.run({
-            $name: name
+            $name: tag.name
         });
 
         if (typeof res.changes !== "undefined" && res.changes > 0) {
@@ -115,14 +115,14 @@ class TagDatabase extends BaseDatabase {
         return quota["quota"];
     }
 
-    quotaCreate(id) {
-        return this.quotaQueries.quotaCreate.run({
+    async quotaCreate(id) {
+        return await this.quotaQueries.quotaCreate.run({
             $id: id
         });
     }
 
-    quotaSet(id, quota) {
-        return this.quotaQueries.quotaSet.run({
+    async quotaSet(id, quota) {
+        return await this.quotaQueries.quotaSet.run({
             $id: id,
             $quota: quota
         });
