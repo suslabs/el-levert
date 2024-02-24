@@ -9,7 +9,7 @@ class BaseLoader {
     constructor(name, logger) {
         this.name = name;
 
-        const configPath = path.join(configPaths.dir, configPaths[name]);
+        const configPath = path.resolve(configPaths.dir, configPaths[name]);
         this.path = configPath;
 
         if (logger === undefined) {
