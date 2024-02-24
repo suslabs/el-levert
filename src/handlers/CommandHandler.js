@@ -35,8 +35,8 @@ class CommandHandler extends Handler {
         this.cmdPrefix = getClient().config.cmdPrefix;
         this.commands = getClient().commands;
 
-        this.charLimit = Util.clamp(getClient().config.outCharLimit, 0, 2000);
-        this.newlineLimit = Util.clamp(getClient().config.outNewlineLimit, 0, 2000);
+        this.outCharLimit = Util.clamp(getClient().config.outCharLimit, 0, 2000);
+        this.outNewlineLimit = Util.clamp(getClient().config.outNewlineLimit, 0, 2000);
 
         this.trackedUsers = [];
         this.checkInterval = checkInterval;
