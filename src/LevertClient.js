@@ -60,6 +60,8 @@ class LevertClient extends Client {
         this.events = [];
         this.commands = [];
 
+        this.inProcessIds = [];
+
         this.setupLogger();
     }
 
@@ -355,10 +357,31 @@ class LevertClient extends Client {
         }
     }
 
-    async executeAllHandlers(func, ...args) {
+    isProcessing(msg_id) {
+        return this.inProcessIds.includes(msg_id);
+    }
+
+    addId(msg_id) {
+        this.inProcessIds.push(msg_id);
+    }
+
+    removeId(msg_id) {
+        this.inProcessIds = this.inProcessIds.filter(x => x !== msg_id);
+    }
+
+    async executeAllHandlers(func, msg, ...args) {
+        if (this.isProcessing(msg.id)) {
+            return;
+        }
+
+        this.addId(msg.id);
+
         for (const handler of this.handlerList) {
-            const out = await handler[func](...args);
+            const handlerFunc = handler[func].bind(handler),
+                out = await handlerFunc(msg, ...args);
+
             if (out) {
+                this.removeId(msg.id);
                 return;
             }
         }
