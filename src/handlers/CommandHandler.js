@@ -77,8 +77,6 @@ class CommandHandler extends Handler {
             return false;
         }
 
-        await msg.channel.sendTyping();
-
         if (this.searchUser(msg.author.id)) {
             const reply = await msg.reply(":warning: Please wait for the previous command to finish.");
             this.addMsg(reply, msg.id);
@@ -95,6 +93,7 @@ class CommandHandler extends Handler {
             return false;
         }
 
+        await msg.channel.sendTyping();
         this.addUser(msg.author.id);
         logUsage(msg, name, args);
 
