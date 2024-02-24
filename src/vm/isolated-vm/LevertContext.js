@@ -238,7 +238,7 @@ class LevertContext {
         this.script.release();
         this.context.release();
 
-        if (!isolate.isDisposed) {
+        if (!this.isolate.isDisposed) {
             this.isolate.dispose();
         }
 
