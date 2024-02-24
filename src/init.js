@@ -5,7 +5,7 @@ import ConfigLoader from "./config/ConfigLoader.js";
 import ReactionsLoader from "./config/ReactionsLoader.js";
 import AuthLoader from "./config/AuthLoader.js";
 
-import LoadStatus from "./config/LoadStatus.js";
+import LoadStatus from "./config/BaseLoader/LoadStatus.js";
 
 import { LevertClient } from "./LevertClient.js";
 

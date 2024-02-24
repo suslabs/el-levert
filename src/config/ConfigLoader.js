@@ -1,4 +1,4 @@
-import BaseLoader from "./BaseLoader.js";
+import BaseLoader from "./BaseLoader/BaseLoader.js";
 
 class ConfigLoader extends BaseLoader {
     constructor(logger) {

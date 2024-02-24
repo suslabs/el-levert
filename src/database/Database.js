@@ -5,24 +5,24 @@ import Util from "../util/Util.js";
 
 import { AsyncDatabase, Modes } from "./sqlite/AsyncDatabase.js";
 
-const extension = ".sql",
-    encoding = "utf-8";
-
 class Database {
-    constructor(dbPath, queryPath) {
+    constructor(dbPath, queryPath, options = {}) {
         this.dbPath = dbPath;
         this.queryPath = queryPath;
+
+        this.queryExtension = options.queryExtension ?? ".sql";
+        this.queryEncoding = options.queryEncoding ?? "utf-8";
 
         this.createString = "";
         this.queryStrings = {};
     }
 
     async loadCreateQuery() {
-        const filename = "create" + extension,
+        const filename = "create" + this.queryExtension,
             createPath = path.join(this.queryPath, filename);
 
         this.createString = await fs.readFile(createPath, {
-            encoding
+            encoding: this.queryEncoding
         });
     }
 
@@ -65,12 +65,12 @@ class Database {
     async readQuery(queryPath, categoryName) {
         const parsed = path.parse(queryPath);
 
-        if (parsed.name === "create" || parsed.ext !== extension) {
+        if (parsed.name === "create" || parsed.ext !== this.queryExtension) {
             return;
         }
 
         const queryString = await fs.readFile(queryPath, {
-            encoding
+            encoding: this.queryEncoding
         });
         queryString.trim();
 

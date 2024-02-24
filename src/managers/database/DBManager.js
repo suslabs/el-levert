@@ -8,6 +8,11 @@ import Util from "../../util/Util.js";
 
 import databaseFilenames from "./databaseFilenames.json" assert { type: "json" };
 
+const dbOptions = {
+    queryExtension: databaseFilenames.queryExtension,
+    queryEncoding: databaseFilenames.queryEncoding
+};
+
 async function directoryExists(path) {
     let stat;
 
@@ -45,7 +50,7 @@ class DBManager extends Manager {
     }
 
     async loadDatabase() {
-        const db = new this.classType(this.dbPath, this.queryDir);
+        const db = new this.classType(this.dbPath, this.queryDir, dbOptions);
         this[this.fieldName] = db;
 
         if (!(await this.checkDatabase())) {
