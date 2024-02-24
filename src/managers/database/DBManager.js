@@ -6,11 +6,11 @@ import Manager from "../Manager.js";
 import { getClient, getLogger } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 
-import databaseFilenames from "./databaseFilenames.json" assert { type: "json" };
+import dbFilenames from "./dbFilenames.json" assert { type: "json" };
 
 const dbOptions = {
-    queryExtension: databaseFilenames.queryExtension,
-    queryEncoding: databaseFilenames.queryEncoding
+    queryExtension: dbFilenames.queryExtension,
+    queryEncoding: dbFilenames.queryEncoding
 };
 
 async function directoryExists(path) {
@@ -39,7 +39,7 @@ class DBManager extends Manager {
 
         this.dbDir = getClient().config.dbPath;
 
-        const dbFilename = databaseFilenames[name];
+        const dbFilename = dbFilenames[name];
         this.dbPath = path.resolve(this.dbDir, dbFilename);
 
         const queryBase = getClient().config.queryPath;
