@@ -1,6 +1,8 @@
 import path from "path";
 import fs from "fs/promises";
 
+import Manager from "../Manager.js";
+
 import { getClient, getLogger } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 
@@ -24,8 +26,10 @@ async function directoryExists(path) {
     }
 }
 
-class DBManager {
-    constructor(name, classType, fieldName) {
+class DBManager extends Manager {
+    constructor(enabled, name, classType, fieldName) {
+        super(enabled);
+
         this.name = name;
 
         this.dbDir = getClient().config.dbPath;
@@ -73,6 +77,10 @@ class DBManager {
         getLogger().info(`${name} database not found. Creating at path: ${this.dbPath}`);
 
         await this[this.fieldName].create();
+    }
+
+    load() {
+        return this.loadDatabase();
     }
 }
 

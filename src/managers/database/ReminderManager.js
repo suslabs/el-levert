@@ -1,13 +1,15 @@
 import DBManager from "./DBManager.js";
 
-import { getClient } from "../../LevertClient.js";
+import { getClient, getLogger } from "../../LevertClient.js";
 import ReminderDatabase from "../../database/ReminderDatabase.js";
 
 import Reminder from "../../structures/Reminder.js";
 
+const sendDelay = 1000;
+
 class ReminderManager extends DBManager {
-    constructor() {
-        super("reminder", ReminderDatabase, "remind_db");
+    constructor(enabled = true) {
+        super(enabled, "reminder", ReminderDatabase, "remind_db");
 
         this.maxMsgLength = 512;
     }
@@ -60,14 +62,6 @@ class ReminderManager extends DBManager {
         return past;
     }
 
-    async sendReminders() {
-        const reminders = await this.checkPast();
-
-        for (const reminder of reminders) {
-            this.sendReminder(reminder);
-        }
-    }
-
     async sendReminder(reminder) {
         const user = await getClient().findUserById(reminder.user);
 
@@ -84,6 +78,36 @@ class ReminderManager extends DBManager {
         }
 
         await user.send(out);
+    }
+
+    async sendReminders() {
+        const reminders = await this.checkPast();
+
+        for (const reminder of reminders) {
+            this.sendReminder(reminder);
+        }
+    }
+
+    setSendInterval() {
+        if (!this.enabled) {
+            return;
+        }
+
+        const sendFunc = this.sendReminders.bind(this);
+        this.sendInterval = setInterval(sendFunc, sendDelay);
+
+        getLogger().info("Started reminder loop.");
+    }
+
+    clearSendInterval() {
+        if (typeof this.sendInterval === "undefined") {
+            return;
+        }
+
+        clearInterval(this.sendInterval);
+        delete this.sendInterval;
+
+        getLogger().info("Stopped reminder loop.");
     }
 }
 

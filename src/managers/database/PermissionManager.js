@@ -7,9 +7,22 @@ const isGroupName = name => {
     return /^[A-Za-z0-9\-_]+$/.test(name);
 };
 
+const disabledPermission = [
+        {
+            name: "",
+            level: 0
+        }
+    ],
+    ownerPermission = [
+        {
+            name: "owner",
+            level: 2147483647
+        }
+    ];
+
 class PermissionManager extends DBManager {
-    constructor() {
-        super("permission", PermissionDatabase, "perm_db");
+    constructor(enabled = true) {
+        super(enabled, "permission", PermissionDatabase, "perm_db");
 
         this.owner = getClient().owner;
     }
@@ -24,12 +37,11 @@ class PermissionManager extends DBManager {
 
     async fetch(id) {
         if (id === this.owner) {
-            return [
-                {
-                    name: "owner",
-                    level: 2147483647
-                }
-            ];
+            return ownerPermission;
+        }
+
+        if (!this.enabled) {
+            return disabledPermission;
         }
 
         return await this.perm_db.fetch(id);
@@ -40,7 +52,12 @@ class PermissionManager extends DBManager {
         let maxLevel = 0;
 
         if (groups) {
-            maxLevel = Math.max(...groups.map(x => x.level));
+            if (groups.length === 1) {
+                maxLevel = groups[0].level;
+            } else {
+                const levels = groups.map(x => x.level);
+                maxLevel = Math.max(...levels);
+            }
         }
 
         return maxLevel;
@@ -99,7 +116,6 @@ class PermissionManager extends DBManager {
         }
 
         groups.forEach(x => (x.users = users.filter(y => y.group === x.name)));
-
         return groups;
     }
 }

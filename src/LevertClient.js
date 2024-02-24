@@ -49,13 +49,10 @@ class LevertClient extends Client {
         }
 
         this.version = version;
+        this.setConfigs(configs);
 
-        const { config, reactions, auth } = configs;
-        this.config = config;
-        this.reactions = reactions;
-
-        token = auth.token;
-        this.owner = auth.owner ?? "";
+        this.handlers = {};
+        this.handlerList = [];
 
         this.events = [];
         this.commands = [];
@@ -63,6 +60,15 @@ class LevertClient extends Client {
         this.inProcessIds = [];
 
         this.setupLogger();
+    }
+
+    setConfigs(configs) {
+        const { config, reactions, auth } = configs;
+        this.config = config;
+        this.reactions = reactions;
+
+        token = auth.token;
+        this.owner = auth.owner ?? "";
     }
 
     setupLogger() {
@@ -184,6 +190,8 @@ class LevertClient extends Client {
     }
 
     loadHandlers() {
+        this.logger.info("Loading handlers...");
+
         const handlers = {
             commandHander: new CommandHandler(),
             previewHandler: new PreviewHandler(),
@@ -196,20 +204,17 @@ class LevertClient extends Client {
     }
 
     async loadManagers() {
-        const tagManager = new TagManager(),
-            permManager = new PermissionManager();
+        this.logger.info("Loading managers...");
 
-        this.tagManager = tagManager;
-        this.permManager = permManager;
+        const managers = {
+            tagManager: new TagManager(),
+            permManager: new PermissionManager(this.config.enablePermissions),
+            reminderManager: new ReminderManager(this.config.enableReminders)
+        };
 
-        await tagManager.loadDatabase();
-        await permManager.loadDatabase();
-
-        if (this.config.enableReminders) {
-            const reminderManager = new ReminderManager();
-            this.reminderManager = reminderManager;
-
-            await reminderManager.loadDatabase();
+        for (const [name, manager] of Object.entries(managers)) {
+            this[name] = manager;
+            await manager.load();
         }
     }
 
@@ -315,6 +320,7 @@ class LevertClient extends Client {
 
         let users = [],
             ids = [];
+
         options = Object.assign(
             {
                 limit: 10
@@ -388,8 +394,8 @@ class LevertClient extends Client {
     }
 
     async start() {
-        this.loadHandlers();
         await this.loadManagers();
+        this.loadHandlers();
 
         await this.loadEvents();
         await this.loadCommands();
@@ -404,10 +410,7 @@ class LevertClient extends Client {
         await this.login(token);
         this.setActivity(this.config.activity);
 
-        if (this.config.enableReminders) {
-            setInterval(this.reminderManager.sendReminders.bind(this.reminderManager), 1000);
-            this.logger.info("Started reminder loop.");
-        }
+        this.reminderManager.setSendInterval();
 
         if (this.config.enableGlobalHandler) {
             registerGlobalHandler();
