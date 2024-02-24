@@ -237,7 +237,10 @@ class LevertContext {
     disposeIsolate() {
         this.script.release();
         this.context.release();
-        this.isolate.dispose();
+
+        if (!isolate.isDisposed) {
+            this.isolate.dispose();
+        }
 
         delete this.script;
         delete this.context;
