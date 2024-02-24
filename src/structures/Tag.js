@@ -1,7 +1,7 @@
 import Util from "../util/Util.js";
 
 const defaultValues = {
-    hops: "",
+    hops: [],
     name: "",
     body: "",
     owner: "0",
@@ -12,13 +12,15 @@ const defaultValues = {
 };
 
 class Tag {
-    constructor(options) {
+    constructor(data) {
+        if (typeof data?.hops === "string") {
+            data.hops = data.hops.split(",");
+        }
+
         Object.assign(this, {
             ...defaultValues,
-            ...options
+            ...data
         });
-
-        this.hops = this.hops.split(",");
     }
 
     getHopsString() {

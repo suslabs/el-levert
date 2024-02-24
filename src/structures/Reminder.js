@@ -13,10 +13,10 @@ const defaultValues = {
 };
 
 class Reminder {
-    constructor(options) {
+    constructor(data) {
         Object.assign(this, {
             ...defaultValues,
-            ...options
+            ...data
         });
 
         if (typeof this.id === "undefined") {

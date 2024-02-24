@@ -126,7 +126,7 @@ class TagManager extends DBManager {
         const tagSize = tag.getSize();
 
         await this.updateQuota(tag.owner, -tagSize);
-        await this.tag_db.delete(tag.name);
+        await this.tag_db.delete(tag);
     }
 
     async edit(tag, body, isScript, scriptType) {
