@@ -31,10 +31,10 @@ class DBManager {
         this.dbDir = getClient().config.dbPath;
 
         const dbFilename = databaseFilenames[name];
-        this.dbPath = path.join(this.dbDir, dbFilename);
+        this.dbPath = path.resolve(this.dbDir, dbFilename);
 
         const queryBase = getClient().config.queryPath;
-        this.queryDir = path.join(queryBase, name);
+        this.queryDir = path.resolve(queryBase, name);
 
         this.classType = classType;
         this.fieldName = fieldName;
