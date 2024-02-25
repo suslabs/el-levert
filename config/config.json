@@ -2,7 +2,7 @@
     "logFile": "./logs/debug.log",
     "importLogFile": "./logs/import.log",
     "eventsPath": "./src/events",
-    "commandsPath": "./src/commands/cmds",
+    "commandsPath": "./src/commands",
     "dbPath": "./db",
     "queryPath": "./src/database/query",
     "cmdPrefix": "%",
