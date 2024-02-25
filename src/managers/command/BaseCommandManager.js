@@ -5,7 +5,7 @@ import Manager from "../Manager.js";
 import { getLogger, wrapEvent } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 
-import Command from "../../commands/Command.js";
+import Command from "../../structures/Command.js";
 
 class BaseCommandManager extends Manager {
     constructor(enabled, commandsDir, commandPrefix) {
