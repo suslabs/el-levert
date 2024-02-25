@@ -14,15 +14,14 @@ function removeId(msg_id) {
     inProcessIds = inProcessIds.filter(x => x !== msg_id);
 }
 
-async function executeAllHandlers(func, msg, ...args) {
+async function executeAllHandlers(client, func, msg, ...args) {
     if (isProcessing(msg.id)) {
         return;
     }
 
     addId(msg.id);
-    const handlerList = this.handlerList;
 
-    for (const handler of handlerList) {
+    for (const handler of client.handlerList) {
         const handlerFunc = handler[func].bind(handler),
             out = await handlerFunc(msg, ...args);
 

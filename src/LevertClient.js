@@ -129,7 +129,7 @@ class LevertClient extends Client {
         this.handlers = handlers;
         this.handlerList = Object.values(handlers);
 
-        this.executeAllHandlers = executeAllHandlers.bind(this);
+        this.executeAllHandlers = executeAllHandlers.bind(undefined, this);
     }
 
     async loadManagers() {
