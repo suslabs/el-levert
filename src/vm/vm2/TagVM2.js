@@ -2,7 +2,7 @@ import { getClient } from "../../LevertClient.js";
 
 import VM2ProcPool from "./process-pool/ProcessPool.js";
 import FakeUtil from "./FakeUtil.js";
-import FakeAxios from "./FakeAxios.js";
+import FakeAxios from "./classes/FakeAxios.js";
 
 const vmOptions = {
     allowAsync: true,
