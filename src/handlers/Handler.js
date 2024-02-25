@@ -1,43 +1,34 @@
+import MessageTracker from "./tracker/MessageTracker.js";
+import UserTracker from "./tracker/UserTracker.js";
+
 import { getLogger } from "../LevertClient.js";
 
-function addMsg(msg, trigger_id) {
-    if (this.trackedMsgs.size >= this.trackLimit) {
-        const [key] = this.trackedMsgs.keys();
-        this.trackedMsgs.delete(key);
-    }
-
-    this.trackedMsgs.set(trigger_id, msg);
-}
-
-function deleteMsg(trigger_id) {
-    if (!this.enabled) {
-        return;
-    }
-
-    const sentMsg = this.trackedMsgs.get(trigger_id);
-
-    if (typeof sentMsg === "undefined") {
-        return;
-    }
-
-    return sentMsg;
-}
-
 class Handler {
-    constructor(enabled = true, hasTracker = true) {
+    constructor(enabled = true, hasMessageTracker = true, hasUserTracker = false, options = {}) {
         this.enabled = enabled;
+        this.hasMessageTracker = hasMessageTracker;
+        this.hasUserTracker = hasUserTracker;
 
-        if (enabled && hasTracker) {
-            this.trackLimit = 100;
-            this.trackedMsgs = new Map();
+        if (!enabled) {
+            return;
+        }
 
-            this.addMsg = addMsg.bind(this);
-            this.deleteMsg = deleteMsg.bind(this);
+        if (hasMessageTracker) {
+            this.messageTracker = new MessageTracker();
+        }
+
+        if (hasUserTracker) {
+            const userCheckInterval = options.userCheckInterval ?? 0;
+            this.userTracker = new UserTracker(userCheckInterval);
         }
     }
 
     async delete(msg) {
-        const sentMsg = this.deleteMsg(msg.id);
+        if (!this.hasMessageTracker) {
+            return true;
+        }
+
+        const sentMsg = this.messageTracker.deleteMsg(msg.id);
 
         if (typeof sentMsg === "undefined") {
             return false;

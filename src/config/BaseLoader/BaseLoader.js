@@ -94,7 +94,7 @@ class BaseLoader {
         }
 
         this.baseModify();
-        this.logger?.info(`Loaded ${this.name} file successfully`);
+        this.logger?.info(`Loaded ${this.name} file successfully.`);
 
         return [this.config, status];
     }

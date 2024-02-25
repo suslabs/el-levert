@@ -48,9 +48,11 @@ async function init() {
         return;
     }
 
+    const client = new LevertClient(configs);
+
+    logger.info("Initialized client.");
     logger.end();
 
-    const client = new LevertClient(configs);
     await client.start();
 }
 

@@ -95,7 +95,7 @@ class PreviewHandler extends Handler {
                 content: ":no_entry_sign: Encountered exception while generating preview:",
                 ...Util.getFileAttach(err.stack, "error.js")
             });
-            this.addMsg(reply, msg.id);
+            this.messageTracker.addMsg(reply, msg.id);
 
             getLogger().error("Preview gen failed", err);
             return false;
@@ -108,13 +108,13 @@ class PreviewHandler extends Handler {
         await msg.channel.sendTyping();
 
         try {
-            this.addMsg(await msg.reply(preview), msg.id);
+            this.messageTracker.addMsg(await msg.reply(preview), msg.id);
         } catch (err) {
             const reply = await msg.reply({
                 content: ":no_entry_sign: Encountered exception while sending preview:",
                 ...Util.getFileAttach(err.stack, "error.js")
             });
-            this.addMsg(reply, msg.id);
+            this.messageTracker.addMsg(reply, msg.id);
 
             getLogger().error("Reply failed", err);
             return false;

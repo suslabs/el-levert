@@ -88,7 +88,7 @@ class SedHandler extends Handler {
 
         if (typeof ret[1] !== "undefined") {
             const reply = msg.reply(ret[1]);
-            this.addMsg(reply, msg.id);
+            this.messageTracker.addMsg(reply, msg.id);
         }
 
         const embed = ret[0];
@@ -97,13 +97,13 @@ class SedHandler extends Handler {
             const reply = await msg.reply({
                 embeds: [embed]
             });
-            this.addMsg(reply, msg.id);
+            this.messageTracker.addMsg(reply, msg.id);
         } catch (err) {
             const reply = await msg.reply({
                 content: `:no_entry_sign: Encountered exception while sending preview:`,
                 ...Util.getFileAttach(err.stack, "error.js")
             });
-            this.addMsg(reply, msg.id);
+            this.messageTracker.addMsg(reply, msg.id);
 
             getLogger().error("Reply failed", err);
             return false;

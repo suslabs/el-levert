@@ -9,16 +9,17 @@ import Util from "./util/Util.js";
 import createLogger from "./logger/CreateLogger.js";
 import getDefaultLoggerConfig from "./logger/DefaultConfig.js";
 
+import executeAllHandlers from "./handlers/executeAllHandlers.js";
 import ReactionHandler from "./handlers/ReactionHandler.js";
 import CommandHandler from "./handlers/CommandHandler.js";
 import PreviewHandler from "./handlers/PreviewHandler.js";
 import SedHandler from "./handlers/SedHandler.js";
 
+import CommandManager from "./managers/command/CommandManager.js";
 import TagManager from "./managers/database/TagManager.js";
 import PermissionManager from "./managers/database/PermissionManager.js";
 import ReminderManager from "./managers/database/ReminderManager.js";
 
-import Command from "./commands/Command.js";
 import TagVM from "./vm/isolated-vm/TagVM.js";
 import TagVM2 from "./vm/vm2/TagVM2.js";
 import ExternalVM from "./vm/judge0/ExternalVM.js";
@@ -55,9 +56,6 @@ class LevertClient extends Client {
         this.handlerList = [];
 
         this.events = [];
-        this.commands = [];
-
-        this.inProcessIds = [];
 
         this.setupLogger();
     }
@@ -118,77 +116,6 @@ class LevertClient extends Client {
         this.logger.info(`Loaded ${ok + bad} events. ${ok} successful, ${bad} failed.`);
     }
 
-    loadCommand(cmd) {
-        if (typeof cmd === "undefined" || typeof cmd.name === "undefined") {
-            return;
-        }
-
-        cmd = new Command(cmd);
-
-        if (typeof cmd.load !== "undefined") {
-            cmd.load = wrapEvent(cmd.load.bind(cmd));
-            const res = cmd.load();
-
-            if (res === false) {
-                return false;
-            }
-        }
-
-        cmd.handler = cmd.handler.bind(cmd);
-        this.commands.push(cmd);
-
-        return true;
-    }
-
-    loadSubcommands() {
-        this.commands.forEach(x => {
-            if (x.isSubcmd || x.subcommands.length < 1) {
-                return;
-            }
-
-            x.subcommands.forEach(n => {
-                const find = this.commands.find(y => {
-                    return y.name === n && y.parent === x.name;
-                });
-
-                if (typeof find === "undefined") {
-                    this.logger.warn(`Subcommand "${n}" of command "${x.name}" not found.`);
-                    return;
-                }
-
-                find.parentCmd = x;
-                x.subcmds.set(find.name, find);
-            });
-        });
-    }
-
-    async loadCommands() {
-        this.logger.info("Loading commands...");
-
-        let ok = 0,
-            bad = 0;
-
-        const cmdsPath = this.config.commandsPath,
-            files = Util.getFilesRecSync(cmdsPath).filter(file => file.endsWith(".js"));
-
-        for (const file of files) {
-            try {
-                let cmd = await import(URL.pathToFileURL(file));
-                cmd = cmd.default;
-
-                if (this.loadCommand(cmd)) {
-                    ok++;
-                }
-            } catch (err) {
-                this.logger.error("loadEvents: " + file, err);
-                bad++;
-            }
-        }
-
-        this.logger.info(`Loaded ${ok + bad} commands. ${ok} successful, ${bad} failed.`);
-        this.loadSubcommands();
-    }
-
     loadHandlers() {
         this.logger.info("Loading handlers...");
 
@@ -201,12 +128,15 @@ class LevertClient extends Client {
 
         this.handlers = handlers;
         this.handlerList = Object.values(handlers);
+
+        this.executeAllHandlers = executeAllHandlers.bind(this);
     }
 
     async loadManagers() {
         this.logger.info("Loading managers...");
 
         const managers = {
+            commandManager: new CommandManager(),
             tagManager: new TagManager(),
             permManager: new PermissionManager(this.config.enablePermissions),
             reminderManager: new ReminderManager(this.config.enableReminders)
@@ -215,6 +145,8 @@ class LevertClient extends Client {
         for (const [name, manager] of Object.entries(managers)) {
             this[name] = manager;
             await manager.load();
+
+            this.logger.info(`Loaded manager: ${manager.constructor.name}`);
         }
     }
 
@@ -363,42 +295,13 @@ class LevertClient extends Client {
         }
     }
 
-    isProcessing(msg_id) {
-        return this.inProcessIds.includes(msg_id);
-    }
-
-    addId(msg_id) {
-        this.inProcessIds.push(msg_id);
-    }
-
-    removeId(msg_id) {
-        this.inProcessIds = this.inProcessIds.filter(x => x !== msg_id);
-    }
-
-    async executeAllHandlers(func, msg, ...args) {
-        if (this.isProcessing(msg.id)) {
-            return;
-        }
-
-        this.addId(msg.id);
-
-        for (const handler of this.handlerList) {
-            const handlerFunc = handler[func].bind(handler),
-                out = await handlerFunc(msg, ...args);
-
-            if (out) {
-                this.removeId(msg.id);
-                return;
-            }
-        }
-    }
-
     async start() {
+        this.logger.info("Starting client...");
+
         await this.loadManagers();
         this.loadHandlers();
 
         await this.loadEvents();
-        await this.loadCommands();
 
         this.tagVM = new TagVM();
         this.tagVM2 = new TagVM2();
@@ -455,4 +358,4 @@ function registerGlobalHandler() {
     });
 }
 
-export { LevertClient, getClient, getLogger };
+export { LevertClient, getClient, getLogger, wrapEvent };
