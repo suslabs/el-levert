@@ -1,4 +1,4 @@
-import VMUtil from "../../util/VMUtil.js";
+import VMUtil from "../../../util/VMUtil.js";
 
 class FakeMsg {
     constructor(msg) {
