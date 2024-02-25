@@ -2,6 +2,16 @@ import CommandError from "../errors/CommandError.js";
 import Util from "../util/Util.js";
 import { getClient } from "../LevertClient.js";
 
+const defaultValues = {
+    parent: "",
+    allowed: 0,
+    subcommands: [],
+    description: "",
+    usage: "",
+    aliases: [],
+    helpArgs: ["-h", "-u", "-help", "help"]
+};
+
 class Command {
     constructor(options) {
         if (typeof options.name === "undefined") {
@@ -13,19 +23,13 @@ class Command {
         }
 
         Object.assign(this, {
-            parent: "",
-            allowed: 0,
-            subcommands: [],
-            description: "",
-            usage: "",
-            aliases: [],
-            helpArgs: ["-h", "-u", "-help", "help"],
+            ...defaultValues,
             ...options
         });
 
         this.subcmds = new Map();
 
-        this.isSubcmd = options.subcommand || false;
+        this.isSubcmd = options.subcommand ?? false;
         this.hasHelp = typeof options.description !== "undefined" || typeof options.usage !== "undefined";
     }
 
