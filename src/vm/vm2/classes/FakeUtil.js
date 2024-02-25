@@ -1,7 +1,7 @@
-import { getClient } from "../../LevertClient.js";
+import { getClient } from "../../../LevertClient.js";
 
-import Util from "../../util/Util.js";
-import VMUtil from "../../util/VMUtil.js";
+import Util from "../../../util/Util.js";
+import VMUtil from "../../../util/VMUtil.js";
 
 const FakeUtil = {
     reply: (reply, text, options) => {

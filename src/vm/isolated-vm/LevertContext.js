@@ -2,8 +2,8 @@ import ivm from "isolated-vm";
 
 import { getLogger } from "../../LevertClient.js";
 
-import FakeMsg from "./FakeMsg.js";
-import FakeUtil from "./FakeUtil.js";
+import FakeMsg from "./classes/FakeMsg.js";
+import FakeUtil from "./classes/FakeUtil.js";
 import FakeAxios from "./classes/FakeAxios.js";
 
 const FuncTypes = {
