@@ -1,19 +1,19 @@
 import path from "path";
 import fs from "fs/promises";
 
-import TagDatabase from "../../database/tag/TagDatabase.js";
+import TagDatabase from "../../src/database/TagDatabase.js";
 
-import createLogger from "../../logger/CreateLogger.js";
-import getDefaultLoggerConfig from "../../logger/DefaultConfig.js";
+import createLogger from "../../src/logger/CreateLogger.js";
+import getDefaultLoggerConfig from "../../src/logger/DefaultConfig.js";
 
 import config from "../../config/config.json" assert { type: "json" };
-import Util from "../../util/Util.js";
+import Util from "../../src/util/Util.js";
 
 class DBImporter {
     constructor(jsonPath) {
         this.jsonPath = jsonPath;
 
-        const loggerConfig = getDefaultLoggerConfig(config.importLogFile, "Importer");
+        const loggerConfig = getDefaultLoggerConfig("Importer", true, false, config.importLogFile);
         this.logger = createLogger(loggerConfig);
     }
 
