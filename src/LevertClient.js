@@ -9,7 +9,10 @@ import Util from "./util/Util.js";
 import createLogger from "./logger/CreateLogger.js";
 import getDefaultLoggerConfig from "./logger/DefaultConfig.js";
 
-import executeAllHandlers from "./handlers/executeAllHandlers.js";
+import wrapEvent from "./client/wrapEvent.js";
+import executeAllHandlers from "./client/executeAllHandlers.js";
+import { registerGlobalHandler } from "./client/registerGlobalHandler.js";
+
 import ReactionHandler from "./handlers/ReactionHandler.js";
 import CommandHandler from "./handlers/CommandHandler.js";
 import PreviewHandler from "./handlers/PreviewHandler.js";
@@ -49,18 +52,13 @@ class LevertClient extends Client {
             client = this;
         }
 
-        this.version = version;
         this.setConfigs(configs);
-
-        this.handlers = {};
-        this.handlerList = [];
-
-        this.events = [];
-
         this.setupLogger();
     }
 
     setConfigs(configs) {
+        this.version = version;
+
         const { config, reactions, auth } = configs;
         this.config = config;
         this.reactions = reactions;
@@ -81,6 +79,7 @@ class LevertClient extends Client {
 
     async loadEvents() {
         this.logger.info("Loading events...");
+        this.events = [];
 
         let ok = 0,
             bad = 0;
@@ -97,7 +96,7 @@ class LevertClient extends Client {
                     continue;
                 }
 
-                const listener = wrapEvent(event.listener);
+                const listener = wrapEvent(this.logger, event.listener);
 
                 if (event.once ?? false) {
                     this.once(event.name, listener);
@@ -316,7 +315,7 @@ class LevertClient extends Client {
         this.reminderManager.setSendInterval();
 
         if (this.config.enableGlobalHandler) {
-            registerGlobalHandler();
+            registerGlobalHandler(this.logger);
         }
     }
 }
@@ -331,31 +330,4 @@ function getLogger() {
     return client.logger;
 }
 
-const wrapEvent = callback =>
-    function (...args) {
-        try {
-            const out = callback(...args);
-
-            if (typeof out === "object" && typeof out.then === "function") {
-                out.catch(err => client.logger.error(err));
-            }
-
-            return out;
-        } catch (err) {
-            console.log(client);
-            client.logger.error(err);
-        }
-    };
-
-function registerGlobalHandler() {
-    process.on("uncaughtException", function (err1) {
-        try {
-            getLogger().error("Uncaught exception:", err1);
-        } catch (err2) {
-            console.error("Error occured while reporting uncaught error:", err2);
-            console.error("Uncaught error:", err1);
-        }
-    });
-}
-
-export { LevertClient, getClient, getLogger, wrapEvent };
+export { LevertClient, getClient, getLogger };

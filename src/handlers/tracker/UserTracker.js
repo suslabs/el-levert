@@ -38,12 +38,12 @@ class UserTracker {
 
     setCheckInterval() {
         const checkUsersFunc = checkUsers.bind(this);
-        this.checkInterval = setInterval(checkUsersFunc, this.checkInterval);
+        this.checkTimer = setInterval(checkUsersFunc, this.checkInterval);
     }
 
     clearCheckInterval() {
-        clearInterval(this.checkInterval);
-        delete this.checkInterval;
+        clearInterval(this.checkTimer);
+        delete this.checkTimer;
     }
 }
 
