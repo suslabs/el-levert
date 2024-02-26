@@ -33,6 +33,10 @@ export default {
             end = new Date(parsedDate).getTime();
         }
 
+        if (end < Date.now()) {
+            return ":warning: Can't add a reminder for a time in the past.";
+        }
+
         const reminder = await getClient().reminderManager.add(msg.author.id, end, message);
 
         return `:information_source: You will be reminded on ${reminder.getTimestamp()}.`;
