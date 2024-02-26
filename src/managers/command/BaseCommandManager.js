@@ -2,7 +2,7 @@ import URL from "url";
 
 import Manager from "../Manager.js";
 
-import { getLogger } from "../../LevertClient.js";
+import { getClient, getLogger } from "../../LevertClient.js";
 import wrapEvent from "../../client/wrapEvent.js";
 import Util from "../../util/Util.js";
 
@@ -85,7 +85,7 @@ class BaseCommandManager extends Manager {
         const command = new Command(cmdProperties);
 
         if (typeof command.load !== "undefined") {
-            command.load = wrapEvent(getLogger(), command.load.bind(command));
+            command.load = getClient().wrapEvent(command.load.bind(command));
             const res = command.load();
 
             if (res === false) {
