@@ -54,6 +54,8 @@ class LevertClient extends Client {
 
         this.setConfigs(configs);
         this.setupLogger();
+
+        this.wrapEvent = wrapEvent.bind(undefined, this.logger);
     }
 
     setConfigs(configs) {
@@ -96,7 +98,7 @@ class LevertClient extends Client {
                     continue;
                 }
 
-                const listener = wrapEvent(this.logger, event.listener);
+                const listener = this.wrapEvent(event.listener);
 
                 if (event.once ?? false) {
                     this.once(event.name, listener);
