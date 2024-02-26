@@ -12,7 +12,7 @@ function logUsage(msg, name, args) {
 class CommandHandler extends Handler {
     constructor() {
         super(true, true, true, {
-            userCheckInterval: 20000
+            userCheckInterval: 10000
         });
 
         this.cmdPrefix = getClient().config.cmdPrefix;

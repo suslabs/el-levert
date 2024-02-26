@@ -1,5 +1,3 @@
-import { getClient } from "../LevertClient.js";
-
 const inProcessIds = [];
 
 function isProcessing(msg_id) {
@@ -14,7 +12,7 @@ function removeId(msg_id) {
     inProcessIds = inProcessIds.filter(x => x !== msg_id);
 }
 
-async function executeAllHandlers(client, func, msg, ...args) {
+async function executeAllHandlers(client, funcName, msg, ...args) {
     if (isProcessing(msg.id)) {
         return;
     }
@@ -22,7 +20,7 @@ async function executeAllHandlers(client, func, msg, ...args) {
     addId(msg.id);
 
     for (const handler of client.handlerList) {
-        const handlerFunc = handler[func].bind(handler),
+        const handlerFunc = handler[funcName].bind(handler),
             out = await handlerFunc(msg, ...args);
 
         if (out) {
