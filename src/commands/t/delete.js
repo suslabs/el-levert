@@ -3,6 +3,7 @@ import { getClient } from "../../LevertClient.js";
 
 export default {
     name: "delete",
+    aliases: ["remove"],
     parent: "tag",
     subcommand: true,
     handler: async function (args, msg, perm) {

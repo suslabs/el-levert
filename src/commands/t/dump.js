@@ -3,6 +3,7 @@ import { getClient } from "../../LevertClient.js";
 
 export default {
     name: "dump",
+    aliases: ["all", "list_all"],
     parent: "tag",
     subcommand: true,
     handler: async _ => {

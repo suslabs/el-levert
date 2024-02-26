@@ -2,6 +2,7 @@ import { getClient } from "../../LevertClient.js";
 
 export default {
     name: "remove",
+    aliases: ["delete"],
     parent: "reminder",
     subcommand: true,
     handler: async (args, msg) => {

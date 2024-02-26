@@ -3,7 +3,7 @@ import Util from "../../util/Util.js";
 
 export default {
     name: "eval",
-    aliases: ["e"],
+    aliases: ["e", "exec"],
     subcommands: ["c", "cpp", "py", "vm2", "langs"],
     load: function () {
         this.evalBase = async (args, msg) => {

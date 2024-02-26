@@ -4,6 +4,7 @@ import { getClient } from "../../LevertClient.js";
 
 export default {
     name: "add",
+    aliases: ["create"],
     parent: "reminder",
     subcommand: true,
     handler: async (args, msg) => {

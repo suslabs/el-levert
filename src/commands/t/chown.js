@@ -3,6 +3,7 @@ import { getClient } from "../../LevertClient.js";
 
 export default {
     name: "chown",
+    aliases: ["transfer"],
     parent: "tag",
     subcommand: true,
     handler: async function (args, msg, perm) {

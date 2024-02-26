@@ -19,6 +19,7 @@ function formatReminders(reminders) {
 
 export default {
     name: "list",
+    aliases: ["all"],
     parent: "reminder",
     subcommand: true,
     handler: async (args, msg) => {
