@@ -3,6 +3,7 @@ import { getClient } from "../../LevertClient.js";
 
 export default {
     name: "raw",
+    aliases: ["code"],
     parent: "tag",
     subcommand: true,
     handler: async function (args) {

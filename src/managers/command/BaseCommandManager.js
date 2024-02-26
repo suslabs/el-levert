@@ -99,6 +99,28 @@ class BaseCommandManager extends Manager {
         return true;
     }
 
+    bindSubcommand(command, subcommand) {
+        const find = this.commands.find(findCmd => {
+            return findCmd.name === subcommand && findCmd.parent === command.name;
+        });
+
+        if (typeof find === "undefined") {
+            getLogger().warn(`Subcommand "${subcommand}" of command "${command.name}" not found.`);
+            return false;
+        }
+
+        find.parentCmd = command;
+        command.subcmds.set(find.name, find);
+
+        if (find.aliases.length > 0) {
+            for (const alias of find.aliases) {
+                command.subcmds.set(alias, find);
+            }
+        }
+
+        return true;
+    }
+
     bindSubcommands() {
         getLogger().info("Loading subcommands...");
 
@@ -110,19 +132,9 @@ class BaseCommandManager extends Manager {
             }
 
             command.subcommands.forEach(subcommand => {
-                const find = this.commands.find(findCmd => {
-                    return findCmd.name === subcommand && findCmd.parent === command.name;
-                });
-
-                if (typeof find === "undefined") {
-                    getLogger().warn(`Subcommand "${subcommand}" of command "${command.name}" not found.`);
-                    return;
+                if (this.bindSubcommand(command, subcommand)) {
+                    n++;
                 }
-
-                find.parentCmd = command;
-                command.subcmds.set(find.name, find);
-
-                n++;
             });
         });
 
