@@ -20,7 +20,7 @@ export default {
         let tag = await getClient().tagManager.fetch(t_name);
 
         if (!tag) {
-            const find = await getClient().tagManager.search(t_name, 0.5);
+            const find = await getClient().tagManager.search(t_name);
             let out = `:warning: Tag **${t_name}** doesn't exist.`;
 
             if (find.length > 0) {

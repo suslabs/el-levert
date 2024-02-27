@@ -67,7 +67,7 @@ class SedHandler extends Handler {
         const embed = new EmbedBuilder()
             .setAuthor({
                 name: sedMsg.author.username,
-                iconURL: Util.getIcon(sedMsg.author)
+                iconURL: sedMsg.author.displayAvatarURL()
             })
             .setDescription(sedMsg.content.replace(regex, replace ?? ""))
             .setTimestamp(sedMsg.editedTimestamp ?? sedMsg.createdTimestamp)

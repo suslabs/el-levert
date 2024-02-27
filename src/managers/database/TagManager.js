@@ -3,7 +3,9 @@ import axios from "axios";
 import DBManager from "./DBManager.js";
 
 import { getClient } from "../../LevertClient.js";
+
 import Util from "../../util/Util.js";
+import diceDist from "../../util/diceDist.js";
 
 import TagError from "../../errors/TagError.js";
 import Tag from "../../structures/Tag.js";
@@ -167,10 +169,10 @@ class TagManager extends DBManager {
         };
     }
 
-    async search(name, minDist = 0.4) {
+    async search(name, minDist = 0.5) {
         let tags = await this.dump(),
             find;
-        tags = tags.map(x => [x, Util.diceDist(x, name)]);
+        tags = tags.map(x => [x, diceDist(x, name)]);
 
         if (typeof minDist === "undefined") {
             tags.sort((a, b) => b[1] - a[1]);

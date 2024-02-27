@@ -34,7 +34,7 @@ class PreviewHandler extends Handler {
         const embed = new EmbedBuilder()
             .setAuthor({
                 name: prevMsg.author.username,
-                iconURL: Util.getIcon(prevMsg.author)
+                iconURL: prevMsg.author.displayAvatarURL()
             })
             .setTimestamp(prevMsg.editedTimestamp ?? prevMsg.createdTimestamp);
 

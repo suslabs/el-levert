@@ -24,9 +24,10 @@
     "enableVM2": false,
     "enablePermissions": true,
     "enableReminders": true,
+    "enableGlobalHandler": true,
+    "setActivity": false,
     "activity": {
         "type": "Watching",
-        "text": "over Innerius's holy temple"
-    },
-    "enableGlobalHandler": true
+        "text": "Example"
+    }
 }

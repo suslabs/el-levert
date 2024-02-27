@@ -1,61 +1,24 @@
 {
-    "enableReacts": true,
+    "enableReacts": false,
     "parans": {},
     "funnyWords": [
         {
-            "words": [
-                "wait",
-                "waiting"
-            ],
-            "react": [
-                "🕐",
-                "🕙",
-                "🕥",
-                "🕚",
-                "🕦",
-                "🕛",
-                "🕧",
-                "🕜",
-                "🕑",
-                "🕝",
-                "🕒",
-                "🕞",
-                "🕓",
-                "🕟",
-                "🕔",
-                "🕠",
-                "🕕",
-                "🕡",
-                "🕖",
-                "🕢",
-                "🕗",
-                "🕣",
-                "🕘",
-                "🕤"
-            ]
-        },
-        {
-            "words": [
-                "lever",
-                "rat",
-                "leverat",
-                "leverer"
-            ],
+            "words": "example1",
             "react": "🐀"
         },
         {
-            "words": "leveret",
+            "words": [
+                "example2",
+                "example3"
+            ],
+            "react": "🇳🇴"
+        },
+        {
+            "words": "example4",
             "react": [
                 "🐰",
                 "🐇"
-            ]
-        },
-        {
-            "words": [
-                "ohio",
-                "oslo"
-            ],
-            "react": "🇳🇴"
+            ] 
         }
     ]
 }

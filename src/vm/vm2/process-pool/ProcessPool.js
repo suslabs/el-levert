@@ -4,6 +4,7 @@ import crypto from "crypto";
 import genericPool from "generic-pool";
 
 import VMUtil from "../../../util/VMUtil.js";
+import Util from "../../../util/Util.js";
 
 function listener(socket, funcs) {
     return new Promise((resolve, reject) => {
@@ -137,7 +138,7 @@ class VM2ProcPool {
         }
 
         const childProcess = await this.pool.acquire();
-        await VMUtil.waitUntil(() => childProcess.socket);
+        await Util.waitForCondition(() => childProcess.socket);
 
         this.childProcess = childProcess;
     }
