@@ -5,6 +5,7 @@ import version from "../version.js";
 
 import ClientError from "./errors/ClientError.js";
 import Util from "./util/Util.js";
+import diceDist from "./util/diceDist.js";
 
 import createLogger from "./logger/CreateLogger.js";
 import getDefaultLoggerConfig from "./logger/DefaultConfig.js";
@@ -56,6 +57,9 @@ class LevertClient extends Client {
         this.setupLogger();
 
         this.wrapEvent = wrapEvent.bind(undefined, this.logger);
+
+        this.started = false;
+        this.loggedIn = false;
     }
 
     setConfigs(configs) {
@@ -270,7 +274,7 @@ class LevertClient extends Client {
             guildUsers = guildUsers.filter(x => !ids.includes(x.id));
             ids.push(...guildUsers.map(x => x.id));
 
-            guildUsers = guildUsers.map(x => [x, Util.diceDist(x.username, search)]);
+            guildUsers = guildUsers.map(x => [x, diceDist(x.username, search)]);
             users.push(...guildUsers);
         }
 
@@ -311,14 +315,23 @@ class LevertClient extends Client {
             this.externalVM = new ExternalVM();
         }
 
-        await this.login(token);
-        this.setActivity(this.config.activity);
+        this.login(token);
+        await Util.waitForCondition(_ => this.loggedIn);
+
+        if (this.config.setActivity) {
+            this.setActivity(this.config.activity);
+            this.logger.info("Set activity status.");
+        }
 
         this.reminderManager.setSendInterval();
 
         if (this.config.enableGlobalHandler) {
             registerGlobalHandler(this.logger);
+            this.logger.info("Registered global error hander.");
         }
+
+        this.started = true;
+        this.logger.info("Startup complete.");
     }
 }
 
