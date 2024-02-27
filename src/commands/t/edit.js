@@ -29,9 +29,14 @@ export default {
         }
 
         if (perm < 1 && tag.owner !== msg.author.id) {
-            const owner = await getClient().tagManager.ownerTag(tag);
+            const owner = await getClient().findUserById(tag.owner),
+                out = `:warning: You can only edit your own tags.`;
 
-            return `:warning: You can only edit your own tags. Tag is owned by \`${owner}\`.`;
+            if (!owner) {
+                return out + " Tag owner not found.";
+            }
+
+            return out + ` Tag is owned by \`${owner.username}\`.`;
         }
 
         if (typeof t_args === "undefined" || (t_args.length < 1 && msg.attachments.size < 1)) {
