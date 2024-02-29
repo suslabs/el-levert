@@ -1,11 +1,7 @@
-import discord from "discord.js";
-import URL from "url";
-
+import DiscordClient from "./client/DiscordClient.js";
 import version from "../version.js";
 
 import ClientError from "./errors/ClientError.js";
-import Util from "./util/Util.js";
-import diceDist from "./util/diceDist.js";
 
 import createLogger from "./logger/CreateLogger.js";
 import getDefaultLoggerConfig from "./logger/DefaultConfig.js";
@@ -28,24 +24,9 @@ import TagVM from "./vm/isolated-vm/TagVM.js";
 import TagVM2 from "./vm/vm2/TagVM2.js";
 import ExternalVM from "./vm/judge0/ExternalVM.js";
 
-const { Client, GatewayIntentBits, PermissionsBitField, ActivityType, Partials } = discord;
-
-const intents = [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildInvites,
-        GatewayIntentBits.DirectMessages
-    ],
-    partials = [Partials.Channel];
-
-class LevertClient extends Client {
+class LevertClient extends DiscordClient {
     constructor(configs) {
-        super({
-            intents: intents,
-            partials: partials
-        });
+        super();
 
         if (client) {
             throw new ClientError("The client can only be constructed once.");
@@ -59,7 +40,6 @@ class LevertClient extends Client {
         this.wrapEvent = wrapEvent.bind(undefined, this.logger);
 
         this.started = false;
-        this.loggedIn = false;
     }
 
     setConfigs(configs) {
@@ -71,6 +51,8 @@ class LevertClient extends Client {
 
         token = auth.token;
         this.owner = auth.owner ?? "";
+
+        this.setEventsDir(config.eventsPath);
     }
 
     setupLogger() {
@@ -81,44 +63,6 @@ class LevertClient extends Client {
 
         const config = getDefaultLoggerConfig("El Levert", true, true, this.config.logFile);
         this.logger = createLogger(config);
-    }
-
-    async loadEvents() {
-        this.logger.info("Loading events...");
-        this.events = [];
-
-        let ok = 0,
-            bad = 0;
-
-        const eventsPath = this.config.eventsPath,
-            files = Util.getFilesRecSync(eventsPath).filter(file => file.endsWith(".js"));
-
-        for (const file of files) {
-            try {
-                let event = await import(URL.pathToFileURL(file));
-                event = event.default;
-
-                if (typeof event === "undefined" || typeof event.name === "undefined") {
-                    continue;
-                }
-
-                const listener = this.wrapEvent(event.listener);
-
-                if (event.once ?? false) {
-                    this.once(event.name, listener);
-                } else {
-                    this.on(event.name, listener);
-                }
-
-                this.events.push(event.name);
-                ok++;
-            } catch (err) {
-                this.logger.error("loadEvents: " + file, err);
-                bad++;
-            }
-        }
-
-        this.logger.info(`Loaded ${ok + bad} events. ${ok} successful, ${bad} failed.`);
     }
 
     loadHandlers() {
@@ -157,151 +101,6 @@ class LevertClient extends Client {
         }
     }
 
-    getChannel(ch_id, user_id, check = true) {
-        let channel;
-        if (this.channels.cache.has(ch_id)) {
-            channel = this.channels.cache.get(ch_id);
-        } else {
-            return false;
-        }
-
-        if (check) {
-            const perms = channel.permissionsFor(user_id);
-
-            if (perms === null || !perms.has(PermissionsBitField.Flags.ViewChannel)) {
-                return false;
-            }
-        }
-
-        return channel;
-    }
-
-    async fetchMessage(ch_id, msg_id, user_id, check) {
-        const channel = this.getChannel(ch_id, user_id, check);
-
-        if (!channel || typeof msg_id !== "string") {
-            return false;
-        }
-
-        try {
-            return await channel.messages.fetch(msg_id);
-        } catch (err) {
-            if (err.constructor.name === "DiscordAPIError") {
-                return false;
-            }
-
-            throw err;
-        }
-    }
-
-    async fetchMessages(ch_id, options = {}, user_id, check) {
-        const channel = this.getChannel(ch_id, user_id, check);
-
-        if (!channel || typeof options !== "object") {
-            return false;
-        }
-
-        options = Object.assign(
-            {
-                limit: 100
-            },
-            options
-        );
-
-        try {
-            return await channel.messages.fetch(options);
-        } catch (err) {
-            if (err.constructor.name === "DiscordAPIError") {
-                return false;
-            }
-
-            throw err;
-        }
-    }
-
-    async findUserById(id) {
-        const user = await this.users.fetch(id);
-
-        if (typeof user === "undefined") {
-            return false;
-        }
-
-        return user;
-    }
-
-    async findUsers(search, options = {}) {
-        const idMatch = search.match(/(\d{17,20})/),
-            mentionMatch = search.match(/<@(\d{17,20})>/);
-
-        let guilds = this.guilds.cache;
-
-        if (idMatch ?? mentionMatch) {
-            const id = idMatch[1] ?? mentionMatch[1];
-
-            for (let i = 0; i < guilds.size; i++) {
-                let user;
-
-                try {
-                    user = await guilds.at(i).members.fetch({
-                        user: id
-                    });
-                } catch (err) {
-                    if (err.constructor.name !== "DiscordAPIError") {
-                        throw err;
-                    }
-                }
-
-                if (typeof user !== "undefined") {
-                    return [user];
-                }
-            }
-        }
-
-        let users = [],
-            ids = [];
-
-        options = Object.assign(
-            {
-                limit: 10
-            },
-            options
-        );
-
-        for (let i = 0; i < guilds.size; i++) {
-            let guildUsers = await guilds.at(i).members.fetch({
-                query: search,
-                limit: options.limit
-            });
-
-            guildUsers = guildUsers.filter(x => !ids.includes(x.id));
-            ids.push(...guildUsers.map(x => x.id));
-
-            guildUsers = guildUsers.map(x => [x, diceDist(x.username, search)]);
-            users.push(...guildUsers);
-        }
-
-        users.sort((a, b) => b[1] - a[1]);
-        users = users.slice(0, options.limit).map(x => x[0]);
-
-        return users;
-    }
-
-    setActivity(config) {
-        if (typeof config !== "undefined") {
-            if (!Object.keys(ActivityType).includes(config.type)) {
-                throw new ClientError("Invalid activity type: " + config.type);
-            }
-
-            if (typeof config.text !== "undefined") {
-                this.user.setActivity(config.text, {
-                    type: ActivityType[config.type]
-                });
-            } else {
-                throw new ClientError("Invalid activity text.");
-            }
-        }
-    }
-
     async start() {
         this.logger.info("Starting client...");
 
@@ -317,13 +116,10 @@ class LevertClient extends Client {
             this.externalVM = new ExternalVM();
         }
 
-        this.logger.info("Logging in...");
-        this.login(token).catch(err => this.logger.error(err));
-        await Util.waitForCondition(_ => this.loggedIn, new ClientError("Login took too long"), 60000);
+        await this.login(token);
 
         if (this.config.setActivity) {
             this.setActivity(this.config.activity);
-            this.logger.info("Set activity status.");
         }
 
         this.reminderManager.setSendInterval();

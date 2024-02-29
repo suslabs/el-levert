@@ -98,15 +98,15 @@ class BaseCommandManager extends Manager {
         let ok = 0,
             bad = 0;
 
-        for (const path of paths) {
+        for (const commandPath of paths) {
             try {
-                const res = await this.loadCommand(path);
+                const res = await this.loadCommand(commandPath);
 
                 if (res === true) {
                     ok++;
                 }
             } catch (err) {
-                getLogger().error("Error occured while loading command: " + path, err);
+                getLogger().error("Error occured while loading command: " + commandPath, err);
                 bad++;
             }
         }
