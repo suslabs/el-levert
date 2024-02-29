@@ -7,6 +7,6 @@ export default {
     once: true,
     listener: _ => {
         getClient().loggedIn = true;
-        getLogger().info(`The bot is online. Logged in as "${getClient().user.username}".`);
+        getLogger().info(`The bot is online. Logged in as "${getClient().client.user.username}".`);
     }
 };
