@@ -147,6 +147,8 @@ class LevertClient extends Client {
             reminderManager: new ReminderManager(this.config.enableReminders)
         };
 
+        this.managers = managers;
+
         for (const [name, manager] of Object.entries(managers)) {
             this[name] = manager;
             await manager.load();
@@ -315,8 +317,9 @@ class LevertClient extends Client {
             this.externalVM = new ExternalVM();
         }
 
-        this.login(token);
-        await Util.waitForCondition(_ => this.loggedIn);
+        this.logger.info("Logging in...");
+        this.login(token).catch(err => this.logger.error(err));
+        await Util.waitForCondition(_ => this.loggedIn, new ClientError("Login took too long"), 60000);
 
         if (this.config.setActivity) {
             this.setActivity(this.config.activity);

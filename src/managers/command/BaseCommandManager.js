@@ -1,9 +1,9 @@
 import URL from "url";
+import path from "path";
 
 import Manager from "../Manager.js";
 
 import { getClient, getLogger } from "../../LevertClient.js";
-import wrapEvent from "../../client/wrapEvent.js";
 import Util from "../../util/Util.js";
 
 import Command from "../../structures/Command.js";
@@ -13,6 +13,8 @@ class BaseCommandManager extends Manager {
         super(enabled);
 
         this.commandsDir = commandsDir;
+        this.cmdFileExtension = ".js";
+
         this.commandPrefix = commandPrefix;
 
         this.commands = [];
@@ -46,32 +48,14 @@ class BaseCommandManager extends Manager {
         });
     }
 
-    async loadCommands() {
-        getLogger().info("Loading commands...");
+    getCommandPaths() {
+        let files = Util.getFilesRecSync(this.commandsDir);
+        files = files.filter(file => {
+            const extension = path.extname(file);
+            return extension === this.cmdFileExtension;
+        });
 
-        let paths = Util.getFilesRecSync(this.commandsDir);
-        paths = paths.filter(file => file.endsWith(".js"));
-
-        if (paths.length === 0) {
-            getLogger().info("Couldn't find any commands.");
-            return;
-        }
-
-        let ok = 0,
-            bad = 0;
-
-        for (const path of paths) {
-            try {
-                if (await this.loadCommand(path)) {
-                    ok++;
-                }
-            } catch (err) {
-                getLogger().error("Error occured while loading command: " + path, err);
-                bad++;
-            }
-        }
-
-        getLogger().info(`Loaded ${ok + bad} commands. ${ok} successful, ${bad} failed.`);
+        return files;
     }
 
     async loadCommand(commandPath) {
@@ -85,18 +69,49 @@ class BaseCommandManager extends Manager {
         const command = new Command(cmdProperties);
 
         if (typeof command.load !== "undefined") {
-            command.load = getClient().wrapEvent(command.load.bind(command));
-            const res = command.load();
+            const loadFunc = getClient().wrapEvent(command.load.bind(command));
+            command.load = loadFunc;
+
+            const res = await loadFunc();
 
             if (res === false) {
                 return false;
             }
         }
 
-        command.handler = command.handler.bind(command);
-        this.commands.push(command);
+        const handlerFunc = command.handler.bind(command);
+        command.handler = handlerFunc;
 
+        this.commands.push(command);
         return true;
+    }
+
+    async loadCommands() {
+        getLogger().info("Loading commands...");
+        const paths = this.getCommandPaths();
+
+        if (paths.length === 0) {
+            getLogger().info("Couldn't find any commands.");
+            return;
+        }
+
+        let ok = 0,
+            bad = 0;
+
+        for (const path of paths) {
+            try {
+                const res = await this.loadCommand(path);
+
+                if (res === true) {
+                    ok++;
+                }
+            } catch (err) {
+                getLogger().error("Error occured while loading command: " + path, err);
+                bad++;
+            }
+        }
+
+        getLogger().info(`Loaded ${ok + bad} commands. ${ok} successful, ${bad} failed.`);
     }
 
     bindSubcommand(command, subcommand) {
@@ -132,7 +147,9 @@ class BaseCommandManager extends Manager {
             }
 
             command.subcommands.forEach(subcommand => {
-                if (this.bindSubcommand(command, subcommand)) {
+                const res = this.bindSubcommand(command, subcommand);
+
+                if (res === true) {
                     n++;
                 }
             });
