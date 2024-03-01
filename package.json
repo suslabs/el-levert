@@ -5,7 +5,7 @@
     "main": "index.js",
     "type": "module",
     "scripts": {
-        "start": "node index.js",
+        "start": "node --no-warnings=ExperimentalWarning index.js",
         "lint": "eslint \"**/*.js\" --ignore-pattern node_modules/",
         "prettier-format": "prettier --config .prettierrc --write **/*.js"
     },
