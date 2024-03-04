@@ -7,7 +7,7 @@ class AuthLoader extends BaseLoader {
 
     modify(config) {
         if (typeof config.owner === "undefined") {
-            config.owner = "";
+            config.owner = "0";
         }
     }
 }
