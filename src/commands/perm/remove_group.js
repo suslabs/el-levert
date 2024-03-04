@@ -24,6 +24,10 @@ export default {
             return `:warning: Group **${g_name}** doesn't exist.`;
         }
 
+        if (group.name === "owner") {
+            return ":warning: Can't remove the owner group.";
+        }
+
         await getClient().permManager.removeGroup(g_name);
 
         return `:white_check_mark: Removed group **${g_name}** and all it's users.`;

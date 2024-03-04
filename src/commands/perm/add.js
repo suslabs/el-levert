@@ -24,6 +24,10 @@ export default {
             return `:warning: Group **${g_name}** doesn't exist.`;
         }
 
+        if (group.name === "owner") {
+            return ":warning: Can't add a user to the owner group.";
+        }
+
         const find = (await getClient().findUsers(u_name))[0];
 
         if (typeof find === "undefined") {

@@ -7,24 +7,34 @@ const isGroupName = name => {
     return /^[A-Za-z0-9\-_]+$/.test(name);
 };
 
-const disabledPermission = [
-        {
-            name: "",
-            level: 0
-        }
-    ],
-    ownerPermission = [
-        {
-            name: "owner",
-            level: 2147483647
-        }
-    ];
+const disabledGroup = {
+        name: "",
+        level: 0
+    },
+    ownerGroup = {
+        name: "owner",
+        level: 2147483647
+    };
+
+const ownerUser = {
+    group: "owner",
+    id: "0"
+};
 
 class PermissionManager extends DBManager {
     constructor(enabled = true) {
         super(enabled, "permission", PermissionDatabase, "perm_db");
 
         this.owner = getClient().owner;
+
+        this.disabledGroup = disabledGroup;
+        this.ownerGroup = ownerGroup;
+
+        this.ownerLevel = ownerGroup.level;
+        this.ownerUser = {
+            ...ownerUser,
+            id: this.owner
+        };
     }
 
     checkName(name) {
@@ -37,11 +47,11 @@ class PermissionManager extends DBManager {
 
     async fetch(id) {
         if (id === this.owner) {
-            return ownerPermission;
+            return [this.ownerGroup];
         }
 
         if (!this.enabled) {
-            return disabledPermission;
+            return [this.disabledGroup];
         }
 
         return await this.perm_db.fetch(id);
@@ -63,11 +73,19 @@ class PermissionManager extends DBManager {
         return maxLevel;
     }
 
-    fetchGroup(name) {
-        return this.perm_db.fetchGroup(name);
+    async fetchGroup(name) {
+        if (name === "owner") {
+            return ownerGroup;
+        }
+
+        return await this.perm_db.fetchGroup(name);
     }
 
     fetchByLevel(level) {
+        if (level === this.ownerLevel) {
+            return [this.ownerGroup];
+        }
+
         return this.perm_db.fetchByLevel(level);
     }
 
@@ -92,12 +110,25 @@ class PermissionManager extends DBManager {
     }
 
     async list() {
-        let users = await this.perm_db.listUsers(),
-            groups = await this.perm_db.listGroups();
+        let users = [],
+            groups = [];
+
+        if (this.owner !== "0") {
+            groups = [this.ownerGroup];
+            users = [this.ownerUser];
+        }
+
+        const userList = await this.perm_db.listUsers();
+        users = users.concat(userList);
+
+        const groupList = await this.perm_db.listGroups();
+        groups = groups.concat(groupList);
 
         if (groups.length < 1) {
             return false;
         }
+
+        groups.sort((a, b) => b.level - a.level);
 
         if (users.length < 1) {
             groups.forEach(x => (x.users = []));

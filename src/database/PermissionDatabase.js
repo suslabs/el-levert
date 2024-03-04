@@ -46,7 +46,7 @@ class PermissionDatabase extends Database {
     }
 
     async fetchByLevel(level) {
-        const row = await this.groupQueries.fetchLevel.get({
+        const row = await this.groupQueries.fetchByLevel.get({
             $level: level
         });
 
