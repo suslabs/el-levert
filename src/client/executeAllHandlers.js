@@ -1,4 +1,4 @@
-const inProcessIds = [];
+let inProcessIds = [];
 
 function isProcessing(msg_id) {
     return inProcessIds.includes(msg_id);
