@@ -24,16 +24,20 @@ class DiscordClient {
         this.intents = intents ?? defaultIntents;
         this.partials = partials ?? defaultPartials;
 
-        this.loggedIn = false;
-        this.loginTimeout = 60000;
-
-        this.eventFileExtension = ".js";
+        this.buildClient();
         this.events = [];
 
-        this.buildClient();
+        this.loginTimeout = 60000;
+        this.wrapEvents = true;
+        this.eventsDir = "./events";
+        this.eventFileExtension = ".js";
     }
 
     buildClient() {
+        if (typeof this.client !== "undefined") {
+            new ClientError("Can't create a new client without disposing the old one");
+        }
+
         this.logger?.info("Creating client...");
 
         const options = {
@@ -43,6 +47,14 @@ class DiscordClient {
 
         const client = new Client(options);
         this.client = client;
+        this.loggedIn = false;
+    }
+
+    setOptions(options) {
+        this.loginTimeout = options.loginTimeout ?? this.loginTimeout;
+        this.wrapEvents = options.wrapEvents ?? this.wrapEvents;
+        this.eventsDir = options.eventsDir ?? this.eventsDir;
+        this.eventFileExtension = options.eventFileExtension ?? this.eventFileExtension;
     }
 
     async login(token) {
@@ -62,8 +74,11 @@ class DiscordClient {
         await login;
     }
 
-    setEventsDir(eventsDir) {
-        this.eventsDir = eventsDir;
+    async logout() {
+        await this.client.destroy();
+        delete this.client;
+
+        this.logger?.info("Destroyed client.");
     }
 
     getEventPaths() {
@@ -90,12 +105,14 @@ class DiscordClient {
             return false;
         }
 
-        let listener;
+        let listener = event.listener;
 
-        if (typeof this.wrapEvent === "undefined") {
-            listener = event.listener;
-        } else {
-            listener = this.wrapEvent(event.listener);
+        if (this.wrapEvents) {
+            if (typeof this.wrapEvent === "undefined") {
+                this.logger?.warn("Couldn't wrap event: " + event.name);
+            } else {
+                listener = this.wrapEvent(listener);
+            }
         }
 
         if (event.once ?? false) {
@@ -137,10 +154,12 @@ class DiscordClient {
     }
 
     removeEvents() {
-        for (const event of this.events) {
-            this.client.removeAllListeners(event.name);
+        for (let i = 0; i < this.events.length; i++) {
+            this.client.removeAllListeners(this.events[i].name);
+            delete this.events[i];
         }
 
+        delete this.events;
         this.logger?.info("Removed all listeners.");
     }
 

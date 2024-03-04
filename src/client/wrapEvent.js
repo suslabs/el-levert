@@ -18,7 +18,7 @@ const wrapPromise = (logger, promise) =>
     new Promise((resolve, reject) => {
         promise.then(resolve).catch(err => {
             logger.error(err);
-            resolve();
+            resolve(undefined);
         });
     });
 

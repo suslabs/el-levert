@@ -25,6 +25,7 @@
     "enablePermissions": true,
     "enableReminders": true,
     "enableGlobalHandler": true,
+    "wrapEvents": true,
     "setActivity": false,
     "activity": {
         "type": "Watching",
