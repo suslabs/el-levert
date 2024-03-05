@@ -71,6 +71,8 @@ class CommandHandler extends Handler {
             } catch (err2) {
                 getLogger().error("Reporting error failed:", err2);
             }
+
+            return;
         }
 
         if (typeof out === "string") {
@@ -88,6 +90,8 @@ class CommandHandler extends Handler {
             if (err1.message === "Cannot send an empty message") {
                 const reply = await msg.reply(`:no_entry_sign: ${err1.message}.`);
                 this.messageTracker.addMsg(reply, msg.id);
+
+                return;
             }
 
             getLogger().error("Reply failed:", err1);
@@ -101,6 +105,8 @@ class CommandHandler extends Handler {
             } catch (err2) {
                 getLogger().error("Reporting error failed:", err2);
             }
+
+            return;
         }
     }
 }
