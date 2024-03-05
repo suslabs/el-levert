@@ -19,6 +19,10 @@ class MessageTracker {
 
         return sentMsg;
     }
+
+    clearMsgs() {
+        this.trackedMsgs.clear();
+    }
 }
 
 export default MessageTracker;

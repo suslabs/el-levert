@@ -44,10 +44,10 @@ class CommandHandler extends Handler {
         this.userTracker.addUser(msg.author.id);
         logUsage(msg, cmd.name, args);
 
-        const ret = await this.executeCommand(msg, cmd, args);
+        await this.executeCommand(msg, cmd, args);
         this.userTracker.removeUser(msg.author.id);
 
-        return ret;
+        return true;
     }
 
     async executeCommand(msg, cmd, args) {
@@ -59,16 +59,18 @@ class CommandHandler extends Handler {
             out = await cmd.execute(args, msg);
 
             getLogger().info(`Command execution took ${(Date.now() - t1).toLocaleString()} ms.`);
-        } catch (err) {
-            const reply = await msg.reply({
-                content: `:no_entry_sign: Encountered exception while executing command **${cmd.name}**:`,
-                ...Util.getFileAttach(err.stack, "error.js")
-            });
+        } catch (err1) {
+            getLogger().error("Command execution failed:", err1);
 
-            this.messageTracker.addMsg(reply, msg.id);
-            getLogger().error("Command execution failed", err);
-
-            return false;
+            try {
+                const reply = await msg.reply({
+                    content: `:no_entry_sign: Encountered exception while executing command **${cmd.name}**:`,
+                    ...Util.getFileAttach(err1.stack, "error.js")
+                });
+                this.messageTracker.addMsg(reply, msg.id);
+            } catch (err2) {
+                getLogger().error("Reporting error failed:", err2);
+            }
         }
 
         if (typeof out === "string") {
@@ -82,22 +84,23 @@ class CommandHandler extends Handler {
         try {
             const reply = await msg.reply(out);
             this.messageTracker.addMsg(reply, msg.id);
-        } catch (err) {
-            if (err.message === "Cannot send an empty message") {
-                const reply = await msg.reply(`:no_entry_sign: ${err.message}.`);
+        } catch (err1) {
+            if (err1.message === "Cannot send an empty message") {
+                const reply = await msg.reply(`:no_entry_sign: ${err1.message}.`);
                 this.messageTracker.addMsg(reply, msg.id);
-
-                return false;
             }
 
-            const reply = await msg.reply({
-                content: ":no_entry_sign: Encountered exception while sending reply:",
-                ...Util.getFileAttach(err.stack, "error.js")
-            });
-            this.messageTracker.addMsg(reply, msg.id);
+            getLogger().error("Reply failed:", err1);
 
-            getLogger().error("Reply failed", err);
-            return false;
+            try {
+                const reply = await msg.reply({
+                    content: ":no_entry_sign: Encountered exception while sending reply:",
+                    ...Util.getFileAttach(err1.stack, "error.js")
+                });
+                this.messageTracker.addMsg(reply, msg.id);
+            } catch (err2) {
+                getLogger().error("Reporting error failed:", err2);
+            }
         }
     }
 }

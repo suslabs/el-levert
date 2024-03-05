@@ -109,6 +109,10 @@ class ReminderManager extends DBManager {
 
         getLogger().info("Stopped reminder loop.");
     }
+
+    unload() {
+        this.clearSendInterval();
+    }
 }
 
 export default ReminderManager;

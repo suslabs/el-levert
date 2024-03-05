@@ -24,10 +24,11 @@ async function executeAllHandlers(client, funcName, msg, ...args) {
             out = await handlerFunc(msg, ...args);
 
         if (out) {
-            removeId(msg.id);
-            return;
+            break;
         }
     }
+
+    removeId(msg.id);
 }
 
 export default executeAllHandlers;

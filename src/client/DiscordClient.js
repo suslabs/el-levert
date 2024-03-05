@@ -78,6 +78,7 @@ class DiscordClient {
         await this.client.destroy();
         delete this.client;
 
+        this.loggedIn = false;
         this.logger?.info("Destroyed client.");
     }
 
@@ -159,7 +160,10 @@ class DiscordClient {
             delete this.events[i];
         }
 
-        delete this.events;
+        while (this.events.length > 0) {
+            this.events.shift();
+        }
+
         this.logger?.info("Removed all listeners.");
     }
 

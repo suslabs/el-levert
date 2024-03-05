@@ -109,19 +109,11 @@ class ReactionHandler extends Handler {
     }
 
     async execute(msg) {
-        if (!this.enabled) {
-            return false;
-        }
-
         await this.paransReact(msg);
         await this.funnyReact(msg);
     }
 
     async delete(msg) {
-        if (!this.enable) {
-            return false;
-        }
-
         const botReacts = msg.reactions.cache.filter(react => react.users.cache.has(getClient().user.id));
 
         if (botReacts.size < 1) {
