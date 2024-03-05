@@ -2,12 +2,16 @@ import createLogger from "./logger/CreateLogger.js";
 import getDefaultLoggerConfig from "./logger/DefaultConfig.js";
 
 import loadConfig from "./config/loadConfig.js";
-
 import { LevertClient } from "./LevertClient.js";
 
-const logger = createLogger(getDefaultLoggerConfig("init", false, true));
+function setupLogger() {
+    const config = getDefaultLoggerConfig("init", false, true);
+    return createLogger(config);
+}
 
 async function init() {
+    const logger = setupLogger();
+
     const configs = await loadConfig(logger);
 
     if (typeof configs === "undefined") {

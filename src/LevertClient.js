@@ -240,7 +240,7 @@ class LevertClient extends DiscordClient {
 
     async restart() {
         if (!this.started) {
-            throw new ClientError("The client can't be restarted if it hasn't been started");
+            throw new ClientError("The client can't be restarted if it hasn't been started once");
         }
 
         this.logger.info("Restarting client...");
