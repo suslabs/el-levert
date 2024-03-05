@@ -1,3 +1,5 @@
+import HandlerError from "../errors/HandlerError.js";
+
 import MessageTracker from "./tracker/MessageTracker.js";
 import UserTracker from "./tracker/UserTracker.js";
 
@@ -35,7 +37,7 @@ function _delete(msg) {
 class Handler {
     constructor(enabled = true, hasMessageTracker = true, hasUserTracker = false, options = {}) {
         if (typeof this.execute !== "function") {
-            throw new Error("Child class must have an execute function");
+            throw new HandlerError("Child class must have an execute function");
         }
 
         this.enabled = enabled;
