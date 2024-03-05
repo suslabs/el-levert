@@ -43,6 +43,10 @@ class LevertClient extends DiscordClient {
     setConfigs(configs) {
         this.version = version;
 
+        if (typeof configs === "undefined") {
+            throw new ClientError("Config cannot be undefined.");
+        }
+
         const { config, reactions, auth } = configs;
         this.config = config;
         this.reactions = reactions;
@@ -238,7 +242,7 @@ class LevertClient extends DiscordClient {
         }
     }
 
-    async restart() {
+    async restart(configs) {
         if (!this.started) {
             throw new ClientError("The client can't be restarted if it hasn't been started once");
         }
@@ -246,6 +250,17 @@ class LevertClient extends DiscordClient {
         this.logger.info("Restarting client...");
 
         await this.stop();
+
+        switch (typeof configs) {
+            case "object":
+                this.setConfigs(configs);
+                break;
+            case "function":
+                const obj = await configs();
+                this.setConfigs(obj);
+
+                break;
+        }
 
         this.setupLogger();
         this.buildClient();
