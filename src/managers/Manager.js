@@ -1,3 +1,5 @@
+import ManagerError from "../errors/ManagerError.js";
+
 function load(...args) {
     if (!this.enabled) {
         return;
@@ -21,7 +23,7 @@ function unload(...args) {
 class Manager {
     constructor(enabled) {
         if (typeof this.load !== "function") {
-            throw new Error("Child class must have a load function");
+            throw new ManagerError("Child class must have a load function");
         }
 
         this.enabled = enabled;
