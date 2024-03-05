@@ -33,12 +33,21 @@ class BaseCommandManager extends Manager {
         return str.startsWith(this.commandPrefix);
     }
 
-    searchCommands(name) {
-        return this.commands.find(command => {
-            if (command.isSubcmd) {
-                return false;
-            }
+    getCommands(perm) {
+        const commands = this.commands.filter(command => !command.isSubcmd);
 
+        if (typeof perm !== "undefined") {
+            const allowedCmds = commands.filter(command => perm >= command.allowed);
+            return allowedCmds;
+        } else {
+            return commands;
+        }
+    }
+
+    searchCommands(name) {
+        const commands = this.getCommands();
+
+        return commands.find(command => {
             if (command.name === name) {
                 return true;
             }
@@ -47,6 +56,19 @@ class BaseCommandManager extends Manager {
                 return command.aliases.includes(name);
             }
         });
+    }
+
+    getHelp(perm) {
+        const allowedCmds = this.getCommands(perm),
+            cmdNames = allowedCmds.map(x => {
+                const names = [x.name].concat(x.aliases);
+                return names.join("/");
+            });
+
+        cmdNames.sort();
+        const format = `\`${cmdNames.join("`, `")}\``;
+
+        return format;
     }
 
     getCommandPaths() {
