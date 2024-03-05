@@ -1,7 +1,7 @@
 import winston from "winston";
 import path from "path";
 
-import CreateLoggerError from "../errors/LoggerError.js";
+import CreateLoggerError from "../errors/CreateLoggerError.js";
 
 const validForm = Object.getOwnPropertyNames(winston.format).filter(x => !["length", "combine"].includes(x));
 
