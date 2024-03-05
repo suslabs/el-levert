@@ -40,6 +40,12 @@ export default {
             return `:warning: Cannot add yourself to a group that is higher than yourself. (${maxLevel} -> ${group.level})`;
         }
 
+        const currentPerms = await getClient().permManager.fetch(find.user.id);
+
+        if (currentPerms && currentPerms.find(x => x.name === g_name)) {
+            return `:warning: User \`${find.user.username}\` is already a part of the group **${g_name}**.`;
+        }
+
         await getClient().permManager.add(group, find.user.id);
 
         return `:white_check_mark: Added user \`${find.user.username}\` (${find.user.id}) to group **${g_name}**.`;
