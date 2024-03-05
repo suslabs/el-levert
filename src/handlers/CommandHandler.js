@@ -15,9 +15,6 @@ class CommandHandler extends Handler {
             userCheckInterval: 10000
         });
 
-        this.cmdPrefix = getClient().config.cmdPrefix;
-        this.commands = getClient().commands;
-
         this.outCharLimit = Util.clamp(getClient().config.outCharLimit, 0, 2000);
         this.outNewlineLimit = Util.clamp(getClient().config.outNewlineLimit, 0, 2000);
     }
