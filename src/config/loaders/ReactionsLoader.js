@@ -1,4 +1,4 @@
-import BaseLoader from "./BaseLoader/BaseLoader.js";
+import BaseLoader from "./baseLoader/BaseLoader.js";
 
 class ReactionsLoader extends BaseLoader {
     constructor(logger) {
