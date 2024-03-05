@@ -1,7 +1,5 @@
 import { EmbedBuilder } from "discord.js";
 
-import { getClient } from "../../LevertClient.js";
-
 function formatNames(langNames) {
     const format = Object.keys(langNames)
         .map((x, i) => `${i + 1}. ${x} - **${langNames[x]}**`)

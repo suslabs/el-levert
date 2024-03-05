@@ -1,8 +1,8 @@
-import createLogger from "../logger/CreateLogger.js";
-import getDefaultLoggerConfig from "../logger/DefaultConfig.js";
+import createLogger from "../../logger/CreateLogger.js";
+import getDefaultLoggerConfig from "../../logger/DefaultConfig.js";
 
-import loadConfig from "../config/loadConfig.js";
-import { getClient } from "../LevertClient.js";
+import loadConfig from "../../config/loadConfig.js";
+import { getClient } from "../../LevertClient.js";
 
 function setupLogger() {
     const config = getDefaultLoggerConfig("reload", false, true);
