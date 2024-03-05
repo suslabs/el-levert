@@ -1,4 +1,4 @@
-import { EmbedBuilder, time, bold } from "discord.js";
+import { EmbedBuilder, bold } from "discord.js";
 
 import { getClient } from "../../LevertClient.js";
 
