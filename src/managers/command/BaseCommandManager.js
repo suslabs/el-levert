@@ -16,6 +16,7 @@ class BaseCommandManager extends Manager {
         this.cmdFileExtension = ".js";
 
         this.commandPrefix = commandPrefix;
+        this.wrapCommands = getClient().config.wrapEvents;
 
         this.commands = [];
     }
@@ -69,9 +70,13 @@ class BaseCommandManager extends Manager {
         const command = new Command(cmdProperties);
 
         if (typeof command.load !== "undefined") {
-            const loadFunc = getClient().wrapEvent(command.load.bind(command));
-            command.load = loadFunc;
+            let loadFunc = command.load.bind(command);
 
+            if (this.wrapCommands) {
+                loadFunc = getClient().wrapEvent(loadFunc);
+            }
+
+            command.load = loadFunc;
             const res = await loadFunc();
 
             if (res === false) {

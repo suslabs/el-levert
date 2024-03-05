@@ -8,7 +8,7 @@ import getDefaultLoggerConfig from "./logger/DefaultConfig.js";
 
 import wrapEvent from "./client/wrapEvent.js";
 import executeAllHandlers from "./client/executeAllHandlers.js";
-import { registerGlobalHandler } from "./client/registerGlobalHandler.js";
+import { registerGlobalHandler, removeGlobalHandler } from "./client/registerGlobalHandler.js";
 
 import ReactionHandler from "./handlers/ReactionHandler.js";
 import CommandHandler from "./handlers/CommandHandler.js";
@@ -29,15 +29,13 @@ class LevertClient extends DiscordClient {
         super();
 
         if (client) {
-            throw new ClientError("The client can only be constructed once.");
+            throw new ClientError("The client can only be constructed once");
         } else {
             client = this;
         }
 
         this.setConfigs(configs);
         this.setupLogger();
-
-        this.wrapEvent = wrapEvent.bind(undefined, this.logger);
 
         this.started = false;
     }
@@ -52,17 +50,21 @@ class LevertClient extends DiscordClient {
         token = auth.token;
         this.owner = auth.owner ?? "";
 
-        this.setEventsDir(config.eventsPath);
+        this.setOptions({
+            wrapEvents: this.config.wrapEvents,
+            eventsDir: config.eventsPath
+        });
     }
 
     setupLogger() {
         if (typeof this.logger !== "undefined") {
-            this.logger.end();
-            delete this.logger;
+            this.deleteLogger();
         }
 
         const config = getDefaultLoggerConfig("El Levert", true, true, this.config.logFile);
         this.logger = createLogger(config);
+
+        this.wrapEvent = wrapEvent.bind(undefined, this.logger);
     }
 
     loadHandlers() {
@@ -78,16 +80,21 @@ class LevertClient extends DiscordClient {
         this.handlers = handlers;
         this.handlerList = Object.values(handlers);
 
+        for (const handler of this.handlerList) {
+            handler.load();
+        }
+
         this.executeAllHandlers = executeAllHandlers.bind(undefined, this);
+        this.logger.info("Loaded handlers.");
     }
 
     async loadManagers() {
         this.logger.info("Loading managers...");
 
         const managers = {
-            commandManager: new CommandManager(),
             tagManager: new TagManager(),
             permManager: new PermissionManager(this.config.enablePermissions),
+            commandManager: new CommandManager(),
             reminderManager: new ReminderManager(this.config.enableReminders)
         };
 
@@ -97,11 +104,24 @@ class LevertClient extends DiscordClient {
             this[name] = manager;
             await manager.load();
 
-            this.logger.info(`Loaded manager: ${manager.constructor.name}`);
+            this.logger.info(`Loaded manager: ${name}`);
+        }
+    }
+
+    loadVMs() {
+        this.tagVM = new TagVM();
+        this.tagVM2 = new TagVM2();
+
+        if (this.config.enableOtherLangs) {
+            this.externalVM = new ExternalVM();
         }
     }
 
     async start() {
+        if (this.started) {
+            throw new ClientError("The client can only be started once");
+        }
+
         this.logger.info("Starting client...");
 
         await this.loadManagers();
@@ -109,12 +129,7 @@ class LevertClient extends DiscordClient {
 
         await this.loadEvents();
 
-        this.tagVM = new TagVM();
-        this.tagVM2 = new TagVM2();
-
-        if (this.config.enableOtherLangs) {
-            this.externalVM = new ExternalVM();
-        }
+        this.loadVMs();
 
         await this.login(token);
 
@@ -131,6 +146,111 @@ class LevertClient extends DiscordClient {
 
         this.started = true;
         this.logger.info("Startup complete.");
+    }
+
+    unloadHandlers() {
+        this.logger.info("Unloading handlers...");
+
+        for (let i = 0; i < this.handlerList.length; i++) {
+            this.handlerList[i].unload();
+            delete this.handlerList[i];
+        }
+
+        for (const name in this.handlers) {
+            delete this.handlers[name];
+        }
+
+        delete this.handlerList;
+        delete this.handlers;
+        delete this.executeAllHandlers;
+
+        this.logger.info("Unloaded handlers.");
+    }
+
+    async unloadManagers() {
+        this.logger.info("Unloading managers...");
+
+        for (const [name, manager] of Object.entries(this.managers)) {
+            await manager.unload();
+
+            delete this.managers[name];
+            delete this[name];
+
+            this.logger.info(`Unloaded manager: ${name}`);
+        }
+
+        delete this.managers;
+        this.logger.info("Unloaded managers.");
+    }
+
+    unloadVMs() {
+        delete this.tagVM;
+
+        if (this.tagVM2.kill()) {
+            this.logger.info("Killed VM2 child process.");
+            delete this.tagVM2;
+        }
+
+        if (this.config.enableOtherLangs) {
+            delete this.externalVM;
+        }
+    }
+
+    deleteLogger() {
+        this.logger.end();
+        delete this.logger;
+
+        delete this.wrapEvent;
+    }
+
+    killProcess() {
+        process.exit(0);
+    }
+
+    async stop(kill = false) {
+        if (!this.started) {
+            throw new ClientError("The client can't be stopped if it hasn't been started");
+        }
+
+        this.logger.info("Stopping client...");
+
+        this.removeEvents();
+
+        this.unloadHandlers();
+        await this.unloadManagers();
+
+        this.unloadVMs();
+
+        await this.logout();
+
+        if (this.config.enableGlobalHandler) {
+            removeGlobalHandler();
+            this.logger.info("Removed global error hander.");
+        }
+
+        this.started = false;
+        this.logger.info("Client stopped.");
+
+        this.deleteLogger();
+
+        if (kill) {
+            this.killProcess();
+        }
+    }
+
+    async restart() {
+        if (!this.started) {
+            throw new ClientError("The client can't be restarted if it hasn't been started");
+        }
+
+        this.logger.info("Restarting client...");
+
+        await this.stop();
+
+        this.setupLogger();
+        this.buildClient();
+
+        await this.start();
     }
 }
 

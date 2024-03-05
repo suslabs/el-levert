@@ -15,6 +15,8 @@ class Database {
 
         this.createString = "";
         this.queryStrings = {};
+
+        this.queryList = [];
     }
 
     async loadCreateQuery() {
@@ -44,10 +46,6 @@ class Database {
         }
 
         this.db = db;
-    }
-
-    close() {
-        return this.db.close();
     }
 
     async create() {
@@ -128,12 +126,31 @@ class Database {
                 strings = this.queryStrings[category];
 
             for (const query in strings) {
-                const queryString = strings[query];
-                queries[query] = await this.db.prepare(queryString);
+                const queryString = strings[query],
+                    statement = await this.db.prepare(queryString);
+
+                queries[query] = statement;
+                this.queryList.push(statement);
             }
 
             this[category] = queries;
         }
+    }
+
+    async unloadQueries() {
+        for (let i = 0; i < this.queryList.length; i++) {
+            await this.queryList[i].finalize();
+            delete this.queryList[i];
+        }
+
+        for (const category in this.queryStrings) {
+            delete this[category];
+        }
+    }
+
+    async close() {
+        await this.unloadQueries();
+        return await this.db.close();
     }
 
     async load() {

@@ -49,18 +49,6 @@ class DBManager extends Manager {
         this.fieldName = fieldName;
     }
 
-    async loadDatabase() {
-        const db = new this.classType(this.dbPath, this.queryDir, dbOptions);
-        this[this.fieldName] = db;
-
-        if (!(await this.checkDatabase())) {
-            await this.createDatabase();
-        }
-
-        await db.load();
-        getLogger().info(`Successfully loaded ${this.name} database.`);
-    }
-
     async checkDatabase() {
         if (!(await directoryExists(this.dbDir))) {
             await fs.mkdir(this.dbDir, {
@@ -84,8 +72,28 @@ class DBManager extends Manager {
         await this[this.fieldName].create();
     }
 
-    load() {
-        return this.loadDatabase();
+    async loadDatabase() {
+        const db = new this.classType(this.dbPath, this.queryDir, dbOptions);
+        this[this.fieldName] = db;
+
+        if (!(await this.checkDatabase())) {
+            await this.createDatabase();
+        }
+
+        await db.load();
+        getLogger().info(`Successfully loaded ${this.name} database.`);
+    }
+
+    async closeDatabase() {
+        await this[this.fieldName].close();
+    }
+
+    async load() {
+        return await this.loadDatabase();
+    }
+
+    async unload() {
+        return await this.closeDatabase();
     }
 }
 

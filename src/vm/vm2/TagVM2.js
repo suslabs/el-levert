@@ -1,4 +1,4 @@
-import { getClient } from "../../LevertClient.js";
+import { getClient, getLogger } from "../../LevertClient.js";
 
 import VM2ProcPool from "./process-pool/ProcessPool.js";
 import FakeUtil from "./classes/FakeUtil.js";
@@ -84,6 +84,17 @@ class TagVM2 {
 
             throw err;
         }
+    }
+
+    kill() {
+        try {
+            this.procPool.kill();
+        } catch (err) {
+            getLogger().error(err);
+            return false;
+        }
+
+        return true;
     }
 }
 

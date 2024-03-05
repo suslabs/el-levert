@@ -36,6 +36,12 @@ class UserTracker {
         this.trackedUsers = this.trackedUsers.filter(x => x.id !== id);
     }
 
+    clearUsers() {
+        while (this.trackedUsers.length > 0) {
+            this.trackedUsers.pop();
+        }
+    }
+
     setCheckInterval() {
         const checkUsersFunc = checkUsers.bind(this);
         this.checkTimer = setInterval(checkUsersFunc, this.checkInterval);

@@ -78,6 +78,18 @@ class AsyncStatement {
             });
         });
     }
+
+    finalize() {
+        return new Promise((resolve, reject) => {
+            this.st.finalize(err => {
+                if (err) {
+                    reject(err);
+                }
+
+                resolve(this);
+            });
+        });
+    }
 }
 
 export default AsyncStatement;
