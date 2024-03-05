@@ -1,4 +1,4 @@
-import { getClient } from "../LevertClient.js";
+import { getClient } from "../../LevertClient.js";
 
 export default {
     name: "stop",
