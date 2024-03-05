@@ -5,7 +5,7 @@ export default {
     aliases: ["r"],
     subcommands: ["add", "list", "remove", "remove_all"],
     load: _ => getClient().config.enableReminders,
-    handler: async function (args, msg) {
+    handler: function (args, msg) {
         return `:information_source: %reminder [${this.subcommands.join("|")}]`;
     }
 };
