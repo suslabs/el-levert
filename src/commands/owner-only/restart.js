@@ -35,7 +35,7 @@ export default {
     load: function () {
         this.allowed = getClient().permManager.ownerLevel;
     },
-    handler: async (args, msg, perm) => {
+    handler: async (_, msg) => {
         await getClient().restart(configReloader);
 
         rebindMessage(msg, getClient().client);

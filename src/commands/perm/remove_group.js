@@ -1,4 +1,5 @@
 import Util from "../../util/Util.js";
+
 import { getClient } from "../../LevertClient.js";
 
 export default {
@@ -6,7 +7,7 @@ export default {
     parent: "perm",
     subcommand: true,
     allowed: 2,
-    handler: async (args, msg) => {
+    handler: async args => {
         if (args.length === 0) {
             return ":information_source: `perm remove_group [group name]`";
         }

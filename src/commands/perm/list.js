@@ -20,7 +20,7 @@ export default {
     name: "list",
     parent: "perm",
     subcommand: true,
-    handler: async (args, msg) => {
+    handler: async _ => {
         const groups = await getClient().permManager.list();
 
         if (!groups) {

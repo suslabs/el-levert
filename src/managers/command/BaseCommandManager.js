@@ -2,6 +2,7 @@ import URL from "url";
 import path from "path";
 
 import Manager from "../Manager.js";
+import ManagerError from "../../errors/ManagerError.js";
 
 import { getClient, getLogger } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
@@ -9,14 +10,16 @@ import Util from "../../util/Util.js";
 import Command from "../../structures/Command.js";
 
 class BaseCommandManager extends Manager {
-    constructor(enabled, commandsDir, commandPrefix) {
+    constructor(enabled, commandsDir, commandPrefix, options = {}) {
         super(enabled);
 
         this.commandsDir = commandsDir;
-        this.cmdFileExtension = ".js";
-
         this.commandPrefix = commandPrefix;
+
         this.wrapCommands = getClient().config.wrapEvents;
+
+        this.excludeDirs = options.excludeDirs ?? [];
+        this.cmdFileExtension = options.cmdFileExtension ?? ".js";
 
         this.commands = [];
     }
@@ -46,33 +49,50 @@ class BaseCommandManager extends Manager {
 
     searchCommands(name) {
         const commands = this.getCommands();
-
-        return commands.find(command => {
-            if (command.name === name) {
-                return true;
-            }
-
-            if (command.aliases.length > 0) {
-                return command.aliases.includes(name);
-            }
-        });
+        return commands.find(command => command.matches(name));
     }
 
-    getHelp(perm) {
+    getHelp(perm, discord = true) {
         const allowedCmds = this.getCommands(perm),
-            cmdNames = allowedCmds.map(x => {
-                const names = [x.name].concat(x.aliases);
+            cmdNames = allowedCmds.map(command => {
+                const names = [command.name].concat(command.aliases);
                 return names.join("/");
             });
 
         cmdNames.sort();
-        const format = `\`${cmdNames.join("`, `")}\``;
 
-        return format;
+        if (discord) {
+            return `\`${cmdNames.join("`, `")}\``;
+        } else {
+            return cmdNames.join(", ");
+        }
     }
 
     getCommandPaths() {
-        let files = Util.getFilesRecSync(this.commandsDir);
+        let files;
+
+        try {
+            files = Util.getFilesRecSync(this.commandsDir);
+        } catch (err) {
+            if (err.code === "ENOENT") {
+                throw new ManagerError("Couldn't find the commands directory.");
+            }
+
+            throw err;
+        }
+
+        const excludeDirs = this.excludeDirs.map(dir => path.resolve(dir));
+
+        files = files.filter(file => {
+            for (const excludeDir of excludeDirs) {
+                if (file.startsWith(excludeDir)) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
+
         files = files.filter(file => {
             const extension = path.extname(file);
             return extension === this.cmdFileExtension;
@@ -115,7 +135,19 @@ class BaseCommandManager extends Manager {
 
     async loadCommands() {
         getLogger().info("Loading commands...");
-        const paths = this.getCommandPaths();
+
+        let paths;
+
+        try {
+            paths = this.getCommandPaths();
+        } catch (err) {
+            if (err.name === "ManagerError") {
+                getLogger().info(err.message);
+                return;
+            }
+
+            throw err;
+        }
 
         if (paths.length === 0) {
             getLogger().info("Couldn't find any commands.");

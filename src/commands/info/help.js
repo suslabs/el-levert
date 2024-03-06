@@ -2,7 +2,7 @@ import { getClient } from "../../LevertClient.js";
 
 export default {
     name: "help",
-    handler: (args, msg, perm) => {
+    handler: (_, _, perm) => {
         const help = getClient().commandManager.getHelp(perm);
 
         return `:information_source: Available commands are: ${help}
