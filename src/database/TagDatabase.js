@@ -1,6 +1,6 @@
 import Database from "./Database.js";
 
-import Tag from "../structures/Tag.js";
+import Tag from "../structures/tag/Tag.js";
 
 /*
 {
