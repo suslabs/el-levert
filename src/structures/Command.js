@@ -9,7 +9,7 @@ const defaultValues = {
     description: "",
     usage: "",
     aliases: [],
-    helpArgs: ["-h", "-u", "-help", "help"]
+    helpArgs: ["help", "-help", "-h", "usage"]
 };
 
 class Command {
@@ -41,7 +41,23 @@ class Command {
         return this.subcmds.get(name);
     }
 
-    getHelp() {
+    isHelpCall(args) {
+        if (!this.hasHelp) {
+            return false;
+        }
+
+        const split = args.split(" ");
+
+        for (const part of split) {
+            if (this.helpArgs.includes(part)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    getHelpText() {
         let help = "";
 
         if (this.description.length > 0) {
@@ -69,14 +85,18 @@ class Command {
             }
         }
 
-        const perm = await getClient().permManager.maxLevel(msg.author.id);
+        let perm;
+
+        if (typeof msg !== "undefined") {
+            perm = await getClient().permManager.maxLevel(msg.author.id);
+        }
 
         if (perm < this.allowed) {
             return `:warning: Access denied.\nOnly permission level ${this.allowed} and above can execute this command.`;
         }
 
-        if (this.hasHelp && this.helpArgs.includes(args.toLowerCase())) {
-            return this.getHelp();
+        if (this.isHelpCall(args)) {
+            return this.getHelpText();
         }
 
         return this.handler(args, msg, perm);
