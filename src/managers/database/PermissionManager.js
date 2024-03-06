@@ -89,24 +89,24 @@ class PermissionManager extends DBManager {
         return this.perm_db.fetchByLevel(level);
     }
 
-    add(group, id) {
-        return this.perm_db.add(group.name, id);
+    async add(group, id) {
+        await this.perm_db.add(group.name, id);
     }
 
-    remove(group, id) {
-        return this.perm_db.remove(group.name, id);
+    async remove(group, id) {
+        await this.perm_db.remove(group.name, id);
     }
 
-    removeAll(id) {
-        return this.perm_db.removeAll(id);
+    async removeAll(id) {
+        await this.perm_db.removeAll(id);
     }
 
-    addGroup(name, level) {
-        return this.perm_db.addGroup(name, level);
+    async addGroup(name, level) {
+        await this.perm_db.addGroup(name, level);
     }
 
-    removeGroup(name) {
-        return this.perm_db.removeGroup(name);
+    async removeGroup(name) {
+        await this.perm_db.removeGroup(name);
     }
 
     async list() {
@@ -131,7 +131,9 @@ class PermissionManager extends DBManager {
         groups.sort((a, b) => b.level - a.level);
 
         if (users.length < 1) {
-            groups.forEach(x => (x.users = []));
+            groups.forEach(group => {
+                group.users = [];
+            });
 
             return groups;
         }
@@ -146,7 +148,11 @@ class PermissionManager extends DBManager {
             }
         }
 
-        groups.forEach(x => (x.users = users.filter(y => y.group === x.name)));
+        groups.forEach(group => {
+            const groupUsers = users.filter(user => user.group === group.name);
+            group.users = groupUsers;
+        });
+
         return groups;
     }
 }
