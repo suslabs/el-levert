@@ -1,11 +1,12 @@
 import Util from "../../util/Util.js";
+
 import { getClient } from "../../LevertClient.js";
 
 export default {
     name: "check",
     parent: "perm",
     subcommand: true,
-    handler: async (args, msg) => {
+    handler: async args => {
         if (args.length === 0) {
             return ":information_source: `perm check [username]`";
         }

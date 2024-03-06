@@ -34,11 +34,51 @@ class Command {
     }
 
     getSubcmd(name) {
-        if (this.subcmds.size < 1) {
+        let subcmds;
+
+        if (this.isSubcmd) {
+            subcmds = this.parentCmd.subcmds;
+        } else {
+            subcmds = this.subcmds;
+        }
+
+        if (subcmds.size < 1) {
             return;
         }
 
-        return this.subcmds.get(name);
+        return subcmds.get(name);
+    }
+
+    isSubName(name) {
+        let subNames;
+
+        if (this.isSubcmd) {
+            subNames = this.parentCmd.subcommands;
+        } else {
+            subNames = this.subcommands;
+        }
+
+        return subNames.includes(name);
+    }
+
+    getSubcmdList(separator = "|") {
+        if (this.isSubcmd) {
+            return "";
+        }
+
+        return this.subcommands.join(separator);
+    }
+
+    matches(name) {
+        if (this.name === name) {
+            return true;
+        }
+
+        if (this.aliases.length > 0) {
+            return this.aliases.includes(name);
+        }
+
+        return false;
     }
 
     isHelpCall(args) {

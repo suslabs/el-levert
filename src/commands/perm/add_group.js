@@ -1,4 +1,5 @@
 import Util from "../../util/Util.js";
+
 import { getClient } from "../../LevertClient.js";
 
 export default {
@@ -6,7 +7,7 @@ export default {
     parent: "perm",
     subcommand: true,
     allowed: 2,
-    handler: async (args, msg) => {
+    handler: async args => {
         let [g_name, level] = Util.splitArgs(args);
 
         if (args.length === 0 || g_name.length === 0 || level.length === 0) {
