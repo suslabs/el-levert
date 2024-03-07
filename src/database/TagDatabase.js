@@ -89,18 +89,18 @@ class TagDatabase extends Database {
 
     async dump() {
         let tags = await this.tagQueries.dump.all();
-        tags = tags.map(x => x.name);
+        tags = tags.map(tag => tag.name);
         tags.sort();
 
         return tags;
     }
 
     async list(owner) {
-        const tags = await this.tagQueries.list.all({
+        const rows = await this.tagQueries.list.all({
             $owner: owner
         });
 
-        return tags.map(x => new Tag(x));
+        return rows.map(row => new Tag(row));
     }
 
     async quotaFetch(id) {
