@@ -1,4 +1,5 @@
 import Util from "../../util/Util.js";
+
 import { getClient } from "../../LevertClient.js";
 
 export default {
@@ -6,15 +7,16 @@ export default {
     parent: "tag",
     subcommand: true,
     handler: async (_, msg) => {
-        const quota = await getClient().tagManager.getQuota(msg.author.id),
-            perc = Util.round((quota / getClient().config.maxQuota) * 100, 2);
+        let quota = await getClient().tagManager.getQuota(msg.author.id);
 
-        if (quota === false) {
+        if (!quota) {
             return ":information_source: You have no tags.";
         }
 
-        return `:information_source: You're using **${Util.round(quota, 2)}/${
-            getClient().config.maxQuota
-        }kb** of the available storage (**${perc}%**).`;
+        const maxQuota = getClient().config.maxQuota,
+            perc = Util.round((quota / maxQuota) * 100, 2),
+            roundedQuota = Util.round(quota, 2);
+
+        return `:information_source: You're using **${roundedQuota}/${maxQuota}kb** of the available storage (**${perc}%**).`;
     }
 };

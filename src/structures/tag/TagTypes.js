@@ -8,7 +8,7 @@ const defaultType = "text",
     defaultScriptType = "ivm",
     specialScriptTypes = ["vm2"];
 
-const scriptTypes = [DefaultScriptType].concat(SpecialScriptTypes);
+const scriptTypes = [defaultScriptType].concat(specialScriptTypes);
 
 const TagTypes = {
     defaultType,

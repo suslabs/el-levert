@@ -172,8 +172,28 @@ class TagManager extends DBManager {
         return find;
     }
 
-    async dump() {
-        return await this.tag_db.dump();
+    async dump(full = false) {
+        const tags = await this.tag_db.dump();
+
+        if (full) {
+            const fullDump = [];
+
+            for (const name of tags) {
+                let tag;
+
+                try {
+                    tag = await this.fetch(name);
+                } catch (err) {}
+
+                if (typeof tag !== "undefined") {
+                    fullDump.push(tag);
+                }
+            }
+
+            return fullDump;
+        } else {
+            return tags;
+        }
     }
 
     async getQuota(id) {

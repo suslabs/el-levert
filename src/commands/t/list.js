@@ -1,18 +1,11 @@
 import Util from "../../util/Util.js";
+
 import { getClient } from "../../LevertClient.js";
 
 function formatTagList(tags) {
-    return tags
-        .map((x, i) => {
-            let name = `${i + 1}. ${x.name}`;
+    const format = tags.map((tag, i) => `${i + 1}. ` + tag.format()).join("\n");
 
-            if (x.hops.length > 1) {
-                name += `(-> ${x.hops[1]} ${x.args})`;
-            }
-
-            return name;
-        })
-        .join("\n");
+    return format;
 }
 
 export default {
