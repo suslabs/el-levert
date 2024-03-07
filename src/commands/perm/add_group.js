@@ -28,7 +28,7 @@ export default {
 
         level = parseInt(level);
 
-        if (isNaN(level) || Math.floor(level) !== level) {
+        if (isNaN(level) || perm < 0) {
             return `:warning: Invalid level: \`${level}\`. Level must be an int.`;
         }
 
