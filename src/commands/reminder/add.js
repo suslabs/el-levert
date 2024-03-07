@@ -39,6 +39,6 @@ export default {
 
         const reminder = await getClient().reminderManager.add(msg.author.id, end, message);
 
-        return ":information_source: You will be reminded at " + reminder.format();
+        return ":information_source: You will be reminded on " + reminder.format();
     }
 };

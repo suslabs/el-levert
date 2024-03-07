@@ -38,7 +38,7 @@ class ReminderManager extends DBManager {
     async remove(user, index) {
         const reminders = await this.fetch(user);
 
-        if (typeof reminders === "undefined" || typeof reminders[user] === "undefined") {
+        if (!reminders) {
             return false;
         }
 
