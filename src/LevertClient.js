@@ -19,6 +19,7 @@ import CommandManager from "./managers/command/CommandManager.js";
 import TagManager from "./managers/database/TagManager.js";
 import PermissionManager from "./managers/database/PermissionManager.js";
 import ReminderManager from "./managers/database/ReminderManager.js";
+import CLICommandManager from "./managers/command/CLICommandManager.js";
 
 import TagVM from "./vm/isolated-vm/TagVM.js";
 import TagVM2 from "./vm/vm2/TagVM2.js";
@@ -99,7 +100,8 @@ class LevertClient extends DiscordClient {
             tagManager: new TagManager(),
             permManager: new PermissionManager(this.config.enablePermissions),
             commandManager: new CommandManager(),
-            reminderManager: new ReminderManager(this.config.enableReminders)
+            reminderManager: new ReminderManager(this.config.enableReminders),
+            cliCommandManager: new CLICommandManager(this.config.enableCliCommands)
         };
 
         this.managers = managers;
@@ -202,8 +204,8 @@ class LevertClient extends DiscordClient {
 
     deleteLogger() {
         this.logger.end();
-        delete this.logger;
 
+        delete this.logger;
         delete this.wrapEvent;
     }
 
