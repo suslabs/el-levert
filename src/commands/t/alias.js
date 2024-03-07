@@ -1,4 +1,5 @@
 import Util from "../../util/Util.js";
+
 import { getClient } from "../../LevertClient.js";
 
 export default {
@@ -13,15 +14,15 @@ export default {
         const [t_name, t_args] = Util.splitArgs(args),
             [a_name, a_args] = Util.splitArgs(t_args);
 
+        if (this.isSubName(t_name)) {
+            return `:police_car: ${t_name} is a __command__, not a __tag__. You can't manipulate commands.`;
+        }
+
         const e1 = getClient().tagManager.checkName(t_name),
             e2 = getClient().tagManager.checkName(a_name);
 
         if (e1 ?? e2) {
             return ":warning: " + e1 ?? e2;
-        }
-
-        if (this.parentCmd.subcommands.includes(t_name)) {
-            return `:police_car: ${t_name} is a __command__, not a __tag__. You can't manipulate commands.`;
         }
 
         if (a_name.length === 0) {
@@ -34,7 +35,7 @@ If you want to de-alias the tag, \`edit\` it.`;
 
         if (!tag) {
             try {
-                tag = await getClient().tagManager.add(t_name, "", msg.author.id, false);
+                tag = await getClient().tagManager.add(t_name, "", msg.author.id);
             } catch (err) {
                 if (err.name === "TagError") {
                     return ":warning: " + err.message;
@@ -54,7 +55,7 @@ If you want to de-alias the tag, \`edit\` it.`;
                 return out + " Tag owner not found.";
             }
 
-            return out + ` Tag is owned by \`${owner.username}\`.`;
+            return out + ` The tag is owned by \`${owner.username}\`.`;
         }
 
         const a_tag = await getClient().tagManager.fetch(a_name),

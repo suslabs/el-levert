@@ -1,4 +1,5 @@
 import Util from "../../util/Util.js";
+
 import { getClient } from "../../LevertClient.js";
 
 export default {
@@ -7,20 +8,15 @@ export default {
     parent: "tag",
     subcommand: true,
     handler: async function (args, msg) {
-        const [t_name, t_args] = Util.splitArgs(args),
-            [t_type, t_body] = Util.splitArgs(t_args),
-            e = getClient().tagManager.checkName(t_name);
+        const [t_name, t_args] = Util.splitArgs(args);
 
-        if (e) {
-            return ":warning: " + e;
-        }
-
-        if (this.parentCmd.subcommands.includes(t_name)) {
+        if (this.isSubName(t_name)) {
             return `:police_car: ${t_name} is a __command__, not a __tag__. You can't manipulate commands.`;
         }
 
-        if (typeof t_args === "undefined" || (t_args.length < 1 && msg.attachments.size < 1)) {
-            return ":warning: Tag body is empty.";
+        const e = getClient().tagManager.checkName(t_name);
+        if (e) {
+            return ":warning: " + e;
         }
 
         const tag = await getClient().tagManager.fetch(t_name);
@@ -36,32 +32,15 @@ export default {
             return out + ` and is owned by \`${owner.username}\``;
         }
 
-        let body = t_args,
-            isScript,
-            scriptType = 0;
+        const parsed = await this.parentCmd.parseBase(t_args, msg.attachments),
+            { body, type } = parsed;
 
-        if (t_type === "vm2") {
-            body = t_body;
-            scriptType = 1;
-        }
-
-        if (msg.attachments.size > 0) {
-            try {
-                [body, isScript] = await getClient().tagManager.downloadBody(msg);
-            } catch (err) {
-                if (err.name === "TagError") {
-                    return ":warning: " + err.message;
-                }
-
-                return {
-                    content: ":no_entry_sign: Downloading attachment failed:",
-                    ...Util.getFileAttach(err.stack, "error.js")
-                };
-            }
+        if (typeof parsed.err !== "undefined") {
+            return parsed.err;
         }
 
         try {
-            await getClient().tagManager.add(t_name, body, msg.author.id, isScript, scriptType);
+            await getClient().tagManager.add(t_name, body, msg.author.id, type);
         } catch (err) {
             if (err.name === "TagError") {
                 return ":warning: " + err.message;

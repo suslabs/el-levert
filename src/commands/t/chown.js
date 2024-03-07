@@ -1,4 +1,5 @@
 import Util from "../../util/Util.js";
+
 import { getClient } from "../../LevertClient.js";
 
 export default {
@@ -11,9 +12,13 @@ export default {
             return ":information_source: `t chown name new_owner_mention`";
         }
 
-        const [t_name, t_args] = Util.splitArgs(args),
-            e = getClient().tagManager.checkName(t_name);
+        const [t_name, t_args] = Util.splitArgs(args);
 
+        if (this.isSubName(t_name)) {
+            return `:police_car: ${t_name} is a __command__, not a __tag__. You can't manipulate commands.`;
+        }
+
+        const e = getClient().tagManager.checkName(t_name);
         if (e) {
             return ":warning: " + e;
         }
@@ -36,24 +41,17 @@ export default {
 
         if (perm < 1 && tag.owner !== msg.author.id) {
             const owner = await getClient().findUserById(tag.owner),
-                out = ":warning: You can only chown your own tags.";
+                out = ":warning: You can only edit your own tags.";
 
             if (!owner) {
                 return out + " Tag owner not found.";
             }
 
-            return out + ` Tag is owned by \`${owner.username}\`.`;
+            return out + ` The tag is owned by \`${owner.username}\`.`;
         }
 
         await getClient().tagManager.chown(tag, find.user.id);
 
-        let out = "";
-
-        if ((tag.type & 1) === 0) {
-            out =
-                ":warning: Tag has been converted to EL LEVERT format. Updates on Leveret 1 will no longer apply.\n\n";
-        }
-
-        return out + `:white_check_mark: Transferred tag **${t_name}** to ${t_args}.`;
+        return `:white_check_mark: Transferred tag **${t_name}** to \`${t_args}\`.`;
     }
 };
