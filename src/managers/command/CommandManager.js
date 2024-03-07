@@ -4,9 +4,12 @@ import BaseCommandManager from "./BaseCommandManager.js";
 class CommandManager extends BaseCommandManager {
     constructor() {
         const commandsDir = getClient().config.commandsPath,
-            commandPrefix = getClient().config.cmdPrefix;
+            commandPrefix = getClient().config.cmdPrefix,
+            excludeDir = getClient().config.cliCommandsPath;
 
-        super(true, commandsDir, commandPrefix);
+        super(true, commandsDir, commandPrefix, {
+            excludeDirs: [excludeDir]
+        });
     }
 }
 
