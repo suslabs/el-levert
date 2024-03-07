@@ -20,8 +20,17 @@ const vmOptions = {
     }
 };
 
+const additionalPath = "../canvas-integration";
+
+function formatCode(code) {
+    code = `return (async () => {${code};})();`;
+    return code;
+}
+
 class TagVM2 {
     constructor() {
+        this.enabled = getClient().config.enableVM2;
+
         this.memLimit = getClient().config.otherMemLimit;
         this.timeLimit = getClient().config.otherTimeLimit;
 
@@ -41,7 +50,7 @@ class TagVM2 {
         this.procPool.createPool();
     }
 
-    async runScript(code, msg, args) {
+    getContext(msg, args) {
         const vmObjects = {
             msg: msg
         };
@@ -52,22 +61,34 @@ class TagVM2 {
             };
         }
 
-        let reply = {};
+        const outputVars = {
+            reply: {}
+        };
+
         const vmFuncs = {
-            reply: FakeUtil.reply.bind(reply),
+            reply: FakeUtil.reply.bind(outputVars.reply),
             findUsers: FakeUtil.findUsers,
             dumpTags: FakeUtil.dumpTags,
             fetchTag: FakeUtil.fetchTag,
             request: FakeAxios.request
         };
 
-        code = `return (async () => {${code};})();`;
+        return { vmObjects, vmFuncs, outputVars };
+    }
+
+    async runScript(code, msg, args) {
+        if (!this.enabled) {
+            return "VM2 is disabled.";
+        }
+
+        const { vmObjects, vmFuncs, outputVars } = this.getContext(msg, args);
+        code = formatCode(code);
 
         try {
-            const out = await this.procPool.run(code, vmObjects, this.vmOptions, vmFuncs, "../canvas-integration");
+            const out = await this.procPool.run(code, vmObjects, this.vmOptions, vmFuncs, additionalPath);
 
-            if (typeof reply.reply !== "undefined") {
-                return reply.reply;
+            if (typeof outputVars.reply.reply !== "undefined") {
+                return outputVars.reply.reply;
             }
 
             if (typeof out === "number") {
@@ -87,6 +108,10 @@ class TagVM2 {
     }
 
     kill() {
+        if (!this.enabled) {
+            return true;
+        }
+
         try {
             this.procPool.kill();
         } catch (err) {
