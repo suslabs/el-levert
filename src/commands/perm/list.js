@@ -6,7 +6,7 @@ function formatGroups(groups) {
     const format = groups
         .map(
             (x, i) =>
-                `${i + 1}. ${x.name} - Level ${x.level} - Users:\n` +
+                `${i + 1}. ${x.name} - Level ${x.level} - User(s):\n` +
                 (x.users.length > 0
                     ? x.users.map((y, j) => `    ${j + 1}. \`${y.username}\` (${y.id})`).join("\n")
                     : "    none")
