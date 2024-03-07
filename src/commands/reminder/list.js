@@ -3,18 +3,9 @@ import { EmbedBuilder, bold } from "discord.js";
 import { getClient } from "../../LevertClient.js";
 
 function formatReminders(reminders) {
-    return reminders
-        .map((reminder, i) => {
-            let out = `${i + 1}. `;
-            out += reminder.getTimestamp();
+    const format = reminders.map((reminder, i) => `${i + 1}. On ` + reminder.format()).join("\n");
 
-            if (reminder.msg.length > 0) {
-                out += `: ${bold(reminder.msg)}`;
-            }
-
-            return out;
-        })
-        .join("\n");
+    return format;
 }
 
 export default {
@@ -39,7 +30,7 @@ export default {
 
         const reminders = await getClient().reminderManager.fetch(owner);
 
-        if (typeof reminders === "undefined") {
+        if (!reminders) {
             if (owner === msg.author.id) {
                 return ":information_source: You have no reminders.";
             }

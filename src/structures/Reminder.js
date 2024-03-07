@@ -1,4 +1,4 @@
-import { time } from "discord.js";
+import { time, bold } from "discord.js";
 import crypto from "crypto";
 
 function generateId() {
@@ -24,9 +24,28 @@ class Reminder {
         }
     }
 
+    get hasMessage() {
+        return this.msg.length > 0;
+    }
+
+    isPast(date) {
+        date = date ?? Date.now();
+        return this.end <= date;
+    }
+
     getTimestamp(style = "f") {
         const timestamp = Math.floor(this.end / 1000);
         return time(timestamp, style);
+    }
+
+    format() {
+        let format = this.getTimestamp();
+
+        if (this.hasMessage) {
+            format += ` with the message: ${bold(this.msg)}`;
+        }
+
+        return format;
     }
 }
 

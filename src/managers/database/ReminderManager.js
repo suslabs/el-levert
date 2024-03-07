@@ -5,13 +5,15 @@ import ReminderDatabase from "../../database/ReminderDatabase.js";
 
 import Reminder from "../../structures/Reminder.js";
 
-const sendDelay = 1000;
+const sendDelay = 1000,
+    maxMsgLength = 512;
 
 class ReminderManager extends DBManager {
     constructor(enabled = true) {
         super(enabled, "reminder", ReminderDatabase, "remind_db");
 
-        this.maxMsgLength = 512;
+        this.sendDelay = sendDelay;
+        this.maxMsgLength = maxMsgLength;
     }
 
     checkMessage(msg) {
@@ -49,11 +51,9 @@ class ReminderManager extends DBManager {
         return res.changes > 0;
     }
 
-    async checkPast(date) {
-        date = date ?? Date.now();
-
+    async getPast(date) {
         const reminders = await this.remind_db.list(),
-            past = reminders.filter(x => x.end < date);
+            past = reminders.filter(reminder => reminder.isPast(date));
 
         for (const reminder of past) {
             await this.remind_db.remove(reminder);
@@ -69,19 +69,12 @@ class ReminderManager extends DBManager {
             return false;
         }
 
-        let out = `You set a reminder for ${reminder.getTimestamp()}`;
-
-        if (reminder.msg.length > 0) {
-            out += ` with the message: **${reminder.msg}**`;
-        } else {
-            out += ".";
-        }
-
+        const out = "You set a reminder for " + reminder.format();
         await user.send(out);
     }
 
     async sendReminders() {
-        const reminders = await this.checkPast();
+        const reminders = await this.getPast();
 
         for (const reminder of reminders) {
             this.sendReminder(reminder);
@@ -94,7 +87,7 @@ class ReminderManager extends DBManager {
         }
 
         const sendFunc = this.sendReminders.bind(this);
-        this.sendInterval = setInterval(sendFunc, sendDelay);
+        this.sendInterval = setInterval(sendFunc, this.sendDelay);
 
         getLogger().info("Started reminder loop.");
     }

@@ -13,6 +13,7 @@ export default {
         }
 
         const res = await getClient().reminderManager.remove(msg.author.id, index - 1);
+
         if (!res) {
             return `:warning: Reminder **${index}** doesn't exist.`;
         }
