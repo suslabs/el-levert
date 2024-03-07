@@ -29,7 +29,7 @@ export default {
         level = parseInt(level);
 
         if (isNaN(level) || perm < 0) {
-            return `:warning: Invalid level: \`${level}\`. Level must be an int.`;
+            return `:warning: Invalid level: \`${level}\`. Level must be an int larger than 0.`;
         }
 
         await getClient().permManager.addGroup(g_name, level);
