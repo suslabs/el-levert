@@ -9,7 +9,7 @@ class ReminderDatabase extends Database {
         });
 
         if (typeof rows === "undefined" || rows.length < 1) {
-            return undefined;
+            return false;
         }
 
         return rows.map(x => new Reminder(x));
