@@ -39,7 +39,7 @@ export default {
             return out + ` The tag is owned by \`${owner.username}\`.`;
         }
 
-        const parsed = await this.parentCmd.parseBase(t_args, msg.attachments),
+        const parsed = await this.parentCmd.parseBase(t_args, msg),
             { body, type } = parsed;
 
         if (typeof parsed.err !== "undefined") {

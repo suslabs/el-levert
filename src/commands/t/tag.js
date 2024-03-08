@@ -4,14 +4,18 @@ import { TagTypes } from "../../structures/tag/TagTypes.js";
 
 import { getClient, getLogger } from "../../LevertClient.js";
 
-async function parseBase(t_args, attachments) {
+const dummyMsg = {
+    attachments: new Map()
+};
+
+async function parseBase(t_args, msg) {
     const [t_type, t_body] = Util.splitArgs(t_args);
 
-    if (typeof attachments === "undefined") {
-        attachments = new Map();
+    if (typeof msg === "undefined") {
+        msg = dummyMsg;
     }
 
-    if (typeof t_args === "undefined" || (t_args.length < 1 && attachments.size === 0)) {
+    if (typeof t_args === "undefined" || (t_args.length < 1 && msg.attachments.size === 0)) {
         return {
             err: ":warning: Tag body is empty."
         };
@@ -19,10 +23,12 @@ async function parseBase(t_args, attachments) {
 
     let body, isScript;
 
-    if (attachments.size > 0) {
+    if (msg.attachments.size > 0) {
         try {
             [body, isScript] = await getClient().tagManager.downloadBody(msg);
         } catch (err) {
+            getLogger().error(err);
+
             if (err.name === "TagError") {
                 return {
                     err: ":warning: " + err.message
