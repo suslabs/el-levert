@@ -2,6 +2,18 @@ import Util from "../../util/Util.js";
 
 import { getClient } from "../../LevertClient.js";
 
+function formatGroups(groups) {
+    let format;
+
+    if (groups.length > 1) {
+        format = groups.map((group, i) => `${i + 1}. ${group.format()}`).join("\n");
+    } else {
+        format = groups[0].format();
+    }
+
+    return format;
+}
+
 export default {
     name: "check",
     parent: "perm",
@@ -11,10 +23,9 @@ export default {
             return ":information_source: `perm check [username]`";
         }
 
-        let [u_name] = Util.splitArgs(args);
+        const [u_name] = Util.splitArgs(args);
 
         let find = (await getClient().findUsers(u_name))[0],
-            format = "",
             user;
 
         if (typeof find !== "undefined") {
@@ -22,7 +33,7 @@ export default {
         } else {
             user = {
                 id: u_name,
-                tag: u_name
+                username: u_name
             };
         }
 
@@ -32,13 +43,8 @@ export default {
             return `:information_source: User \`${user.username}\` has no permissions.`;
         }
 
-        if (groups.length > 1) {
-            format = groups.map((x, i) => `${i + 1}. ${x.name} - ${x.level}`);
-        } else {
-            format = `${groups[0].name} - ${groups[0].level}`;
-        }
-
-        const maxLevel = Math.max(...groups.map(x => x.level));
+        const format = formatGroups(groups),
+            maxLevel = await getClient().permManager.maxLevel(user.id);
 
         return `User \`${user.username}\` has permissions:
 \`\`\`

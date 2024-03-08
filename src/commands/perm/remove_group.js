@@ -12,9 +12,9 @@ export default {
             return ":information_source: `perm remove_group [group name]`";
         }
 
-        const [g_name] = Util.splitArgs(args),
-            e = getClient().permManager.checkName(g_name);
+        const [g_name] = Util.splitArgs(args);
 
+        const e = getClient().permManager.checkName(g_name);
         if (e) {
             return ":warning: " + e;
         }
@@ -25,12 +25,12 @@ export default {
             return `:warning: Group **${g_name}** doesn't exist.`;
         }
 
-        if (group.name === "owner") {
-            return ":warning: Can't remove the owner group.";
+        const res = await getClient().permManager.removeGroup(g_name);
+
+        if (!res) {
+            return `:warning: Can't remove the **${g_name}** group.`;
         }
 
-        await getClient().permManager.removeGroup(g_name);
-
-        return `:white_check_mark: Removed group **${g_name}** and all it's users.`;
+        return `:white_check_mark: Removed group **${g_name}** and all of it's users.`;
     }
 };
