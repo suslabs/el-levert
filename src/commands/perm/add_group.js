@@ -15,7 +15,6 @@ export default {
         }
 
         const e = getClient().permManager.checkName(g_name);
-
         if (e) {
             return ":warning: " + e;
         }
@@ -28,11 +27,15 @@ export default {
 
         level = parseInt(level);
 
-        if (isNaN(level) || perm < 0) {
+        if (isNaN(level) || level < 0) {
             return `:warning: Invalid level: \`${level}\`. Level must be an int larger than 0.`;
         }
 
-        await getClient().permManager.addGroup(g_name, level);
+        const res = await getClient().permManager.addGroup(g_name, level);
+
+        if (!res) {
+            return `:warning: Can't create the **${g_name}** group.`;
+        }
 
         return `:white_check_mark: Added group **${g_name}**.`;
     }

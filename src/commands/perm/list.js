@@ -3,15 +3,7 @@ import { EmbedBuilder } from "discord.js";
 import { getClient } from "../../LevertClient.js";
 
 function formatGroups(groups) {
-    const format = groups
-        .map(
-            (x, i) =>
-                `${i + 1}. ${x.name} - Level ${x.level} - User(s):\n` +
-                (x.users.length > 0
-                    ? x.users.map((y, j) => `    ${j + 1}. \`${y.username}\` (${y.id})`).join("\n")
-                    : "    none")
-        )
-        .join("\n");
+    const format = groups.map((group, i) => `${i + 1}. ${group.formatUsers()}`).join("\n");
 
     return format;
 }
@@ -21,7 +13,7 @@ export default {
     parent: "perm",
     subcommand: true,
     handler: async _ => {
-        const groups = await getClient().permManager.list();
+        const groups = await getClient().permManager.listGroups(true);
 
         if (!groups) {
             return ":information_source: No permissions are registered.";

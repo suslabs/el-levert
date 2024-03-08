@@ -53,7 +53,7 @@ class LevertClient extends DiscordClient {
         this.reactions = reactions;
 
         token = auth.token;
-        this.owner = auth.owner ?? "";
+        this.owner = auth.owner;
 
         this.setOptions({
             wrapEvents: this.config.wrapEvents,
