@@ -7,7 +7,9 @@ import { getClient } from "../../LevertClient.js";
 import diceDist from "../../util/diceDist.js";
 
 import TagDatabase from "../../database/TagDatabase.js";
+
 import TagError from "../../errors/TagError.js";
+
 import Tag from "../../structures/tag/Tag.js";
 
 class TagManager extends DBManager {
