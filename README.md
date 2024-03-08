@@ -84,6 +84,7 @@ Subcommands:
 
 -   add `(group_name)` `(user)` - Add `(user)` to `(group_name)`. Can be executed by admin and above. Cannot add yourself to a group with a level higher than your own.
 -   remove `(group_name)` `(user)` - Remove `(user)` from `(group_name)`. Can be executed by admin and above.
+-   remove_all `(user)` - Remove all of `(user)`'s permissions.
 -   list - Sends registered permissions. Can be executed by anyone.
 -   add_group `(group_name) (level)` - Add `(group_name)` with the specified level.
     Level 1 = Moderator
