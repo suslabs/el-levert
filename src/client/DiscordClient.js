@@ -31,6 +31,7 @@ class DiscordClient {
         this.wrapEvents = true;
         this.eventsDir = "./events";
         this.eventFileExtension = ".js";
+        this.onKill = _ => {};
     }
 
     buildClient() {
@@ -51,35 +52,72 @@ class DiscordClient {
     }
 
     setOptions(options) {
-        this.loginTimeout = options.loginTimeout ?? this.loginTimeout;
-        this.wrapEvents = options.wrapEvents ?? this.wrapEvents;
-        this.eventsDir = options.eventsDir ?? this.eventsDir;
-        this.eventFileExtension = options.eventFileExtension ?? this.eventFileExtension;
+        for (const key in options) {
+            if (typeof this[key] === "undefined") {
+                throw new ClientError("Invalid option: " + key);
+            }
+
+            if (typeof options[key] === "function") {
+                options[key] = options[key].bind(this);
+            }
+
+            this[key] = options[key] ?? this[key];
+        }
     }
 
-    async login(token) {
+    async login(token, exitOnFailure = false) {
         this.logger?.info("Logging in...");
 
-        const login = new Promise((resolve, reject) => {
+        const promise = new Promise((resolve, reject) => {
             this.client.login(token).catch(err => {
+                if (!exitOnFailure) {
+                    reject(err);
+                }
+
                 this.logger?.error("Error occured while logging in:", err);
-                reject(err);
+                resolve(false);
             });
 
             Util.waitForCondition(_ => this.loggedIn, new ClientError("Login took too long"), this.loginTimeout)
-                .then(resolve)
-                .catch(reject);
+                .then(_ => {
+                    if (exitOnFailure) {
+                        resolve(true);
+                    }
+
+                    resolve();
+                })
+                .catch(err => {
+                    if (!exitOnFailure) {
+                        reject(err);
+                    }
+
+                    this.logger?.error(err);
+                    resolve(false);
+                });
         });
 
-        await login;
+        const res = await promise;
+
+        if (exitOnFailure && !res) {
+            this.killProcess();
+        }
     }
 
-    async logout() {
+    async logout(kill = false) {
         await this.client.destroy();
         delete this.client;
 
         this.loggedIn = false;
         this.logger?.info("Destroyed client.");
+
+        if (kill) {
+            this.killProcess();
+        }
+    }
+
+    killProcess() {
+        this.onKill();
+        process.exit(0);
     }
 
     getEventPaths() {
