@@ -1,6 +1,8 @@
 import { getClient } from "../../LevertClient.js";
 
-import LevertContext from "./LevertContext.js";
+import EvalContext from "./context/EvalContext.js";
+import VMErrors from "./VMErrors.js";
+
 import Util from "../../util/Util.js";
 
 function processReply(msg) {
@@ -30,10 +32,23 @@ function processReply(msg) {
     return out;
 }
 
-const Errors = {
-    timeout: "Script execution timed out.",
-    memLimit: "Isolate was disposed during execution due to memory limit"
-};
+function handleError(err) {
+    switch (err.name) {
+        case "ExitError":
+            return err.exitData;
+        case "ManevraError":
+            return processReply(err.message);
+    }
+
+    switch (err.message) {
+        case VMErrors.timeout:
+            return ":no_entry_sign: " + err.message;
+        case VMErrors.memLimit:
+            return ":no_entry_sign: Memory limit reached.";
+        default:
+            throw err;
+    }
+}
 
 class TagVM {
     constructor() {
@@ -45,7 +60,7 @@ class TagVM {
     }
 
     async runScript(code, msg, args) {
-        const context = new LevertContext({
+        const context = new EvalContext({
             memLimit: this.memLimit,
             timeLimit: this.timeLimit,
             enableInspector: this.enableInspector,
@@ -62,20 +77,7 @@ class TagVM {
                 res = res.toString();
             }
         } catch (err) {
-            if (err.name === "ManevraError") {
-                res = processReply(err.message);
-            } else {
-                switch (err.message) {
-                    case Errors.timeout:
-                        res = ":no_entry_sign: " + err.message;
-                        break;
-                    case Errors.memLimit:
-                        res = ":no_entry_sign: Memory limit reached.";
-                        break;
-                    default:
-                        throw err;
-                }
-            }
+            res = handleError(err);
         } finally {
             context.disposeIsolate();
         }

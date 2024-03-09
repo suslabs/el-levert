@@ -1,0 +1,15 @@
+{
+    "msg": {
+        "reply": "reply"
+    },
+    "util": {
+        "findUsers": "findUsers",
+        "dumpTags": "dumpTags",
+        "fetchTag": "fetchTag",
+        "fetchMessage": "fetchMessage",
+        "fetchMessages": "fetchMessages"
+    },
+    "http": {
+        "request": "request"
+    }
+}

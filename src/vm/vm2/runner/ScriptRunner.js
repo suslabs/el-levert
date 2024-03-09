@@ -3,7 +3,7 @@ import net from "net";
 import crypto from "crypto";
 import path from "path";
 
-import VMUtil from "../../../util/VMUtil.js";
+import VMUtil from "../../util/VMUtil.js";
 
 const pendingFuncs = {};
 
