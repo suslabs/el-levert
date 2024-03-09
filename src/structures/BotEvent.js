@@ -1,7 +1,8 @@
 import EventError from "../errors/EventError.js";
 
 const defaultValues = {
-    once: false
+    once: false,
+    registered: false
 };
 
 class BotEvent {
@@ -20,7 +21,7 @@ class BotEvent {
         });
     }
 
-    bind(client) {
+    register(client) {
         this.client = client;
 
         if (this.once) {
@@ -28,10 +29,17 @@ class BotEvent {
         } else {
             client.on(this.name, this.listener);
         }
+
+        this.registered = true;
     }
 
-    remove() {
+    unregister() {
+        if (!this.registered) {
+            throw new EventError("Event isn't registered.");
+        }
+
         this.client.removeAllListeners(this.name);
+        this.registered = false;
     }
 }
 
