@@ -1,18 +1,4 @@
-function tagTester(name) {
-    const tag = "[object " + name + "]";
-
-    return obj => toString.call(obj) === tag;
-}
-
-const isFunction = tagTester("Function");
-
-function isPromise(obj) {
-    if (typeof obj !== "object") {
-        return false;
-    }
-
-    return isFunction(obj.then) && isFunction(obj.catch);
-}
+import isPromise from "../util/isPromise.js";
 
 const wrapPromise = (logger, promise) =>
     new Promise((resolve, reject) => {
