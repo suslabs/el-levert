@@ -60,7 +60,7 @@ class EventLoader {
         const event = new BotEvent(eventProperties);
 
         this.wrapEvent(event);
-        event.bind(this.client);
+        event.register(this.client);
 
         this.events.push(event);
         return true;
