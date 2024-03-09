@@ -1,5 +1,6 @@
 import { getClient } from "../../LevertClient.js";
 
+import ErrorCodes from "./ErrorCodes.js";
 import ExternalVMError from "../../errors/ExternalVMError.js";
 
 import axios from "axios";
@@ -14,22 +15,7 @@ class ExternalVM {
         this.statusUrl = "?base64_encoded=false&fields=status_id";
         this.outputUrl = "?base64_encoded=true&fields=stdout,stderr,compile_output,exit_code";
 
-        this.codes = {
-            1: "In Queue",
-            2: "Processing",
-            3: "Accepted",
-            4: "Wrong Answer",
-            5: "Time Limit Exceeded",
-            6: "Compilation Error",
-            7: "Runtime Error (SIGSEGV)",
-            8: "Runtime Error (SIGXFSZ)",
-            9: "Runtime Error (SIGFPE)",
-            10: "Runtime Error (SIGABRT)",
-            11: "Runtime Error (NZEC)",
-            12: "Runtime Error (Other)",
-            13: "Internal Error",
-            14: "Exec Format Error"
-        };
+        this.codes = ErrorCodes;
     }
 
     async submit(code, lang, stdin) {
