@@ -105,7 +105,7 @@ class BaseCommandManager extends Manager {
         commandPath = URL.pathToFileURL(commandPath);
         const cmdProperties = (await import(commandPath)).default;
 
-        if (typeof cmdProperties === "undefined" || typeof cmdProperties.name === "undefined") {
+        if (typeof cmdProperties === "undefined") {
             return false;
         }
 
