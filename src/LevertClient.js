@@ -225,7 +225,7 @@ class LevertClient extends DiscordClient {
             this.logger.info("Removed global error hander.");
         }
 
-        this.removeEvents();
+        this.unloadEvents();
 
         this.unloadHandlers();
         await this.unloadManagers();

@@ -1,11 +1,10 @@
 import discord from "discord.js";
-import URL from "url";
-import path from "path";
+
+import ClientError from "../errors/ClientError.js";
+import EventLoader from "./EventLoader.js";
 
 import Util from "../util/Util.js";
 import diceDist from "../util/diceDist.js";
-
-import ClientError from "../errors/ClientError.js";
 
 const { Client, GatewayIntentBits, PermissionsBitField, ActivityType, Partials } = discord;
 
@@ -25,12 +24,11 @@ class DiscordClient {
         this.partials = partials ?? defaultPartials;
 
         this.buildClient();
-        this.events = [];
+
+        this.wrapEvents = false;
+        this.eventsDir = "";
 
         this.loginTimeout = 60000;
-        this.wrapEvents = true;
-        this.eventsDir = "./events";
-        this.eventFileExtension = ".js";
         this.onKill = _ => {};
     }
 
@@ -63,6 +61,26 @@ class DiscordClient {
 
             this[key] = options[key] ?? this[key];
         }
+    }
+
+    setActivity(config) {
+        if (typeof config === "undefined") {
+            return;
+        }
+
+        if (!Object.keys(ActivityType).includes(config.type)) {
+            throw new ClientError("Invalid activity type: " + config.type);
+        }
+
+        if (typeof config.text !== "undefined") {
+            this.client.user.setActivity(config.text, {
+                type: ActivityType[config.type]
+            });
+        } else {
+            throw new ClientError("Invalid activity text.");
+        }
+
+        this.logger?.info("Set activity status.");
     }
 
     async login(token, exitOnFailure = false) {
@@ -120,109 +138,24 @@ class DiscordClient {
         process.exit(0);
     }
 
-    getEventPaths() {
-        if (typeof this.eventsDir === "undefined") {
-            return [];
-        }
-
-        let files = Util.getFilesRecSync(this.eventsDir);
-        files = files.filter(file => {
-            const extension = path.extname(file);
-            return extension === this.eventFileExtension;
+    async loadEvents() {
+        const eventLoader = new EventLoader(this.client, this.eventsDir, {
+            logger: this.logger,
+            wrapFunc: this.wrapEvent,
+            wrapEvents: this.wrapEvents
         });
 
-        return files;
+        await eventLoader.loadEvents();
+        this.eventLoader = eventLoader;
     }
 
-    async loadEvent(eventPath) {
-        eventPath = URL.pathToFileURL(eventPath);
-
-        let event = await import(eventPath);
-        event = event.default;
-
-        if (typeof event === "undefined" || typeof event.name === "undefined") {
-            return false;
+    unloadEvents() {
+        if (typeof this.eventLoader === "undefined") {
+            throw new ClientError("Can't unload events, events weren't loaded.");
         }
 
-        let listener = event.listener;
-
-        if (this.wrapEvents) {
-            if (typeof this.wrapEvent === "undefined") {
-                this.logger?.warn("Couldn't wrap event: " + event.name);
-            } else {
-                listener = this.wrapEvent(listener);
-            }
-        }
-
-        if (event.once ?? false) {
-            this.client.once(event.name, listener);
-        } else {
-            this.client.on(event.name, listener);
-        }
-
-        this.events.push(event.name);
-        return true;
-    }
-
-    async loadEvents() {
-        this.logger?.info("Loading events...");
-        const paths = this.getEventPaths();
-
-        if (paths.length === 0) {
-            this.logger?.info("Couldn't find any events.");
-            return;
-        }
-
-        let ok = 0,
-            bad = 0;
-
-        for (const eventPath of paths) {
-            try {
-                const res = await this.loadEvent(eventPath);
-
-                if (res === true) {
-                    ok++;
-                }
-            } catch (err) {
-                this.logger?.error("loadEvents: " + eventPath, err);
-                bad++;
-            }
-        }
-
-        this.logger?.info(`Loaded ${ok + bad} events. ${ok} successful, ${bad} failed.`);
-    }
-
-    removeEvents() {
-        for (let i = 0; i < this.events.length; i++) {
-            this.client.removeAllListeners(this.events[i].name);
-            delete this.events[i];
-        }
-
-        while (this.events.length > 0) {
-            this.events.shift();
-        }
-
-        this.logger?.info("Removed all listeners.");
-    }
-
-    setActivity(config) {
-        if (typeof config === "undefined") {
-            return;
-        }
-
-        if (!Object.keys(ActivityType).includes(config.type)) {
-            throw new ClientError("Invalid activity type: " + config.type);
-        }
-
-        if (typeof config.text !== "undefined") {
-            this.client.user.setActivity(config.text, {
-                type: ActivityType[config.type]
-            });
-        } else {
-            throw new ClientError("Invalid activity text.");
-        }
-
-        this.logger?.info("Set activity status.");
+        this.eventLoader.removeListeners();
+        delete this.eventLoader;
     }
 
     getChannel(ch_id, user_id, check = true) {
