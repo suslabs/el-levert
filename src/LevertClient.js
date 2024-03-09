@@ -35,15 +35,14 @@ class LevertClient extends DiscordClient {
             client = this;
         }
 
+        this.started = false;
+        this.version = version;
+
         this.setConfigs(configs);
         this.setupLogger();
-
-        this.started = false;
     }
 
     setConfigs(configs) {
-        this.version = version;
-
         if (typeof configs === "undefined") {
             throw new ClientError("Config cannot be undefined.");
         }
@@ -70,6 +69,18 @@ class LevertClient extends DiscordClient {
         this.logger = createLogger(config);
 
         this.wrapEvent = wrapEvent.bind(undefined, this.logger);
+        this.setOptions({ onKill: this.deleteLogger });
+    }
+
+    deleteLogger() {
+        if (typeof this.logger === "undefined") {
+            return;
+        }
+
+        this.logger.end();
+
+        delete this.logger;
+        delete this.wrapEvent;
     }
 
     loadHandlers() {
@@ -93,6 +104,25 @@ class LevertClient extends DiscordClient {
         this.logger.info("Loaded handlers.");
     }
 
+    unloadHandlers() {
+        this.logger.info("Unloading handlers...");
+
+        for (let i = 0; i < this.handlerList.length; i++) {
+            this.handlerList[i].unload();
+            delete this.handlerList[i];
+        }
+
+        for (const name in this.handlers) {
+            delete this.handlers[name];
+        }
+
+        delete this.handlerList;
+        delete this.handlers;
+        delete this.executeAllHandlers;
+
+        this.logger.info("Unloaded handlers.");
+    }
+
     async loadManagers() {
         this.logger.info("Loading managers...");
 
@@ -114,12 +144,41 @@ class LevertClient extends DiscordClient {
         }
     }
 
+    async unloadManagers() {
+        this.logger.info("Unloading managers...");
+
+        for (const [name, manager] of Object.entries(this.managers)) {
+            await manager.unload();
+
+            delete this.managers[name];
+            delete this[name];
+
+            this.logger.info(`Unloaded manager: ${name}`);
+        }
+
+        delete this.managers;
+        this.logger.info("Unloaded managers.");
+    }
+
     loadVMs() {
         this.tagVM = new TagVM();
         this.tagVM2 = new TagVM2();
 
         if (this.config.enableOtherLangs) {
             this.externalVM = new ExternalVM();
+        }
+    }
+
+    unloadVMs() {
+        delete this.tagVM;
+
+        if (this.tagVM2.kill()) {
+            this.logger.info("Killed VM2 child process.");
+            delete this.tagVM2;
+        }
+
+        if (this.config.enableOtherLangs) {
+            delete this.externalVM;
         }
     }
 
@@ -137,7 +196,7 @@ class LevertClient extends DiscordClient {
 
         this.loadVMs();
 
-        await this.login(token);
+        await this.login(token, true);
 
         if (this.config.setActivity) {
             this.setActivity(this.config.activity);
@@ -154,71 +213,17 @@ class LevertClient extends DiscordClient {
         this.logger.info("Startup complete.");
     }
 
-    unloadHandlers() {
-        this.logger.info("Unloading handlers...");
-
-        for (let i = 0; i < this.handlerList.length; i++) {
-            this.handlerList[i].unload();
-            delete this.handlerList[i];
-        }
-
-        for (const name in this.handlers) {
-            delete this.handlers[name];
-        }
-
-        delete this.handlerList;
-        delete this.handlers;
-        delete this.executeAllHandlers;
-
-        this.logger.info("Unloaded handlers.");
-    }
-
-    async unloadManagers() {
-        this.logger.info("Unloading managers...");
-
-        for (const [name, manager] of Object.entries(this.managers)) {
-            await manager.unload();
-
-            delete this.managers[name];
-            delete this[name];
-
-            this.logger.info(`Unloaded manager: ${name}`);
-        }
-
-        delete this.managers;
-        this.logger.info("Unloaded managers.");
-    }
-
-    unloadVMs() {
-        delete this.tagVM;
-
-        if (this.tagVM2.kill()) {
-            this.logger.info("Killed VM2 child process.");
-            delete this.tagVM2;
-        }
-
-        if (this.config.enableOtherLangs) {
-            delete this.externalVM;
-        }
-    }
-
-    deleteLogger() {
-        this.logger.end();
-
-        delete this.logger;
-        delete this.wrapEvent;
-    }
-
-    killProcess() {
-        process.exit(0);
-    }
-
     async stop(kill = false) {
         if (!this.started) {
             throw new ClientError("The client can't be stopped if it hasn't been started");
         }
 
         this.logger.info("Stopping client...");
+
+        if (this.config.enableGlobalHandler) {
+            removeGlobalHandler();
+            this.logger.info("Removed global error hander.");
+        }
 
         this.removeEvents();
 
@@ -227,21 +232,10 @@ class LevertClient extends DiscordClient {
 
         this.unloadVMs();
 
-        await this.logout();
-
-        if (this.config.enableGlobalHandler) {
-            removeGlobalHandler();
-            this.logger.info("Removed global error hander.");
-        }
+        await this.logout(kill);
 
         this.started = false;
         this.logger.info("Client stopped.");
-
-        this.deleteLogger();
-
-        if (kill) {
-            this.killProcess();
-        }
     }
 
     async restart(configs) {
@@ -264,9 +258,7 @@ class LevertClient extends DiscordClient {
                 break;
         }
 
-        this.setupLogger();
         this.buildClient();
-
         await this.start();
     }
 }
