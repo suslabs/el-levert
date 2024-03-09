@@ -1,22 +1,9 @@
-import createLogger from "../../logger/CreateLogger.js";
-import getDefaultLoggerConfig from "../../logger/DefaultConfig.js";
-
 import loadConfig from "../../config/loadConfig.js";
-import { getClient } from "../../LevertClient.js";
+import { getClient, getLogger } from "../../LevertClient.js";
 
-function setupLogger() {
-    const config = getDefaultLoggerConfig("reload", false, true);
-    return createLogger(config);
-}
-
-async function configReloader() {
-    const logger = setupLogger();
-
-    logger.info("Reloading configs...");
-    const configs = await loadConfig(logger);
-
-    logger.end();
-    return configs;
+function configReloader() {
+    getLogger().info("Reloading configs...");
+    return loadConfig(getLogger());
 }
 
 function rebindMessage(msg, client) {
