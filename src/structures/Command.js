@@ -22,6 +22,10 @@ class Command {
             throw new CommandError("Command must have a handler.");
         }
 
+        if (options.subcommand && typeof options.parent === "undefined") {
+            throw new CommandError("Subcommands must have a parent command.");
+        }
+
         Object.assign(this, {
             ...defaultValues,
             ...options
