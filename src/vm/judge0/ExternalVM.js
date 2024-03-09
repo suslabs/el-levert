@@ -1,7 +1,7 @@
 import { getClient } from "../../LevertClient.js";
 
 import ErrorCodes from "./ErrorCodes.js";
-import ExternalVMError from "../../errors/ExternalVMError.js";
+import VMError from "../../errors/VMError.js";
 
 import axios from "axios";
 
@@ -38,9 +38,9 @@ class ExternalVM {
                 const data = err.response.data;
 
                 if (err.response.status === 422) {
-                    throw new ExternalVMError(JSON.stringify(data));
+                    throw new VMError(JSON.stringify(data));
                 } else {
-                    throw new ExternalVMError(data.error);
+                    throw new VMError(data.error);
                 }
             }
 
@@ -61,7 +61,7 @@ class ExternalVM {
                 }
             }, 200);
 
-            setTimeout(_ => reject(new ExternalVMError("check timed out")), this.timeLimit * 2000);
+            setTimeout(_ => reject(new VMError("check timed out")), this.timeLimit * 2000);
         });
     }
 

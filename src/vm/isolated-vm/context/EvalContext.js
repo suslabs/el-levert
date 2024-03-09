@@ -1,141 +1,80 @@
 import ivm from "isolated-vm";
 
-import { getLogger } from "../../LevertClient.js";
+import { getLogger } from "../../../LevertClient.js";
 
-import FakeMsg from "./classes/FakeMsg.js";
-import FakeUtil from "./classes/FakeUtil.js";
-import FakeAxios from "./classes/FakeAxios.js";
+import FakeMsg from "../classes/FakeMsg.js";
+import VMFunction from "../../../structures/vm/VMFunction.js";
 
-const FuncTypes = {
-    regular: "applySync",
-    ignored: "applyIgnored",
-    syncPromise: "applySyncPromise"
-};
+import funcMap from "./funcMap.js";
+import globalNames from "./globalNames.json" assert { type: "json" };
+import funcNames from "./funcNames.json" assert { type: "json" };
 
 const filename = "script.js",
     inspectorUrl = "devtools://devtools/bundled/inspector.html?experiments=true&v8only=true";
 
-class LevertContext {
+class EvalContext {
     constructor(options) {
         this.memLimit = options.memLimit;
         this.timeLimit = options.timeLimit;
 
-        this.enableInspector = options.enableInspector;
-        this.inspectorPort = options.inspectorPort;
+        this.enableInspector = options.enableInspector ?? false;
+        this.inspectorPort = options.inspectorPort ?? 10000;
     }
 
     async setMsg(msg) {
         const vmMsg = new ivm.ExternalCopy(msg.fixedMsg).copyInto();
-        await this.global.set("msg", vmMsg);
+
+        await this.global.set(globalNames.msg, vmMsg);
     }
 
     async setArgs(args) {
-        if (typeof args !== "undefined") {
-            args = args.length > 0 ? args : undefined;
-
-            const vmTag = new ivm.ExternalCopy({
-                args: args
-            }).copyInto();
-
-            await this.global.set("tag", vmTag);
+        if (typeof args === "undefined") {
+            return;
         }
+
+        args = args.length > 0 ? args : undefined;
+
+        const vmTag = new ivm.ExternalCopy({
+            args: args
+        }).copyInto();
+
+        await this.global.set(globalNames.tag, vmTag);
     }
 
-    registerFunc(options) {
-        const { objName, funcName, type, funcRef } = options;
+    registerFunc(func) {
+        const code = func.getRegisterCode();
 
-        const body =
-                options.body ??
-                `return $0.${type}(undefined, args, {
-            arguments: {
-                copy: true
-            }
-        });`,
-            code = `(function() {
-    if(typeof ${objName} === "undefined") {
-        ${objName} = {};
-    }
-
-    ${objName}.${funcName} = (...args) => {
-        ${body}
-    }
-})();`;
-
-        return this.context.evalClosure(code, [funcRef], {
+        return this.context.evalClosure(code, [func.ref], {
             arguments: {
                 reference: true
             }
         });
     }
 
-    async registerReply(msg) {
-        await this.context.eval(`class ManevraError extends Error {
-            constructor(message = "", ...args) {
-                super(message, ...args);
-                
-                this.name = "ManevraError";
-                this.message = message;
+    async registerFuncs(objMap) {
+        let funcs = [];
+
+        for (const [objKey, funcMap] of Object.entries(objMap)) {
+            const objName = globalNames[objKey],
+                names = funcNames[objKey];
+
+            for (let [funcKey, funcProperties] of Object.entries(funcMap)) {
+                funcProperties = {
+                    ...funcProperties,
+                    parent: objName,
+                    name: names[funcKey]
+                };
+
+                const func = new VMFunction(funcProperties, this.propertyMap);
+                funcs.push(func);
             }
-        }`);
+        }
 
-        await this.registerFunc({
-            objName: "msg",
-            funcName: "reply",
-            funcRef: msg.reply,
-            body: `
-        const ret = $0.applySync(undefined, args, {
-            arguments: {
-                copy: true
-            }
-        });
+        for (const func of funcs) {
+            await this.registerFunc(func);
+        }
 
-        throw new ManevraError(ret);
-`
-        });
-    }
-
-    async registerFuncs(msg) {
-        await this.registerFunc({
-            objName: "util",
-            funcName: "findUsers",
-            type: FuncTypes.syncPromise,
-            funcRef: FakeUtil.findUsers
-        });
-
-        await this.registerFunc({
-            objName: "util",
-            funcName: "dumpTags",
-            type: FuncTypes.syncPromise,
-            funcRef: FakeUtil.dumpTags
-        });
-
-        await this.registerFunc({
-            objName: "util",
-            funcName: "fetchTag",
-            type: FuncTypes.syncPromise,
-            funcRef: FakeUtil.fetchTag
-        });
-
-        await this.registerFunc({
-            objName: "util",
-            funcName: "fetchMessage",
-            type: FuncTypes.syncPromise,
-            funcRef: FakeUtil.fetchMessage.bind(undefined, msg.msg.author.id)
-        });
-
-        await this.registerFunc({
-            objName: "util",
-            funcName: "fetchMessages",
-            type: FuncTypes.syncPromise,
-            funcRef: FakeUtil.fetchMessages.bind(undefined, msg.msg.author.id)
-        });
-
-        await this.registerFunc({
-            objName: "http",
-            funcName: "request",
-            type: FuncTypes.syncPromise,
-            funcRef: FakeAxios.request
-        });
+        this.funcs = funcs;
     }
 
     async setupContext(msg, args) {
@@ -152,13 +91,11 @@ class LevertContext {
         await this.setMsg(msg);
         await this.setArgs(args);
 
-        await this.registerFuncs(msg);
-        await this.registerReply(msg);
-    }
+        this.propertyMap = {
+            msg
+        };
 
-    async getContext(msg, args) {
-        await this.setupContext(msg, args);
-        return this.context;
+        await this.registerFuncs(funcMap);
     }
 
     setupDebugger() {
@@ -271,4 +208,4 @@ class LevertContext {
     }
 }
 
-export default LevertContext;
+export default EvalContext;

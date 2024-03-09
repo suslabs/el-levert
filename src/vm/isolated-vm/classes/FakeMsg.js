@@ -1,10 +1,10 @@
-import VMUtil from "../../../util/VMUtil.js";
+import VMUtil from "../../util/VMUtil.js";
 
 class FakeMsg {
     constructor(msg) {
+        const attachments = Array.from(msg.attachments.values());
         this.msg = msg;
 
-        const attachments = Array.from(msg.attachments.values());
         this.fixedMsg = {
             channelId: msg.channelId,
             guildId: msg.guildId,
