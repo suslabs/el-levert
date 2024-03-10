@@ -1,10 +1,12 @@
 import CommandError from "../errors/CommandError.js";
 import Util from "../util/Util.js";
 import { getClient } from "../LevertClient.js";
+import c from "../commands/eval/c.js";
 
 const defaultValues = {
     parent: "",
     allowed: 0,
+    ownerOnly: false,
     subcommands: [],
     description: "",
     usage: "",
@@ -26,15 +28,19 @@ class Command {
             throw new CommandError("Subcommands must have a parent command.");
         }
 
+        this.isSubcmd = options.subcommand ?? false;
+        delete options.subcommand;
+
         Object.assign(this, {
             ...defaultValues,
             ...options
         });
 
         this.subcmds = new Map();
+    }
 
-        this.isSubcmd = options.subcommand ?? false;
-        this.hasHelp = typeof options.description !== "undefined" || typeof options.usage !== "undefined";
+    get hasHelp() {
+        return this.description.length > 0 || this.usage.length > 0;
     }
 
     getSubcmd(name) {
@@ -133,6 +139,12 @@ class Command {
 
         if (typeof msg !== "undefined") {
             perm = await getClient().permManager.maxLevel(msg.author.id);
+        } else {
+            perm = getClient().permManager.ownerLevel;
+        }
+
+        if (this.ownerOnly && perm !== getClient().permManager.ownerLevel) {
+            return ":warning: Access denied.\nOnly the bot owner can execute this command.";
         }
 
         if (perm < this.allowed) {

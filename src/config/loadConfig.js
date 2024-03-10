@@ -2,7 +2,7 @@ import ConfigLoader from "./loaders/ConfigLoader.js";
 import ReactionsLoader from "./loaders/ReactionsLoader.js";
 import AuthLoader from "./loaders/AuthLoader.js";
 
-import LoadStatus from "./loaders/baseLoader/LoadStatus.js";
+import LoadStatus from "./loaders/LoadStatus.js";
 
 function initLoaders(logger) {
     const configLoader = new ConfigLoader(logger),

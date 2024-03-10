@@ -1,7 +1,7 @@
 import path from "path";
 import fs from "fs/promises";
 
-import configPaths from "../../configPaths.json" assert { type: "json" };
+import configPaths from "../configPaths.json" assert { type: "json" };
 
 import LoadStatus from "./LoadStatus.js";
 
