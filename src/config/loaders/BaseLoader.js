@@ -1,13 +1,19 @@
 import path from "path";
 import fs from "fs/promises";
-
 import Ajv from "ajv";
-const ajv = new Ajv();
 
 import LoadStatus from "./LoadStatus.js";
 import ValidationError from "../../errors/ValidationError.js";
 
+import { isArray } from "../../util/TypeTester.js";
+
 import configPaths from "../configPaths.json" assert { type: "json" };
+
+const ajvOptions = {
+    allowUnionTypes: true
+};
+
+const ajv = new Ajv(ajvOptions);
 
 function formatErrors(errors) {
     let errMessage = [];
@@ -92,12 +98,8 @@ class BaseLoader {
         try {
             schemaString = await fs.readFile(this.schemaPath, { encoding: configPaths.encoding });
         } catch (err) {
-            if (this.useLogger) {
-                this.logger.error(`Error occured while reading ${this.name} schema file:`, err);
-                return LoadStatus.failed;
-            }
-
-            throw err;
+            this.logger.error(`Error occured while reading ${this.name} schema file:`, err);
+            return LoadStatus.failed;
         }
 
         schemaString = schemaString.trim();
@@ -111,11 +113,25 @@ class BaseLoader {
         let status = LoadStatus.successful;
 
         if (typeof this.validate === "function") {
-            const valid = this.validate(this.config);
+            const res = this.validate(this.config);
+
+            let valid, error;
+
+            if (isArray(res)) {
+                [valid, error] = res;
+            } else {
+                valid = res;
+            }
+
+            let errMessage = "Validation failed." + error ? `\n${error}` : "";
 
             if (!valid) {
-                this.logger?.error("Validation failed.");
-                return LoadStatus.failed;
+                if (this.useLogger) {
+                    this.logger?.error(errMessage);
+                    return LoadStatus.failed;
+                } else {
+                    throw new ValidationError(errMessage);
+                }
             }
         }
 
@@ -133,7 +149,8 @@ class BaseLoader {
         status &= valid;
 
         if (errors) {
-            const errMessage = formatErrors(errors);
+            let errMessage = formatErrors(errors);
+            errMessage = "Validation failed:\n" + errMessage;
 
             if (this.useLogger) {
                 this.logger?.error(errMessage);
