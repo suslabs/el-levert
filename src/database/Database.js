@@ -85,27 +85,27 @@ class Database {
         this.queryStrings[categoryName][parsed.name] = queryString;
     }
 
-    async readQueries() {
-        async function readDirectory(dirPath) {
-            const dirName = path.basename(dirPath),
-                items = await fs.readdir(dirPath);
-
-            for (const item of items) {
-                const itemPath = path.resolve(dirPath, item),
-                    stat = await fs.stat(itemPath);
-
-                if (stat.isDirectory()) {
-                    const queryPaths = Util.getFilesRecSync(itemPath);
-
-                    for (const queryPath of queryPaths) {
-                        await this.readQuery(queryPath, dirName);
-                    }
-                } else {
-                    await this.readQuery(itemPath, dirName);
+    async readDirectory(dirPath) {
+        const dirName = path.basename(dirPath),
+            items = await fs.readdir(dirPath);
+    
+        for (const item of items) {
+            const itemPath = path.resolve(dirPath, item),
+                stat = await fs.stat(itemPath);
+    
+            if (stat.isDirectory()) {
+                const queryPaths = Util.getFilesRecSync(itemPath);
+    
+                for (const queryPath of queryPaths) {
+                    await this.readQuery(queryPath, dirName);
                 }
+            } else {
+                await this.readQuery(itemPath, dirName);
             }
         }
+    }
 
+    async readQueries() {
         const items = await fs.readdir(this.queryPath);
 
         for (const item of items) {
@@ -113,14 +113,14 @@ class Database {
                 stat = await fs.stat(itemPath);
 
             if (stat.isDirectory()) {
-                await readDirectory.bind(this)(itemPath);
+                await this.readDirectory(itemPath);
             } else {
                 await this.readQuery(itemPath);
             }
         }
     }
 
-    async loadQueries() {
+    async bindQueries() {
         for (const category in this.queryStrings) {
             const queries = {},
                 strings = this.queryStrings[category];
@@ -135,6 +135,11 @@ class Database {
 
             this[category] = queries;
         }
+    }
+
+    async loadQueries() {
+        await this.readQueries();
+        await this.bindQueries();
     }
 
     async unloadQueries() {
@@ -155,9 +160,7 @@ class Database {
 
     async load() {
         await this.open(Modes.OPEN_READWRITE);
-
-        await this.readQueries();
-        await this.loadQueries();
+        await this.loadQueries();        
     }
 }
 
