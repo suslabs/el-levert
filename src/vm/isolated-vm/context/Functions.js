@@ -5,7 +5,7 @@ import FakeAxios from "../classes/FakeAxios.js";
 
 import ManevraError from "../functionErrors/ManevraError.js";
 
-const funcMap = {
+const Functions = {
     msg: {
         reply: {
             type: FuncTypes.regular,
@@ -46,4 +46,4 @@ const funcMap = {
     }
 };
 
-export default funcMap;
+export default Functions;
