@@ -123,7 +123,7 @@ class BaseLoader {
                 valid = res;
             }
 
-            let errMessage = "Validation failed." + error ? `\n${error}` : "";
+            const errMessage = "Validation failed." + error ? `\n${error}` : "";
 
             if (!valid) {
                 if (this.useLogger) {
@@ -149,8 +149,7 @@ class BaseLoader {
         status &= valid;
 
         if (errors) {
-            let errMessage = formatErrors(errors);
-            errMessage = "Validation failed:\n" + errMessage;
+            const errMessage = "Validation failed:\n" + formatErrors(errors);
 
             if (this.useLogger) {
                 this.logger?.error(errMessage);
