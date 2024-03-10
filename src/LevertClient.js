@@ -35,8 +35,8 @@ class LevertClient extends DiscordClient {
             client = this;
         }
 
-        this.started = false;
         this.version = version;
+        this.started = false;
 
         this.setConfigs(configs);
         this.setupLogger();

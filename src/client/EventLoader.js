@@ -1,6 +1,7 @@
 import path from "path";
 
 import BotEvent from "../structures/BotEvent.js";
+import EventError from "../errors/EventError.js";
 
 import Util from "../util/Util.js";
 
@@ -23,7 +24,18 @@ class EventLoader {
             return [];
         }
 
-        let files = Util.getFilesRecSync(this.eventsDir);
+        let files;
+
+        try {
+            files = Util.getFilesRecSync(this.eventsDir);
+        } catch (err) {
+            if (err.code === "ENOENT") {
+                throw new EventError("Couldn't find the events directory.");
+            }
+
+            throw err;
+        }
+
         files = files.filter(file => {
             const extension = path.extname(file);
             return extension === this.eventFileExtension;
