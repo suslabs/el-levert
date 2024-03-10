@@ -1,5 +1,6 @@
 {
     "dir": "./config",
+    "schemaDir": "./src/config/schemas",
     "encoding": "utf-8",
     "config": "config.json",
     "reactions": "reactions.json",
