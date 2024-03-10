@@ -1,0 +1,45 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "reactions",
+    "title": "Reactions",
+    "type": "object",
+    "properties": {
+      "enableReacts": {
+        "type": "boolean"
+      },
+      "parans": {
+        "type": "object",
+        "properties": {
+          "leftParans": {
+            "type": "array"
+          },
+          "rightParans": {
+            "type": "array"
+          }
+        }
+      },
+      "funnyWords": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "words": {
+                "type": ["string", "array"]
+            },
+            "react": {
+                "type": ["string", "array"]
+            }
+          },
+          "required": [
+            "words",
+            "react"
+          ]
+        }
+      }
+    },
+    "required": [
+      "enableReacts",
+      "parans",
+      "funnyWords"
+    ]
+  }
