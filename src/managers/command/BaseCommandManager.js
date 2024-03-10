@@ -169,9 +169,11 @@ class BaseCommandManager extends Manager {
         }
 
         getLogger().info(`Loaded ${ok + bad} commands. ${ok} successful, ${bad} failed.`);
+
+        this.loadSubcommands();
     }
 
-    bindSubcommand(command, subcommand) {
+    loadSubcommand(command, subcommand) {
         const find = this.commands.find(findCmd => {
             return findCmd.name === subcommand && findCmd.parent === command.name;
         });
@@ -193,7 +195,7 @@ class BaseCommandManager extends Manager {
         return true;
     }
 
-    bindSubcommands() {
+    loadSubcommands() {
         getLogger().info("Loading subcommands...");
 
         let n = 0;
@@ -204,7 +206,7 @@ class BaseCommandManager extends Manager {
             }
 
             command.subcommands.forEach(subcommand => {
-                const res = this.bindSubcommand(command, subcommand);
+                const res = this.loadSubcommand(command, subcommand);
 
                 if (res === true) {
                     n++;
@@ -219,9 +221,38 @@ class BaseCommandManager extends Manager {
         }
     }
 
+    deleteCommands() {
+        getLogger().info("Deleting commands...");
+
+        let i = 0;
+        for (; i < this.commands.length; i++) {
+            delete this.commands[i];
+        }
+
+        while (this.commands.length > 0) {
+            this.commands.shift();
+        }
+
+        if (i === 0) {
+            getLogger().info("No commands were found.");
+        } else {
+            getLogger().info(`Deleted ${i} commands.`);
+        }
+    }
+
+    async reloadCommands() {
+        getLogger().info("Reloading commands...");
+
+        this.deleteCommands();
+        await this.loadCommands();
+    }
+
     async load() {
         await this.loadCommands();
-        this.bindSubcommands();
+    }
+
+    unload() {
+        this.deleteCommands();
     }
 }
 
