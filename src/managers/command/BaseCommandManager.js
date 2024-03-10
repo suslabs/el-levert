@@ -1,4 +1,3 @@
-import URL from "url";
 import path from "path";
 
 import Manager from "../Manager.js";
@@ -102,8 +101,7 @@ class BaseCommandManager extends Manager {
     }
 
     async loadCommand(commandPath) {
-        commandPath = URL.pathToFileURL(commandPath);
-        const cmdProperties = (await import(commandPath)).default;
+        const cmdProperties = await Util.import(commandPath);
 
         if (typeof cmdProperties === "undefined") {
             return false;

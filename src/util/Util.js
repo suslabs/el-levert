@@ -3,6 +3,7 @@ import { AttachmentBuilder } from "discord.js";
 
 import fs from "fs";
 import path from "path";
+import URL from "url";
 
 const Util = {
     getFilesRecSync: dir_path => {
@@ -24,9 +25,12 @@ const Util = {
 
         return files;
     },
-    randElement: arr => arr[~~(Math.random() * arr.length)],
-    clamp: (x, a, b) => Math.max(Math.min(x, b), a),
-    round: (num, digits) => Math.round((num + Number.EPSILON) * 10 ** digits) / 10 ** digits,
+    import: async modulePath => {
+        let fileURL = URL.pathToFileURL(modulePath);
+        fileURL += `?update=${Date.now()}`;
+
+        return (await import(fileURL)).default;
+    },
     splitArgs: str => {
         const ind = str.indexOf(" ");
         let name, args;
@@ -41,13 +45,24 @@ const Util = {
 
         return [name.toLowerCase(), args];
     },
-    getFileAttach: (data, name = "message.txt") => ({
-        files: [
-            new AttachmentBuilder(Buffer.from(data), {
-                name: name
-            })
-        ]
-    }),
+    formatScript: body => {
+        const match = body.match(/^`{3}([\S]+)?\n([\s\S]+)`{3}$/);
+
+        if (match) {
+            return [match[2], true];
+        }
+
+        return [body, false];
+    },
+    getFileAttach: (data, name = "message.txt") => {
+        const attachment = new AttachmentBuilder(Buffer.from(data), {
+            name: name
+        });
+
+        return {
+            files: [attachment]
+        };
+    },
     getByteLen: str => {
         let s = str.length;
 
@@ -66,16 +81,18 @@ const Util = {
 
         return s;
     },
-    formatScript: body => {
-        const match = body.match(/^`{3}([\S]+)?\n([\s\S]+)`{3}$/);
-
-        if (match) {
-            return [match[2], true];
-        }
-
-        return [body, false];
+    firstCharUpper: str => {
+        return str[0].toUpperCase() + str.substring(1);
     },
-    firstCharUpper: str => str[0].toUpperCase() + str.substring(1),
+    randElement: arr => {
+        return arr[~~(Math.random() * arr.length)];
+    },
+    clamp: (x, a, b) => {
+        return Math.max(Math.min(x, b), a);
+    },
+    round: (num, digits) => {
+        return Math.round((num + Number.EPSILON) * 10 ** digits) / 10 ** digits;
+    },
     waitForCondition: (condition, timeoutError = "", timeout = 0, interval = 100) => {
         return new Promise((resolve, reject) => {
             let _timeout;

@@ -69,6 +69,7 @@ export default {
     },
     sockWrite: (socket, packetType, obj) => {
         obj.packetType = packetType ?? "unknown";
+
         socket.write(JSON.stringify(obj) + "\n");
     }
 };
