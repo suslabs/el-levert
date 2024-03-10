@@ -3,7 +3,7 @@ import fs from "fs/promises";
 import Ajv from "ajv";
 
 import LoadStatus from "./LoadStatus.js";
-import ValidationError from "../../errors/ValidationError.js";
+import ConfigError from "../../errors/ConfigError.js";
 
 import { isArray } from "../../util/TypeTester.js";
 
@@ -98,8 +98,12 @@ class BaseLoader {
         try {
             schemaString = await fs.readFile(this.schemaPath, { encoding: configPaths.encoding });
         } catch (err) {
-            this.logger.error(`Error occured while reading ${this.name} schema file:`, err);
-            return LoadStatus.failed;
+            if (this.useLogger) {
+                this.logger.error(`Error occured while reading ${this.name} schema file:`, err);
+                return LoadStatus.failed;
+            }
+
+            throw err;
         }
 
         schemaString = schemaString.trim();
@@ -130,7 +134,7 @@ class BaseLoader {
                     this.logger?.error(errMessage);
                     return LoadStatus.failed;
                 } else {
-                    throw new ValidationError(errMessage);
+                    throw new ConfigError(errMessage);
                 }
             }
         }
@@ -155,7 +159,7 @@ class BaseLoader {
                 this.logger?.error(errMessage);
                 return LoadStatus.failed;
             } else {
-                throw new ValidationError(errMessage);
+                throw new ConfigError(errMessage);
             }
         }
 
