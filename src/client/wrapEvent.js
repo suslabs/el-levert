@@ -1,4 +1,4 @@
-import isPromise from "../util/isPromise.js";
+import { isPromise } from "../util/TypeTester.js";
 
 const wrapPromise = (logger, promise) =>
     new Promise((resolve, reject) => {

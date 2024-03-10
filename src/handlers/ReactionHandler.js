@@ -1,6 +1,8 @@
 import Handler from "./Handler.js";
 
 import Util from "../util/Util.js";
+import { isArray } from "../util/TypeTester.js";
+
 import { getClient, getLogger } from "../LevertClient.js";
 
 const emojiChars = ":;=-x+";
@@ -77,10 +79,10 @@ class ReactionHandler extends Handler {
 
     findWord(str) {
         return this.funnyWords.find(x => {
-            if (typeof x.words === "string") {
-                return x.words === str;
-            } else if (x.words.constructor.name == "Array") {
+            if (isArray(x.words)) {
                 return x.words.includes(str);
+            } else {
+                return x.words === str;
             }
         });
     }
@@ -95,12 +97,10 @@ class ReactionHandler extends Handler {
             for (const w of words) {
                 const word = this.findWord(w);
 
-                if (typeof word !== "undefined") {
-                    if (typeof word.react === "string") {
-                        await msg.react(word.react);
-                    } else if (word.react.constructor.name == "Array") {
-                        await msg.react(Util.randElement(word.react));
-                    }
+                if (isArray(word)) {
+                    await msg.react(Util.randElement(word.react));
+                } else if (typeof word.react === "string") {
+                    await msg.react(word.react);
                 }
             }
         } catch (err) {
@@ -114,7 +114,8 @@ class ReactionHandler extends Handler {
     }
 
     async delete(msg) {
-        const botReacts = msg.reactions.cache.filter(react => react.users.cache.has(getClient().user.id));
+        const botId = getClient().client.user.id,
+            botReacts = msg.reactions.cache.filter(react => react.users.cache.has(botId));
 
         if (botReacts.size < 1) {
             return false;
@@ -126,7 +127,6 @@ class ReactionHandler extends Handler {
             }
         } catch (err) {
             getLogger().error("Failed to remove reactions from message.", err);
-            return false;
         }
 
         return true;
