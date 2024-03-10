@@ -81,8 +81,7 @@ class EventLoader {
         const paths = this.getEventPaths();
 
         if (paths.length === 0) {
-            this.logger?.info("Couldn't find any events.");
-            return;
+            throw new EventError("Couldn't find any events.");
         }
 
         let ok = 0,
@@ -99,6 +98,10 @@ class EventLoader {
                 this.logger?.error("Error occured while loading event: " + eventPath, err);
                 bad++;
             }
+        }
+
+        if (ok + bad === 0) {
+            throw new EventError("Couldn't load any events.");
         }
 
         this.logger?.info(`Loaded ${ok + bad} events. ${ok} successful, ${bad} failed.`);

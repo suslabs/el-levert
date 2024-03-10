@@ -168,6 +168,11 @@ class BaseCommandManager extends Manager {
             }
         }
 
+        if (ok + bad === 0) {
+            getLogger().info("Couldn't load any commands.");
+            return;
+        }
+
         getLogger().info(`Loaded ${ok + bad} commands. ${ok} successful, ${bad} failed.`);
 
         this.loadSubcommands();
