@@ -1,10 +1,10 @@
-class ValidationError extends Error {
+class ConfigError extends Error {
     constructor(message = "", ...args) {
         super(message, ...args);
 
-        this.name = "ValidationError";
+        this.name = "ConfigError";
         this.message = message;
     }
 }
 
-export default ValidationError;
+export default ConfigError;
