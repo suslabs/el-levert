@@ -5,7 +5,7 @@ import { getLogger } from "../../../LevertClient.js";
 import FakeMsg from "../classes/FakeMsg.js";
 import VMFunction from "../../../structures/vm/VMFunction.js";
 
-import funcMap from "./funcMap.js";
+import Functions from "./Functions.js";
 import globalNames from "./globalNames.json" assert { type: "json" };
 import funcNames from "./funcNames.json" assert { type: "json" };
 
@@ -95,7 +95,7 @@ class EvalContext {
             msg
         };
 
-        await this.registerFuncs(funcMap);
+        await this.registerFuncs(Functions);
     }
 
     setupDebugger() {
