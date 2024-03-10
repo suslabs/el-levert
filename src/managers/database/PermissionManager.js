@@ -17,10 +17,12 @@ class PermissionManager extends DBManager {
         super(enabled, "permission", PermissionDatabase, "perm_db");
 
         this.maxGroupNameLength = getClient().config.maxGroupNameLength;
-        const owner = getClient().owner;
+        const ownerId = getClient().owner;
 
-        this.ownerUser = OwnerUser;
-        this.ownerUser.setId(owner);
+        this.owner = new User(OwnerUser);
+        this.owner.setId(ownerId);
+
+        this.ownerLevel = OwnerGroup.level;
     }
 
     checkName(name) {
@@ -32,7 +34,7 @@ class PermissionManager extends DBManager {
     }
 
     async fetch(id) {
-        if (id === this.ownerUser.id) {
+        if (id === this.owner.id) {
             return [OwnerGroup];
         }
 
@@ -44,7 +46,7 @@ class PermissionManager extends DBManager {
     }
 
     async fetchByLevel(level) {
-        if (level === this.ownerUser.level) {
+        if (level === this.owner.level) {
             return [OwnerGroup];
         }
 
@@ -146,8 +148,8 @@ class PermissionManager extends DBManager {
     async listUsers(fetchUsernames = false) {
         let users = [];
 
-        if (this.owner !== "0") {
-            users = [this.ownerUser];
+        if (this.owner.id !== "0") {
+            users = [this.owner];
         }
 
         const userList = await this.perm_db.listUsers();
@@ -168,7 +170,7 @@ class PermissionManager extends DBManager {
     async listGroups(fetchUsernames = false) {
         let groups = [];
 
-        if (this.owner !== "0") {
+        if (this.owner.id !== "0") {
             groups = [OwnerGroup];
         }
 

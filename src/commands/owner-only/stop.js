@@ -2,9 +2,7 @@ import { getClient } from "../../LevertClient.js";
 
 export default {
     name: "stop",
-    load: function () {
-        this.allowed = getClient().permManager.ownerLevel;
-    },
+    ownerOnly: true,
     handler: async (_, msg) => {
         msg.reply(":information_source: Stopping client...");
 

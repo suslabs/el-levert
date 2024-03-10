@@ -96,7 +96,7 @@ class EventLoader {
 
     removeListeners() {
         for (let i = 0; i < this.events.length; i++) {
-            this.events[i].remove();
+            this.events[i].unregister();
             delete this.events[i];
         }
 

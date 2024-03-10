@@ -1,4 +1,4 @@
-import BaseLoader from "./baseLoader/BaseLoader.js";
+import BaseLoader from "./BaseLoader.js";
 
 class AuthLoader extends BaseLoader {
     constructor(logger) {

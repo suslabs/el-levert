@@ -19,9 +19,7 @@ function rebindMessage(msg, client) {
 export default {
     name: "restart",
     aliases: ["reload"],
-    load: function () {
-        this.allowed = getClient().permManager.ownerLevel;
-    },
+    ownerOnly: true,
     handler: async (_, msg) => {
         await getClient().restart(configReloader);
 
