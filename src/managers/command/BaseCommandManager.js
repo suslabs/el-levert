@@ -32,7 +32,7 @@ class BaseCommandManager extends Manager {
     }
 
     isCommand(str) {
-        return str.startsWith(this.commandPrefix);
+        return str.startsWith(this.commandPrefix) && str.length > this.commandPrefix.length;
     }
 
     getCommands(perm) {
