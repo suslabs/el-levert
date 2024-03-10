@@ -1,4 +1,3 @@
-import URL from "url";
 import path from "path";
 
 import BotEvent from "../structures/BotEvent.js";
@@ -50,8 +49,7 @@ class EventLoader {
     }
 
     async loadEvent(eventPath) {
-        eventPath = URL.pathToFileURL(eventPath);
-        const eventProperties = (await import(eventPath)).default;
+        const eventProperties = await Util.import(eventPath);
 
         if (typeof eventProperties === "undefined" || typeof eventProperties.name === "undefined") {
             return false;
