@@ -1,8 +1,8 @@
 import BaseLoader from "./BaseLoader.js";
 
 class ReactionsLoader extends BaseLoader {
-    constructor(logger) {
-        super("reactions", logger);
+    constructor(logger, options) {
+        super("reactions", logger, options);
     }
 
     modify(config) {

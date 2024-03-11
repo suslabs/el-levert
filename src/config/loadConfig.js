@@ -4,10 +4,14 @@ import AuthLoader from "./loaders/AuthLoader.js";
 
 import LoadStatus from "./loaders/LoadStatus.js";
 
+const loaderConfig = {
+    throwOnFailure: false
+};
+
 function initLoaders(logger) {
-    const configLoader = new ConfigLoader(logger),
-        reactionsLoader = new ReactionsLoader(logger),
-        authLoader = new AuthLoader(logger);
+    const configLoader = new ConfigLoader(logger, loaderConfig),
+        reactionsLoader = new ReactionsLoader(logger, loaderConfig),
+        authLoader = new AuthLoader(logger, loaderConfig);
 
     const loaders = [];
     loaders.push(configLoader);

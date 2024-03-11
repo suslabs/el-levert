@@ -1,8 +1,8 @@
 import BaseLoader from "./BaseLoader.js";
 
 class ConfigLoader extends BaseLoader {
-    constructor(logger) {
-        super("config", logger);
+    constructor(logger, options) {
+        super("config", logger, options);
     }
 }
 
