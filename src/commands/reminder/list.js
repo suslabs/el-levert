@@ -28,7 +28,7 @@ export default {
             username = find.user.username;
         }
 
-        const reminders = await getClient().reminderManager.fetch(owner);
+        const reminders = await getClient().reminderManager.list(owner);
 
         if (!reminders) {
             if (owner === msg.author.id) {
