@@ -37,6 +37,21 @@
   <a href="#amogus">Amogus</a>
 </p>
 
+# TODO
+
+-   [ ] Fix oc (soon)
+-   [ ] Extract responses into a lang file
+-   [ ] Rewrite vm2 runner
+-   [ ] Finish CLI commands
+-   [ ] Add cabal
+-   [ ] Add the option to save tag attachments locally
+-   [ ] Add support for slash commands (perhaps)
+-   [ ] Add more commands for things
+-   [ ] Use real fuzzy search
+-   [ ] Add the option to log to a channel
+-   [ ] Loading extensions
+-   [ ] Rewrite importer & add db check script
+
 # Commands
 
 ### 1. help
