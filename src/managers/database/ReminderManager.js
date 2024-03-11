@@ -92,7 +92,7 @@ class ReminderManager extends DBManager {
     }
 
     async sendReminders() {
-        const reminders = await this.getPast();
+        const reminders = await this.getPastReminders();
 
         for (const reminder of reminders) {
             this.sendReminder(reminder);
