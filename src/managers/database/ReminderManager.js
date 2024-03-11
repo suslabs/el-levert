@@ -24,8 +24,20 @@ class ReminderManager extends DBManager {
         }
     }
 
-    async fetch(user) {
-        return await this.remind_db.fetch(user);
+    async list(user) {
+        const reminders = await this.remind_db.fetch(user);
+
+        reminders.sort((a, b) => a.end - b.end);
+
+        return reminders;
+    }
+
+    async listAll() {
+        const reminders = await this.remind_db.list();
+
+        reminders.sort((a, b) => a.end - b.end);
+
+        return reminders;
     }
 
     async add(user, end, msg) {
@@ -36,13 +48,19 @@ class ReminderManager extends DBManager {
     }
 
     async remove(user, index) {
-        const reminders = await this.fetch(user);
+        const reminders = await this.list(user);
 
         if (!reminders) {
             return false;
         }
 
-        await this.remind_db.remove(reminders[index]);
+        const reminder = reminders[index];
+
+        if (typeof reminder === "undefined") {
+            return false;
+        }
+
+        await this.remind_db.remove(reminder);
         return true;
     }
 
@@ -51,8 +69,8 @@ class ReminderManager extends DBManager {
         return res.changes > 0;
     }
 
-    async getPast(date) {
-        const reminders = await this.remind_db.list(),
+    async getPastReminders(date) {
+        const reminders = await this.listAll(),
             past = reminders.filter(reminder => reminder.isPast(date));
 
         for (const reminder of past) {
@@ -66,7 +84,7 @@ class ReminderManager extends DBManager {
         const user = await getClient().findUserById(reminder.user);
 
         if (!user) {
-            return false;
+            return;
         }
 
         const out = "You set a reminder for " + reminder.format();
