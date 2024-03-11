@@ -33,7 +33,7 @@ class SedHandler extends Handler {
     }
 
     canSed(str) {
-        return this.enabled && this.regex.test(str);
+        return this.regex.test(str);
     }
 
     async genSed(msg) {
