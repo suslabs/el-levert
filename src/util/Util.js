@@ -81,17 +81,17 @@ const Util = {
 
         return s;
     },
-    firstCharUpper: str => {
+    capitalize: str => {
         return str[0].toUpperCase() + str.substring(1);
-    },
-    randElement: arr => {
-        return arr[~~(Math.random() * arr.length)];
     },
     clamp: (x, a, b) => {
         return Math.max(Math.min(x, b), a);
     },
     round: (num, digits) => {
         return Math.round((num + Number.EPSILON) * 10 ** digits) / 10 ** digits;
+    },
+    randElement: (arr, a = 0, b = arr.length) => {
+        return arr[a + ~~(Math.random() * (b - a))];
     },
     waitForCondition: (condition, timeoutError = "", timeout = 0, interval = 100) => {
         return new Promise((resolve, reject) => {

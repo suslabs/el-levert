@@ -57,11 +57,11 @@ async function altevalBase(args, msg, lang) {
             try {
                 parsed = JSON.parse(err.message);
             } catch (err) {
-                return `:no_entry_sign: ${Util.firstCharUpper(err.message)}.`;
+                return `:no_entry_sign: ${Util.capitalize(err.message)}.`;
             }
 
             const format = Object.values(parsed)
-                .map(x => Util.firstCharUpper(x).join(","))
+                .map(x => Util.capitalize(x).join(","))
                 .join("\n");
             return `:no_entry_sign: ${format}.`;
         }
