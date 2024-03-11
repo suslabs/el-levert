@@ -66,7 +66,7 @@ class DBManager extends Manager {
     }
 
     async createDatabase() {
-        const name = Util.firstCharUpper(this.name);
+        const name = Util.capitalize(this.name);
         getLogger().info(`${name} database not found. Creating at path: ${this.dbPath}`);
 
         await this[this.fieldName].create();
