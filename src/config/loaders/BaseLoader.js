@@ -23,7 +23,11 @@ function formatErrors(errors) {
         const split = err.instancePath.split("/"),
             newPath = split.slice(1).join(".");
 
-        errMessage.push(`Property ${newPath} ${err.message}`);
+        if (newPath.length > 0) {
+            errMessage.push(`Property ${newPath} ${err.message}`);
+        } else {
+            errMessage.push(Util.capitalize(err.message));
+        }
     }
 
     return errMessage.join("\n");
