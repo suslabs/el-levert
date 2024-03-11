@@ -39,7 +39,6 @@
     },
     "required": [
       "enableReacts",
-      "parans",
       "funnyWords"
     ]
   }

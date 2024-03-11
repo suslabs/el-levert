@@ -5,6 +5,7 @@ import Ajv from "ajv";
 import LoadStatus from "./LoadStatus.js";
 import ConfigError from "../../errors/ConfigError.js";
 
+import Util from "../../util/Util.js";
 import { isArray } from "../../util/TypeTester.js";
 
 import configPaths from "../configPaths.json" assert { type: "json" };
@@ -33,14 +34,10 @@ class BaseLoader {
         this.name = name;
         this.setPaths();
 
-        this.validateWithSchema = options.validateWithSchema ?? true;
+        this.logger = logger;
 
-        if (logger === undefined) {
-            this.useLogger = false;
-        } else {
-            this.logger = logger;
-            this.useLogger = true;
-        }
+        this.throwOnFailure = options.throwOnFailure ?? true;
+        this.validateWithSchema = options.validateWithSchema ?? true;
     }
 
     setPaths() {
@@ -60,12 +57,11 @@ class BaseLoader {
         try {
             configString = await fs.readFile(this.path, { encoding: configPaths.encoding });
         } catch (err) {
-            if (this.useLogger) {
-                this.logger.error(`Error occured while reading ${this.name} file:`, err);
-                return LoadStatus.failed;
+            if (err.code === "ENOENT") {
+                return this.failure(`${Util.capitalize(this.name)} file not found.`);
             }
 
-            throw err;
+            return this.failure(err, `Error occured while reading ${this.name} file:`);
         }
 
         configString = configString.trim();
@@ -80,12 +76,7 @@ class BaseLoader {
         try {
             config = JSON.parse(this.configString);
         } catch (err) {
-            if (this.useLogger) {
-                this.logger.error(`Error occured while parsing ${this.name} file:`, err);
-                return LoadStatus.failed;
-            }
-
-            throw err;
+            return this.failure(err, `Error occured while parsing ${this.name} file:`);
         }
 
         this.config = config;
@@ -98,12 +89,11 @@ class BaseLoader {
         try {
             schemaString = await fs.readFile(this.schemaPath, { encoding: configPaths.encoding });
         } catch (err) {
-            if (this.useLogger) {
-                this.logger.error(`Error occured while reading ${this.name} schema file:`, err);
-                return LoadStatus.failed;
+            if (err.code === "ENOENT") {
+                return this.failure("Schema file not found.");
             }
 
-            throw err;
+            return this.failure(err, `Error occured while reading ${this.name} schema file:`);
         }
 
         schemaString = schemaString.trim();
@@ -127,15 +117,8 @@ class BaseLoader {
                 valid = res;
             }
 
-            const errMessage = "Validation failed." + error ? `\n${error}` : "";
-
             if (!valid) {
-                if (this.useLogger) {
-                    this.logger?.error(errMessage);
-                    return LoadStatus.failed;
-                } else {
-                    throw new ConfigError(errMessage);
-                }
+                return this.failure("Validation failed." + error ? `\n${error}` : "");
             }
         }
 
@@ -144,7 +127,8 @@ class BaseLoader {
         }
 
         if (this.schemaLoadStatus === LoadStatus.failed) {
-            this.logger.info("Schema validation skipped.");
+            this.logger?.info("Schema validation skipped.");
+            return LoadStatus.successful;
         }
 
         const valid = this.ajvValidate(this.config),
@@ -153,14 +137,7 @@ class BaseLoader {
         status &= valid;
 
         if (errors) {
-            const errMessage = "Validation failed:\n" + formatErrors(errors);
-
-            if (this.useLogger) {
-                this.logger?.error(errMessage);
-                return LoadStatus.failed;
-            } else {
-                throw new ConfigError(errMessage);
-            }
+            return this.failure("Validation failed:\n" + formatErrors(errors));
         }
 
         return status;
@@ -205,6 +182,24 @@ class BaseLoader {
         this.logger?.info(`Loaded ${this.name} file successfully.`);
 
         return [this.config, status];
+    }
+
+    failure(err, loggerMsg) {
+        if (!this.throwOnFailure) {
+            if (typeof loggerMsg !== "undefined") {
+                this.logger?.error(loggerMsg, err);
+            } else {
+                this.logger?.error(err);
+            }
+
+            return LoadStatus.failed;
+        }
+
+        if (typeof err === "string") {
+            throw new ConfigError(err);
+        } else {
+            throw err;
+        }
     }
 }
 
