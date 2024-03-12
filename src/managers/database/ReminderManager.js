@@ -99,7 +99,7 @@ class ReminderManager extends DBManager {
         }
     }
 
-    setSendInterval() {
+    startSendLoop() {
         if (!this.enabled) {
             return;
         }
@@ -110,7 +110,7 @@ class ReminderManager extends DBManager {
         getLogger().info("Started reminder loop.");
     }
 
-    clearSendInterval() {
+    stopSendLoop() {
         if (typeof this.sendInterval === "undefined") {
             return;
         }
@@ -122,7 +122,7 @@ class ReminderManager extends DBManager {
     }
 
     unload() {
-        this.clearSendInterval();
+        this.stopSendLoop();
     }
 }
 
