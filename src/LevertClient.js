@@ -202,7 +202,7 @@ class LevertClient extends DiscordClient {
             this.setActivity(this.config.activity);
         }
 
-        this.reminderManager.setSendInterval();
+        this.reminderManager.startSendLoop();
 
         if (this.config.enableGlobalHandler) {
             registerGlobalHandler(this.logger);

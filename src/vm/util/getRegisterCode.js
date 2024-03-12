@@ -5,21 +5,12 @@ const funcOptions = {
 };
 
 const indentation = 4,
-    spaces = Array(indentation).fill(" ").join("");
+    spaces = " ".repeat(indentation);
 
 function indent(code, times) {
     let lines = code.split("\n");
 
-    lines = lines.map(line => {
-        let newLine = "";
-
-        for (let i = 0; i < times; i++) {
-            newLine += spaces;
-        }
-
-        newLine += line;
-        return newLine;
-    });
+    lines = lines.map(line => spaces.repeat(times) + line);
 
     return lines.join("\n");
 }
