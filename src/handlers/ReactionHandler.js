@@ -1,7 +1,6 @@
 import Handler from "./Handler.js";
 
 import Util from "../util/Util.js";
-import { isArray } from "../util/TypeTester.js";
 
 import { getClient, getLogger } from "../LevertClient.js";
 
@@ -79,7 +78,7 @@ class ReactionHandler extends Handler {
 
     findWord(str) {
         return this.funnyWords.find(x => {
-            if (isArray(x.words)) {
+            if (Array.isArray(x.words)) {
                 return x.words.includes(str);
             } else {
                 return x.words === str;
@@ -97,7 +96,7 @@ class ReactionHandler extends Handler {
             for (const w of words) {
                 const word = this.findWord(w);
 
-                if (isArray(word)) {
+                if (Array.isArray(word)) {
                     await msg.react(Util.randElement(word.react));
                 } else if (typeof word.react === "string") {
                     await msg.react(word.react);

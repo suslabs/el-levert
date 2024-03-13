@@ -6,7 +6,7 @@ import EventLoader from "./EventLoader.js";
 import Util from "../util/Util.js";
 import diceDist from "../util/diceDist.js";
 
-const { Client, GatewayIntentBits, PermissionsBitField, ActivityType, Partials } = discord;
+const { Client, GatewayIntentBits, PermissionsBitField, ActivityType, Partials, DiscordAPIError } = discord;
 
 const defaultIntents = [
         GatewayIntentBits.Guilds,
@@ -17,6 +17,17 @@ const defaultIntents = [
         GatewayIntentBits.DirectMessages
     ],
     defaultPartials = [Partials.Channel];
+
+const userIdRegex = /(\d{17,20})/,
+    mentionRegex = /<@(\d{17,20})>/;
+
+const defaultMessageFetchOptions = {
+        limit: 100
+    },
+    defaultUserFetchOptions = {
+        fetchLimit: 100,
+        limit: 100
+    };
 
 class DiscordClient {
     constructor(intents, partials) {
@@ -158,12 +169,10 @@ class DiscordClient {
         delete this.eventLoader;
     }
 
-    getChannel(ch_id, user_id, check = true) {
-        let channel;
+    async getChannel(ch_id, user_id, check = true) {
+        const channel = await this.client.channels.fetch(ch_id);
 
-        if (this.client.channels.cache.has(ch_id)) {
-            channel = this.client.channels.cache.get(ch_id);
-        } else {
+        if (typeof channel === "undefined") {
             return false;
         }
 
@@ -179,16 +188,16 @@ class DiscordClient {
     }
 
     async fetchMessage(ch_id, msg_id, user_id, check) {
-        const channel = this.getChannel(ch_id, user_id, check);
+        const channel = await this.getChannel(ch_id, user_id, check);
 
-        if (!channel || typeof msg_id !== "string") {
+        if (!channel) {
             return false;
         }
 
         try {
             return await channel.messages.fetch(msg_id);
         } catch (err) {
-            if (err.constructor.name === "DiscordAPIError") {
+            if (err instanceof DiscordAPIError) {
                 return false;
             }
 
@@ -197,23 +206,21 @@ class DiscordClient {
     }
 
     async fetchMessages(ch_id, options = {}, user_id, check) {
-        const channel = this.getChannel(ch_id, user_id, check);
+        const channel = await this.getChannel(ch_id, user_id, check);
 
-        if (!channel || typeof options !== "object") {
+        if (!channel) {
             return false;
         }
 
-        options = Object.assign(
-            {
-                limit: 100
-            },
-            options
-        );
+        Object.assign(options, {
+            ...defaultMessageFetchOptions,
+            ...options
+        });
 
         try {
             return await channel.messages.fetch(options);
         } catch (err) {
-            if (err.constructor.name === "DiscordAPIError") {
+            if (err instanceof DiscordAPIError) {
                 return false;
             }
 
@@ -232,51 +239,47 @@ class DiscordClient {
     }
 
     async findUsers(search, options = {}) {
-        const idMatch = search.match(/(\d{17,20})/),
-            mentionMatch = search.match(/<@(\d{17,20})>/);
+        Object.assign(options, {
+            ...defaultUserFetchOptions,
+            ...options
+        });
 
-        let guilds = this.client.guilds.cache;
+        const guilds = this.client.guilds.cache;
+
+        const idMatch = search.match(userIdRegex),
+            mentionMatch = search.match(mentionRegex);
 
         if (idMatch ?? mentionMatch) {
             const id = idMatch[1] ?? mentionMatch[1];
 
             for (let i = 0; i < guilds.size; i++) {
-                let user;
-
                 try {
-                    user = await guilds.at(i).members.fetch({
-                        user: id
-                    });
+                    const user = await guilds.at(i).members.fetch({ user: id });
+                    return [user];
                 } catch (err) {
-                    if (err.constructor.name !== "DiscordAPIError") {
+                    if (!(err instanceof DiscordAPIError)) {
                         throw err;
                     }
                 }
-
-                if (typeof user !== "undefined") {
-                    return [user];
-                }
             }
+
+            const user = await this.client.users.fetch(id);
+            user.user = user;
+
+            return [user];
         }
 
         let users = [],
-            ids = [];
-
-        options = Object.assign(
-            {
-                limit: 10
-            },
-            options
-        );
+            foundIds = [];
 
         for (let i = 0; i < guilds.size; i++) {
             let guildUsers = await guilds.at(i).members.fetch({
                 query: search,
-                limit: options.limit
+                limit: options.fetchLimit
             });
 
-            guildUsers = guildUsers.filter(x => !ids.includes(x.id));
-            ids.push(...guildUsers.map(x => x.id));
+            guildUsers = guildUsers.filter(x => !foundIds.includes(x.id));
+            foundIds.push(...guildUsers.map(x => x.id));
 
             guildUsers = guildUsers.map(x => [x, diceDist(x.username, search)]);
             users.push(...guildUsers);

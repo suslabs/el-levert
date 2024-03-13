@@ -52,6 +52,6 @@ export default {
 
         await getClient().tagManager.chown(tag, find.user.id);
 
-        return `:white_check_mark: Transferred tag **${t_name}** to \`${t_args}\`.`;
+        return `:white_check_mark: Transferred tag **${t_name}** to \`${find.user.username}\`.`;
     }
 };

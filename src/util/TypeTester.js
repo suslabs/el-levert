@@ -5,8 +5,7 @@ function tagTester(name) {
 }
 
 const isObject = tagTester("Object"),
-    isFunction = tagTester("Function"),
-    isArray = tagTester("Array");
+    isFunction = tagTester("Function");
 
 function isPromise(obj) {
     if (!isObject(obj)) {
@@ -16,4 +15,4 @@ function isPromise(obj) {
     return isFunction(obj.then) && isFunction(obj.catch);
 }
 
-export { isPromise, isArray };
+export { isPromise };
