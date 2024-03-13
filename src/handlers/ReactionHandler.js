@@ -76,12 +76,12 @@ class ReactionHandler extends Handler {
         }
     }
 
-    findWord(str) {
+    findWord(word) {
         return this.funnyWords.find(x => {
             if (Array.isArray(x.words)) {
-                return x.words.includes(str);
+                return x.words.includes(word);
             } else {
-                return x.words === str;
+                return x.words === word;
             }
         });
     }
@@ -96,7 +96,7 @@ class ReactionHandler extends Handler {
             for (const w of words) {
                 const word = this.findWord(w);
 
-                if (Array.isArray(word)) {
+                if (Array.isArray(word.react)) {
                     await msg.react(Util.randElement(word.react));
                 } else if (typeof word.react === "string") {
                     await msg.react(word.react);
