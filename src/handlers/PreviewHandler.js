@@ -10,18 +10,19 @@ const msgUrlRegex = /https:\/\/discord.com\/channels\/(\d{18,19})\/(\d{18,19})\/
 class PreviewHandler extends Handler {
     constructor() {
         super(true, true);
-        this.regex = msgUrlRegex;
+
+        this.outCharLimit = Util.clamp(getClient().config.outCharLimit, 0, 2000);
+        this.outNewlineLimit = Util.clamp(getClient().config.outNewlineLimit, 0, 2000);
     }
 
     canPreview(str) {
-        return this.regex.test(str);
+        return msgUrlRegex.test(str);
     }
 
     async genPreview(msg, url) {
-        const match = url.match(this.regex),
-            msgUrl = match[0];
-
-        const sv_id = match[1],
+        const match = url.match(msgUrlRegex),
+            msgUrl = match[0],
+            sv_id = match[1],
             ch_id = match[2],
             msg_id = match[3];
 
@@ -51,22 +52,27 @@ class PreviewHandler extends Handler {
         let content = prevMsg.content,
             split = content.split("\n");
 
-        if (content.length > 500) {
-            content = content.slice(0, 500) + "...";
+        if (content.length > this.outCharLimit) {
+            content = content.slice(0, this.outCharLimit) + "...";
         }
 
-        if (split.length > 10) {
-            content = split.slice(0, 10).join("\n") + "...";
+        if (split.length > this.outNewlineLimit) {
+            content = split.slice(0, this.outNewlineLimit).join("\n") + "...";
         }
 
         if (prevMsg.attachments.size > 0) {
-            const attach = prevMsg.attachments.first();
+            const attach = prevMsg.attachments.first(),
+                isImage = attach.contentType.startsWith("image/");
 
-            if (attach.contentType.startsWith("image/")) {
+            if (isImage) {
                 embed.setImage(attach.url);
+            }
 
-                if (content.length < 1) {
+            if (content.length < 1) {
+                if (isImage) {
                     content = hyperlink(`[Image (${attach.name})]`, attach.url);
+                } else {
+                    content = hyperlink(`[Attachment (${attach.name})]`, attach.url);
                 }
             }
         }
