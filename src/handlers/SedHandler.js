@@ -5,59 +5,56 @@ import Handler from "./Handler.js";
 import { getClient, getLogger } from "../LevertClient.js";
 import Util from "../util/Util.js";
 
-async function fetchMatch(ch_id, regex, ignore_id, limit = 100) {
-    const msgs = await getClient().fetchMessages(
-        ch_id,
-        {
-            limit: limit
-        },
-        null,
-        false
-    );
-
-    if (!msgs) {
-        return false;
-    }
-
-    const msg = msgs.find(x => regex.test(x) && x.id !== ignore_id);
-    return typeof msg === "undefined" ? false : msg;
-}
-
-const sedRegex = /^sed\/(.+?)\/([^/]*)\/?(.{1,2})?/;
+const sedRegex = /^sed\/(.+?)\/([^/]*)\/?(.{1,2})?/,
+    sedUsage = "Usage: sed/regex/replace/flags (optional)";
 
 class SedHandler extends Handler {
     constructor() {
         super(getClient().config.enableSed, true);
-
-        this.regex = sedRegex;
     }
 
     canSed(str) {
-        return this.regex.test(str);
+        return sedRegex.test(str);
+    }
+
+    async fetchMatch(ch_id, regex, ignore_id, limit = 100) {
+        const msgs = await getClient().fetchMessages(ch_id, { limit }, null, false);
+
+        if (!msgs) {
+            return false;
+        }
+
+        const msg = msgs.find(x => regex.test(x) && x.id !== ignore_id);
+
+        if (typeof msg === "undefined") {
+            return false;
+        }
+
+        return msg;
     }
 
     async genSed(msg) {
-        const match = msg.content.match(this.regex),
+        const match = msg.content.match(sedRegex),
             parsedRegex = match[1],
             replace = match[2],
-            flag = match[3];
+            flag = match[3] ?? "" + "i";
 
         if (match.length < 3) {
-            return [undefined, ":warning: Encountered invalid args."];
+            return [undefined, ":warning: Invalid regex args.\n" + sedUsage];
         }
 
         let regex, sedMsg;
 
         try {
-            regex = new RegExp(parsedRegex, flag ?? "" + "i");
+            regex = new RegExp(parsedRegex, flag);
         } catch (err) {
-            return [undefined, ":warning: Invalid regex or flags."];
+            return [undefined, ":warning: Invalid regex or flags.\n" + sedUsage];
         }
 
         if (msg.type === MessageType.Reply) {
             sedMsg = await getClient().fetchMessage(msg.channel.id, msg.reference.messageId, null, false);
         } else {
-            sedMsg = await fetchMatch(msg.channel.id, regex, msg.id);
+            sedMsg = await this.fetchMatch(msg.channel.id, regex, msg.id);
         }
 
         if (!sedMsg) {
@@ -71,6 +68,7 @@ class SedHandler extends Handler {
             })
             .setDescription(sedMsg.content.replace(regex, replace ?? ""))
             .setTimestamp(sedMsg.editedTimestamp ?? sedMsg.createdTimestamp)
+            .setImage(sedMsg.attachments.at(0)?.url)
             .setFooter({
                 text: "From #" + sedMsg.channel.name
             });
@@ -84,14 +82,15 @@ class SedHandler extends Handler {
         }
 
         await msg.channel.sendTyping();
-        const ret = await this.genSed(msg);
 
-        if (typeof ret[1] !== "undefined") {
-            const reply = msg.reply(ret[1]);
+        const ret = await this.genSed(msg),
+            embed = ret[0],
+            err = ret[1];
+
+        if (typeof err !== "undefined") {
+            const reply = msg.reply(err);
             this.messageTracker.addMsg(reply, msg.id);
         }
-
-        const embed = ret[0];
 
         try {
             const reply = await msg.reply({
@@ -108,6 +107,8 @@ class SedHandler extends Handler {
             getLogger().error("Reply failed", err);
             return false;
         }
+
+        return true;
     }
 }
 
