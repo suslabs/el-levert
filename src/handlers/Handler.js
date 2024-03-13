@@ -71,7 +71,7 @@ class Handler {
             return false;
         }
 
-        if (sentMsg.constructor.name === "Array") {
+        if (Array.isArray(sentMsg)) {
             for (const sent of sentMsg) {
                 try {
                     await sent.delete();

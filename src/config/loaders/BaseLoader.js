@@ -6,7 +6,6 @@ import LoadStatus from "./LoadStatus.js";
 import ConfigError from "../../errors/ConfigError.js";
 
 import Util from "../../util/Util.js";
-import { isArray } from "../../util/TypeTester.js";
 
 import configPaths from "../configPaths.json" assert { type: "json" };
 
@@ -115,7 +114,7 @@ class BaseLoader {
 
             let valid, error;
 
-            if (isArray(res)) {
+            if (Array.isArray(res)) {
                 [valid, error] = res;
             } else {
                 valid = res;
