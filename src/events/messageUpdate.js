@@ -4,11 +4,11 @@ import { getClient } from "../LevertClient.js";
 
 export default {
     name: Events.MessageUpdate,
-    listener: (_, msg) => {
+    listener: async (_, msg) => {
         if (msg.author.bot) {
             return;
         }
 
-        getClient().executeAllHandlers("resubmit", msg);
+        await getClient().executeAllHandlers("resubmit", msg);
     }
 };
