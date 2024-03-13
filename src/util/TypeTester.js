@@ -4,15 +4,14 @@ function tagTester(name) {
     return obj => toString.call(obj) === tag;
 }
 
-const isObject = tagTester("Object"),
-    isFunction = tagTester("Function");
+const isFunction = tagTester("Function");
 
 function isPromise(obj) {
-    if (!isObject(obj)) {
+    if (typeof obj === "undefined") {
         return false;
     }
 
-    return isFunction(obj.then) && isFunction(obj.catch);
+    return isFunction(obj.then);
 }
 
 export { isPromise };

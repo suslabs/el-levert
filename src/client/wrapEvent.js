@@ -3,7 +3,7 @@ import { isPromise } from "../util/TypeTester.js";
 const wrapPromise = (logger, promise) =>
     new Promise((resolve, reject) => {
         promise.then(resolve).catch(err => {
-            logger.error(err);
+            logger.error("Event exception:", err);
             resolve(undefined);
         });
     });
@@ -15,7 +15,7 @@ const wrapEvent = (logger, func) =>
         try {
             out = func(...args);
         } catch (err) {
-            logger.error(err);
+            logger.error("Event exception:", err);
             return;
         }
 
