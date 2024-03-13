@@ -6,7 +6,7 @@ export default {
     name: "add_group",
     parent: "perm",
     subcommand: true,
-    allowed: 2,
+    allowed: getClient().permManager.adminLevel,
     handler: async args => {
         let [g_name, level] = Util.splitArgs(args);
 

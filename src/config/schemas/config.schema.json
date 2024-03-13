@@ -4,147 +4,152 @@
     "title": "Config",
     "type": "object",
     "properties": {
-      "logFile": {
-        "type": "string"
-      },
-      "importLogFile": {
-        "type": "string"
-      },
-      "eventsPath": {
-        "type": "string"
-      },
-      "commandsPath": {
-        "type": "string"
-      },
-      "cliCommandsPath": {
-        "type": "string"
-      },
-      "dbPath": {
-        "type": "string"
-      },
-      "queryPath": {
-        "type": "string"
-      },
-      "cmdPrefix": {
-        "type": "string"
-      },
-      "enableCliCommands": {
-        "type": "boolean"
-      },
-      "cliCmdPrefix": {
-        "type": "string"
-      },
-      "memLimit": {
-        "type": "number"
-      },
-      "timeLimit": {
-        "type": "number"
-      },
-      "otherMemLimit": {
-        "type": "number"
-      },
-      "otherTimeLimit": {
-        "type": "number"
-      },
-      "enableInspector": {
-        "type": "boolean"
-      },
-      "inspectorPort": {
-        "type": "number"
-      },
-      "outCharLimit": {
-        "type": "number"
-      },
-      "outNewlineLimit": {
-        "type": "number"
-      },
-      "maxTagNameLength": {
-        "type": "number"
-      },
-      "maxTagSize": {
-        "type": "number"
-      },
-      "tagNameRegex": {
-        "type": "string"
-      },
-      "maxQuota": {
-        "type": "number"
-      },
-      "maxGroupNameLength": {
-        "type": "number"
-      },
-      "enableSed": {
-        "type": "boolean"
-      },
-      "enableOtherLangs": {
-        "type": "boolean"
-      },
-      "enableVM2": {
-        "type": "boolean"
-      },
-      "enablePermissions": {
-        "type": "boolean"
-      },
-      "enableReminders": {
-        "type": "boolean"
-      },
-      "enableGlobalHandler": {
-        "type": "boolean"
-      },
-      "wrapEvents": {
-        "type": "boolean"
-      },
-      "setActivity": {
-        "type": "boolean"
-      },
-      "activity": {
-        "type": "object",
-        "properties": {
-          "type": {
+        "logFile": {
             "type": "string"
-          },
-          "text": {
-            "type": "string"
-          }
         },
-        "required": [
-          "type",
-          "text"
-        ]
-      }
+        "importLogFile": {
+            "type": "string"
+        },
+        "eventsPath": {
+            "type": "string"
+        },
+        "commandsPath": {
+            "type": "string"
+        },
+        "cliCommandsPath": {
+            "type": "string"
+        },
+        "dbPath": {
+            "type": "string"
+        },
+        "queryPath": {
+            "type": "string"
+        },
+        "cmdPrefix": {
+            "type": "string"
+        },
+        "enableCliCommands": {
+            "type": "boolean"
+        },
+        "cliCmdPrefix": {
+            "type": "string"
+        },
+        "memLimit": {
+            "type": "number"
+        },
+        "timeLimit": {
+            "type": "number"
+        },
+        "otherMemLimit": {
+            "type": "number"
+        },
+        "otherTimeLimit": {
+            "type": "number"
+        },
+        "enableInspector": {
+            "type": "boolean"
+        },
+        "inspectorPort": {
+            "type": "number"
+        },
+        "outCharLimit": {
+            "type": "number"
+        },
+        "outNewlineLimit": {
+            "type": "number"
+        },
+        "maxTagNameLength": {
+            "type": "number"
+        },
+        "maxTagSize": {
+            "type": "number"
+        },
+        "tagNameRegex": {
+            "type": "string"
+        },
+        "maxQuota": {
+            "type": "number"
+        },
+        "maxGroupNameLength": {
+            "type": "number"
+        },
+        "tagModeratorLevel": {
+            "type": "number"
+        },
+        "permissionAdminLevel": {
+            "type": "number"
+        },
+        "enableSed": {
+            "type": "boolean"
+        },
+        "enableOtherLangs": {
+            "type": "boolean"
+        },
+        "enableVM2": {
+            "type": "boolean"
+        },
+        "enablePermissions": {
+            "type": "boolean"
+        },
+        "enableReminders": {
+            "type": "boolean"
+        },
+        "enableGlobalHandler": {
+            "type": "boolean"
+        },
+        "wrapEvents": {
+            "type": "boolean"
+        },
+        "setActivity": {
+            "type": "boolean"
+        },
+        "activity": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string"
+                },
+                "text": {
+                    "type": "string"
+                }
+            },
+            "required": ["type", "text"]
+        }
     },
     "required": [
-      "logFile",
-      "importLogFile",
-      "eventsPath",
-      "commandsPath",
-      "cliCommandsPath",
-      "dbPath",
-      "queryPath",
-      "cmdPrefix",
-      "enableCliCommands",
-      "cliCmdPrefix",
-      "memLimit",
-      "timeLimit",
-      "otherMemLimit",
-      "otherTimeLimit",
-      "enableInspector",
-      "inspectorPort",
-      "outCharLimit",
-      "outNewlineLimit",
-      "maxTagNameLength",
-      "maxTagSize",
-      "tagNameRegex",
-      "maxQuota",
-      "maxGroupNameLength",
-      "enableSed",
-      "enableOtherLangs",
-      "enableVM2",
-      "enablePermissions",
-      "enableReminders",
-      "enableGlobalHandler",
-      "wrapEvents",
-      "setActivity",
-      "activity"
+        "logFile",
+        "importLogFile",
+        "eventsPath",
+        "commandsPath",
+        "cliCommandsPath",
+        "dbPath",
+        "queryPath",
+        "cmdPrefix",
+        "enableCliCommands",
+        "cliCmdPrefix",
+        "memLimit",
+        "timeLimit",
+        "otherMemLimit",
+        "otherTimeLimit",
+        "enableInspector",
+        "inspectorPort",
+        "outCharLimit",
+        "outNewlineLimit",
+        "maxTagNameLength",
+        "maxTagSize",
+        "tagNameRegex",
+        "maxQuota",
+        "maxGroupNameLength",
+        "tagModeratorLevel",
+        "permissionAdminLevel",
+        "enableSed",
+        "enableOtherLangs",
+        "enableVM2",
+        "enablePermissions",
+        "enableReminders",
+        "enableGlobalHandler",
+        "wrapEvents",
+        "setActivity",
+        "activity"
     ]
-  }
+}

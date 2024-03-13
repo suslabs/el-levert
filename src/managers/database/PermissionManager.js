@@ -16,13 +16,14 @@ class PermissionManager extends DBManager {
     constructor(enabled = true) {
         super(enabled, "permission", PermissionDatabase, "perm_db");
 
-        this.maxGroupNameLength = getClient().config.maxGroupNameLength;
-        const ownerId = getClient().owner;
-
         this.owner = new User(OwnerUser);
-        this.owner.setId(ownerId);
+        this.owner.setId(getClient().owner);
 
+        this.modLevel = getClient().config.tagModeratorLevel;
+        this.adminLevel = getClient().config.permissionAdminLevel;
         this.ownerLevel = OwnerGroup.level;
+
+        this.maxGroupNameLength = getClient().config.maxGroupNameLength;
     }
 
     checkName(name) {
