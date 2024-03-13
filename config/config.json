@@ -22,6 +22,8 @@
     "tagNameRegex": "^[A-Za-z0-9\\-_]+$",
     "maxQuota": 1024,
     "maxGroupNameLength": 16,
+    "tagModeratorLevel": 1,
+    "permissionAdminLevel": 2,
     "enableSed": true,
     "enableOtherLangs": false,
     "enableVM2": false,

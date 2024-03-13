@@ -4,41 +4,35 @@
     "title": "Reactions",
     "type": "object",
     "properties": {
-      "enableReacts": {
-        "type": "boolean"
-      },
-      "parans": {
-        "type": "object",
-        "properties": {
-          "leftParans": {
-            "type": "array"
-          },
-          "rightParans": {
-            "type": "array"
-          }
-        }
-      },
-      "funnyWords": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "words": {
-                "type": ["string", "array"]
-            },
-            "react": {
-                "type": ["string", "array"]
+        "enableReacts": {
+            "type": "boolean"
+        },
+        "parans": {
+            "type": "object",
+            "properties": {
+                "leftParans": {
+                    "type": "array"
+                },
+                "rightParans": {
+                    "type": "array"
+                }
             }
-          },
-          "required": [
-            "words",
-            "react"
-          ]
+        },
+        "funnyWords": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "words": {
+                        "type": ["string", "array"]
+                    },
+                    "react": {
+                        "type": ["string", "array"]
+                    }
+                },
+                "required": ["words", "react"]
+            }
         }
-      }
     },
-    "required": [
-      "enableReacts",
-      "funnyWords"
-    ]
-  }
+    "required": ["enableReacts", "funnyWords"]
+}

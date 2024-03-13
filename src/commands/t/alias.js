@@ -47,7 +47,7 @@ If you want to de-alias the tag, \`edit\` it.`;
             out = `Created tag **${t_name}**. `;
         }
 
-        if (perm < 1 && tag.owner !== msg.author.id) {
+        if (perm < getClient().permManager.modLevel && tag.owner !== msg.author.id) {
             const owner = await getClient().findUserById(tag.owner),
                 out = `:warning: You can only edit your own tags.`;
 
