@@ -58,14 +58,14 @@
         "outNewlineLimit": {
             "type": "number"
         },
+        "tagNameRegex": {
+            "type": "string"
+        },
         "maxTagNameLength": {
             "type": "number"
         },
         "maxTagSize": {
             "type": "number"
-        },
-        "tagNameRegex": {
-            "type": "string"
         },
         "maxQuota": {
             "type": "number"
@@ -135,9 +135,9 @@
         "inspectorPort",
         "outCharLimit",
         "outNewlineLimit",
+        "tagNameRegex",
         "maxTagNameLength",
         "maxTagSize",
-        "tagNameRegex",
         "maxQuota",
         "maxGroupNameLength",
         "tagModeratorLevel",
