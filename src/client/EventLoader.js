@@ -11,6 +11,7 @@ class EventLoader {
         this.eventsDir = eventsDir;
 
         this.logger = options.logger;
+        this.throwOnFailure = options.throwOnFailure ?? true;
         this.wrapFunc = options.wrapFunc;
 
         this.wrapEvents = options.wrapEvents ?? false;
@@ -48,8 +49,8 @@ class EventLoader {
         let listener = event.listener;
 
         if (this.wrapEvents) {
-            if (typeof this.wrapEvent === "undefined") {
-                this.logger?.warn("Couldn't wrap event: " + event.name);
+            if (typeof this.wrapFunc !== "function") {
+                this.failure("Couldn't wrap event: " + event.name, undefined, "warn");
             } else {
                 listener = this.wrapFunc(listener);
             }
@@ -78,10 +79,23 @@ class EventLoader {
 
     async loadEvents() {
         this.logger?.info("Loading events...");
-        const paths = this.getEventPaths();
+        let paths;
+
+        try {
+            paths = this.getEventPaths();
+        } catch (err) {
+            if (err.name === "EventError") {
+                this.failure(err.message);
+            } else {
+                this.failure(err, "Error occured while reading events directory:");
+            }
+
+            return { total: 0, ok: 0, bad: 0 };
+        }
 
         if (paths.length === 0) {
-            throw new EventError("Couldn't find any events.");
+            this.failure("Couldn't find any events.");
+            return { total: 0, ok: 0, bad: 0 };
         }
 
         let ok = 0,
@@ -95,16 +109,20 @@ class EventLoader {
                     ok++;
                 }
             } catch (err) {
-                this.logger?.error("Error occured while loading event: " + eventPath, err);
+                this.failure(err, "Error occured while loading event: " + eventPath);
                 bad++;
             }
         }
 
-        if (ok + bad === 0) {
-            throw new EventError("Couldn't load any events.");
+        const total = ok + bad;
+
+        if (total === 0) {
+            this.failure("Couldn't load any events.");
+        } else {
+            this.logger?.info(`Loaded ${total} events. ${ok} successful, ${bad} failed.`);
         }
 
-        this.logger?.info(`Loaded ${ok + bad} events. ${ok} successful, ${bad} failed.`);
+        return { total, ok, bad };
     }
 
     removeListeners() {
@@ -118,6 +136,22 @@ class EventLoader {
         }
 
         this.logger?.info("Removed all listeners.");
+    }
+
+    failure(err, loggerMsg, logLevel = "error") {
+        if (this.throwOnFailure) {
+            if (typeof err === "string") {
+                throw new EventError(err);
+            } else {
+                throw err;
+            }
+        }
+
+        if (typeof loggerMsg !== "undefined") {
+            this.logger?.log(logLevel, loggerMsg, err);
+        } else {
+            this.logger?.log(logLevel, err);
+        }
     }
 }
 

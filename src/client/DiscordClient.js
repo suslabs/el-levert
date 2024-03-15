@@ -18,6 +18,10 @@ const defaultIntents = [
     ],
     defaultPartials = [Partials.Channel];
 
+const eventLoaderConfig = {
+    throwOnFailure: false
+};
+
 const userIdRegex = /(\d{17,20})/,
     mentionRegex = /<@(\d{17,20})>/;
 
@@ -72,26 +76,6 @@ class DiscordClient {
 
             this[key] = options[key] ?? this[key];
         }
-    }
-
-    setActivity(config) {
-        if (typeof config === "undefined") {
-            return;
-        }
-
-        if (!Object.keys(ActivityType).includes(config.type)) {
-            throw new ClientError("Invalid activity type: " + config.type);
-        }
-
-        if (typeof config.text !== "undefined") {
-            this.client.user.setActivity(config.text, {
-                type: ActivityType[config.type]
-            });
-        } else {
-            throw new ClientError("Invalid activity text.");
-        }
-
-        this.logger?.info("Set activity status.");
     }
 
     async login(token, exitOnFailure = false) {
@@ -151,6 +135,7 @@ class DiscordClient {
 
     async loadEvents() {
         const eventLoader = new EventLoader(this.client, this.eventsDir, {
+            ...eventLoaderConfig,
             logger: this.logger,
             wrapFunc: this.wrapEvent,
             wrapEvents: this.wrapEvents
@@ -167,6 +152,33 @@ class DiscordClient {
 
         this.eventLoader.removeListeners();
         delete this.eventLoader;
+    }
+
+    setActivity(config) {
+        const validTypes = Object.entries(ActivityType)
+                .filter(([key, _]) => !isNaN(key))
+                .map(([_, value]) => value),
+            lowercaseTypes = validTypes.map(x => x.toLowerCase());
+
+        const activityType = config.type.toLowerCase(),
+            ind = lowercaseTypes.indexOf(activityType);
+
+        if (ind === -1) {
+            this.logger?.error(`Invalid activity type: ${activityType}\nValid types are: ${validTypes.join(" ")}`);
+            return;
+        }
+
+        if (typeof config.text === "undefined") {
+            this.logger?.error("Invalid activity text.");
+            return;
+        }
+
+        const presence = this.client.user.setActivity(config.text, {
+                type: validTypes[ind]
+            }),
+            activity = presence.activities[0];
+
+        this.logger?.info(`Set activity status: "${activity.type} ${activity.name}"`);
     }
 
     async getChannel(ch_id, user_id, check = true) {

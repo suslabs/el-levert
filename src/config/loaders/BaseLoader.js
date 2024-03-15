@@ -187,22 +187,22 @@ class BaseLoader {
         return [this.config, status];
     }
 
-    failure(err, loggerMsg) {
-        if (!this.throwOnFailure) {
-            if (typeof loggerMsg !== "undefined") {
-                this.logger?.error(loggerMsg, err);
+    failure(err, loggerMsg, logLevel = "error") {
+        if (this.throwOnFailure) {
+            if (typeof err === "string") {
+                throw new ConfigError(err);
             } else {
-                this.logger?.error(err);
+                throw err;
             }
-
-            return LoadStatus.failed;
         }
 
-        if (typeof err === "string") {
-            throw new ConfigError(err);
+        if (typeof loggerMsg !== "undefined") {
+            this.logger?.log(logLevel, loggerMsg, err);
         } else {
-            throw err;
+            this.logger?.log(logLevel, err);
         }
+
+        return LoadStatus.failed;
     }
 }
 

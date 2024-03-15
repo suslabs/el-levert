@@ -140,16 +140,17 @@ class BaseCommandManager extends Manager {
             paths = this.getCommandPaths();
         } catch (err) {
             if (err.name === "ManagerError") {
-                getLogger().info(err.message);
-                return;
+                getLogger().error(err.message);
+            } else {
+                getLogger().error(err);
             }
 
-            throw err;
+            return { total: 0, ok: 0, bad: 0, subcommands: 0 };
         }
 
         if (paths.length === 0) {
-            getLogger().info("Couldn't find any commands.");
-            return;
+            getLogger().warn("Couldn't find any commands.");
+            return { total: 0, ok: 0, bad: 0, subcommands: 0 };
         }
 
         let ok = 0,
@@ -168,14 +169,18 @@ class BaseCommandManager extends Manager {
             }
         }
 
+        let total = ok + bad,
+            subcommands = 0;
+
         if (ok + bad === 0) {
-            getLogger().info("Couldn't load any commands.");
-            return;
+            getLogger().warn("Couldn't load any commands.");
+        } else {
+            getLogger().info(`Loaded ${total} commands. ${ok} successful, ${bad} failed.`);
+
+            subcommands = this.loadSubcommands();
         }
 
-        getLogger().info(`Loaded ${ok + bad} commands. ${ok} successful, ${bad} failed.`);
-
-        this.loadSubcommands();
+        return { total, ok, bad, subcommands };
     }
 
     loadSubcommand(command, subcommand) {
@@ -219,11 +224,11 @@ class BaseCommandManager extends Manager {
             });
         });
 
-        if (n === 0) {
-            getLogger().info("No subcommands were found.");
-        } else {
+        if (n > 0) {
             getLogger().info(`Loaded ${n} subcommands.`);
         }
+
+        return n;
     }
 
     deleteCommands() {
