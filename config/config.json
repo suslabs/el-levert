@@ -33,7 +33,7 @@
     "wrapEvents": true,
     "setActivity": false,
     "activity": {
-        "type": "Watching",
-        "text": "Example"
+        "type": "watching",
+        "text": "example"
     }
 }
