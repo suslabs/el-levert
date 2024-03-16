@@ -15,7 +15,7 @@ const isGroupName = name => {
 };
 
 class PermissionManager extends DBManager {
-    constructor(enabled = true) {
+    constructor(enabled) {
         super(enabled, "permission", PermissionDatabase, "perm_db");
 
         this.owner = new User(OwnerUser);

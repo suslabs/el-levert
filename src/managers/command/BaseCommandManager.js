@@ -15,8 +15,7 @@ class BaseCommandManager extends Manager {
         this.commandsDir = commandsDir;
         this.commandPrefix = commandPrefix;
 
-        this.wrapCommands = getClient().config.wrapEvents;
-
+        this.wrapCommands = options.wrapCommands ?? getClient().config.wrapEvents;
         this.excludeDirs = options.excludeDirs ?? [];
         this.cmdFileExtension = options.cmdFileExtension ?? ".js";
 
@@ -68,13 +67,17 @@ class BaseCommandManager extends Manager {
     }
 
     getCommandPaths() {
+        if (typeof this.commandsDir === "undefined" || this.commandsDir.length < 1) {
+            throw new ManagerError("Invalid commands directory");
+        }
+
         let files;
 
         try {
             files = Util.getFilesRecSync(this.commandsDir);
         } catch (err) {
             if (err.code === "ENOENT") {
-                throw new ManagerError("Couldn't find the commands directory.");
+                throw new ManagerError("Couldn't find the commands directory");
             }
 
             throw err;
@@ -140,7 +143,7 @@ class BaseCommandManager extends Manager {
             paths = this.getCommandPaths();
         } catch (err) {
             if (err.name === "ManagerError") {
-                getLogger().error(err.message);
+                getLogger().error(err.message + ".");
             } else {
                 getLogger().error(err);
             }

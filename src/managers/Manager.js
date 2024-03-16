@@ -21,7 +21,7 @@ function unload(...args) {
 }
 
 class Manager {
-    constructor(enabled) {
+    constructor(enabled = true) {
         if (typeof this.load !== "function") {
             throw new ManagerError("Child class must have a load function");
         }
