@@ -31,7 +31,7 @@ async function parseBase(t_args, msg) {
 
             if (err.name === "TagError") {
                 return {
-                    err: ":warning: " + err.message
+                    err: `:warning: ${err.message}.`
                 };
             }
 
@@ -106,9 +106,9 @@ export default {
             } catch (err) {
                 if (err.name === "TagError") {
                     switch (err.message) {
-                        case "Tag recursion detected.":
+                        case "Tag recursion detected":
                             return `:warning: Ebic recursion fail: **${err.ref.join("** -> **")}**`;
-                        case "Hop not found.":
+                        case "Hop not found":
                             return `:warning: Tag **${err.ref}** doesn't exist.`;
                     }
                 }

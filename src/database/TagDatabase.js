@@ -29,6 +29,8 @@ class TagDatabase extends Database {
     }
 
     async add(tag) {
+        tag.registered = Date.now();
+
         return await this.tagQueries.add.run({
             $name: tag.name,
             $body: tag.body,

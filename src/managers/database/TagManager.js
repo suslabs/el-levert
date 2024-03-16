@@ -3,14 +3,12 @@ import axios from "axios";
 import DBManager from "./DBManager.js";
 
 import { getClient } from "../../LevertClient.js";
-
-import diceDist from "../../util/diceDist.js";
-
 import TagDatabase from "../../database/TagDatabase.js";
 
-import TagError from "../../errors/TagError.js";
-
 import Tag from "../../structures/tag/Tag.js";
+
+import diceDist from "../../util/diceDist.js";
+import TagError from "../../errors/TagError.js";
 
 class TagManager extends DBManager {
     constructor() {
@@ -40,20 +38,24 @@ class TagManager extends DBManager {
     }
 
     async fetchAlias(tag) {
+        if (!tag) {
+            return false;
+        }
+
         let hops = [],
             args = [],
             lastTag;
 
         for (const hop of tag.hops) {
             if (hops.includes(hop)) {
-                throw new TagError("Tag recursion detected.", hops);
+                throw new TagError("Tag recursion detected", hops);
             }
 
             hops.push(hop);
             lastTag = await this.fetch(hop);
 
             if (!lastTag) {
-                throw new TagError("Hop not found.", hop);
+                throw new TagError("Hop not found", hop);
             }
 
             if (lastTag.args.length > 0) {
@@ -61,73 +63,111 @@ class TagManager extends DBManager {
             }
         }
 
-        lastTag.hops = tag.hops;
+        lastTag.hops = hops;
         lastTag.args = args.join(" ");
 
         return lastTag;
     }
 
     async add(name, body, owner, type) {
+        const existingTag = await this.fetch(name);
+
+        if (existingTag) {
+            throw new TagError("Tag already exists");
+        }
+
+        if (typeof body === "undefined" || body.length < 1) {
+            throw new TagError("Can't add an empty tag");
+        }
+
         const tag = new Tag({
             name,
             body,
             owner,
-            registered: Date.now(),
             type
         });
 
         const tagSize = tag.getSize();
-        await this.updateQuota(owner, tagSize);
 
         await this.tag_db.add(tag);
+        await this.updateQuota(owner, tagSize);
 
         return tag;
     }
 
     async edit(tag, body, type) {
+        if (!tag) {
+            throw new TagError("Tag doesn't exist");
+        }
+
+        if (typeof body === "undefined" || body.length < 1) {
+            throw new TagError("Tag body is empty");
+        }
+
         const newTag = new Tag({
+            ...tag,
             name: tag.name,
             body,
             type
         });
 
         if (tag.isEquivalent(newTag)) {
-            throw new TagError("Can't update tag with the same body.");
+            throw new TagError("Can't update tag with the same body");
         }
 
         const oldTagSize = tag.getSize(),
             newTagSize = newTag.getSize(),
             sizeDiff = newTagSize - oldTagSize;
 
-        await this.updateQuota(tag.owner, sizeDiff);
         await this.tag_db.edit(newTag);
+        await this.updateQuota(tag.owner, sizeDiff);
 
         return newTag;
     }
 
-    async alias(tag, aliasName, aliasHops, args) {
-        if (typeof aliasHops === "undefined" || aliasHops.length === 0) {
-            aliasHops = [aliasName];
+    async alias(tag, aliasTag, args, owner) {
+        let create = false;
+
+        if (!tag) {
+            create = true;
         }
 
-        const hops = [tag.name].concat(aliasHops),
-            newTag = new Tag({
-                name: tag.name,
-                args,
-                hops
-            });
+        if (!aliasTag) {
+            throw new TagError("Alias target doesn't exist");
+        }
 
-        const oldTagSize = tag.getSize(),
-            newTagSize = newTag.getSize(),
-            sizeDiff = newTagSize - oldTagSize;
+        const aliasHops = aliasTag.hops,
+            hops = [tag.name].concat(aliasHops);
+
+        const newTag = new Tag({
+            name: tag.name,
+            args,
+            hops
+        });
+
+        let newTagSize = newTag.getSize(),
+            sizeDiff = newTagSize;
+
+        if (create) {
+            newTag.owner = owner;
+            await this.tag_db.add(newTag);
+        } else {
+            const oldTagSize = tag.getSize();
+            sizeDiff -= oldTagSize;
+
+            await this.tag_db.edit(newTag);
+        }
 
         await this.updateQuota(tag.owner, sizeDiff);
-        await this.tag_db.edit(newTag);
 
-        return newTag;
+        return [newTag, create];
     }
 
     async chown(tag, newOwner) {
+        if (!tag) {
+            throw new TagError("Tag doesn't exist");
+        }
+
         const tagSize = tag.getSize();
 
         await this.updateQuota(tag.owner, -tagSize);
@@ -139,10 +179,16 @@ class TagManager extends DBManager {
     }
 
     async delete(tag) {
+        if (!tag) {
+            throw new TagError("Tag doesn't exist");
+        }
+
         const tagSize = tag.getSize();
 
         await this.updateQuota(tag.owner, -tagSize);
         await this.tag_db.delete(tag);
+
+        return tag;
     }
 
     async list(id) {
@@ -217,7 +263,7 @@ class TagManager extends DBManager {
         const newQuota = currentQuota + difference;
 
         if (newQuota > this.maxQuota) {
-            throw new TagError(`Maximum quota of ${this.maxQuota}kb has been exceeded.`);
+            throw new TagError(`Maximum quota of ${this.maxQuota}kb has been exceeded`);
         }
 
         await this.tag_db.quotaSet(id, newQuota);
@@ -231,7 +277,7 @@ class TagManager extends DBManager {
 
         if (attach.contentType.startsWith("text/plain") || attach.contentType.startsWith("application/javascript")) {
             if (attach.size > this.maxTagSize * 1024) {
-                throw new TagError(`Scripts can take up at most ${this.maxTagSize}kb.`);
+                throw new TagError(`Scripts can take up at most ${this.maxTagSize}kb`);
             }
 
             body = (

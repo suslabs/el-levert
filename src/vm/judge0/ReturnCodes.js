@@ -1,4 +1,4 @@
-const ErrorCodes = {
+const ReturnCodes = {
     1: "In Queue",
     2: "Processing",
     3: "Accepted",
@@ -15,4 +15,4 @@ const ErrorCodes = {
     14: "Exec Format Error"
 };
 
-export default ErrorCodes;
+export default ReturnCodes;

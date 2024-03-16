@@ -27,14 +27,19 @@ export default {
 
         level = parseInt(level);
 
-        if (isNaN(level) || level < 0) {
-            return `:warning: Invalid level: \`${level}\`. Level must be an int larger than 0.`;
-        }
+        try {
+            await getClient().permManager.addGroup(g_name, level);
+        } catch (err) {
+            if (err.name === "PermissionError") {
+                switch (err.message) {
+                    case "Invalid level":
+                        return `Invalid level: \`${level}\`. Level must be an int larger than 0.`;
+                    default:
+                        return `:warning: ${err.message}.`;
+                }
+            }
 
-        const res = await getClient().permManager.addGroup(g_name, level);
-
-        if (!res) {
-            return `:warning: Can't create the **${g_name}** group.`;
+            throw err;
         }
 
         return `:white_check_mark: Added group **${g_name}**.`;

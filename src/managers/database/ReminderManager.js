@@ -4,6 +4,7 @@ import { getClient, getLogger } from "../../LevertClient.js";
 import ReminderDatabase from "../../database/ReminderDatabase.js";
 
 import Reminder from "../../structures/Reminder.js";
+import ReminderError from "../../errors/ReminderError.js";
 
 const sendDelay = 1000,
     maxMsgLength = 512;
@@ -41,9 +42,14 @@ class ReminderManager extends DBManager {
     }
 
     async add(user, end, msg) {
+        if (end < Date.now()) {
+            throw new ReminderError("Invalid end time");
+        }
+
         const reminder = new Reminder({ user, end, msg });
 
         await this.remind_db.add(reminder);
+
         return reminder;
     }
 
@@ -57,10 +63,11 @@ class ReminderManager extends DBManager {
         const reminder = reminders[index];
 
         if (typeof reminder === "undefined") {
-            return false;
+            throw new ReminderError("Reminder doesn't exist");
         }
 
         await this.remind_db.remove(reminder);
+
         return true;
     }
 

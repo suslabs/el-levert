@@ -50,7 +50,7 @@ export default {
             await getClient().tagManager.edit(tag, body, type);
         } catch (err) {
             if (err.name === "TagError") {
-                return ":warning: " + err.message;
+                return `:warning: ${err.message}.`;
             }
 
             throw err;

@@ -31,13 +31,23 @@ export default {
             }
         }
 
-        const end = new Date(parsedDate).getTime();
+        let end = new Date(parsedDate).getTime(),
+            reminder;
 
-        if (end < Date.now()) {
-            return ":warning: Can't add a reminder for a time in the past.";
+        try {
+            reminder = await getClient().reminderManager.add(msg.author.id, end, message);
+        } catch (err) {
+            if (err.name === "ReminderError") {
+                switch (err.message) {
+                    case "Invalid end time":
+                        return ":warning: Can't add a reminder for a time in the past.";
+                    default:
+                        return `:warning: ${err.message}.`;
+                }
+            }
+
+            throw err;
         }
-
-        const reminder = await getClient().reminderManager.add(msg.author.id, end, message);
 
         return ":information_source: You will be reminded on " + reminder.format();
     }

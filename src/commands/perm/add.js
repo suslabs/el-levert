@@ -33,18 +33,22 @@ export default {
 
         const maxLevel = await getClient().permManager.maxLevel(msg.author.id);
 
-        if (maxLevel < group.level) {
-            return `:warning: Can't add yourself to a group that is higher than yourself. (${maxLevel} -> ${group.level})`;
+        if (group.level > maxLevel) {
+            return `:warning: Can't a user to a group that is higher than your own. (${maxLevel} -> ${group.level})`;
         }
 
         if (await getClient().permManager.isInGroup(g_name, find.id)) {
             return `:warning: User \`${find.user.username}\` is already a part of the group **${g_name}**.`;
         }
 
-        const res = await getClient().permManager.add(group, find.user.id);
+        try {
+            await getClient().permManager.add(group, find.user.id);
+        } catch (err) {
+            if (err.name === "PermissionError") {
+                return `:warning: ${err.message}.`;
+            }
 
-        if (!res) {
-            return `:warning: Can't add a user to the **${g_name}** group.`;
+            throw err;
         }
 
         return `:white_check_mark: Added user \`${find.user.username}\` (${find.user.id}) to group **${g_name}**.`;

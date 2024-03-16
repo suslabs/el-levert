@@ -34,7 +34,7 @@ export default {
             return ":warning: Tag owner not found.";
         }
 
-        let out = `:information_source: \`${owner.username}\``;
+        let out = `:information_source: Tag **${t_name}** is owned by \`${owner.username}\``;
 
         if (typeof owner.nickname !== "undefined") {
             out += ` (also known as \`${owner.nickname}\`)`;

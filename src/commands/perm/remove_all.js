@@ -18,18 +18,18 @@ export default {
 
         if (typeof find === "undefined") {
             let out = `:warning: User \`${u_name}\` not found. Tried removing by verbatim input: \`${u_name}\``,
-                res = await getClient().permManager.removeAll(u_name);
+                removed = await getClient().permManager.removeAll(u_name);
 
-            if (res.changes === 0) {
+            if (!removed) {
                 out += `\nUser doesn't have any permissions.`;
             }
 
             return out;
         }
 
-        const res = await getClient().permManager.removeAll(find.user.id);
+        const removed = await getClient().permManager.removeAll(find.user.id);
 
-        if (res.changes === 0) {
+        if (!removed) {
             return `:information_source: User \`${find.user.username}\` doesn't have any permissions.`;
         }
 

@@ -12,10 +12,25 @@ export default {
             return ":information_source: `reminder remove [index]`";
         }
 
-        const res = await getClient().reminderManager.remove(msg.author.id, index - 1);
+        let res = false;
+
+        try {
+            res = await getClient().reminderManager.remove(msg.author.id, index - 1);
+        } catch (err) {
+            if (err.name === "ReminderError") {
+                switch (err.message) {
+                    case "Reminder doesn't exist":
+                        return `:warning: Reminder **${index}** doesn't exist.`;
+                    default:
+                        return `:warning: ${err.message}.`;
+                }
+            }
+
+            throw err;
+        }
 
         if (!res) {
-            return `:warning: Reminder **${index}** doesn't exist.`;
+            return ":information_source: You don't have any reminders.";
         }
 
         return `:information_source: Removed reminder **${index}**.`;

@@ -1,6 +1,6 @@
 import { getClient } from "../../LevertClient.js";
 
-import ErrorCodes from "./ErrorCodes.js";
+import ReturnCodes from "./ReturnCodes.js";
 import VMError from "../../errors/VMError.js";
 
 import axios from "axios";
@@ -10,12 +10,12 @@ class ExternalVM {
         this.memLimit = getClient().config.otherMemLimit;
         this.timeLimit = getClient().config.otherTimeLimit;
 
+        this.codes = ReturnCodes;
+
         this.base = "http://localhost:2358/submissions/";
         this.submitUrl = "?base64_encoded=false&wait=false";
         this.statusUrl = "?base64_encoded=false&fields=status_id";
         this.outputUrl = "?base64_encoded=true&fields=stdout,stderr,compile_output,exit_code";
-
-        this.codes = ErrorCodes;
     }
 
     async submit(code, lang, stdin) {

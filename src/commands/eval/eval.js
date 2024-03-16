@@ -11,7 +11,7 @@ async function evalBase(args, msg) {
         } catch (err) {
             if (err.name === "TagError") {
                 return {
-                    err: ":warning: " + err.message
+                    err: `:warning: ${err.message}.`
                 };
             }
 
