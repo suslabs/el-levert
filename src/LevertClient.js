@@ -8,7 +8,7 @@ import getDefaultLoggerConfig from "./logger/DefaultConfig.js";
 
 import wrapEvent from "./client/wrapEvent.js";
 import executeAllHandlers from "./client/executeAllHandlers.js";
-import { registerGlobalHandler, removeGlobalHandler } from "./client/registerGlobalHandler.js";
+import { registerGlobalHandler, removeGlobalHandler } from "./client/GlobalHandler.js";
 
 import ReactionHandler from "./handlers/ReactionHandler.js";
 import CommandHandler from "./handlers/CommandHandler.js";
