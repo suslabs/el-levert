@@ -10,7 +10,7 @@ const sendDelay = 1000,
     maxMsgLength = 512;
 
 class ReminderManager extends DBManager {
-    constructor(enabled = true) {
+    constructor(enabled) {
         super(enabled, "reminder", ReminderDatabase, "remind_db");
 
         this.sendDelay = sendDelay;

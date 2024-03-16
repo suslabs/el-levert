@@ -36,17 +36,20 @@ class DBManager extends Manager {
         super(enabled);
 
         this.name = name;
+        this.classType = classType;
+        this.fieldName = fieldName;
 
+        this.setPaths();
+    }
+
+    setPaths() {
         this.dbDir = getClient().config.dbPath;
 
-        const dbFilename = dbFilenames[name];
+        const dbFilename = dbFilenames[this.name];
         this.dbPath = path.resolve(this.dbDir, dbFilename);
 
         const queryBase = getClient().config.queryPath;
-        this.queryDir = path.resolve(queryBase, name);
-
-        this.classType = classType;
-        this.fieldName = fieldName;
+        this.queryDir = path.resolve(queryBase, this.name);
     }
 
     async checkDatabase() {

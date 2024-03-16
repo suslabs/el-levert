@@ -2,7 +2,7 @@ import { getClient } from "../../LevertClient.js";
 import BaseCommandManager from "./BaseCommandManager.js";
 
 class CLICommandManager extends BaseCommandManager {
-    constructor(enabled = true) {
+    constructor(enabled) {
         const commandsDir = getClient().config.cliCommandsPath,
             commandPrefix = getClient().config.cliCmdPrefix;
 

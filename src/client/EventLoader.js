@@ -22,7 +22,7 @@ class EventLoader {
 
     getEventPaths() {
         if (typeof this.eventsDir === "undefined" || this.eventsDir.length < 1) {
-            return [];
+            throw new EventError("Invalid events directory");
         }
 
         let files;
@@ -31,7 +31,7 @@ class EventLoader {
             files = Util.getFilesRecSync(this.eventsDir);
         } catch (err) {
             if (err.code === "ENOENT") {
-                throw new EventError("Couldn't find the events directory.");
+                throw new EventError("Couldn't find the events directory");
             }
 
             throw err;
@@ -85,7 +85,7 @@ class EventLoader {
             paths = this.getEventPaths();
         } catch (err) {
             if (err.name === "EventError") {
-                this.failure(err.message);
+                this.failure(err.message + ".");
             } else {
                 this.failure(err, "Error occured while reading events directory:");
             }

@@ -1,6 +1,6 @@
-import BaseLoader from "./BaseLoader.js";
+import BaseConfigLoader from "./BaseConfigLoader.js";
 
-class ReactionsLoader extends BaseLoader {
+class ReactionsLoader extends BaseConfigLoader {
     constructor(logger, options) {
         super("reactions", logger, options);
     }
