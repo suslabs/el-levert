@@ -1,5 +1,4 @@
-import ConfigError from "../errors/ConfigError.js";
-
+import LoaderError from "../errors/LoaderError.js";
 import LoadStatus from "./LoadStatus.js";
 
 import Util from "../util/Util.js";
@@ -36,7 +35,7 @@ async function write(...args) {
 class Loader {
     constructor(name = "", logger, options = {}) {
         if (typeof this.load !== "function") {
-            throw new ConfigError("Child class must have a load function");
+            throw new LoaderError("Child class must have a load function");
         }
 
         this.name = name;
@@ -110,7 +109,7 @@ class Loader {
     failure(err, loggerMsg, logLevel = "error") {
         if (this.throwOnFailure) {
             if (typeof err === "string") {
-                throw new ConfigError(err);
+                throw new LoaderError(err);
             } else {
                 throw err;
             }
