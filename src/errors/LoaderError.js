@@ -1,10 +1,10 @@
-class ConfigError extends Error {
+class LoaderError extends Error {
     constructor(message = "", ...args) {
         super(message, ...args);
 
-        this.name = "ConfigError";
+        this.name = "LoaderError";
         this.message = message;
     }
 }
 
-export default ConfigError;
+export default LoaderError;
