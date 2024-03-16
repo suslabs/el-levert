@@ -8,6 +8,8 @@ import { DisabledGroup, OwnerGroup, OwnerUser } from "../../structures/permissio
 import Group from "../../structures/permission/Group.js";
 import User from "../../structures/permission/User.js";
 
+import PermissionError from "../../errors/PermissionError.js";
+
 const isGroupName = name => {
     return /^[A-Za-z0-9\-_]+$/.test(name);
 };
@@ -88,8 +90,12 @@ class PermissionManager extends DBManager {
     }
 
     async add(group, id) {
+        if (!group) {
+            throw new PermissionError("Group doesn't exist");
+        }
+
         if (group.name === OwnerGroup.name) {
-            return false;
+            throw new PermissionError("Can't add a user to the owner group");
         }
 
         const user = new User({ id });
@@ -100,26 +106,34 @@ class PermissionManager extends DBManager {
     }
 
     async remove(group, id) {
+        if (!group) {
+            throw new PermissionError("Group doesn't exist");
+        }
+
         if (group.name === OwnerGroup.name) {
-            return false;
+            throw new PermissionError("Can't remove a user from the owner group");
         }
 
         const user = new User({ id }),
             res = await this.perm_db.remove(group, user);
 
-        return res;
+        return res.changes > 0;
     }
 
     async removeAll(id) {
         const user = new User({ id }),
             res = await this.perm_db.removeAll(user);
 
-        return res;
+        return res.changes > 0;
     }
 
     async addGroup(name, level) {
         if (name === OwnerGroup.name) {
-            return false;
+            throw new PermissionError('Can\'t create a group with the name "owner"');
+        }
+
+        if (isNaN(level) || level < 0) {
+            throw new PermissionError("Invalid level");
         }
 
         const group = new Group({
@@ -132,14 +146,14 @@ class PermissionManager extends DBManager {
         return group;
     }
 
-    async removeGroup(name) {
-        if (name === OwnerGroup.name) {
-            return false;
+    async removeGroup(group) {
+        if (!group) {
+            throw new PermissionError("Group doesn't exist");
         }
 
-        const group = new Group({
-            name
-        });
+        if (group.name === OwnerGroup.name) {
+            throw new PermissionError("Can't remove the owner group");
+        }
 
         await this.perm_db.removeGroup(group);
 

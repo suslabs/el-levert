@@ -19,19 +19,6 @@ export default {
             return ":warning: " + e;
         }
 
-        const tag = await getClient().tagManager.fetch(t_name);
-
-        if (tag) {
-            const owner = await getClient().findUserById(tag.owner),
-                out = `:warning: Tag **${t_name}** already exists,`;
-
-            if (!owner) {
-                return out + " tag owner not found.";
-            }
-
-            return out + ` and is owned by \`${owner.username}\``;
-        }
-
         const parsed = await this.parentCmd.parseBase(t_args, msg),
             { body, type } = parsed;
 
@@ -43,7 +30,19 @@ export default {
             await getClient().tagManager.add(t_name, body, msg.author.id, type);
         } catch (err) {
             if (err.name === "TagError") {
-                return ":warning: " + err.message;
+                switch (err.message) {
+                    case "Tag already exists":
+                        const owner = await getClient().findUserById(tag.owner),
+                            out = `:warning: Tag **${t_name}** already exists,`;
+
+                        if (!owner) {
+                            return out + " tag owner not found.";
+                        }
+
+                        return out + ` and is owned by \`${owner.username}\``;
+                    default:
+                        return `:warning: ${err.message}.`;
+                }
             }
 
             throw err;

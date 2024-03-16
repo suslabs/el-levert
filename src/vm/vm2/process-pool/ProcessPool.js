@@ -6,6 +6,8 @@ import genericPool from "generic-pool";
 import VMUtil from "../../util/VMUtil.js";
 import Util from "../../../util/Util.js";
 
+import VMError from "../../../errors/VMError.js";
+
 function listener(socket, funcs) {
     return new Promise((resolve, reject) => {
         let buf = "";
@@ -176,7 +178,7 @@ class VM2ProcPool {
                 await this.prepare_cp();
             }
 
-            throw new Error(limit ?? error);
+            throw new VMError(limit ?? error);
         } finally {
             clearTimeout(timer);
         }

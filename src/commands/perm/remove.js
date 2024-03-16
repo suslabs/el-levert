@@ -31,13 +31,19 @@ export default {
             return `:warning: User \`${u_name}\` not found.`;
         }
 
-        const res = await getClient().permManager.remove(group, find.user.id);
+        let removed = false;
 
-        if (!res) {
-            return `:warning: Can't remove a user from the **${g_name}** group.`;
+        try {
+            removed = await getClient().permManager.remove(group, find.user.id);
+        } catch (err) {
+            if (err.name === "PermissionError") {
+                return `:warning: ${err.message}.`;
+            }
+
+            throw err;
         }
 
-        if (res.changes === 0) {
+        if (!removed) {
             return `:warning: User \`${find.user.username}\` (${find.user.id}) is not in group **${g_name}**.`;
         }
 

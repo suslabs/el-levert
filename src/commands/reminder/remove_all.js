@@ -9,7 +9,7 @@ export default {
         const res = await getClient().reminderManager.removeAll(msg.author.id);
 
         if (!res) {
-            return ":information_source: You have no reminders.";
+            return ":information_source: You don't have any reminders.";
         }
 
         return `:information_source: Removed all reminders.`;

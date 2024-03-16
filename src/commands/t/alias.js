@@ -33,21 +33,7 @@ If you want to de-alias the tag, \`edit\` it.`;
         let tag = await getClient().tagManager.fetch(t_name),
             out = "";
 
-        if (!tag) {
-            try {
-                tag = await getClient().tagManager.add(t_name, "", msg.author.id);
-            } catch (err) {
-                if (err.name === "TagError") {
-                    return ":warning: " + err.message;
-                }
-
-                throw err;
-            }
-
-            out = `Created tag **${t_name}**. `;
-        }
-
-        if (perm < getClient().permManager.modLevel && tag.owner !== msg.author.id) {
+        if (tag && perm < getClient().permManager.modLevel && tag.owner !== msg.author.id) {
             const owner = await getClient().findUserById(tag.owner),
                 out = `:warning: You can only edit your own tags.`;
 
@@ -55,20 +41,29 @@ If you want to de-alias the tag, \`edit\` it.`;
                 return out + " Tag owner not found.";
             }
 
-            return out + ` The tag is owned by \`${owner.username}\`.`;
+            return `${out} The tag is owned by \`${owner.username}\`.`;
         }
 
-        const a_tag = await getClient().tagManager.fetch(a_name),
-            a_hops = a_tag.hops;
+        const a_tag = await getClient().tagManager.fetch(a_name);
+
+        if (!a_tag) {
+            return `:warning: Tag **${a_tag.name}** doesn't exist.`;
+        }
+
+        let created = false;
 
         try {
-            await getClient().tagManager.alias(tag, a_name, a_hops, a_args);
+            [_, created] = await getClient().tagManager.alias(tag, a_tag, a_args);
         } catch (err) {
             if (err.name === "TagError") {
-                return ":warning: " + err.message;
+                return `:warning: ${err.message}.`;
             }
 
             throw err;
+        }
+
+        if (created) {
+            out = `Created tag **${t_name}**. `;
         }
 
         return `:white_check_mark: ${out}Aliased tag **${t_name}** to **${a_name}**.`;

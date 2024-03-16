@@ -25,10 +25,14 @@ export default {
             return `:warning: Group **${g_name}** doesn't exist.`;
         }
 
-        const res = await getClient().permManager.removeGroup(g_name);
+        try {
+            await getClient().permManager.remove(group, find.user.id);
+        } catch (err) {
+            if (err.name === "PermissionError") {
+                return `:warning: ${err.message}.`;
+            }
 
-        if (!res) {
-            return `:warning: Can't remove the **${g_name}** group.`;
+            throw err;
         }
 
         return `:white_check_mark: Removed group **${g_name}** and all of it's users.`;
