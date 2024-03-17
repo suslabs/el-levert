@@ -41,6 +41,10 @@ class EventObjectLoader extends ObjectLoader {
     getLoadedMessage() {
         return `Loaded ${this.getName()}: ${this.data.name}`;
     }
+
+    getIgnoredMessage() {
+        return `Didn't load ${this.getName()}.`;
+    }
 }
 
 export default EventObjectLoader;
