@@ -23,6 +23,7 @@ class BaseConfigLoader extends JsonLoader {
             configPath = path.resolve(configPaths.dir, configFilename);
 
         super(name, configPath, logger, {
+            validateWithSchema: true,
             schemaDir: configPaths.schemaDir,
             ...options
         });

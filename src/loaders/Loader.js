@@ -5,7 +5,7 @@ import Util from "../util/Util.js";
 import { isPromise } from "../util/TypeTester.js";
 
 function load(...args) {
-    this.logger?.info(`Loading${this.getName()}...`);
+    this.logger?.info(`Loading ${this.getName()}...`);
 
     const res = this.childLoad(...args);
 
@@ -21,7 +21,7 @@ async function write(...args) {
         return LoadStatus.successful;
     }
 
-    this.logger?.info(`Writing${this.getName()}...`);
+    this.logger?.info(`Writing ${this.getName()}...`);
 
     const res = this.childWrite(...args);
 
@@ -54,11 +54,7 @@ class Loader {
     }
 
     getName(capitalized = false) {
-        let name = "";
-
-        if (this.name.length > 0) {
-            name += this.name;
-        }
+        let name = this.name;
 
         if (this.type.length > 0) {
             if (name.length > 0) {
@@ -68,15 +64,11 @@ class Loader {
             name += this.type;
         }
 
-        if (name.length < 1) {
-            return "";
-        }
-
         if (capitalized) {
             name = Util.capitalize(name);
         }
 
-        return " " + name;
+        return name;
     }
 
     loadSync(status) {
@@ -84,7 +76,7 @@ class Loader {
             return [undefined, status];
         }
 
-        this.logger?.info(`Loaded${this.getName()} successfully.`);
+        this.logger?.info(`Loaded ${this.getName()} successfully.`);
         return [this.data, status];
     }
 
@@ -95,7 +87,7 @@ class Loader {
 
     writeSync(status) {
         if (status === LoadStatus.successful) {
-            this.logger?.info(`Wrote${this.getName()} successfully.`);
+            this.logger?.info(`Wrote ${this.getName()} successfully.`);
         }
 
         return status ?? LoadStatus.successful;
