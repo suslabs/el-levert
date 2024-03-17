@@ -11,13 +11,22 @@ class FileLoader extends Loader {
             ...options
         });
 
-        this.path = path.resolve(filePath);
-        this.encoding = options.encoding ?? "utf-8";
+        if (typeof filePath === "string") {
+            this.path = path.resolve(filePath);
+        } else {
+            this.path = filePath;
+        }
 
         this.tempPath = this.getTempPath();
+
+        this.encoding = options.encoding ?? "utf-8";
     }
 
     getTempPath() {
+        if (typeof this.path !== "string") {
+            return;
+        }
+
         const parsed = path.parse(this.path),
             tempPath = path.join(parsed.dir, parsed.name + ".tmp");
 
@@ -41,6 +50,15 @@ class FileLoader extends Loader {
     }
 
     async load() {
+        switch (typeof this.path) {
+            case "string":
+                break;
+            case "undefined":
+                return this.failure("No file path provided.");
+            default:
+                return this.failure("Invalid file path.");
+        }
+
         let text;
 
         try {
@@ -50,7 +68,7 @@ class FileLoader extends Loader {
                 return this.failure(`${this.getName(true)} not found at path: ${this.path}`);
             }
 
-            return this.failure(err, `Error occured while reading ${this.getName()}:`);
+            return this.failure(err, `Error occured while loading ${this.getName()}:`);
         }
 
         text = text.trim();
@@ -60,7 +78,14 @@ class FileLoader extends Loader {
     }
 
     async write(data) {
-        data = data ?? this.data;
+        switch (typeof this.path) {
+            case "string":
+                break;
+            case "undefined":
+                return this.failure("No file path provided.");
+            default:
+                return this.failure("Invalid file path.");
+        }
 
         try {
             await fs.writeFile(this.tempPath, data, this.fsConfig);
@@ -79,6 +104,14 @@ class FileLoader extends Loader {
         }
 
         return LoadStatus.successful;
+    }
+
+    getLoadingMessage() {
+        return `Loading ${this.getName()}: ${this.path}`;
+    }
+
+    getWritingMessage() {
+        return `Writing ${this.getName()}: ${this.path}`;
     }
 }
 

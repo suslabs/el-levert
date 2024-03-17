@@ -1,6 +1,6 @@
-import ConfigLoader from "./loaders/ConfigLoader.js";
-import ReactionsLoader from "./loaders/ReactionsLoader.js";
-import AuthLoader from "./loaders/AuthLoader.js";
+import ConfigLoader from "../loaders/config/ConfigLoader.js";
+import ReactionsLoader from "../loaders/config/ReactionsLoader.js";
+import AuthLoader from "../loaders/config/AuthLoader.js";
 
 import LoadStatus from "../loaders/LoadStatus.js";
 

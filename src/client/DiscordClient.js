@@ -1,10 +1,10 @@
 import discord from "discord.js";
 
 import ClientError from "../errors/ClientError.js";
-import EventLoader from "./EventLoader.js";
+import EventLoader from "../loaders/event/EventLoader.js";
 
 import Util from "../util/Util.js";
-import diceDist from "../util/diceDist.js";
+import diceDist from "../util/search/diceDist.js";
 
 const { Client, GatewayIntentBits, PermissionsBitField, ActivityType, Partials, DiscordAPIError } = discord;
 
@@ -17,10 +17,6 @@ const defaultIntents = [
         GatewayIntentBits.DirectMessages
     ],
     defaultPartials = [Partials.Channel];
-
-const eventLoaderConfig = {
-    throwOnFailure: false
-};
 
 const userIdRegex = /(\d{17,20})/,
     mentionRegex = /<@(\d{17,20})>/;
@@ -134,19 +130,18 @@ class DiscordClient {
     }
 
     async loadEvents() {
-        const eventLoader = new EventLoader(this.client, this.eventsDir, {
-            ...eventLoaderConfig,
-            logger: this.logger,
+        const eventLoader = new EventLoader(this.eventsDir, this.client, this.logger, {
+            client: this.client,
             wrapFunc: this.wrapEvent,
             wrapEvents: this.wrapEvents
         });
 
-        await eventLoader.loadEvents();
+        await eventLoader.load();
         this.eventLoader = eventLoader;
     }
 
     unloadEvents() {
-        if (typeof this.eventLoader === "undefined") {
+        if (typeof this.eventLoader === "undefined" || !this.eventLoader.loaded) {
             throw new ClientError("Can't unload events, events weren't loaded.");
         }
 

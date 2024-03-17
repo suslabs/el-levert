@@ -43,6 +43,17 @@ class Command {
         return this.description.length > 0 || this.usage.length > 0;
     }
 
+    getName() {
+        let names = [this.name].concat(this.aliases);
+        names = names.join("/");
+
+        if (this.isSubcmd) {
+            return this.parentCmd.name + ": " + names;
+        }
+
+        return names;
+    }
+
     getSubcmd(name) {
         let subcmds;
 

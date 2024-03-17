@@ -137,8 +137,10 @@ class LevertClient extends DiscordClient {
         this.managers = managers;
 
         for (const [name, manager] of Object.entries(managers)) {
-            this[name] = manager;
+            this.logger.info(`Loading manager: ${name}`);
+
             await manager.load();
+            this[name] = manager;
 
             this.logger.info(`Loaded manager: ${name}`);
         }

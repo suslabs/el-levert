@@ -6,7 +6,7 @@ class ReactionsLoader extends BaseConfigLoader {
     }
 
     modify(config) {
-        if (typeof config.parans === "undefined") {
+        if (typeof config.parans !== "object") {
             config.parans = {};
         }
     }

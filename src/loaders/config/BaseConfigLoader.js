@@ -1,9 +1,9 @@
 import path from "path";
 
-import JsonLoader from "../../loaders/JsonLoader.js";
-import LoadStatus from "../../loaders/LoadStatus.js";
+import JsonLoader from "../JsonLoader.js";
+import LoadStatus from "../LoadStatus.js";
 
-import configPaths from "../configPaths.json" assert { type: "json" };
+import configPaths from "../../config/configPaths.json" assert { type: "json" };
 
 function modify() {
     if (typeof this.childModify !== "function") {

@@ -1,12 +1,11 @@
-import path from "path";
-
 import Manager from "../Manager.js";
-import ManagerError from "../../errors/ManagerError.js";
 
 import { getClient, getLogger } from "../../LevertClient.js";
-import Util from "../../util/Util.js";
 
-import Command from "../../structures/Command.js";
+import CommandLoader from "../../loaders/command/CommandLoader.js";
+import LoadStatus from "../../loaders/LoadStatus.js";
+
+import Util from "../../util/Util.js";
 
 class BaseCommandManager extends Manager {
     constructor(enabled, commandsDir, commandPrefix, options = {}) {
@@ -16,7 +15,7 @@ class BaseCommandManager extends Manager {
         this.commandPrefix = commandPrefix;
 
         this.wrapCommands = options.wrapCommands ?? getClient().config.wrapEvents;
-        this.excludeDirs = options.excludeDirs ?? [];
+        this.excludeDirs = options.excludeDirs;
         this.cmdFileExtension = options.cmdFileExtension ?? ".js";
 
         this.commands = [];
@@ -52,10 +51,7 @@ class BaseCommandManager extends Manager {
 
     getHelp(perm, discord = true) {
         const allowedCmds = this.getCommands(perm),
-            cmdNames = allowedCmds.map(command => {
-                const names = [command.name].concat(command.aliases);
-                return names.join("/");
-            });
+            cmdNames = allowedCmds.map(command => command.getName());
 
         cmdNames.sort();
 
@@ -66,124 +62,20 @@ class BaseCommandManager extends Manager {
         }
     }
 
-    getCommandPaths() {
-        if (typeof this.commandsDir === "undefined" || this.commandsDir.length < 1) {
-            throw new ManagerError("Invalid commands directory");
-        }
-
-        let files;
-
-        try {
-            files = Util.getFilesRecSync(this.commandsDir);
-        } catch (err) {
-            if (err.code === "ENOENT") {
-                throw new ManagerError("Couldn't find the commands directory");
-            }
-
-            throw err;
-        }
-
-        const excludeDirs = this.excludeDirs.map(dir => path.resolve(dir));
-
-        files = files.filter(file => {
-            for (const excludeDir of excludeDirs) {
-                if (file.startsWith(excludeDir)) {
-                    return false;
-                }
-            }
-
-            return true;
-        });
-
-        files = files.filter(file => {
-            const extension = path.extname(file);
-            return extension === this.cmdFileExtension;
-        });
-
-        return files;
-    }
-
-    async loadCommand(commandPath) {
-        const cmdProperties = await Util.import(commandPath);
-
-        if (typeof cmdProperties === "undefined") {
-            return false;
-        }
-
-        const command = new Command(cmdProperties);
-
-        if (typeof command.load !== "undefined") {
-            let loadFunc = command.load.bind(command);
-
-            if (this.wrapCommands) {
-                loadFunc = getClient().wrapEvent(loadFunc);
-            }
-
-            command.load = loadFunc;
-            const res = await loadFunc();
-
-            if (res === false) {
-                return false;
-            }
-        }
-
-        const handlerFunc = command.handler.bind(command);
-        command.handler = handlerFunc;
-
-        this.commands.push(command);
-        return true;
-    }
-
     async loadCommands() {
-        getLogger().info("Loading commands...");
+        const loader = new CommandLoader(this.commandsDir, getLogger(), {
+            excludeDirs: this.excludeDirs,
+            fileExtension: this.cmdFileExtension
+        });
 
-        let paths;
+        const [commands, status] = await loader.load();
 
-        try {
-            paths = this.getCommandPaths();
-        } catch (err) {
-            if (err.name === "ManagerError") {
-                getLogger().error(err.message + ".");
-            } else {
-                getLogger().error(err);
-            }
-
-            return { total: 0, ok: 0, bad: 0, subcommands: 0 };
-        }
-
-        if (paths.length === 0) {
-            getLogger().warn("Couldn't find any commands.");
-            return { total: 0, ok: 0, bad: 0, subcommands: 0 };
-        }
-
-        let ok = 0,
-            bad = 0;
-
-        for (const commandPath of paths) {
-            try {
-                const res = await this.loadCommand(commandPath);
-
-                if (res === true) {
-                    ok++;
-                }
-            } catch (err) {
-                getLogger().error("Error occured while loading command: " + commandPath, err);
-                bad++;
-            }
-        }
-
-        let total = ok + bad,
-            subcommands = 0;
-
-        if (ok + bad === 0) {
-            getLogger().warn("Couldn't load any commands.");
+        if (status === LoadStatus.failed) {
+            this.commands = [];
         } else {
-            getLogger().info(`Loaded ${total} commands. ${ok} successful, ${bad} failed.`);
-
-            subcommands = this.bindSubcommands();
+            this.commands = commands;
+            this.bindSubcommands();
         }
-
-        return { total, ok, bad, subcommands };
     }
 
     bindSubcommand(command, subcommand) {

@@ -7,7 +7,7 @@ import TagDatabase from "../../database/TagDatabase.js";
 
 import Tag from "../../structures/tag/Tag.js";
 
-import diceDist from "../../util/diceDist.js";
+import diceDist from "../../util/search/diceDist.js";
 import TagError from "../../errors/TagError.js";
 
 class TagManager extends DBManager {

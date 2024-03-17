@@ -42,7 +42,7 @@ function validate() {
         }
 
         if (!valid) {
-            return this.failure(`Validation failed: Invalid ${this.getName()}.` + error ? `\n${error}` : "");
+            return this.failure("Validation failed." + (error ? `\n${error}` : ""));
         }
     }
 
@@ -60,8 +60,8 @@ function validate() {
 }
 
 class JsonLoader extends FileLoader {
-    constructor(name, jsonPath, logger, options = {}) {
-        super(name, jsonPath, logger, options);
+    constructor(name, filePath, logger, options = {}) {
+        super(name, filePath, logger, options);
 
         this.validateWithSchema = options.validateWithSchema ?? false;
         this.schema = options.schema;
@@ -72,11 +72,11 @@ class JsonLoader extends FileLoader {
     }
 
     getSchemaPath(options) {
-        if (typeof options.schemaPath !== "undefined") {
+        if (typeof options.schemaPath === "string") {
             return options.schemaPath;
         }
 
-        if (typeof options.schemaDir === "undefined") {
+        if (typeof this.path !== "string" || typeof options.schemaDir !== "string") {
             return;
         }
 
@@ -105,7 +105,7 @@ class JsonLoader extends FileLoader {
         try {
             obj = JSON.parse(this.jsonString);
         } catch (err) {
-            return this.failure(err, `Error occured while parsing ${this.getName()}:`);
+            return this.failure(`Error occured while parsing ${this.getName()}: ${err.message}`);
         }
 
         this.data = obj;
@@ -113,21 +113,29 @@ class JsonLoader extends FileLoader {
         return LoadStatus.successful;
     }
 
-    async loadSchema() {
-        if (typeof this.schemaPath !== "undefined") {
-            const schemaOptions = { throwOnFailure: this.throwOnFailure },
-                schemaLoader = new FileLoader("schema", this.schemaPath, this.logger, schemaOptions);
+    async loadSchemaFile() {
+        const schemaOptions = { throwOnFailure: this.throwOnFailure },
+            schemaLoader = new FileLoader("schema", this.schemaPath, this.logger, schemaOptions);
 
-            const [schemaString, status] = await schemaLoader.load();
+        const [schemaString, status] = await schemaLoader.load();
 
-            if (status === LoadStatus.failed) {
-                return status;
-            }
-
-            this.schema = JSON.parse(schemaString);
+        if (status === LoadStatus.failed) {
+            return status;
         }
 
+        this.schema = JSON.parse(schemaString);
+
         return LoadStatus.successful;
+    }
+
+    async loadSchema() {
+        if (typeof this.schemaPath === "string") {
+            this.schemaLoadStatus = await this.loadSchemaFile();
+        } else if (typeof this.schema === "undefined") {
+            this.schemaLoadStatus = this.failure("No schema provided.");
+        } else {
+            this.schemaLoadStatus = LoadStatus.successful;
+        }
     }
 
     initValidator() {
@@ -170,7 +178,7 @@ class JsonLoader extends FileLoader {
         }
 
         if (this.validateWithSchema) {
-            this.schemaLoadStatus = await this.loadSchema();
+            await this.loadSchema();
         }
 
         status = this.validate();
@@ -180,6 +188,8 @@ class JsonLoader extends FileLoader {
 
         return status;
     }
+
+    async write() {}
 }
 
 export default JsonLoader;

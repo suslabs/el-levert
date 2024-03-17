@@ -1,7 +1,7 @@
 import ivm from "isolated-vm";
 
 import { getClient } from "../../../LevertClient.js";
-import VMUtil from "../../util/VMUtil.js";
+import VMUtil from "../../../util/vm/VMUtil.js";
 
 const FakeUtil = {
     findUsers: async search => {
