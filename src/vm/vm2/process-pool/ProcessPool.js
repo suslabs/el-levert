@@ -3,7 +3,7 @@ import net from "net";
 import crypto from "crypto";
 import genericPool from "generic-pool";
 
-import VMUtil from "../../util/VMUtil.js";
+import VMUtil from "../../../util/vm/VMUtil.js";
 import Util from "../../../util/Util.js";
 
 import VMError from "../../../errors/VMError.js";

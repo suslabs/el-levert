@@ -3,7 +3,7 @@ import FuncTypes from "./FuncTypes.js";
 import VMError from "../../errors/VMError.js";
 import ExitError from "../../vm/isolated-vm/functionErrors/ExitError.js";
 
-import getRegisterCode from "../../vm/util/getRegisterCode.js";
+import getRegisterCode from "../../util/vm/getRegisterCode.js";
 
 const defaultValues = {
     type: FuncTypes.regular,

@@ -5,8 +5,19 @@ import Util from "../util/Util.js";
 import { isPromise } from "../util/TypeTester.js";
 
 function load(...args) {
-    this.logger?.info(`Loading ${this.getName()}...`);
+    let loadingMessage;
 
+    if (typeof this.getLoadingMessage === "function") {
+        loadingMessage = this.getLoadingMessage();
+    } else {
+        loadingMessage = `Loading ${this.getName()}...`;
+    }
+
+    if (loadingMessage.length > 0) {
+        this.logger?.info(loadingMessage);
+    }
+
+    this.result = {};
     const res = this.childLoad(...args);
 
     if (isPromise(res)) {
@@ -16,19 +27,35 @@ function load(...args) {
     }
 }
 
-async function write(...args) {
+async function write(data, ...args) {
     if (typeof this.childWrite !== "function") {
         return LoadStatus.successful;
     }
 
-    this.logger?.info(`Writing ${this.getName()}...`);
+    let writingMessage;
 
-    const res = this.childWrite(...args);
+    if (typeof this.getWritingMessage === "function") {
+        writingMessage = this.getWritingMessage();
+    } else {
+        writingMessage = `Writing ${this.getName()}...`;
+    }
+
+    if (writingMessage.length > 0) {
+        this.logger?.info(writingMessage);
+    }
+
+    data = data ?? this.data;
+    if (data === null) {
+        return this.failure(`Can't write ${this.getName()}, no data provided.`);
+    }
+
+    this.result = {};
+    const res = this.childWrite(data, ...args);
 
     if (isPromise(res)) {
-        return this.writeAsync(res);
+        return this.writeAsync(res, data);
     } else {
-        return this.writeSync(res);
+        return this.writeSync(res, data);
     }
 }
 
@@ -45,6 +72,8 @@ class Loader {
         this.throwOnFailure = options.throwOnFailure ?? true;
 
         this.data = null;
+        this.loaded = false;
+        this.result = {};
 
         this.childLoad = this.load;
         this.load = load.bind(this);
@@ -76,20 +105,45 @@ class Loader {
             return [undefined, status];
         }
 
-        this.logger?.info(`Loaded ${this.getName()} successfully.`);
-        return [this.data, status];
-    }
+        let loadedMessage;
 
-    async loadAsync(promise) {
-        const status = await promise;
-        return this.loadSync(status);
-    }
-
-    writeSync(status) {
-        if (status === LoadStatus.successful) {
-            this.logger?.info(`Wrote ${this.getName()} successfully.`);
+        if (typeof this.getLoadedMessage === "function") {
+            loadedMessage = this.getLoadedMessage();
+        } else {
+            loadedMessage = `Loaded ${this.getName()} successfully.`;
         }
 
+        if (status !== LoadStatus.ignore && loadedMessage.length > 0) {
+            this.logger?.info(loadedMessage);
+        }
+
+        this.loaded = true;
+        return [this.data, status ?? LoadStatus.successful];
+    }
+
+    async loadAsync(promise, data) {
+        const status = await promise;
+        return this.loadSync(status, data);
+    }
+
+    writeSync(status, data) {
+        if (status === LoadStatus.failed) {
+            return status;
+        }
+
+        let writtenMessage;
+
+        if (typeof this.getWrittenMessage === "function") {
+            writtenMessage = this.getWrittenMessage();
+        } else {
+            writtenMessage = `Wrote ${this.getName()} successfully.`;
+        }
+
+        if (status !== LoadStatus.ignore && writtenMessage.length > 0) {
+            this.logger?.info(writtenMessage);
+        }
+
+        this.data = data;
         return status ?? LoadStatus.successful;
     }
 

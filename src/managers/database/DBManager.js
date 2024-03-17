@@ -6,7 +6,7 @@ import Manager from "../Manager.js";
 import { getClient, getLogger } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 
-import dbFilenames from "./dbFilenames.json" assert { type: "json" };
+import dbFilenames from "../../database/dbFilenames.json" assert { type: "json" };
 
 const dbOptions = {
     queryExtension: dbFilenames.queryExtension,
