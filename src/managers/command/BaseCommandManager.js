@@ -180,13 +180,13 @@ class BaseCommandManager extends Manager {
         } else {
             getLogger().info(`Loaded ${total} commands. ${ok} successful, ${bad} failed.`);
 
-            subcommands = this.loadSubcommands();
+            subcommands = this.bindSubcommands();
         }
 
         return { total, ok, bad, subcommands };
     }
 
-    loadSubcommand(command, subcommand) {
+    bindSubcommand(command, subcommand) {
         const find = this.commands.find(findCmd => {
             return findCmd.name === subcommand && findCmd.parent === command.name;
         });
@@ -208,7 +208,7 @@ class BaseCommandManager extends Manager {
         return true;
     }
 
-    loadSubcommands() {
+    bindSubcommands() {
         getLogger().info("Loading subcommands...");
 
         let n = 0;
@@ -219,7 +219,7 @@ class BaseCommandManager extends Manager {
             }
 
             command.subcommands.forEach(subcommand => {
-                const res = this.loadSubcommand(command, subcommand);
+                const res = this.bindSubcommand(command, subcommand);
 
                 if (res === true) {
                     n++;

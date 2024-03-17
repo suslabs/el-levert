@@ -5,13 +5,13 @@ import Loader from "./Loader.js";
 import LoadStatus from "./LoadStatus.js";
 
 class FileLoader extends Loader {
-    constructor(name, path, logger, options = {}) {
+    constructor(name, filePath, logger, options = {}) {
         super(name, logger, {
             type: "file",
             ...options
         });
 
-        this.path = path;
+        this.path = path.resolve(filePath);
         this.encoding = options.encoding ?? "utf-8";
 
         this.tempPath = this.getTempPath();
@@ -47,10 +47,10 @@ class FileLoader extends Loader {
             text = await fs.readFile(this.path, this.fsConfig);
         } catch (err) {
             if (err.code === "ENOENT") {
-                return this.failure(`${this.getName(true)}not found.`);
+                return this.failure(`${this.getName(true)} not found at path: ${this.path}`);
             }
 
-            return this.failure(err, `Error occured while reading${this.getName()}:`);
+            return this.failure(err, `Error occured while reading ${this.getName()}:`);
         }
 
         text = text.trim();
@@ -67,7 +67,7 @@ class FileLoader extends Loader {
         } catch (err) {
             await this.deleteTemp();
 
-            return this.failure(err, `Error occured while writing${this.getName()}:`);
+            return this.failure(err, `Error occured while writing ${this.getName()}:`);
         }
 
         try {
@@ -75,7 +75,7 @@ class FileLoader extends Loader {
         } catch (err) {
             await this.deleteTemp();
 
-            return this.failure(err, `Error occured while writing${this.getName()}:`);
+            return this.failure(err, `Error occured while writing ${this.getName()}:`);
         }
 
         return LoadStatus.successful;

@@ -30,10 +30,10 @@ function formatValidationErrors(errors) {
 }
 
 function validate() {
+    let valid, error;
+
     if (typeof this.childValidate === "function") {
         const res = this.childValidate(this.config);
-
-        let valid, error;
 
         if (Array.isArray(res)) {
             [valid, error] = res;
@@ -42,52 +42,48 @@ function validate() {
         }
 
         if (!valid) {
-            return this.failure(`Validation failed: Invalid${this.getName()}.` + error ? `\n${error}` : "");
+            return this.failure(`Validation failed: Invalid ${this.getName()}.` + error ? `\n${error}` : "");
         }
     }
 
-    const status = this.baseValidate();
+    if (this.validateWithSchema) {
+        [valid, error] = this.schemaValidate();
 
-    if (status === LoadStatus.failed) {
-        return status;
+        if (!valid) {
+            return this.failure("Validation failed:\n" + formatValidationErrors(error));
+        }
     }
 
-    this.logger?.info(`Validated${this.getName()}.`);
+    if (valid) {
+        this.logger?.info(`Validated ${this.getName()}.`);
+    }
 }
 
 class JsonLoader extends FileLoader {
-    constructor(name, path, logger, options = {}) {
-        super(name, path, logger, options);
+    constructor(name, jsonPath, logger, options = {}) {
+        super(name, jsonPath, logger, options);
 
-        this.schemaDir = options.schemaDir;
-        this.validateWithSchema = options.validateWithSchema ?? true;
-
-        this.schemaPath = this.getSchemaPath();
+        this.validateWithSchema = options.validateWithSchema ?? false;
+        this.schema = options.schema;
+        this.schemaPath = this.getSchemaPath(options);
 
         this.childValidate = this.validate;
         this.validate = validate.bind(this);
     }
 
-    getSchemaPath() {
-        const parsed = path.parse(this.path),
-            schemaDir = this.schemaDir ?? parsed.dir,
-            schemaPath = path.join(schemaDir, parsed.name + ".schema.json");
-
-        return schemaPath;
-    }
-
-    async loadSchema() {
-        const schemaLoader = new FileLoader("schema", this.schemaPath, this.logger),
-            [schemaString, status] = await schemaLoader.load();
-
-        if (status === LoadStatus.failed) {
-            return status;
+    getSchemaPath(options) {
+        if (typeof options.schemaPath !== "undefined") {
+            return options.schemaPath;
         }
 
-        this.schema = JSON.parse(schemaString);
-        this.ajvValidate = ajv.compile(this.schema);
+        if (typeof options.schemaDir === "undefined") {
+            return;
+        }
 
-        return LoadStatus.successful;
+        const parsed = path.parse(this.path),
+            schemaPath = path.join(options.schemaDir, parsed.name + ".schema.json");
+
+        return schemaPath;
     }
 
     async read() {
@@ -109,7 +105,7 @@ class JsonLoader extends FileLoader {
         try {
             obj = JSON.parse(this.jsonString);
         } catch (err) {
-            return this.failure(err, `Error occured while parsing${this.getName()}:`);
+            return this.failure(err, `Error occured while parsing ${this.getName()}:`);
         }
 
         this.data = obj;
@@ -117,28 +113,47 @@ class JsonLoader extends FileLoader {
         return LoadStatus.successful;
     }
 
-    baseValidate() {
-        let status = LoadStatus.successful;
+    async loadSchema() {
+        if (typeof this.schemaPath !== "undefined") {
+            const schemaOptions = { throwOnFailure: this.throwOnFailure },
+                schemaLoader = new FileLoader("schema", this.schemaPath, this.logger, schemaOptions);
 
-        if (!this.validateWithSchema) {
-            return status;
+            const [schemaString, status] = await schemaLoader.load();
+
+            if (status === LoadStatus.failed) {
+                return status;
+            }
+
+            this.schema = JSON.parse(schemaString);
         }
 
-        if (this.schemaLoadStatus === LoadStatus.failed) {
-            this.logger?.info("Schema validation skipped.");
-            return status;
+        return LoadStatus.successful;
+    }
+
+    initValidator() {
+        if (typeof this.schema === "undefined") {
+            return this.failure("Can't initialize validator, no schema provided.");
+        }
+
+        if (typeof this.ajvValidate !== "undefined") {
+            delete this.ajvValidate;
+        }
+
+        this.ajvValidate = ajv.compile(this.schema);
+
+        return LoadStatus.successful;
+    }
+
+    schemaValidate() {
+        if (this.schemaLoadStatus === LoadStatus.failed || this.initValidator() === LoadStatus.failed) {
+            this.logger?.warn("Schema validation skipped.");
+            return [true, undefined];
         }
 
         const valid = this.ajvValidate(this.data),
             errors = this.ajvValidate.errors;
 
-        status &= valid;
-
-        if (errors) {
-            return this.failure("Validation failed:\n" + formatValidationErrors(errors));
-        }
-
-        return status;
+        return [valid, errors];
     }
 
     async load() {
