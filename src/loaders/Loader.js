@@ -105,15 +105,19 @@ class Loader {
             return [undefined, status];
         }
 
-        let loadedMessage;
+        let loadedMessage = "";
 
-        if (typeof this.getLoadedMessage === "function") {
-            loadedMessage = this.getLoadedMessage();
-        } else {
-            loadedMessage = `Loaded ${this.getName()} successfully.`;
+        if (status !== LoadStatus.ignore) {
+            if (typeof this.getLoadedMessage === "function") {
+                loadedMessage = this.getLoadedMessage();
+            } else {
+                loadedMessage = `Loaded ${this.getName()} successfully.`;
+            }
+        } else if (typeof this.getIgnoredMessage === "function") {
+            loadedMessage = this.getIgnoredMessage();
         }
 
-        if (status !== LoadStatus.ignore && loadedMessage.length > 0) {
+        if (loadedMessage.length > 0) {
             this.logger?.info(loadedMessage);
         }
 
@@ -131,15 +135,19 @@ class Loader {
             return status;
         }
 
-        let writtenMessage;
+        let writtenMessage = "";
 
-        if (typeof this.getWrittenMessage === "function") {
-            writtenMessage = this.getWrittenMessage();
-        } else {
-            writtenMessage = `Wrote ${this.getName()} successfully.`;
+        if (status !== LoadStatus.ignore) {
+            if (typeof this.getWrittenMessage === "function") {
+                writtenMessage = this.getWrittenMessage();
+            } else {
+                writtenMessage = `Wrote ${this.getName()} successfully.`;
+            }
+        } else if (typeof this.getIgnoredMessage === "function") {
+            writtenMessage = this.getIgnoredMessage();
         }
 
-        if (status !== LoadStatus.ignore && writtenMessage.length > 0) {
+        if (writtenMessage.length > 0) {
             this.logger?.info(writtenMessage);
         }
 
