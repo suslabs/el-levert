@@ -1,8 +1,4 @@
 import { Buffer } from "buffer";
-
-import discord from "discord.js-selfbot-v13";
-const { AttachmentBuilder } = discord;
-
 import fs from "fs";
 import path from "path";
 import URL from "url";
@@ -57,9 +53,11 @@ const Util = {
         return [body, false];
     },
     getFileAttach: (data, name = "message.txt") => {
-        const attachment = new AttachmentBuilder(Buffer.from(data), {
-            name: name
-        });
+        const buffer = Buffer.from(data),
+            attachment = {
+                name: name,
+                attachment: buffer
+            };
 
         return {
             files: [attachment]
