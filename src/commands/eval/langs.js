@@ -1,4 +1,5 @@
-import { EmbedBuilder } from "discord.js";
+import discord from "discord.js-selfbot-v13";
+const { EmbedBuilder } = discord;
 
 function formatNames(langNames) {
     const format = Object.keys(langNames)

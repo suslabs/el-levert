@@ -1,4 +1,5 @@
-import { EmbedBuilder } from "discord.js";
+import discord from "discord.js-selfbot-v13";
+const { EmbedBuilder } = discord;
 
 import GregicUtil from "../../oc/GregicUtil.js";
 

@@ -1,9 +1,7 @@
-import { Events } from "discord.js";
-
 import { getClient, getLogger } from "../LevertClient.js";
 
 export default {
-    name: Events.ClientReady,
+    name: "ready",
     once: true,
     listener: _ => {
         getClient().loggedIn = true;

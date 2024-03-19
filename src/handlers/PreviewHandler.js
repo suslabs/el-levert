@@ -1,4 +1,5 @@
-import { EmbedBuilder, hyperlink } from "discord.js";
+import discord from "discord.js-selfbot-v13";
+const { EmbedBuilder, hyperlink } = discord;
 
 import Handler from "./Handler.js";
 

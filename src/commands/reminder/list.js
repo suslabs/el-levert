@@ -1,4 +1,5 @@
-import { EmbedBuilder, bold } from "discord.js";
+import discord from "discord.js-selfbot-v13";
+const { EmbedBuilder } = discord;
 
 import { getClient } from "../../LevertClient.js";
 

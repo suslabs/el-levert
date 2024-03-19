@@ -1,4 +1,6 @@
-import { time, bold } from "discord.js";
+import discord from "discord.js-selfbot-v13";
+const { time, bold } = discord;
+
 import crypto from "crypto";
 
 function generateId() {

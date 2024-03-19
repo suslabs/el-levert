@@ -1,4 +1,5 @@
-import { inlineCode } from "discord.js";
+import discord from "discord.js-selfbot-v13";
+const { inlineCode } = discord;
 
 const defaultValues = {
     id: "0",

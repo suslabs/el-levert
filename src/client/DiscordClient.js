@@ -1,4 +1,4 @@
-import discord from "discord.js";
+import discord from "discord.js-selfbot-v13";
 
 import ClientError from "../errors/ClientError.js";
 import EventLoader from "./EventLoader.js";
@@ -6,17 +6,16 @@ import EventLoader from "./EventLoader.js";
 import Util from "../util/Util.js";
 import diceDist from "../util/diceDist.js";
 
-const { Client, GatewayIntentBits, PermissionsBitField, ActivityType, Partials, DiscordAPIError } = discord;
+const { Client, Intents, PermissionsBitField, ActivityType, DiscordAPIError } = discord;
 
 const defaultIntents = [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildInvites,
-        GatewayIntentBits.DirectMessages
-    ],
-    defaultPartials = [Partials.Channel];
+    Intents.FLAGS.GUILDS,
+    Intents.FLAGS.GUILD_MESSAGES,
+    Intents.FLAGS.MESSAGE_CONTENT,
+    Intents.FLAGS.GUILD_MEMBERS,
+    Intents.FLAGS.GUILD_INVITES,
+    Intents.FLAGS.DIRECT_MESSAGES
+];
 
 const userIdRegex = /(\d{17,20})/,
     mentionRegex = /<@(\d{17,20})>/;
@@ -30,9 +29,8 @@ const defaultMessageFetchOptions = {
     };
 
 class DiscordClient {
-    constructor(intents, partials) {
+    constructor(intents) {
         this.intents = intents ?? defaultIntents;
-        this.partials = partials ?? defaultPartials;
 
         this.buildClient();
 
@@ -51,8 +49,7 @@ class DiscordClient {
         this.logger?.info("Creating client...");
 
         const options = {
-            intents: this.intents,
-            partials: this.partials
+            intents: this.intents
         };
 
         const client = new Client(options);

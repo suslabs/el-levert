@@ -1,9 +1,7 @@
-import { Events } from "discord.js";
-
 import { getClient } from "../LevertClient.js";
 
 export default {
-    name: Events.MessageCreate,
+    name: "messageCreate",
     listener: async msg => {
         if (msg.author.bot) {
             return;

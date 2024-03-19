@@ -1,5 +1,7 @@
 import { Buffer } from "buffer";
-import { AttachmentBuilder } from "discord.js";
+
+import discord from "discord.js-selfbot-v13";
+const { AttachmentBuilder } = discord;
 
 import fs from "fs";
 import path from "path";

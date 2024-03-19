@@ -1,4 +1,5 @@
-import { EmbedBuilder, MessageType } from "discord.js";
+import discord from "discord.js-selfbot-v13";
+const { EmbedBuilder, MessageType } = discord;
 
 import Handler from "./Handler.js";
 

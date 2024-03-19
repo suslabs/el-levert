@@ -1,4 +1,5 @@
-import { bold } from "discord.js";
+import discord from "discord.js-selfbot-v13";
+const { bold } = discord;
 
 const defaultValues = {
     name: "",
