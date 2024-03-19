@@ -35,5 +35,6 @@
     "activity": {
         "type": "Watching",
         "text": "Example"
-    }
+    },
+    "guilds": ["781499018253434921"]
 }

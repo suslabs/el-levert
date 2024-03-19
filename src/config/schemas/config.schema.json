@@ -114,6 +114,14 @@
                 }
             },
             "required": ["type", "text"]
+        },
+        "guilds": {
+            "type": "array",
+            "items": [
+                {
+                    "type": "string"
+                }
+            ]
         }
     },
     "required": [
@@ -150,6 +158,7 @@
         "enableGlobalHandler",
         "wrapEvents",
         "setActivity",
-        "activity"
+        "activity",
+        "guilds"
     ]
 }

@@ -58,6 +58,8 @@ class LevertClient extends DiscordClient {
             wrapEvents: this.config.wrapEvents,
             eventsDir: config.eventsPath
         });
+
+        this.guilds = config.guilds ?? [];
     }
 
     setupLogger() {
