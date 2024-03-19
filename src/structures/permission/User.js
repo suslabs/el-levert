@@ -1,5 +1,4 @@
-import discord from "discord.js-selfbot-v13";
-const { inlineCode } = discord;
+import Util from "../../util/Util.js";
 
 const defaultValues = {
     id: "0",
@@ -36,7 +35,7 @@ class User {
             return `${this.username} (${inlineCode(this.id)})`;
         }
 
-        return inlineCode(this.id);
+        return Util.inlineCode(this.id);
     }
 }
 

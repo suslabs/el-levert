@@ -1,5 +1,5 @@
 import discord from "discord.js-selfbot-v13";
-const { EmbedBuilder } = discord;
+const { MessageEmbed } = discord;
 
 import GregicUtil from "../../oc/GregicUtil.js";
 
@@ -43,7 +43,7 @@ export default {
         }
 
         const oc = GregicUtil.oc(eu, dur, type),
-            embed = new EmbedBuilder().setTitle(`${eu} EU/t for ${dur}s`).addFields([
+            embed = new MessageEmbed().setTitle(`${eu} EU/t for ${dur}s`).addFields([
                 {
                     name: "EU/t",
                     value: `\`\`\`lua\n${oc.map(x => x.eu.toLocaleString() + " EU/t").join("\n")}\`\`\``,

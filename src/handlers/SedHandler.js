@@ -1,5 +1,5 @@
 import discord from "discord.js-selfbot-v13";
-const { EmbedBuilder, MessageType } = discord;
+const { MessageEmbed, MessageType } = discord;
 
 import Handler from "./Handler.js";
 
@@ -62,7 +62,7 @@ class SedHandler extends Handler {
             return [undefined, ":warning: No matching message found."];
         }
 
-        const embed = new EmbedBuilder()
+        const embed = new MessageEmbed()
             .setAuthor({
                 name: sedMsg.author.username,
                 iconURL: sedMsg.author.displayAvatarURL()

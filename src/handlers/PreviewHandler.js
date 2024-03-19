@@ -1,5 +1,5 @@
 import discord from "discord.js-selfbot-v13";
-const { EmbedBuilder, hyperlink } = discord;
+const { MessageEmbed } = discord;
 
 import Handler from "./Handler.js";
 
@@ -33,7 +33,7 @@ class PreviewHandler extends Handler {
             return false;
         }
 
-        const embed = new EmbedBuilder()
+        const embed = new MessageEmbed()
             .setAuthor({
                 name: prevMsg.author.username,
                 iconURL: prevMsg.author.displayAvatarURL()
@@ -71,15 +71,15 @@ class PreviewHandler extends Handler {
 
             if (content.length < 1) {
                 if (isImage) {
-                    content = hyperlink(`[Image (${attach.name})]`, attach.url);
+                    content = Util.hyperlink(`[Image (${attach.name})]`, attach.url);
                 } else {
-                    content = hyperlink(`[Attachment (${attach.name})]`, attach.url);
+                    content = Util.hyperlink(`[Attachment (${attach.name})]`, attach.url);
                 }
             }
         }
 
         content += "\n\n";
-        content += hyperlink("[Jump to Message]", url);
+        content += Util.hyperlink("[Jump to Message]", url);
 
         embed.setDescription(content);
 
@@ -115,7 +115,8 @@ class PreviewHandler extends Handler {
         await msg.channel.sendTyping();
 
         try {
-            this.messageTracker.addMsg(await msg.reply(preview), msg.id);
+            const reply = await msg.reply(preview);
+            this.messageTracker.addMsg(reply, msg.id);
         } catch (err) {
             const reply = await msg.reply({
                 content: ":no_entry_sign: Encountered exception while sending preview:",

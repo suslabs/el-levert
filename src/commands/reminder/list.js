@@ -1,6 +1,3 @@
-import discord from "discord.js-selfbot-v13";
-const { EmbedBuilder } = discord;
-
 import { getClient } from "../../LevertClient.js";
 
 function formatReminders(reminders) {
@@ -39,17 +36,21 @@ export default {
             return `:information_source: \`${username}\` has no reminders.`;
         }
 
-        const format = formatReminders(reminders),
-            embed = new EmbedBuilder().setDescription(format);
+        let out;
 
-        let out = {};
         if (owner === msg.author.id) {
-            out.content = ":information_source: Your Reminders:";
+            out = ":information_source: Your Reminders:";
         } else {
-            out.content = `:information_source: \`${username}\`'s reminders:`;
+            out = `:information_source: \`${username}\`'s reminders:`;
         }
 
-        out.embeds = [embed];
+        const format = formatReminders(reminders);
+
+        out += `
+\`\`\`
+${format}
+\`\`\``;
+
         return out;
     }
 };

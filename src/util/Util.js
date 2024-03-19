@@ -111,6 +111,18 @@ const Util = {
                 }
             }, interval);
         });
+    },
+    bold: str => {
+        return `**${str}**`;
+    },
+    time: (timestamp, style) => {
+        return `<t:${timestamp.toString()}:${style}>`;
+    },
+    inlineCode: str => {
+        return `\`${str}\``;
+    },
+    hyperlink: (str, url) => {
+        return `[${str}](${url})`;
     }
 };
 

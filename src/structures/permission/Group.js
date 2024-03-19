@@ -1,5 +1,4 @@
-import discord from "discord.js-selfbot-v13";
-const { bold } = discord;
+import Util from "../../util/Util.js";
 
 const defaultValues = {
     name: "",
@@ -24,7 +23,7 @@ class Group {
     }
 
     formatUsers() {
-        let format = `Group ${bold(this.name)} - Level ${this.level} - User(s):\n`;
+        let format = `Group ${Util.bold(this.name)} - Level ${this.level} - User(s):\n`;
 
         if (this.users.length > 0) {
             const userFormat = this.users

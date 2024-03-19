@@ -1,7 +1,6 @@
-import discord from "discord.js-selfbot-v13";
-const { time, bold } = discord;
-
 import crypto from "crypto";
+
+import Util from "../util/Util.js";
 
 function generateId() {
     const id = crypto.randomBytes(5).toString("hex");
@@ -37,14 +36,14 @@ class Reminder {
 
     getTimestamp(style = "f") {
         const timestamp = Math.floor(this.end / 1000);
-        return time(timestamp, style);
+        return Util.time(timestamp, style);
     }
 
     format() {
         let format = this.getTimestamp();
 
         if (this.hasMessage) {
-            format += ` with the message: ${bold(this.msg)}`;
+            format += ` with the message: ${Util.bold(this.msg)}`;
         }
 
         return format;

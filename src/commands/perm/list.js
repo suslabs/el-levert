@@ -1,6 +1,3 @@
-import discord from "discord.js-selfbot-v13";
-const { EmbedBuilder } = discord;
-
 import { getClient } from "../../LevertClient.js";
 
 function formatGroups(groups) {
@@ -20,14 +17,11 @@ export default {
             return ":information_source: No permissions are registered.";
         }
 
-        const format = formatGroups(groups),
-            embed = new EmbedBuilder().setDescription(format);
+        const format = formatGroups(groups);
 
-        const out = {
-            content: ":information_source: Registered permissions:",
-            embeds: [embed]
-        };
-
-        return out;
+        return `:information_source: Registered permissions:
+\`\`\`
+${format}
+\`\`\``;
     }
 };

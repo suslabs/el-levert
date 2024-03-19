@@ -1,6 +1,3 @@
-import discord from "discord.js-selfbot-v13";
-const { bold } = discord;
-
 import Util from "../../util/Util.js";
 
 import { TagFlags, TagTypes } from "./TagTypes.js";
@@ -140,7 +137,7 @@ class Tag {
                 ...Util.getFileAttach(body, "script.js")
             };
         } else if (this.isAlias) {
-            out.content = `${bold(this.name)} is an alias of ${bold(this.aliasName)}`;
+            out.content = `${Util.bold(this.name)} is an alias of ${Util.bold(this.aliasName)}`;
 
             if (this.args.length > 0) {
                 out.content += ` (with args: )`;
