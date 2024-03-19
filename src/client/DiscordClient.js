@@ -6,7 +6,7 @@ import EventLoader from "./EventLoader.js";
 import Util from "../util/Util.js";
 import diceDist from "../util/diceDist.js";
 
-const { Client, Intents, PermissionsBitField, ActivityType, DiscordAPIError } = discord;
+const { Client, Intents, Permissions, ActivityType, DiscordAPIError } = discord;
 
 const defaultIntents = [
     Intents.FLAGS.GUILDS,
@@ -176,7 +176,7 @@ class DiscordClient {
         if (check) {
             const perms = channel.permissionsFor(user_id);
 
-            if (perms === null || !perms.has(PermissionsBitField.Flags.ViewChannel)) {
+            if (perms === null || !perms.has(Permissions.FLAGS.VIEW_CHANNEL)) {
                 return false;
             }
         }
