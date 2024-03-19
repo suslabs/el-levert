@@ -3,7 +3,7 @@ import { getClient } from "../LevertClient.js";
 export default {
     name: "messageCreate",
     listener: async msg => {
-        if (msg.author.bot) {
+        if (msg.author.id === getClient().client.user.id) {
             return;
         }
 
