@@ -68,7 +68,7 @@ class PreviewHandler extends Handler {
 
         if (inDms) {
             channel = "DMs";
-        } else if (sv_id === msg.guild.id) {
+        } else if (sv_id === msg.guild?.id) {
             channel = `#${prevMsg.channel.name}`;
         } else {
             channel = `#${prevMsg.channel.name} - ${prevMsg.guild.name}`;
