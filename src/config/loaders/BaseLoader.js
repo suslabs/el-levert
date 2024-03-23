@@ -100,8 +100,17 @@ class BaseLoader {
         }
 
         schemaString = schemaString.trim();
-        this.schema = JSON.parse(schemaString);
-        this.ajvValidate = ajv.compile(this.schema);
+
+        const schema = JSON.parse(schemaString);
+        this.schema = schema;
+
+        const existingValidator = ajv.getSchema(schema.$id);
+
+        if (typeof existingValidator !== "undefined") {
+            this.ajvValidate = existingValidator;
+        } else {
+            this.ajvValidate = ajv.compile(schema);
+        }
 
         return LoadStatus.successful;
     }
