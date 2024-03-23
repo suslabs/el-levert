@@ -6,8 +6,16 @@ import EventLoader from "../loaders/event/EventLoader.js";
 import Util from "../util/Util.js";
 import diceDist from "../util/search/diceDist.js";
 
-const { Client, DiscordAPIError, GatewayIntentBits, Partials, ActivityType, PermissionsBitField, ChannelType } =
-    discord;
+const {
+    Client,
+    DiscordAPIError,
+    RESTJSONErrorCodes,
+    GatewayIntentBits,
+    Partials,
+    ActivityType,
+    PermissionsBitField,
+    ChannelType
+} = discord;
 
 const defaultIntents = [
         GatewayIntentBits.Guilds,
@@ -192,7 +200,7 @@ class DiscordClient {
         try {
             channel = await this.client.channels.fetch(ch_id);
         } catch (err) {
-            if (err.code === 10003 || err.code === 50001) {
+            if (err.code === RESTJSONErrorCodes.UnknownChannel || err.code === RESTJSONErrorCodes.MissingAccess) {
                 return false;
             }
 
@@ -245,7 +253,7 @@ class DiscordClient {
         try {
             return await channel.messages.fetch(msg_id);
         } catch (err) {
-            if (err.code === 10008) {
+            if (err.code === RESTJSONErrorCodes.UnknownChannel) {
                 return false;
             }
 
@@ -281,10 +289,16 @@ class DiscordClient {
     }
 
     async findUserById(id) {
-        const user = await this.client.users.fetch(id);
+        let user;
 
-        if (typeof user === "undefined") {
-            return false;
+        try {
+            user = await this.client.users.fetch(id);
+        } catch (err) {
+            if (err.code === RESTJSONErrorCodes.UnknownUser) {
+                return false;
+            }
+
+            throw err;
         }
 
         return user;
@@ -309,7 +323,7 @@ class DiscordClient {
                     const user = await guilds.at(i).members.fetch({ user: id });
                     return [user];
                 } catch (err) {
-                    if (!(err instanceof DiscordAPIError)) {
+                    if (err.code !== RESTJSONErrorCodes.UnknownUser) {
                         throw err;
                     }
                 }
