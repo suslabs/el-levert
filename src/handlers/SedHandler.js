@@ -61,16 +61,23 @@ class SedHandler extends Handler {
             return [undefined, ":warning: No matching message found."];
         }
 
+        const username = sedMsg.author.username,
+            avatar = sedMsg.author.displayAvatarURL(),
+            content = sedMsg.content.replace(regex, replace ?? ""),
+            timestamp = sedMsg.editedTimestamp ?? sedMsg.createdTimestamp,
+            image = sedMsg.attachments.at(0)?.url,
+            footer = "From #" + sedMsg.channel.name;
+
         const embed = new EmbedBuilder()
             .setAuthor({
-                name: sedMsg.author.username,
-                iconURL: sedMsg.author.displayAvatarURL()
+                name: username,
+                iconURL: avatar
             })
-            .setDescription(sedMsg.content.replace(regex, replace ?? ""))
-            .setTimestamp(sedMsg.editedTimestamp ?? sedMsg.createdTimestamp)
-            .setImage(sedMsg.attachments.at(0)?.url)
+            .setDescription(content)
+            .setTimestamp(timestamp)
+            .setImage(image)
             .setFooter({
-                text: "From #" + sedMsg.channel.name
+                text: footer
             });
 
         return [embed, undefined];
@@ -96,12 +103,14 @@ class SedHandler extends Handler {
             const reply = await msg.reply({
                 embeds: [embed]
             });
+
             this.messageTracker.addMsg(reply, msg.id);
         } catch (err) {
             const reply = await msg.reply({
                 content: `:no_entry_sign: Encountered exception while sending preview:`,
                 ...Util.getFileAttach(err.stack, "error.js")
             });
+
             this.messageTracker.addMsg(reply, msg.id);
 
             getLogger().error("Reply failed", err);

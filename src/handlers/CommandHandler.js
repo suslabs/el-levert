@@ -64,6 +64,7 @@ class CommandHandler extends Handler {
                     content: `:no_entry_sign: Encountered exception while executing command **${cmd.name}**:`,
                     ...Util.getFileAttach(err1.stack, "error.js")
                 });
+
                 this.messageTracker.addMsg(reply, msg.id);
             } catch (err2) {
                 getLogger().error("Reporting error failed:", err2);
@@ -98,6 +99,7 @@ class CommandHandler extends Handler {
                     content: ":no_entry_sign: Encountered exception while sending reply:",
                     ...Util.getFileAttach(err1.stack, "error.js")
                 });
+
                 this.messageTracker.addMsg(reply, msg.id);
             } catch (err2) {
                 getLogger().error("Reporting error failed:", err2);
