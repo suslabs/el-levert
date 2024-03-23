@@ -68,13 +68,13 @@ class PreviewHandler extends Handler {
         let channel;
 
         if (sv_id !== msg.guild.id) {
-            channel = `From #${prevMsg.channel.name} - ${prevMsg.guild.name}`;
+            channel = `#${prevMsg.channel.name} - ${prevMsg.guild.name}`;
         } else {
-            channel = "From #" + prevMsg.channel.name;
+            channel = `#${prevMsg.channel.name}`;
         }
 
-        const username = sedMsg.author.username,
-            avatar = sedMsg.author.displayAvatarURL(),
+        const username = prevMsg.author.displayName,
+            avatar = prevMsg.author.displayAvatarURL(),
             timestamp = prevMsg.editedTimestamp ?? prevMsg.createdTimestamp;
 
         const embed = new EmbedBuilder()
@@ -86,7 +86,7 @@ class PreviewHandler extends Handler {
             .setTimestamp(timestamp)
             .setImage(image)
             .setFooter({
-                text: channel
+                text: `From ${channel}`
             });
 
         return {
