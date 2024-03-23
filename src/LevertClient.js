@@ -263,6 +263,14 @@ class LevertClient extends DiscordClient {
         this.buildClient();
         await this.start();
     }
+
+    shouldProcess(msg) {
+        if (msg.author.bot) {
+            return false;
+        }
+
+        return true;
+    }
 }
 
 let token, client;
