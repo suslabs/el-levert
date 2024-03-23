@@ -6,7 +6,7 @@ import EventLoader from "./EventLoader.js";
 import Util from "../util/Util.js";
 import diceDist from "../util/diceDist.js";
 
-const { Client, Intents, Permissions, DiscordAPIError } = discord;
+const { Client, DiscordAPIError, Intents, Permissions } = discord;
 
 const defaultIntents = [
     Intents.FLAGS.GUILDS,
@@ -168,26 +168,65 @@ class DiscordClient {
         delete this.eventLoader;
     }
 
-    async getChannel(ch_id, user_id, check = true) {
-        const channel = await this.client.channels.fetch(ch_id);
+    async getChannel(ch_id, user_id, checkAccess = true) {
+        let channel;
 
-        if (typeof channel === "undefined") {
-            return false;
-        }
-
-        if (check) {
-            const perms = channel.permissionsFor(user_id);
-
-            if (perms === null || !perms.has(Permissions.FLAGS.VIEW_CHANNEL)) {
+        try {
+            channel = await this.client.channels.fetch(ch_id);
+        } catch (err) {
+            if (err.code === 10003 || err.code === 50001) {
                 return false;
             }
+
+            throw err;
+        }
+
+        if (!checkAccess) {
+            return channel;
+        }
+
+        if (typeof user_id === "undefined") {
+            throw new ClientError("No user id provided");
+        }
+
+        switch (channel.type) {
+            case "DM":
+                if (channel.recipient.id !== user_id) {
+                    return false;
+                }
+
+                break;
+            case "GROUP_DM":
+                const recipientIds = channel.recipients.map(user => user.id);
+
+                if (!recipientIds.includes(user_id)) {
+                    return false;
+                }
+
+                break;
+            default:
+                const perms = channel.permissionsFor(user_id);
+
+                if (perms === null || !perms.has(Permissions.FLAGS.VIEW_CHANNEL)) {
+                    return false;
+                }
+
+                break;
         }
 
         return channel;
     }
 
-    async fetchMessage(ch_id, msg_id, user_id, check) {
-        const channel = await this.getChannel(ch_id, user_id, check);
+    async fetchMessage(ch_id, msg_id, user_id, checkAccess) {
+        if (typeof ch_id === "undefined") {
+            throw new ClientError("No channel id provided");
+        }
+
+        if (typeof msg_id === "undefined") {
+            throw new ClientError("No message id provided");
+        }
+
+        const channel = await this.getChannel(ch_id, user_id, checkAccess);
 
         if (!channel) {
             return false;
@@ -196,7 +235,7 @@ class DiscordClient {
         try {
             return await channel.messages.fetch(msg_id);
         } catch (err) {
-            if (err instanceof DiscordAPIError) {
+            if (err.code === 10008) {
                 return false;
             }
 
@@ -204,8 +243,12 @@ class DiscordClient {
         }
     }
 
-    async fetchMessages(ch_id, options = {}, user_id, check) {
-        const channel = await this.getChannel(ch_id, user_id, check);
+    async fetchMessages(ch_id, options = {}, user_id, checkAccess) {
+        if (typeof ch_id === "undefined") {
+            throw new ClientError("No channel id provided");
+        }
+
+        const channel = await this.getChannel(ch_id, user_id, checkAccess);
 
         if (!channel) {
             return false;
@@ -228,10 +271,16 @@ class DiscordClient {
     }
 
     async findUserById(id) {
-        const user = await this.client.users.fetch(id);
+        let user;
 
-        if (typeof user === "undefined") {
-            return false;
+        try {
+            user = await this.client.users.fetch(id);
+        } catch (err) {
+            if (err.code === 10013) {
+                return false;
+            }
+
+            throw err;
         }
 
         return user;
