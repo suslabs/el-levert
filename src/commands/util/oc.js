@@ -1,5 +1,4 @@
-import discord from "discord.js-selfbot-v13";
-const { MessageEmbed } = discord;
+import table from "../../util/AsciiTable.js";
 
 import GregicUtil from "../../oc/GregicUtil.js";
 
@@ -42,41 +41,43 @@ export default {
             return ":warning: Invalid duration.";
         }
 
-        const oc = GregicUtil.oc(eu, dur, type),
-            embed = new MessageEmbed().setTitle(`${eu} EU/t for ${dur}s`).addFields([
-                {
-                    name: "EU/t",
-                    value: `\`\`\`lua\n${oc.map(x => x.eu.toLocaleString() + " EU/t").join("\n")}\`\`\``,
-                    inline: true
-                },
-                {
-                    name: "Time",
-                    value: `\`\`\`lua\n${oc
-                        .map(x => {
-                            if (x.t_dur < 10) {
-                                return x.t_dur.toLocaleString() + "t";
-                            } else {
-                                return x.dur.toLocaleString() + "s";
-                            }
-                        })
-                        .join("\n")}\`\`\``,
-                    inline: true
-                },
-                {
-                    name: "Voltage",
-                    value: `\`\`\`\n${oc.map(x => x.tier).join("\n")}\`\`\``,
-                    inline: true
+        const oc = GregicUtil.oc(eu, dur, type);
+
+        const outEu = oc.map(x => x.eu.toLocaleString() + " EU/t"),
+            outTime = oc.map(x => {
+                if (x.t_dur < 10) {
+                    return x.t_dur.toLocaleString() + "t";
+                } else {
+                    return x.dur.toLocaleString() + "s";
                 }
-            ]);
+            }),
+            outTier = oc.map(x => x.tier);
+
+        const columns = {
+                eu: "EU/t",
+                time: "Time",
+                tier: "Voltage"
+            },
+            rows = {
+                eu: outEu,
+                time: outTime,
+                tier: outTier
+            };
+
+        const ocTable = table(columns, rows, "doubleVertical", 1);
+
+        let footer = "";
 
         if (type === "nomi") {
-            embed.setFooter({
-                text: "MAX is only available in dev, and only for multiblocks."
-            });
+            footer = "MAX is only available in dev, and only for multiblocks.";
         }
 
-        return {
-            embeds: [embed]
-        };
+        const out = `:information_source: Input: ${eu} EU/t for ${dur}s
+\`\`\`lua
+${ocTable}
+\`\`\`
+${footer}`;
+
+        return out;
     }
 };
