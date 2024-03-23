@@ -3,7 +3,8 @@ import Handler from "./Handler.js";
 import { getClient, getLogger } from "../LevertClient.js";
 import Util from "../util/Util.js";
 
-const msgUrlRegex = /https:\/\/discord.com\/channels\/(\d{18,19})\/(\d{18,19})\/(\d{18,19})/;
+const msgUrlRegex =
+    /(?:(https?):\/\/)?(?:(www|ptb)\.)?discord\.com\/channels\/(?<sv_id>\d{18,19}|@me)\/(?<ch_id>\d{18,19})(?:\/(?<msg_id>\d{18,19}))?/;
 
 class PreviewHandler extends Handler {
     constructor() {
@@ -19,10 +20,8 @@ class PreviewHandler extends Handler {
 
     async genPreview(msg, url) {
         const match = url.match(msgUrlRegex),
-            msgUrl = match[0],
-            sv_id = match[1],
-            ch_id = match[2],
-            msg_id = match[3];
+            { sv_id, ch_id, msg_id } = match.groups,
+            inDms = sv_id === "@me";
 
         const prevMsg = await getClient().fetchMessage(ch_id, msg_id, msg.author.id);
 
@@ -65,10 +64,12 @@ class PreviewHandler extends Handler {
 
         let channel;
 
-        if (sv_id !== msg.guild.id) {
-            channel = `#${prevMsg.channel.name} - ${prevMsg.guild.name}`;
-        } else {
+        if (inDms) {
+            channel = "DMs";
+        } else if (sv_id === msg.guild?.id) {
             channel = `#${prevMsg.channel.name}`;
+        } else {
+            channel = `#${prevMsg.channel.name} - ${prevMsg.guild.name}`;
         }
 
         channel = Util.bold(channel);
