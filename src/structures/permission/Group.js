@@ -1,12 +1,11 @@
-import Util from "../../util/Util.js";
-
 const defaultValues = {
     name: "",
     level: 0,
     users: []
 };
 
-const indent = " ";
+const indent = 4,
+    spacing = " ".repeat(indent);
 
 class Group {
     constructor(data) {
@@ -23,19 +22,19 @@ class Group {
     }
 
     formatUsers() {
-        let format = `Group ${Util.bold(this.name)} - Level ${this.level} - User(s):\n`;
+        let format = `Group ${this.name} - Level ${this.level} - User(s):\n`;
 
         if (this.users.length > 0) {
             const userFormat = this.users
                 .map((user, i) => {
                     const name = user.format();
-                    return `${indent}${i + 1}. ${name}`;
+                    return `${spacing}${i + 1}. ${name}`;
                 })
                 .join("\n");
 
             format += userFormat;
         } else {
-            format += `${indent}None`;
+            format += `${spacing}None`;
         }
 
         return format;

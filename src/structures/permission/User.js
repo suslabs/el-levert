@@ -32,7 +32,7 @@ class User {
 
     format() {
         if (this.username.length > 0) {
-            return `${this.username} (${inlineCode(this.id)})`;
+            return `${this.username} (${Util.inlineCode(this.id)})`;
         }
 
         return Util.inlineCode(this.id);
