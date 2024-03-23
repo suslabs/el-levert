@@ -1,12 +1,11 @@
 import { Events } from "discord.js";
 
-import { getClient, getLogger } from "../LevertClient.js";
+import { getClient } from "../LevertClient.js";
 
 export default {
     name: Events.ClientReady,
     once: true,
     listener: _ => {
-        getClient().loggedIn = true;
-        getLogger().info(`The bot is online. Logged in as "${getClient().client.user.username}".`);
+        getClient().onLogin();
     }
 };
