@@ -5,7 +5,7 @@ import { getClient } from "../LevertClient.js";
 export default {
     name: Events.MessageCreate,
     listener: async msg => {
-        if (msg.author.bot) {
+        if (!getClient().shouldProcess(msg)) {
             return;
         }
 

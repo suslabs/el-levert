@@ -5,7 +5,7 @@ import { getClient } from "../LevertClient.js";
 export default {
     name: Events.MessageDelete,
     listener: async msg => {
-        if (msg.author.bot) {
+        if (!getClient().shouldProcess(msg)) {
             return;
         }
 
