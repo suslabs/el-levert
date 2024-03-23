@@ -69,7 +69,6 @@ class LevertClient extends DiscordClient {
         this.logger = createLogger(config);
 
         this.wrapEvent = wrapEvent.bind(undefined, this.logger);
-        this.setOptions({ onKill: this.deleteLogger });
     }
 
     deleteLogger() {
@@ -270,6 +269,30 @@ class LevertClient extends DiscordClient {
         }
 
         return true;
+    }
+
+    async processMessage(msg, handler) {
+        if (!this.shouldProcess(msg)) {
+            return;
+        }
+
+        await this.executeAllHandlers(handler, msg);
+    }
+
+    async processCreate(msg) {
+        await this.processMessage(msg, "execute");
+    }
+
+    async processDelete(msg) {
+        await this.processMessage(msg, "delete");
+    }
+
+    async processEdit(msg) {
+        await this.processMessage(msg, "resubmit");
+    }
+
+    onKill() {
+        this.deleteLogger();
     }
 }
 
