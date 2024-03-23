@@ -68,7 +68,7 @@ class SedHandler extends Handler {
         const username = Util.bold(sedMsg.author.displayName),
             content = sedMsg.content.replace(regex, replace ?? ""),
             channel = Util.bold(`#${sedMsg.channel.name}`),
-            timestamp = Util.time(Math.floor(sedMsg.createdTimestamp / 1000), "R"),
+            timestamp = Util.time(Math.floor(sedMsg.createdTimestamp / 1000), "f"),
             image = sedMsg.attachments.at(0)?.url;
 
         const sed = `From ${username} in ${channel} | ${timestamp}

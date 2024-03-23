@@ -75,7 +75,7 @@ class PreviewHandler extends Handler {
         channel = Util.bold(channel);
 
         const username = Util.bold(prevMsg.author.displayName),
-            timestamp = Util.time(Math.floor(prevMsg.createdTimestamp / 1000), "R");
+            timestamp = Util.time(Math.floor(prevMsg.createdTimestamp / 1000), "f");
 
         const preview = `From ${username} in ${channel} | ${timestamp}
 
