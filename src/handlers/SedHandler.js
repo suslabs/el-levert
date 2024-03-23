@@ -66,7 +66,7 @@ class SedHandler extends Handler {
             content = sedMsg.content.replace(regex, replace ?? ""),
             timestamp = sedMsg.editedTimestamp ?? sedMsg.createdTimestamp,
             image = sedMsg.attachments.at(0)?.url,
-            footer = "From #" + sedMsg.channel.name;
+            channel = "From #" + sedMsg.channel.name;
 
         const embed = new EmbedBuilder()
             .setAuthor({
@@ -77,7 +77,7 @@ class SedHandler extends Handler {
             .setTimestamp(timestamp)
             .setImage(image)
             .setFooter({
-                text: footer
+                text: channel
             });
 
         return [embed, undefined];
