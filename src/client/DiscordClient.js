@@ -6,7 +6,7 @@ import EventLoader from "./EventLoader.js";
 import Util from "../util/Util.js";
 import diceDist from "../util/diceDist.js";
 
-const { Client, Intents, Permissions, ActivityType, DiscordAPIError } = discord;
+const { Client, Intents, Permissions, DiscordAPIError } = discord;
 
 const defaultIntents = [
     Intents.FLAGS.GUILDS,
@@ -27,6 +27,8 @@ const defaultMessageFetchOptions = {
         fetchLimit: 100,
         limit: 100
     };
+
+const activityTypes = ["PLAYING", "STREAMING", "LISTENING", "WATCHING", "CUSTOM", "COMPETING"];
 
 class DiscordClient {
     constructor(intents) {
@@ -76,13 +78,13 @@ class DiscordClient {
             return;
         }
 
-        if (!Object.keys(ActivityType).includes(config.type)) {
+        if (!activityTypes.includes(config.type)) {
             throw new ClientError("Invalid activity type: " + config.type);
         }
 
         if (typeof config.text !== "undefined") {
             this.client.user.setActivity(config.text, {
-                type: ActivityType[config.type]
+                type: config.type
             });
         } else {
             throw new ClientError("Invalid activity text.");

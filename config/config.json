@@ -33,7 +33,7 @@
     "wrapEvents": true,
     "setActivity": false,
     "activity": {
-        "type": "Watching",
+        "type": "WATCHING",
         "text": "Example"
     },
     "guilds": ["781499018253434921"]
