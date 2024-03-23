@@ -56,7 +56,7 @@ const FakeUtil = {
     fetchMessage: async (user_id, ch_id, msg_id) => {
         let data = await getClient().fetchMessage(ch_id, msg_id, user_id);
 
-        if (data === false) {
+        if (!data) {
             return undefined;
         }
 
@@ -66,7 +66,7 @@ const FakeUtil = {
     fetchMessages: async (user_id, ch_id, options) => {
         let data = await getClient().fetchMessages(ch_id, options, user_id);
 
-        if (data === false) {
+        if (!data) {
             return undefined;
         }
 
