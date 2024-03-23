@@ -32,25 +32,10 @@ class PreviewHandler extends Handler {
             return false;
         }
 
-        const embed = new EmbedBuilder()
-            .setAuthor({
-                name: prevMsg.author.username,
-                iconURL: prevMsg.author.displayAvatarURL()
-            })
-            .setTimestamp(prevMsg.editedTimestamp ?? prevMsg.createdTimestamp);
-
-        if (sv_id !== msg.guild.id) {
-            embed.setFooter({
-                text: `From #${prevMsg.channel.name} - ${prevMsg.guild.name}`
-            });
-        } else {
-            embed.setFooter({
-                text: "From #" + prevMsg.channel.name
-            });
-        }
-
         let content = prevMsg.content,
             split = content.split("\n");
+
+        let image;
 
         if (content.length > this.outCharLimit) {
             content = content.slice(0, this.outCharLimit) + "...";
@@ -65,7 +50,7 @@ class PreviewHandler extends Handler {
                 isImage = attach.contentType.startsWith("image/");
 
             if (isImage) {
-                embed.setImage(attach.url);
+                image = attach.url;
             }
 
             if (content.length < 1) {
@@ -80,7 +65,29 @@ class PreviewHandler extends Handler {
         content += "\n\n";
         content += hyperlink("[Jump to Message]", url);
 
-        embed.setDescription(content);
+        let footer;
+
+        if (sv_id !== msg.guild.id) {
+            footer = `From #${prevMsg.channel.name} - ${prevMsg.guild.name}`;
+        } else {
+            footer = "From #" + prevMsg.channel.name;
+        }
+
+        const username = sedMsg.author.username,
+            avatar = sedMsg.author.displayAvatarURL(),
+            timestamp = prevMsg.editedTimestamp ?? prevMsg.createdTimestamp;
+
+        const embed = new EmbedBuilder()
+            .setAuthor({
+                name: username,
+                iconURL: avatar
+            })
+            .setDescription(content)
+            .setTimestamp(timestamp)
+            .setImage(image)
+            .setFooter({
+                text: footer
+            });
 
         return {
             embeds: [embed]
@@ -101,6 +108,7 @@ class PreviewHandler extends Handler {
                 content: ":no_entry_sign: Encountered exception while generating preview:",
                 ...Util.getFileAttach(err.stack, "error.js")
             });
+
             this.messageTracker.addMsg(reply, msg.id);
 
             getLogger().error("Preview gen failed", err);
@@ -120,6 +128,7 @@ class PreviewHandler extends Handler {
                 content: ":no_entry_sign: Encountered exception while sending preview:",
                 ...Util.getFileAttach(err.stack, "error.js")
             });
+
             this.messageTracker.addMsg(reply, msg.id);
 
             getLogger().error("Reply failed", err);
