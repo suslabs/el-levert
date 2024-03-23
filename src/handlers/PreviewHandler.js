@@ -65,12 +65,12 @@ class PreviewHandler extends Handler {
         content += "\n\n";
         content += hyperlink("[Jump to Message]", url);
 
-        let footer;
+        let channel;
 
         if (sv_id !== msg.guild.id) {
-            footer = `From #${prevMsg.channel.name} - ${prevMsg.guild.name}`;
+            channel = `From #${prevMsg.channel.name} - ${prevMsg.guild.name}`;
         } else {
-            footer = "From #" + prevMsg.channel.name;
+            channel = "From #" + prevMsg.channel.name;
         }
 
         const username = sedMsg.author.username,
@@ -86,7 +86,7 @@ class PreviewHandler extends Handler {
             .setTimestamp(timestamp)
             .setImage(image)
             .setFooter({
-                text: footer
+                text: channel
             });
 
         return {

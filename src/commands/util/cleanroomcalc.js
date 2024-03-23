@@ -1,5 +1,8 @@
 import { EmbedBuilder } from "discord.js";
 
+const minSize = 5,
+    maxSize = 15;
+
 export default {
     name: "cleanroomcalc",
     handler: args => {
@@ -17,12 +20,12 @@ export default {
             return `:warning: Invalid dimensions: \`${dims[0]}\`x\`${dims[1]}\`x\`${dims[2]}\`.`;
         }
 
-        if (l < 5 || w < 5 || h < 5) {
-            return ":warning: Cleanroom must be at least 5x5x5.";
+        if (l < minSize || w < minSize || h < minSize) {
+            return `:warning: Cleanroom must be at least ${minSize}x${minSize}x${minSize}.`;
         }
 
-        if (l > 15 || w > 15 || h > 15) {
-            return ":warning: Cleanroom cannot be bigger than 15x15x15.";
+        if (l > maxSize || w > maxSize || h > maxSize) {
+            return `:warning: Cleanroom cannot be bigger than ${maxSize}x${maxSize}x${maxSize}.`;
         }
 
         const lInner = l - 2,
