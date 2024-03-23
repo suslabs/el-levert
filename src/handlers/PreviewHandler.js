@@ -1,6 +1,3 @@
-import discord from "discord.js-selfbot-v13";
-const { MessageEmbed } = discord;
-
 import Handler from "./Handler.js";
 
 import { getClient, getLogger } from "../LevertClient.js";
@@ -33,25 +30,10 @@ class PreviewHandler extends Handler {
             return false;
         }
 
-        const embed = new MessageEmbed()
-            .setAuthor({
-                name: prevMsg.author.username,
-                iconURL: prevMsg.author.displayAvatarURL()
-            })
-            .setTimestamp(prevMsg.editedTimestamp ?? prevMsg.createdTimestamp);
-
-        if (sv_id !== msg.guild.id) {
-            embed.setFooter({
-                text: `From #${prevMsg.channel.name} - ${prevMsg.guild.name}`
-            });
-        } else {
-            embed.setFooter({
-                text: "From #" + prevMsg.channel.name
-            });
-        }
-
         let content = prevMsg.content,
             split = content.split("\n");
+
+        let image = "";
 
         if (content.length > this.outCharLimit) {
             content = content.slice(0, this.outCharLimit) + "...";
@@ -66,7 +48,7 @@ class PreviewHandler extends Handler {
                 isImage = attach.contentType.startsWith("image/");
 
             if (isImage) {
-                embed.setImage(attach.url);
+                image = attach.url;
             }
 
             if (content.length < 1) {
@@ -81,11 +63,25 @@ class PreviewHandler extends Handler {
         content += "\n\n";
         content += Util.hyperlink("[Jump to Message]", url);
 
-        embed.setDescription(content);
+        let channel;
 
-        return {
-            embeds: [embed]
-        };
+        if (sv_id !== msg.guild.id) {
+            channel = `#${prevMsg.channel.name} - ${prevMsg.guild.name}`;
+        } else {
+            channel = `#${prevMsg.channel.name}`;
+        }
+
+        channel = Util.bold(channel);
+
+        const username = Util.bold(prevMsg.author.displayName),
+            timestamp = Util.time(Math.floor(prevMsg.createdTimestamp / 1000), "R");
+
+        const preview = `From ${username} in ${channel} | ${timestamp}
+
+${content}
+${image ? "\n" + image : ""}`;
+
+        return preview;
     }
 
     async execute(msg) {

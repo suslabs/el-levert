@@ -1,6 +1,3 @@
-import discord from "discord.js-selfbot-v13";
-const { MessageEmbed, MessageType } = discord;
-
 import Handler from "./Handler.js";
 
 import { getClient, getLogger } from "../LevertClient.js";
@@ -25,7 +22,13 @@ class SedHandler extends Handler {
             return false;
         }
 
-        const msg = msgs.find(x => regex.test(x) && x.id !== ignore_id);
+        const msg = msgs.find(msg => {
+            if (msg.author.id === getClient().client.user.id || msg.id === ignore_id) {
+                return false;
+            }
+
+            return regex.test(msg);
+        });
 
         if (typeof msg === "undefined") {
             return false;
@@ -52,7 +55,7 @@ class SedHandler extends Handler {
             return [undefined, ":warning: Invalid regex or flags.\n" + sedUsage];
         }
 
-        if (msg.type === MessageType.Reply) {
+        if (msg.type === "reply") {
             sedMsg = await getClient().fetchMessage(msg.channel.id, msg.reference.messageId, null, false);
         } else {
             sedMsg = await this.fetchMatch(msg.channel.id, regex, msg.id);
@@ -62,19 +65,18 @@ class SedHandler extends Handler {
             return [undefined, ":warning: No matching message found."];
         }
 
-        const embed = new MessageEmbed()
-            .setAuthor({
-                name: sedMsg.author.username,
-                iconURL: sedMsg.author.displayAvatarURL()
-            })
-            .setDescription(sedMsg.content.replace(regex, replace ?? ""))
-            .setTimestamp(sedMsg.editedTimestamp ?? sedMsg.createdTimestamp)
-            .setImage(sedMsg.attachments.at(0)?.url)
-            .setFooter({
-                text: "From #" + sedMsg.channel.name
-            });
+        const username = Util.bold(sedMsg.author.displayName),
+            content = sedMsg.content.replace(regex, replace ?? ""),
+            channel = Util.bold(`#${sedMsg.channel.name}`),
+            timestamp = Util.time(Math.floor(sedMsg.createdTimestamp / 1000), "R"),
+            image = sedMsg.attachments.at(0)?.url;
 
-        return [embed, undefined];
+        const sed = `From ${username} in ${channel} | ${timestamp}
+
+${content}
+${image ? "\n" + image : ""}`;
+
+        return [sed, undefined];
     }
 
     async execute(msg) {
@@ -85,7 +87,7 @@ class SedHandler extends Handler {
         await msg.channel.sendTyping();
 
         const ret = await this.genSed(msg),
-            embed = ret[0],
+            sed = ret[0],
             err = ret[1];
 
         if (typeof err !== "undefined") {
@@ -94,9 +96,7 @@ class SedHandler extends Handler {
         }
 
         try {
-            const reply = await msg.reply({
-                embeds: [embed]
-            });
+            const reply = await msg.reply(sed);
             this.messageTracker.addMsg(reply, msg.id);
         } catch (err) {
             const reply = await msg.reply({
