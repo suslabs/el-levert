@@ -24,7 +24,13 @@ class SedHandler extends Handler {
             return false;
         }
 
-        const msg = msgs.find(x => regex.test(x) && x.id !== ignore_id);
+        const msg = msgs.find(msg => {
+            if (msg.author.id === getClient().client.user.id || msg.id === ignore_id) {
+                return false;
+            }
+
+            return regex.test(msg);
+        });
 
         if (typeof msg === "undefined") {
             return false;
