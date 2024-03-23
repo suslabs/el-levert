@@ -36,5 +36,6 @@
         "type": "WATCHING",
         "text": "Example"
     },
-    "guilds": ["781499018253434921"]
+    "channels": [],
+    "guilds": []
 }

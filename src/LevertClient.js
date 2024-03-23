@@ -59,6 +59,7 @@ class LevertClient extends DiscordClient {
             eventsDir: config.eventsPath
         });
 
+        this.channels = config.channels ?? [];
         this.guilds = config.guilds ?? [];
     }
 
@@ -262,6 +263,14 @@ class LevertClient extends DiscordClient {
 
         this.buildClient();
         await this.start();
+    }
+
+    shouldProcess(msg) {
+        if (msg.author.id === this.client.user.id) {
+            return false;
+        }
+
+        return this.channels.includes(msg.channel.id) || this.guilds.includes(msg.guild.id);
     }
 }
 
