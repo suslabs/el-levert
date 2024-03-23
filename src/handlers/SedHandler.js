@@ -61,12 +61,12 @@ class SedHandler extends Handler {
             return [undefined, ":warning: No matching message found."];
         }
 
-        const username = sedMsg.author.username,
+        const username = sedMsg.author.displayName,
             avatar = sedMsg.author.displayAvatarURL(),
             content = sedMsg.content.replace(regex, replace ?? ""),
+            channel = `#${sedMsg.channel.name}`,
             timestamp = sedMsg.editedTimestamp ?? sedMsg.createdTimestamp,
-            image = sedMsg.attachments.at(0)?.url,
-            channel = "From #" + sedMsg.channel.name;
+            image = sedMsg.attachments.at(0)?.url;
 
         const embed = new EmbedBuilder()
             .setAuthor({
@@ -77,7 +77,7 @@ class SedHandler extends Handler {
             .setTimestamp(timestamp)
             .setImage(image)
             .setFooter({
-                text: channel
+                text: `From ${channel}`
             });
 
         return [embed, undefined];
