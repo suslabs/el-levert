@@ -40,6 +40,8 @@ class DiscordClient {
         this.eventsDir = "";
 
         this.loginTimeout = 60000;
+
+        this.onLogout = _ => {};
         this.onKill = _ => {};
     }
 
@@ -112,7 +114,14 @@ class DiscordClient {
         }
     }
 
+    onLogin() {
+        this.loggedIn = true;
+        this.logger?.info(`The bot is online. Logged in as "${this.client.user.username}".`);
+    }
+
     async logout(kill = false) {
+        this.onLogout();
+
         await this.client.destroy();
         delete this.client;
 
