@@ -86,10 +86,10 @@ class LevertClient extends DiscordClient {
         this.logger.info("Loading handlers...");
 
         const handlers = {
-            commandHander: new CommandHandler(),
+            commandHandler: new CommandHandler(),
             previewHandler: new PreviewHandler(),
             reactionHandler: new ReactionHandler(),
-            sedHander: new SedHandler()
+            sedHandler: new SedHandler()
         };
 
         this.handlers = handlers;
@@ -230,7 +230,7 @@ class LevertClient extends DiscordClient {
 
         if (this.config.enableGlobalHandler) {
             registerGlobalHandler(this.logger);
-            this.logger.info("Registered global error hander.");
+            this.logger.info("Registered global error handler.");
         }
 
         this.started = true;
@@ -246,7 +246,7 @@ class LevertClient extends DiscordClient {
 
         if (this.config.enableGlobalHandler) {
             removeGlobalHandler();
-            this.logger.info("Removed global error hander.");
+            this.logger.info("Removed global error handler.");
         }
 
         this.unloadEvents();
