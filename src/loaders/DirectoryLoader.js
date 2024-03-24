@@ -2,6 +2,7 @@ import path from "path";
 
 import Loader from "./Loader.js";
 import FileLoader from "./FileLoader.js";
+
 import LoadStatus from "./LoadStatus.js";
 
 import Util from "../util/Util.js";
@@ -13,7 +14,11 @@ class DirectoryLoader extends Loader {
             ...options
         });
 
-        this.dirPath = dirPath;
+        if (typeof dirPath === "string") {
+            this.dirPath = path.resolve(dirPath);
+        } else {
+            this.dirPath = dirPath;
+        }
 
         this.excludeDirs = options.excludeDirs ?? [];
         this.fileExtension = options.fileExtension ?? "any";

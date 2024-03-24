@@ -5,9 +5,9 @@ import LoadStatus from "../LoadStatus.js";
 class EventLoader extends DirectoryLoader {
     constructor(dirPath, client, logger, options = {}) {
         super("event", dirPath, logger, {
+            throwOnFailure: true,
             ...options,
-            fileLoaderClass: EventObjectLoader,
-            throwOnFailure: true
+            fileLoaderClass: EventObjectLoader
         });
 
         this.client = client;
@@ -23,13 +23,19 @@ class EventLoader extends DirectoryLoader {
             return status;
         }
 
-        const events = Array.from(this.data.values());
-        this.data = events;
+        this.getEvents();
 
         this.wrapEvents();
         this.registerEvents();
 
         return LoadStatus.successful;
+    }
+
+    getEvents() {
+        const events = Array.from(this.data.values());
+
+        this.events = events;
+        this.data = events;
     }
 
     wrapEvent(event) {
@@ -49,7 +55,7 @@ class EventLoader extends DirectoryLoader {
     }
 
     wrapEvents() {
-        for (const event of this.data) {
+        for (const event of this.events) {
             this.wrapEvent(event);
         }
     }
@@ -59,7 +65,7 @@ class EventLoader extends DirectoryLoader {
 
         let n = 0;
 
-        for (const event of this.data) {
+        for (const event of this.events) {
             event.register(this.client);
             n++;
         }
@@ -68,12 +74,15 @@ class EventLoader extends DirectoryLoader {
     }
 
     removeListeners() {
-        for (let i = 0; i < this.data.length; i++) {
-            this.data[i].unregister();
+        for (let i = 0; i < this.events.length; i++) {
+            this.events[i].unregister();
+
+            delete this.events[i];
             delete this.data[i];
         }
 
-        while (this.data.length > 0) {
+        while (this.events.length > 0) {
+            this.events.shift();
             this.data.shift();
         }
 

@@ -5,25 +5,29 @@ import LoadStatus from "../LoadStatus.js";
 class CommandLoader extends DirectoryLoader {
     constructor(dirPath, logger, options = {}) {
         super("command", dirPath, logger, {
+            throwOnFailure: false,
             ...options,
-            fileLoaderClass: CommandObjectLoader,
-            throwOnFailure: false
+            fileLoaderClass: CommandObjectLoader
         });
     }
 
     async load() {
-        const status = await super.load({
-            throwOnFailure: false
-        });
+        const status = await super.load();
 
         if (status === LoadStatus.failed) {
             return status;
         }
 
-        const commands = Array.from(this.data.values());
-        this.data = commands;
+        this.getCommands();
 
         return LoadStatus.successful;
+    }
+
+    getCommands() {
+        const commands = Array.from(this.data.values());
+
+        this.commands = commands;
+        this.data = commands;
     }
 }
 

@@ -1,11 +1,12 @@
+import Command from "../../structures/Command.js";
+
 import ObjectLoader from "../ObjectLoader.js";
 import LoadStatus from "../LoadStatus.js";
 
-import Command from "../../structures/Command.js";
-
-class EventObjectLoader extends ObjectLoader {
+class CommandObjectLoader extends ObjectLoader {
     constructor(filePath, logger, options = {}) {
         super("command", filePath, logger, {
+            throwOnFailure: false,
             ...options,
             type: null
         });
@@ -47,4 +48,4 @@ class EventObjectLoader extends ObjectLoader {
     }
 }
 
-export default EventObjectLoader;
+export default CommandObjectLoader;

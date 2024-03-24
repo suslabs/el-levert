@@ -24,6 +24,7 @@ class BaseConfigLoader extends JsonLoader {
 
         super(name, configPath, logger, {
             validateWithSchema: true,
+            forceSchemaValidation: false,
             schemaDir: configPaths.schemaDir,
             ...options
         });
