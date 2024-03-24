@@ -4,11 +4,13 @@ import { getClient } from "../../LevertClient.js";
 
 export default {
     name: "add_group",
+    aliases: ["create", "create_group"],
     parent: "perm",
     subcommand: true,
     allowed: getClient().permManager.adminLevel,
-    handler: async args => {
+    handler: async (args, msg) => {
         let [g_name, level] = Util.splitArgs(args);
+        level = parseInt(level);
 
         if (args.length === 0 || g_name.length === 0 || level.length === 0) {
             return ":information_source: `perm add_group [group name] [level]`";
@@ -19,19 +21,19 @@ export default {
             return ":warning: " + e;
         }
 
-        const group = await getClient().permManager.fetchGroup(g_name);
+        const maxLevel = await getClient().permManager.maxLevel(msg.author.id);
 
-        if (group) {
-            return `:warning: Group **${g_name}** already exists.`;
+        if (maxLevel < level) {
+            return `:warning: Can't create a group with a level that is higher than your own. (${maxLevel} < ${level})`;
         }
-
-        level = parseInt(level);
 
         try {
             await getClient().permManager.addGroup(g_name, level);
         } catch (err) {
             if (err.name === "PermissionError") {
                 switch (err.message) {
+                    case "Group already exists":
+                        return `:warning: Group **${g_name}** already exists.`;
                     case "Invalid level":
                         return `Invalid level: \`${level}\`. Level must be an int larger than 0.`;
                     default:

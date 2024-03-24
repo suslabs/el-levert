@@ -25,6 +25,12 @@ export default {
             return `:warning: Group **${g_name}** doesn't exist.`;
         }
 
+        const maxLevel = await getClient().permManager.maxLevel(msg.author.id);
+
+        if (maxLevel < group.level) {
+            return `:warning: Can't remove a user from a group with a higher level your own. (${maxLevel} < ${group.level})`;
+        }
+
         const find = (await getClient().findUsers(u_name))[0];
 
         if (typeof find === "undefined") {

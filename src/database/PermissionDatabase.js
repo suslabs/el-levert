@@ -30,9 +30,22 @@ class PermissionDatabase extends Database {
         });
     }
 
+    async removeByGroup(group) {
+        return await this.userQueries.removeByGroup.run({
+            $name: group.name
+        });
+    }
+
     async removeAll(user) {
         return await this.userQueries.removeAll.run({
             $id: user.id
+        });
+    }
+
+    async transferUsers(group, newGroup) {
+        return await this.userQueries.transfer.run({
+            $group: group.name,
+            $newGroup: newGroup.name
         });
     }
 
@@ -68,12 +81,16 @@ class PermissionDatabase extends Database {
     }
 
     async removeGroup(group) {
-        await this.userQueries.removeByGroup.run({
-            $name: group.name
-        });
-
         return await this.groupQueries.remove.run({
             $name: group.name
+        });
+    }
+
+    async updateGroup(group, newGroup) {
+        return await this.groupQueries.update.run({
+            $name: group.name,
+            $newName: newGroup.name,
+            $newLevel: newGroup.level
         });
     }
 
