@@ -29,11 +29,11 @@ function formatValidationErrors(errors) {
     return errMessage.join("\n");
 }
 
-function validate() {
+function validate(data) {
     let valid, error;
 
     if (typeof this.childValidate === "function") {
-        const res = this.childValidate(this.config);
+        const res = this.childValidate(data);
 
         if (Array.isArray(res)) {
             [valid, error] = res;
@@ -47,16 +47,22 @@ function validate() {
     }
 
     if (this.validateWithSchema) {
-        [valid, error] = this.schemaValidate();
+        [valid, error] = this.schemaValidate(data);
 
         if (!valid) {
-            return this.failure("Validation failed:\n" + formatValidationErrors(error));
+            let errMessage = "Validation failed";
+
+            if (typeof error !== "undefined") {
+                errMessage += ":\n" + formatValidationErrors(error);
+            } else {
+                errMessage += ".";
+            }
+
+            return this.failure(errMessage);
         }
     }
 
-    if (valid) {
-        this.logger?.info(`Validated ${this.getName()}.`);
-    }
+    return LoadStatus.successful;
 }
 
 class JsonLoader extends FileLoader {
@@ -64,6 +70,8 @@ class JsonLoader extends FileLoader {
         super(name, filePath, logger, options);
 
         this.validateWithSchema = options.validateWithSchema ?? false;
+        this.forceSchemaValidation = options.forceSchemaValidation ?? true;
+
         this.schema = options.schema;
         this.schemaPath = this.getSchemaPath(options);
 
@@ -123,7 +131,8 @@ class JsonLoader extends FileLoader {
             return status;
         }
 
-        this.schema = JSON.parse(schemaString);
+        const schema = JSON.parse(schemaString);
+        this.schema = schema;
 
         return LoadStatus.successful;
     }
@@ -147,32 +156,48 @@ class JsonLoader extends FileLoader {
             delete this.ajvValidate;
         }
 
-        this.ajvValidate = ajv.compile(this.schema);
+        const existingValidator = ajv.getSchema(this.schema.$id);
+
+        if (typeof existingValidator !== "undefined") {
+            this.ajvValidate = existingValidator;
+        } else {
+            this.ajvValidate = ajv.compile(this.schema);
+        }
 
         return LoadStatus.successful;
     }
 
-    schemaValidate() {
+    schemaValidate(data) {
         if (this.schemaLoadStatus === LoadStatus.failed || this.initValidator() === LoadStatus.failed) {
-            this.logger?.warn("Schema validation skipped.");
-            return [true, undefined];
+            if (this.forceSchemaValidation) {
+                return [false, undefined];
+            } else {
+                this.logger?.warn("Schema validation skipped.");
+                return [true, undefined];
+            }
         }
 
-        const valid = this.ajvValidate(this.data),
+        const valid = this.ajvValidate(data),
             errors = this.ajvValidate.errors;
 
-        return [valid, errors];
+        if (valid) {
+            return [valid, undefined];
+        } else {
+            return [valid, errors];
+        }
     }
 
     async load() {
         let status;
 
         status = await this.read();
+
         if (status === LoadStatus.failed) {
             return status;
         }
 
         status = this.parse();
+
         if (status === LoadStatus.failed) {
             return status;
         }
@@ -181,15 +206,36 @@ class JsonLoader extends FileLoader {
             await this.loadSchema();
         }
 
-        status = this.validate();
+        status = this.validate(this.data);
+
         if (status === LoadStatus.failed) {
             return status;
+        } else {
+            this.logger?.info(`Validated ${this.getName()}.`);
         }
 
         return status;
     }
 
-    async write() {}
+    async write(data, options = {}) {
+        const status = this.validate(data);
+
+        if (status === LoadStatus.failed) {
+            return status;
+        }
+
+        let jsonData;
+
+        const { stringify, space } = options;
+
+        if (typeof stringify === "function") {
+            jsonData = stringify(data);
+        } else {
+            jsonData = JSON.stringify(data, undefined, space);
+        }
+
+        return await super.write(jsonData);
+    }
 }
 
 export default JsonLoader;

@@ -1,13 +1,13 @@
+import BotEvent from "../../structures/BotEvent.js";
+
 import ObjectLoader from "../ObjectLoader.js";
 import LoadStatus from "../LoadStatus.js";
-
-import BotEvent from "../../structures/BotEvent.js";
 
 class EventObjectLoader extends ObjectLoader {
     constructor(filePath, logger, options = {}) {
         super("event", filePath, logger, {
-            ...options,
             throwOnFailure: true,
+            ...options,
             type: null
         });
     }
