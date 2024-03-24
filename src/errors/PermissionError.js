@@ -2,7 +2,7 @@ class PermissionError extends Error {
     constructor(message = "", ...args) {
         super(message, ...args);
 
-        this.name = "PermissionErrorError";
+        this.name = "PermissionError";
         this.message = message;
     }
 }
