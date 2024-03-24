@@ -101,10 +101,11 @@ Subcommands:
 -   remove `(group_name)` `(user)` - Remove `(user)` from `(group_name)`. Can be executed by admin and above.
 -   remove_all `(user)` - Remove all of `(user)`'s permissions.
 -   list - Sends registered permissions. Can be executed by anyone.
--   add_group `(group_name) (level)` - Add `(group_name)` with the specified level.
+-   add_group `(group_name) (level)` - Adds `(group_name)` with the specified level.
     Level 1 = Moderator
     Level 2 = Admin
 -   remove_group `(group_name)` - Removes `(group_name)` from the group list and from the permission list of everyone added to it.
+-   update_group `(group_name) (new_name) (new_level) - Updates `(group_name)` with a new name and level.
 -   check `(user)` - Sends permission details for `(user)`. Can be executed by anyone.
 
 ### 6. oc `-version (EU/t) (duration)`
