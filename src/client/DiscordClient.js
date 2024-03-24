@@ -169,14 +169,14 @@ class DiscordClient {
 
     setActivity(config) {
         const validTypes = Object.entries(ActivityType)
-                .filter(([key, _]) => !isNaN(key))
+                .filter(([key, value]) => !isNaN(key) && value !== "Custom")
                 .map(([_, value]) => value),
             lowercaseTypes = validTypes.map(x => x.toLowerCase());
 
-        const activityType = config.type.toLowerCase(),
-            ind = lowercaseTypes.indexOf(activityType);
+        let activityType = config.type.toLowerCase(),
+            num = lowercaseTypes.indexOf(activityType);
 
-        if (ind === -1) {
+        if (num === -1) {
             this.logger?.error(`Invalid activity type: ${activityType}\nValid types are: ${validTypes.join(" ")}`);
             return;
         }
@@ -187,11 +187,14 @@ class DiscordClient {
         }
 
         const presence = this.client.user.setActivity(config.text, {
-                type: validTypes[ind]
+                type: num
             }),
             activity = presence.activities[0];
 
-        this.logger?.info(`Set activity status: "${activity.type} ${activity.name}"`);
+        const setType = ActivityType[activity.type],
+            setText = activity.name;
+
+        this.logger?.info(`Set activity status: "${setType} ${setText}"`);
     }
 
     async getChannel(ch_id, user_id, checkAccess = true) {
