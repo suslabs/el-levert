@@ -1,3 +1,5 @@
+import DatabaseError from "../../errors/DatabaseError.js";
+
 class AsyncStatement {
     constructor(statement) {
         this.st = statement;
@@ -15,7 +17,7 @@ class AsyncStatement {
         return new Promise((resolve, reject) => {
             this.st.bind(...args, err => {
                 if (err) {
-                    reject(err);
+                    reject(new DatabaseError(err));
                 }
 
                 resolve(this);
@@ -35,7 +37,7 @@ class AsyncStatement {
         return new Promise((resolve, reject) => {
             this.st.run(...args, err => {
                 if (err) {
-                    reject(err);
+                    reject(new DatabaseError(err));
                 }
 
                 resolve(this);
@@ -47,7 +49,7 @@ class AsyncStatement {
         return new Promise((resolve, reject) => {
             this.st.get(...args, (err, row) => {
                 if (err) {
-                    reject(err);
+                    reject(new DatabaseError(err));
                 }
 
                 resolve(row);
@@ -59,7 +61,7 @@ class AsyncStatement {
         return new Promise((resolve, reject) => {
             this.st.all(...args, (err, rows) => {
                 if (err) {
-                    reject(err);
+                    reject(new DatabaseError(err));
                 }
 
                 resolve(rows);
@@ -71,7 +73,7 @@ class AsyncStatement {
         return new Promise((resolve, reject) => {
             this.st.each(...args, (err, nrows) => {
                 if (err) {
-                    reject(err);
+                    reject(new DatabaseError(err));
                 }
 
                 resolve(nrows);
@@ -83,7 +85,7 @@ class AsyncStatement {
         return new Promise((resolve, reject) => {
             this.st.finalize(err => {
                 if (err) {
-                    reject(err);
+                    reject(new DatabaseError(err));
                 }
 
                 resolve(this);

@@ -29,7 +29,7 @@ class AsyncDatabase {
 
             const db = new sqlite.Database(this.filename, this.mode, err => {
                 if (err) {
-                    reject(err);
+                    reject(new DatabaseError(err));
                 }
 
                 this.db = db;
@@ -46,7 +46,7 @@ class AsyncDatabase {
 
             this.db.close(err => {
                 if (err) {
-                    reject(err);
+                    reject(new DatabaseError(err));
                 }
 
                 delete this.db;
@@ -67,7 +67,7 @@ class AsyncDatabase {
 
             this.db.run(...args, err => {
                 if (err) {
-                    reject(err);
+                    reject(new DatabaseError(err));
                 }
 
                 resolve(this);
@@ -83,7 +83,7 @@ class AsyncDatabase {
 
             this.db.get(...args, (err, row) => {
                 if (err) {
-                    reject(err);
+                    reject(new DatabaseError(err));
                 }
 
                 resolve(row);
@@ -99,7 +99,7 @@ class AsyncDatabase {
 
             this.db.all(...args, (err, rows) => {
                 if (err) {
-                    reject(err);
+                    reject(new DatabaseError(err));
                 }
 
                 resolve(rows);
@@ -115,7 +115,7 @@ class AsyncDatabase {
 
             this.db.each(...args, (err, nrows) => {
                 if (err) {
-                    reject(err);
+                    reject(new DatabaseError(err));
                 }
 
                 resolve(nrows);
@@ -131,7 +131,7 @@ class AsyncDatabase {
 
             this.db.resolve(...args, err => {
                 if (err) {
-                    reject(err);
+                    reject(new DatabaseError(err));
                 }
 
                 resolve(this);
@@ -149,7 +149,7 @@ class AsyncDatabase {
 
             let callback = err => {
                 if (err) {
-                    reject(err);
+                    reject(new DatabaseError(err));
                 }
 
                 resolve(new AsyncStatement(statement));
