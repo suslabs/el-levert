@@ -6,6 +6,6 @@ export default {
     name: Events.ClientReady,
     once: true,
     listener: _ => {
-        getClient().onLogin();
+        getClient().onReady();
     }
 };

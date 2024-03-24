@@ -29,6 +29,29 @@ class CommandLoader extends DirectoryLoader {
         this.commands = commands;
         this.data = commands;
     }
+
+    deleteCommands() {
+        this.logger?.info("Deleting commands...");
+
+        let i = 0;
+        for (; i < this.commands.length; i++) {
+            delete this.commands[i];
+        }
+
+        while (this.commands.length > 0) {
+            this.commands.shift();
+        }
+
+        this.logger?.info(`Deleted ${i} commands.`);
+    }
+
+    getLoadingMessage() {
+        return `Loading ${this.name}s...`;
+    }
+
+    getLoadedMessage() {
+        return `Loaded ${this.name}s successfully.`;
+    }
 }
 
 export default CommandLoader;

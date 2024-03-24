@@ -44,7 +44,7 @@ class CommandObjectLoader extends ObjectLoader {
     }
 
     getIgnoredMessage() {
-        return `Didn't load ${this.getName()}.`;
+        return `Didn't load ${this.getName()}: ${this.data.name}`;
     }
 }
 

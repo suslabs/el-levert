@@ -86,7 +86,15 @@ class EventLoader extends DirectoryLoader {
             this.data.shift();
         }
 
-        this.logger?.info("Removed all listeners.");
+        this.logger?.info("Removed all event listeners.");
+    }
+
+    getLoadingMessage() {
+        return `Loading ${this.name}s...`;
+    }
+
+    getLoadedMessage() {
+        return `Loaded ${this.name}s successfully.`;
     }
 }
 

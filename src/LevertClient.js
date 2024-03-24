@@ -95,8 +95,15 @@ class LevertClient extends DiscordClient {
         this.handlers = handlers;
         this.handlerList = Object.values(handlers);
 
-        for (const handler of this.handlerList) {
+        for (const [name, handler] of Object.entries(handlers)) {
             handler.load();
+
+            Object.defineProperty(this, name, {
+                value: handler,
+                configurable: true
+            });
+
+            this.logger.info(`Loaded handler: ${name}`);
         }
 
         this.executeAllHandlers = executeAllHandlers.bind(undefined, this);
@@ -106,17 +113,20 @@ class LevertClient extends DiscordClient {
     unloadHandlers() {
         this.logger.info("Unloading handlers...");
 
+        for (const name in this.handlers) {
+            this.handlers[name].unload();
+
+            delete this.handlers[name];
+            delete this[name];
+        }
+
         for (let i = 0; i < this.handlerList.length; i++) {
-            this.handlerList[i].unload();
             delete this.handlerList[i];
         }
 
-        for (const name in this.handlers) {
-            delete this.handlers[name];
-        }
-
-        delete this.handlerList;
         delete this.handlers;
+        delete this.handlerList;
+
         delete this.executeAllHandlers;
 
         this.logger.info("Unloaded handlers.");
@@ -134,12 +144,17 @@ class LevertClient extends DiscordClient {
         };
 
         this.managers = managers;
+        this.managerList = Object.values(managers);
 
         for (const [name, manager] of Object.entries(managers)) {
             this.logger.info(`Loading manager: ${name}`);
 
             await manager.load();
-            this[name] = manager;
+
+            Object.defineProperty(this, name, {
+                value: manager,
+                configurable: true
+            });
 
             this.logger.info(`Loaded manager: ${name}`);
         }
@@ -148,8 +163,10 @@ class LevertClient extends DiscordClient {
     async unloadManagers() {
         this.logger.info("Unloading managers...");
 
-        for (const [name, manager] of Object.entries(this.managers)) {
-            await manager.unload();
+        for (const name in this.managers) {
+            this.logger.info(`Unloading manager: ${name}`);
+
+            await this.managers[name].unload();
 
             delete this.managers[name];
             delete this[name];
@@ -157,7 +174,13 @@ class LevertClient extends DiscordClient {
             this.logger.info(`Unloaded manager: ${name}`);
         }
 
+        for (let i = 0; i < this.managerList.length; i++) {
+            delete this.managerList[i];
+        }
+
         delete this.managers;
+        delete this.managerList;
+
         this.logger.info("Unloaded managers.");
     }
 

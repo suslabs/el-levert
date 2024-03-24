@@ -123,7 +123,7 @@ class DiscordClient {
         }
     }
 
-    onLogin() {
+    onReady() {
         this.loggedIn = true;
         this.logger?.info(`The bot is online. Logged in as "${this.client.user.username}".`);
     }
