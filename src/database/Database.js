@@ -88,14 +88,14 @@ class Database {
     async readDirectory(dirPath) {
         const dirName = path.basename(dirPath),
             items = await fs.readdir(dirPath);
-    
+
         for (const item of items) {
             const itemPath = path.resolve(dirPath, item),
                 stat = await fs.stat(itemPath);
-    
+
             if (stat.isDirectory()) {
                 const queryPaths = Util.getFilesRecSync(itemPath);
-    
+
                 for (const queryPath of queryPaths) {
                     await this.readQuery(queryPath, dirName);
                 }
@@ -160,7 +160,7 @@ class Database {
 
     async load() {
         await this.open(Modes.OPEN_READWRITE);
-        await this.loadQueries();        
+        await this.loadQueries();
     }
 }
 

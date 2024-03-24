@@ -4,6 +4,7 @@ import { getClient } from "../../LevertClient.js";
 
 export default {
     name: "add",
+    aliases: ["give"],
     parent: "perm",
     subcommand: true,
     allowed: getClient().permManager.adminLevel,
@@ -25,16 +26,16 @@ export default {
             return `:warning: Group **${g_name}** doesn't exist.`;
         }
 
+        const maxLevel = await getClient().permManager.maxLevel(msg.author.id);
+
+        if (maxLevel < group.level) {
+            return `:warning: Can't add a user to a group with a higher level your own. (${maxLevel} < ${group.level})`;
+        }
+
         const find = (await getClient().findUsers(u_name))[0];
 
         if (typeof find === "undefined") {
             return `:warning: User \`${u_name}\` not found.`;
-        }
-
-        const maxLevel = await getClient().permManager.maxLevel(msg.author.id);
-
-        if (group.level > maxLevel) {
-            return `:warning: Can't a user to a group that is higher than your own. (${maxLevel} -> ${group.level})`;
         }
 
         if (await getClient().permManager.isInGroup(g_name, find.id)) {

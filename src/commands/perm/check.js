@@ -18,6 +18,7 @@ export default {
     name: "check",
     parent: "perm",
     subcommand: true,
+    allowed: getClient().permManager.adminLevel,
     handler: async args => {
         if (args.length === 0) {
             return ":information_source: `perm check [username]`";

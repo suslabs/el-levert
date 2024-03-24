@@ -1,0 +1,1 @@
+UPDATE Groups SET name = $newName, level = $newLevel WHERE name = $name;

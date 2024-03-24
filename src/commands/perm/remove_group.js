@@ -4,6 +4,7 @@ import { getClient } from "../../LevertClient.js";
 
 export default {
     name: "remove_group",
+    aliases: ["delete", "delete_group"],
     parent: "perm",
     subcommand: true,
     allowed: getClient().permManager.adminLevel,
@@ -25,8 +26,14 @@ export default {
             return `:warning: Group **${g_name}** doesn't exist.`;
         }
 
+        const maxLevel = await getClient().permManager.maxLevel(msg.author.id);
+
+        if (maxLevel < group.level) {
+            return `:warning: Can't remove a group with a level that is higher than yours. (${maxLevel} < ${group.level})`;
+        }
+
         try {
-            await getClient().permManager.remove(group, find.user.id);
+            await getClient().permManager.removeGroup(group);
         } catch (err) {
             if (err.name === "PermissionError") {
                 return `:warning: ${err.message}.`;

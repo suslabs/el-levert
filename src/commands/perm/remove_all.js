@@ -4,10 +4,11 @@ import { getClient } from "../../LevertClient.js";
 
 export default {
     name: "remove_all",
+    aliases: ["take"],
     parent: "perm",
     subcommand: true,
     allowed: getClient().permManager.adminLevel,
-    handler: async args => {
+    handler: async (args, msg) => {
         const [u_name] = Util.splitArgs(args);
 
         if (args.length === 0 || u_name.length === 0) {
@@ -17,20 +18,37 @@ export default {
         const find = (await getClient().findUsers(u_name))[0];
 
         if (typeof find === "undefined") {
-            let out = `:warning: User \`${u_name}\` not found. Tried removing by verbatim input: \`${u_name}\``,
-                removed = await getClient().permManager.removeAll(u_name);
+            if (getClient().permManager.isOwner(msg.author.id)) {
+                let out = `:warning: User \`${u_name}\` not found. Tried removing by verbatim input: \`${u_name}\``,
+                    removed = await getClient().permManager.removeAll(u_name);
 
-            if (!removed) {
-                out += `\nUser doesn't have any permissions.`;
+                if (!removed) {
+                    out += "\nUser doesn't have any permissions.";
+                }
+
+                return out;
+            } else {
+                return `:warning: User \`${u_name}\` not found.`;
             }
+        }
 
-            return out;
+        const yourLevel = await getClient().permManager.maxLevel(msg.author.id),
+            theirLevel = await getClient().permManager.maxLevel(find.user.id);
+
+        if (yourLevel < theirLevel) {
+            return `:warning: Can't remove permissions of a user with a level higher than your own. (${yourLevel} < ${theirLevel})`;
         }
 
         const removed = await getClient().permManager.removeAll(find.user.id);
 
         if (!removed) {
-            return `:information_source: User \`${find.user.username}\` doesn't have any permissions.`;
+            const out = `:information_source: User \`${find.user.username}\` doesn't have any permissions`;
+
+            if (getClient().permManager.isOwner(find.user.id)) {
+                return `${out} other than being the bot owner.`;
+            }
+
+            return out + ".";
         }
 
         return `:white_check_mark: Removed \`${find.user.username}\`'s permissions.`;

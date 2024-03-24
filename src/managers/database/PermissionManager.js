@@ -36,6 +36,16 @@ class PermissionManager extends DBManager {
         }
     }
 
+    checkLevel(level) {
+        if (isNaN(level) || level < 0) {
+            throw new PermissionError("Invalid level");
+        }
+    }
+
+    isOwner(id) {
+        return id === this.owner.id;
+    }
+
     async fetch(id) {
         if (id === this.owner.id) {
             return [OwnerGroup];
@@ -132,9 +142,13 @@ class PermissionManager extends DBManager {
             throw new PermissionError('Can\'t create a group with the name "owner"');
         }
 
-        if (isNaN(level) || level < 0) {
-            throw new PermissionError("Invalid level");
+        const existingGroup = await getClient().permManager.fetchGroup(name);
+
+        if (existingGroup) {
+            throw new PermissionError("Group already exists");
         }
+
+        this.checkLevel(level);
 
         const group = new Group({
             name,
@@ -155,9 +169,50 @@ class PermissionManager extends DBManager {
             throw new PermissionError("Can't remove the owner group");
         }
 
+        await this.perm_db.removeByGroup(group);
         await this.perm_db.removeGroup(group);
 
         return group;
+    }
+
+    async updateGroup(group, newName, newLevel) {
+        if (!group) {
+            throw new PermissionError("Group doesn't exist");
+        }
+
+        if (group.name === newName) {
+            throw new PermissionError("Can't update group with the same name");
+        }
+
+        if (group.level === newLevel) {
+            throw new PermissionError("Can't update group with the same level");
+        }
+
+        let newGroup = new Group(group);
+
+        if (typeof newName !== "undefined") {
+            const existingGroup = await this.fetchGroup(newName);
+
+            if (existingGroup) {
+                throw new PermissionError("Group already exists");
+            }
+
+            newGroup.name = newName;
+        }
+
+        if (typeof newLevel !== "undefined") {
+            this.checkLevel(newLevel);
+
+            newGroup.level = newLevel;
+        }
+
+        await this.perm_db.updateGroup(group, newGroup);
+
+        if (newGroup.name !== group.name) {
+            await this.perm_db.transferUsers(group, newGroup);
+        }
+
+        return newGroup;
     }
 
     async listUsers(fetchUsernames = false) {
