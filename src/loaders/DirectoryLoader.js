@@ -20,9 +20,15 @@ class DirectoryLoader extends Loader {
             this.dirPath = dirPath;
         }
 
+        this.logName = this.getLogName();
+
         this.excludeDirs = options.excludeDirs ?? [];
         this.fileExtension = options.fileExtension ?? "any";
         this.fileLoaderClass = options.fileLoaderClass ?? FileLoader;
+    }
+
+    getLogName() {
+        return this.name ?? "file";
     }
 
     loadFilePaths() {
@@ -105,10 +111,6 @@ class DirectoryLoader extends Loader {
         return loadArgs;
     }
 
-    getLogName() {
-        return this.name ?? "file";
-    }
-
     async load(options = {}) {
         let status = await this.loadFilePaths();
 
@@ -117,15 +119,13 @@ class DirectoryLoader extends Loader {
         }
 
         if (this.files.length === 0) {
-            return this.failure(`Couldn't find any ${logName}s.`);
+            return this.failure(`Couldn't find any ${this.logName}s.`);
         }
 
         this.deleteData();
 
         let ok = 0,
             bad = 0;
-
-        const logName = this.getLogName();
 
         for (const file of this.files) {
             const loadArgs = this.getLoadArgs(file, options),
@@ -136,7 +136,7 @@ class DirectoryLoader extends Loader {
             try {
                 [data, status] = await loader.load();
             } catch (err) {
-                this.failure(err, `Error occured while loading ${logName}: ` + file);
+                this.failure(err, `Error occured while loading ${this.logName}: ` + file);
 
                 bad++;
                 continue;
@@ -158,9 +158,9 @@ class DirectoryLoader extends Loader {
         const total = ok + bad;
 
         if (total === 0) {
-            return this.failure(`Couldn't load any ${logName}s.`);
+            return this.failure(`Couldn't load any ${this.logName}s.`);
         } else {
-            this.logger?.info(`Loaded ${total} ${logName}(s). ${ok} successful, ${bad} failed.`);
+            this.logger?.info(`Loaded ${total} ${this.logName}(s). ${ok} successful, ${bad} failed.`);
         }
 
         this.result = {
@@ -180,14 +180,12 @@ class DirectoryLoader extends Loader {
         let ok = 0,
             bad = 0;
 
-        const logName = this.getLogName();
-
         for (const filename of Object.keys(data)) {
             const loader = this.loaders[filename],
                 fileData = data[filename];
 
             if (typeof loader === "undefined") {
-                this.logger?.warn(`Can't write ${filename}: ${logName} isn't loaded.`);
+                this.logger?.warn(`Can't write ${filename}: ${this.logName} isn't loaded.`);
             }
 
             let status;
@@ -195,7 +193,7 @@ class DirectoryLoader extends Loader {
             try {
                 status = await loader[filename].write(fileData);
             } catch (err) {
-                this.failure(err, `Error occured while writing ${logName}: ` + file);
+                this.failure(err, `Error occured while writing ${this.logName}: ` + file);
 
                 bad++;
                 continue;
@@ -214,9 +212,9 @@ class DirectoryLoader extends Loader {
         const total = ok + bad;
 
         if (total === 0) {
-            return this.failure(`Couldn't write any ${logName}s.`);
+            return this.failure(`Couldn't write any ${this.logName}s.`);
         } else {
-            this.logger?.info(`Wrote ${total} ${logName}(s). ${ok} successful, ${bad} failed.`);
+            this.logger?.info(`Wrote ${total} ${this.logName}(s). ${ok} successful, ${bad} failed.`);
         }
 
         this.result = {

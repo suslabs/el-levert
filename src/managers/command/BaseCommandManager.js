@@ -63,19 +63,19 @@ class BaseCommandManager extends Manager {
     }
 
     async loadCommands() {
-        const loader = new CommandLoader(this.commandsDir, getLogger(), {
+        const commandLoader = new CommandLoader(this.commandsDir, getLogger(), {
             excludeDirs: this.excludeDirs,
             fileExtension: this.cmdFileExtension
         });
 
-        const [commands, status] = await loader.load();
+        const [commands, status] = await commandLoader.load();
 
-        if (status === LoadStatus.failed) {
-            this.commands = [];
-        } else {
+        if (status !== LoadStatus.failed) {
             this.commands = commands;
             this.bindSubcommands();
         }
+
+        this.commandLoader = commandLoader;
     }
 
     bindSubcommand(command, subcommand) {
@@ -127,22 +127,13 @@ class BaseCommandManager extends Manager {
     }
 
     deleteCommands() {
-        getLogger().info("Deleting commands...");
-
-        let i = 0;
-        for (; i < this.commands.length; i++) {
-            delete this.commands[i];
-        }
-
-        while (this.commands.length > 0) {
-            this.commands.shift();
-        }
-
-        if (i === 0) {
-            getLogger().info("No commands were found.");
+        if (this.commandLoader.loaded) {
+            this.commandLoader.deleteCommands();
         } else {
-            getLogger().info(`Deleted ${i} commands.`);
+            getLogger().info("No commands to delete.");
         }
+
+        delete this.commandLoader;
     }
 
     async reloadCommands() {
