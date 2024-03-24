@@ -73,7 +73,7 @@ class TagManager extends DBManager {
         const existingTag = await this.fetch(name);
 
         if (existingTag) {
-            throw new TagError("Tag already exists");
+            throw new TagError("Tag already exists", existingTag);
         }
 
         if (typeof body === "undefined" || body.length < 1) {

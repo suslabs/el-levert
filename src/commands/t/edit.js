@@ -33,10 +33,10 @@ export default {
                 out = `:warning: You can only edit your own tags.`;
 
             if (!owner) {
-                return out + " Tag owner not found.";
+                return `${out} Tag owner not found.`;
             }
 
-            return out + ` The tag is owned by \`${owner.username}\`.`;
+            return `${out} The tag is owned by \`${owner.username}\`.`;
         }
 
         const parsed = await this.parentCmd.parseBase(t_args, msg),

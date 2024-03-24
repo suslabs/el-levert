@@ -50,7 +50,15 @@ export default {
             return out + ` The tag is owned by \`${owner.username}\`.`;
         }
 
-        await getClient().tagManager.chown(tag, find.user.id);
+        try {
+            await getClient().tagManager.chown(tag, find.user.id);
+        } catch (err) {
+            if (err.name === "TagError") {
+                return `:warning: ${err.message}.`;
+            }
+
+            throw err;
+        }
 
         return `:white_check_mark: Transferred tag **${t_name}** to \`${find.user.username}\`.`;
     }
