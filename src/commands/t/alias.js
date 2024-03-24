@@ -38,7 +38,7 @@ If you want to de-alias the tag, \`edit\` it.`;
                 out = `:warning: You can only edit your own tags.`;
 
             if (!owner) {
-                return out + " Tag owner not found.";
+                return `${out} Tag owner not found.`;
             }
 
             return `${out} The tag is owned by \`${owner.username}\`.`;

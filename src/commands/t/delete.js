@@ -34,10 +34,10 @@ export default {
                 out = ":warning: You can only delete your own tags.";
 
             if (!owner) {
-                return out + " Tag owner not found.";
+                return `${out} Tag owner not found.`;
             }
 
-            return out + ` Tag is owned by \`${owner.username}\`.`;
+            return `${out} Tag is owned by \`${owner.username}\`.`;
         }
 
         await getClient().tagManager.delete(tag);
