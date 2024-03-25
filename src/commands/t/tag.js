@@ -139,11 +139,11 @@ export default {
             }
         }
 
-        if (getClient().handlers.previewHandler.canPreview(out)) {
-            let prev;
+        if (getClient().previewHandler.canPreview(out)) {
+            let preview;
 
             try {
-                prev = await getClient().handlers.previewHandler.genPreview(msg, out);
+                preview = await getClient().previewHandler.genPreview(msg, out);
             } catch (err) {
                 getLogger().error("Preview gen failed", err);
 
@@ -153,17 +153,21 @@ export default {
                 };
             }
 
-            if (!prev) {
+            if (!preview) {
                 return out;
             }
 
-            out = out.replace(getClient().handlers.previewHandler.regex, "");
+            const outMsg = {
+                embeds: [preview]
+            };
+
+            out = getClient().handlers.previewHandler.removeLink(out);
 
             if (out.length > 0) {
-                prev.content = out;
+                outMsg.content = out;
             }
 
-            return prev;
+            return outMsg;
         }
 
         return out;

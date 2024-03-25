@@ -3,7 +3,7 @@ import HandlerError from "../errors/HandlerError.js";
 import MessageTracker from "./tracker/MessageTracker.js";
 import UserTracker from "./tracker/UserTracker.js";
 
-import { getClient, getLogger } from "../LevertClient.js";
+import { getLogger } from "../LevertClient.js";
 
 function execute(msg) {
     if (!this.enabled) {
@@ -20,18 +20,33 @@ function _delete(msg) {
 
     let deleteFunc;
 
-    if (typeof this.childDelete === "undefined") {
-        if (this.hasMessageTracker) {
-            deleteFunc = this.msgTrackerDelete;
-        } else {
-            deleteFunc = this.defaultDelete;
-        }
-    } else {
+    if (typeof this.childDelete === "function") {
         deleteFunc = this.childDelete;
+    } else if (this.hasMessageTracker) {
+        deleteFunc = this.msgTrackerDelete;
+    } else {
+        deleteFunc = this.defaultDelete;
     }
 
     deleteFunc = deleteFunc.bind(this);
     return deleteFunc(msg);
+}
+
+function resubmit(msg) {
+    if (!this.enabled) {
+        return false;
+    }
+
+    let resubmitFunc;
+
+    if (typeof this.childResubmit === "function") {
+        resubmitFunc = this.childResubmit;
+    } else {
+        resubmitFunc = this.defaultResubmit;
+    }
+
+    resubmitFunc = resubmitFunc.bind(this);
+    return resubmitFunc(msg);
 }
 
 class Handler {
@@ -48,12 +63,13 @@ class Handler {
         this.options = options;
 
         this.childExecute = this.execute;
-        const executeFunc = execute.bind(this);
-        this.execute = getClient().wrapEvent(executeFunc);
+        this.execute = execute.bind(this);
 
         this.childDelete = this.delete;
-        const deleteFunc = _delete.bind(this);
-        this.delete = getClient().wrapEvent(deleteFunc);
+        this.delete = _delete.bind(this);
+
+        this.childResubmit = this.resubmit;
+        this.resubmit = resubmit.bind(this);
     }
 
     defaultDelete() {
@@ -90,7 +106,11 @@ class Handler {
         return true;
     }
 
-    async resubmit(msg) {
+    async defaultResubmit(msg) {
+        if (!this.enabled) {
+            return false;
+        }
+
         await this.delete(msg);
         return await this.execute(msg);
     }

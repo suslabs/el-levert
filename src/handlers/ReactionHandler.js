@@ -96,6 +96,10 @@ class ReactionHandler extends Handler {
             for (const w of words) {
                 const word = this.findWord(w);
 
+                if (typeof word === "undefined") {
+                    continue;
+                }
+
                 if (Array.isArray(word.react)) {
                     await msg.react(Util.randElement(word.react));
                 } else if (typeof word.react === "string") {
@@ -112,23 +116,26 @@ class ReactionHandler extends Handler {
         await this.funnyReact(msg);
     }
 
-    async delete(msg) {
+    async removeReacts(msg) {
         const botId = getClient().client.user.id,
             botReacts = msg.reactions.cache.filter(react => react.users.cache.has(botId));
 
         if (botReacts.size < 1) {
-            return false;
+            return;
         }
 
         try {
             for (const react of botReacts.values()) {
-                await react.users.remove(getClient().user.id);
+                await react.users.remove(botId);
             }
         } catch (err) {
             getLogger().error("Failed to remove reactions from message.", err);
         }
+    }
 
-        return true;
+    async resubmit(msg) {
+        await this.removeReacts(msg);
+        await this.execute(msg);
     }
 }
 
