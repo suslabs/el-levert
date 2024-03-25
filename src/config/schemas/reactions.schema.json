@@ -30,7 +30,12 @@
                         "type": ["string", "array"]
                     }
                 },
-                "required": ["words", "react"]
+                "oneOf": [
+                    { "required": ["word", "react"] },
+                    { "required": ["words", "react"] },
+                    { "required": ["word", "reacts"] },
+                    { "required": ["words", "reacts"] }
+                ]
             }
         }
     },

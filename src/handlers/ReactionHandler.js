@@ -78,12 +78,28 @@ class ReactionHandler extends Handler {
 
     findWord(word) {
         return this.funnyWords.find(x => {
-            if (Array.isArray(x.words)) {
-                return x.words.includes(word);
-            } else {
-                return x.words === word;
+            const words = x.word ?? x.words;
+
+            if (Array.isArray(words)) {
+                return words.includes(word);
+            } else if (typeof words === "string") {
+                return words === word;
             }
+
+            return false;
         });
+    }
+
+    getReact(word) {
+        const reacts = word.react ?? word.reacts;
+
+        if (Array.isArray(reacts)) {
+            return Util.randElement(reacts);
+        } else if (typeof reacts === "string") {
+            return reacts;
+        }
+
+        return;
     }
 
     async funnyReact(msg) {
@@ -96,14 +112,12 @@ class ReactionHandler extends Handler {
             for (const w of words) {
                 const word = this.findWord(w);
 
-                if (typeof word === "undefined") {
-                    continue;
-                }
+                if (typeof word !== "undefined") {
+                    const react = this.getReact(word);
 
-                if (Array.isArray(word.react)) {
-                    await msg.react(Util.randElement(word.react));
-                } else if (typeof word.react === "string") {
-                    await msg.react(word.react);
+                    if (typeof react !== "undefined") {
+                        await msg.react(react);
+                    }
                 }
             }
         } catch (err) {
