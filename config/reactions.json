@@ -3,7 +3,7 @@
     "parans": {},
     "funnyWords": [
         {
-            "words": "example1",
+            "word": "example1",
             "react": "🐀"
         },
         {
@@ -14,10 +14,21 @@
             "react": "🇳🇴"
         },
         {
-            "words": "example4",
-            "react": [
+            "word": "example4",
+            "reacts": [
                 "🐰",
                 "🐇"
+            ] 
+        },
+        {
+            "words": [
+                "example5",
+                "example6"
+            ],
+            "reacts": [
+                "🕥",
+                "🕟",
+                "⏳"
             ] 
         }
     ]
