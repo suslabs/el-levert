@@ -11,7 +11,7 @@ const uf = new uFuzzy(uFuzzyOpts);
 function search(haystack, needle, maxResults) {
     const [_1, info, order] = uf.search(haystack, needle);
 
-    const results = Array(order.length);
+    let results = Array(order.length);
 
     for (let i = 0; i < order.length; i++) {
         const idx = info.idx[order[i]];
@@ -19,7 +19,7 @@ function search(haystack, needle, maxResults) {
     }
 
     if (typeof maxResults !== "undefined") {
-        return results.slice(0, maxResults);
+        results = results.slice(0, maxResults);
     }
 
     return results;
