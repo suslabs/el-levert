@@ -19,7 +19,7 @@ export default {
             return ":warning: " + e;
         }
 
-        const find = await getClient().tagManager.search(t_name, 0.5);
+        const find = await getClient().tagManager.search(t_name, 20);
 
         if (find.length < 1) {
             return ":information_source: Found no similar tags.";
