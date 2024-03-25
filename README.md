@@ -47,7 +47,7 @@
 -   [ ] Add the option to save tag attachments locally
 -   [ ] Add support for slash commands (perhaps)
 -   [ ] Add more commands for things
--   [ ] Use real fuzzy search
+-   [x] Use real fuzzy search
 -   [ ] Add the option to log to a channel
 -   [ ] Loading extensions
 -   [ ] Rewrite importer & add db check script

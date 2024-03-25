@@ -338,25 +338,27 @@ class DiscordClient {
             return [user];
         }
 
-        let users = [],
+        const userDistances = [],
             foundIds = [];
 
         for (let i = 0; i < guilds.size; i++) {
-            let guildUsers = await guilds.at(i).members.fetch({
+            const guildUsers = await guilds.at(i).members.fetch({
                 query: search,
                 limit: options.fetchLimit
             });
 
-            guildUsers = guildUsers.filter(x => !foundIds.includes(x.id));
-            foundIds.push(...guildUsers.map(x => x.id));
+            const newUsers = guildUsers.filter(user => !foundIds.includes(user.id)),
+                userIds = newUsers.map(x => x.id),
+                distances = newUsers.map(user => [user, diceDist(user.username, search)]);
 
-            guildUsers = guildUsers.map(x => [x, diceDist(x.username, search)]);
-            users.push(...guildUsers);
+            foundIds.push(...userIds);
+            userDistances.push(...distances);
         }
 
-        users.sort((a, b) => b[1] - a[1]);
-        users = users.slice(0, options.limit).map(x => x[0]);
+        userDistances.sort((a, b) => b[1] - a[1]);
+        userDistances = userDistances.slice(0, options.limit);
 
+        const users = userDistances.map(x => x[0]);
         return users;
     }
 }

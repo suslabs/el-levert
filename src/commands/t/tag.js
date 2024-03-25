@@ -89,11 +89,10 @@ export default {
         let tag = await getClient().tagManager.fetch(t_name);
 
         if (!tag) {
-            let find = await getClient().tagManager.search(t_name, 0.75),
+            let find = await getClient().tagManager.search(t_name, 5),
                 out = `:warning: Tag **${t_name}** doesn't exist.`;
 
             if (find.length > 0) {
-                find = find.slice(0, 5);
                 out += `\nDid you mean: **${find.join("**, **")}**?`;
             }
 
