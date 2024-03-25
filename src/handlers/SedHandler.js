@@ -1,6 +1,7 @@
 import { EmbedBuilder, MessageType } from "discord.js";
 
 import Handler from "./Handler.js";
+import HandlerError from "../errors/HandlerError.js";
 
 import { getClient, getLogger } from "../LevertClient.js";
 import Util from "../util/Util.js";
@@ -39,14 +40,19 @@ class SedHandler extends Handler {
         return msg;
     }
 
-    async genSed(msg) {
-        const match = msg.content.match(sedRegex),
-            parsedRegex = match[1],
+    async genSed(msg, str) {
+        const match = str.match(sedRegex);
+
+        if (!match) {
+            throw new HandlerError("Invalid input string");
+        }
+
+        const parsedRegex = match[1],
             replace = match[2],
             flag = match[3] ?? "" + "i";
 
         if (match.length < 3) {
-            return [undefined, ":warning: Invalid regex args.\n" + sedUsage];
+            throw new HandlerError("Invalid regex args");
         }
 
         let regex, sedMsg;
@@ -54,7 +60,7 @@ class SedHandler extends Handler {
         try {
             regex = new RegExp(parsedRegex, flag);
         } catch (err) {
-            return [undefined, ":warning: Invalid regex or flags.\n" + sedUsage];
+            throw new HandlerError("Invalid regex or flags");
         }
 
         if (msg.type === MessageType.Reply) {
@@ -64,7 +70,7 @@ class SedHandler extends Handler {
         }
 
         if (!sedMsg) {
-            return [undefined, ":warning: No matching message found."];
+            throw new HandlerError("No matching message found");
         }
 
         const username = sedMsg.author.displayName,
@@ -86,7 +92,7 @@ class SedHandler extends Handler {
                 text: `From ${channel}`
             });
 
-        return [embed, undefined];
+        return embed;
     }
 
     async execute(msg) {
@@ -96,18 +102,24 @@ class SedHandler extends Handler {
 
         await msg.channel.sendTyping();
 
-        const ret = await this.genSed(msg),
-            embed = ret[0],
-            err = ret[1];
+        let sed;
 
-        if (typeof err !== "undefined") {
-            const reply = msg.reply(err);
-            this.messageTracker.addMsg(reply, msg.id);
+        try {
+            sed = await this.genSed(msg, msg.content);
+        } catch (err) {
+            if (err.name === "HandlerError") {
+                const reply = msg.reply(`:warning: ${err.message}.\n${sedUsage}`);
+                this.messageTracker.addMsg(reply, msg.id);
+
+                return true;
+            }
+
+            throw err;
         }
 
         try {
             const reply = await msg.reply({
-                embeds: [embed]
+                embeds: [sed]
             });
 
             this.messageTracker.addMsg(reply, msg.id);
@@ -120,6 +132,7 @@ class SedHandler extends Handler {
             this.messageTracker.addMsg(reply, msg.id);
 
             getLogger().error("Reply failed", err);
+
             return false;
         }
 

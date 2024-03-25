@@ -38,6 +38,7 @@ class CommandHandler extends Handler {
         }
 
         await msg.channel.sendTyping();
+
         this.userTracker.addUser(msg.author.id);
         logUsage(msg, cmd.name, args);
 

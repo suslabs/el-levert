@@ -1,6 +1,7 @@
 import { EmbedBuilder, hyperlink } from "discord.js";
 
 import Handler from "./Handler.js";
+import HandlerError from "../errors/HandlerError.js";
 
 import { getClient, getLogger } from "../LevertClient.js";
 import Util from "../util/Util.js";
@@ -20,15 +21,25 @@ class PreviewHandler extends Handler {
         return msgUrlRegex.test(str);
     }
 
-    async genPreview(msg, url) {
-        const match = url.match(msgUrlRegex),
+    removeLink(str) {
+        return str.replace(msgUrlRegex, "");
+    }
+
+    async genPreview(msg, str) {
+        const match = str.match(msgUrlRegex);
+
+        if (!match) {
+            throw new HandlerError("Invalid input string");
+        }
+
+        const msgUrl = match[0],
             { sv_id, ch_id, msg_id } = match.groups,
             inDms = sv_id === "@me";
 
         const prevMsg = await getClient().fetchMessage(ch_id, msg_id, msg.author.id);
 
         if (!prevMsg) {
-            return false;
+            throw new HandlerError("Preview message not found");
         }
 
         let content = prevMsg.content,
@@ -62,7 +73,7 @@ class PreviewHandler extends Handler {
         }
 
         content += "\n\n";
-        content += hyperlink("[Jump to Message]", url);
+        content += hyperlink("[Jump to Message]", msgUrl);
 
         let channel;
 
@@ -90,9 +101,7 @@ class PreviewHandler extends Handler {
                 text: `From ${channel}`
             });
 
-        return {
-            embeds: [embed]
-        };
+        return embed;
     }
 
     async execute(msg) {
@@ -105,6 +114,10 @@ class PreviewHandler extends Handler {
         try {
             preview = await this.genPreview(msg, msg.content);
         } catch (err) {
+            if (err.name === "HandlerError") {
+                return false;
+            }
+
             const reply = await msg.reply({
                 content: ":no_entry_sign: Encountered exception while generating preview:",
                 ...Util.getFileAttach(err.stack, "error.js")
@@ -113,17 +126,18 @@ class PreviewHandler extends Handler {
             this.messageTracker.addMsg(reply, msg.id);
 
             getLogger().error("Preview gen failed", err);
-            return false;
-        }
 
-        if (!preview) {
             return false;
         }
 
         await msg.channel.sendTyping();
 
         try {
-            this.messageTracker.addMsg(await msg.reply(preview), msg.id);
+            const reply = await msg.reply({
+                embeds: [preview]
+            });
+
+            this.messageTracker.addMsg(reply, msg.id);
         } catch (err) {
             const reply = await msg.reply({
                 content: ":no_entry_sign: Encountered exception while sending preview:",
@@ -133,6 +147,7 @@ class PreviewHandler extends Handler {
             this.messageTracker.addMsg(reply, msg.id);
 
             getLogger().error("Reply failed", err);
+
             return false;
         }
 
