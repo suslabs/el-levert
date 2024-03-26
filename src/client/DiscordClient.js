@@ -160,7 +160,7 @@ class DiscordClient {
 
     unloadEvents() {
         if (typeof this.eventLoader === "undefined" || !this.eventLoader.loaded) {
-            throw new ClientError("Can't unload events, events weren't loaded.");
+            throw new ClientError("Can't unload events, events weren't loaded");
         }
 
         this.eventLoader.removeListeners();
