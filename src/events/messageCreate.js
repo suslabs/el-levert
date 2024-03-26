@@ -5,6 +5,6 @@ import { getClient } from "../LevertClient.js";
 export default {
     name: Events.MessageCreate,
     listener: msg => {
-        return getClient().processCreate(msg);
+        return getClient().messageProcessor.processCreate(msg);
     }
 };
