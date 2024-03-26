@@ -8,7 +8,7 @@ import getDefaultLoggerConfig from "./logger/DefaultConfig.js";
 
 import wrapEvent from "./client/wrapEvent.js";
 import executeAllHandlers from "./client/executeAllHandlers.js";
-import { registerGlobalHandler, removeGlobalHandler } from "./client/GlobalHandler.js";
+import { registerGlobalErrorHandler, removeGlobalErrorHandler } from "./client/GlobalErrorHandler.js";
 
 import ReactionHandler from "./handlers/ReactionHandler.js";
 import CommandHandler from "./handlers/CommandHandler.js";
@@ -234,7 +234,7 @@ class LevertClient extends DiscordClient {
         this.reminderManager.startSendLoop();
 
         if (this.config.enableGlobalHandler) {
-            registerGlobalHandler(this.logger);
+            registerGlobalErrorHandler(this.logger);
             this.logger.info("Registered global error handler.");
         }
 
@@ -250,7 +250,7 @@ class LevertClient extends DiscordClient {
         this.logger.info("Stopping client...");
 
         if (this.config.enableGlobalHandler) {
-            removeGlobalHandler();
+            removeGlobalErrorHandler();
             this.logger.info("Removed global error handler.");
         }
 

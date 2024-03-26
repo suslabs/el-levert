@@ -9,14 +9,14 @@ function errorHandler(err1) {
     }
 }
 
-function registerGlobalHandler(logger) {
+function registerGlobalErrorHandler(logger) {
     logger_ = logger;
     process.on("uncaughtException", errorHandler);
 }
 
-function removeGlobalHandler() {
+function removeGlobalErrorHandler() {
     logger_ = undefined;
     process.removeAllListeners("uncaughtException");
 }
 
-export { registerGlobalHandler, removeGlobalHandler };
+export { registerGlobalErrorHandler, removeGlobalErrorHandler };
