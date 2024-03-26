@@ -5,13 +5,6 @@ import ExitError from "../../vm/isolated-vm/functionErrors/ExitError.js";
 
 import getRegisterCode from "../../util/vm/getRegisterCode.js";
 
-const defaultValues = {
-    type: FuncTypes.regular,
-    exits: false,
-    errorClass: ExitError,
-    binds: []
-};
-
 function resolveObj(path, propertyMap) {
     let split = [],
         obj;
@@ -41,18 +34,22 @@ function resolveObj(path, propertyMap) {
     return obj;
 }
 
+const defaultValues = {
+    parent: "",
+    type: FuncTypes.regular,
+    exits: false,
+    errorClass: ExitError,
+    binds: []
+};
+
 class VMFunction {
     constructor(options, propertyMap) {
         if (typeof options.name === "undefined") {
-            throw new VMError("VM function must have a name.");
+            throw new VMError("VM function must have a name");
         }
 
-        if (typeof options.parent === "undefined") {
-            throw new VMError("VM function must have a parent object.");
-        }
-
-        if (typeof options.ref === "undefined") {
-            throw new VMError("VM function must have a reference function.");
+        if (typeof options.ref !== "function") {
+            throw new VMError("VM function must have a reference function");
         }
 
         Object.assign(this, {
@@ -88,14 +85,14 @@ class VMFunction {
         }
 
         if (typeof propertyMap === "undefined") {
-            throw new VMError("Cannot resolve reference function.");
+            throw new VMError("Cannot resolve reference function");
         }
 
         const path = this.ref;
         this.ref = resolveObj(path, propertyMap);
 
         if (typeof this.ref === "undefined") {
-            throw new VMError("Cannot resolve reference function.");
+            throw new VMError("Cannot resolve reference function");
         }
     }
 

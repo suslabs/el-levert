@@ -25,6 +25,10 @@ function funcBody(type, ret = true) {
 }
 
 function objDeclaration(objName) {
+    if (typeof objName === "undefined" || objName.length < 1) {
+        return "";
+    }
+
     const code = `
 if(typeof ${objName} === "undefined") {
 ${spaces}${objName} = {};
@@ -35,9 +39,14 @@ ${spaces}${objName} = {};
 
 function funcDeclaration(objName, funcName, body) {
     body = indent(body, 1);
+    let code = "";
 
-    const code = `
-${objName}.${funcName} = (...args) => {
+    if (typeof objName !== "undefined" && objName.length > 0) {
+        code += `${objName}.`;
+    }
+
+    code += `
+${funcName} = (...args) => {
 ${body}
 }`;
 
@@ -85,7 +94,11 @@ function getRegisterCode(options, errorOptions = {}) {
     if (useError) {
         const errName = getClassName(errorClass);
 
-        declCode += `\n\n${classDeclaration(errorClass)}`;
+        if (declCode.length > 0) {
+            declCode += "\n\n";
+        }
+
+        declCode += classDeclaration(errorClass);
         body += `\n\nthrow new ${errName}(res);`;
     }
 
