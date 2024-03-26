@@ -8,11 +8,11 @@ const defaultValues = {
 class BotEvent {
     constructor(options) {
         if (typeof options.name === "undefined") {
-            throw new EventError("Event must have a name.");
+            throw new EventError("Event must have a name");
         }
 
         if (typeof options.listener === "undefined") {
-            throw new EventError("Event must have a listener.");
+            throw new EventError("Event must have a listener");
         }
 
         Object.assign(this, {
@@ -35,7 +35,7 @@ class BotEvent {
 
     unregister() {
         if (!this.registered) {
-            throw new EventError("Event isn't registered.");
+            throw new EventError("Event isn't registered");
         }
 
         this.client.removeAllListeners(this.name);

@@ -46,7 +46,7 @@ class LevertClient extends DiscordClient {
 
     setConfigs(configs) {
         if (typeof configs === "undefined") {
-            throw new ClientError("Config cannot be undefined.");
+            throw new ClientError("Config cannot be undefined");
         }
 
         const { config, reactions, auth } = configs;

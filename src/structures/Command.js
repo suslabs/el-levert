@@ -17,15 +17,15 @@ const defaultValues = {
 class Command {
     constructor(options) {
         if (typeof options.name === "undefined") {
-            throw new CommandError("Command must have a name.");
+            throw new CommandError("Command must have a name");
         }
 
         if (typeof options.handler === "undefined") {
-            throw new CommandError("Command must have a handler.");
+            throw new CommandError("Command must have a handler");
         }
 
         if (options.subcommand && typeof options.parent === "undefined") {
-            throw new CommandError("Subcommands must have a parent command.");
+            throw new CommandError("Subcommands must have a parent command");
         }
 
         this.isSubcmd = options.subcommand ?? false;
