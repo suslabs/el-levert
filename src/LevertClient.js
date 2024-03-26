@@ -1,7 +1,7 @@
 import DiscordClient from "./client/DiscordClient.js";
-import version from "../version.js";
-
 import ClientError from "./errors/ClientError.js";
+
+import version from "../version.js";
 
 import createLogger from "./logger/CreateLogger.js";
 import getDefaultLoggerConfig from "./logger/DefaultConfig.js";
@@ -14,6 +14,8 @@ import ReactionHandler from "./handlers/ReactionHandler.js";
 import CommandHandler from "./handlers/CommandHandler.js";
 import PreviewHandler from "./handlers/PreviewHandler.js";
 import SedHandler from "./handlers/SedHandler.js";
+
+import MessageProcessor from "./client/MessageProcessor.js";
 
 import CommandManager from "./managers/command/CommandManager.js";
 import TagManager from "./managers/database/TagManager.js";
@@ -107,6 +109,8 @@ class LevertClient extends DiscordClient {
         }
 
         this.executeAllHandlers = executeAllHandlers.bind(undefined, this);
+        this.messageProcessor = new MessageProcessor(this);
+
         this.logger.info("Loaded handlers.");
     }
 
@@ -128,6 +132,7 @@ class LevertClient extends DiscordClient {
         delete this.handlerList;
 
         delete this.executeAllHandlers;
+        delete this.messageProcessor;
 
         this.logger.info("Unloaded handlers.");
     }
@@ -284,34 +289,6 @@ class LevertClient extends DiscordClient {
 
         this.buildClient();
         await this.start();
-    }
-
-    shouldProcess(msg) {
-        if (msg.author.bot) {
-            return false;
-        }
-
-        return true;
-    }
-
-    async processMessage(msg, handler) {
-        if (!this.shouldProcess(msg)) {
-            return;
-        }
-
-        await this.executeAllHandlers(handler, msg);
-    }
-
-    async processCreate(msg) {
-        await this.processMessage(msg, "execute");
-    }
-
-    async processDelete(msg) {
-        await this.processMessage(msg, "delete");
-    }
-
-    async processEdit(msg) {
-        await this.processMessage(msg, "resubmit");
     }
 
     onKill() {
