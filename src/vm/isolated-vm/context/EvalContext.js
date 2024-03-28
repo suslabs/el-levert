@@ -1,24 +1,29 @@
 import ivm from "isolated-vm";
 
-import { getLogger } from "../../../LevertClient.js";
-
 import FakeMsg from "../classes/FakeMsg.js";
 import VMFunction from "../../../structures/vm/VMFunction.js";
+
+import IsolateInspector from "../inspector/IsolateInspector.js";
 
 import Functions from "./Functions.js";
 import globalNames from "./globalNames.json" assert { type: "json" };
 import funcNames from "./funcNames.json" assert { type: "json" };
 
-const filename = "script.js",
-    inspectorUrl = "devtools://devtools/bundled/inspector.html?experiments=true&v8only=true";
+const filename = "script.js";
 
 class EvalContext {
-    constructor(options) {
+    constructor(options, inspectorOptions = {}) {
         this.memLimit = options.memLimit;
         this.timeLimit = options.timeLimit;
 
-        this.enableInspector = options.enableInspector ?? false;
-        this.inspectorPort = options.inspectorPort ?? 10000;
+        this.setupInspector(inspectorOptions);
+    }
+
+    setupInspector(options) {
+        const enableInspector = options.enable ?? false;
+
+        this.inspector = new IsolateInspector(enableInspector, options);
+        this.enableInspector = enableInspector;
     }
 
     async setMsg(msg) {
@@ -98,66 +103,6 @@ class EvalContext {
         await this.registerFuncs(Functions);
     }
 
-    setupDebugger() {
-        let wss = new WebSocket.Server({
-            port: this.inspectorPort
-        });
-
-        let handleConnection = function (ws) {
-            if (typeof this.isolate === "undefined") {
-                return;
-            }
-
-            let channel = this.isolate.createInspectorSession();
-
-            function dispose() {
-                try {
-                    channel.dispose();
-                } catch (err) {
-                    getLogger().error(err.message);
-                }
-            }
-
-            ws.on("error", err => {
-                getLogger().error(err.message);
-                dispose();
-            });
-
-            ws.on("close", (code, reason) => {
-                getLogger().info(`Websocket closed: ${code}, ${reason}`);
-                dispose();
-            });
-
-            ws.on("message", function (msg) {
-                try {
-                    const str = String(msg);
-                    channel.dispatchProtocolMessage(str);
-                } catch (err) {
-                    getLogger().error("Error message to inspector", err);
-                    ws.close();
-                }
-            });
-
-            function send(message) {
-                try {
-                    ws.send(message);
-                } catch (err) {
-                    getLogger().error(err);
-                    dispose();
-                }
-            }
-
-            channel.onResponse = (callId, message) => send(message);
-            channel.onNotification = send;
-        };
-
-        handleConnection = handleConnection.bind(this);
-        wss.on("connection", handleConnection);
-
-        this.wss = wss;
-        getLogger().info("Inspector: " + inspectorUrl + `&ws=127.0.0.1:${this.inspectorPort}`);
-    }
-
     async setupIsolate(msg, args) {
         this.isolate = new ivm.Isolate({
             memoryLimit: this.memLimit,
@@ -166,14 +111,14 @@ class EvalContext {
 
         await this.setupContext(msg, args);
 
-        if (this.enableInspector) {
-            this.setupDebugger();
-        }
+        this.inspector.create(this.isolate);
     }
 
     disposeIsolate() {
         this.script.release();
         this.context.release();
+
+        this.inspector.dispose();
 
         if (!this.isolate.isDisposed) {
             this.isolate.dispose();
@@ -190,21 +135,25 @@ class EvalContext {
         });
     }
 
-    async getIsolate(options) {
-        const { code, msg, args } = options;
+    async runScript(code) {
+        if (typeof code !== "undefined") {
+            this.compileScript(code);
+        }
 
-        await this.setupIsolate(msg, args);
-        await this.compileScript(code);
+        await this.inspector.waitForConnection();
 
-        return this.isolate;
-    }
-
-    async runScript() {
         const res = await this.script.run(this.context, {
             timeout: this.timeLimit * 1000
         });
 
         return res;
+    }
+
+    async getIsolate(options) {
+        const { msg, args } = options;
+
+        await this.setupIsolate(msg, args);
+        return this.isolate;
     }
 }
 

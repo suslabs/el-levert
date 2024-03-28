@@ -1,6 +1,8 @@
 import { getClient } from "../../LevertClient.js";
 
 import EvalContext from "./context/EvalContext.js";
+import InspectorServer from "./inspector/InspectorServer.js";
+
 import VMErrors from "./VMErrors.js";
 
 import Util from "../../util/Util.js";
@@ -10,37 +12,18 @@ class TagVM {
         this.memLimit = getClient().config.memLimit;
         this.timeLimit = getClient().config.timeLimit;
 
-        this.enableInspector = getClient().config.enableInspector;
-        this.inspectorPort = getClient().config.inspectorPort;
-
         this.outCharLimit = getClient().config.outCharLimit;
         this.outNewlineLimit = getClient().config.outNewlineLimit;
     }
 
-    async runScript(code, msg, args) {
-        const context = new EvalContext({
-            memLimit: this.memLimit,
-            timeLimit: this.timeLimit,
-            enableInspector: this.enableInspector,
-            inspectorPort: this.inspectorPort
-        });
+    setupInspectorServer() {
+        const enableInspector = getClient().config.enableInspector,
+            inspectorPort = getClient().config.inspectorPort;
 
-        await context.getIsolate({ code, msg, args });
-        let res;
+        const inspectorServer = new InspectorServer(enableInspector, inspectorPort);
+        inspectorServer.setup();
 
-        try {
-            res = await context.runScript();
-
-            if (typeof res === "number") {
-                res = res.toString();
-            }
-        } catch (err) {
-            res = this.handleError(err);
-        } finally {
-            context.disposeIsolate();
-        }
-
-        return res;
+        this.inspectorServer = inspectorServer;
     }
 
     handleError(err) {
@@ -62,14 +45,20 @@ class TagVM {
     }
 
     processReply(msg) {
-        let out = JSON.parse(msg);
+        let out = JSON.parse(msg),
+            content = out.content;
 
-        if (typeof out.content !== "undefined") {
-            const split = out.content.split("\n");
+        if (typeof content !== "undefined") {
+            let split = out.content.split("\n");
 
-            if (out.content.length > this.outCharLimit || split.length > this.outNewlineLimit) {
-                return Util.getFileAttach(out.content);
+            if (out.content.length > this.outCharLimit) {
+                content = content.slice(0, this.outCharLimit - 1);
+            } else if (split.length > this.outNewlineLimit) {
+                split = split.slice(0, this.outNewlineLimit - 1);
+                content = split.join("\n") + "...";
             }
+
+            out.content = content;
         }
 
         if (typeof out.file !== "undefined") {
@@ -77,14 +66,52 @@ class TagVM {
                 out.file.data = Object.values(out.file.data);
             }
 
+            delete out.file;
+
             out = {
                 ...out,
                 ...Util.getFileAttach(out.file.data, out.file.name)
             };
         }
 
-        delete out.file;
         return out;
+    }
+
+    async runScript(code, msg, args) {
+        const context = new EvalContext(
+            {
+                memLimit: this.memLimit,
+                timeLimit: this.timeLimit
+            },
+            {
+                enable: this.inspectorServer?.enable,
+                sendReply: this.inspectorServer?.sendReply
+            }
+        );
+
+        await context.getIsolate({ msg, args });
+        this.inspectorServer?.setContext(context);
+
+        let res;
+
+        try {
+            res = await context.runScript(code);
+
+            if (typeof res === "number") {
+                res = res.toString();
+            }
+        } catch (err) {
+            res = this.handleError(err);
+        } finally {
+            this.inspectorServer?.executionFinished();
+            context.disposeIsolate();
+        }
+
+        return res;
+    }
+
+    unload() {
+        this.inspectorServer?.close();
     }
 }
 
