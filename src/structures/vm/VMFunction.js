@@ -48,7 +48,7 @@ class VMFunction {
             throw new VMError("VM function must have a name");
         }
 
-        if (typeof options.ref !== "function") {
+        if (typeof options.ref === "undefined") {
             throw new VMError("VM function must have a reference function");
         }
 
