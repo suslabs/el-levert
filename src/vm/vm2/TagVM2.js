@@ -20,7 +20,7 @@ const vmOptions = {
     }
 };
 
-const additionalPath = "../canvas-integration";
+const additionalPath = "";
 
 function formatCode(code) {
     code = `return (async () => {${code};})();`;

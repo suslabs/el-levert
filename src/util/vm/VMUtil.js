@@ -1,47 +1,38 @@
-import cloneDeep from "lodash.clonedeep";
-
-export default {
+const VMUtil = {
     removeCircRef: obj => {
-        const obj2 = cloneDeep(obj);
+        const pathMap = new Map();
 
-        function recRemove(target, obj, references) {
-            for (const key in obj) {
-                const val = obj[key];
+        function recRemove(val, path) {
+            if (val === null || typeof val !== "object") {
+                return val;
+            }
 
-                if (typeof val !== "object") {
-                    let refFound = false;
+            const seenPath = pathMap.get(val);
 
-                    for (const reference of references) {
-                        if (reference === val) {
-                            target[key] = undefined;
-                            refFound = true;
+            if (seenPath) {
+                const joinedPath = seenPath.join(".");
 
-                            break;
-                        }
-                    }
-
-                    if (!refFound) {
-                        if (val instanceof Map) {
-                            const entries = Array.from(val);
-                            target[key] = entries;
-
-                            recRemove(entries, entries, [...references, entries]);
-                        } else {
-                            target[key] = Object.assign({}, val);
-
-                            recRemove(target[key], val, [...references, val]);
-                        }
-                    }
+                if (joinedPath.length < 1) {
+                    return "[Circular reference]";
                 } else {
-                    target[key] = val;
-                    continue;
+                    return `[Circular reference: ${joinedPath}]`;
                 }
             }
 
-            return target;
+            pathMap.set(val, path);
+
+            const newVal = Array.isArray(val) ? [] : {};
+
+            for (const [key, value] of Object.entries(val)) {
+                newVal[key] = recRemove(value, path.concat(key));
+            }
+
+            pathMap.delete(val);
+
+            return newVal;
         }
 
-        return recRemove({}, obj2, [obj2]);
+        return recRemove(obj, []);
     },
     formatReply: (text, options) => {
         let out = {};
@@ -73,3 +64,5 @@ export default {
         socket.write(JSON.stringify(obj) + "\n");
     }
 };
+
+export default VMUtil;
