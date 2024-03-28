@@ -30,7 +30,7 @@ function listener(socket) {
 
     socket.on("message", msg => {
         try {
-            this.inspectorContext.inspector.sendMessage(msg);
+            this.inspectorContext?.inspector.sendMessage(msg);
         } catch (err) {
             getLogger().error("Error sending message to inspector: ", err);
             socket.close();
