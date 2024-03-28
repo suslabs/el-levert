@@ -34,26 +34,32 @@ const VMUtil = {
 
         return recRemove(obj, []);
     },
-    formatReply: (text, options) => {
+    formatReply: (text, msg) => {
         let out = {};
 
         if (typeof text === "object") {
-            options = text;
+            msg = text;
         } else {
             out.content = text ?? "";
         }
 
-        if (typeof options !== "undefined") {
-            if (typeof options.embed !== "undefined") {
-                const embed = options.embed;
-                embed.description = embed.description ?? "";
+        if (typeof msg === "undefined") {
+            return out;
+        }
 
-                out.embeds = [embed];
-            }
+        if (typeof msg.content !== "undefined") {
+            out.content = msg.content;
+        }
 
-            if (typeof options.file !== "undefined") {
-                out.file = options.file;
-            }
+        if (typeof msg.embed !== "undefined") {
+            const embed = msg.embed;
+            embed.description = embed.description ?? "";
+
+            out.embeds = [embed];
+        }
+
+        if (typeof msg.file !== "undefined") {
+            out.file = msg.file;
         }
 
         return out;

@@ -38,8 +38,8 @@ class FakeMsg {
         };
     }
 
-    reply(text, options) {
-        const formatted = VMUtil.formatReply(text, options);
+    reply(text, msg) {
+        const formatted = VMUtil.formatReply(text, msg);
         return JSON.stringify(formatted);
     }
 }
