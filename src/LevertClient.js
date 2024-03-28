@@ -191,6 +191,8 @@ class LevertClient extends DiscordClient {
 
     loadVMs() {
         this.tagVM = new TagVM();
+        this.tagVM.setupInspectorServer();
+
         this.tagVM2 = new TagVM2();
 
         if (this.config.enableOtherLangs) {
@@ -199,6 +201,7 @@ class LevertClient extends DiscordClient {
     }
 
     unloadVMs() {
+        this.tagVM.unload();
         delete this.tagVM;
 
         if (this.tagVM2.kill()) {
