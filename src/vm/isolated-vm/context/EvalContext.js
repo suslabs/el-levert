@@ -137,7 +137,7 @@ class EvalContext {
 
     async runScript(code) {
         if (typeof code !== "undefined") {
-            this.compileScript(code);
+            await this.compileScript(code);
         }
 
         await this.inspector.waitForConnection();

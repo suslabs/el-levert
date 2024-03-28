@@ -45,20 +45,14 @@ class TagVM {
     }
 
     processReply(msg) {
-        let out = JSON.parse(msg),
-            content = out.content;
+        let out = JSON.parse(msg);
 
-        if (typeof content !== "undefined") {
+        if (typeof out.content !== "undefined") {
             let split = out.content.split("\n");
 
-            if (out.content.length > this.outCharLimit) {
-                content = content.slice(0, this.outCharLimit - 1);
-            } else if (split.length > this.outNewlineLimit) {
-                split = split.slice(0, this.outNewlineLimit - 1);
-                content = split.join("\n") + "...";
+            if (out.content.length > this.outCharLimit || split.length > this.outNewlineLimit) {
+                return Util.getFileAttach(out.content);
             }
-
-            out.content = content;
         }
 
         if (typeof out.file !== "undefined") {
