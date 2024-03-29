@@ -46,16 +46,6 @@ class EvalContext {
         await this.global.set(globalNames.tag, vmTag);
     }
 
-    registerFunc(func) {
-        const code = func.getRegisterCode();
-
-        return this.context.evalClosure(code, [func.ref], {
-            arguments: {
-                reference: true
-            }
-        });
-    }
-
     async registerFuncs(objMap) {
         let funcs = [];
 
@@ -80,6 +70,16 @@ class EvalContext {
         }
 
         this.funcs = funcs;
+    }
+
+    registerFunc(func) {
+        const code = func.getRegisterCode();
+
+        return this.context.evalClosure(code, [func.ref], {
+            arguments: {
+                reference: true
+            }
+        });
     }
 
     async setupContext(msg, args) {
