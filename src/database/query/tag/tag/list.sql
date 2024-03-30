@@ -1,1 +1,1 @@
-SELECT * FROM Tags WHERE owner = $owner;
+SELECT * FROM Tags WHERE owner = $user;

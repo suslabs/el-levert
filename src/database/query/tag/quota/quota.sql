@@ -1,1 +1,1 @@
-SELECT quota FROM Quotas WHERE id = $id;
+SELECT quota FROM Quotas WHERE user = $user;

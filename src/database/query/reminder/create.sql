@@ -1,6 +1,7 @@
 CREATE TABLE "Reminders" (
+	"id"	INTEGER,
 	"user"	TEXT,
 	"end"	INTEGER,
-    "msg"   TEXT,
-	"id"	TEXT
+	"msg"	TEXT,
+	PRIMARY KEY("id" AUTOINCREMENT)
 );

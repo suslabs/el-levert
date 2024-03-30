@@ -19,14 +19,12 @@ class ReminderDatabase extends Database {
         return await this.queries.add.run({
             $user: reminder.user,
             $end: reminder.end,
-            $msg: reminder.msg,
-            $id: reminder.id
+            $msg: reminder.msg
         });
     }
 
     async remove(reminder) {
         return await this.queries.remove.run({
-            $user: reminder.user,
             $id: reminder.id
         });
     }

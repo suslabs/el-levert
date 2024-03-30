@@ -1,10 +1,4 @@
 import { time, bold } from "discord.js";
-import crypto from "crypto";
-
-function generateId() {
-    const id = crypto.randomBytes(5).toString("hex");
-    return id + "-" + Math.floor(Date.now() / 1000).toString();
-}
 
 const defaultValues = {
     user: "0",
@@ -18,10 +12,6 @@ class Reminder {
             ...defaultValues,
             ...data
         });
-
-        if (typeof this.id === "undefined") {
-            this.id = generateId();
-        }
     }
 
     get hasMessage() {

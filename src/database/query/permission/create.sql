@@ -1,9 +1,11 @@
 CREATE TABLE "Groups" (
-    "name"	TEXT,
-    "level"	INTEGER
+	"name"	TEXT,
+	"level"	INTEGER,
+	PRIMARY KEY("name")
 );
 ---
 CREATE TABLE "Users" (
-    "group"	TEXT,
-    "id"	TEXT
+	"id"	TEXT,
+	"group"	TEXT,
+	FOREIGN KEY("group") REFERENCES Groups("name")
 );
