@@ -338,7 +338,7 @@ class DiscordClient {
             return [user];
         }
 
-        const userDistances = [],
+        let userDistances = [],
             foundIds = [];
 
         for (let i = 0; i < guilds.size; i++) {
