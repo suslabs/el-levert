@@ -1,5 +1,7 @@
 import { time, bold } from "discord.js";
 
+import Util from "../util/Util.js";
+
 const defaultValues = {
     user: "0",
     end: 0,
@@ -8,10 +10,7 @@ const defaultValues = {
 
 class Reminder {
     constructor(data) {
-        Object.assign(this, {
-            ...defaultValues,
-            ...data
-        });
+        Util.setValuesWithDefaults(this, data, defaultValues);
     }
 
     get hasMessage() {

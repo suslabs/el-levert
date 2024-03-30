@@ -1,7 +1,8 @@
 import CommandError from "../errors/CommandError.js";
+
 import Util from "../util/Util.js";
+
 import { getClient } from "../LevertClient.js";
-import c from "../commands/eval/c.js";
 
 const defaultValues = {
     parent: "",
@@ -31,10 +32,7 @@ class Command {
         this.isSubcmd = options.subcommand ?? false;
         delete options.subcommand;
 
-        Object.assign(this, {
-            ...defaultValues,
-            ...options
-        });
+        Util.setValuesWithDefaults(this, options, defaultValues);
 
         this.subcmds = new Map();
     }
