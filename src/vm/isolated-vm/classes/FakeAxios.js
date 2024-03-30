@@ -5,7 +5,6 @@ async function request(...args) {
     try {
         return await axios.request(...args);
     } catch (err) {
-        console.log();
         throw err;
     }
 }

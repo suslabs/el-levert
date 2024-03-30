@@ -206,8 +206,9 @@ class LevertClient extends DiscordClient {
 
         if (this.tagVM2.kill()) {
             this.logger.info("Killed VM2 child process.");
-            delete this.tagVM2;
         }
+
+        delete this.tagVM2;
 
         if (this.config.enableOtherLangs) {
             delete this.externalVM;
