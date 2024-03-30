@@ -14,19 +14,18 @@
     "dependencies": {
         "@leeoniya/ufuzzy": "^1.0.14",
         "ajv": "^8.12.0",
-        "axios": "^1.6.7",
+        "axios": "^1.6.8",
         "chrono-node": "^2.7.5",
         "discord.js": "^14.14.1",
         "generic-pool": "^3.9.0",
         "isolated-vm": "^4.7.2",
         "sqlite3": "^5.1.7",
         "vm2": "^3.9.19",
-        "winston": "^3.12.0",
-        "yargs": "^17.7.2"
+        "winston": "^3.13.0"
     },
     "devDependencies": {
-        "@babel/eslint-parser": "^7.23.10",
-        "@babel/plugin-syntax-import-assertions": "^7.23.3",
+        "@babel/eslint-parser": "^7.24.1",
+        "@babel/plugin-syntax-import-assertions": "^7.24.1",
         "eslint": "^8.57.0",
         "prettier": "3.2.5"
     }
