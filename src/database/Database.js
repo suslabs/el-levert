@@ -60,17 +60,30 @@ class Database {
         }
     }
 
-    async readQuery(queryPath, categoryName) {
+    isValidQueryPath(queryPath) {
         const parsed = path.parse(queryPath);
 
-        if (parsed.name === "create" || parsed.ext !== this.queryExtension) {
+        if (parsed.dir === this.queryPath && parsed.name === "create") {
+            return false;
+        }
+
+        if (parsed.ext !== this.queryExtension) {
+            return fasle;
+        }
+
+        return true;
+    }
+
+    async readQuery(queryPath, categoryName) {
+        if (!this.isValidQueryPath(queryPath)) {
             return;
         }
 
-        const queryString = await fs.readFile(queryPath, {
+        let queryString = await fs.readFile(queryPath, {
             encoding: this.queryEncoding
         });
-        queryString.trim();
+
+        queryString = queryString.trim();
 
         if (typeof categoryName === "undefined") {
             categoryName = "queries";
@@ -82,7 +95,8 @@ class Database {
             this.queryStrings[categoryName] = {};
         }
 
-        this.queryStrings[categoryName][parsed.name] = queryString;
+        const filename = path.parse(queryPath).name;
+        this.queryStrings[categoryName][filename] = queryString;
     }
 
     async readDirectory(dirPath) {
