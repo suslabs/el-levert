@@ -94,7 +94,7 @@ class ReactionHandler extends Handler {
         const reacts = word.react ?? word.reacts;
 
         if (Array.isArray(reacts)) {
-            return Util.randElement(reacts);
+            return Util.randomElement(reacts);
         } else if (typeof reacts === "string") {
             return reacts;
         }
