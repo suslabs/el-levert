@@ -28,6 +28,8 @@ class TagVM {
 
     handleError(err) {
         switch (err.name) {
+            case "VMError":
+                return `:no_entry_sign: ${err.message}.`;
             case "ExitError":
                 return err.exitData;
             case "ManevraError":
@@ -72,13 +74,17 @@ class TagVM {
     }
 
     async runScript(code, msg, args) {
+        if (this.inspectorServer?.inspectorConnected) {
+            return ":no_entry_sign: Inspector is already connected.";
+        }
+
         const context = new EvalContext(
             {
                 memLimit: this.memLimit,
                 timeLimit: this.timeLimit
             },
             {
-                enable: this.inspectorServer?.enable,
+                enable: this.inspectorServer?.enable ?? false,
                 sendReply: this.inspectorServer?.sendReply
             }
         );

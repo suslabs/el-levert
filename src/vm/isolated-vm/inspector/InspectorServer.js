@@ -10,22 +10,23 @@ const inspectorUrl = "devtools://devtools/bundled/inspector.html",
     };
 
 function listener(socket) {
+    this.inspectorSocket = socket;
+
     if (this.inspectorContext === null) {
-        socket.close();
+        this.closeSocket();
         return;
     }
 
-    this.inspectorSocket = socket;
-    this.inspectorContext.inspector.onConnection();
+    this.connectInspector();
 
     socket.on("error", err => {
-        getLogger().error(err.message);
-        this.inspectorContext?.inspector.dispose();
+        getLogger().error(err);
+        this.disconnectInspector();
     });
 
-    socket.on("close", (code, reason) => {
-        getLogger().info(`Websocket closed: ${code}, ${reason}`);
-        this.inspectorContext?.inspector.dispose();
+    socket.on("close", code => {
+        getLogger().info(`Websocket closed: ${JSON.stringify(code)}`);
+        this.disconnectInspector();
     });
 
     socket.on("message", msg => {
@@ -53,6 +54,8 @@ class InspectorServer {
 
         this.inspectorContext = null;
         this.inspectorSocket = null;
+
+        this.running = false;
 
         this.sendReply = sendReply.bind(this);
     }
@@ -86,6 +89,7 @@ class InspectorServer {
 
         this.bindEvents();
 
+        this.running = true;
         getLogger().info("## Inspector: " + this.getInspectorUrl());
     }
 
@@ -94,15 +98,56 @@ class InspectorServer {
         this.websocketServer.on("close", _ => getLogger().info("Inspector server closed."));
     }
 
+    get inspectorConnected() {
+        if (this.inspectorContext === null) {
+            return false;
+        }
+
+        return this.inspectorContext.inspector.connected;
+    }
+
+    connectInspector() {
+        if (this.inspectorContext === null) {
+            return;
+        }
+
+        this.inspectorContext.inspector.onConnection();
+    }
+
+    disconnectInspector() {
+        if (this.inspectorContext === null) {
+            return;
+        }
+
+        this.inspectorContext.inspector.onDisconnection();
+    }
+
+    closeSocket() {
+        if (this.inspectorSocket === null) {
+            return;
+        }
+
+        if (this.inspectorSocket.readyState !== WebSocket.CLOSED) {
+            this.inspectorSocket.close();
+        }
+    }
+
+    deleteReferences() {
+        this.disconnectInspector();
+        this.closeSocket();
+
+        this.inspectorContext = null;
+        this.inspectorSocket = null;
+
+        this.running = false;
+    }
+
     executionFinished() {
         if (!this.enable) {
             return;
         }
 
-        this.inspectorSocket.close();
-
-        this.inspectorContext = null;
-        this.inspectorSocket = null;
+        this.deleteReferences();
     }
 
     close() {
@@ -111,9 +156,7 @@ class InspectorServer {
         }
 
         this.websocketServer.close();
-
-        this.inspectorContext = null;
-        this.inspectorSocket = null;
+        this.deleteReferences();
     }
 }
 

@@ -109,7 +109,7 @@ class TagVM2 {
 
     kill() {
         if (!this.enabled) {
-            return true;
+            return false;
         }
 
         try {
