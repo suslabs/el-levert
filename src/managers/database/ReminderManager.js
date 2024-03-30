@@ -28,6 +28,10 @@ class ReminderManager extends DBManager {
     async list(user) {
         const reminders = await this.remind_db.fetch(user);
 
+        if (!reminders) {
+            return false;
+        }
+
         reminders.sort((a, b) => a.end - b.end);
 
         return reminders;
