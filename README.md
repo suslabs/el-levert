@@ -51,6 +51,7 @@
 -   [ ] Add the option to log to a channel
 -   [ ] Loading extensions
 -   [ ] Rewrite importer & add db check script
+-   [ ] Add support for other databases
 
 # Commands
 
