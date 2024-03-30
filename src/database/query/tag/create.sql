@@ -1,3 +1,9 @@
+CREATE TABLE "Quotas" (
+	"user"	TEXT,
+	"quota"	REAL,
+	PRIMARY KEY("user")
+);
+---
 CREATE TABLE "Tags" (
 	"hops"	TEXT,
 	"name"	TEXT,
@@ -9,10 +15,4 @@ CREATE TABLE "Tags" (
 	"type"	INTEGER,
 	PRIMARY KEY("name"),
 	FOREIGN KEY("owner") REFERENCES Quotas("user")
-);
----
-CREATE TABLE "Quotas" (
-	"user"	TEXT,
-	"quota"	REAL,
-	PRIMARY KEY("user")
 );
