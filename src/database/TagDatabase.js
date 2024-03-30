@@ -106,7 +106,7 @@ class TagDatabase extends Database {
     }
 
     async quotaFetch(user) {
-        const quota = await this.quotaQueries.quota.get({
+        const quota = await this.quotaQueries.fetch.get({
             $user: user
         });
 
@@ -118,13 +118,13 @@ class TagDatabase extends Database {
     }
 
     async quotaCreate(user) {
-        return await this.quotaQueries.quotaCreate.run({
+        return await this.quotaQueries.create.run({
             $user: user
         });
     }
 
     async quotaSet(user, quota) {
-        return await this.quotaQueries.quotaSet.run({
+        return await this.quotaQueries.set.run({
             $user: user,
             $quota: quota
         });
