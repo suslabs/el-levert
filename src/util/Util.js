@@ -111,6 +111,22 @@ const Util = {
                 }
             }, interval);
         });
+    },
+    setValuesWithDefaults: (target, source, defaults = {}) => {
+        const values = {};
+
+        for (const [key, value] of Object.entries(defaults)) {
+            const sourceVal = source[key];
+
+            if (sourceVal === null || typeof sourceVal === "undefined") {
+                values[key] = value;
+            }
+        }
+
+        return Object.assign(target, {
+            ...source,
+            ...values
+        });
     }
 };
 

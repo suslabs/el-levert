@@ -275,10 +275,7 @@ class DiscordClient {
             return false;
         }
 
-        Object.assign(options, {
-            ...defaultMessageFetchOptions,
-            ...options
-        });
+        Util.setValuesWithDefaults(options, options, defaultMessageFetchOptions);
 
         try {
             return await channel.messages.fetch(options);
@@ -308,11 +305,6 @@ class DiscordClient {
     }
 
     async findUsers(search, options = {}) {
-        Object.assign(options, {
-            ...defaultUserFetchOptions,
-            ...options
-        });
-
         const guilds = this.client.guilds.cache;
 
         const idMatch = search.match(userIdRegex),
@@ -341,6 +333,8 @@ class DiscordClient {
             user.user = user;
             return [user];
         }
+
+        Util.setValuesWithDefaults(options, options, defaultUserFetchOptions);
 
         let userDistances = [],
             foundIds = [];

@@ -1,5 +1,7 @@
 import EventError from "../errors/EventError.js";
 
+import Util from "../util/Util.js";
+
 const defaultValues = {
     once: false,
     registered: false
@@ -15,10 +17,7 @@ class BotEvent {
             throw new EventError("Event must have a listener");
         }
 
-        Object.assign(this, {
-            ...defaultValues,
-            ...options
-        });
+        Util.setValuesWithDefaults(this, options, defaultValues);
     }
 
     register(client) {

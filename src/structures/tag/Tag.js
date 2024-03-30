@@ -1,8 +1,8 @@
 import { bold } from "discord.js";
 
-import Util from "../../util/Util.js";
-
 import { TagFlags, TagTypes } from "./TagTypes.js";
+
+import Util from "../../util/Util.js";
 
 const defaultValues = {
     hops: [],
@@ -21,10 +21,7 @@ class Tag {
             data.hops = data.hops.split(",");
         }
 
-        Object.assign(this, {
-            ...defaultValues,
-            ...data
-        });
+        Util.setValuesWithDefaults(this, data, defaultValues);
 
         if (this.hops.length === 0) {
             this.hops.push(this.name);

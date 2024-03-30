@@ -1,5 +1,7 @@
 import { bold } from "discord.js";
 
+import Util from "../../util/Util.js";
+
 const defaultValues = {
     name: "",
     level: 0,
@@ -10,10 +12,7 @@ const indent = " ";
 
 class Group {
     constructor(data) {
-        Object.assign(this, {
-            ...defaultValues,
-            ...data
-        });
+        Util.setValuesWithDefaults(this, data, defaultValues);
     }
 
     setUsers(users) {

@@ -3,6 +3,7 @@ import FuncTypes from "./FuncTypes.js";
 import VMError from "../../errors/VMError.js";
 import ExitError from "../../vm/isolated-vm/functionErrors/ExitError.js";
 
+import Util from "../../util/Util.js";
 import getRegisterCode from "../../util/vm/getRegisterCode.js";
 
 function resolveObj(path, propertyMap) {
@@ -52,10 +53,7 @@ class VMFunction {
             throw new VMError("VM function must have a reference function");
         }
 
-        Object.assign(this, {
-            ...defaultValues,
-            ...options
-        });
+        Util.setValuesWithDefaults(this, options, defaultValues);
 
         this.resolveReference(propertyMap);
         this.resolveBinds(propertyMap);

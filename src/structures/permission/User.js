@@ -1,5 +1,7 @@
 import { inlineCode } from "discord.js";
 
+import Util from "../../util/Util.js";
+
 const defaultValues = {
     id: "0",
     group: "",
@@ -8,10 +10,7 @@ const defaultValues = {
 
 class User {
     constructor(data) {
-        Object.assign(this, {
-            ...defaultValues,
-            ...data
-        });
+        Util.setValuesWithDefaults(this, data, defaultValues);
     }
 
     setId(id) {
