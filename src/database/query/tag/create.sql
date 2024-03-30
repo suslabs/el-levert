@@ -8,7 +8,7 @@ CREATE TABLE "Tags" (
 	"lastEdited"	INTEGER,
 	"type"	INTEGER,
 	PRIMARY KEY("name"),
-	FOREIGN KEY("owner") REFERENCES Quotas(user)
+	FOREIGN KEY("owner") REFERENCES Quotas("user")
 );
 ---
 CREATE TABLE "Quotas" (
