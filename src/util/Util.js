@@ -90,7 +90,7 @@ const Util = {
     round: (num, digits) => {
         return Math.round((num + Number.EPSILON) * 10 ** digits) / 10 ** digits;
     },
-    randElement: (arr, a = 0, b = arr.length) => {
+    randomElement: (arr, a = 0, b = arr.length) => {
         return arr[a + ~~(Math.random() * (b - a))];
     },
     waitForCondition: (condition, timeoutError = "", timeout = 0, interval = 100) => {
