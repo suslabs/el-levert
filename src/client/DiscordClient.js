@@ -297,7 +297,7 @@ class DiscordClient {
         try {
             user = await this.client.users.fetch(id);
         } catch (err) {
-            if (err.code === RESTJSONErrorCodes.UnknownUser) {
+            if (err.code === RESTJSONErrorCodes.UnknownMember) {
                 return false;
             }
 
@@ -326,15 +326,19 @@ class DiscordClient {
                     const user = await guilds.at(i).members.fetch({ user: id });
                     return [user];
                 } catch (err) {
-                    if (err.code !== RESTJSONErrorCodes.UnknownUser) {
+                    if (err.code !== RESTJSONErrorCodes.UnknownMember) {
                         throw err;
                     }
                 }
             }
 
             const user = await this.client.users.fetch(id);
-            user.user = user;
 
+            if (!user) {
+                return [];
+            }
+
+            user.user = user;
             return [user];
         }
 
