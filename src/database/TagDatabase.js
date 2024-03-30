@@ -97,17 +97,17 @@ class TagDatabase extends Database {
         return tags;
     }
 
-    async list(owner) {
+    async list(user) {
         const rows = await this.tagQueries.list.all({
-            $owner: owner
+            $user: user
         });
 
         return rows.map(row => new Tag(row));
     }
 
-    async quotaFetch(id) {
+    async quotaFetch(user) {
         const quota = await this.quotaQueries.quota.get({
-            $id: id
+            $user: user
         });
 
         if (typeof quota === "undefined") {
@@ -117,15 +117,15 @@ class TagDatabase extends Database {
         return quota["quota"];
     }
 
-    async quotaCreate(id) {
+    async quotaCreate(user) {
         return await this.quotaQueries.quotaCreate.run({
-            $id: id
+            $user: user
         });
     }
 
-    async quotaSet(id, quota) {
+    async quotaSet(user, quota) {
         return await this.quotaQueries.quotaSet.run({
-            $id: id,
+            $user: user,
             $quota: quota
         });
     }

@@ -191,8 +191,8 @@ class TagManager extends DBManager {
         return tag;
     }
 
-    async list(id) {
-        const tags = await this.tag_db.list(id),
+    async list(user) {
+        const tags = await this.tag_db.list(user),
             newTags = tags.filter(tag => !tag.isOld),
             oldTags = tags.filter(tag => tag.isOld);
 
@@ -233,19 +233,19 @@ class TagManager extends DBManager {
         }
     }
 
-    async getQuota(id) {
-        return await this.tag_db.quotaFetch(id);
+    async getQuota(user) {
+        return await this.tag_db.quotaFetch(user);
     }
 
-    async updateQuota(id, difference) {
+    async updateQuota(user, difference) {
         if (difference === 0) {
             return;
         }
 
-        let currentQuota = await this.tag_db.quotaFetch(id);
+        let currentQuota = await this.tag_db.quotaFetch(user);
 
         if (currentQuota === false) {
-            await this.tag_db.quotaCreate(id);
+            await this.tag_db.quotaCreate(user);
             currentQuota = 0;
         }
 
@@ -255,7 +255,7 @@ class TagManager extends DBManager {
             throw new TagError(`Maximum quota of ${this.maxQuota}kb has been exceeded`);
         }
 
-        await this.tag_db.quotaSet(id, newQuota);
+        await this.tag_db.quotaSet(user, newQuota);
     }
 
     async downloadBody(msg) {

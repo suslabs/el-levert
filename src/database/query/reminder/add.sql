@@ -1,1 +1,1 @@
-INSERT INTO Reminders VALUES ($user, $end, $msg, $id);
+INSERT INTO Reminders ("user", "end", "msg") VALUES ($user, $end, $msg);

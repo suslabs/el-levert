@@ -18,15 +18,15 @@ class PermissionDatabase extends Database {
 
     async add(group, user) {
         return await this.userQueries.add.run({
-            $group: group.name,
-            $id: user.id
+            $id: user.id,
+            $group: group.name
         });
     }
 
     async remove(group, user) {
         return await this.userQueries.remove.run({
-            $group: group.name,
-            $id: user.id
+            $id: user.id,
+            $group: group.name
         });
     }
 

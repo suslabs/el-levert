@@ -1,1 +1,1 @@
-INSERT INTO Quotas VALUES ($id, 0)
+INSERT INTO Quotas VALUES ($user, 0)

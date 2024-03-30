@@ -1,1 +1,1 @@
-INSERT INTO Users VALUES ($group, $id);
+INSERT INTO Users VALUES ($id, $group);
