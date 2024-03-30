@@ -13,24 +13,27 @@ export default {
     parent: "tag",
     subcommand: true,
     handler: async (args, msg) => {
-        let owner = msg.author.id,
-            username = msg.author.username;
+        let user = msg.author;
 
         if (args.length > 0) {
-            const find = (await getClient().findUsers(args))[0];
+            const [u_name] = Util.splitArgs(args),
+                find = (await getClient().findUsers(u_name))[0];
 
             if (typeof find === "undefined") {
-                return `:warning: User \`${args}\` not found.`;
+                return `:warning: User \`${u_name}\` not found.`;
             }
 
-            owner = find.user.id;
-            username = find.user.username;
+            user = find.user;
         }
 
-        const tags = await getClient().tagManager.list(owner);
+        const tags = await getClient().tagManager.list(user.id);
 
         if (tags.count === 0) {
-            return `:information_source: User \`${username}\` has no tags.`;
+            if (user === msg.author) {
+                return `:information_source: You have no tags.`;
+            } else {
+                return `:information_source: User \`${user.username}\` has no tags.`;
+            }
         }
 
         let format = "";
@@ -47,9 +50,16 @@ export default {
             format += `Leveret 1 tags:\n${formatTagList(tags.oldTags)}`;
         }
 
-        return {
-            content: `:information_source: User \`${username}\` has following tags:`,
+        const out = {
             ...Util.getFileAttach(format)
         };
+
+        if (user === msg.author) {
+            out.content = `:information_source: You have the following tags:`;
+        } else {
+            out.content = `:information_source: User \`${user.username}\` has the following tags:`;
+        }
+
+        return out;
     }
 };

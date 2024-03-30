@@ -18,24 +18,21 @@ export default {
     name: "check",
     parent: "perm",
     subcommand: true,
-    allowed: getClient().permManager.adminLevel,
-    handler: async args => {
-        if (args.length === 0) {
-            return ":information_source: `perm check [username]`";
-        }
+    handler: async (args, msg) => {
+        let user = msg.author;
 
-        const [u_name] = Util.splitArgs(args);
+        if (args.length > 0) {
+            const [u_name] = Util.splitArgs(args),
+                find = (await getClient().findUsers(u_name))[0];
 
-        let find = (await getClient().findUsers(u_name))[0],
-            user;
-
-        if (typeof find !== "undefined") {
-            user = find.user;
-        } else {
-            user = {
-                id: u_name,
-                username: u_name
-            };
+            if (typeof find === "undefined") {
+                user = {
+                    id: u_name,
+                    username: u_name
+                };
+            } else {
+                user = find.user;
+            }
         }
 
         const groups = await getClient().permManager.fetch(user.id);
@@ -47,10 +44,17 @@ export default {
         const format = formatGroups(groups),
             maxLevel = await getClient().permManager.maxLevel(user.id);
 
-        return `User \`${user.username}\` has permissions:
-\`\`\`
+        let out = `\`\`\`
 ${format}
 \`\`\`
 Level: ${maxLevel}`;
+
+        if (user === msg.author) {
+            out = `You have the following permissions:` + out;
+        } else {
+            out = `User \`${user.username}\` has the following permissions:` + out;
+        }
+
+        return out;
     }
 };
