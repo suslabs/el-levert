@@ -115,7 +115,7 @@ class EvalContext {
     }
 
     disposeIsolate() {
-        this.script.release();
+        this.script?.release();
         this.context.release();
 
         this.inspector.dispose();
