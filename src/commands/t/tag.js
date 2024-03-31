@@ -67,6 +67,31 @@ async function parseBase(t_args, msg) {
     return { body, type };
 }
 
+function getPreview(out, msg) {
+    let preview;
+
+    try {
+        preview = await getClient().previewHandler.genPreview(msg, out);
+    } catch (err) {
+        getLogger().error("Preview gen failed", err);
+    }
+
+    if (!preview) {
+        return out;
+    }
+
+    const previewMsg = {
+        embeds: [preview]
+    },
+        cleanedOut = getClient().handlers.previewHandler.removeLink(out);
+
+    if (cleanedOut.length > 0) {
+        previewMsg.content = cleanedOut;
+    }
+
+    return previewMsg;
+}
+
 export default {
     name: "tag",
     aliases: ["t"],
@@ -139,34 +164,7 @@ export default {
         }
 
         if (getClient().previewHandler.canPreview(out)) {
-            let preview;
-
-            try {
-                preview = await getClient().previewHandler.genPreview(msg, out);
-            } catch (err) {
-                getLogger().error("Preview gen failed", err);
-
-                return {
-                    content: `:no_entry_sign: Encountered exception while generating preview:`,
-                    ...Util.getFileAttach(err.stack, "error.js")
-                };
-            }
-
-            if (!preview) {
-                return out;
-            }
-
-            const outMsg = {
-                embeds: [preview]
-            };
-
-            out = getClient().handlers.previewHandler.removeLink(out);
-
-            if (out.length > 0) {
-                outMsg.content = out;
-            }
-
-            return outMsg;
+            return getPreview(out, msg)
         }
 
         return out;
