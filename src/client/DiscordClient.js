@@ -220,7 +220,7 @@ class DiscordClient {
 
         switch (channel.type) {
             case ChannelType.DM:
-                if (channel.recipient.id !== user_id) {
+                if (channel.recipientId !== user_id) {
                     return false;
                 }
 
