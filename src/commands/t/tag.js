@@ -67,7 +67,7 @@ async function parseBase(t_args, msg) {
     return { body, type };
 }
 
-function getPreview(out, msg) {
+async function getPreview(out, msg) {
     let preview;
 
     try {
@@ -81,9 +81,9 @@ function getPreview(out, msg) {
     }
 
     const previewMsg = {
-        embeds: [preview]
-    },
-        cleanedOut = getClient().handlers.previewHandler.removeLink(out);
+            embeds: [preview]
+        },
+        cleanedOut = getClient().previewHandler.removeLink(out);
 
     if (cleanedOut.length > 0) {
         previewMsg.content = cleanedOut;
@@ -155,16 +155,8 @@ export default {
                 break;
         }
 
-        if (typeof out !== "string") {
-            try {
-                out = out.toString();
-            } catch (err) {
-                return;
-            }
-        }
-
         if (getClient().previewHandler.canPreview(out)) {
-            return getPreview(out, msg)
+            return getPreview(out, msg);
         }
 
         return out;
