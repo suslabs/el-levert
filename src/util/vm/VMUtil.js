@@ -68,6 +68,33 @@ const VMUtil = {
         obj.packetType = packetType ?? "unknown";
 
         socket.write(JSON.stringify(obj) + "\n");
+    },
+    formatOutput: out => {
+        if (out === null) {
+            return undefined;
+        }
+
+        if (Array.isArray(out)) {
+            return out.join(" ");
+        }
+
+        switch (typeof out) {
+            case "bigint":
+            case "boolean":
+            case "number":
+                return out.toString();
+            case "function":
+            case "symbol":
+                return undefined;
+            case "object":
+                try {
+                    return JSON.stringify(out);
+                } catch (err) {
+                    return undefined;
+                }
+        }
+
+        return out;
     }
 };
 

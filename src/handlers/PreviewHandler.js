@@ -18,6 +18,10 @@ class PreviewHandler extends Handler {
     }
 
     canPreview(str) {
+        if (typeof str !== "string") {
+            return false;
+        }
+
         return msgUrlRegex.test(str);
     }
 
