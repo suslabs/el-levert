@@ -4,6 +4,8 @@ import VM2ProcPool from "./process-pool/ProcessPool.js";
 import FakeUtil from "./classes/FakeUtil.js";
 import FakeAxios from "./classes/FakeAxios.js";
 
+import VMUtil from "../../util/vm/VMUtil.js";
+
 const vmOptions = {
     allowAsync: true,
     wrapper: "none",
@@ -76,35 +78,39 @@ class TagVM2 {
         return { vmObjects, vmFuncs, outputVars };
     }
 
+    handleError(err) {
+        switch (err.message) {
+            case "Code execution took too long and was killed.":
+            case "Code execution exceeed allowed memory.":
+                return ":no_entry_sign: " + err.message;
+            default:
+                throw err;
+        }
+    }
+
     async runScript(code, msg, args) {
         if (!this.enabled) {
             return "VM2 is disabled.";
         }
 
-        const { vmObjects, vmFuncs, outputVars } = this.getContext(msg, args);
-        code = formatCode(code);
+        const { vmObjects, vmFuncs, outputVars } = this.getContext(msg, args),
+            formattedCode = formatCode(code);
+
+        let out;
 
         try {
-            const out = await this.procPool.run(code, vmObjects, this.vmOptions, vmFuncs, additionalPath);
+            out = await this.procPool.run(formattedCode, vmObjects, this.vmOptions, vmFuncs, additionalPath);
 
             if (typeof outputVars.reply.reply !== "undefined") {
-                return outputVars.reply.reply;
+                out = outputVars.reply.reply;
+            } else {
+                out = VMUtil.formatOutput(out);
             }
-
-            if (typeof out === "number") {
-                return out.toString();
-            }
-
-            return out;
         } catch (err) {
-            switch (err.message) {
-                case "Code execution took too long and was killed.":
-                case "Code execution exceeed allowed memory.":
-                    return ":no_entry_sign: " + err.message;
-            }
-
-            throw err;
+            out = this.handleError(err);
         }
+
+        return out;
     }
 
     kill() {

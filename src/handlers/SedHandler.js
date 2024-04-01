@@ -15,6 +15,10 @@ class SedHandler extends Handler {
     }
 
     canSed(str) {
+        if (typeof str !== "string") {
+            return false;
+        }
+
         return sedRegex.test(str);
     }
 

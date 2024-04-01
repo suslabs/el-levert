@@ -46,7 +46,7 @@ class EvalContext {
         await this.global.set(globalNames.tag, vmTag);
     }
 
-    async registerFuncs(objMap) {
+    constructFuncs(objMap) {
         let funcs = [];
 
         for (const [objKey, funcMap] of Object.entries(objMap)) {
@@ -65,11 +65,15 @@ class EvalContext {
             }
         }
 
-        for (const func of funcs) {
+        return funcs;
+    }
+
+    async registerFuncs(objMap) {
+        this.funcs = this.constructFuncs(objMap);
+
+        for (const func of this.funcs) {
             await this.registerFunc(func);
         }
-
-        this.funcs = funcs;
     }
 
     registerFunc(func) {

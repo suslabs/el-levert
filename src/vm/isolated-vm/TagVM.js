@@ -6,6 +6,7 @@ import InspectorServer from "./inspector/InspectorServer.js";
 import VMErrors from "./VMErrors.js";
 
 import Util from "../../util/Util.js";
+import VMUtil from "../../util/vm/VMUtil.js";
 
 class TagVM {
     constructor() {
@@ -92,22 +93,19 @@ class TagVM {
         await context.getIsolate({ msg, args });
         this.inspectorServer?.setContext(context);
 
-        let res;
+        let out;
 
         try {
-            res = await context.runScript(code);
-
-            if (typeof res === "number") {
-                res = res.toString();
-            }
+            out = await context.runScript(code);
+            out = VMUtil.formatOutput(out);
         } catch (err) {
-            res = this.handleError(err);
+            out = this.handleError(err);
         } finally {
             this.inspectorServer?.executionFinished();
             context.disposeIsolate();
         }
 
-        return res;
+        return out;
     }
 
     unload() {
