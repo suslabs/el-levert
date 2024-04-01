@@ -26,18 +26,10 @@ class EvalContext {
         this.enableInspector = enableInspector;
     }
 
-    async setMsg(msg) {
-        const vmMsg = new ivm.ExternalCopy(msg.fixedMsg).copyInto();
-
-        await this.global.set(globalNames.msg, vmMsg);
-    }
-
     async setArgs(args) {
-        if (typeof args === "undefined") {
-            return;
+        if (args === null || args?.length < 1) {
+            args = undefined;
         }
-
-        args = args.length > 0 ? args : undefined;
 
         const vmTag = new ivm.ExternalCopy({
             args: args
@@ -46,18 +38,24 @@ class EvalContext {
         await this.global.set(globalNames.tag, vmTag);
     }
 
-    constructFuncs(objMap) {
+    async setMsg(msg) {
+        const vmMsg = new ivm.ExternalCopy(msg.fixedMsg).copyInto();
+
+        await this.global.set(globalNames.msg, vmMsg);
+    }
+
+    constructFuncs(objMap, names) {
         let funcs = [];
 
         for (const [objKey, funcMap] of Object.entries(objMap)) {
-            const objName = globalNames[objKey],
-                names = funcNames[objKey];
+            const objName = names.global[objKey],
+                funcNames = names.func[objKey];
 
             for (let [funcKey, funcProperties] of Object.entries(funcMap)) {
                 funcProperties = {
                     ...funcProperties,
                     parent: objName,
-                    name: names[funcKey]
+                    name: funcNames[funcKey]
                 };
 
                 const func = new VMFunction(funcProperties, this.propertyMap);
@@ -68,14 +66,6 @@ class EvalContext {
         return funcs;
     }
 
-    async registerFuncs(objMap) {
-        this.funcs = this.constructFuncs(objMap);
-
-        for (const func of this.funcs) {
-            await this.registerFunc(func);
-        }
-    }
-
     registerFunc(func) {
         const code = func.getRegisterCode();
 
@@ -84,6 +74,17 @@ class EvalContext {
                 reference: true
             }
         });
+    }
+
+    async registerFuncs() {
+        this.funcs = this.constructFuncs(Functions, {
+            global: globalNames,
+            func: funcNames
+        });
+
+        for (const func of this.funcs) {
+            await this.registerFunc(func);
+        }
     }
 
     async setupContext(msg, args) {
@@ -104,7 +105,7 @@ class EvalContext {
             msg
         };
 
-        await this.registerFuncs(Functions);
+        await this.registerFuncs();
     }
 
     async setupIsolate(msg, args) {
