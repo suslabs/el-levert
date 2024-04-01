@@ -36,12 +36,19 @@ class BaseCommandManager extends Manager {
     getCommands(perm) {
         const commands = this.commands.filter(command => !command.isSubcmd);
 
-        if (typeof perm !== "undefined") {
-            const allowedCmds = commands.filter(command => perm >= command.allowed);
-            return allowedCmds;
-        } else {
+        if (typeof perm === "undefined") {
             return commands;
         }
+
+        const allowedCmds = commands.filter(command => {
+            if (command.ownerOnly) {
+                return perm === getClient().permManager.owner.level;
+            }
+
+            return perm >= command.allowed;
+        });
+
+        return allowedCmds;
     }
 
     searchCommands(name) {
