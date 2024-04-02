@@ -121,7 +121,7 @@ class MysqlConnection {
 
     query(...args) {
         return new Promise((resolve, reject) => {
-            this.con.query(...args, err => {
+            this.con.query(...args, (err, result) => {
                 if (err) {
                     if (this.throwErrors) {
                         reject(new DatabaseError(err));
@@ -130,7 +130,7 @@ class MysqlConnection {
                     }
                 }
 
-                resolve();
+                resolve(result);
             });
         });
     }
