@@ -1,6 +1,6 @@
 import sqlite from "sqlite3";
 
-import Modes from "./Modes.js";
+import OpenModes from "./OpenModes.js";
 
 import DatabaseError from "../../errors/DatabaseError.js";
 import SqliteStatement from "./SqliteStatement.js";
@@ -10,7 +10,7 @@ class SqliteDatabase {
         this.filename = filename;
 
         if (typeof mode === "undefined") {
-            mode = Modes.OPEN_RWCREATE;
+            mode = OpenModes.OPEN_RWCREATE;
         }
 
         this.mode = mode;
