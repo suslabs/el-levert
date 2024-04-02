@@ -4,7 +4,7 @@ import fs from "fs/promises";
 import Util from "../util/Util.js";
 
 import SqliteDatabase from "./sqlite/SqliteDatabase.js";
-import Modes from "./sqlite/Modes.js";
+import OpenModes from "./sqlite/OpenModes.js";
 
 class SqlDatabase {
     constructor(dbPath, queryPath, options = {}) {
@@ -50,7 +50,7 @@ class SqlDatabase {
     }
 
     async create() {
-        await this.open(Modes.OPEN_RWCREATE);
+        await this.open(OpenModes.OPEN_RWCREATE);
 
         await this.loadCreateQuery();
         const split = this.createString.split("---");
@@ -174,7 +174,7 @@ class SqlDatabase {
     }
 
     async load() {
-        await this.open(Modes.OPEN_READWRITE);
+        await this.open(OpenModes.OPEN_READWRITE);
         await this.loadQueries();
     }
 }
