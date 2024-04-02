@@ -3,6 +3,7 @@ const { Isolate, ExternalCopy } = ivm;
 
 import FakeMsg from "../classes/FakeMsg.js";
 import VMFunction from "../../../structures/vm/VMFunction.js";
+import VMError from "../../../errors/VMError.js";
 
 import IsolateInspector from "../inspector/IsolateInspector.js";
 
@@ -50,9 +51,15 @@ class EvalContext {
     }
 
     async setMsg(msg) {
-        const fakeMsg = new FakeMsg(msg);
-        this.msg = fakeMsg;
+        let fakeMsg;
 
+        if (typeof msg === "undefined") {
+            fakeMsg = undefined;
+        } else {
+            fakeMsg = new FakeMsg(msg);
+        }
+
+        this.msg = fakeMsg;
         const vmMsg = new ExternalCopy(fakeMsg.fixedMsg).copyInto();
 
         this.vmMsg = vmMsg;
@@ -63,14 +70,28 @@ class EvalContext {
         let funcs = [];
 
         for (const [objKey, funcMap] of Object.entries(objMap)) {
+            if (!funcMap) {
+                throw new VMError("Invalid object map");
+            }
+
             const objName = names.global[objKey],
                 funcNames = names.func[objKey];
 
+            if (typeof objName === "undefined") {
+                throw new VMError(`Object ${objKey} not found`);
+            }
+
             for (let [funcKey, funcProperties] of Object.entries(funcMap)) {
+                const funcName = funcNames[funcKey];
+
+                if (typeof funcName === "undefined") {
+                    throw new VMError(`Function ${funcKey} not found`);
+                }
+
                 funcProperties = {
                     ...funcProperties,
                     parent: objName,
-                    name: funcNames[funcKey]
+                    name: funcName
                 };
 
                 const func = new VMFunction(funcProperties, this.propertyMap);
@@ -113,7 +134,7 @@ class EvalContext {
         await this.setArgs(args);
 
         this.propertyMap = {
-            msg
+            msg: this.msg
         };
 
         await this.registerFuncs();
@@ -130,23 +151,40 @@ class EvalContext {
         this.inspector.create(this.isolate);
     }
 
-    async compileScript(code) {
-        this.script = await this.isolate.compileScript(code, {
+    async compileScript(code, setReference = true) {
+        const script = await this.isolate.compileScript(code, {
             filename: `file:///${filename}`
         });
+
+        if (setReference) {
+            this.script = script;
+        } else {
+            return script;
+        }
     }
 
     async runScript(code) {
-        if (typeof code !== "undefined") {
-            await this.compileScript(code);
+        let compileNow = typeof code !== "undefined",
+            script;
+
+        if (compileNow) {
+            script = await this.compileScript(code, false);
+        } else if (typeof this.script === "undefined") {
+            throw new VMError("Can't run script, no script was compiled");
+        } else {
+            script = this.script;
         }
 
         await this.inspector.waitForConnection();
 
-        const res = await this.script.run(this.context, {
+        const res = await script.run(this.context, {
             timeout: this.timeLimit * 1000,
             copy: true
         });
+
+        if (compileNow) {
+            script.release();
+        }
 
         return res;
     }
