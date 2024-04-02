@@ -1,4 +1,6 @@
 import ivm from "isolated-vm";
+const { ExternalCopy } = ivm;
+
 import axios from "axios";
 
 async function request(...args) {
@@ -13,7 +15,7 @@ const FakeAxios = {
     request: async (...args) => {
         let res = await request.apply(this, args);
 
-        return new ivm.ExternalCopy({
+        return new ExternalCopy({
             data: res.data,
             status: res.status,
             statusText: res.statusText,

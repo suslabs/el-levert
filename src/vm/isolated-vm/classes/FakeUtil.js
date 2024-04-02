@@ -1,4 +1,5 @@
 import ivm from "isolated-vm";
+const { ExternalCopy } = ivm;
 
 import { getClient } from "../../../LevertClient.js";
 import VMUtil from "../../../util/vm/VMUtil.js";
@@ -34,11 +35,11 @@ const FakeUtil = {
             tag: x.user.tag
         }));
 
-        return new ivm.ExternalCopy(data).copyInto();
+        return new ExternalCopy(data).copyInto();
     },
     dumpTags: async _ => {
         const data = await getClient().tagManager.dump();
-        return new ivm.ExternalCopy(data).copyInto();
+        return new ExternalCopy(data).copyInto();
     },
     fetchTag: async name => {
         let tag = await getClient().tagManager.fetch(name);
@@ -51,7 +52,7 @@ const FakeUtil = {
             tag = await getClient().tagManager.fetchAlias(tag);
         }
 
-        return new ivm.ExternalCopy(tag).copyInto();
+        return new ExternalCopy(tag).copyInto();
     },
     fetchMessage: async (user_id, ch_id, msg_id) => {
         let data = await getClient().fetchMessage(ch_id, msg_id, user_id);
@@ -61,7 +62,7 @@ const FakeUtil = {
         }
 
         data = VMUtil.removeCircRef(data);
-        return new ivm.ExternalCopy(data).copyInto();
+        return new ExternalCopy(data).copyInto();
     },
     fetchMessages: async (user_id, ch_id, options) => {
         let data = await getClient().fetchMessages(ch_id, options, user_id);
@@ -71,7 +72,7 @@ const FakeUtil = {
         }
 
         data = data.map(x => VMUtil.removeCircRef(x));
-        return new ivm.ExternalCopy(data).copyInto();
+        return new ExternalCopy(data).copyInto();
     }
 };
 
