@@ -1,4 +1,4 @@
-import * as chrono from "chrono-node";
+import { parseDate } from "chrono-node";
 
 import { getClient } from "../../LevertClient.js";
 
@@ -21,10 +21,10 @@ export default {
             return ":warning: " + e;
         }
 
-        let parsedDate = chrono.parseDate(date);
+        let parsedDate = parseDate(date);
 
         if (!parsedDate) {
-            parsedDate = chrono.parseDate("in " + date);
+            parsedDate = parseDate("in " + date);
 
             if (!parsedDate) {
                 return `:warning: Invalid date: \`${date}\`.`;
