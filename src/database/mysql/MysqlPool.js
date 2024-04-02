@@ -114,7 +114,7 @@ class MysqlPool extends EventEmitter {
 
     query(...args) {
         return new Promise((resolve, reject) => {
-            this.con.query(...args, (err, result) => {
+            this.pool.query(...args, (err, result) => {
                 if (err) {
                     if (this.throwErrors) {
                         reject(new DatabaseError(err));
