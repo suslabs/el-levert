@@ -112,9 +112,7 @@ class MysqlPool extends EventEmitter {
 
     query(...args) {
         return new Promise((resolve, reject) => {
-            let query;
-
-            const callback = err => {
+            this.con.query(...args, (err, result) => {
                 if (err) {
                     if (this.throwErrors) {
                         reject(new DatabaseError(err));
@@ -123,11 +121,8 @@ class MysqlPool extends EventEmitter {
                     }
                 }
 
-                resolve(query);
-            };
-
-            args.push(callback);
-            query = this.pool.query.apply(this.pool, args);
+                resolve(result);
+            });
         });
     }
 
