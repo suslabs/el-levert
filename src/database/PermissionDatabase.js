@@ -1,4 +1,4 @@
-import Database from "./Database.js";
+import Database from "./SqlDatabase.js";
 
 import Group from "../structures/permission/Group.js";
 import User from "../structures/permission/User.js";

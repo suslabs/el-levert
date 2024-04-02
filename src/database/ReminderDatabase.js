@@ -1,4 +1,4 @@
-import Database from "./Database.js";
+import Database from "./SqlDatabase.js";
 
 import Reminder from "../structures/Reminder.js";
 
