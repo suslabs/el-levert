@@ -1,4 +1,5 @@
 import ivm from "isolated-vm";
+const { Isolate, ExternalCopy } = ivm;
 
 import FakeMsg from "../classes/FakeMsg.js";
 import VMFunction from "../../../structures/vm/VMFunction.js";
@@ -26,21 +27,35 @@ class EvalContext {
         this.enableInspector = enableInspector;
     }
 
+    async setGlobal() {
+        const global = this.context.global;
+
+        this.global = global;
+        await global.set("global", global.derefInto());
+    }
+
     async setArgs(args) {
         if (args === null || args?.length < 1) {
             args = undefined;
         }
 
-        const vmTag = new ivm.ExternalCopy({
+        this.args = args;
+
+        const vmTag = new ExternalCopy({
             args: args
         }).copyInto();
 
+        this.vmTag = vmTag;
         await this.global.set(globalNames.tag, vmTag);
     }
 
     async setMsg(msg) {
-        const vmMsg = new ivm.ExternalCopy(msg.fixedMsg).copyInto();
+        const fakeMsg = new FakeMsg(msg);
+        this.msg = fakeMsg;
 
+        const vmMsg = new ExternalCopy(fakeMsg.fixedMsg).copyInto();
+
+        this.vmMsg = vmMsg;
         await this.global.set(globalNames.msg, vmMsg);
     }
 
@@ -92,11 +107,7 @@ class EvalContext {
             inspector: this.enableInspector
         });
 
-        const global = this.context.global;
-        await global.set("global", global.derefInto());
-        this.global = global;
-
-        msg = new FakeMsg(msg);
+        await this.setGlobal();
 
         await this.setMsg(msg);
         await this.setArgs(args);
@@ -109,7 +120,7 @@ class EvalContext {
     }
 
     async setupIsolate(msg, args) {
-        this.isolate = new ivm.Isolate({
+        this.isolate = new Isolate({
             memoryLimit: this.memLimit,
             inspector: this.enableInspector
         });
@@ -117,21 +128,6 @@ class EvalContext {
         await this.setupContext(msg, args);
 
         this.inspector.create(this.isolate);
-    }
-
-    disposeIsolate() {
-        this.script?.release();
-        this.context.release();
-
-        this.inspector.dispose();
-
-        if (!this.isolate.isDisposed) {
-            this.isolate.dispose();
-        }
-
-        delete this.script;
-        delete this.context;
-        delete this.isolate;
     }
 
     async compileScript(code) {
@@ -159,6 +155,50 @@ class EvalContext {
 
         await this.setupIsolate(msg, args);
         return this.isolate;
+    }
+
+    disposeInspector() {
+        this.inspector.dispose();
+        delete this.inspector;
+    }
+
+    disposeVMObjects() {
+        this.global?.release();
+        this.vmTag?.release();
+        this.vmMsg?.release();
+
+        delete this.global;
+        delete this.vmTag;
+        delete this.vmMsg;
+    }
+
+    disposeScript() {
+        this.script?.release();
+        delete this.script;
+    }
+
+    disposeContext() {
+        this.context?.release();
+        delete this.context;
+    }
+
+    disposeIsolate() {
+        if (typeof this.isolate === "undefined") {
+            return;
+        }
+
+        if (!this.isolate.isDisposed) {
+            this.isolate.dispose();
+        }
+
+        delete this.isolate;
+    }
+
+    dispose() {
+        this.disposeInspector();
+        this.disposeVMObjects();
+        this.disposeScript();
+        this.disposeIsolate();
     }
 }
 
