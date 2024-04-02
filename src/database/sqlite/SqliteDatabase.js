@@ -19,7 +19,7 @@ class SqliteDatabase {
     open() {
         return new Promise((resolve, reject) => {
             if (typeof this.db !== "undefined") {
-                reject(new DatabaseError("Cannot open database. The database is already open."));
+                reject(new DatabaseError("Cannot open database. The database is already open"));
             }
 
             const db = new sqlite.Database(this.filename, this.mode, err => {
@@ -36,7 +36,7 @@ class SqliteDatabase {
     close() {
         return new Promise((resolve, reject) => {
             if (typeof this.db === "undefined") {
-                reject(new DatabaseError("The database is not open."));
+                reject(new DatabaseError("The database is not open"));
             }
 
             this.db.close(err => {
@@ -57,7 +57,7 @@ class SqliteDatabase {
     run(...args) {
         return new Promise((resolve, reject) => {
             if (typeof this.db === "undefined") {
-                reject(new DatabaseError("The database is not open."));
+                reject(new DatabaseError("The database is not open"));
             }
 
             this.db.run(...args, err => {
@@ -73,7 +73,7 @@ class SqliteDatabase {
     get(...args) {
         return new Promise((resolve, reject) => {
             if (typeof this.db === "undefined") {
-                reject(new DatabaseError("The database is not open."));
+                reject(new DatabaseError("The database is not open"));
             }
 
             this.db.get(...args, (err, row) => {
@@ -89,7 +89,7 @@ class SqliteDatabase {
     all(...args) {
         return new Promise((resolve, reject) => {
             if (typeof this.db === "undefined") {
-                reject(new DatabaseError("The database is not open."));
+                reject(new DatabaseError("The database is not open"));
             }
 
             this.db.all(...args, (err, rows) => {
@@ -105,7 +105,7 @@ class SqliteDatabase {
     each(...args) {
         return new Promise((resolve, reject) => {
             if (typeof this.db === "undefined") {
-                reject(new DatabaseError("The database is not open."));
+                reject(new DatabaseError("The database is not open"));
             }
 
             this.db.each(...args, (err, nrows) => {
@@ -121,7 +121,7 @@ class SqliteDatabase {
     resolve(...args) {
         return new Promise((resolve, reject) => {
             if (typeof this.db === "undefined") {
-                reject(new DatabaseError("The database is not open."));
+                reject(new DatabaseError("The database is not open"));
             }
 
             this.db.resolve(...args, err => {
@@ -137,7 +137,7 @@ class SqliteDatabase {
     prepare(...args) {
         return new Promise((resolve, reject) => {
             if (typeof this.db === "undefined") {
-                reject(new DatabaseError("The database is not open."));
+                reject(new DatabaseError("The database is not open"));
             }
 
             let statement;
