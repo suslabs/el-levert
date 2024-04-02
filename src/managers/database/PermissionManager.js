@@ -231,11 +231,13 @@ class PermissionManager extends DBManager {
 
         for (const user of users) {
             let find;
+
             try {
                 find = await getClient().findUserById(user.id);
             } catch (err) {
-                console.log();
+                debugger;
             }
+
             user.setUsername(find.username);
         }
 
