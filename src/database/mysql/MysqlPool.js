@@ -4,7 +4,7 @@ import EventEmitter from "events";
 import DatabaseError from "../../errors/DatabaseError.js";
 
 import PoolEvents from "./PoolEvents.js";
-import MysqlPoolConnection from "./MysqlPoolConnection.js";
+import MysqlConnection from "./MysqlConnection.js";
 
 class MysqlPool extends EventEmitter {
     constructor(config) {
@@ -41,7 +41,7 @@ class MysqlPool extends EventEmitter {
                     }
                 }
 
-                resolve(new MysqlPoolConnection(null, connection));
+                resolve(new MysqlConnection(null, connection));
             });
         });
     }
@@ -58,7 +58,7 @@ class MysqlPool extends EventEmitter {
                         }
                     }
 
-                    resolve(new MysqlPoolConnection(null, connection));
+                    resolve(new MysqlConnection(null, connection));
                 });
             } catch (err) {
                 if (this.throwErrors) {
