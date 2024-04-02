@@ -119,7 +119,7 @@ class InspectorServer {
             return;
         }
 
-        this.inspectorContext.inspector.onDisconnection();
+        this.inspectorContext.inspector.onDisconnect();
     }
 
     closeSocket() {

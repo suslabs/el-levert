@@ -95,7 +95,7 @@ class IsolateInspector {
         this.connected = true;
     }
 
-    onDisconnection() {
+    onDisconnect() {
         if (!this.connected) {
             return;
         }
