@@ -75,7 +75,7 @@ const VMUtil = {
         }
 
         if (Array.isArray(out)) {
-            return out.join(" ");
+            return out.join(",");
         }
 
         switch (typeof out) {
@@ -92,9 +92,9 @@ const VMUtil = {
                 } catch (err) {
                     return undefined;
                 }
+            default:
+                return out;
         }
-
-        return out;
     }
 };
 
