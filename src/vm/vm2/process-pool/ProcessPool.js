@@ -34,7 +34,7 @@ function listener(socket, funcs) {
         };
 
         socket.on("data", recieve);
-        socket.on("close", _ => reject(new Error("Socket was cabaled.")));
+        socket.on("close", _ => reject(new Error("Socket was cabaled")));
     });
 }
 
