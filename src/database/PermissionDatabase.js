@@ -1,9 +1,9 @@
-import Database from "./SqlDatabase.js";
+import SqliteDatabase from "./SqlDatabase.js";
 
 import Group from "../structures/permission/Group.js";
 import User from "../structures/permission/User.js";
 
-class PermissionDatabase extends Database {
+class PermissionDatabase extends SqliteDatabase {
     async fetch(id) {
         const rows = await this.userQueries.fetch.all({
             $id: id

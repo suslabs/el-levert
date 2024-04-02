@@ -3,9 +3,10 @@ import fs from "fs/promises";
 
 import Util from "../util/Util.js";
 
-import { AsyncDatabase, Modes } from "./sqlite/AsyncDatabase.js";
+import SqliteDatabase from "./sqlite/SqliteDatabase.js";
+import Modes from "./sqlite/Modes.js";
 
-class Database {
+class SqlDatabase {
     constructor(dbPath, queryPath, options = {}) {
         this.dbPath = dbPath;
         this.queryPath = queryPath;
@@ -32,7 +33,7 @@ class Database {
         let db;
 
         if (typeof this.db === "undefined") {
-            db = new AsyncDatabase(this.dbPath, mode);
+            db = new SqliteDatabase(this.dbPath, mode);
         } else {
             db = this.db;
         }
@@ -178,4 +179,4 @@ class Database {
     }
 }
 
-export default Database;
+export default SqlDatabase;

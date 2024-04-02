@@ -1,4 +1,4 @@
-import Database from "./SqlDatabase.js";
+import SqliteDatabase from "./SqlDatabase.js";
 
 import Tag from "../structures/tag/Tag.js";
 
@@ -15,7 +15,7 @@ import Tag from "../structures/tag/Tag.js";
 }
 */
 
-class TagDatabase extends Database {
+class TagDatabase extends SqliteDatabase {
     async fetch(name) {
         const row = await this.tagQueries.fetch.get({
             $name: name
