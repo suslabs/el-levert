@@ -1,8 +1,8 @@
-import Database from "./SqlDatabase.js";
+import SqliteDatabase from "./SqlDatabase.js";
 
 import Reminder from "../structures/Reminder.js";
 
-class ReminderDatabase extends Database {
+class ReminderDatabase extends SqliteDatabase {
     async fetch(user) {
         const rows = await this.queries.fetch.all({
             $user: user

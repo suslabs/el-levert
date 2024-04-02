@@ -1,16 +1,11 @@
 import sqlite from "sqlite3";
 
+import Modes from "./Modes.js";
+
 import DatabaseError from "../../errors/DatabaseError.js";
-import AsyncStatement from "./AsyncStatement.js";
+import SqliteStatement from "./SqliteStatement.js";
 
-const Modes = {
-    OPEN_READONLY: sqlite.OPEN_READONLY,
-    OPEN_READWRITE: sqlite.OPEN_READWRITE,
-    OPEN_CREATE: sqlite.OPEN_CREATE,
-    OPEN_RWCREATE: sqlite.OPEN_READWRITE | sqlite.OPEN_CREATE
-};
-
-class AsyncDatabase {
+class SqliteDatabase {
     constructor(filename, mode) {
         this.filename = filename;
 
@@ -152,7 +147,7 @@ class AsyncDatabase {
                     reject(new DatabaseError(err));
                 }
 
-                resolve(new AsyncStatement(statement));
+                resolve(new SqliteStatement(statement));
             };
 
             args.push(callback);
@@ -175,4 +170,4 @@ class AsyncDatabase {
     }
 }
 
-export { AsyncDatabase, Modes };
+export default SqliteDatabase;

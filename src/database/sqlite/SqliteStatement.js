@@ -1,6 +1,6 @@
 import DatabaseError from "../../errors/DatabaseError.js";
 
-class AsyncStatement {
+class SqliteStatement {
     constructor(statement) {
         this.st = statement;
     }
@@ -94,4 +94,4 @@ class AsyncStatement {
     }
 }
 
-export default AsyncStatement;
+export default SqliteStatement;
