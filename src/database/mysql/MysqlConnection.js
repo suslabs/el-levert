@@ -1,6 +1,7 @@
 class MysqlConnection {
-    constructor(connection) {
+    constructor(connection, throwErrors) {
         this.con = connection;
+        this.throwErrors = throwErrors;
     }
 }
 
