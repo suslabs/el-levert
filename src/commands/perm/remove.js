@@ -7,7 +7,7 @@ export default {
     parent: "perm",
     subcommand: true,
     allowed: getClient().permManager.adminLevel,
-    handler: async args => {
+    handler: async (args, msg) => {
         const [g_name, u_name] = Util.splitArgs(args);
 
         if (args.length === 0 || g_name.length === 0 || u_name.length === 0) {
