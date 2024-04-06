@@ -47,7 +47,7 @@ If you want to de-alias the tag, \`edit\` it.`;
         const a_tag = await getClient().tagManager.fetch(a_name);
 
         if (!a_tag) {
-            return `:warning: Tag **${a_tag.name}** doesn't exist.`;
+            return `:warning: Tag **${a_name}** doesn't exist.`;
         }
 
         let newTag,
