@@ -32,6 +32,7 @@ class TagDatabase extends SqliteDatabase {
         tag.registered = Date.now();
 
         return await this.tagQueries.add.run({
+            $hops: tag.getHopsString(),
             $name: tag.name,
             $body: tag.body,
             $owner: tag.owner,
@@ -114,7 +115,7 @@ class TagDatabase extends SqliteDatabase {
             return false;
         }
 
-        return quota["quota"];
+        return quota.quota;
     }
 
     async quotaCreate(user) {
