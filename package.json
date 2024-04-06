@@ -19,6 +19,7 @@
         "discord.js": "^14.14.1",
         "generic-pool": "^3.9.0",
         "isolated-vm": "^4.7.2",
+        "lodash.clonedeep": "^4.5.0",
         "sqlite3": "^5.1.7",
         "vm2": "^3.9.19",
         "winston": "^3.13.0"
