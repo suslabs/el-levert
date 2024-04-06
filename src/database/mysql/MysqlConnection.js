@@ -18,27 +18,6 @@ class MysqlConnection {
         }
     }
 
-    createQuery(...args) {
-        return new Promise((resolve, reject) => {
-            let query;
-
-            const callback = err => {
-                if (err) {
-                    if (this.throwErrors) {
-                        reject(new DatabaseError(err));
-                    } else {
-                        resolve();
-                    }
-                }
-
-                resolve(query);
-            };
-
-            args.push(callback);
-            query = this.con.createQuery.apply(this.pool, args);
-        });
-    }
-
     connect(options) {
         return new Promise((resolve, reject) => {
             this.con.connect(options, err => {
