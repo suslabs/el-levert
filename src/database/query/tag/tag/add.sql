@@ -1,1 +1,1 @@
-INSERT INTO Tags VALUES ($name, $name, $body, $owner, '', $registered, 0, $type);
+INSERT INTO Tags VALUES ($hops, $name, $body, $owner, '', $registered, 0, $type);
