@@ -2,7 +2,7 @@ import SqliteDatabase from "./SqlDatabase.js";
 
 import Tag from "../structures/tag/Tag.js";
 
-/*
+/* Tag
 {
     $hops: tag.getHopsString(),
     $name: tag.name,
@@ -36,6 +36,7 @@ class TagDatabase extends SqliteDatabase {
             $name: tag.name,
             $body: tag.body,
             $owner: tag.owner,
+            $args: tag.args,
             $registered: tag.registered,
             $type: tag.type
         });
