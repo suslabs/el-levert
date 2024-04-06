@@ -48,7 +48,8 @@ class TagManager extends DBManager {
 
         for (const hop of tag.hops) {
             if (hops.includes(hop)) {
-                throw new TagError("Tag recursion detected", hops);
+                const recursionHops = hops.concat(hop);
+                throw new TagError("Tag recursion detected", recursionHops);
             }
 
             hops.push(hop);
