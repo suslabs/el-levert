@@ -1,5 +1,6 @@
 import { Buffer } from "buffer";
 import { AttachmentBuilder } from "discord.js";
+import cloneDeep from "lodash.clonedeep";
 
 import fs from "fs";
 import path from "path";
@@ -115,11 +116,12 @@ const Util = {
     setValuesWithDefaults: (target, source, defaults = {}) => {
         const values = {};
 
-        for (const [key, value] of Object.entries(defaults)) {
+        for (const key of Object.keys(defaults)) {
             const sourceVal = source[key];
 
             if (sourceVal === null || typeof sourceVal === "undefined") {
-                values[key] = value;
+                const defaultValue = cloneDeep(defaults[key]);
+                values[key] = defaultValue;
             }
         }
 
