@@ -2,6 +2,7 @@ import mysql from "mysql";
 import EventEmitter from "events";
 
 import DatabaseError from "../../errors/DatabaseError.js";
+import MysqlUtil from "./MysqlUtil.js";
 
 import PoolEvents from "./PoolEvents.js";
 import MysqlPoolConnection from "./MysqlPoolConnection.js";
@@ -112,9 +113,11 @@ class MysqlPool extends EventEmitter {
         });
     }
 
-    query(...args) {
+    async query(...args) {
+        const con = await this.getConnection();
+
         return new Promise((resolve, reject) => {
-            this.pool.query(...args, (err, result) => {
+            const callback = (err, result) => {
                 if (err) {
                     if (this.throwErrors) {
                         reject(new DatabaseError(err));
@@ -124,7 +127,10 @@ class MysqlPool extends EventEmitter {
                 }
 
                 resolve(result);
-            });
+            };
+
+            args.push(callback);
+            const query = MysqlUtil.createQuery(...args);
         });
     }
 
