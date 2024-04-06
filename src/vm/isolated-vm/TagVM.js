@@ -51,7 +51,7 @@ class TagVM {
         let out = JSON.parse(msg);
 
         if (typeof out.content !== "undefined") {
-            let split = out.content.split("\n");
+            const split = out.content.split("\n");
 
             if (out.content.length > this.outCharLimit || split.length > this.outNewlineLimit) {
                 return Util.getFileAttach(out.content);
@@ -59,15 +59,16 @@ class TagVM {
         }
 
         if (typeof out.file !== "undefined") {
-            if (typeof out.file.data === "object") {
-                out.file.data = Object.values(out.file.data);
-            }
-
+            let { data, name } = out.file;
             delete out.file;
+
+            if (typeof data === "object") {
+                data = Object.values(data);
+            }
 
             out = {
                 ...out,
-                ...Util.getFileAttach(out.file.data, out.file.name)
+                ...Util.getFileAttach(data, name)
             };
         }
 
