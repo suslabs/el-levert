@@ -7,10 +7,16 @@ export default {
     parent: "tag",
     subcommand: true,
     handler: async (_, msg) => {
-        let quota = await getClient().tagManager.getQuota(msg.author.id);
+        const tags = await getClient().tagManager.list(msg.author.id);
 
-        if (!quota) {
+        if (tags.count === 0) {
             return ":information_source: You have no tags.";
+        }
+
+        const quota = await getClient().tagManager.getQuota(msg.author.id);
+
+        if (quota === 0) {
+            return `:information_source: You aren't using any of the available storage.`;
         }
 
         const maxQuota = getClient().config.maxQuota,
