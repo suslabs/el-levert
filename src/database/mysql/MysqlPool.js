@@ -2,7 +2,6 @@ import mysql from "mysql";
 import EventEmitter from "events";
 
 import DatabaseError from "../../errors/DatabaseError.js";
-import MysqlUtil from "./MysqlUtil.js";
 
 import PoolEvents from "./PoolEvents.js";
 import MysqlPoolConnection from "./MysqlPoolConnection.js";
@@ -76,7 +75,7 @@ class MysqlPool extends EventEmitter {
     releaseConnection(connection) {
         return new Promise((resolve, reject) => {
             try {
-                this.pool.releaseConnection(connection.con, (err, connection) => {
+                this.pool.releaseConnection(connection.con, err => {
                     if (err) {
                         if (this.throwErrors) {
                             reject(new DatabaseError(err));
@@ -118,6 +117,8 @@ class MysqlPool extends EventEmitter {
 
         return new Promise((resolve, reject) => {
             const callback = (err, result) => {
+                con.release();
+
                 if (err) {
                     if (this.throwErrors) {
                         reject(new DatabaseError(err));
@@ -130,7 +131,7 @@ class MysqlPool extends EventEmitter {
             };
 
             args.push(callback);
-            const query = MysqlUtil.createQuery(...args);
+            con.query(...args);
         });
     }
 

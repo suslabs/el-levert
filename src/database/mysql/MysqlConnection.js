@@ -5,10 +5,11 @@ class MysqlConnection {
         if (config === null) {
             this.con = connection;
             this.config = connection.config;
+
             this.throwErrors = this.config.throwErrors;
         } else {
+            this.con = mysql.createConnection(config);
             this.config = config;
-            this.connection = mysql.createConnection(config);
 
             if (typeof config.throwErrors === "boolean") {
                 this.throwErrors = onfig.throwErrors;
@@ -16,6 +17,8 @@ class MysqlConnection {
                 this.throwErrors = true;
             }
         }
+
+        this.inTransaction = false;
     }
 
     connect(options) {
@@ -61,6 +64,7 @@ class MysqlConnection {
                     }
                 }
 
+                this.inTransaction = true;
                 resolve();
             });
         });
@@ -69,8 +73,18 @@ class MysqlConnection {
     commit(options) {
         return new Promise((resolve, reject) => {
             this.con.commit(options, err => {
+                this.inTransaction = false;
+
                 if (err) {
-                    if (this.throwErrors) {
+                    if (this.inTransaction) {
+                        this.con.rollback(() => {
+                            if (this.throwErrors) {
+                                reject(new DatabaseError(err));
+                            } else {
+                                resolve();
+                            }
+                        });
+                    } else if (this.throwErrors) {
                         reject(new DatabaseError(err));
                     } else {
                         resolve();
@@ -85,6 +99,8 @@ class MysqlConnection {
     rollback(options) {
         return new Promise((resolve, reject) => {
             this.con.rollback(options, err => {
+                this.inTransaction = false;
+
                 if (err) {
                     if (this.throwErrors) {
                         reject(new DatabaseError(err));
@@ -102,7 +118,17 @@ class MysqlConnection {
         return new Promise((resolve, reject) => {
             this.con.query(...args, (err, result) => {
                 if (err) {
-                    if (this.throwErrors) {
+                    if (this.inTransaction) {
+                        this.con.rollback(() => {
+                            this.inTransaction = false;
+
+                            if (this.throwErrors) {
+                                reject(new DatabaseError(err));
+                            } else {
+                                resolve();
+                            }
+                        });
+                    } else if (this.throwErrors) {
                         reject(new DatabaseError(err));
                     } else {
                         resolve();
