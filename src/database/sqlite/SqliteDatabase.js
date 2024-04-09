@@ -54,13 +54,13 @@ class SqliteDatabase {
         return this.db.configure(option, value);
     }
 
-    run(...args) {
+    run(sql, ...param) {
         return new Promise((resolve, reject) => {
             if (typeof this.db === "undefined") {
                 reject(new DatabaseError("The database is not open"));
             }
 
-            this.db.run(...args, err => {
+            this.db.run(sql, ...param, err => {
                 if (err) {
                     reject(new DatabaseError(err));
                 }
@@ -70,13 +70,13 @@ class SqliteDatabase {
         });
     }
 
-    get(...args) {
+    get(sql, ...param) {
         return new Promise((resolve, reject) => {
             if (typeof this.db === "undefined") {
                 reject(new DatabaseError("The database is not open"));
             }
 
-            this.db.get(...args, (err, row) => {
+            this.db.get(sql, ...param, (err, row) => {
                 if (err) {
                     reject(new DatabaseError(err));
                 }
@@ -86,13 +86,13 @@ class SqliteDatabase {
         });
     }
 
-    all(...args) {
+    all(sql, ...param) {
         return new Promise((resolve, reject) => {
             if (typeof this.db === "undefined") {
                 reject(new DatabaseError("The database is not open"));
             }
 
-            this.db.all(...args, (err, rows) => {
+            this.db.all(sql, ...param, (err, rows) => {
                 if (err) {
                     reject(new DatabaseError(err));
                 }
@@ -102,13 +102,13 @@ class SqliteDatabase {
         });
     }
 
-    each(...args) {
+    each(sql, param, callback) {
         return new Promise((resolve, reject) => {
             if (typeof this.db === "undefined") {
                 reject(new DatabaseError("The database is not open"));
             }
 
-            this.db.each(...args, (err, nrows) => {
+            this.db.each(sql, param, callback, (err, nrows) => {
                 if (err) {
                     reject(new DatabaseError(err));
                 }
@@ -118,13 +118,13 @@ class SqliteDatabase {
         });
     }
 
-    resolve(...args) {
+    exec(sql) {
         return new Promise((resolve, reject) => {
             if (typeof this.db === "undefined") {
                 reject(new DatabaseError("The database is not open"));
             }
 
-            this.db.resolve(...args, err => {
+            this.db.exec(sql, err => {
                 if (err) {
                     reject(new DatabaseError(err));
                 }
@@ -134,7 +134,7 @@ class SqliteDatabase {
         });
     }
 
-    prepare(...args) {
+    prepare(sql, ...param) {
         return new Promise((resolve, reject) => {
             if (typeof this.db === "undefined") {
                 reject(new DatabaseError("The database is not open"));
@@ -150,9 +150,28 @@ class SqliteDatabase {
                 resolve(new SqliteStatement(statement));
             };
 
-            args.push(callback);
-            statement = this.db.prepare.apply(this.db, args);
+            statement = this.db.prepare.apply(this.db, sql, ...param, callback);
         });
+    }
+
+    loadExtension(path) {
+        return new Promise((resolve, reject) => {
+            if (typeof this.db === "undefined") {
+                reject(new DatabaseError("The database is not open"));
+            }
+
+            this.db.loadExtension(path, err => {
+                if (err) {
+                    reject(new DatabaseError(err));
+                }
+
+                resolve(this);
+            });
+        });
+    }
+
+    interrupt() {
+        this.db.interrupt();
     }
 
     async transaction(op) {

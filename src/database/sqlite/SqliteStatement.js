@@ -13,9 +13,9 @@ class SqliteStatement {
         return this.st.changes;
     }
 
-    bind(...args) {
+    bind(...param) {
         return new Promise((resolve, reject) => {
-            this.st.bind(...args, err => {
+            this.st.bind(...param, err => {
                 if (err) {
                     reject(new DatabaseError(err));
                 }
@@ -33,9 +33,9 @@ class SqliteStatement {
         });
     }
 
-    run(...args) {
+    finalize() {
         return new Promise((resolve, reject) => {
-            this.st.run(...args, err => {
+            this.st.finalize(err => {
                 if (err) {
                     reject(new DatabaseError(err));
                 }
@@ -45,9 +45,21 @@ class SqliteStatement {
         });
     }
 
-    get(...args) {
+    run(...param) {
         return new Promise((resolve, reject) => {
-            this.st.get(...args, (err, row) => {
+            this.st.run(...param, err => {
+                if (err) {
+                    reject(new DatabaseError(err));
+                }
+
+                resolve(this);
+            });
+        });
+    }
+
+    get(...param) {
+        return new Promise((resolve, reject) => {
+            this.st.get(...param, (err, row) => {
                 if (err) {
                     reject(new DatabaseError(err));
                 }
@@ -57,9 +69,9 @@ class SqliteStatement {
         });
     }
 
-    all(...args) {
+    all(...param) {
         return new Promise((resolve, reject) => {
-            this.st.all(...args, (err, rows) => {
+            this.st.all(...param, (err, rows) => {
                 if (err) {
                     reject(new DatabaseError(err));
                 }
@@ -69,26 +81,14 @@ class SqliteStatement {
         });
     }
 
-    each(...args) {
+    each(...param) {
         return new Promise((resolve, reject) => {
-            this.st.each(...args, (err, nrows) => {
+            this.st.each(...param, (err, nrows) => {
                 if (err) {
                     reject(new DatabaseError(err));
                 }
 
                 resolve(nrows);
-            });
-        });
-    }
-
-    finalize() {
-        return new Promise((resolve, reject) => {
-            this.st.finalize(err => {
-                if (err) {
-                    reject(new DatabaseError(err));
-                }
-
-                resolve(this);
             });
         });
     }
