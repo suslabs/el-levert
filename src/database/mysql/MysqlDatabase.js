@@ -20,8 +20,8 @@ function createPool() {
     pool = new MysqlPool(MysqlDatabase.config);
 }
 
-function endPool() {
-    pool.end();
+async function endPool() {
+    await pool.end();
     pool = undefined;
 }
 
@@ -52,8 +52,8 @@ class MysqlDatabase extends EventEmitter {
         this.pool = pool;
     }
 
-    static close() {
-        endPool();
+    static async close() {
+        await endPool();
         delete this.pool;
     }
 
@@ -94,6 +94,8 @@ class MysqlDatabase extends EventEmitter {
         } finally {
             this.releaseConnection(con);
         }
+
+        return this;
     }
 
     prepare(sql, ...param) {
