@@ -6,6 +6,8 @@ import DatabaseError from "../../errors/DatabaseError.js";
 import PoolEvents from "./PoolEvents.js";
 import MysqlPoolConnection from "./MysqlPoolConnection.js";
 
+import DatabaseUtil from "../../util/DatabaseUtil.js";
+
 class MysqlPool extends EventEmitter {
     constructor(config) {
         super();
@@ -14,22 +16,12 @@ class MysqlPool extends EventEmitter {
         this.pool = mysql.createPool(config);
 
         if (typeof config.throwErrors === "boolean") {
-            this.throwErrors = onfig.throwErrors;
+            this.throwErrors = config.throwErrors;
         } else {
             this.throwErrors = true;
         }
 
-        this.registerEvents();
-    }
-
-    registerEvent(event) {
-        this.pool.on(event, (...args) => this.emit(event, ...args));
-    }
-
-    registerEvents() {
-        for (const event of Object.values(PoolEvents)) {
-            this.registerEvent(event);
-        }
+        DatabaseUtil.registerEvents(this.pool, this, PoolEvents);
     }
 
     getConnection() {
@@ -133,14 +125,6 @@ class MysqlPool extends EventEmitter {
             args.push(callback);
             con.query(...args);
         });
-    }
-
-    escape(value) {
-        return this.pool.escape(value);
-    }
-
-    escapeId(value) {
-        return this.pool.escapeId(value);
     }
 }
 

@@ -1,24 +1,29 @@
 import mysql from "mysql";
+import EventEmitter from "events";
 
-class MysqlConnection {
+import ConnectionEvents from "./ConnectionEvents.js";
+import DatabaseUtil from "../../util/DatabaseUtil.js";
+
+class MysqlConnection extends EventEmitter {
     constructor(config = null, connection) {
-        if (config === null) {
+        if (typeof connection !== "undefined") {
             this.con = connection;
             this.config = connection.config;
 
-            this.throwErrors = this.config.throwErrors;
+            this.throwErrors = this.config.throwErrors ?? true;
         } else {
             this.con = mysql.createConnection(config);
             this.config = config;
 
             if (typeof config.throwErrors === "boolean") {
-                this.throwErrors = onfig.throwErrors;
+                this.throwErrors = config.throwErrors;
             } else {
                 this.throwErrors = true;
             }
         }
 
         this.inTransaction = false;
+        DatabaseUtil.registerEvents(this.con, this, ConnectionEvents);
     }
 
     connect(options) {
@@ -62,6 +67,8 @@ class MysqlConnection {
                     } else {
                         resolve();
                     }
+
+                    return;
                 }
 
                 this.inTransaction = true;
@@ -198,18 +205,6 @@ class MysqlConnection {
 
     resume() {
         return this.con.resume();
-    }
-
-    escape(value) {
-        return this.con.escape(value);
-    }
-
-    escapeId(value) {
-        return this.con.escapeId(value);
-    }
-
-    format(sql, values) {
-        return this.con.format(sql, values);
     }
 }
 
