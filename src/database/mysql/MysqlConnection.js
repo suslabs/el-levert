@@ -10,9 +10,13 @@ class MysqlConnection extends EventEmitter {
 
         if (typeof connection !== "undefined") {
             this.con = connection;
-            this.config = connection.config;
 
-            this.throwErrors = connection.config.throwErrors ?? true;
+            this.config = {
+                ...connection.config,
+                ...(config ?? {})
+            };
+
+            this.throwErrors = this.config.throwErrors ?? true;
         } else if (typeof config === "undefined") {
             throw new DatabaseError("No config provided");
         } else {
