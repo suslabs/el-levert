@@ -1,11 +1,15 @@
 import sqlite from "sqlite3";
+import EventEmitter from "events";
 
+import DatabaseEvents from "./DatabaseEvents.js";
 import OpenModes from "./OpenModes.js";
 
 import DatabaseError from "../../errors/DatabaseError.js";
 import SqliteStatement from "./SqliteStatement.js";
 
-class SqliteDatabase {
+import DatabaseUtil from "../../util/DatabaseUtil.js";
+
+class SqliteDatabase extends EventEmitter {
     constructor(filename, mode) {
         this.filename = filename;
 
@@ -14,6 +18,9 @@ class SqliteDatabase {
         }
 
         this.mode = mode;
+
+        this.inTransaction = false;
+        DatabaseUtil.registerEvents(this.db, this, DatabaseEvents);
     }
 
     open() {
@@ -173,6 +180,8 @@ class SqliteDatabase {
     interrupt() {
         this.db.interrupt();
     }
+
+    async beginTransaction() {}
 
     async transaction(op) {
         await this.exec("BEGIN TRANSACTION");
