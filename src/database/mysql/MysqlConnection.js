@@ -5,12 +5,14 @@ import ConnectionEvents from "./ConnectionEvents.js";
 import DatabaseUtil from "../../util/DatabaseUtil.js";
 
 class MysqlConnection extends EventEmitter {
-    constructor(config = null, connection) {
+    constructor(config, connection) {
         if (typeof connection !== "undefined") {
             this.con = connection;
             this.config = connection.config;
 
             this.throwErrors = this.config.throwErrors ?? true;
+        } else if (typeof config === "undefined") {
+            throw new DatabaseError("No config provided");
         } else {
             this.con = mysql.createConnection(config);
             this.config = config;
