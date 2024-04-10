@@ -7,6 +7,7 @@ import EventPrefixes from "./EventPrefixes.js";
 import PoolEvents from "./PoolEvents.js";
 import ConnectionEvents from "./ConnectionEvents.js";
 
+import MysqlStatement from "./MysqlStatement.js";
 import DatabaseUtil from "../../util/DatabaseUtil.js";
 
 let pool;
@@ -59,15 +60,35 @@ class MysqlDatabase extends EventEmitter {
         }
     }
 
-    async run(sql, ...param) {}
+    run(sql, ...param) {
+        const st = this.prepare(sql);
+        return st.run(...param);
+    }
 
-    async get(sql, ...param) {}
+    get(sql, ...param) {
+        const st = this.prepare(sql);
+        return st.get(...param);
+    }
 
-    async all(sql, ...param) {}
+    all(sql, ...param) {
+        const st = this.prepare(sql);
+        return st.all(...param);
+    }
 
-    async each(sql, param, callback) {}
+    each(sql, param, callback) {
+        const st = this.prepare(sql);
+        return st.each(param, callback);
+    }
 
-    async exec(sql) {}
+    exec(sql) {
+        const st = this.prepare(sql);
+        return st.exec();
+    }
+
+    prepare(sql, ...param) {
+        const st = new MysqlStatement(this, sql, param);
+        return st;
+    }
 
     async getConnection(registerEvents = true) {
         const con = await this.pool.getConnection();
