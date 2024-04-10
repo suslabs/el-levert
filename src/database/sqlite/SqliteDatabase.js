@@ -31,7 +31,15 @@ class SqliteDatabase extends EventEmitter {
 
             const db = new sqlite.Database(this.filename, this.mode, err => {
                 if (err) {
-                    reject(new DatabaseError(err));
+                    this.emit(DatabaseEvents.promiseError, err);
+
+                    if (this.throwErrors) {
+                        reject(new DatabaseError(err));
+                    } else {
+                        resolve(this);
+                    }
+
+                    return;
                 }
 
                 this.db = db;
@@ -48,11 +56,19 @@ class SqliteDatabase extends EventEmitter {
 
             this.db.close(err => {
                 if (err) {
-                    reject(new DatabaseError(err));
+                    this.emit(DatabaseEvents.promiseError, err);
+
+                    if (this.throwErrors) {
+                        reject(new DatabaseError(err));
+                    } else {
+                        resolve(this);
+                    }
+
+                    return;
                 }
 
                 delete this.db;
-                resolve();
+                resolve(this);
             });
         });
     }
@@ -69,7 +85,13 @@ class SqliteDatabase extends EventEmitter {
 
             this.db.run(sql, ...param, err => {
                 if (err) {
-                    reject(new DatabaseError(err));
+                    this.emit(DatabaseEvents.promiseError, err);
+
+                    if (this.throwErrors) {
+                        reject(new DatabaseError(err));
+                    } else {
+                        resolve(this);
+                    }
                 }
 
                 resolve(this);
@@ -85,7 +107,13 @@ class SqliteDatabase extends EventEmitter {
 
             this.db.get(sql, ...param, (err, row) => {
                 if (err) {
-                    reject(new DatabaseError(err));
+                    this.emit(DatabaseEvents.promiseError, err);
+
+                    if (this.throwErrors) {
+                        reject(new DatabaseError(err));
+                    } else {
+                        resolve();
+                    }
                 }
 
                 resolve(row);
@@ -101,7 +129,13 @@ class SqliteDatabase extends EventEmitter {
 
             this.db.all(sql, ...param, (err, rows) => {
                 if (err) {
-                    reject(new DatabaseError(err));
+                    this.emit(DatabaseEvents.promiseError, err);
+
+                    if (this.throwErrors) {
+                        reject(new DatabaseError(err));
+                    } else {
+                        resolve();
+                    }
                 }
 
                 resolve(rows);
@@ -117,7 +151,13 @@ class SqliteDatabase extends EventEmitter {
 
             this.db.each(sql, param, callback, (err, nrows) => {
                 if (err) {
-                    reject(new DatabaseError(err));
+                    this.emit(DatabaseEvents.promiseError, err);
+
+                    if (this.throwErrors) {
+                        reject(new DatabaseError(err));
+                    } else {
+                        resolve();
+                    }
                 }
 
                 resolve(nrows);
@@ -133,7 +173,13 @@ class SqliteDatabase extends EventEmitter {
 
             this.db.exec(sql, err => {
                 if (err) {
-                    reject(new DatabaseError(err));
+                    this.emit(DatabaseEvents.promiseError, err);
+
+                    if (this.throwErrors) {
+                        reject(new DatabaseError(err));
+                    } else {
+                        resolve(this);
+                    }
                 }
 
                 resolve(this);
@@ -151,7 +197,13 @@ class SqliteDatabase extends EventEmitter {
 
             let callback = err => {
                 if (err) {
-                    reject(new DatabaseError(err));
+                    this.emit(DatabaseEvents.promiseError, err);
+
+                    if (this.throwErrors) {
+                        reject(new DatabaseError(err));
+                    } else {
+                        resolve(this);
+                    }
                 }
 
                 resolve(new SqliteStatement(statement));
@@ -169,7 +221,13 @@ class SqliteDatabase extends EventEmitter {
 
             this.db.loadExtension(path, err => {
                 if (err) {
-                    reject(new DatabaseError(err));
+                    this.emit(DatabaseEvents.promiseError, err);
+
+                    if (this.throwErrors) {
+                        reject(new DatabaseError(err));
+                    } else {
+                        resolve(this);
+                    }
                 }
 
                 resolve(this);
@@ -182,6 +240,10 @@ class SqliteDatabase extends EventEmitter {
     }
 
     async beginTransaction() {}
+
+    async commit() {}
+
+    async rollback() {}
 
     async transaction(op) {
         await this.exec("BEGIN TRANSACTION");

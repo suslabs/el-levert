@@ -3,7 +3,8 @@ const ConnectionEvents = {
     drain: "drain",
     connect: "connect",
     end: "end",
-    enqueue: "enqueue"
+    enqueue: "enqueue",
+    promiseError: "promiseError"
 };
 
 export default ConnectionEvents;

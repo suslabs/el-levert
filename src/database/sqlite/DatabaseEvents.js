@@ -4,7 +4,8 @@ const DatabaseEvents = {
     change: "change",
     error: "error",
     open: "open",
-    close: "close"
+    close: "close",
+    promiseError: "promiseError"
 };
 
 export default DatabaseEvents;
