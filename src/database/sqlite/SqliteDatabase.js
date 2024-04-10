@@ -9,6 +9,12 @@ import SqliteStatement from "./SqliteStatement.js";
 
 import DatabaseUtil from "../../util/DatabaseUtil.js";
 
+const transactionSql = {
+    begin: "BEGIN TRANSACTION",
+    commit: "END TRANSACTION",
+    rollback: "ROLLBACK TRANSACTION"
+};
+
 class SqliteDatabase extends EventEmitter {
     constructor(filename, mode, config = {}) {
         super();
@@ -87,7 +93,15 @@ class SqliteDatabase extends EventEmitter {
                 if (err) {
                     this.emit(DatabaseEvents.promiseError, err);
 
-                    if (this.throwErrors) {
+                    if (this.inTransaction) {
+                        this.rollback().then(_ => {
+                            if (this.throwErrors) {
+                                reject(new DatabaseError(err));
+                            } else {
+                                resolve();
+                            }
+                        });
+                    } else if (this.throwErrors) {
                         reject(new DatabaseError(err));
                     } else {
                         resolve(this);
@@ -109,7 +123,15 @@ class SqliteDatabase extends EventEmitter {
                 if (err) {
                     this.emit(DatabaseEvents.promiseError, err);
 
-                    if (this.throwErrors) {
+                    if (this.inTransaction) {
+                        this.rollback().then(_ => {
+                            if (this.throwErrors) {
+                                reject(new DatabaseError(err));
+                            } else {
+                                resolve();
+                            }
+                        });
+                    } else if (this.throwErrors) {
                         reject(new DatabaseError(err));
                     } else {
                         resolve();
@@ -131,7 +153,15 @@ class SqliteDatabase extends EventEmitter {
                 if (err) {
                     this.emit(DatabaseEvents.promiseError, err);
 
-                    if (this.throwErrors) {
+                    if (this.inTransaction) {
+                        this.rollback().then(_ => {
+                            if (this.throwErrors) {
+                                reject(new DatabaseError(err));
+                            } else {
+                                resolve();
+                            }
+                        });
+                    } else if (this.throwErrors) {
                         reject(new DatabaseError(err));
                     } else {
                         resolve();
@@ -153,7 +183,15 @@ class SqliteDatabase extends EventEmitter {
                 if (err) {
                     this.emit(DatabaseEvents.promiseError, err);
 
-                    if (this.throwErrors) {
+                    if (this.inTransaction) {
+                        this.rollback().then(_ => {
+                            if (this.throwErrors) {
+                                reject(new DatabaseError(err));
+                            } else {
+                                resolve();
+                            }
+                        });
+                    } else if (this.throwErrors) {
                         reject(new DatabaseError(err));
                     } else {
                         resolve();
@@ -202,7 +240,7 @@ class SqliteDatabase extends EventEmitter {
                     if (this.throwErrors) {
                         reject(new DatabaseError(err));
                     } else {
-                        resolve(this);
+                        resolve();
                     }
                 }
 
@@ -211,6 +249,57 @@ class SqliteDatabase extends EventEmitter {
 
             statement = this.db.prepare.apply(this.db, sql, ...param, callback);
         });
+    }
+
+    async beginTransaction() {
+        const original = this.throwErrors;
+        this.throwErrors = true;
+
+        try {
+            await this.exec(transactionSql.begin);
+            this.inTransaction = true;
+        } catch (err) {
+            if (original) {
+                throw err;
+            }
+        } finally {
+            this.throwErrors = original;
+        }
+    }
+
+    async commit() {
+        const original = this.throwErrors;
+        this.throwErrors = true;
+
+        try {
+            await this.exec(transactionSql.commit);
+            this.inTransaction = false;
+
+            this.throwErrors = original;
+        } catch (err) {
+            this.throwErrors = original;
+            await this.exec(transactionSql.rollback);
+
+            if (this.throwErrors) {
+                throw err;
+            }
+        }
+    }
+
+    async rollback() {
+        const original = this.throwErrors;
+        this.throwErrors = true;
+
+        try {
+            await this.exec(transactionSql.rollback);
+            this.inTransaction = false;
+        } catch (err) {
+            if (original) {
+                throw err;
+            }
+        } finally {
+            this.throwErrors = original;
+        }
     }
 
     loadExtension(path) {
@@ -237,26 +326,6 @@ class SqliteDatabase extends EventEmitter {
 
     interrupt() {
         this.db.interrupt();
-    }
-
-    async beginTransaction() {}
-
-    async commit() {}
-
-    async rollback() {}
-
-    async transaction(op) {
-        await this.exec("BEGIN TRANSACTION");
-
-        try {
-            const result = await op(this);
-
-            await this.exec("END TRANSACTION");
-            return result;
-        } catch (err) {
-            await this.exec("ROLLBACK TRANSACTION");
-            throw err;
-        }
     }
 }
 
