@@ -27,17 +27,23 @@ function endPool() {
 
 class MysqlDatabase extends EventEmitter {
     constructor() {
+        super();
+
+        this.config = MysqlDatabase.config;
+        this.pool = MysqlDatabase.pool;
+
+        this.open = MysqlDatabase.open;
+        this.close = MysqlDatabase.close;
+
         if (typeof this.config === "undefined") {
             throw new DatabaseError("No config provided");
         }
 
-        this.pool = pool;
         this.inTransaction = false;
-
         DatabaseUtil.registerPrefixedEvents(this.pool, this, EventPrefixes.pool, PoolEvents);
     }
 
-    static createPool() {
+    static open() {
         if (typeof this.config === "undefined") {
             throw new DatabaseError("No config provided");
         }
@@ -46,17 +52,17 @@ class MysqlDatabase extends EventEmitter {
         this.pool = pool;
     }
 
-    static endPool() {
+    static close() {
         endPool();
         delete this.pool;
     }
 
-    static setConfig(config, initPool = false) {
+    static setConfig(config, open = false) {
         this.config = config;
         this.throwErrors = config.throwErrors;
 
-        if (initPool) {
-            this.createPool();
+        if (open) {
+            this.open();
         }
     }
 
