@@ -80,9 +80,14 @@ class MysqlDatabase extends EventEmitter {
         return st.each(param, callback);
     }
 
-    exec(sql) {
-        const st = this.prepare(sql);
-        return st.exec();
+    async exec(sql) {
+        const con = await this.getConnection(false);
+
+        try {
+            await con.query(sql);
+        } finally {
+            this.releaseConnection(con);
+        }
     }
 
     prepare(sql, ...param) {
