@@ -1,8 +1,13 @@
 import MysqlConnection from "./MysqlConnection.js";
 
 class MysqlPoolConnection extends MysqlConnection {
-    constructor(connection) {
-        super(null, connection);
+    constructor(connection, throwErrors) {
+        super(
+            {
+                throwErrors
+            },
+            connection
+        );
 
         this.pool = connection._pool;
     }

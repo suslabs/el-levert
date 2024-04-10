@@ -37,7 +37,7 @@ class MysqlPool extends EventEmitter {
                     }
                 }
 
-                resolve(new MysqlPoolConnection(connection));
+                resolve(new MysqlPoolConnection(connection, this.throwErrors));
             });
         });
     }
@@ -56,7 +56,7 @@ class MysqlPool extends EventEmitter {
                         }
                     }
 
-                    resolve(new MysqlPoolConnection(connection));
+                    resolve(new MysqlPoolConnection(connection, this.throwErrors));
                 });
             } catch (err) {
                 this.emit(PoolEvents.promiseError, err);
