@@ -10,14 +10,14 @@ import SqliteStatement from "./SqliteStatement.js";
 import DatabaseUtil from "../../util/DatabaseUtil.js";
 
 class SqliteDatabase extends EventEmitter {
-    constructor(filename, mode) {
+    constructor(filename, mode, config = {}) {
+        super();
+
         this.filename = filename;
+        this.mode = mode ?? OpenModes.OPEN_RWCREATE;
 
-        if (typeof mode === "undefined") {
-            mode = OpenModes.OPEN_RWCREATE;
-        }
-
-        this.mode = mode;
+        this.config = config;
+        this.throwErrors = config.throwErrors ?? true;
 
         this.inTransaction = false;
         DatabaseUtil.registerEvents(this.db, this, DatabaseEvents);
