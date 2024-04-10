@@ -44,6 +44,88 @@ class MysqlConnection extends EventEmitter {
         });
     }
 
+    query(...args) {
+        return new Promise((resolve, reject) => {
+            this.con.query(...args, (err, result) => {
+                if (err) {
+                    this.emit(ConnectionEvents.promiseError, err);
+
+                    if (this.inTransaction) {
+                        this.con.rollback(() => {
+                            this.inTransaction = false;
+
+                            if (this.throwErrors) {
+                                reject(new DatabaseError(err));
+                            } else {
+                                resolve();
+                            }
+                        });
+                    } else if (this.throwErrors) {
+                        reject(new DatabaseError(err));
+                    } else {
+                        resolve();
+                    }
+                }
+
+                resolve(result);
+            });
+        });
+    }
+
+    ping(options) {
+        return new Promise((resolve, reject) => {
+            this.con.ping(options, err => {
+                if (err) {
+                    this.emit(ConnectionEvents.promiseError, err);
+
+                    if (this.throwErrors) {
+                        reject(new DatabaseError(err));
+                    } else {
+                        resolve();
+                    }
+                }
+
+                resolve();
+            });
+        });
+    }
+
+    statistics(options) {
+        return new Promise((resolve, reject) => {
+            this.con.statistics(options, err => {
+                if (err) {
+                    this.emit(ConnectionEvents.promiseError, err);
+
+                    if (this.throwErrors) {
+                        reject(new DatabaseError(err));
+                    } else {
+                        resolve();
+                    }
+                }
+
+                resolve();
+            });
+        });
+    }
+
+    end(options) {
+        return new Promise((resolve, reject) => {
+            this.con.end(options, err => {
+                if (err) {
+                    this.emit(ConnectionEvents.promiseError, err);
+
+                    if (this.throwErrors) {
+                        reject(new DatabaseError(err));
+                    } else {
+                        resolve();
+                    }
+                }
+
+                resolve();
+            });
+        });
+    }
+
     changeUser(options) {
         return new Promise((resolve, reject) => {
             this.con.changeUser(options, err => {
@@ -116,88 +198,6 @@ class MysqlConnection extends EventEmitter {
             this.con.rollback(options, err => {
                 this.inTransaction = false;
 
-                if (err) {
-                    this.emit(ConnectionEvents.promiseError, err);
-
-                    if (this.throwErrors) {
-                        reject(new DatabaseError(err));
-                    } else {
-                        resolve();
-                    }
-                }
-
-                resolve();
-            });
-        });
-    }
-
-    query(...args) {
-        return new Promise((resolve, reject) => {
-            this.con.query(...args, (err, result) => {
-                if (err) {
-                    this.emit(ConnectionEvents.promiseError, err);
-
-                    if (this.inTransaction) {
-                        this.con.rollback(() => {
-                            this.inTransaction = false;
-
-                            if (this.throwErrors) {
-                                reject(new DatabaseError(err));
-                            } else {
-                                resolve();
-                            }
-                        });
-                    } else if (this.throwErrors) {
-                        reject(new DatabaseError(err));
-                    } else {
-                        resolve();
-                    }
-                }
-
-                resolve(result);
-            });
-        });
-    }
-
-    ping(options) {
-        return new Promise((resolve, reject) => {
-            this.con.ping(options, err => {
-                if (err) {
-                    this.emit(ConnectionEvents.promiseError, err);
-
-                    if (this.throwErrors) {
-                        reject(new DatabaseError(err));
-                    } else {
-                        resolve();
-                    }
-                }
-
-                resolve();
-            });
-        });
-    }
-
-    statistics(options) {
-        return new Promise((resolve, reject) => {
-            this.con.statistics(options, err => {
-                if (err) {
-                    this.emit(ConnectionEvents.promiseError, err);
-
-                    if (this.throwErrors) {
-                        reject(new DatabaseError(err));
-                    } else {
-                        resolve();
-                    }
-                }
-
-                resolve();
-            });
-        });
-    }
-
-    end(options) {
-        return new Promise((resolve, reject) => {
-            this.con.end(options, err => {
                 if (err) {
                     this.emit(ConnectionEvents.promiseError, err);
 
