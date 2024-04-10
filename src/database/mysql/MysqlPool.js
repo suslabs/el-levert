@@ -10,20 +10,16 @@ import DatabaseUtil from "../../util/DatabaseUtil.js";
 
 class MysqlPool extends EventEmitter {
     constructor(config) {
+        super();
+
         if (typeof config === "undefined") {
             throw new DatabaseError("No config provided");
         }
 
-        super();
-
         this.config = config;
-        this.pool = mysql.createPool(config);
+        this.throwErrors = config.throwErrors ?? true;
 
-        if (typeof config.throwErrors === "boolean") {
-            this.throwErrors = config.throwErrors;
-        } else {
-            this.throwErrors = true;
-        }
+        this.pool = mysql.createPool(config);
 
         DatabaseUtil.registerEvents(this.pool, this, PoolEvents);
     }

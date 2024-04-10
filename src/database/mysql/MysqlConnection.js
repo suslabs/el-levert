@@ -6,22 +6,20 @@ import DatabaseUtil from "../../util/DatabaseUtil.js";
 
 class MysqlConnection extends EventEmitter {
     constructor(config, connection) {
+        super();
+
         if (typeof connection !== "undefined") {
             this.con = connection;
             this.config = connection.config;
 
-            this.throwErrors = this.config.throwErrors ?? true;
+            this.throwErrors = connection.config.throwErrors ?? true;
         } else if (typeof config === "undefined") {
             throw new DatabaseError("No config provided");
         } else {
             this.con = mysql.createConnection(config);
             this.config = config;
 
-            if (typeof config.throwErrors === "boolean") {
-                this.throwErrors = config.throwErrors;
-            } else {
-                this.throwErrors = true;
-            }
+            this.throwErrors = config.throwErrors ?? true;
         }
 
         this.inTransaction = false;
