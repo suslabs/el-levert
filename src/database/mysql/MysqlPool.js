@@ -28,14 +28,16 @@ class MysqlPool extends EventEmitter {
         return new Promise((resolve, reject) => {
             this.pool.getConnection((err, connection) => {
                 if (err) {
+                    this.emit(PoolEvents.promiseError, err);
+
                     if (this.throwErrors) {
                         reject(new DatabaseError(err));
                     } else {
                         resolve();
                     }
-                } else {
-                    resolve(new MysqlPoolConnection(connection));
                 }
+
+                resolve(new MysqlPoolConnection(connection));
             });
         });
     }
@@ -45,16 +47,20 @@ class MysqlPool extends EventEmitter {
             try {
                 this.pool.acquireConnection(connection.con, (err, connection) => {
                     if (err) {
+                        this.emit(PoolEvents.promiseError, err);
+
                         if (this.throwErrors) {
                             reject(new DatabaseError(err));
                         } else {
                             resolve();
                         }
-                    } else {
-                        resolve(new MysqlPoolConnection(connection));
                     }
+
+                    resolve(new MysqlPoolConnection(connection));
                 });
             } catch (err) {
+                this.emit(PoolEvents.promiseError, err);
+
                 if (this.throwErrors) {
                     reject(new DatabaseError(err));
                 } else {
@@ -69,6 +75,8 @@ class MysqlPool extends EventEmitter {
             try {
                 this.pool.releaseConnection(connection.con, err => {
                     if (err) {
+                        this.emit(PoolEvents.promiseError, err);
+
                         if (this.throwErrors) {
                             reject(new DatabaseError(err));
                         } else {
@@ -79,6 +87,8 @@ class MysqlPool extends EventEmitter {
                     resolve();
                 });
             } catch (err) {
+                this.emit(PoolEvents.promiseError, err);
+
                 if (this.throwErrors) {
                     reject(new DatabaseError(err));
                 } else {
@@ -92,6 +102,8 @@ class MysqlPool extends EventEmitter {
         return new Promise((resolve, reject) => {
             this.pool.end(err => {
                 if (err) {
+                    this.emit(PoolEvents.promiseError, err);
+
                     if (this.throwErrors) {
                         reject(new DatabaseError(err));
                     } else {
@@ -112,6 +124,8 @@ class MysqlPool extends EventEmitter {
                 con.release();
 
                 if (err) {
+                    this.emit(PoolEvents.promiseError, err);
+
                     if (this.throwErrors) {
                         reject(new DatabaseError(err));
                     } else {
