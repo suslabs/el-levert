@@ -105,6 +105,8 @@ class MysqlDatabase extends StatementDatabase(EventEmitter) {
 
     prepare(sql, ...param) {
         const st = new MysqlStatement(this, sql, param);
+        this.addStatement(st);
+
         return st;
     }
 
@@ -130,6 +132,10 @@ class MysqlDatabase extends StatementDatabase(EventEmitter) {
     }
 
     async beginTransaction() {
+        if (this.inTransaction) {
+            return;
+        }
+
         const con = await this.getConnection(false);
 
         try {
@@ -141,6 +147,10 @@ class MysqlDatabase extends StatementDatabase(EventEmitter) {
     }
 
     async commit() {
+        if (!this.inTransaction) {
+            return;
+        }
+
         const con = await this.getConnection(false);
 
         try {
@@ -152,6 +162,10 @@ class MysqlDatabase extends StatementDatabase(EventEmitter) {
     }
 
     async rollback() {
+        if (!this.inTransaction) {
+            return;
+        }
+
         const con = await this.getConnection(false);
 
         try {

@@ -11,7 +11,7 @@ class MysqlStatement {
     finalize(removeEntry = true) {
         this.finalized = true;
 
-        if (!removeEntry || typeof this.db === "undefined") {
+        if (!removeEntry) {
             return;
         }
 
