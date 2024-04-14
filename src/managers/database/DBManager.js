@@ -6,7 +6,7 @@ import Manager from "../Manager.js";
 import { getClient, getLogger } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 
-import dbFilenames from "../../database/sqlite/dbFilenames.json" assert { type: "json" };
+import dbFilenames from "../../database/config/dbFilenames.json" assert { type: "json" };
 
 const dbOptions = {
     queryExtension: dbFilenames.queryExtension,

@@ -5,7 +5,17 @@ class MysqlStatement {
         this.sql = sql;
         this.defaultParam = defaultParam;
 
-        this.finalize = _ => {};
+        this.finalized = false;
+    }
+
+    finalize(removeEntry = true) {
+        this.finalized = true;
+
+        if (!removeEntry || typeof this.db === "undefined") {
+            return;
+        }
+
+        this.db.removeStatement(this);
     }
 
     bind(...param) {

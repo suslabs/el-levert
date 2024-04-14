@@ -1,16 +1,23 @@
 import mysql from "mysql";
 import EventEmitter from "events";
 
-import DatabaseError from "../../errors/DatabaseError.js";
+import DatabaseError from "../../../errors/DatabaseError.js";
 
 import PoolEvents from "./PoolEvents.js";
 import MysqlPoolConnection from "./MysqlPoolConnection.js";
 
-import DatabaseUtil from "../../util/DatabaseUtil.js";
+import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
 
 class MysqlPool extends EventEmitter {
     constructor(config) {
         super();
+        this.create(config);
+    }
+
+    create(config) {
+        if (typeof this.pool !== "undefined") {
+            throw new DatabaseError("Cannot create pool. The pool has already been created");
+        }
 
         if (typeof config === "undefined") {
             throw new DatabaseError("No config provided");
@@ -19,13 +26,45 @@ class MysqlPool extends EventEmitter {
         this.config = config;
         this.throwErrors = config.throwErrors ?? true;
 
-        this.pool = mysql.createPool(config);
+        const pool = mysql.createPool(config);
 
-        DatabaseUtil.registerEvents(this.pool, this, PoolEvents);
+        this.pool = pool;
+        DatabaseUtil.registerEvents(pool, this, PoolEvents);
+    }
+
+    end() {
+        return new Promise((resolve, reject) => {
+            if (typeof this.pool === "undefined") {
+                reject(new DatabaseError("Cannot end pool. The pool hasn't been created"));
+            }
+
+            this.pool.end(err => {
+                if (err) {
+                    this.emit(PoolEvents.promiseError, err);
+
+                    if (this.throwErrors) {
+                        reject(new DatabaseError(err));
+                    } else {
+                        resolve();
+                    }
+
+                    return;
+                }
+
+                DatabaseUtil.removeEvents(this.pool, this, PoolEvents);
+                delete this.pool;
+
+                resolve();
+            });
+        });
     }
 
     getConnection() {
         return new Promise((resolve, reject) => {
+            if (typeof this.pool === "undefined") {
+                reject(new DatabaseError("The pool hasn't been created"));
+            }
+
             this.pool.getConnection((err, connection) => {
                 if (err) {
                     this.emit(PoolEvents.promiseError, err);
@@ -44,6 +83,10 @@ class MysqlPool extends EventEmitter {
 
     acquireConnection(connection) {
         return new Promise((resolve, reject) => {
+            if (typeof this.pool === "undefined") {
+                reject(new DatabaseError("The pool hasn't been created"));
+            }
+
             try {
                 this.pool.acquireConnection(connection.con, (err, connection) => {
                     if (err) {
@@ -72,6 +115,10 @@ class MysqlPool extends EventEmitter {
 
     releaseConnection(connection) {
         return new Promise((resolve, reject) => {
+            if (typeof this.pool === "undefined") {
+                reject(new DatabaseError("The pool hasn't been created"));
+            }
+
             try {
                 this.pool.releaseConnection(connection.con, err => {
                     if (err) {
@@ -98,25 +145,11 @@ class MysqlPool extends EventEmitter {
         });
     }
 
-    end() {
-        return new Promise((resolve, reject) => {
-            this.pool.end(err => {
-                if (err) {
-                    this.emit(PoolEvents.promiseError, err);
-
-                    if (this.throwErrors) {
-                        reject(new DatabaseError(err));
-                    } else {
-                        resolve();
-                    }
-                }
-
-                resolve();
-            });
-        });
-    }
-
     async query(...args) {
+        if (typeof this.pool === "undefined") {
+            throw new DatabaseError("The pool hasn't been created");
+        }
+
         const con = await this.getConnection();
 
         return new Promise((resolve, reject) => {

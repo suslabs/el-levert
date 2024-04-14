@@ -1,14 +1,16 @@
 import EventEmitter from "events";
 
+import StatementDatabase from "../common/StatementDatabase.js";
+
 import MysqlPool from "./MysqlPool.js";
-import DatabaseError from "../../errors/DatabaseError.js";
+import DatabaseError from "../../../errors/DatabaseError.js";
 
 import EventPrefixes from "./EventPrefixes.js";
 import PoolEvents from "./PoolEvents.js";
 import ConnectionEvents from "./ConnectionEvents.js";
 
 import MysqlStatement from "./MysqlStatement.js";
-import DatabaseUtil from "../../util/DatabaseUtil.js";
+import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
 
 let pool;
 
@@ -25,15 +27,9 @@ async function endPool() {
     pool = undefined;
 }
 
-class MysqlDatabase extends EventEmitter {
+class MysqlDatabase extends StatementDatabase(EventEmitter) {
     constructor() {
         super();
-
-        this.config = MysqlDatabase.config;
-        this.pool = MysqlDatabase.pool;
-
-        this.open = MysqlDatabase.open;
-        this.close = MysqlDatabase.close;
 
         if (typeof this.config === "undefined") {
             throw new DatabaseError("No config provided");
@@ -41,6 +37,15 @@ class MysqlDatabase extends EventEmitter {
 
         this.inTransaction = false;
         DatabaseUtil.registerPrefixedEvents(this.pool, this, EventPrefixes.pool, PoolEvents);
+
+        this.config = MysqlDatabase.config;
+        this.pool = MysqlDatabase.pool;
+
+        this.open = MysqlDatabase.open;
+        this.close = async function () {
+            await this.finalizeAll();
+            await MysqlDatabase.close();
+        };
     }
 
     static open() {
