@@ -18,7 +18,7 @@ class SqliteStatement {
             this.st.finalize(err => {
                 this.finalized = true;
 
-                if (removeEntry && typeof this.db !== "undefined") {
+                if (removeEntry) {
                     this.db.removeStatement(this);
                 }
 

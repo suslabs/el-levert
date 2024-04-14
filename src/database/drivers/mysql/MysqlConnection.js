@@ -1,7 +1,9 @@
 import mysql from "mysql";
 import EventEmitter from "events";
 
+import MysqlResult from "./MysqlResult.js";
 import ConnectionEvents from "./ConnectionEvents.js";
+
 import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
 import DatabaseError from "../../../errors/DatabaseError.js";
 
@@ -25,15 +27,10 @@ class MysqlConnection extends EventEmitter {
             throw new DatabaseError("No config provided");
         }
 
-        this.config = config;
-        this.throwErrors = config.throwErrors ?? true;
+        this.setConfig(config);
 
         const con = mysql.createConnection(config);
-
-        this.con = con;
-        this.inTransaction = false;
-
-        DatabaseUtil.registerEvents(con, this, ConnectionEvents);
+        this.initConnection(con);
     }
 
     createFrom(connection, config) {
@@ -45,17 +42,20 @@ class MysqlConnection extends EventEmitter {
             throw new DatabaseError("No source connection provided");
         }
 
-        this.config = {
+        const newConfig = {
             ...connection.config,
             ...(config ?? {})
         };
 
-        this.throwErrors = this.config.throwErrors ?? true;
+        this.setConfig(newConfig);
+        this.initConnection(connection);
+    }
 
-        this.con = connection;
-        this.inTransaction = false;
+    setConfig(config = {}) {
+        this.config = config;
 
-        DatabaseUtil.registerEvents(this.con, this, ConnectionEvents);
+        this.throwErrors = config.throwErrors ?? true;
+        this.autoRollback = config.autoRollback ?? false;
     }
 
     end(options) {
@@ -77,9 +77,7 @@ class MysqlConnection extends EventEmitter {
                     return;
                 }
 
-                DatabaseUtil.removeEvents(this.con, this, ConnectionEvents);
-                delete this.con;
-
+                this.deleteConnection();
                 resolve();
             });
         });
@@ -113,11 +111,11 @@ class MysqlConnection extends EventEmitter {
                 reject(new DatabaseError("The connection hasn't been created"));
             }
 
-            this.con.query(...args, (err, result) => {
+            this.con.query(...args, (err, res) => {
                 if (err) {
                     this.emit(ConnectionEvents.promiseError, err);
 
-                    if (this.inTransaction) {
+                    if (this.autoRollback && this.inTransaction) {
                         this.con.rollback(() => {
                             this.inTransaction = false;
 
@@ -134,7 +132,7 @@ class MysqlConnection extends EventEmitter {
                     }
                 }
 
-                resolve(result);
+                resolve(new MysqlResult(res));
             });
         });
     }
@@ -211,6 +209,11 @@ class MysqlConnection extends EventEmitter {
                 reject(new DatabaseError("The connection hasn't been created"));
             }
 
+            if (this.inTransaction) {
+                resolve();
+                return;
+            }
+
             this.con.beginTransaction(options, err => {
                 if (err) {
                     this.emit(ConnectionEvents.promiseError, err);
@@ -234,6 +237,11 @@ class MysqlConnection extends EventEmitter {
         return new Promise((resolve, reject) => {
             if (typeof this.con === "undefined") {
                 reject(new DatabaseError("The connection hasn't been created"));
+            }
+
+            if (!this.inTransaction) {
+                resolve();
+                return;
             }
 
             this.con.commit(options, err => {
@@ -268,6 +276,11 @@ class MysqlConnection extends EventEmitter {
                 reject(new DatabaseError("The connection hasn't been created"));
             }
 
+            if (!this.inTransaction) {
+                resolve();
+                return;
+            }
+
             this.con.rollback(options, err => {
                 this.inTransaction = false;
 
@@ -291,9 +304,7 @@ class MysqlConnection extends EventEmitter {
             throw new DatabaseError("Cannot destroy the connection. The connection hasn't been created");
         }
 
-        DatabaseUtil.removeEvents(this.con, this, ConnectionEvents);
-        delete this.con;
-
+        this.deleteConnection();
         this.con.destroy();
     }
 
@@ -311,6 +322,18 @@ class MysqlConnection extends EventEmitter {
         }
 
         this.con.resume();
+    }
+
+    initConnection(con) {
+        this.con = con;
+        this.inTransaction = false;
+
+        DatabaseUtil.registerEvents(con, this, ConnectionEvents);
+    }
+
+    deleteConnection() {
+        DatabaseUtil.removeEvents(this.con, this, ConnectionEvents);
+        delete this.con;
     }
 }
 

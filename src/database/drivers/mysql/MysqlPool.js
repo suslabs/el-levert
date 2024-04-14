@@ -2,6 +2,7 @@ import mysql from "mysql";
 import EventEmitter from "events";
 
 import DatabaseError from "../../../errors/DatabaseError.js";
+import MysqlResult from "./MysqlResult.js";
 
 import PoolEvents from "./PoolEvents.js";
 import MysqlPoolConnection from "./MysqlPoolConnection.js";
@@ -153,7 +154,7 @@ class MysqlPool extends EventEmitter {
         const con = await this.getConnection();
 
         return new Promise((resolve, reject) => {
-            const callback = (err, result) => {
+            const callback = (err, res) => {
                 con.release();
 
                 if (err) {
@@ -166,7 +167,7 @@ class MysqlPool extends EventEmitter {
                     }
                 }
 
-                resolve(result);
+                resolve(new MysqlResult(res));
             };
 
             args.push(callback);
