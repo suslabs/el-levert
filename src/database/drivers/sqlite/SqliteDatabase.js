@@ -1,13 +1,16 @@
 import sqlite from "sqlite3";
 import EventEmitter from "events";
 
+import StatementDatabase from "../common/StatementDatabase.js";
+
 import DatabaseEvents from "./DatabaseEvents.js";
 import OpenModes from "./OpenModes.js";
 
-import DatabaseError from "../../errors/DatabaseError.js";
 import SqliteStatement from "./SqliteStatement.js";
+import SqliteResult from "./SqliteResult.js";
 
-import DatabaseUtil from "../../util/DatabaseUtil.js";
+import DatabaseError from "../../../errors/DatabaseError.js";
+import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
 
 const transactionSql = {
     begin: "BEGIN TRANSACTION",
@@ -15,7 +18,7 @@ const transactionSql = {
     rollback: "ROLLBACK TRANSACTION"
 };
 
-class SqliteDatabase extends EventEmitter {
+class SqliteDatabase extends StatementDatabase(EventEmitter) {
     constructor(filename, mode, config = {}) {
         super();
 
@@ -26,7 +29,6 @@ class SqliteDatabase extends EventEmitter {
         this.throwErrors = config.throwErrors ?? true;
 
         this.inTransaction = false;
-        DatabaseUtil.registerEvents(this.db, this, DatabaseEvents);
     }
 
     open() {
@@ -49,6 +51,8 @@ class SqliteDatabase extends EventEmitter {
                 }
 
                 this.db = db;
+                DatabaseUtil.registerEvents(this.db, this, DatabaseEvents);
+
                 resolve(this);
             });
         });
@@ -57,29 +61,40 @@ class SqliteDatabase extends EventEmitter {
     close() {
         return new Promise((resolve, reject) => {
             if (typeof this.db === "undefined") {
-                reject(new DatabaseError("The database is not open"));
+                reject(new DatabaseError("Cannot close database. The database is not open"));
             }
 
-            this.db.close(err => {
-                if (err) {
-                    this.emit(DatabaseEvents.promiseError, err);
+            this.finalizeAll()
+                .then(_ => {
+                    this.db.close(err => {
+                        if (err) {
+                            this.emit(DatabaseEvents.promiseError, err);
 
-                    if (this.throwErrors) {
-                        reject(new DatabaseError(err));
-                    } else {
+                            if (this.throwErrors) {
+                                reject(new DatabaseError(err));
+                            } else {
+                                resolve(this);
+                            }
+
+                            return;
+                        }
+
+                        this.db.configure = _ => {};
+                        DatabaseUtil.removeEvents(this.db, this, DatabaseEvents);
+                        delete this.db;
+
                         resolve(this);
-                    }
-
-                    return;
-                }
-
-                delete this.db;
-                resolve(this);
-            });
+                    });
+                })
+                .catch();
         });
     }
 
     configure(option, value) {
+        if (typeof this.db === "undefined") {
+            throw new DatabaseError("The database is not open");
+        }
+
         return this.db.configure(option, value);
     }
 
@@ -89,26 +104,29 @@ class SqliteDatabase extends EventEmitter {
                 reject(new DatabaseError("The database is not open"));
             }
 
-            this.db.run(sql, ...param, err => {
-                if (err) {
-                    this.emit(DatabaseEvents.promiseError, err);
+            const _this = this;
+            this.db.run(sql, ...param, function (err) {
+                const st = this;
 
-                    if (this.inTransaction) {
-                        this.rollback().then(_ => {
-                            if (this.throwErrors) {
+                if (err) {
+                    _this.emit(DatabaseEvents.promiseError, err);
+
+                    if (_this.inTransaction) {
+                        _this.rollback().then(_ => {
+                            if (_this.throwErrors) {
                                 reject(new DatabaseError(err));
                             } else {
                                 resolve();
                             }
                         });
-                    } else if (this.throwErrors) {
+                    } else if (_this.throwErrors) {
                         reject(new DatabaseError(err));
                     } else {
-                        resolve(this);
+                        resolve();
                     }
                 }
 
-                resolve(this);
+                resolve(new SqliteResult(undefined, st));
             });
         });
     }
@@ -119,26 +137,29 @@ class SqliteDatabase extends EventEmitter {
                 reject(new DatabaseError("The database is not open"));
             }
 
-            this.db.get(sql, ...param, (err, row) => {
-                if (err) {
-                    this.emit(DatabaseEvents.promiseError, err);
+            const _this = this;
+            this.db.get(sql, ...param, function (err, row) {
+                const st = this;
 
-                    if (this.inTransaction) {
-                        this.rollback().then(_ => {
-                            if (this.throwErrors) {
+                if (err) {
+                    _this.emit(DatabaseEvents.promiseError, err);
+
+                    if (_this.inTransaction) {
+                        _this.rollback().then(_ => {
+                            if (_this.throwErrors) {
                                 reject(new DatabaseError(err));
                             } else {
                                 resolve();
                             }
                         });
-                    } else if (this.throwErrors) {
+                    } else if (_this.throwErrors) {
                         reject(new DatabaseError(err));
                     } else {
                         resolve();
                     }
                 }
 
-                resolve(row);
+                resolve(new SqliteResult(row, st));
             });
         });
     }
@@ -149,26 +170,29 @@ class SqliteDatabase extends EventEmitter {
                 reject(new DatabaseError("The database is not open"));
             }
 
+            const _this = this;
             this.db.all(sql, ...param, (err, rows) => {
-                if (err) {
-                    this.emit(DatabaseEvents.promiseError, err);
+                const st = this;
 
-                    if (this.inTransaction) {
-                        this.rollback().then(_ => {
-                            if (this.throwErrors) {
+                if (err) {
+                    _this.emit(DatabaseEvents.promiseError, err);
+
+                    if (_this.inTransaction) {
+                        _this.rollback().then(_ => {
+                            if (_this.throwErrors) {
                                 reject(new DatabaseError(err));
                             } else {
                                 resolve();
                             }
                         });
-                    } else if (this.throwErrors) {
+                    } else if (_this.throwErrors) {
                         reject(new DatabaseError(err));
                     } else {
                         resolve();
                     }
                 }
 
-                resolve(rows);
+                resolve(new SqliteResult(rows, st));
             });
         });
     }
@@ -179,26 +203,29 @@ class SqliteDatabase extends EventEmitter {
                 reject(new DatabaseError("The database is not open"));
             }
 
-            this.db.each(sql, param, callback, (err, nrows) => {
-                if (err) {
-                    this.emit(DatabaseEvents.promiseError, err);
+            const _this = this;
+            this.db.each(sql, param, callback, function (err, nrows) {
+                const st = this;
 
-                    if (this.inTransaction) {
-                        this.rollback().then(_ => {
-                            if (this.throwErrors) {
+                if (err) {
+                    _this.emit(DatabaseEvents.promiseError, err);
+
+                    if (_this.inTransaction) {
+                        _this.rollback().then(_ => {
+                            if (_this.throwErrors) {
                                 reject(new DatabaseError(err));
                             } else {
                                 resolve();
                             }
                         });
-                    } else if (this.throwErrors) {
+                    } else if (_this.throwErrors) {
                         reject(new DatabaseError(err));
                     } else {
                         resolve();
                     }
                 }
 
-                resolve(nrows);
+                resolve(new SqliteResult(nrows, st));
             });
         });
     }
@@ -216,11 +243,11 @@ class SqliteDatabase extends EventEmitter {
                     if (this.throwErrors) {
                         reject(new DatabaseError(err));
                     } else {
-                        resolve(this);
+                        resolve();
                     }
                 }
 
-                resolve(this);
+                resolve();
             });
         });
     }
@@ -244,10 +271,13 @@ class SqliteDatabase extends EventEmitter {
                     }
                 }
 
-                resolve(new SqliteStatement(statement));
+                const newSt = new SqliteStatement(this, statement);
+                this.addStatement(newSt);
+
+                resolve(newSt);
             };
 
-            statement = this.db.prepare.apply(this.db, sql, ...param, callback);
+            statement = this.db.prepare(sql, ...param, callback);
         });
     }
 
