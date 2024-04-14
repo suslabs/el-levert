@@ -17,6 +17,7 @@
     "inspectorPort": 10000,
     "outCharLimit": 2000,
     "outNewlineLimit": 30,
+    "reminderMsgLimit": 512,
     "tagNameRegex": "^[A-Za-z0-9\\-_]+$",
     "maxTagNameLength": 32,
     "maxTagSize": 100,
