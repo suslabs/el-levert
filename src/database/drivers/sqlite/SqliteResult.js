@@ -8,9 +8,7 @@ class SqliteResult extends ProxiedResult {
         this.setData(data);
         this.setInfo(st);
 
-        const proxy = new Proxy(this, ResultProxyHandler);
-
-        return proxy;
+        return new Proxy(this, ResultProxyHandler);
     }
 }
 
