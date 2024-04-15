@@ -1,1 +1,1 @@
-SELECT * FROM Groups
+SELECT * FROM Groups;

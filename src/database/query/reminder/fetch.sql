@@ -1,1 +1,1 @@
-SELECT * FROM Reminders WHERE user = $user
+SELECT * FROM Reminders WHERE user = $user;

@@ -20,10 +20,10 @@ import User from "../structures/permission/User.js";
 class PermissionDatabase extends SqliteDatabase {
     async fetch(id) {
         const rows = await this.userQueries.fetch.all({
-            $id: id
+            $user: id
         });
 
-        if (typeof rows === "undefined" || rows.length < 1) {
+        if (typeof rows._data === "undefined" || rows.length < 1) {
             return false;
         }
 
@@ -32,14 +32,14 @@ class PermissionDatabase extends SqliteDatabase {
 
     async add(group, user) {
         return await this.userQueries.add.run({
-            $id: user.id,
+            $user: user.user,
             $group: group.name
         });
     }
 
     async remove(group, user) {
         return await this.userQueries.remove.run({
-            $id: user.id,
+            $user: user.user,
             $group: group.name
         });
     }
@@ -52,7 +52,7 @@ class PermissionDatabase extends SqliteDatabase {
 
     async removeAll(user) {
         return await this.userQueries.removeAll.run({
-            $id: user.id
+            $user: user.user
         });
     }
 
@@ -68,7 +68,7 @@ class PermissionDatabase extends SqliteDatabase {
             $name: name
         });
 
-        if (typeof row === "undefined") {
+        if (typeof row._data === "undefined") {
             return false;
         }
 
@@ -80,7 +80,7 @@ class PermissionDatabase extends SqliteDatabase {
             $level: level
         });
 
-        if (typeof row === "undefined") {
+        if (typeof row._data === "undefined") {
             return false;
         }
 

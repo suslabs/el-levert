@@ -1,0 +1,6 @@
+{
+    "connectionLimit": 10,
+    "waitForConnections": true,
+    "queueLimit": 20,
+    "database": "el-levert"
+}

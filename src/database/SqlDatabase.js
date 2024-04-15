@@ -3,8 +3,8 @@ import fs from "fs/promises";
 
 import Util from "../util/Util.js";
 
-import SqliteDatabase from "./sqlite/SqliteDatabase.js";
-import OpenModes from "./sqlite/OpenModes.js";
+import SqliteDatabase from "./drivers/sqlite/SqliteDatabase.js";
+import OpenModes from "./drivers/sqlite/OpenModes.js";
 
 class SqlDatabase {
     constructor(dbPath, queryPath, options = {}) {
@@ -41,7 +41,7 @@ class SqlDatabase {
         try {
             await db.open();
         } catch (err) {
-            if (err.message !== "Cannot open database. The database is already open.") {
+            if (err.message !== "Cannot open database. The database is already open") {
                 throw err;
             }
         }
@@ -159,7 +159,6 @@ class SqlDatabase {
 
     async unloadQueries() {
         for (let i = 0; i < this.queryList.length; i++) {
-            await this.queryList[i].finalize();
             delete this.queryList[i];
         }
 
@@ -170,7 +169,7 @@ class SqlDatabase {
 
     async close() {
         await this.unloadQueries();
-        return await this.db.close();
+        await this.db.close();
     }
 
     async load() {

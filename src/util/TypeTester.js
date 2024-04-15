@@ -1,7 +1,7 @@
 function tagTester(name) {
     const tag = "[object " + name + "]";
 
-    return obj => toString.call(obj) === tag;
+    return obj => Object.prototype.toString.call(obj) === tag;
 }
 
 const isFunction = tagTester("Function");
