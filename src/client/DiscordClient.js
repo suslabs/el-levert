@@ -88,7 +88,7 @@ class DiscordClient {
     async login(token, exitOnFailure = false) {
         this.logger?.info("Logging in...");
 
-        const promise = new Promise((resolve, reject) => {
+        const loginPromise = new Promise((resolve, reject) => {
             this.client.login(token).catch(err => {
                 if (!exitOnFailure) {
                     reject(err);
@@ -116,7 +116,7 @@ class DiscordClient {
                 });
         });
 
-        const res = await promise;
+        const res = await loginPromise;
 
         if (exitOnFailure && !res) {
             this.killProcess();
@@ -177,13 +177,11 @@ class DiscordClient {
             num = lowercaseTypes.indexOf(activityType);
 
         if (num === -1) {
-            this.logger?.error(`Invalid activity type: ${activityType}\nValid types are: ${validTypes.join(" ")}`);
-            return;
+            throw new ClientError(`Invalid activity type: ${activityType}. Valid types are: ${validTypes.join(" ")}`);
         }
 
         if (typeof config.text === "undefined") {
-            this.logger?.error("Invalid activity text.");
-            return;
+            throw new ClientError("Invalid activity text");
         }
 
         const presence = this.client.user.setActivity(config.text, {
@@ -203,7 +201,7 @@ class DiscordClient {
         try {
             channel = await this.client.channels.fetch(ch_id);
         } catch (err) {
-            if (err.code === RESTJSONErrorCodes.UnknownChannel || err.code === RESTJSONErrorCodes.MissingAccess) {
+            if ([RESTJSONErrorCodes.UnknownChannel, RESTJSONErrorCodes.MissingAccess].includes(err.code)) {
                 return false;
             }
 
@@ -256,7 +254,7 @@ class DiscordClient {
         try {
             return await channel.messages.fetch(msg_id);
         } catch (err) {
-            if (err.code === RESTJSONErrorCodes.UnknownChannel) {
+            if (err.code === RESTJSONErrorCodes.UnknownMessage) {
                 return false;
             }
 

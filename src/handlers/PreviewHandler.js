@@ -7,7 +7,7 @@ import { getClient, getLogger } from "../LevertClient.js";
 import Util from "../util/Util.js";
 
 const msgUrlRegex =
-    /(?:(https?):\/\/)?(?:(www|ptb)\.)?discord\.com\/channels\/(?<sv_id>\d{18,19}|@me)\/(?<ch_id>\d{18,19})(?:\/(?<msg_id>\d{18,19}))?/;
+    /(?:(https?):\/\/)?(?:(www|ptb)\.)?discord\.com\/channels\/(?<sv_id>\d{18,19}|@me)\/(?<ch_id>\d{18,19})(?:\/(?<msg_id>\d{18,19}))/;
 
 class PreviewHandler extends Handler {
     constructor() {
@@ -36,7 +36,7 @@ class PreviewHandler extends Handler {
             throw new HandlerError("Invalid input string");
         }
 
-        const msgUrl = match[0],
+        const rawMsgUrl = match[0],
             { sv_id, ch_id, msg_id } = match.groups,
             inDms = sv_id === "@me";
 
@@ -47,9 +47,8 @@ class PreviewHandler extends Handler {
         }
 
         let content = prevMsg.content,
+            image,
             split = content.split("\n");
-
-        let image;
 
         if (content.length > this.outCharLimit) {
             content = content.slice(0, this.outCharLimit) + "...";
@@ -76,8 +75,14 @@ class PreviewHandler extends Handler {
             }
         }
 
-        content += "\n\n";
-        content += hyperlink("[Jump to Message]", msgUrl);
+        if (!inDms) {
+            const msgUrl = new URL(rawMsgUrl);
+            msgUrl.protocol = "https";
+            msgUrl.hostname = "discord.com";
+
+            content += "\n\n";
+            content += hyperlink("[Jump to Message]", msgUrl.href);
+        }
 
         let channel;
 

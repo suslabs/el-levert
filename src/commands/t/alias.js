@@ -47,13 +47,19 @@ If you want to de-alias the tag, \`edit\` it.`;
         const a_tag = await getClient().tagManager.fetch(a_name);
 
         if (!a_tag) {
-            return `:warning: Tag **${a_tag.name}** doesn't exist.`;
+            return `:warning: Tag **${a_name}** doesn't exist.`;
         }
 
-        let created = false;
+        let newTag,
+            created = false;
 
         try {
-            [_, created] = await getClient().tagManager.alias(tag, a_tag, a_args);
+            const createOptions = {
+                name: t_name,
+                owner: msg.author.id
+            };
+
+            [newTag, created] = await getClient().tagManager.alias(tag, a_tag, a_args, createOptions);
         } catch (err) {
             if (err.name === "TagError") {
                 return `:warning: ${err.message}.`;

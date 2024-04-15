@@ -48,7 +48,8 @@ class TagManager extends DBManager {
 
         for (const hop of tag.hops) {
             if (hops.includes(hop)) {
-                throw new TagError("Tag recursion detected", hops);
+                const recursionHops = hops.concat(hop);
+                throw new TagError("Tag recursion detected", recursionHops);
             }
 
             hops.push(hop);
@@ -125,31 +126,36 @@ class TagManager extends DBManager {
         return newTag;
     }
 
-    async alias(tag, aliasTag, args, owner) {
-        let create = false;
-
-        if (!tag) {
-            create = true;
-        }
-
+    async alias(tag, aliasTag, args, createOptions) {
         if (!aliasTag) {
             throw new TagError("Alias target doesn't exist");
         }
 
-        const aliasHops = aliasTag.hops,
-            hops = [tag.name].concat(aliasHops);
+        let create = false;
+
+        if (!tag) {
+            create = true;
+
+            if (typeof createOptions === "undefined") {
+                throw new TagError("No info for creating the tag");
+            }
+        }
+
+        const name = tag.name ?? createOptions.name,
+            owner = tag.owner ?? createOptions.owner,
+            hops = [name].concat(aliasTag.hops);
 
         const newTag = new Tag({
-            name: tag.name,
-            args,
-            hops
+            hops,
+            name,
+            owner,
+            args
         });
 
         let newTagSize = newTag.getSize(),
             sizeDiff = newTagSize;
 
         if (create) {
-            newTag.owner = owner;
             await this.tag_db.add(newTag);
         } else {
             const oldTagSize = tag.getSize();
