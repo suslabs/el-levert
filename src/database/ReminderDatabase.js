@@ -8,7 +8,7 @@ class ReminderDatabase extends SqliteDatabase {
             $user: user
         });
 
-        if (typeof rows === "undefined" || rows.length < 1) {
+        if (typeof rows._data === "undefined" || rows.length < 1) {
             return false;
         }
 

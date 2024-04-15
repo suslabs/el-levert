@@ -1,4 +1,4 @@
-import { dataProps, infoProps, passthroughProps } from "./ResultProperties.js";
+import { dataProps, infoProps, passthroughProps, targetProp } from "./ResultProperties.js";
 
 const ResultProxyHandler = {
     get: (target, prop) => {
@@ -13,7 +13,7 @@ const ResultProxyHandler = {
                 if (prop.startsWith("_")) {
                     const privProp = prop.slice(1);
 
-                    if (privProp === "obj") {
+                    if (privProp === targetProp) {
                         return target;
                     }
 
@@ -53,7 +53,7 @@ const ResultProxyHandler = {
                 if (prop.startsWith("_")) {
                     const privProp = prop.slice(1);
 
-                    if (privProp === "obj" || dataProps.includes(privProp)) {
+                    if (privProp === targetProp || dataProps.includes(privProp)) {
                         return false;
                     }
                 }
@@ -63,6 +63,7 @@ const ResultProxyHandler = {
                 }
             default:
                 target.data[prop] = newVal;
+                return true;
         }
     },
     has: (target, prop) => {
@@ -73,6 +74,10 @@ const ResultProxyHandler = {
         return prop in target.info || prop in target.data;
     },
     ownKeys: target => {
+        if (target.data === null || typeof target.data === "undefined") {
+            return [];
+        }
+
         return Reflect.ownKeys(target.data);
     },
     getOwnPropertyDescriptor: (target, prop) => {
