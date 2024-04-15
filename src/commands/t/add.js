@@ -2,6 +2,8 @@ import Util from "../../util/Util.js";
 
 import { getClient } from "../../LevertClient.js";
 
+const temp_ban = ['799706996584087642', '1182591943792918624', '269509554939625475', '381742479755706368']
+
 export default {
     name: "add",
     aliases: ["create"],
@@ -9,7 +11,9 @@ export default {
     subcommand: true,
     handler: async function (args, msg) {
         const [t_name, t_args] = Util.splitArgs(args);
-
+        if (temp_ban.includes(msg.author.id)){
+            return `:white_check_mark: Created tag **${t_name}**.`;
+        }
         if (this.isSubName(t_name)) {
             return `:police_car: ${t_name} is a __command__, not a __tag__. You can't manipulate commands.`;
         }
