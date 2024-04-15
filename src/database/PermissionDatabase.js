@@ -9,7 +9,7 @@ class PermissionDatabase extends SqliteDatabase {
             $user: id
         });
 
-        if (typeof rows === "undefined" || rows.length < 1) {
+        if (typeof rows._data === "undefined" || rows.length < 1) {
             return false;
         }
 
@@ -54,7 +54,7 @@ class PermissionDatabase extends SqliteDatabase {
             $name: name
         });
 
-        if (typeof row === "undefined") {
+        if (typeof row._data === "undefined") {
             return false;
         }
 
@@ -66,7 +66,7 @@ class PermissionDatabase extends SqliteDatabase {
             $level: level
         });
 
-        if (typeof row === "undefined") {
+        if (typeof row._data === "undefined") {
             return false;
         }
 

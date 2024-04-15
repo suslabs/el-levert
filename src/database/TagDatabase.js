@@ -21,7 +21,7 @@ class TagDatabase extends SqliteDatabase {
             $name: name
         });
 
-        if (typeof row === "undefined" || row.length < 1) {
+        if (typeof row._data === "undefined" || row.length < 1) {
             return false;
         }
 
@@ -52,7 +52,7 @@ class TagDatabase extends SqliteDatabase {
             $type: tag.type
         });
 
-        if (typeof res.changes !== "undefined" && res.changes > 0) {
+        if (res.changes > 0) {
             return true;
         }
 
@@ -70,7 +70,7 @@ class TagDatabase extends SqliteDatabase {
             $type: tag.type | 1
         });
 
-        if (typeof res.changes !== "undefined" && res.changes > 0) {
+        if (res.changes > 0) {
             return true;
         }
 
@@ -82,7 +82,7 @@ class TagDatabase extends SqliteDatabase {
             $name: tag.name
         });
 
-        if (typeof res.changes !== "undefined" && res.changes > 0) {
+        if (res.changes > 0) {
             return true;
         }
 
@@ -110,11 +110,11 @@ class TagDatabase extends SqliteDatabase {
             $user: user
         });
 
-        if (typeof quota === "undefined") {
+        if (typeof quota._data === "undefined") {
             return false;
         }
 
-        return quota["quota"];
+        return quota.quota;
     }
 
     async quotaCreate(user) {
