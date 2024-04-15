@@ -18,14 +18,14 @@ class PermissionManager extends DBManager {
     constructor(enabled) {
         super(enabled, "permission", PermissionDatabase, "perm_db");
 
+        this.maxGroupNameLength = getClient().config.maxGroupNameLength;
+
         this.owner = new User(OwnerUser);
         this.owner.setUserId(getClient().owner);
 
         this.modLevel = getClient().config.tagModeratorLevel;
         this.adminLevel = getClient().config.permissionAdminLevel;
         this.ownerLevel = OwnerGroup.level;
-
-        this.maxGroupNameLength = getClient().config.maxGroupNameLength;
     }
 
     checkName(name) {
@@ -233,12 +233,10 @@ class PermissionManager extends DBManager {
             let find;
 
             try {
-                find = await getClient().findUserById(user.id);
-            } catch (err) {
-                debugger;
-            }
+                find = await getClient().findUserById(user.user);
+            } catch (err) {}
 
-            user.setUsername(find.username);
+            user.setUsername(find?.username);
         }
 
         return users;
