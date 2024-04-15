@@ -6,6 +6,8 @@ import ReminderDatabase from "../../database/ReminderDatabase.js";
 import Reminder from "../../structures/Reminder.js";
 import ReminderError from "../../errors/ReminderError.js";
 
+import Util from "../../util/Util.js";
+
 const sendDelay = 1000,
     maxMsgLength = 512;
 
@@ -14,7 +16,7 @@ class ReminderManager extends DBManager {
         super(enabled, "reminder", ReminderDatabase, "remind_db");
 
         this.sendDelay = sendDelay;
-        this.maxMsgLength = maxMsgLength;
+        this.maxMsgLength = Util.clamp(maxMsgLength, 0, 1500);
     }
 
     checkMessage(msg) {
