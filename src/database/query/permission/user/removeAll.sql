@@ -1,1 +1,1 @@
-DELETE FROM Users WHERE id = $id;
+DELETE FROM Users WHERE user = $user;

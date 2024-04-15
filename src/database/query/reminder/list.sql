@@ -1,1 +1,1 @@
-SELECT * FROM Reminders
+SELECT * FROM Reminders;

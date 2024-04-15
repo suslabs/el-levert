@@ -3,6 +3,7 @@ import { time, bold } from "discord.js";
 import Util from "../util/Util.js";
 
 const defaultValues = {
+    id: 0,
     user: "0",
     end: 0,
     msg: ""

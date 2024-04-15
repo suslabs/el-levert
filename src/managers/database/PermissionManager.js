@@ -19,7 +19,7 @@ class PermissionManager extends DBManager {
         super(enabled, "permission", PermissionDatabase, "perm_db");
 
         this.owner = new User(OwnerUser);
-        this.owner.setId(getClient().owner);
+        this.owner.setUserId(getClient().owner);
 
         this.modLevel = getClient().config.tagModeratorLevel;
         this.adminLevel = getClient().config.permissionAdminLevel;
@@ -43,11 +43,11 @@ class PermissionManager extends DBManager {
     }
 
     isOwner(id) {
-        return id === this.owner.id;
+        return id === this.owner.user;
     }
 
     async fetch(id) {
-        if (id === this.owner.id) {
+        if (id === this.owner.user) {
             return [OwnerGroup];
         }
 
@@ -108,7 +108,7 @@ class PermissionManager extends DBManager {
             throw new PermissionError("Can't add a user to the owner group");
         }
 
-        const user = new User({ id });
+        const user = new User({ user: id });
 
         await this.perm_db.add(group, user);
 
@@ -124,14 +124,14 @@ class PermissionManager extends DBManager {
             throw new PermissionError("Can't remove a user from the owner group");
         }
 
-        const user = new User({ id }),
+        const user = new User({ user: id }),
             res = await this.perm_db.remove(group, user);
 
         return res.changes > 0;
     }
 
     async removeAll(id) {
-        const user = new User({ id }),
+        const user = new User({ user: id }),
             res = await this.perm_db.removeAll(user);
 
         return res.changes > 0;
@@ -218,7 +218,7 @@ class PermissionManager extends DBManager {
     async listUsers(fetchUsernames = false) {
         let users = [];
 
-        if (this.owner.id !== "0") {
+        if (this.owner.user !== "0") {
             users = [this.owner];
         }
 
@@ -247,7 +247,7 @@ class PermissionManager extends DBManager {
     async listGroups(fetchUsernames = false) {
         let groups = [];
 
-        if (this.owner.id !== "0") {
+        if (this.owner.user !== "0") {
             groups = [OwnerGroup];
         }
 

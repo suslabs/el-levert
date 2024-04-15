@@ -41,7 +41,7 @@ class SqlDatabase {
         try {
             await db.open();
         } catch (err) {
-            if (err.message !== "Cannot open database. The database is already open.") {
+            if (err.message !== "Cannot open database. The database is already open") {
                 throw err;
             }
         }

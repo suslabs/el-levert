@@ -1,1 +1,1 @@
-DELETE FROM Reminders WHERE id = $id
+DELETE FROM Reminders WHERE id = $id;
