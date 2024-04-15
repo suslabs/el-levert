@@ -3,7 +3,8 @@ import { inlineCode } from "discord.js";
 import Util from "../../util/Util.js";
 
 const defaultValues = {
-    id: "0",
+    id: 0,
+    user: "0",
     group: "",
     username: ""
 };
@@ -13,8 +14,8 @@ class User {
         Util.setValuesWithDefaults(this, data, defaultValues);
     }
 
-    setId(id) {
-        this.id = id;
+    setUserId(id) {
+        this.user = id;
     }
 
     setGroup(group) {
@@ -31,10 +32,10 @@ class User {
 
     format() {
         if (this.username.length > 0) {
-            return `${this.username} (${inlineCode(this.id)})`;
+            return `${this.username} (${inlineCode(this.user)})`;
         }
 
-        return inlineCode(this.id);
+        return inlineCode(this.user);
     }
 }
 

@@ -5,7 +5,9 @@ CREATE TABLE "Groups" (
 );
 ---
 CREATE TABLE "Users" (
-	"id"	TEXT,
+	"id"	INTEGER,
+	"user"	TEXT,
 	"group"	TEXT,
+	PRIMARY KEY("id" AUTOINCREMENT),
 	FOREIGN KEY("group") REFERENCES Groups("name")
 );
