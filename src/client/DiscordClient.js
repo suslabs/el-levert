@@ -201,7 +201,7 @@ class DiscordClient {
         try {
             channel = await this.client.channels.fetch(ch_id);
         } catch (err) {
-            if (err.code === RESTJSONErrorCodes.UnknownChannel || err.code === RESTJSONErrorCodes.MissingAccess) {
+            if ([RESTJSONErrorCodes.UnknownChannel, RESTJSONErrorCodes.MissingAccess].includes(err.code)) {
                 return false;
             }
 
@@ -254,7 +254,7 @@ class DiscordClient {
         try {
             return await channel.messages.fetch(msg_id);
         } catch (err) {
-            if (err.code === RESTJSONErrorCodes.UnknownChannel) {
+            if (err.code === RESTJSONErrorCodes.UnknownMessage) {
                 return false;
             }
 
