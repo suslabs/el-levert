@@ -1,3 +1,4 @@
+
 <h1 align="center">
     <img src="./assets/bigrat.jpg" alt="EL LEVERT" style="width:35%;height:35%;">
     <br>
@@ -36,6 +37,7 @@
   •
   <a href="#amogus">Amogus</a>
 </p>
+
 
 # TODO
 
@@ -234,3 +236,7 @@ To delete all imported tags, run `node ./scripts/importer/importer.js --p1`.
 ⠀⠀⠀⠀⠀⠀⠀⢿⣿⣦⣄⣀⣠⣴⣿⣿⠁⠀⠈⠻⣿⣿⣿⣿⡿⠏⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠈⠛⠻⠿⠿⠿⠿⠋⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ```
+
+<h1 align="center">
+    <img src="https://i.imgur.com/oDZ2nYI.png" alt="EL LEVERT" style="width:75%;height:50%;">
+</h1>

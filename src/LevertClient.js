@@ -232,7 +232,11 @@ class LevertClient extends DiscordClient {
         await this.login(token, true);
 
         if (this.config.setActivity) {
-            this.setActivity(this.config.activity);
+            try {
+                this.setActivity(this.config.activity);
+            } catch (err) {
+                this.logger.error(err);
+            }
         }
 
         this.reminderManager.startSendLoop();

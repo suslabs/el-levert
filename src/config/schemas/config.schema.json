@@ -58,6 +58,9 @@
         "outNewlineLimit": {
             "type": "number"
         },
+        "reminderMsgLimit": {
+            "type": "number"
+        },
         "tagNameRegex": {
             "type": "string"
         },
@@ -135,6 +138,7 @@
         "inspectorPort",
         "outCharLimit",
         "outNewlineLimit",
+        "reminderMsgLimit",
         "tagNameRegex",
         "maxTagNameLength",
         "maxTagSize",
