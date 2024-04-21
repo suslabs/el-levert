@@ -13,24 +13,6 @@ const dbOptions = {
     queryEncoding: dbFilenames.queryEncoding
 };
 
-async function directoryExists(path) {
-    let stat;
-
-    try {
-        stat = await fs.stat(path);
-    } catch (err) {
-        if (err.code === "ENOENT") {
-            return false;
-        }
-
-        throw err;
-    }
-
-    if (typeof stat !== "undefined") {
-        return stat.isDirectory();
-    }
-}
-
 class DBManager extends Manager {
     constructor(enabled, name, classType, fieldName) {
         super(enabled);
@@ -53,7 +35,7 @@ class DBManager extends Manager {
     }
 
     async checkDatabase() {
-        if (!(await directoryExists(this.dbDir))) {
+        if (!(await Util.directoryExists(this.dbDir))) {
             await fs.mkdir(this.dbDir, {
                 recursive: true
             });

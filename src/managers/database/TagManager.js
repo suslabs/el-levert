@@ -8,7 +8,7 @@ import TagDatabase from "../../database/TagDatabase.js";
 import Tag from "../../structures/tag/Tag.js";
 import TagError from "../../errors/TagError.js";
 
-import search from "../../util/search/search.js";
+import search from "../../util/search/uFuzzySearch.js";
 
 class TagManager extends DBManager {
     constructor() {
@@ -212,7 +212,9 @@ class TagManager extends DBManager {
     async search(name, maxResults) {
         const tags = await this.dump();
 
-        return search(tags, name, maxResults);
+        return search(tags, name, {
+            maxResults
+        });
     }
 
     async dump(full = false) {

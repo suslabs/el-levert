@@ -4,7 +4,7 @@ import ClientError from "../errors/ClientError.js";
 import EventLoader from "../loaders/event/EventLoader.js";
 
 import Util from "../util/Util.js";
-import diceDist from "../util/search/diceDist.js";
+import search from "../util/search/diceSearch.js";
 
 const {
     Client,
@@ -302,11 +302,11 @@ class DiscordClient {
         return user;
     }
 
-    async findUsers(search, options = {}) {
+    async findUsers(query, options = {}) {
         const guilds = this.client.guilds.cache;
 
-        const idMatch = search.match(userIdRegex),
-            mentionMatch = search.match(mentionRegex);
+        const idMatch = query.match(userIdRegex),
+            mentionMatch = query.match(mentionRegex);
 
         if (idMatch ?? mentionMatch) {
             const id = idMatch[1] ?? mentionMatch[1];
@@ -334,27 +334,28 @@ class DiscordClient {
 
         Util.setValuesWithDefaults(options, options, defaultUserFetchOptions);
 
-        let userDistances = [],
+        let users = [],
             foundIds = [];
 
         for (let i = 0; i < guilds.size; i++) {
             const guildUsers = await guilds.at(i).members.fetch({
-                query: search,
+                query,
                 limit: options.fetchLimit
             });
 
             const newUsers = guildUsers.filter(user => !foundIds.includes(user.id)),
-                userIds = newUsers.map(x => x.id),
-                distances = newUsers.map(user => [user, diceDist(user.username, search)]);
+                userIds = newUsers.keys();
 
+            users.push(...newUsers.values());
             foundIds.push(...userIds);
-            userDistances.push(...distances);
         }
 
-        userDistances.sort((a, b) => b[1] - a[1]);
-        userDistances = userDistances.slice(0, options.limit);
+        users = search(users, query, {
+            maxResults: options.limit,
+            minDist: 0,
+            searchKey: "username"
+        });
 
-        const users = userDistances.map(x => x[0]);
         return users;
     }
 }

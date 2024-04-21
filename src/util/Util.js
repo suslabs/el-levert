@@ -2,7 +2,9 @@ import { Buffer } from "buffer";
 import { AttachmentBuilder } from "discord.js";
 import cloneDeep from "lodash.clonedeep";
 
-import fs from "fs";
+import syncFs, { fstat } from "fs";
+import fs from "fs/promises";
+
 import path from "path";
 import URL from "url";
 
@@ -11,10 +13,10 @@ const Util = {
         const files = [];
 
         function recursiveFunc(dir_path, arr) {
-            fs.readdirSync(dir_path).forEach(itm => {
+            syncFs.readdirSync(dir_path).forEach(itm => {
                 const itmPath = path.resolve(dir_path, itm);
 
-                if (fs.statSync(itmPath).isDirectory()) {
+                if (syncFs.statSync(itmPath).isDirectory()) {
                     recursiveFunc(itmPath, arr);
                 } else {
                     arr.push(itmPath);
@@ -25,6 +27,23 @@ const Util = {
         recursiveFunc(dir_path, files);
 
         return files;
+    },
+    directoryExists: async path => {
+        let stat;
+
+        try {
+            stat = await fs.stat(path);
+        } catch (err) {
+            if (err.code === "ENOENT") {
+                return false;
+            }
+
+            throw err;
+        }
+
+        if (typeof stat !== "undefined") {
+            return stat.isDirectory();
+        }
     },
     import: async modulePath => {
         let fileURL = URL.pathToFileURL(modulePath);
