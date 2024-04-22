@@ -53,8 +53,8 @@ class SqlDatabase {
         await this.open(OpenModes.OPEN_RWCREATE);
 
         await this.loadCreateQuery();
-        const split = this.createString.split("---");
-        split.forEach(x => x.trim());
+        let split = this.createString.split("---");
+        split = split.map(x => x.trim());
 
         for (const query of split) {
             await this.db.run(query);

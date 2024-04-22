@@ -44,7 +44,7 @@ async function write(data, ...args) {
         this.logger?.info(writingMessage);
     }
 
-    data = data ?? this.data;
+    data ??= this.data;
     if (data === null) {
         return this.failure(`Can't write ${this.getName()}, no data provided.`);
     }

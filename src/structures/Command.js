@@ -12,7 +12,8 @@ const defaultValues = {
     description: "",
     usage: "",
     aliases: [],
-    helpArgs: ["help", "-help", "-h", "usage"]
+    helpArgs: ["help", "-help", "-h", "usage"],
+    category: "none"
 };
 
 class Command {
@@ -64,7 +65,7 @@ class Command {
         return names;
     }
 
-    isSubName(name) {
+    getSubcmdNames() {
         let subNames;
 
         if (this.isSubcmd) {
@@ -73,10 +74,15 @@ class Command {
             subNames = this.subcommands;
         }
 
+        return subNames;
+    }
+
+    isSubName(name) {
+        const subNames = this.getSubcmdNames();
         return subNames.includes(name);
     }
 
-    getSubcmd(name) {
+    getSubcmdMap() {
         let subcmds;
 
         if (this.isSubcmd) {
@@ -85,6 +91,12 @@ class Command {
             subcmds = this.subcmds;
         }
 
+        return subcmds;
+    }
+
+    getSubcmd(name) {
+        const subcmds = this.getSubcmdMap();
+
         if (subcmds.size < 1) {
             return;
         }
@@ -92,12 +104,42 @@ class Command {
         return subcmds.get(name);
     }
 
-    getSubcmdList(separator = "|") {
+    getSubcmds(perm) {
+        const subcmds = this.getSubcmdMap(),
+            subcmdList = Array.from(subcmds.entries())
+                .filter(x => x[0] === x[1].name)
+                .map(x => x[1]);
+
+        if (typeof perm === "undefined") {
+            return subcmdList;
+        }
+
+        const allowedSubcmds = subcmdList.filter(subcmd => {
+            if (subcmd.ownerOnly) {
+                return perm === getClient().permManager.owner.level;
+            }
+
+            return perm >= subcmd.allowed;
+        });
+
+        return allowedSubcmds;
+    }
+
+    getSubcmdList(perm, separator = "|") {
         if (this.isSubcmd) {
             return "";
         }
 
-        return this.subcommands.join(separator);
+        let subNames;
+
+        if (typeof perm === "undefined") {
+            subNames = this.getSubcmdNames();
+        } else {
+            const subcmds = this.getSubcmds(perm);
+            subNames = subcmds.map(command => command.name);
+        }
+
+        return subNames.join(separator);
     }
 
     isHelpCall(args) {
@@ -140,7 +182,7 @@ class Command {
                 subCmd = this.getSubcmd(subName);
 
             if (typeof subCmd !== "undefined") {
-                return subCmd.execute(subArgs, msg);
+                return await subCmd.execute(subArgs, msg);
             }
         }
 
@@ -164,7 +206,7 @@ class Command {
             return this.getHelpText();
         }
 
-        return this.handler(args, msg, perm);
+        return await this.handler(args, msg, perm);
     }
 }
 

@@ -53,7 +53,7 @@ const VMUtil = {
 
         if (typeof msg.embed !== "undefined") {
             const embed = msg.embed;
-            embed.description = embed.description ?? "";
+            embed.description ??= "";
 
             out.embeds = [embed];
         }

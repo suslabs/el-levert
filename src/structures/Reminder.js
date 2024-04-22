@@ -19,7 +19,7 @@ class Reminder {
     }
 
     isPast(date) {
-        date = date ?? Date.now();
+        date ??= Date.now();
         return this.end <= date;
     }
 

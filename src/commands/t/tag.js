@@ -83,10 +83,10 @@ async function getPreview(out, msg) {
     const previewMsg = {
             embeds: [preview]
         },
-        cleanedOut = getClient().previewHandler.removeLink(out);
+        cleanOut = getClient().previewHandler.removeLink(out);
 
-    if (cleanedOut.length > 0) {
-        previewMsg.content = cleanedOut;
+    if (cleanOut.length > 0) {
+        previewMsg.content = cleanOut;
     }
 
     return previewMsg;
@@ -99,9 +99,9 @@ export default {
     load: function () {
         this.parseBase = parseBase.bind(this);
     },
-    handler: async function (args, msg) {
+    handler: async function (args, msg, perm) {
         if (args.length === 0) {
-            return `:information_source: %t [${this.getSubcmdList()}] tag_name [tag_body]`;
+            return `:information_source: %t [${this.getSubcmdList(perm)}] tag_name [tag_body]`;
         }
 
         const [t_name, t_args] = Util.splitArgs(args);
@@ -156,7 +156,7 @@ export default {
         }
 
         if (getClient().previewHandler.canPreview(out)) {
-            return getPreview(out, msg);
+            return await getPreview(out, msg);
         }
 
         return out;

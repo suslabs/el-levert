@@ -2,7 +2,7 @@ import diceDist from "./diceDist.js";
 
 function search(haystack, needle, options = {}) {
     let { maxResults, minDist, searchKey } = options;
-    minDist = minDist ?? 0.5;
+    minDist ??= 0.5;
 
     let distances = haystack.map((elem, i) => {
         let val;

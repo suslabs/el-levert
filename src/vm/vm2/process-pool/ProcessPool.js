@@ -106,7 +106,7 @@ class VM2ProcPool {
                 const str = data.toString().trim();
 
                 if (!str.toLowerCase().includes("debugger") && typeof runner.socket === "undefined") {
-                    runner.socket = runner.socket ?? str;
+                    runner.socket ??= str;
                 }
             });
 

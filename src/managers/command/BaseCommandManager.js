@@ -56,17 +56,71 @@ class BaseCommandManager extends Manager {
         return commands.find(command => command.matches(name));
     }
 
-    getHelp(perm, discord = true) {
+    getHelp(perm, indentation = 4, discord = true) {
         const allowedCmds = this.getCommands(perm),
-            cmdNames = allowedCmds.map(command => command.getName());
+            categories = new Map();
 
-        cmdNames.sort();
+        for (const command of allowedCmds) {
+            if (!categories.has(command.category)) {
+                categories.set(command.category, []);
+            }
 
-        if (discord) {
-            return `\`${cmdNames.join("`, `")}\``;
-        } else {
-            return cmdNames.join(", ");
+            const name = command.getName();
+            categories.get(command.category).push(name);
         }
+
+        const sortedNames = Array.from(categories.keys()).sort((a, b) => {
+            if (a === "none") {
+                return -1;
+            }
+
+            if (b === "none") {
+                return 1;
+            }
+
+            return a.localeCompare(b);
+        });
+
+        const headers = Array(categories.size),
+            spaces = " ".repeat(indentation);
+
+        let num = 1;
+
+        for (const [i, name] of sortedNames.entries()) {
+            let header;
+
+            if (name === "none") {
+                header = "";
+            } else {
+                header = `${num}${discord ? "\\" : ""}. ${Util.capitalize(name)} commands:`;
+                num++;
+            }
+
+            headers[i] = header;
+        }
+
+        const format = Array(categories.size);
+
+        for (const [i, name] of sortedNames.entries()) {
+            const cmdNames = categories.get(name);
+            cmdNames.sort();
+
+            let categoryFormat = headers[i];
+
+            if (name !== "none") {
+                categoryFormat += `\n${spaces}`;
+            }
+
+            if (discord) {
+                categoryFormat += `\\- \`${cmdNames.join("`, `")}\``;
+            } else {
+                categoryFormat += `- ${cmdNames.join(", ")}`;
+            }
+
+            format[i] = categoryFormat;
+        }
+
+        return format.join("\n\n");
     }
 
     async loadCommands() {
@@ -112,19 +166,19 @@ class BaseCommandManager extends Manager {
 
         let n = 0;
 
-        this.commands.forEach(command => {
+        for (const command of this.commands) {
             if (command.isSubcmd || command.subcommands.length < 1) {
-                return;
+                continue;
             }
 
-            command.subcommands.forEach(subcommand => {
+            for (const subcommand of command.subcommands) {
                 const res = this.bindSubcommand(command, subcommand);
 
                 if (res === true) {
                     n++;
                 }
-            });
-        });
+            }
+        }
 
         if (n > 0) {
             getLogger().info(`Loaded ${n} subcommands.`);
