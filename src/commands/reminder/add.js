@@ -2,13 +2,15 @@ import { parseDate } from "chrono-node";
 
 import { getClient } from "../../LevertClient.js";
 
+const messageRegex = /(.+?)\s*(?:(?:"((?:[^"\\]|\\.)*)")|$)/;
+
 export default {
     name: "add",
     aliases: ["create"],
     parent: "reminder",
     subcommand: true,
     handler: async (args, msg) => {
-        const match = args.match(/(.+?)\s*(?:(?:"((?:[^"\\]|\\.)*)")|$)/),
+        const match = args.match(messageRegex),
             date = match[1] ?? "",
             message = match[2] ?? "";
 

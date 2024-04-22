@@ -87,12 +87,13 @@ class BaseCommandManager extends Manager {
         let num = 1;
 
         for (const [i, name] of sortedNames.entries()) {
+            const formattedName = Util.capitalize(name).replaceAll("_", " ");
             let header;
 
             if (name === "none") {
                 header = "";
             } else {
-                header = `${num}${discord ? "\\" : ""}. ${Util.capitalize(name)} commands:`;
+                header = `${num}${discord ? "\\" : ""}. ${formattedName} commands:`;
                 num++;
             }
 
