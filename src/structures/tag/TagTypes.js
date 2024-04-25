@@ -1,7 +1,7 @@
 const TagFlags = {
-    new: 0b1,
-    script: 0b10,
-    vm2: 0b100
+    new: 1,
+    script: 1 << 1,
+    vm2: 1 << 2
 };
 
 const defaultType = "text",
@@ -10,11 +10,14 @@ const defaultType = "text",
 
 const scriptTypes = [defaultScriptType].concat(specialScriptTypes);
 
+const versionTypes = ["old", "new"];
+
 const TagTypes = {
     defaultType,
     defaultScriptType,
     specialScriptTypes,
-    scriptTypes
+    scriptTypes,
+    versionTypes
 };
 
 export { TagFlags, TagTypes };

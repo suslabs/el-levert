@@ -95,7 +95,22 @@ async function getPreview(out, msg) {
 export default {
     name: "tag",
     aliases: ["t"],
-    subcommands: ["add", "alias", "chown", "delete", "dump", "edit", "list", "owner", "quota", "raw", "search"],
+    subcommands: [
+        "add",
+        "alias",
+        "chown",
+        "delete",
+        "dump",
+        "edit",
+        "info",
+        "list",
+        "owner",
+        "quota",
+        "raw",
+        "rename",
+        "search",
+        "set_type"
+    ],
     load: function () {
         this.parseBase = parseBase.bind(this);
     },

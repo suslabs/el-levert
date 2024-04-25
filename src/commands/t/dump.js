@@ -12,7 +12,7 @@ export default {
             tags = await getClient().tagManager.dump(full);
 
         if (tags.length < 1) {
-            return ":warning: There are no registered tags.";
+            return ":information_source: There are no registered tags.";
         }
 
         let format;

@@ -42,9 +42,10 @@ class TagManager extends DBManager {
             return false;
         }
 
-        let hops = [],
-            args = [],
-            lastTag;
+        const hops = [],
+            argsList = [];
+
+        let lastTag;
 
         for (const hop of tag.hops) {
             if (hops.includes(hop)) {
@@ -60,12 +61,12 @@ class TagManager extends DBManager {
             }
 
             if (lastTag.args.length > 0) {
-                args.push(lastTag.args);
+                argsList.push(lastTag.args);
             }
         }
 
-        lastTag.hops = hops;
-        lastTag.args = args.join(" ");
+        const args = argsList.join(" ");
+        lastTag.setAliasProps(hops, args);
 
         return lastTag;
     }
@@ -126,6 +127,43 @@ class TagManager extends DBManager {
         return newTag;
     }
 
+    async updateProps(name, tag) {
+        const oldTag = await this.fetch(name);
+
+        if (!oldTag) {
+            throw new TagError("Tag doesn't exist");
+        }
+
+        tag = new Tag(tag);
+
+        if (name !== tag.name) {
+            const existingTag = await this.fetch(tag.name);
+
+            if (existingTag) {
+                throw new TagError("Tag already exists", existingTag);
+            }
+        }
+
+        await this.tag_db.updateProps(name, tag);
+
+        if (oldTag.sameBody(tag)) {
+            return tag;
+        }
+
+        const oldTagSize = oldTag.getSize(),
+            newTagSize = tag.getSize(),
+            sizeDiff = newTagSize - oldTagSize;
+
+        if (oldTag.owner === tag.owner) {
+            await this.updateQuota(tag.owner, sizeDiff);
+        } else {
+            await this.updateQuota(oldTag.owner, -sizeDiff);
+            await this.updateQuota(tag.owner, sizeDiff);
+        }
+
+        return tag;
+    }
+
     async alias(tag, aliasTag, args, createOptions) {
         if (!aliasTag) {
             throw new TagError("Alias target doesn't exist");
@@ -158,6 +196,10 @@ class TagManager extends DBManager {
         if (create) {
             await this.tag_db.add(newTag);
         } else {
+            if (tag.isEqual(newTag)) {
+                throw new TagError("Can't alias tag with the same target and args");
+            }
+
             const oldTagSize = tag.getSize();
             sizeDiff -= oldTagSize;
 
@@ -176,10 +218,26 @@ class TagManager extends DBManager {
 
         const tagSize = tag.getSize();
 
+        await this.tag_db.chown(tag, newOwner);
+
         await this.updateQuota(tag.owner, -tagSize);
         await this.updateQuota(newOwner, tagSize);
 
-        await this.tag_db.chown(tag, newOwner);
+        return tag;
+    }
+
+    async rename(tag, newName) {
+        if (!tag) {
+            throw new TagError("Tag doesn't exist");
+        }
+
+        const existingTag = await this.fetch(newName);
+
+        if (existingTag) {
+            throw new TagError("Tag already exists", existingTag);
+        }
+
+        await this.tag_db.rename(tag, newName);
 
         return tag;
     }
@@ -245,19 +303,19 @@ class TagManager extends DBManager {
         return await this.tag_db.quotaFetch(user);
     }
 
-    async updateQuota(user, difference) {
-        if (difference === 0) {
+    async updateQuota(user, diff) {
+        if (diff === 0) {
             return;
         }
 
-        let currentQuota = await this.tag_db.quotaFetch(user);
+        let currQuota = await this.tag_db.quotaFetch(user);
 
-        if (currentQuota === false) {
+        if (currQuota === false) {
             await this.tag_db.quotaCreate(user);
-            currentQuota = 0;
+            currQuota = 0;
         }
 
-        const newQuota = currentQuota + difference;
+        const newQuota = currQuota + diff;
 
         if (newQuota > this.maxQuota) {
             throw new TagError(`Maximum quota of ${this.maxQuota}kb has been exceeded`);

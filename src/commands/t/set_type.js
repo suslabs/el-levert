@@ -3,16 +3,16 @@ import Util from "../../util/Util.js";
 import { getClient } from "../../LevertClient.js";
 
 export default {
-    name: "delete",
-    aliases: ["remove"],
+    name: "set_type",
     parent: "tag",
     subcommand: true,
-    handler: async function (args, msg, perm) {
-        if (args.length === 0) {
-            return ":information_source: `t delete name`";
+    allowed: getClient().permManager.modLevel,
+    handler: async function (args) {
+        if (args.length < 2) {
+            return ":information_source: `t set_type name version/type`";
         }
 
-        const [t_name] = Util.splitArgs(args);
+        const [t_name, t_args] = Util.splitArgs(args);
 
         if (this.isSubName(t_name)) {
             return `:police_car: ${t_name} is a __command__, not a __tag__. You can't manipulate commands.`;
@@ -23,25 +23,23 @@ export default {
             return ":warning: " + e;
         }
 
+        let [type, version] = Util.splitArgs(t_args),
+            setVersion = type === "version";
+
         const tag = await getClient().tagManager.fetch(t_name);
 
         if (!tag) {
             return `:warning: Tag **${t_name}** doesn't exist.`;
         }
 
-        if (perm < getClient().permManager.modLevel && tag.owner !== msg.author.id) {
-            const owner = await getClient().findUserById(tag.owner),
-                out = ":warning: You can only delete your own tags.";
-
-            if (!owner) {
-                return `${out} Tag owner not found.`;
-            }
-
-            return `${out} Tag is owned by \`${owner.username}\`.`;
+        if (setVersion) {
+            tag.setVersion(version);
+        } else {
+            tag.setType(type);
         }
 
         try {
-            await getClient().tagManager.delete(tag);
+            await getClient().tagManager.updateProps(t_name, tag);
         } catch (err) {
             if (err.name === "TagError") {
                 return `:warning: ${err.message}.`;
@@ -50,6 +48,6 @@ export default {
             throw err;
         }
 
-        return `:white_check_mark: Deleted tag **${t_name}**.`;
+        return `:white_check_mark: Updated tag **${t_name}**.`;
     }
 };

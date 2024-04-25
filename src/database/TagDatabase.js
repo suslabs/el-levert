@@ -29,7 +29,7 @@ class TagDatabase extends SqliteDatabase {
     }
 
     async add(tag) {
-        tag.registered = Date.now();
+        tag.setRegistered();
 
         return await this.tagQueries.add.run({
             $hops: tag.getHopsString(),
@@ -43,9 +43,10 @@ class TagDatabase extends SqliteDatabase {
     }
 
     async edit(tag) {
-        tag.lastEdited = Date.now();
+        tag.setNew();
+        tag.setLastEdited();
 
-        const res = this.tagQueries.edit.run({
+        return await this.tagQueries.edit.run({
             $hops: tag.getHopsString(),
             $name: tag.name,
             $body: tag.body,
@@ -53,42 +54,56 @@ class TagDatabase extends SqliteDatabase {
             $lastEdited: tag.lastEdited,
             $type: tag.type
         });
+    }
 
-        if (res.changes > 0) {
-            return true;
-        }
-
-        return false;
+    async updateProps(name, tag) {
+        return await this.tagQueries.updateProps.run({
+            $tagName: name,
+            $hops: tag.getHopsString(),
+            $name: tag.name,
+            $body: tag.body,
+            $owner: tag.owner,
+            $args: tag.args,
+            $registered: tag.registered,
+            $lastEdited: tag.lastEdited,
+            $type: tag.type
+        });
     }
 
     async chown(tag, newOwner) {
-        tag.lastEdited = Date.now();
-        tag.owner = newOwner;
+        tag.setNew();
+        tag.setLastEdited();
 
-        const res = this.tagQueries.chown.run({
+        tag.setOwner(newOwner);
+
+        return await this.tagQueries.chown.run({
             $name: tag.name,
             $owner: tag.owner,
             $lastEdited: tag.lastEdited,
-            $type: tag.type | 1
+            $type: tag.type
         });
+    }
 
-        if (res.changes > 0) {
-            return true;
-        }
+    async rename(tag, newName) {
+        tag.setNew();
+        tag.setLastEdited();
 
-        return false;
+        const oldName = tag.name;
+        tag.setName(newName);
+
+        return await this.tagQueries.rename.run({
+            $oldName: oldName,
+            $hops: tag.getHopsString(),
+            $name: tag.name,
+            $lastEdited: tag.lastEdited,
+            $type: tag.type
+        });
     }
 
     async delete(tag) {
-        const res = await this.tagQueries.delete.run({
+        return await this.tagQueries.delete.run({
             $name: tag.name
         });
-
-        if (res.changes > 0) {
-            return true;
-        }
-
-        return false;
     }
 
     async dump() {
