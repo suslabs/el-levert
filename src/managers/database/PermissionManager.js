@@ -40,6 +40,8 @@ class PermissionManager extends DBManager {
         if (isNaN(level) || level < 0) {
             throw new PermissionError("Invalid level");
         }
+
+        return true;
     }
 
     isOwner(id) {

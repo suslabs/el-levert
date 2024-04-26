@@ -79,6 +79,7 @@ class ReminderManager extends DBManager {
 
     async removeAll(user) {
         const res = await this.remind_db.removeAll(user);
+
         return res.changes > 0;
     }
 
