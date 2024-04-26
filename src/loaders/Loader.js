@@ -27,7 +27,7 @@ function _load(...args) {
     }
 }
 
-async function _write(data, ...args) {
+function _write(data, ...args) {
     if (typeof this.childWrite !== "function") {
         return LoadStatus.successful;
     }
