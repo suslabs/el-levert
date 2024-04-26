@@ -5,7 +5,7 @@ import UserTracker from "./tracker/UserTracker.js";
 
 import { getLogger } from "../LevertClient.js";
 
-function execute(msg) {
+function _execute(msg) {
     if (!this.enabled) {
         return false;
     }
@@ -32,7 +32,7 @@ function _delete(msg) {
     return deleteFunc(msg);
 }
 
-function resubmit(msg) {
+function _resubmit(msg) {
     if (!this.enabled) {
         return false;
     }
@@ -63,13 +63,13 @@ class Handler {
         this.options = options;
 
         this.childExecute = this.execute;
-        this.execute = execute.bind(this);
+        this.execute = _execute.bind(this);
 
         this.childDelete = this.delete;
         this.delete = _delete.bind(this);
 
         this.childResubmit = this.resubmit;
-        this.resubmit = resubmit.bind(this);
+        this.resubmit = _resubmit.bind(this);
     }
 
     defaultDelete() {
@@ -125,8 +125,8 @@ class Handler {
         }
 
         if (this.hasUserTracker) {
-            const userCheckInterval = this.options.userCheckInterval ?? 0;
-            this.userTracker = new UserTracker(userCheckInterval);
+            const userSweepInterval = this.options.userSweepInterval ?? 0;
+            this.userTracker = new UserTracker(userSweepInterval);
         }
     }
 
@@ -137,7 +137,7 @@ class Handler {
 
         if (this.hasUserTracker) {
             this.userTracker.clearUsers();
-            this.userTracker.clearCheckInterval();
+            this.userTracker.clearSweepInterval();
         }
     }
 }

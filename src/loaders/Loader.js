@@ -4,7 +4,7 @@ import LoadStatus from "./LoadStatus.js";
 import Util from "../util/Util.js";
 import { isPromise } from "../util/TypeTester.js";
 
-function load(...args) {
+function _load(...args) {
     let loadingMessage;
 
     if (typeof this.getLoadingMessage === "function") {
@@ -27,7 +27,7 @@ function load(...args) {
     }
 }
 
-async function write(data, ...args) {
+async function _write(data, ...args) {
     if (typeof this.childWrite !== "function") {
         return LoadStatus.successful;
     }
@@ -76,10 +76,10 @@ class Loader {
         this.result = {};
 
         this.childLoad = this.load;
-        this.load = load.bind(this);
+        this.load = _load.bind(this);
 
         this.childWrite = this.write;
-        this.write = write.bind(this);
+        this.write = _write.bind(this);
     }
 
     getName(capitalized = false) {

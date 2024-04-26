@@ -12,7 +12,7 @@ function logUsage(msg, name, args) {
 class CommandHandler extends Handler {
     constructor() {
         super(true, true, true, {
-            userCheckInterval: 10000
+            userSweepInterval: 10000
         });
 
         this.outCharLimit = Util.clamp(getClient().config.outCharLimit, 0, 2000);

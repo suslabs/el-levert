@@ -118,18 +118,18 @@ class ReminderManager extends DBManager {
         }
 
         const sendFunc = this.sendReminders.bind(this);
-        this.sendInterval = setInterval(sendFunc, this.sendDelay);
+        this.sendTimer = setInterval(sendFunc, this.sendDelay);
 
         getLogger().info("Started reminder loop.");
     }
 
     stopSendLoop() {
-        if (typeof this.sendInterval === "undefined") {
+        if (typeof this.sendTimer === "undefined") {
             return;
         }
 
-        clearInterval(this.sendInterval);
-        delete this.sendInterval;
+        clearInterval(this.sendTimer);
+        delete this.sendTimer;
 
         getLogger().info("Stopped reminder loop.");
     }

@@ -1,25 +1,25 @@
 import TrackedUser from "./TrackedUser.js";
 
-function checkUsers() {
+function sweepUsers() {
     for (const user of this.trackedUsers) {
         const timeDiff = Date.now() - user.time;
 
-        if (timeDiff > this.checkInterval) {
+        if (timeDiff > this.sweepInterval) {
             this.removeUser(user.id);
         }
     }
 }
 
 class UserTracker {
-    constructor(checkInterval = 0) {
-        this.checkInterval = checkInterval;
+    constructor(sweepInterval = 0) {
+        this.sweepInterval = sweepInterval;
         this.trackedUsers = [];
 
-        const enableChecks = checkInterval > 0;
+        const enableChecks = sweepInterval > 0;
         this.enableChecks = enableChecks;
 
         if (enableChecks) {
-            this.setCheckInterval();
+            this.setSweepInterval();
         }
     }
 
@@ -42,14 +42,22 @@ class UserTracker {
         }
     }
 
-    setCheckInterval() {
-        const checkUsersFunc = checkUsers.bind(this);
-        this.checkTimer = setInterval(checkUsersFunc, this.checkInterval);
+    setSweepInterval() {
+        if (typeof this.sweepTimer !== "undefined") {
+            this.clearSweepInterval();
+        }
+
+        const sweepUsersFunc = sweepUsers.bind(this);
+        this.sweepTimer = setInterval(sweepUsersFunc, this.sweepInterval);
     }
 
-    clearCheckInterval() {
-        clearInterval(this.checkTimer);
-        delete this.checkTimer;
+    clearSweepInterval() {
+        if (typeof this.sweepTimer === "undefined") {
+            return;
+        }
+
+        clearInterval(this.sweepTimer);
+        delete this.sweepTimer;
     }
 }
 

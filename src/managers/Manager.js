@@ -1,6 +1,6 @@
 import ManagerError from "../errors/ManagerError.js";
 
-function load(...args) {
+function _load(...args) {
     if (!this.enabled) {
         return;
     }
@@ -8,7 +8,7 @@ function load(...args) {
     return this.childLoad(...args);
 }
 
-function unload(...args) {
+function _unload(...args) {
     if (!this.enabled) {
         return;
     }
@@ -29,10 +29,10 @@ class Manager {
         this.enabled = enabled;
 
         this.childLoad = this.load;
-        this.load = load.bind(this);
+        this.load = _load.bind(this);
 
         this.childUnload = this.unload;
-        this.unload = unload.bind(this);
+        this.unload = _unload.bind(this);
     }
 }
 
