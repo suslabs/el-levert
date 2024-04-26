@@ -1,5 +1,5 @@
-import createLogger from "./logger/CreateLogger.js";
-import getDefaultLoggerConfig from "./logger/DefaultConfig.js";
+import createLogger from "./logger/createLogger.js";
+import getDefaultLoggerConfig from "./logger/getDefaultLoggerConfig.js";
 
 import loadConfig from "./config/loadConfig.js";
 import { LevertClient } from "./LevertClient.js";

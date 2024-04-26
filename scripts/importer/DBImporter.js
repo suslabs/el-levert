@@ -3,8 +3,8 @@ import fs from "fs/promises";
 
 import TagDatabase from "../../src/database/TagDatabase.js";
 
-import createLogger from "../../src/logger/CreateLogger.js";
-import getDefaultLoggerConfig from "../../src/logger/DefaultConfig.js";
+import createLogger from "../../src/logger/createLogger.js";
+import getDefaultLoggerConfig from "../../src/logger/getDefaultLoggerConfig.js";
 
 import config from "../../config/config.json" assert { type: "json" };
 import Util from "../../src/util/Util.js";
