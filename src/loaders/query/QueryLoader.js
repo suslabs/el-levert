@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 
 import DirectoryLoader from "../DirectoryLoader.js";
 import QueryFileLoader from "./QueryFileLoader.js";
@@ -6,7 +6,7 @@ import LoadStatus from "../LoadStatus.js";
 
 function getCategory(filePath, rootPath) {
     let categoryDir = path.dirname(filePath);
-    categoryDir = categoryDir.slice(rootPath.length);
+    categoryDir = categoryDir.substring(rootPath.length);
 
     let categoryName = categoryDir.split(path.sep)[0];
 

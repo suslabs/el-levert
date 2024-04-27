@@ -12,13 +12,13 @@ const fileFormat = [
     "json",
     {
         name: "timestamp",
-        prop: {
+        opts: {
             format: "YYYY-MM-DD HH:mm:ss"
         }
     },
     {
         name: "errors",
-        prop: {
+        opts: {
             stack: true
         }
     }
@@ -28,19 +28,19 @@ const consoleFormat = [
     "colorize",
     {
         name: "timestamp",
-        prop: {
+        opts: {
             format: "YYYY-MM-DD HH:mm:ss"
         }
     },
     {
         name: "errors",
-        prop: {
+        opts: {
             stack: true
         }
     },
     {
         name: "printf",
-        prop: printfTemplate
+        opts: printfTemplate
     }
 ];
 

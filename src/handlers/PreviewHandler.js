@@ -1,4 +1,5 @@
 import { EmbedBuilder, hyperlink } from "discord.js";
+import { MIMEType } from "node:util";
 
 import Handler from "./Handler.js";
 import HandlerError from "../errors/HandlerError.js";
@@ -51,7 +52,7 @@ class PreviewHandler extends Handler {
             split = content.split("\n");
 
         if (content.length > this.outCharLimit) {
-            content = content.slice(0, this.outCharLimit) + "...";
+            content = content.substring(0, this.outCharLimit) + "...";
         }
 
         if (split.length > this.outNewlineLimit) {

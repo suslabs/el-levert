@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 
 import Loader from "./Loader.js";
 import FileLoader from "./FileLoader.js";

@@ -4,7 +4,7 @@ import ClientError from "./errors/ClientError.js";
 import version from "../version.js";
 
 import createLogger from "./logger/createLogger.js";
-import getDefaultLoggerConfig from "./logger/getDefaultLoggerConfig.js";
+import getDefaultLoggerConfig from "./logger/DefaultLoggerConfig.js";
 
 import wrapEvent from "./client/wrapEvent.js";
 import executeAllHandlers from "./client/executeAllHandlers.js";

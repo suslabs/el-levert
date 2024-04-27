@@ -11,7 +11,7 @@ const ResultProxyHandler = {
                 return target[prop];
             case "string":
                 if (prop.startsWith("_")) {
-                    const privProp = prop.slice(1);
+                    const privProp = prop.substring(1);
 
                     if (privProp === targetProp) {
                         return target;
@@ -51,7 +51,7 @@ const ResultProxyHandler = {
                 return true;
             case "string":
                 if (prop.startsWith("_")) {
-                    const privProp = prop.slice(1);
+                    const privProp = prop.substring(1);
 
                     if (privProp === targetProp || dataProps.includes(privProp)) {
                         return false;

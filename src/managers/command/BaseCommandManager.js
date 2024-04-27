@@ -22,7 +22,7 @@ class BaseCommandManager extends Manager {
     }
 
     getCommand(str) {
-        const content = str.slice(this.commandPrefix.length),
+        const content = str.substring(this.commandPrefix.length),
             [name, args] = Util.splitArgs(content);
 
         const cmd = this.searchCommands(name);

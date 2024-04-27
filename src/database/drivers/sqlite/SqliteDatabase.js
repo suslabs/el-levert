@@ -1,5 +1,5 @@
 import sqlite from "sqlite3";
-import EventEmitter from "events";
+import EventEmitter from "node:events";
 
 import StatementDatabase from "../common/StatementDatabase.js";
 

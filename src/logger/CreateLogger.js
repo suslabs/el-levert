@@ -1,64 +1,16 @@
 import winston from "winston";
-import path from "path";
+import path from "node:path";
 
 import CreateLoggerError from "../errors/CreateLoggerError.js";
 
-const validForm = Object.getOwnPropertyNames(winston.format).filter(x => !["length", "combine"].includes(x));
-
-function getFormat(names) {
-    if (names === undefined) {
-        return winston.format.simple();
-    } else if (typeof names === "string") {
-        names = [names];
-    }
-
-    const formats = names.map(x => {
-        let name, prop;
-
-        if (typeof x === "object") {
-            ({ name: name, prop: prop } = x);
-        } else {
-            name = x;
-        }
-
-        if (!validForm.includes(name)) {
-            throw new CreateLoggerError("Invalid format: " + x);
-        }
-
-        return winston.format[name](prop);
-    });
-
-    return winston.format.combine(...formats);
-}
-
-const enumerateErrorFormat = winston.format(info => {
-    if (info.message instanceof Error) {
-        info.message = Object.assign(
-            {
-                message: info.message.message,
-                stack: info.message.stack
-            },
-            info.message
-        );
-    }
-
-    if (info instanceof Error) {
-        return Object.assign(
-            {
-                message: info.message,
-                stack: info.stack
-            },
-            info
-        );
-    }
-
-    return info;
-});
+import getFormat from "./getFormat.js";
+import getGlobalFormat from "./GlobalFormat.js";
 
 function getFilename(name) {
     const file = path.basename(name),
-        dir = path.dirname(name),
-        date = new Date().toISOString().substring(0, 10);
+        dir = path.dirname(name);
+
+    const date = new Date().toISOString().substring(0, 10);
 
     return path.join(dir, date + "-" + file);
 }
@@ -124,7 +76,7 @@ function createLogger(config) {
 
     const logger = winston.createLogger({
         level,
-        format: enumerateErrorFormat(),
+        format: getGlobalFormat(),
         transports,
         defaultMeta: meta
     });

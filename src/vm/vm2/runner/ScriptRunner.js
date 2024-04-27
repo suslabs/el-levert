@@ -1,7 +1,7 @@
 import { NodeVM } from "vm2";
-import net from "net";
-import crypto from "crypto";
-import path from "path";
+import net from "node:net";
+import crypto from "node:crypto";
+import path from "node:path";
 
 import VMUtil from "../../util/VMUtil.js";
 

@@ -1,12 +1,12 @@
-import { Buffer } from "buffer";
+import { Buffer } from "node:buffer";
 import { AttachmentBuilder } from "discord.js";
 import cloneDeep from "lodash.clonedeep";
 
-import syncFs, { fstat } from "fs";
-import fs from "fs/promises";
+import syncFs from "node:fs";
+import fs from "node:fs/promises";
 
-import path from "path";
-import URL from "url";
+import path from "node:path";
+import URL from "node:url";
 
 const Util = {
     getFilesRecSync: dir_path => {
@@ -59,8 +59,8 @@ const Util = {
             name = str;
             args = "";
         } else {
-            name = str.slice(0, ind);
-            args = str.slice(ind + 1);
+            name = str.substring(0, ind);
+            args = str.substring(ind + 1);
         }
 
         return [name.toLowerCase(), args];

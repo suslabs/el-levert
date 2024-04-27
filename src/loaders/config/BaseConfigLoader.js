@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 
 import JsonLoader from "../JsonLoader.js";
 import LoadStatus from "../LoadStatus.js";

@@ -1,6 +1,6 @@
-import { spawn } from "child_process";
-import net from "net";
-import crypto from "crypto";
+import { spawn } from "node:child_process";
+import net from "node:net";
+import crypto from "node:crypto";
 import genericPool from "generic-pool";
 
 import VMUtil from "../../../util/vm/VMUtil.js";

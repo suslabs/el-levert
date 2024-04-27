@@ -1,5 +1,5 @@
 import mysql from "mysql";
-import EventEmitter from "events";
+import EventEmitter from "node:events";
 
 import MysqlResult from "./MysqlResult.js";
 import ConnectionEvents from "./ConnectionEvents.js";
