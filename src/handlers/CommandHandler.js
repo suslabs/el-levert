@@ -4,9 +4,21 @@ import { getClient, getLogger } from "../LevertClient.js";
 import Util from "../util/Util.js";
 
 function logUsage(msg, name, args) {
+    const cmdArgs = args.length > 0 ? ` with args:${Util.formatLog(args)}` : ".";
+
     getLogger().info(
-        `User ${msg.author.id} ("${msg.author.username}") used command ${name} in channel ${msg.channel.id} ("${msg.channel.name}").`
+        `User ${msg.author.id} (${msg.author.username}) used command "${name}" in channel ${msg.channel.id} (${msg.channel.name})${cmdArgs}`
     );
+}
+
+function logOutput(cmd, out) {
+    const cmdOut = typeof out === "object" ? JSON.stringify(out) : out;
+
+    getLogger().info(`Command "${cmd.name}" returned:${Util.formatLog(cmdOut)}`);
+}
+
+function logTime(t1) {
+    getLogger().info(`Command execution took ${(Date.now() - t1).toLocaleString()}ms.`);
 }
 
 class CommandHandler extends Handler {
@@ -53,10 +65,8 @@ class CommandHandler extends Handler {
 
         try {
             const t1 = Date.now();
-
             out = await cmd.execute(args, msg);
-
-            getLogger().info(`Command execution took ${(Date.now() - t1).toLocaleString()} ms.`);
+            logTime(t1);
         } catch (err1) {
             getLogger().error("Command execution failed:", err1);
 
@@ -81,6 +91,8 @@ class CommandHandler extends Handler {
                 out = Util.getFileAttach(out);
             }
         }
+
+        logOutput(cmd, out);
 
         try {
             const reply = await msg.reply(out);

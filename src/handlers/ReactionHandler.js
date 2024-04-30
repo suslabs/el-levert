@@ -5,6 +5,32 @@ import Util from "../util/Util.js";
 
 const emojiChars = ":;=-x+";
 
+function logParansUsage(msg, count) {
+    getLogger().info(
+        `Reacting with ${count} parans to message sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${msg.channel.name}).`
+    );
+}
+
+function logWordsUsage(msg, words) {
+    getLogger().info(
+        `Reacting to words: "${words.join('", "')}" sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${msg.channel.name}).`
+    );
+}
+
+function logReactTime(t1) {
+    getLogger().info(`Reacting took ${(Date.now() - t1).toLocaleString()}ms.`);
+}
+
+function logRemove(msg, count) {
+    getLogger().info(
+        `Removing ${count} reactions from message ${msg.id} sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${msg.channel.name}).`
+    );
+}
+
+function logRemoveTime(t1) {
+    getLogger().info(`Removing reactions took ${(Date.now() - t1).toLocaleString()}ms.`);
+}
+
 class ReactionHandler extends Handler {
     constructor() {
         super(getClient().reactions.enableReacts, false);
@@ -17,11 +43,13 @@ class ReactionHandler extends Handler {
         let parans = 0,
             isEmoji = false;
 
-        str.split("").forEach(c => {
-            if (emojiChars.includes(c)) {
+        const split = str.split("");
+
+        for (const char of split) {
+            if (emojiChars.includes(char)) {
                 isEmoji = true;
             } else {
-                switch (c) {
+                switch (char) {
                     case "(":
                         if (isEmoji) {
                             return 0;
@@ -41,9 +69,9 @@ class ReactionHandler extends Handler {
                         break;
                 }
             }
-        });
+        }
 
-        const count = Math.min(Math.max(parans, -this.parans.left.length), this.parans.right.length);
+        const count = Util.clamp(parans, -this.parans.left.length, this.parans.right.length);
         return isEmoji ? 0 : count;
     }
 
@@ -52,7 +80,14 @@ class ReactionHandler extends Handler {
             return;
         }
 
-        let parans = this.countParans(msg.content);
+        const t1 = Date.now(),
+            parans = this.countParans(msg.content);
+
+        if (parans === 0) {
+            return;
+        }
+
+        logParansUsage(parans);
 
         if (parans > 0) {
             try {
@@ -63,16 +98,16 @@ class ReactionHandler extends Handler {
                 getLogger().error("Failed to react to message.", err);
             }
         } else if (parans < 0) {
-            parans = Math.abs(parans);
-
             try {
-                for (let i = 0; i < parans; i++) {
+                for (let i = 0; i < Math.abs(parans); i++) {
                     await msg.react(this.parans.left[i]);
                 }
             } catch (err) {
                 getLogger().error("Failed to react to message.", err);
             }
         }
+
+        logReactTime(t1);
     }
 
     findWord(word) {
@@ -101,27 +136,43 @@ class ReactionHandler extends Handler {
         return;
     }
 
-    async funnyReact(msg) {
-        let content = msg.content.toLowerCase();
-        content = content.normalize("NFKD");
+    getWords(str) {
+        let normStr = str.toLowerCase();
+        normStr = str.normalize("NFKD");
 
-        const words = content.split(" ");
+        const split = normStr.split(" "),
+            words = [];
+
+        for (const w of split) {
+            const word = this.findWord(w);
+
+            if (typeof word !== "undefined") {
+                words.push(word);
+            }
+        }
+
+        return words;
+    }
+
+    async funnyReact(msg) {
+        const t1 = Date.now(),
+            words = this.getWords(msg.content);
+
+        logWordsUsage(msg, words);
 
         try {
-            for (const w of words) {
-                const word = this.findWord(w);
+            for (const word of words) {
+                const react = this.getReact(word);
 
-                if (typeof word !== "undefined") {
-                    const react = this.getReact(word);
-
-                    if (typeof react !== "undefined") {
-                        await msg.react(react);
-                    }
+                if (typeof react !== "undefined") {
+                    await msg.react(react);
                 }
             }
         } catch (err) {
-            getLogger().error("Failed to react to message.", err);
+            getLogger().error("Failed to react to message", err);
         }
+
+        logReactTime(t1);
     }
 
     async execute(msg) {
@@ -130,20 +181,25 @@ class ReactionHandler extends Handler {
     }
 
     async removeReacts(msg) {
-        const botId = getClient().client.user.id,
+        const t1 = Date.now(),
+            botId = getClient().client.user.id,
             botReacts = msg.reactions.cache.filter(react => react.users.cache.has(botId));
 
         if (botReacts.size < 1) {
             return;
         }
 
+        logRemove(msg, botReacts.size);
+
         try {
             for (const react of botReacts.values()) {
                 await react.users.remove(botId);
             }
         } catch (err) {
-            getLogger().error("Failed to remove reactions from message.", err);
+            getLogger().error("Failed to remove reactions from message", err);
         }
+
+        logRemoveTime(t1);
     }
 
     async resubmit(msg) {

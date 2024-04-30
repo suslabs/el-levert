@@ -9,6 +9,16 @@ import Util from "../util/Util.js";
 const msgUrlRegex =
     /(?:(https?):\/\/)?(?:(www|ptb)\.)?discord\.com\/channels\/(?<sv_id>\d{18,19}|@me)\/(?<ch_id>\d{18,19})(?:\/(?<msg_id>\d{18,19}))/;
 
+function logUsage(msg, str) {
+    getLogger().info(
+        `Generating preview for "${str.match(msgUrlRegex)[0]}", issued by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${msg.channel.name}).`
+    );
+}
+
+function logTime(t1) {
+    getLogger().info(`Preview generation took ${(Date.now() - t1).toLocaleString()}ms.`);
+}
+
 class PreviewHandler extends Handler {
     constructor() {
         super(true, true);
@@ -30,7 +40,10 @@ class PreviewHandler extends Handler {
     }
 
     async genPreview(msg, str) {
-        const match = str.match(msgUrlRegex);
+        logUsage(msg, str);
+
+        const t1 = Date.now(),
+            match = str.match(msgUrlRegex);
 
         if (!match) {
             throw new HandlerError("Invalid input string");
@@ -110,6 +123,7 @@ class PreviewHandler extends Handler {
                 text: `From ${channel}`
             });
 
+        logTime(t1);
         return embed;
     }
 
@@ -134,8 +148,7 @@ class PreviewHandler extends Handler {
 
             this.messageTracker.addMsg(reply, msg.id);
 
-            getLogger().error("Preview gen failed", err);
-
+            getLogger().error("Preview generation failed", err);
             return false;
         }
 
@@ -156,7 +169,6 @@ class PreviewHandler extends Handler {
             this.messageTracker.addMsg(reply, msg.id);
 
             getLogger().error("Reply failed", err);
-
             return false;
         }
 

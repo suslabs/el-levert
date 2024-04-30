@@ -10,6 +10,7 @@ const inspectorUrl = "devtools://devtools/bundled/inspector.html",
     };
 
 function listener(socket) {
+    getLogger().info("Inspector server: Recieved connection.");
     this.inspectorSocket = socket;
 
     if (this.inspectorContext === null) {
@@ -20,16 +21,20 @@ function listener(socket) {
     this.connectInspector();
 
     socket.on("error", err => {
-        getLogger().error(err);
+        getLogger().error("Inspector websocket error: ", err);
         this.disconnectInspector();
     });
 
     socket.on("close", code => {
-        getLogger().info(`Websocket closed: ${JSON.stringify(code)}`);
+        getLogger().info(`Inspector websocket closed: ${JSON.stringify(code)}`);
         this.disconnectInspector();
     });
 
     socket.on("message", msg => {
+        if (this.logPackets) {
+            getLogger().info(`Recieved: ${msg}`);
+        }
+
         try {
             this.inspectorContext?.inspector.sendMessage(msg);
         } catch (err) {
@@ -44,20 +49,25 @@ function sendReply(msg) {
         return;
     }
 
+    if (this.logPackets) {
+        etLogger().info(`Sending: ${msg}`);
+    }
+
     this.inspectorSocket.send(msg);
 }
 
 class InspectorServer {
-    constructor(enable, port) {
+    constructor(enable, port, options = {}) {
         this.enable = enable;
         this.port = port;
 
+        this.logPackets = options.logPackets ?? false;
+
+        this.sendReply = sendReply.bind(this);
         this.inspectorContext = null;
         this.inspectorSocket = null;
 
         this.running = false;
-
-        this.sendReply = sendReply.bind(this);
     }
 
     getInspectorUrl() {
@@ -82,6 +92,8 @@ class InspectorServer {
         if (!this.enable) {
             return;
         }
+
+        getLogger().info("Setting up inspector server...");
 
         this.websocketServer = new WebSocket.Server({
             port: this.port
@@ -130,6 +142,8 @@ class InspectorServer {
         if (this.inspectorSocket.readyState !== WebSocket.CLOSED) {
             this.inspectorSocket.close();
         }
+
+        getLogger.info("Closed inspector socket.");
     }
 
     deleteReferences() {
@@ -157,6 +171,8 @@ class InspectorServer {
 
         this.websocketServer.close();
         this.deleteReferences();
+
+        getLogger().info("Closed inspector server.");
     }
 }
 

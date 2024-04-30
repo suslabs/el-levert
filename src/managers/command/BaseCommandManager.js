@@ -1,4 +1,5 @@
 import Manager from "../Manager.js";
+import Command from "../../structures/Command.js";
 
 import CommandLoader from "../../loaders/command/CommandLoader.js";
 import LoadStatus from "../../loaders/LoadStatus.js";
@@ -86,7 +87,7 @@ class BaseCommandManager extends Manager {
         let num = 1;
 
         for (const [i, name] of sortedNames.entries()) {
-            const formattedName = Util.capitalize(name).replaceAll(/[_-]/, " ");
+            const formattedName = Util.capitalize(name).replaceAll(/[_-]/g, " ");
             let header;
 
             if (name === Command.defaultValues.category) {

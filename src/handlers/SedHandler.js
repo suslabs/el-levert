@@ -9,6 +9,16 @@ import Util from "../util/Util.js";
 const sedRegex = /^sed\/(.+?)\/([^/]*)\/?(.{1,2})?/,
     sedUsage = "Usage: sed/regex/replace/flags (optional)";
 
+function logUsage(msg) {
+    getLogger().info(
+        `Generating sed for "${msg.content}", issued by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${msg.channel.name}).`
+    );
+}
+
+function logTime(t1) {
+    getLogger().info(`Sed generation took ${(Date.now() - t1).toLocaleString()}ms.`);
+}
+
 class SedHandler extends Handler {
     constructor() {
         super(getClient().config.enableSed, true);
@@ -45,7 +55,10 @@ class SedHandler extends Handler {
     }
 
     async genSed(msg, str) {
-        const match = str.match(sedRegex);
+        logUsage(msg);
+
+        const t1 = Date.now(),
+            match = str.match(sedRegex);
 
         if (!match) {
             throw new HandlerError("Invalid input string");
@@ -96,6 +109,7 @@ class SedHandler extends Handler {
                 text: `From ${channel}`
             });
 
+        logTime(t1);
         return embed;
     }
 

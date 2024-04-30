@@ -24,6 +24,8 @@ class IsolateInspector {
             return;
         }
 
+        getLogger().info("Creating inspector channel...");
+
         if (typeof isolate === "undefined") {
             isolate = this.isolate;
         } else {
@@ -44,6 +46,7 @@ class IsolateInspector {
         channel.onResponse = (_, msg) => wrappedReply(msg);
         channel.onNotification = wrappedReply;
 
+        getLogger().info("Created channel.");
         this.channel = channel;
     }
 

@@ -24,7 +24,6 @@ class EventLoader extends DirectoryLoader {
         }
 
         this.getEvents();
-
         this.wrapEvents();
         this.registerEvents();
 

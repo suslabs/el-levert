@@ -148,6 +148,13 @@ const Util = {
             ...source,
             ...values
         });
+    },
+    formatLog(str, maxLength = 80) {
+        if (str.length <= maxLength) {
+            return " " + str;
+        }
+
+        return `\n---\n${str}\n---`;
     }
 };
 
