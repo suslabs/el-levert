@@ -150,11 +150,19 @@ const Util = {
         });
     },
     formatLog(str, maxLength = 80) {
-        if (str.length <= maxLength) {
+        if (typeof str === "object") {
+            str = JSON.stringify(str);
+        }
+
+        if (str.length > maxLength) {
+            return `\n---\n${str}\n---`;
+        }
+
+        if (str.startsWith('"') && str.endsWith('"')) {
             return " " + str;
         }
 
-        return `\n---\n${str}\n---`;
+        return ` "${str}"`;
     }
 };
 

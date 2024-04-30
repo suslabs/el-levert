@@ -46,7 +46,7 @@ class TagVM {
                 getLogger().err(`VM error: ${err.message}`);
                 return `:no_entry_sign: ${err.message}.`;
             case "ExitError":
-                getLogger().err(`Returning exit data:${Util.formatLog(JSON.stringify(err.exitData))}`);
+                getLogger().err(`Returning exit data:${Util.formatLog(err.exitData)}`);
                 return err.exitData;
             case "ManevraError":
                 getLogger().err(`Returning reply data:${Util.formatLog(err.message)}`);

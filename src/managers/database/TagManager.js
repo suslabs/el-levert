@@ -6,7 +6,8 @@ import TagDatabase from "../../database/TagDatabase.js";
 import Tag from "../../structures/tag/Tag.js";
 import TagError from "../../errors/TagError.js";
 
-import { getClient } from "../../LevertClient.js";
+import { getClient, getLogger } from "../../LevertClient.js";
+import Util from "../../util/Util.js";
 import search from "../../util/search/uFuzzySearch.js";
 
 class TagManager extends DBManager {
@@ -97,6 +98,7 @@ class TagManager extends DBManager {
         await this.tag_db.add(tag);
         await this.updateQuota(owner, tagSize);
 
+        getLogger().info(`Added tag: "${name}" with type: "${type}", body:${Util.formatLog(body)}`);
         return tag;
     }
 
@@ -127,6 +129,7 @@ class TagManager extends DBManager {
         await this.tag_db.edit(newTag);
         await this.updateQuota(tag.owner, sizeDiff);
 
+        getLogger().info(`Edited tag: "${tag.name}" with type: "${type}", body:${Util.formatLog(body)}`);
         return newTag;
     }
 
@@ -164,6 +167,7 @@ class TagManager extends DBManager {
             await this.updateQuota(tag.owner, sizeDiff);
         }
 
+        getLogger().info(`Updated tag: "${oldTag.name}" with data:${Util.formatLog(tag)}`);
         return tag;
     }
 
@@ -211,6 +215,7 @@ class TagManager extends DBManager {
 
         await this.updateQuota(tag.owner, sizeDiff);
 
+        getLogger().info(`Aliased tag: "${name}" to: "${aliasTag.name}".`);
         return [newTag, create];
     }
 
@@ -226,6 +231,7 @@ class TagManager extends DBManager {
         await this.updateQuota(tag.owner, -tagSize);
         await this.updateQuota(newOwner, tagSize);
 
+        getLogger().info(`Transferred tag: "${tag.name}" to: ${newOwner}`);
         return tag;
     }
 
@@ -240,8 +246,10 @@ class TagManager extends DBManager {
             throw new TagError("Tag already exists", existingTag);
         }
 
+        const oldName = tag.name;
         await this.tag_db.rename(tag, newName);
 
+        getLogger.info(`Renamed tag: "${oldName}" to: "${newName}"`);
         return tag;
     }
 
@@ -255,6 +263,7 @@ class TagManager extends DBManager {
         await this.updateQuota(tag.owner, -tagSize);
         await this.tag_db.delete(tag);
 
+        getLogger().info(`Deleted tag: "${tag.name}".`);
         return tag;
     }
 
@@ -325,6 +334,7 @@ class TagManager extends DBManager {
         }
 
         await this.tag_db.quotaSet(user, newQuota);
+        getLogger().info(`Updated quota for: ${user} diff: ${diff}`);
     }
 
     async downloadBody(msg) {

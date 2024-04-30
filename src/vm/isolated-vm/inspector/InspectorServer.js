@@ -2,6 +2,7 @@ import { URL, URLSearchParams } from "node:url";
 import WebSocket from "ws";
 
 import { getLogger } from "../../../LevertClient.js";
+import Util from "../../../util/Util.js";
 
 const inspectorUrl = "devtools://devtools/bundled/inspector.html",
     inspectorOptions = {
@@ -26,7 +27,7 @@ function listener(socket) {
     });
 
     socket.on("close", code => {
-        getLogger().info(`Inspector websocket closed: ${JSON.stringify(code)}`);
+        getLogger().info(`Inspector websocket closed:${Util.formatLog(code)}`);
         this.disconnectInspector();
     });
 

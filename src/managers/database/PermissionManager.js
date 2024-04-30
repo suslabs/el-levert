@@ -7,7 +7,7 @@ import User from "../../structures/permission/User.js";
 
 import PermissionError from "../../errors/PermissionError.js";
 
-import { getClient } from "../../LevertClient.js";
+import { getClient, getLogger } from "../../LevertClient.js";
 
 const groupNameRegex = /^[A-Za-z0-9\-_]+$/;
 
@@ -134,6 +134,7 @@ class PermissionManager extends DBManager {
 
         await this.perm_db.add(group, user);
 
+        getLogger().info(`Added user: ${id} to group: "${group}".`);
         return user;
     }
 
@@ -149,6 +150,7 @@ class PermissionManager extends DBManager {
         const user = new User({ user: id }),
             res = await this.perm_db.remove(group, user);
 
+        getLogger().info(`Removed user: ${id} from group: "${group}".`);
         return res.changes > 0;
     }
 
@@ -156,6 +158,7 @@ class PermissionManager extends DBManager {
         const user = new User({ user: id }),
             res = await this.perm_db.removeAll(user);
 
+        getLogger().info(`Removed permissions for user: ${id}`);
         return res.changes > 0;
     }
 
@@ -179,6 +182,7 @@ class PermissionManager extends DBManager {
 
         await this.perm_db.addGroup(group);
 
+        getLogger().info(`Added group: "${name}" with level: ${level}`);
         return group;
     }
 
@@ -194,6 +198,7 @@ class PermissionManager extends DBManager {
         await this.perm_db.removeByGroup(group);
         await this.perm_db.removeGroup(group);
 
+        getLogger().info(`Removed group: "${group.name}"`);
         return group;
     }
 
@@ -234,6 +239,7 @@ class PermissionManager extends DBManager {
             await this.perm_db.transferUsers(group, newGroup);
         }
 
+        getLogger().info(`Updated group: "${group.name}" with name: "${newName}", level: ${newLevel}`);
         return newGroup;
     }
 

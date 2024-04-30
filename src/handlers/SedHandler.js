@@ -16,7 +16,7 @@ function logUsage(msg) {
 }
 
 function logSending(sed) {
-    getLogger().info(`Sending replaced message:${Util.formatLog(JSON.stringify(sed))}`);
+    getLogger().info(`Sending replaced message:${Util.formatLog(sed)}`);
 }
 
 function logGenTime(t1) {

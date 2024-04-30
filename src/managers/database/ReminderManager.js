@@ -10,14 +10,8 @@ import Util from "../../util/Util.js";
 const sendDelay = 1000,
     maxMsgLength = 512;
 
-function logSending(user) {
-    getLogger().info(`Sending reminder to ${user.id} (${user.username})...`);
-}
-
 function logTime(t1) {
-    function logTime(t1) {
-        getLogger().info(`Sending reminders took ${(Date.now() - t1).toLocaleString()}ms.`);
-    }
+    getLogger().info(`Sending reminders took ${(Date.now() - t1).toLocaleString()}ms.`);
 }
 
 class ReminderManager extends DBManager {
@@ -69,6 +63,7 @@ class ReminderManager extends DBManager {
 
         await this.remind_db.add(reminder);
 
+        getLogger().info(`Added reminder for user: ${user} until: ${end} with message:${Util.formatLog(msg)}`);
         return reminder;
     }
 
@@ -87,12 +82,14 @@ class ReminderManager extends DBManager {
 
         await this.remind_db.remove(reminder);
 
+        getLogger().info(`Removed reminder: ${index} for user: ${user}.`);
         return true;
     }
 
     async removeAll(user) {
         const res = await this.remind_db.removeAll(user);
 
+        getLogger().info(`Removed all reminders for user: ${user}`);
         return res.changes > 0;
     }
 
@@ -116,7 +113,7 @@ class ReminderManager extends DBManager {
 
         const out = "You set a reminder for " + reminder.format();
 
-        logSending(user);
+        getLogger().info(`Sending reminder to ${user.id} (${user.username})...`);
         await user.send(out);
     }
 

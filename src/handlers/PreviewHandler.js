@@ -16,7 +16,7 @@ function logUsage(msg, str) {
 }
 
 function logSending(preview) {
-    getLogger().info(`Sending preview:${Util.formatLog(JSON.stringify(preview))}`);
+    getLogger().info(`Sending preview:${Util.formatLog(preview)}`);
 }
 
 function logGenTime(t1) {
