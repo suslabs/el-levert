@@ -73,7 +73,7 @@ async function getPreview(out, msg) {
     try {
         preview = await getClient().previewHandler.genPreview(msg, out);
     } catch (err) {
-        getLogger().error("Preview gen failed", err);
+        getLogger().error("Preview gen failed:", err);
     }
 
     if (!preview) {

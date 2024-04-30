@@ -21,7 +21,7 @@ function listener(socket) {
     this.connectInspector();
 
     socket.on("error", err => {
-        getLogger().error("Inspector websocket error: ", err);
+        getLogger().error("Inspector websocket error:", err);
         this.disconnectInspector();
     });
 
@@ -38,7 +38,7 @@ function listener(socket) {
         try {
             this.inspectorContext?.inspector.sendMessage(msg);
         } catch (err) {
-            getLogger().error("Error sending message to inspector: ", err);
+            getLogger().error("Error sending message to inspector:", err);
             socket.close();
         }
     });

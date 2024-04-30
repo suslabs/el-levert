@@ -92,14 +92,14 @@ class Handler {
                 try {
                     await sent.delete();
                 } catch (err) {
-                    getLogger().error("Could not delete message", err);
+                    getLogger().error("Could not delete message:", err);
                 }
             }
         } else {
             try {
                 await sentMsg.delete();
             } catch (err) {
-                getLogger().error("Could not delete message", err);
+                getLogger().error("Could not delete message:", err);
             }
         }
 

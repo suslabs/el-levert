@@ -148,7 +148,7 @@ class PreviewHandler extends Handler {
 
             this.messageTracker.addMsg(reply, msg.id);
 
-            getLogger().error("Preview generation failed", err);
+            getLogger().error("Preview generation failed:", err);
             return false;
         }
 
@@ -168,7 +168,7 @@ class PreviewHandler extends Handler {
 
             this.messageTracker.addMsg(reply, msg.id);
 
-            getLogger().error("Reply failed", err);
+            getLogger().error("Reply failed:", err);
             return false;
         }
 

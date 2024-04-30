@@ -95,7 +95,7 @@ class ReactionHandler extends Handler {
                     await msg.react(this.parans.right[i]);
                 }
             } catch (err) {
-                getLogger().error("Failed to react to message.", err);
+                getLogger().error("Failed to react to message:", err);
             }
         } else if (parans < 0) {
             try {
@@ -103,7 +103,7 @@ class ReactionHandler extends Handler {
                     await msg.react(this.parans.left[i]);
                 }
             } catch (err) {
-                getLogger().error("Failed to react to message.", err);
+                getLogger().error("Failed to react to message:", err);
             }
         }
 
@@ -169,7 +169,7 @@ class ReactionHandler extends Handler {
                 }
             }
         } catch (err) {
-            getLogger().error("Failed to react to message", err);
+            getLogger().error("Failed to react to message:", err);
         }
 
         logReactTime(t1);
@@ -196,7 +196,7 @@ class ReactionHandler extends Handler {
                 await react.users.remove(botId);
             }
         } catch (err) {
-            getLogger().error("Failed to remove reactions from message", err);
+            getLogger().error("Failed to remove reactions from message:", err);
         }
 
         logRemoveTime(t1);
