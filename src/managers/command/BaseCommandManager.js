@@ -140,24 +140,18 @@ class BaseCommandManager extends Manager {
         this.commandLoader = commandLoader;
     }
 
-    bindSubcommand(command, subcommand) {
-        const find = this.commands.find(findCmd => {
-            return findCmd.name === subcommand && findCmd.parent === command.name;
+    bindSubcommand(command, subName) {
+        const subcommand = this.commands.find(cmd => {
+            return cmd.name === subName && cmd.parent === command.name;
         });
 
-        if (typeof find === "undefined") {
-            getLogger().warn(`Subcommand "${subcommand}" of command "${command.name}" not found.`);
+        if (typeof subcommand === "undefined") {
+            getLogger().warn(`Subcommand "${subName}" of command "${command.name}" not found.`);
             return false;
         }
 
-        find.parentCmd = command;
-        command.subcmds.set(find.name, find);
-
-        if (find.aliases.length > 0) {
-            for (const alias of find.aliases) {
-                command.subcmds.set(alias, find);
-            }
-        }
+        command.addSubcommand(subcommand);
+        getLogger().info(`Bound subcommand "${subcommand.name}" to command "${command.name}".`);
 
         return true;
     }
@@ -165,27 +159,39 @@ class BaseCommandManager extends Manager {
     bindSubcommands() {
         getLogger().info("Loading subcommands...");
 
-        let n = 0;
+        let total = 0,
+            bound = 0;
 
         for (const command of this.commands) {
+            total += +command.isSubcmd;
+
             if (command.isSubcmd || command.subcommands.length < 1) {
                 continue;
             }
 
-            for (const subcommand of command.subcommands) {
-                const res = this.bindSubcommand(command, subcommand);
+            for (const subName of command.subcommands) {
+                const res = this.bindSubcommand(command, subName);
 
                 if (res === true) {
-                    n++;
+                    bound++;
                 }
             }
         }
 
-        if (n > 0) {
-            getLogger().info(`Loaded ${n} subcommands.`);
+        if (bound > 0) {
+            getLogger().info(`Loaded ${bound} subcommand(s).`);
         }
 
-        return n;
+        const unbound = total - bound;
+
+        if (unbound > 0) {
+            const unboundCmds = this.commands.filter(cmd => cmd.isSubcmd && !cmd.bound),
+                format = unboundCmds.map(cmd => `    "${cmd.name}" -> "${cmd.parent}"`).join("\n");
+
+            getLogger().warn(`Found ${unbound} unbound subcommand(s):\n${format}`);
+        }
+
+        return bound;
     }
 
     deleteCommands() {

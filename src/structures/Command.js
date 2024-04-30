@@ -36,6 +36,7 @@ class Command {
         Util.setValuesWithDefaults(this, options, defaultValues);
 
         this.subcmds = new Map();
+        this.bound = false;
     }
 
     get hasHelp() {
@@ -174,6 +175,31 @@ class Command {
         }
 
         return help;
+    }
+
+    addSubcommand(command) {
+        if (this.isSubcmd) {
+            throw new CommandError("Only parent commands can have subcommands");
+        }
+
+        this.subcmds.set(command.name, command);
+
+        if (command.aliases.length > 0) {
+            for (const alias of command.aliases) {
+                this.subcmds.set(alias, command);
+            }
+        }
+
+        command.bind(this);
+    }
+
+    bind(command) {
+        if (!this.isSubcmd) {
+            throw new CommandError("Can only bind subcommands");
+        }
+
+        this.parentCmd = command;
+        this.bound = true;
     }
 
     async execute(args, msg) {
