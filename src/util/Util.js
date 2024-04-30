@@ -9,6 +9,46 @@ import path from "node:path";
 import URL from "node:url";
 
 const Util = {
+    splitArgs: str => {
+        const ind = str.indexOf(" ");
+        let name, args;
+
+        if (ind === -1) {
+            name = str;
+            args = "";
+        } else {
+            name = str.substring(0, ind);
+            args = str.substring(ind + 1);
+        }
+
+        return [name.toLowerCase(), args];
+    },
+    getFileAttach: (data, name = "message.txt") => {
+        const attachment = new AttachmentBuilder(Buffer.from(data), {
+            name: name
+        });
+
+        return {
+            files: [attachment]
+        };
+    },
+    setValuesWithDefaults: (target, source, defaults = {}) => {
+        const values = {};
+
+        for (const key of Object.keys(defaults)) {
+            const sourceVal = source[key];
+
+            if (sourceVal === null || typeof sourceVal === "undefined") {
+                const defaultValue = cloneDeep(defaults[key]);
+                values[key] = defaultValue;
+            }
+        }
+
+        return Object.assign(target, {
+            ...source,
+            ...values
+        });
+    },
     getFilesRecSync: dir_path => {
         const files = [];
 
@@ -51,20 +91,6 @@ const Util = {
 
         return (await import(fileURL)).default;
     },
-    splitArgs: str => {
-        const ind = str.indexOf(" ");
-        let name, args;
-
-        if (ind === -1) {
-            name = str;
-            args = "";
-        } else {
-            name = str.substring(0, ind);
-            args = str.substring(ind + 1);
-        }
-
-        return [name.toLowerCase(), args];
-    },
     formatScript: body => {
         const match = body.match(/^`{3}([\S]+)?\n([\s\S]+)`{3}$/);
 
@@ -73,15 +99,6 @@ const Util = {
         }
 
         return [body, false];
-    },
-    getFileAttach: (data, name = "message.txt") => {
-        const attachment = new AttachmentBuilder(Buffer.from(data), {
-            name: name
-        });
-
-        return {
-            files: [attachment]
-        };
     },
     getByteLen: str => {
         let s = str.length;
@@ -113,6 +130,38 @@ const Util = {
     randomElement: (arr, a = 0, b = arr.length) => {
         return arr[a + ~~(Math.random() * (b - a))];
     },
+    formatLog(str, maxLength = 80) {
+        if (str === null) {
+            return " ";
+        }
+
+        switch (typeof str) {
+            case "undefined":
+                return " ";
+            case "bigint":
+            case "boolean":
+            case "number":
+                str = str.toString();
+                break;
+            case "object":
+                try {
+                    str = JSON.stringify(str);
+                    break;
+                } catch (err) {
+                    return " error";
+                }
+        }
+
+        if (str.length > maxLength) {
+            return `\n---\n${str}\n---`;
+        }
+
+        if (/^(["'`])[\s\S]*\1$/.test(str)) {
+            return " " + str;
+        }
+
+        return ` "${str}"`;
+    },
     waitForCondition: (condition, timeoutError = "", timeout = 0, interval = 100) => {
         return new Promise((resolve, reject) => {
             let _timeout;
@@ -131,38 +180,6 @@ const Util = {
                 }
             }, interval);
         });
-    },
-    setValuesWithDefaults: (target, source, defaults = {}) => {
-        const values = {};
-
-        for (const key of Object.keys(defaults)) {
-            const sourceVal = source[key];
-
-            if (sourceVal === null || typeof sourceVal === "undefined") {
-                const defaultValue = cloneDeep(defaults[key]);
-                values[key] = defaultValue;
-            }
-        }
-
-        return Object.assign(target, {
-            ...source,
-            ...values
-        });
-    },
-    formatLog(str, maxLength = 80) {
-        if (typeof str === "object") {
-            str = JSON.stringify(str);
-        }
-
-        if (str.length > maxLength) {
-            return `\n---\n${str}\n---`;
-        }
-
-        if (str.startsWith('"') && str.endsWith('"')) {
-            return " " + str;
-        }
-
-        return ` "${str}"`;
     }
 };
 
