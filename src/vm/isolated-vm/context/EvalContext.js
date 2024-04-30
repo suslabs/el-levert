@@ -102,16 +102,6 @@ class EvalContext {
         return funcs;
     }
 
-    registerFunc(func) {
-        const code = func.getRegisterCode();
-
-        return this.context.evalClosure(code, [func.ref], {
-            arguments: {
-                reference: true
-            }
-        });
-    }
-
     async registerFuncs() {
         this.funcs = this.constructFuncs(Functions, {
             global: globalNames,
@@ -119,7 +109,7 @@ class EvalContext {
         });
 
         for (const func of this.funcs) {
-            await this.registerFunc(func);
+            await func.register(this.context);
         }
     }
 

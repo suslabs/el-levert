@@ -1,8 +1,7 @@
 import Handler from "./Handler.js";
 
-import Util from "../util/Util.js";
-
 import { getClient, getLogger } from "../LevertClient.js";
+import Util from "../util/Util.js";
 
 const emojiChars = ":;=-x+";
 

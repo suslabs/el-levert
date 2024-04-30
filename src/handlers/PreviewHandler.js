@@ -1,5 +1,4 @@
 import { EmbedBuilder, hyperlink } from "discord.js";
-import { MIMEType } from "node:util";
 
 import Handler from "./Handler.js";
 import HandlerError from "../errors/HandlerError.js";

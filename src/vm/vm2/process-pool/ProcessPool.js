@@ -3,10 +3,10 @@ import net from "node:net";
 import crypto from "node:crypto";
 import genericPool from "generic-pool";
 
+import VMError from "../../../errors/VMError.js";
+
 import VMUtil from "../../../util/vm/VMUtil.js";
 import Util from "../../../util/Util.js";
-
-import VMError from "../../../errors/VMError.js";
 
 function listener(socket, funcs) {
     return new Promise((resolve, reject) => {

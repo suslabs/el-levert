@@ -3,7 +3,6 @@ import { bold } from "discord.js";
 import { TagFlags, TagTypes } from "./TagTypes.js";
 
 import { getClient } from "../../LevertClient.js";
-
 import Util from "../../util/Util.js";
 
 const defaultValues = {
@@ -18,6 +17,8 @@ const defaultValues = {
 };
 
 class Tag {
+    static defaultValues = defaultValues;
+
     constructor(data) {
         if (typeof data?.hops === "string") {
             data.hops = data.hops.split(",");

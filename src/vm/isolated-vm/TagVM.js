@@ -1,10 +1,9 @@
-import { getClient } from "../../LevertClient.js";
-
 import EvalContext from "./context/EvalContext.js";
 import InspectorServer from "./inspector/InspectorServer.js";
 
 import VMErrors from "./VMErrors.js";
 
+import { getClient } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 import VMUtil from "../../util/vm/VMUtil.js";
 

@@ -13,8 +13,7 @@ const ownerLevel = 2147483647,
     });
 
 const OwnerUser = new User({
-    group: "owner",
-    user: "0"
+    group: "owner"
 });
 
 export { DisabledGroup, OwnerGroup, OwnerUser };

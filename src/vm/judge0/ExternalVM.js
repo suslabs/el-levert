@@ -1,9 +1,9 @@
-import { getClient } from "../../LevertClient.js";
+import axios from "axios";
 
 import ReturnCodes from "./ReturnCodes.js";
 import VMError from "../../errors/VMError.js";
 
-import axios from "axios";
+import { getClient } from "../../LevertClient.js";
 
 class ExternalVM {
     constructor() {

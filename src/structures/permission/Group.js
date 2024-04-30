@@ -11,6 +11,8 @@ const defaultValues = {
 const indent = " ";
 
 class Group {
+    static defaultValues = defaultValues;
+
     constructor(data) {
         Util.setValuesWithDefaults(this, data, defaultValues);
     }

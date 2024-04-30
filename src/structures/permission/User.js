@@ -10,6 +10,8 @@ const defaultValues = {
 };
 
 class User {
+    static defaultValues = defaultValues;
+
     constructor(data) {
         Util.setValuesWithDefaults(this, data, defaultValues);
     }

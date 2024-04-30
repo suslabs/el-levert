@@ -1,7 +1,6 @@
 import CommandError from "../errors/CommandError.js";
 
 import { getClient } from "../LevertClient.js";
-
 import Util from "../util/Util.js";
 
 const defaultValues = {
@@ -17,6 +16,8 @@ const defaultValues = {
 };
 
 class Command {
+    static defaultValues = defaultValues;
+
     constructor(options) {
         if (typeof options.name === "undefined") {
             throw new CommandError("Command must have a name");

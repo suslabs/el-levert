@@ -1,11 +1,10 @@
 import DBManager from "./DBManager.js";
-
-import { getClient, getLogger } from "../../LevertClient.js";
 import ReminderDatabase from "../../database/ReminderDatabase.js";
 
 import Reminder from "../../structures/Reminder.js";
 import ReminderError from "../../errors/ReminderError.js";
 
+import { getClient, getLogger } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 
 const sendDelay = 1000,
@@ -22,9 +21,13 @@ class ReminderManager extends DBManager {
     checkMessage(msg) {
         if (msg.length > this.maxMsgLength) {
             return `Reminder messages can be at most ${this.maxMsgLength} characters long.`;
-        } else if (msg.indexOf("\n") !== -1) {
+        }
+
+        if (msg.indexOf("\n") !== -1) {
             return "Reminder messages can only contain a single line.";
         }
+
+        return false;
     }
 
     async list(user) {

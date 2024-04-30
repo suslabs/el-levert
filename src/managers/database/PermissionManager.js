@@ -1,7 +1,4 @@
 import DBManager from "./DBManager.js";
-
-import { getClient } from "../../LevertClient.js";
-
 import PermissionDatabase from "../../database/PermissionDatabase.js";
 
 import { DisabledGroup, OwnerGroup, OwnerUser } from "../../structures/permission/PermissionDefaults.js";
@@ -10,9 +7,9 @@ import User from "../../structures/permission/User.js";
 
 import PermissionError from "../../errors/PermissionError.js";
 
-const isGroupName = name => {
-    return /^[A-Za-z0-9\-_]+$/.test(name);
-};
+import { getClient } from "../../LevertClient.js";
+
+const groupNameRegex = /^[A-Za-z0-9\-_]+$/;
 
 class PermissionManager extends DBManager {
     constructor(enabled) {
@@ -20,20 +17,43 @@ class PermissionManager extends DBManager {
 
         this.maxGroupNameLength = getClient().config.maxGroupNameLength;
 
-        this.owner = new User(OwnerUser);
-        this.owner.setUserId(getClient().owner);
+        this.setOwner(getClient().owner);
+        this.setLevels({
+            modLevel: getClient().config.tagModeratorLevel,
+            adminLevel: getClient().config.permissionAdminLevel,
+            ownerLevel: OwnerGroup.level
+        });
+    }
 
-        this.modLevel = getClient().config.tagModeratorLevel;
-        this.adminLevel = getClient().config.permissionAdminLevel;
-        this.ownerLevel = OwnerGroup.level;
+    setOwner(id) {
+        const owner = new User(OwnerUser);
+        owner.setUserId(id);
+
+        this.owner = owner;
+    }
+
+    setLevels(levels) {
+        const { modLevel, adminLevel, ownerLevel } = levels;
+
+        this.modLevel = modLevel ?? this.modLevel;
+        this.adminLevel = adminLevel ?? this.adminLevel;
+        this.ownerLevel = ownerLevel ?? this.ownerLevel;
+    }
+
+    isGroupName(name) {
+        return groupNameRegex.test(name);
     }
 
     checkName(name) {
         if (name.length > this.maxGroupNameLength) {
             return `The group name can be at most ${this.maxGroupNameLength} characters long.`;
-        } else if (!isGroupName(name)) {
+        }
+
+        if (!this.isGroupName(name)) {
             return "The group name must consist of Latin characters, numbers, _ or -.";
         }
+
+        return false;
     }
 
     checkLevel(level) {
@@ -220,7 +240,7 @@ class PermissionManager extends DBManager {
     async listUsers(fetchUsernames = false) {
         let users = [];
 
-        if (this.owner.user !== "0") {
+        if (this.owner.user !== OwnerUser.user) {
             users = [this.owner];
         }
 
@@ -247,7 +267,7 @@ class PermissionManager extends DBManager {
     async listGroups(fetchUsernames = false) {
         let groups = [];
 
-        if (this.owner.user !== "0") {
+        if (this.owner.user !== OwnerUser.user) {
             groups = [OwnerGroup];
         }
 

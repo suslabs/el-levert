@@ -1,10 +1,9 @@
 import Manager from "../Manager.js";
 
-import { getClient, getLogger } from "../../LevertClient.js";
-
 import CommandLoader from "../../loaders/command/CommandLoader.js";
 import LoadStatus from "../../loaders/LoadStatus.js";
 
+import { getClient, getLogger } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 
 class BaseCommandManager extends Manager {
@@ -70,11 +69,11 @@ class BaseCommandManager extends Manager {
         }
 
         const sortedNames = Array.from(categories.keys()).sort((a, b) => {
-            if (a === "none") {
+            if (a === Command.defaultValues.category) {
                 return -1;
             }
 
-            if (b === "none") {
+            if (b === Command.defaultValues.category) {
                 return 1;
             }
 
@@ -90,7 +89,7 @@ class BaseCommandManager extends Manager {
             const formattedName = Util.capitalize(name).replaceAll(/[_-]/, " ");
             let header;
 
-            if (name === "none") {
+            if (name === Command.defaultValues.category) {
                 header = "";
             } else {
                 header = `${num}${discord ? "\\" : ""}. ${formattedName} commands:`;
@@ -108,7 +107,7 @@ class BaseCommandManager extends Manager {
 
             let categoryFormat = headers[i];
 
-            if (name !== "none") {
+            if (name !== Command.defaultValues.category) {
                 categoryFormat += `\n${spaces}`;
             }
 

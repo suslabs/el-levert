@@ -1,5 +1,6 @@
-import { getClient } from "../../LevertClient.js";
 import BaseCommandManager from "./BaseCommandManager.js";
+
+import { getClient } from "../../LevertClient.js";
 
 class CommandManager extends BaseCommandManager {
     constructor() {

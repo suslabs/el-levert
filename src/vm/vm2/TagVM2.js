@@ -1,9 +1,9 @@
-import { getClient, getLogger } from "../../LevertClient.js";
-
 import VM2ProcPool from "./process-pool/ProcessPool.js";
+
 import FakeUtil from "./classes/FakeUtil.js";
 import FakeAxios from "./classes/FakeAxios.js";
 
+import { getClient, getLogger } from "../../LevertClient.js";
 import VMUtil from "../../util/vm/VMUtil.js";
 
 const vmOptions = {

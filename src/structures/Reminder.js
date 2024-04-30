@@ -10,6 +10,8 @@ const defaultValues = {
 };
 
 class Reminder {
+    static defaultValues = defaultValues;
+
     constructor(data) {
         Util.setValuesWithDefaults(this, data, defaultValues);
     }

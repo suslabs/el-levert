@@ -1,13 +1,12 @@
 import axios from "axios";
 
 import DBManager from "./DBManager.js";
-
-import { getClient } from "../../LevertClient.js";
 import TagDatabase from "../../database/TagDatabase.js";
 
 import Tag from "../../structures/tag/Tag.js";
 import TagError from "../../errors/TagError.js";
 
+import { getClient } from "../../LevertClient.js";
 import search from "../../util/search/uFuzzySearch.js";
 
 class TagManager extends DBManager {
@@ -28,9 +27,13 @@ class TagManager extends DBManager {
     checkName(name) {
         if (name.length > this.maxTagNameLength) {
             return `The tag name can be at most ${this.maxTagNameLength} characters long.`;
-        } else if (!this.isTagName(name)) {
+        }
+
+        if (!this.isTagName(name)) {
             return "The tag name must consist of Latin characters, numbers, _ or -.";
         }
+
+        return false;
     }
 
     async fetch(name) {

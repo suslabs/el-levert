@@ -1,6 +1,6 @@
-import Util from "../../util/Util.js";
-
 import { getClient } from "../../LevertClient.js";
+
+import Util from "../../util/Util.js";
 
 function formatTagList(tags) {
     const format = tags.map((tag, i) => `${i + 1}. ` + tag.format()).join("\n");
