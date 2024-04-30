@@ -10,6 +10,16 @@ import Util from "../../util/Util.js";
 const sendDelay = 1000,
     maxMsgLength = 512;
 
+function logSending(user) {
+    getLogger().info(`Sending reminder to ${user.id} (${user.username})...`);
+}
+
+function logTime(t1) {
+    function logTime(t1) {
+        getLogger().info(`Sending reminders took ${(Date.now() - t1).toLocaleString()}ms.`);
+    }
+}
+
 class ReminderManager extends DBManager {
     constructor(enabled) {
         super(enabled, "reminder", ReminderDatabase, "remind_db");
@@ -105,15 +115,26 @@ class ReminderManager extends DBManager {
         }
 
         const out = "You set a reminder for " + reminder.format();
+
+        logSending(user);
         await user.send(out);
     }
 
     async sendReminders() {
-        const reminders = await this.getPastReminders();
+        const t1 = Date.now(),
+            reminders = await this.getPastReminders();
+
+        if (reminders.length < 1) {
+            return;
+        }
+
+        getLogger().info(`Sending ${reminders.length} reminders...`);
 
         for (const reminder of reminders) {
             this.sendReminder(reminder);
         }
+
+        logTime(t1);
     }
 
     startSendLoop() {

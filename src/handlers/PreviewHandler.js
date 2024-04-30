@@ -15,8 +15,16 @@ function logUsage(msg, str) {
     );
 }
 
-function logTime(t1) {
+function logSending(preview) {
+    getLogger().info(`Sending preview:${Util.formatLog(JSON.stringify(preview))}`);
+}
+
+function logGenTime(t1) {
     getLogger().info(`Preview generation took ${(Date.now() - t1).toLocaleString()}ms.`);
+}
+
+function logSendTime(t1) {
+    getLogger().info(`Sending preview took ${(Date.now() - t1).toLocaleString()}ms.`);
 }
 
 class PreviewHandler extends Handler {
@@ -123,7 +131,7 @@ class PreviewHandler extends Handler {
                 text: `From ${channel}`
             });
 
-        logTime(t1);
+        logGenTime(t1);
         return embed;
     }
 
@@ -132,7 +140,8 @@ class PreviewHandler extends Handler {
             return false;
         }
 
-        let preview;
+        let t1 = Date.now(),
+            preview;
 
         try {
             preview = await this.genPreview(msg, msg.content);
@@ -153,6 +162,7 @@ class PreviewHandler extends Handler {
         }
 
         await msg.channel.sendTyping();
+        logSending(preview);
 
         try {
             const reply = await msg.reply({
@@ -172,6 +182,7 @@ class PreviewHandler extends Handler {
             return false;
         }
 
+        logSendTime(t1);
         return true;
     }
 }

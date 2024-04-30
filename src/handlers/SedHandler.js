@@ -15,8 +15,16 @@ function logUsage(msg) {
     );
 }
 
-function logTime(t1) {
+function logSending(sed) {
+    getLogger().info(`Sending replaced message:${Util.formatLog(JSON.stringify(sed))}`);
+}
+
+function logGenTime(t1) {
     getLogger().info(`Sed generation took ${(Date.now() - t1).toLocaleString()}ms.`);
+}
+
+function logSendTime(t1) {
+    getLogger().info(`Sending replaced message took ${(Date.now() - t1).toLocaleString()}ms.`);
 }
 
 class SedHandler extends Handler {
@@ -109,7 +117,7 @@ class SedHandler extends Handler {
                 text: `From ${channel}`
             });
 
-        logTime(t1);
+        logGenTime(t1);
         return embed;
     }
 
@@ -118,9 +126,10 @@ class SedHandler extends Handler {
             return false;
         }
 
-        await msg.channel.sendTyping();
+        let t1 = Date.now(),
+            sed;
 
-        let sed;
+        await msg.channel.sendTyping();
 
         try {
             sed = await this.genSed(msg, msg.content);
@@ -134,6 +143,8 @@ class SedHandler extends Handler {
 
             throw err;
         }
+
+        logSending(sed);
 
         try {
             const reply = await msg.reply({
@@ -154,6 +165,7 @@ class SedHandler extends Handler {
             return false;
         }
 
+        logSendTime(t1);
         return true;
     }
 }
