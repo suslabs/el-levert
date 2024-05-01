@@ -130,7 +130,7 @@ const Util = {
     randomElement: (arr, a = 0, b = arr.length) => {
         return arr[a + ~~(Math.random() * (b - a))];
     },
-    formatLog(str, maxLength = 80) {
+    formatLog(str, splitLength = 80, maxLength = 5000) {
         if (str === null) {
             return " ";
         }
@@ -148,19 +148,24 @@ const Util = {
                     str = JSON.stringify(str);
                     break;
                 } catch (err) {
-                    return " error";
+                    return ` error: ${err.message}`;
                 }
         }
 
         if (str.length > maxLength) {
+            const diff = str.length - maxLength;
+            return `\n---\n${str.substring(0, maxLength)} ... (${diff} more character${diff > 1 ? "s" : ""})\n---`;
+        }
+
+        if (str.length > splitLength) {
             return `\n---\n${str}\n---`;
         }
 
-        if (/^(["'`])[\s\S]*\1$/.test(str)) {
-            return " " + str;
+        if (!/^(["'`])[\s\S]*\1$/.test(str)) {
+            return ` "${str}"`;
         }
 
-        return ` "${str}"`;
+        return " " + str;
     },
     waitForCondition: (condition, timeoutError = "", timeout = 0, interval = 100) => {
         return new Promise((resolve, reject) => {

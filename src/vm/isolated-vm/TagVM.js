@@ -43,22 +43,22 @@ class TagVM {
     handleError(err) {
         switch (err.name) {
             case "VMError":
-                getLogger().err(`VM error: ${err.message}`);
+                getLogger().error(`VM error: ${err.message}`);
                 return `:no_entry_sign: ${err.message}.`;
             case "ExitError":
-                getLogger().err(`Returning exit data:${Util.formatLog(err.exitData)}`);
+                getLogger().info(`Returning exit data:${Util.formatLog(err.exitData)}`);
                 return err.exitData;
             case "ManevraError":
-                getLogger().err(`Returning reply data:${Util.formatLog(err.message)}`);
+                getLogger().info(`Returning reply data:${Util.formatLog(err.message)}`);
                 return this.processReply(err.message);
         }
 
         switch (err.message) {
             case VMErrors.timeout:
-                getLogger().err("VM error: Script execution timed out.");
+                getLogger().error("VM error: Script execution timed out.");
                 return ":no_entry_sign: Script execution timed out.";
             case VMErrors.memLimit:
-                getLogger().err("VM error: Memory limit reached.");
+                getLogger().error("VM error: Memory limit reached.");
                 return ":no_entry_sign: Memory limit reached.";
             default:
                 throw err;
