@@ -22,9 +22,6 @@
         "dbPath": {
             "type": "string"
         },
-        "queryPath": {
-            "type": "string"
-        },
         "cmdPrefix": {
             "type": "string"
         },
@@ -129,7 +126,6 @@
         "commandsPath",
         "cliCommandsPath",
         "dbPath",
-        "queryPath",
         "cmdPrefix",
         "enableCliCommands",
         "cliCmdPrefix",

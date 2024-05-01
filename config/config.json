@@ -5,7 +5,6 @@
     "commandsPath": "./src/commands",
     "cliCommandsPath": "./src/commands/cli",
     "dbPath": "./db",
-    "queryPath": "./src/database/query",
     "cmdPrefix": "%",
     "enableCliCommands": true,
     "cliCmdPrefix": ".",

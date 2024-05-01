@@ -2,6 +2,7 @@
     "tag": "tag_db.db",
     "permission": "perm_db.db",
     "reminder": "remind_db.db",
+    "queryPath": "./src/database/query",
     "queryExtension": ".sql",
     "queryEncoding": "utf-8"
 }

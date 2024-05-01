@@ -30,7 +30,7 @@ class DBManager extends Manager {
         const dbFilename = dbFilenames[this.name];
         this.dbPath = path.resolve(this.dbDir, dbFilename);
 
-        const queryBase = getClient().config.queryPath;
+        const queryBase = dbFilenames.queryPath;
         this.queryDir = path.resolve(queryBase, this.name);
     }
 
