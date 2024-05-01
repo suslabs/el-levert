@@ -7,7 +7,7 @@ import ReminderError from "../../errors/ReminderError.js";
 import { getClient, getLogger } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 
-const sendDelay = 1000,
+const sendDelay = 10000,
     maxMsgLength = 512;
 
 function logTime(t1) {
@@ -118,14 +118,17 @@ class ReminderManager extends DBManager {
     }
 
     async sendReminders() {
+        getLogger().info(`Checking reminders... (${Util.round(sendDelay / 1000, 1)}s)`);
+
         const t1 = Date.now(),
             reminders = await this.getPastReminders();
 
         if (reminders.length < 1) {
+            getLogger().info("No reminders to send.");
             return;
         }
 
-        getLogger().info(`Sending ${reminders.length} reminders...`);
+        getLogger().info(`Sending ${reminders.length} reminder(s)...`);
 
         for (const reminder of reminders) {
             this.sendReminder(reminder);
