@@ -7,8 +7,7 @@ import ReminderError from "../../errors/ReminderError.js";
 import { getClient, getLogger } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 
-const sendDelay = 10000,
-    maxMsgLength = 512;
+const maxMsgLength = 512;
 
 function logTime(t1) {
     getLogger().info(`Sending reminders took ${(Date.now() - t1).toLocaleString()}ms.`);
@@ -18,7 +17,7 @@ class ReminderManager extends DBManager {
     constructor(enabled) {
         super(enabled, "reminder", ReminderDatabase, "remind_db");
 
-        this.sendDelay = sendDelay;
+        this.sendInterval = getClient().config.reminderSendInterval;
         this.maxMsgLength = Util.clamp(maxMsgLength, 0, 1500);
     }
 
@@ -143,7 +142,7 @@ class ReminderManager extends DBManager {
         }
 
         const sendFunc = this.sendReminders.bind(this);
-        this.sendTimer = setInterval(sendFunc, this.sendDelay);
+        this.sendTimer = setInterval(sendFunc, this.sendInterval);
 
         getLogger().info("Started reminder loop.");
     }

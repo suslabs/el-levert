@@ -14,7 +14,7 @@
     "otherMemLimit": 50,
     "otherTimeLimit": 15,
     "enableInspector": false,
-    "inspectorPort": 10000,
+    "inspectorPort": 8080,
     "outCharLimit": 2000,
     "outNewlineLimit": 30,
     "reminderMsgLimit": 512,
@@ -31,6 +31,7 @@
     "enablePermissions": true,
     "enableReminders": true,
     "enableGlobalHandler": true,
+    "reminderSendInterval": 10000,
     "wrapEvents": true,
     "setActivity": false,
     "activity": {
