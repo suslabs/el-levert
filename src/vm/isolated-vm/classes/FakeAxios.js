@@ -3,7 +3,7 @@ const { ExternalCopy } = ivm;
 
 import axios from "axios";
 
-import { getLogger } from "../../../LevertClient";
+import { getLogger } from "../../../LevertClient.js";
 
 async function request(...args) {
     try {
