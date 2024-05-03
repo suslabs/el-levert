@@ -1,44 +1,16 @@
 import ivm from "isolated-vm";
 const { ExternalCopy } = ivm;
 
+import FakeUser from "./FakeUser.js";
+
 import { getClient } from "../../../LevertClient.js";
 import VMUtil from "../../../util/vm/VMUtil.js";
 
 const FakeUtil = {
     findUsers: async search => {
         let data = await getClient().findUsers(search);
+        data = data.map(user => new FakeUser(user).fixedUser);
 
-        data = data.map(x => ({
-            guildId: x.guild.id,
-            joinedTimestamp: x.joinedTimestamp,
-            premiumSinceTimestamp: x.premiumSinceTimestamp,
-            nickname: x.nickname,
-            pending: x.pending,
-            communicationDisabledUntilTimestamp: x.communicationDisabledUntilTimestamp,
-            userId: x.user.id,
-            avatar: x.user.avatar,
-            displayName: x.displayName,
-            roles: x._roles,
-            avatarURL: x.user.avatarURL(),
-            displayAvatarURL: x.user.displayAvatarURL(),
-            id: x.user.id,
-            bot: x.bot,
-            system: x.system,
-            flags: x.flags,
-            username: x.user.username,
-            discriminator: x.user.discriminator,
-            banner: x.user.banner,
-            accentColor: x.user.accentColor,
-            createdTimestamp: x.user.createdTimestamp,
-            defaultAvatarURL: x.user.defaultAvatarURL,
-            hexAccentColor: x.user.hexAccentColor,
-            tag: x.user.tag
-        }));
-
-        return new ExternalCopy(data).copyInto();
-    },
-    dumpTags: async _ => {
-        const data = await getClient().tagManager.dump();
         return new ExternalCopy(data).copyInto();
     },
     fetchTag: async name => {
@@ -48,31 +20,48 @@ const FakeUtil = {
             return undefined;
         }
 
-        if (tag.hops.length > 1) {
+        if (tag.isAlias) {
             tag = await getClient().tagManager.fetchAlias(tag);
+            tag.setName(name);
         }
 
         return new ExternalCopy(tag).copyInto();
     },
-    fetchMessage: async (user_id, ch_id, msg_id) => {
-        let data = await getClient().fetchMessage(ch_id, msg_id, user_id);
-
-        if (!data) {
-            return undefined;
-        }
-
-        data = VMUtil.removeCircRef(data);
-        return new ExternalCopy(data).copyInto();
+    findTags: async query => {
+        const tags = await getClient().tagManager.search(query);
+        return new ExternalCopy(tags).copyInto();
     },
-    fetchMessages: async (user_id, ch_id, options) => {
-        let data = await getClient().fetchMessages(ch_id, options, user_id);
+    dumpTags: async full => {
+        const tags = await getClient().tagManager.dump(full);
+        return new ExternalCopy(tags).copyInto();
+    },
+    fetchMessage: async (user_id, default_id, ch_id, msg_id) => {
+        if (ch_id === null || typeof ch_id === "undefined") {
+            ch_id = default_id;
+        }
 
-        if (!data) {
+        let msg = await getClient().fetchMessage(ch_id, msg_id, user_id);
+
+        if (!msg) {
             return undefined;
         }
 
-        data = data.map(x => VMUtil.removeCircRef(x));
-        return new ExternalCopy(data).copyInto();
+        msg = VMUtil.removeCircRef(msg);
+        return new ExternalCopy(msg).copyInto();
+    },
+    fetchMessages: async (user_id, default_id, ch_id, options) => {
+        if (ch_id === null || typeof ch_id === "undefined") {
+            ch_id = default_id;
+        }
+
+        let msgs = await getClient().fetchMessages(ch_id, options, user_id);
+
+        if (!msgs) {
+            return undefined;
+        }
+
+        msgs = msgs.map(msg => VMUtil.removeCircRef(msg));
+        return new ExternalCopy(msgs).copyInto();
     }
 };
 

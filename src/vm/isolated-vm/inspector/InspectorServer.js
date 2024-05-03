@@ -86,6 +86,10 @@ class InspectorServer {
     }
 
     setContext(context) {
+        if (!this.enable) {
+            return;
+        }
+
         this.inspectorContext = context;
     }
 

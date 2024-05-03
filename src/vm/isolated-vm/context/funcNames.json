@@ -4,8 +4,9 @@
     },
     "util": {
         "findUsers": "findUsers",
-        "dumpTags": "dumpTags",
         "fetchTag": "fetchTag",
+        "findTags": "findTags",
+        "dumpTags": "dumpTags",
         "fetchMessage": "fetchMessage",
         "fetchMessages": "fetchMessages"
     },

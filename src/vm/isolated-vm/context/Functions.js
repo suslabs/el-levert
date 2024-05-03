@@ -19,23 +19,27 @@ const Functions = {
             type: FuncTypes.syncPromise,
             ref: FakeUtil.findUsers
         },
-        dumpTags: {
-            type: FuncTypes.syncPromise,
-            ref: FakeUtil.dumpTags
-        },
         fetchTag: {
             type: FuncTypes.syncPromise,
             ref: FakeUtil.fetchTag
         },
+        findTags: {
+            type: FuncTypes.syncPromise,
+            ref: FakeUtil.findTags
+        },
+        dumpTags: {
+            type: FuncTypes.syncPromise,
+            ref: FakeUtil.dumpTags
+        },
         fetchMessage: {
             type: FuncTypes.syncPromise,
             ref: FakeUtil.fetchMessage,
-            binds: [null, "msg.msg.author.id"]
+            binds: [null, "msg.msg.author.id", "msg.msg.channelId"]
         },
         fetchMessages: {
             type: FuncTypes.syncPromise,
             ref: FakeUtil.fetchMessages,
-            binds: [null, "msg.msg.author.id"]
+            binds: [null, "msg.msg.author.id", "msg.msg.channelId"]
         }
     },
     http: {

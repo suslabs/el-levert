@@ -3,17 +3,20 @@ const { ExternalCopy } = ivm;
 
 import axios from "axios";
 
+import { getLogger } from "../../../LevertClient";
+
 async function request(...args) {
     try {
         return await axios.request(...args);
     } catch (err) {
+        getLogger().err("Request error:", err);
         throw err;
     }
 }
 
 const FakeAxios = {
-    request: async (...args) => {
-        let res = await request.apply(this, args);
+    request: async config => {
+        let res = await request.apply(this, [config]);
 
         return new ExternalCopy({
             data: res.data,

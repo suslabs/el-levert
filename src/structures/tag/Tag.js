@@ -59,7 +59,7 @@ class Tag {
         name ??= defaultValues.name;
 
         this.name = name;
-        this.hops[this.hops.length - 1] = name;
+        this.hops[0] = name;
     }
 
     setOwner(owner) {

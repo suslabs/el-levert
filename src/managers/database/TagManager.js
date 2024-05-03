@@ -279,10 +279,11 @@ class TagManager extends DBManager {
         };
     }
 
-    async search(name, maxResults) {
+    async search(query, maxResults = 20) {
+        query = query.toLowerCase();
         const tags = await this.dump();
 
-        return search(tags, name, {
+        return search(tags, query, {
             maxResults
         });
     }

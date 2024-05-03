@@ -130,7 +130,7 @@ const Util = {
     randomElement: (arr, a = 0, b = arr.length) => {
         return arr[a + ~~(Math.random() * (b - a))];
     },
-    formatLog(str, splitLength = 80, maxLength = 5000) {
+    formatLog(str, splitLength = 80, maxLength = 1000) {
         if (str === null) {
             return " ";
         }
@@ -151,6 +151,8 @@ const Util = {
                     return ` error: ${err.message}`;
                 }
         }
+
+        str = str.replaceAll(/[\n\r]/g, "\\$1");
 
         if (str.length > maxLength) {
             const diff = str.length - maxLength;

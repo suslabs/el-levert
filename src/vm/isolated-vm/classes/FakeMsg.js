@@ -2,8 +2,18 @@ import VMUtil from "../../../util/vm/VMUtil.js";
 
 class FakeMsg {
     constructor(msg) {
-        const attachments = Array.from(msg.attachments.values());
+        if (msg === null) {
+            msg = undefined;
+        }
+
         this.msg = msg;
+
+        if (typeof msg === "undefined") {
+            this.fixedMsg = {};
+            return this;
+        }
+
+        const attachments = Array.from(msg.attachments.values());
 
         this.fixedMsg = {
             channelId: msg.channelId,
@@ -39,6 +49,10 @@ class FakeMsg {
     }
 
     reply(text, msg) {
+        if (typeof this.msg === "undefined") {
+            return;
+        }
+
         const formatted = VMUtil.formatReply(text, msg);
         return JSON.stringify(formatted);
     }

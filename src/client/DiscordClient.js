@@ -212,7 +212,7 @@ class DiscordClient {
             return channel;
         }
 
-        if (typeof user_id === "undefined") {
+        if (user_id === null || typeof user_id === "undefined") {
             throw new ClientError("No user id provided");
         }
 

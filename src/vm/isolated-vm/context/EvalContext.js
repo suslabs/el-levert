@@ -1,15 +1,17 @@
 import ivm from "isolated-vm";
 const { Isolate, ExternalCopy } = ivm;
 
+import FakeTag from "../classes/FakeTag.js";
 import FakeMsg from "../classes/FakeMsg.js";
+
 import VMFunction from "../../../structures/vm/VMFunction.js";
 import VMError from "../../../errors/VMError.js";
-
-import IsolateInspector from "../inspector/IsolateInspector.js";
 
 import Functions from "./Functions.js";
 import globalNames from "./globalNames.json" assert { type: "json" };
 import funcNames from "./funcNames.json" assert { type: "json" };
+
+import IsolateInspector from "../inspector/IsolateInspector.js";
 
 const filename = "script.js";
 
@@ -35,35 +37,24 @@ class EvalContext {
         await global.set("global", global.derefInto());
     }
 
-    async setArgs(args) {
-        if (args === null || args?.length < 1) {
-            args = undefined;
-        }
+    async setTag(tag, args) {
+        const fakeTag = new FakeTag(tag, args);
 
-        this.args = args;
-
-        const vmTag = new ExternalCopy({
-            args: args
-        }).copyInto();
+        this.tag = fakeTag;
+        const vmTag = new ExternalCopy(fakeTag.fixedTag);
 
         this.vmTag = vmTag;
-        await this.global.set(globalNames.tag, vmTag);
+        await this.global.set(globalNames.tag, vmTag.copyInto());
     }
 
     async setMsg(msg) {
-        let fakeMsg;
-
-        if (typeof msg === "undefined") {
-            fakeMsg = undefined;
-        } else {
-            fakeMsg = new FakeMsg(msg);
-        }
+        const fakeMsg = new FakeMsg(msg);
 
         this.msg = fakeMsg;
-        const vmMsg = new ExternalCopy(fakeMsg.fixedMsg).copyInto();
+        const vmMsg = new ExternalCopy(fakeMsg.fixedMsg);
 
         this.vmMsg = vmMsg;
-        await this.global.set(globalNames.msg, vmMsg);
+        await this.global.set(globalNames.msg, vmMsg.copyInto());
     }
 
     constructFuncs(objMap, names) {
@@ -113,7 +104,7 @@ class EvalContext {
         }
     }
 
-    async setupContext(msg, args) {
+    async setupContext(msg, tag, args) {
         this.context = await this.isolate.createContext({
             inspector: this.enableInspector
         });
@@ -121,7 +112,7 @@ class EvalContext {
         await this.setGlobal();
 
         await this.setMsg(msg);
-        await this.setArgs(args);
+        await this.setTag(tag, args);
 
         this.propertyMap = {
             msg: this.msg
@@ -130,15 +121,22 @@ class EvalContext {
         await this.registerFuncs();
     }
 
-    async setupIsolate(msg, args) {
+    async setupIsolate(msg, tag, args) {
         this.isolate = new Isolate({
             memoryLimit: this.memLimit,
             inspector: this.enableInspector
         });
 
-        await this.setupContext(msg, args);
+        await this.setupContext(msg, tag, args);
 
         this.inspector.create(this.isolate);
+    }
+
+    async getIsolate(options) {
+        const { msg, tag, args } = options;
+
+        await this.setupIsolate(msg, tag, args);
+        return this.isolate;
     }
 
     async compileScript(code, setReference = true) {
@@ -177,13 +175,6 @@ class EvalContext {
         }
 
         return res;
-    }
-
-    async getIsolate(options) {
-        const { msg, args } = options;
-
-        await this.setupIsolate(msg, args);
-        return this.isolate;
     }
 
     disposeInspector() {

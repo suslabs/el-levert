@@ -40,6 +40,52 @@ class TagVM {
         this.inspectorServer = server;
     }
 
+    async getContext(msg, tag, args) {
+        const context = new EvalContext(
+            {
+                memLimit: this.memLimit,
+                timeLimit: this.timeLimit
+            },
+            {
+                enable: this.inspectorServer?.enable ?? false,
+                sendReply: this.inspectorServer?.sendReply
+            }
+        );
+
+        await context.getIsolate({ msg, tag, args });
+        this.inspectorServer?.setContext(context);
+
+        return context;
+    }
+
+    async runScript(code, msg, tag, args) {
+        const t1 = Date.now();
+        logUsage(code);
+
+        if (this.inspectorServer?.inspectorConnected) {
+            getLogger().info("Can't run script: inspector is already connected.");
+            return ":no_entry_sign: Inspector is already connected.";
+        }
+
+        const context = await this.getContext(msg, tag, args);
+        let out;
+
+        try {
+            out = await context.runScript(code);
+
+            out = VMUtil.formatOutput(out);
+            getLogger().info(`Returning script output:${Util.formatLog(out)}`);
+        } catch (err) {
+            out = this.handleError(err);
+        } finally {
+            this.inspectorServer?.executionFinished();
+            context.dispose();
+        }
+
+        logTime(t1);
+        return out;
+    }
+
     handleError(err) {
         switch (err.name) {
             case "VMError":
@@ -90,47 +136,6 @@ class TagVM {
             };
         }
 
-        return out;
-    }
-
-    async runScript(code, msg, args) {
-        const t1 = Date.now();
-        logUsage(code);
-
-        if (this.inspectorServer?.inspectorConnected) {
-            getLogger().info("Can't run script: inspector is already connected.");
-            return ":no_entry_sign: Inspector is already connected.";
-        }
-
-        const context = new EvalContext(
-            {
-                memLimit: this.memLimit,
-                timeLimit: this.timeLimit
-            },
-            {
-                enable: this.inspectorServer?.enable ?? false,
-                sendReply: this.inspectorServer?.sendReply
-            }
-        );
-
-        await context.getIsolate({ msg, args });
-        this.inspectorServer?.setContext(context);
-
-        let out;
-
-        try {
-            out = await context.runScript(code);
-
-            out = VMUtil.formatOutput(out);
-            getLogger().info(`Returning script output:${Util.formatLog(out)}`);
-        } catch (err) {
-            out = this.handleError(err);
-        } finally {
-            this.inspectorServer?.executionFinished();
-            context.disposeIsolate();
-        }
-
-        logTime(t1);
         return out;
     }
 

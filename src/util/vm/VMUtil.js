@@ -75,7 +75,7 @@ const VMUtil = {
         }
 
         if (Array.isArray(out)) {
-            return out.join(",");
+            return out.join(", ");
         }
 
         switch (typeof out) {
