@@ -26,7 +26,7 @@ class EventObjectLoader extends ObjectLoader {
     }
 
     getLoadedMessage() {
-        return `Loaded ${this.getName()}: ${this.data.name}.`;
+        return `Loaded ${this.getName()}: ${this.data.name}`;
     }
 }
 
