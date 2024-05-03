@@ -30,11 +30,13 @@
     "enablePermissions": true,
     "enableReminders": true,
     "enableGlobalHandler": true,
-    "reminderSendInterval": 10000,
+    "reminderSendInterval": 100000000,
     "wrapEvents": true,
     "setActivity": false,
     "activity": {
         "type": "watching",
         "text": "example"
-    }
+    },
+    "mentionUsers": false,
+    "pingReply": true
 }

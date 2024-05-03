@@ -56,7 +56,7 @@ class BaseCommandManager extends Manager {
         return commands.find(command => command.matches(name));
     }
 
-    getHelp(perm, indentation = 4, discord = true) {
+    getHelp(perm, discord = true, indentation = 4) {
         const allowedCmds = this.getCommands(perm),
             categories = new Map();
 

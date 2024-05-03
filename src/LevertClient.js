@@ -58,7 +58,9 @@ class LevertClient extends DiscordClient {
 
         this.setOptions({
             wrapEvents: this.config.wrapEvents,
-            eventsDir: config.eventsPath
+            eventsDir: config.eventsPath,
+            pingReply: config.pingReply,
+            mentionUsers: config.mentionUsers
         });
     }
 
@@ -281,6 +283,7 @@ class LevertClient extends DiscordClient {
         this.logger.info("Restarting client...");
 
         await this.stop();
+        this.buildClient();
 
         switch (typeof configs) {
             case "object":
@@ -293,7 +296,6 @@ class LevertClient extends DiscordClient {
                 break;
         }
 
-        this.buildClient();
         await this.start();
     }
 

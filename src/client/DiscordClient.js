@@ -17,6 +17,8 @@ const {
     ChannelType
 } = discord;
 
+const clientOptions = ["wrapEvents", "eventsDir", "loginTimeout", "onLogout", "onKill", "mentionUsers", "pingReply"];
+
 const defaultIntents = [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
@@ -52,6 +54,9 @@ class DiscordClient {
 
         this.onLogout = _ => {};
         this.onKill = _ => {};
+
+        this.mentionUsers = false;
+        this.pingReply = true;
     }
 
     buildClient() {
@@ -67,22 +72,44 @@ class DiscordClient {
         };
 
         const client = new Client(options);
+
         this.client = client;
         this.loggedIn = false;
+
+        this.setOptions();
     }
 
     setOptions(options) {
-        for (const key in options) {
-            if (typeof this[key] === "undefined") {
-                throw new ClientError("Invalid option: " + key);
+        const optionsList = typeof options !== "undefined" ? clientOptions : [];
+
+        for (const key of optionsList) {
+            if (typeof options[key] === "undefined") {
+                continue;
             }
+
+            let option = options[key];
 
             if (typeof options[key] === "function") {
-                options[key] = options[key].bind(this);
+                option = option.bind(this);
             }
 
-            this[key] = options[key] ?? this[key];
+            this[key] = option;
         }
+
+        const allowedMentions = {
+            repliedUser: this.pingReply
+        };
+
+        if (this.mentionUsers) {
+            allowedMentions.parse = ["roles", "users"];
+        } else {
+            allowedMentions.users = [];
+        }
+
+        this.client.options = {
+            ...this.client.options,
+            allowedMentions
+        };
     }
 
     async login(token, exitOnFailure = false) {
@@ -148,6 +175,10 @@ class DiscordClient {
     }
 
     async loadEvents() {
+        if (this.eventsDir === "") {
+            throw new ClientError("Events directory not set");
+        }
+
         const eventLoader = new EventLoader(this.eventsDir, this.client, this.logger, {
             client: this.client,
             wrapFunc: this.wrapEvent,
