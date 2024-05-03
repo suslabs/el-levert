@@ -141,6 +141,7 @@ class Command {
             subNames = subcmds.map(command => command.name);
         }
 
+        subNames.sort();
         return subNames.join(separator);
     }
 
