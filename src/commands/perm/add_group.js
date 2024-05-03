@@ -10,7 +10,7 @@ export default {
     allowed: getClient().permManager.adminLevel,
     handler: async (args, msg) => {
         let [g_name, level] = Util.splitArgs(args);
-        level = parseInt(level);
+        level = parseInt(level, 10);
 
         if (args.length === 0 || g_name.length === 0 || level.length === 0) {
             return ":information_source: `perm add_group [group name] [level]`";

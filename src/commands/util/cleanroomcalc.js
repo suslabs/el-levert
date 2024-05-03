@@ -13,9 +13,9 @@ export default {
             return ":warning: Must specify all dimensions in LxWxH format.";
         }
 
-        const l = parseInt(dims[0]),
-            w = parseInt(dims[1]),
-            h = parseInt(dims[2]);
+        const l = parseInt(dims[0], 10),
+            w = parseInt(dims[1], 10),
+            h = parseInt(dims[2], 10);
 
         if (isNaN(l) || isNaN(w) || isNaN(h)) {
             return `:warning: Invalid dimensions: \`${dims[0]}\`x\`${dims[1]}\`x\`${dims[2]}\`.`;

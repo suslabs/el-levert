@@ -28,7 +28,7 @@ export default {
         if (newLevel.length < 1 || newLevel === "unchanged") {
             newLevel = undefined;
         } else {
-            newLevel = parseInt(newLevel);
+            newLevel = parseInt(newLevel, 10);
         }
 
         const group = await getClient().permManager.fetchGroup(g_name);

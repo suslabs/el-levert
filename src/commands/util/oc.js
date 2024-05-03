@@ -17,8 +17,8 @@ export default {
 
         switch (split.length) {
             case 2:
-                eu = parseInt(split[0]);
-                dur = parseInt(split[1]);
+                eu = parseInt(split[0], 10);
+                dur = parseInt(split[1], 10);
                 break;
             case 3:
                 type = split[0].substring(1);
@@ -27,8 +27,8 @@ export default {
                     return `:warning: Invalid version: \`${type}\``;
                 }
 
-                eu = parseInt(split[1]);
-                dur = parseInt(split[2]);
+                eu = parseInt(split[1], 10);
+                dur = parseInt(split[2], 10);
                 break;
             default:
                 return ":warning: Invalid argument count.";

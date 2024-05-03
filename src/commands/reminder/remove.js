@@ -6,7 +6,7 @@ export default {
     parent: "reminder",
     subcommand: true,
     handler: async (args, msg) => {
-        const index = parseInt(args);
+        const index = parseInt(args, 10);
 
         if (args.length <= 0 || isNaN(index)) {
             return ":information_source: `reminder remove [index]`";
