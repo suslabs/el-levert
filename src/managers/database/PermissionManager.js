@@ -284,7 +284,6 @@ class PermissionManager extends DBManager {
             return false;
         }
 
-        groups.sort((a, b) => b.level - a.level);
         const users = await this.listUsers(fetchUsernames);
 
         for (const group of groups) {

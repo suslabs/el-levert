@@ -2,18 +2,21 @@ import SqliteDatabase from "./SqlDatabase.js";
 
 import Tag from "../structures/tag/Tag.js";
 
-/* Tag
-{
-    $hops: tag.getHopsString(),
-    $name: tag.name,
-    $body: tag.body,
-    $owner: tag.owner,
-    $args: tag.args,
-    $registered: tag.registered,
-    $lastEdited: tag.lastEdited,
-    $type: tag.type
+function sortTags(tags) {
+    const objs = typeof tags[0] !== "string";
+
+    tags.sort((a, b) => {
+        if (objs) {
+            a = a.name;
+            b = b.name;
+        }
+
+        return a.localeCompare(b, "en", {
+            numeric: true,
+            sensitivity: "base"
+        });
+    });
 }
-*/
 
 class TagDatabase extends SqliteDatabase {
     async fetch(name) {
@@ -107,19 +110,29 @@ class TagDatabase extends SqliteDatabase {
     }
 
     async dump() {
-        let tags = await this.tagQueries.dump.all();
-        tags = tags.map(tag => tag.name);
-        tags.sort();
+        const rows = await this.tagQueries.dump.all(),
+            tags = rows.map(row => row.name);
 
+        sortTags(tags);
+        return tags;
+    }
+
+    async fullDump() {
+        const rows = await this.tagQueries.fullDump.all(),
+            tags = rows.map(row => new Tag(row));
+
+        sortTags(tags);
         return tags;
     }
 
     async list(user) {
         const rows = await this.tagQueries.list.all({
-            $user: user
-        });
+                $user: user
+            }),
+            tags = rows.map(row => new Tag(row));
 
-        return rows.map(row => new Tag(row));
+        sortTags(tags);
+        return tags;
     }
 
     async quotaFetch(user) {

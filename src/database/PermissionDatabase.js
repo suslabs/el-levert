@@ -3,20 +3,6 @@ import SqliteDatabase from "./SqlDatabase.js";
 import Group from "../structures/permission/Group.js";
 import User from "../structures/permission/User.js";
 
-/* User
-{
-    $id: user.id,
-    $group: group.name
-}
-*/
-
-/* Group
-{
-    $name: group.name,
-    $level: group.level
-}
-*/
-
 class PermissionDatabase extends SqliteDatabase {
     async fetch(id) {
         const rows = await this.userQueries.fetch.all({
@@ -108,16 +94,18 @@ class PermissionDatabase extends SqliteDatabase {
         });
     }
 
+    async listGroups() {
+        const rows = await this.groupQueries.list.all(),
+            groups = rows.map(row => new Group(row));
+
+        groups.sort((a, b) => b.level - a.level);
+        return groups;
+    }
+
     async listUsers() {
         const rows = await this.userQueries.list.all();
 
         return rows.map(row => new User(row));
-    }
-
-    async listGroups() {
-        const rows = await this.groupQueries.list.all();
-
-        return rows.map(row => new Group(row));
     }
 }
 

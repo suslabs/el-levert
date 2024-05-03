@@ -1,0 +1,32 @@
+--- Tags ---
+
+Tag {
+    $hops: tag.getHopsString(),
+    $name: tag.name,
+    $body: tag.body,
+    $owner: tag.owner,
+    $args: tag.args,
+    $registered: tag.registered,
+    $lastEdited: tag.lastEdited,
+    $type: tag.type
+}
+
+--- Reminders ---
+
+Reminder {
+    $user: reminder.user,
+    $end: reminder.end,
+    $msg: reminder.msg
+}
+
+--- Permissions ---
+
+User {
+    $id: user.id,
+    $group: group.name
+}
+
+Group {
+    $name: group.name,
+    $level: group.level
+}

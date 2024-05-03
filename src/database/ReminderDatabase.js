@@ -2,14 +2,6 @@ import SqliteDatabase from "./SqlDatabase.js";
 
 import Reminder from "../structures/Reminder.js";
 
-/* Reminder
-{
-    $user: reminder.user,
-    $end: reminder.end,
-    $msg: reminder.msg
-}
-*/
-
 class ReminderDatabase extends SqliteDatabase {
     async fetch(user) {
         const rows = await this.queries.fetch.all({
@@ -20,7 +12,10 @@ class ReminderDatabase extends SqliteDatabase {
             return false;
         }
 
-        return rows.map(x => new Reminder(x));
+        const reminders = rows.map(x => new Reminder(x));
+        reminders.sort((a, b) => a.end - b.end);
+
+        return reminders;
     }
 
     async add(reminder) {
@@ -44,8 +39,11 @@ class ReminderDatabase extends SqliteDatabase {
     }
 
     async list() {
-        const rows = await this.queries.list.all();
-        return rows.map(x => new Reminder(x));
+        const rows = await this.queries.list.all(),
+            reminders = rows.map(x => new Reminder(x));
+
+        reminders.sort((a, b) => a.end - b.end);
+        return reminders;
     }
 }
 

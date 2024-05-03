@@ -267,6 +267,14 @@ class TagManager extends DBManager {
         return tag;
     }
 
+    async dump(full = false) {
+        if (full) {
+            return await this.tag_db.fullDump();
+        } else {
+            return await this.tag_db.dump();
+        }
+    }
+
     async list(user) {
         const tags = await this.tag_db.list(user),
             newTags = tags.filter(tag => !tag.isOld),
@@ -286,30 +294,6 @@ class TagManager extends DBManager {
         return search(tags, query, {
             maxResults
         });
-    }
-
-    async dump(full = false) {
-        const tags = await this.tag_db.dump();
-
-        if (full) {
-            const fullDump = [];
-
-            for (const name of tags) {
-                let tag;
-
-                try {
-                    tag = await this.fetch(name);
-                } catch (err) {}
-
-                if (typeof tag !== "undefined") {
-                    fullDump.push(tag);
-                }
-            }
-
-            return fullDump;
-        } else {
-            return tags;
-        }
     }
 
     async getQuota(user) {

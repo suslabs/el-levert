@@ -40,17 +40,11 @@ class ReminderManager extends DBManager {
             return false;
         }
 
-        reminders.sort((a, b) => a.end - b.end);
-
         return reminders;
     }
 
     async listAll() {
-        const reminders = await this.remind_db.list();
-
-        reminders.sort((a, b) => a.end - b.end);
-
-        return reminders;
+        return await this.remind_db.list();
     }
 
     async add(user, end, msg) {
