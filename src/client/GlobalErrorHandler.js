@@ -18,13 +18,16 @@ function registerGlobalErrorHandler(logger) {
 
     process.on("unhandledRejection", rejectionHandler);
     process.on("uncaughtException", exceptionHandler);
+
+    logger_.info("Registered global error handler.");
 }
 
 function removeGlobalErrorHandler() {
-    logger_ = undefined;
+    process.removeListener("unhandledRejection", rejectionHandler);
+    process.removeListener("uncaughtException", exceptionHandler);
 
-    process.removeAllListeners("unhandledRejection");
-    process.removeAllListeners("uncaughtException");
+    logger_.info("Removed global error handler.");
+    logger_ = undefined;
 }
 
 export { registerGlobalErrorHandler, removeGlobalErrorHandler };

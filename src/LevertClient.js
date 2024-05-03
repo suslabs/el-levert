@@ -243,7 +243,6 @@ class LevertClient extends DiscordClient {
 
         if (this.config.enableGlobalHandler) {
             registerGlobalErrorHandler(this.logger);
-            this.logger.info("Registered global error handler.");
         }
 
         this.started = true;
@@ -259,7 +258,6 @@ class LevertClient extends DiscordClient {
 
         if (this.config.enableGlobalHandler) {
             removeGlobalErrorHandler();
-            this.logger.info("Removed global error handler.");
         }
 
         this.unloadEvents();
