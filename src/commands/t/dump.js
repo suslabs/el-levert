@@ -25,10 +25,10 @@ export default {
 
             if (split.length > 1) {
                 space = parseInt(split[1]);
-            }
 
-            if (isNaN(space)) {
-                return ":warning: Invalid indentation: " + split[1];
+                if (isNaN(space)) {
+                    return ":warning: Invalid indentation: " + split[1];
+                }
             }
 
             format = JSON.stringify(tags, undefined, space);
