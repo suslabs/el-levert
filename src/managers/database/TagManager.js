@@ -58,10 +58,15 @@ class TagManager extends DBManager {
             }
 
             hops.push(hop);
-            lastTag = await this.fetch(hop);
 
-            if (!lastTag) {
-                throw new TagError("Hop not found", hop);
+            if (hop === tag.name) {
+                lastTag = tag;
+            } else {
+                lastTag = await this.fetch(hop);
+
+                if (!lastTag) {
+                    throw new TagError("Hop not found", hop);
+                }
             }
 
             if (lastTag.args.length > 0) {

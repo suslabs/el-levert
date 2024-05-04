@@ -16,18 +16,23 @@ const defaultValues = {
     type: TagFlags.new
 };
 
+const hopsSeparator = ",";
+
 class Tag {
     static defaultValues = defaultValues;
 
     constructor(data) {
         if (typeof data?.hops === "string") {
-            data.hops = data.hops.split(",");
+            data.hops = data.hops.split(hopsSeparator);
         }
 
         Util.setValuesWithDefaults(this, data, defaultValues);
 
         if (this.hops.length === 0) {
             this.hops.push(this.name);
+        } else if (this.isAlias) {
+            this.body = defaultValues.body;
+            this.type &= TagFlags.new;
         }
 
         if (typeof this.type === "string") {
@@ -161,7 +166,7 @@ class Tag {
     }
 
     getHopsString() {
-        return this.hops.join(",");
+        return this.hops.join(hopsSeparator);
     }
 
     getSize() {
