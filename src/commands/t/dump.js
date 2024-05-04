@@ -26,7 +26,7 @@ export default {
             if (s_str.length > 0) {
                 space = parseInt(s_str);
 
-                if (isNaN(space)) {
+                if (isNaN(space) || space < 0) {
                     return ":warning: Invalid indentation: " + s_str;
                 }
             }

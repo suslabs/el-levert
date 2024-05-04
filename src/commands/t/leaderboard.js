@@ -1,3 +1,5 @@
+import { EmbedBuilder } from "discord.js";
+
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
@@ -8,11 +10,14 @@ function formatLeaderboard(leaderboard, type) {
 
         switch (type) {
             case "count":
-                str += `${entry.count} tags`;
+                const s = entry.count > 1 ? "s" : "";
+                str += `${entry.count} tag${s}`;
+
                 break;
             case "size":
-                const quota = entry.quota.toFixed(3);
+                const quota = Util.round(entry.quota, 3);
                 str += `${quota}kb`;
+
                 break;
         }
 
@@ -40,9 +45,9 @@ export default {
         let limit;
 
         if (l_str.length > 0) {
-            limit = parseInt(s_str);
+            limit = parseInt(l_str);
 
-            if (isNaN(space)) {
+            if (isNaN(limit) || limit < 1) {
                 return ":warning: Invalid limit: " + l_str;
             }
         }
@@ -54,12 +59,10 @@ export default {
         }
 
         const format = formatLeaderboard(leaderboard, l_type),
-            embed = {
-                title: `Tag ${l_type} leaderboard`,
-                description: format
-            };
+            embed = new EmbedBuilder().setDescription(format);
 
         return {
+            content: `:information_source: Tag ${l_type} leaderboard:`,
             embeds: [embed]
         };
     }
