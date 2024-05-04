@@ -26,7 +26,7 @@ class Reminder {
     }
 
     getTimestamp(style = "f") {
-        const timestamp = Math.floor(this.end / 1000);
+        const timestamp = Math.floor(this.end * Util.durationSeconds.milli);
         return time(timestamp, style);
     }
 

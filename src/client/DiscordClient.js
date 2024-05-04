@@ -53,7 +53,7 @@ class DiscordClient {
         this.onLogout = _ => {};
         this.onKill = _ => {};
 
-        this.timeout = 60000;
+        this.timeout = 60 / Util.durationSeconds.milli;
         this.mentionUsers = false;
         this.pingReply = true;
     }

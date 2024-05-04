@@ -13,7 +13,7 @@ class IsolateInspector {
             this.sendReply = options.sendReply;
         }
 
-        this.connectTimeout = 60000;
+        this.connectTimeout = 60 / Util.durationSeconds.milli;
 
         this.channel = null;
         this.connected = false;

@@ -24,7 +24,7 @@ function logTime(t1) {
 class CommandHandler extends Handler {
     constructor() {
         super(true, true, true, {
-            userSweepInterval: 10000
+            userSweepInterval: 10 / Util.durationSeconds.milli
         });
 
         this.outCharLimit = Util.clamp(getClient().config.outCharLimit, 0, 2000);

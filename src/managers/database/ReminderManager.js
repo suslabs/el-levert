@@ -111,7 +111,7 @@ class ReminderManager extends DBManager {
     }
 
     async sendReminders() {
-        getLogger().info(`Checking reminders... (${Util.round(this.sendInterval / 1000, 1)}s)`);
+        getLogger().info(`Checking reminders... (${Util.round(this.sendInterval * Util.durationSeconds.milli, 1)}s)`);
 
         const t1 = Date.now(),
             reminders = await this.getPastReminders();

@@ -11,6 +11,7 @@ import Functions from "./Functions.js";
 import globalNames from "./globalNames.json" assert { type: "json" };
 import funcNames from "./funcNames.json" assert { type: "json" };
 
+import Util from "../../../util/Util.js";
 import IsolateInspector from "../inspector/IsolateInspector.js";
 
 const filename = "script.js";
@@ -166,7 +167,7 @@ class EvalContext {
         await this.inspector.waitForConnection();
 
         const res = await script.run(this.context, {
-            timeout: this.timeLimit * 1000,
+            timeout: this.timeLimit / Util.durationSeconds.milli,
             copy: true
         });
 

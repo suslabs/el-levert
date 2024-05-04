@@ -10,7 +10,19 @@ import URL from "node:url";
 
 const scriptRegex = /^`{3}([\S]+)?\n([\s\S]+)`{3}$/;
 
+const durationSeconds = {
+    year: 31536000,
+    month: 2592000,
+    week: 604800,
+    day: 86400,
+    hour: 3600,
+    minute: 60,
+    second: 1,
+    milli: 1 / 1000
+};
+
 const Util = {
+    durationSeconds,
     splitArgs: str => {
         const ind = str.indexOf(" ");
         let name, args;
@@ -199,7 +211,8 @@ const Util = {
                 }
             }, interval);
         });
-    }
+    },
+    duration: delta => {}
 };
 
 export default Util;
