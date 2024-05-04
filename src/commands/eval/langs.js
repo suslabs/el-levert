@@ -1,7 +1,11 @@
 import { EmbedBuilder } from "discord.js";
 
 function formatNames(langNames) {
-    const format = Object.keys(langNames).map((x, i) => `${i + 1}. ${x} - **${langNames[x]}**`);
+    const format = Object.entries(langNames).map((entry, i) => {
+        const [key, name] = entry;
+        return `${i + 1}. ${key} - **${name}**`;
+    });
+
     return format.join("\n");
 }
 
