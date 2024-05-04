@@ -100,8 +100,8 @@ class TagManager extends DBManager {
 
         const tagSize = tag.getSize();
 
-        await this.tag_db.add(tag);
         await this.updateQuota(owner, tagSize);
+        await this.tag_db.add(tag);
 
         getLogger().info(`Added tag: "${name}" with type: "${type}", body:${Util.formatLog(body)}`);
         return tag;
@@ -131,8 +131,8 @@ class TagManager extends DBManager {
             newTagSize = newTag.getSize(),
             sizeDiff = newTagSize - oldTagSize;
 
-        await this.tag_db.edit(newTag);
         await this.updateQuota(tag.owner, sizeDiff);
+        await this.tag_db.edit(newTag);
 
         getLogger().info(`Edited tag: "${tag.name}" with type: "${type}", body:${Util.formatLog(body)}`);
         return newTag;
@@ -155,22 +155,20 @@ class TagManager extends DBManager {
             }
         }
 
+        if (!oldTag.sameBody(tag)) {
+            const oldTagSize = oldTag.getSize(),
+                newTagSize = tag.getSize(),
+                sizeDiff = newTagSize - oldTagSize;
+
+            if (oldTag.owner === tag.owner) {
+                await this.updateQuota(tag.owner, sizeDiff);
+            } else {
+                await this.updateQuota(oldTag.owner, -sizeDiff);
+                await this.updateQuota(tag.owner, sizeDiff);
+            }
+        }
+
         await this.tag_db.updateProps(name, tag);
-
-        if (oldTag.sameBody(tag)) {
-            return tag;
-        }
-
-        const oldTagSize = oldTag.getSize(),
-            newTagSize = tag.getSize(),
-            sizeDiff = newTagSize - oldTagSize;
-
-        if (oldTag.owner === tag.owner) {
-            await this.updateQuota(tag.owner, sizeDiff);
-        } else {
-            await this.updateQuota(oldTag.owner, -sizeDiff);
-            await this.updateQuota(tag.owner, sizeDiff);
-        }
 
         getLogger().info(`Updated tag: "${oldTag.name}" with data:${Util.formatLog(tag)}`);
         return tag;
@@ -205,20 +203,22 @@ class TagManager extends DBManager {
         let newTagSize = newTag.getSize(),
             sizeDiff = newTagSize;
 
-        if (create) {
-            await this.tag_db.add(newTag);
-        } else {
+        if (!create) {
             if (tag.isEqual(newTag)) {
                 throw new TagError("Can't alias tag with the same target and args");
             }
 
             const oldTagSize = tag.getSize();
             sizeDiff -= oldTagSize;
-
-            await this.tag_db.edit(newTag);
         }
 
         await this.updateQuota(tag.owner, sizeDiff);
+
+        if (create) {
+            await this.tag_db.add(newTag);
+        } else {
+            await this.tag_db.edit(newTag);
+        }
 
         getLogger().info(`Aliased tag: "${name}" to: "${aliasTag.name}".`);
         return [newTag, create];
@@ -231,10 +231,10 @@ class TagManager extends DBManager {
 
         const tagSize = tag.getSize();
 
-        await this.tag_db.chown(tag, newOwner);
-
         await this.updateQuota(tag.owner, -tagSize);
         await this.updateQuota(newOwner, tagSize);
+
+        await this.tag_db.chown(tag, newOwner);
 
         getLogger().info(`Transferred tag: "${tag.name}" to: ${newOwner}`);
         return tag;
