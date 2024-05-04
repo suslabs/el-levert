@@ -212,7 +212,41 @@ const Util = {
             }, interval);
         });
     },
-    duration: delta => {}
+    duration: (delta, format = false, include) => {
+        const durationNames = Object.keys(durationSeconds).filter(name => {
+                if (typeof include !== "undefined") {
+                    return include.includes(name);
+                }
+
+                return name !== "milli";
+            }),
+            dur = {};
+
+        let d_secs = delta * durationSeconds.milli;
+
+        for (const name of durationNames) {
+            const secs = durationSeconds[name],
+                num = Math.floor(d_secs / secs);
+
+            if (num > 0) {
+                d_secs -= num * secs;
+                dur[name] = num;
+            }
+        }
+
+        if (!format) {
+            return dur;
+        }
+
+        const _format = Object.entries(dur).map(entry => {
+            const [name, dur] = entry,
+                s = dur > 1 ? "s" : "";
+
+            return `${dur} ${Util.capitalize(name)}${s}`;
+        });
+
+        return _format.join(", ");
+    }
 };
 
 export default Util;

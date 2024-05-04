@@ -38,10 +38,20 @@ class LevertClient extends DiscordClient {
         }
 
         this.version = version;
-        this.started = false;
 
         this.setConfigs(configs);
         this.setupLogger();
+
+        this.started = false;
+        this.startedAt = -1;
+    }
+
+    get uptime() {
+        if (!this.started) {
+            return 0;
+        }
+
+        return Date.now() - this.startedAt;
     }
 
     setConfigs(configs) {
@@ -217,6 +227,18 @@ class LevertClient extends DiscordClient {
         }
     }
 
+    async setActivityFromConfig() {
+        if (!this.config.setActivity) {
+            return;
+        }
+
+        try {
+            await this.setActivity(this.config.activity);
+        } catch (err) {
+            this.logger.error("Error occured while setting activity:", err);
+        }
+    }
+
     async start() {
         if (this.started) {
             throw new ClientError("The client can only be started once");
@@ -233,14 +255,7 @@ class LevertClient extends DiscordClient {
 
         await this.login(token, true);
 
-        if (this.config.setActivity) {
-            try {
-                this.setActivity(this.config.activity);
-            } catch (err) {
-                this.logger.error(err);
-            }
-        }
-
+        await this.setActivityFromConfig();
         this.reminderManager.startSendLoop();
 
         if (this.config.enableGlobalHandler) {
@@ -248,6 +263,8 @@ class LevertClient extends DiscordClient {
         }
 
         this.started = true;
+        this.startedAt = Date.now();
+
         this.logger.info("Startup complete.");
     }
 
@@ -272,6 +289,8 @@ class LevertClient extends DiscordClient {
         await this.logout(kill);
 
         this.started = false;
+        this.startedAt = -1;
+
         this.logger.info("Client stopped.");
     }
 
