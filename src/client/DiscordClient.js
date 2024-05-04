@@ -50,11 +50,10 @@ class DiscordClient {
         this.wrapEvents = false;
         this.eventsDir = "";
 
-        this.loginTimeout = 60000;
-
         this.onLogout = _ => {};
         this.onKill = _ => {};
 
+        this.timeout = 60000;
         this.mentionUsers = false;
         this.pingReply = true;
     }
@@ -96,6 +95,10 @@ class DiscordClient {
             this[key] = option;
         }
 
+        const rest = {
+            timeout: this.timeout + 1
+        };
+
         const allowedMentions = {
             repliedUser: this.pingReply
         };
@@ -108,6 +111,7 @@ class DiscordClient {
 
         this.client.options = {
             ...this.client.options,
+            rest,
             allowedMentions
         };
     }
@@ -125,7 +129,7 @@ class DiscordClient {
                 resolve(false);
             });
 
-            Util.waitForCondition(_ => this.loggedIn, new ClientError("Login took too long"), this.loginTimeout)
+            Util.waitForCondition(_ => this.loggedIn, new ClientError("Login took too long"), this.timeout)
                 .then(_ => {
                     if (exitOnFailure) {
                         resolve(true);
