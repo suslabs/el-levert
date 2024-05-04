@@ -4,7 +4,7 @@ import GregicUtil from "../../util/oc/GregicUtil.js";
 
 export default {
     name: "oc",
-    category: "utility",
+    category: "util",
     handler: args => {
         if (args.length === 0) {
             return ":information_source: %oc (-version) [EU/t] [duration]";

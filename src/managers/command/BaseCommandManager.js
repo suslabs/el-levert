@@ -7,6 +7,8 @@ import LoadStatus from "../../loaders/LoadStatus.js";
 import { getClient, getLogger } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 
+import categoryNames from "./categoryNames.json" assert { type: "json" };
+
 class BaseCommandManager extends Manager {
     constructor(enabled, commandsDir, commandPrefix, options = {}) {
         super(enabled);
@@ -87,8 +89,14 @@ class BaseCommandManager extends Manager {
         let num = 1;
 
         for (const [i, name] of sortedNames.entries()) {
-            const formattedName = Util.capitalize(name).replaceAll(/[_-]/g, " ");
-            let header;
+            let formattedName = categoryNames[name],
+                header;
+
+            if (typeof formattedName === "undefined") {
+                formattedName = Util.capitalize(name).replaceAll(/[_-]/g, " ");
+            } else {
+                formattedName = Util.capitalize(formattedName);
+            }
 
             if (name === Command.defaultValues.category) {
                 header = "";

@@ -20,7 +20,7 @@ export default {
     name: "restart",
     aliases: ["reload"],
     ownerOnly: true,
-    category: "owner_only",
+    category: "owner-only",
     handler: async (_, msg) => {
         await getClient().restart(configReloader);
 
