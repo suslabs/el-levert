@@ -3,7 +3,8 @@ import { getClient } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 
 async function evalBase(args, msg) {
-    let body = args;
+    let body = args,
+        _;
 
     if (msg.attachments.size > 0) {
         try {
@@ -23,7 +24,7 @@ async function evalBase(args, msg) {
             };
         }
     } else {
-        [body] = Util.formatScript(body);
+        [_, body] = Util.formatScript(body);
     }
 
     if (body.length < 1) {

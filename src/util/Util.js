@@ -8,6 +8,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import URL from "node:url";
 
+const scriptRegex = /^`{3}([\S]+)?\n([\s\S]+)`{3}$/;
+
 const Util = {
     splitArgs: str => {
         const ind = str.indexOf(" ");
@@ -91,14 +93,22 @@ const Util = {
 
         return (await import(fileURL)).default;
     },
-    formatScript: body => {
-        const match = body.match(/^`{3}([\S]+)?\n([\s\S]+)`{3}$/);
+    formatScript: str => {
+        const match = str.match(scriptRegex);
 
-        if (match) {
-            return [match[2], true];
+        if (!match) {
+            return [false, str];
         }
 
-        return [body, false];
+        let lang = match[1],
+            body = match[2];
+
+        if (typeof body === "undefined") {
+            body = lang;
+            lang = "";
+        }
+
+        return [true, body, lang];
     },
     getByteLen: str => {
         let s = str.length;
@@ -155,8 +165,10 @@ const Util = {
         str = str.replaceAll(/[\n\r]/g, "\\$1");
 
         if (str.length > maxLength) {
-            const diff = str.length - maxLength;
-            return `\n---\n${str.substring(0, maxLength)} ... (${diff} more character${diff > 1 ? "s" : ""})\n---`;
+            const diff = str.length - maxLength,
+                s = diff > 1 ? "s" : "";
+
+            return `\n---\n${str.substring(0, maxLength)} ... (${diff} more character${s})\n---`;
         }
 
         if (str.length > splitLength) {
