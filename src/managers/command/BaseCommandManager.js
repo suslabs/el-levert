@@ -44,7 +44,7 @@ class BaseCommandManager extends Manager {
 
         const allowedCmds = commands.filter(command => {
             if (command.ownerOnly) {
-                return perm === getClient().permManager.owner.level;
+                return perm === getClient().permManager.ownerLevel;
             }
 
             return perm >= command.allowed;

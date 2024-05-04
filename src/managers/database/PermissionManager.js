@@ -81,7 +81,7 @@ class PermissionManager extends DBManager {
     }
 
     async fetchByLevel(level) {
-        if (level === this.owner.level) {
+        if (level === this.ownerLevel) {
             return [OwnerGroup];
         }
 

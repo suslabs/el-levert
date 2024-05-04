@@ -118,7 +118,7 @@ class Command {
 
         const allowedSubcmds = subcmdList.filter(subcmd => {
             if (subcmd.ownerOnly) {
-                return perm === getClient().permManager.owner.level;
+                return perm === getClient().permManager.ownerLevel;
             }
 
             return perm >= subcmd.allowed;
