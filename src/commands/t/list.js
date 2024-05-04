@@ -3,9 +3,8 @@ import { getClient } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 
 function formatTagList(tags) {
-    const format = tags.map((tag, i) => `${i + 1}. ` + tag.format()).join("\n");
-
-    return format;
+    const format = tags.map((tag, i) => `${i + 1}. ` + tag.format());
+    return format.join("\n");
 }
 
 export default {

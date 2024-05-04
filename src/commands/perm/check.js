@@ -6,7 +6,8 @@ function formatGroups(groups) {
     let format;
 
     if (groups.length > 1) {
-        format = groups.map((group, i) => `${i + 1}. ${group.format()}`).join("\n");
+        format = groups.map((group, i) => `${i + 1}. ${group.format()}`);
+        format = format.join("\n");
     } else {
         format = groups[0].format();
     }

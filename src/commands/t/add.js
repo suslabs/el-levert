@@ -8,6 +8,10 @@ export default {
     parent: "tag",
     subcommand: true,
     handler: async function (args, msg) {
+        if (args.length === 0) {
+            return ":information_source: `t add name body`";
+        }
+
         const [t_name, t_args] = Util.splitArgs(args);
 
         if (this.isSubName(t_name)) {

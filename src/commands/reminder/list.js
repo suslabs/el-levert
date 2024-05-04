@@ -3,9 +3,8 @@ import { EmbedBuilder } from "discord.js";
 import { getClient } from "../../LevertClient.js";
 
 function formatReminders(reminders) {
-    const format = reminders.map((reminder, i) => `${i + 1}. On ` + reminder.format()).join("\n");
-
-    return format;
+    const format = reminders.map((reminder, i) => `${i + 1}. On ` + reminder.format());
+    return format.join("\n");
 }
 
 export default {

@@ -104,6 +104,7 @@ export default {
         "dump",
         "edit",
         "info",
+        "leaderboard",
         "list",
         "owner",
         "quota",
@@ -117,7 +118,7 @@ export default {
     },
     handler: async function (args, msg, perm) {
         if (args.length === 0) {
-            return `:information_source: %t [${this.getSubcmdList(perm)}] tag_name [tag_body]`;
+            return `:information_source: %t [${this.getSubcmdList(perm)}] tag_name [tag_args]`;
         }
 
         const [t_name, t_args] = Util.splitArgs(args);

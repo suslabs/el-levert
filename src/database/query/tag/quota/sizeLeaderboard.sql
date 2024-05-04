@@ -1,0 +1,1 @@
+SELECT user, quota FROM Quotas ORDER BY quota DESC LIMIT $limit;

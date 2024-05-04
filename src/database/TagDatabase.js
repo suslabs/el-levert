@@ -144,6 +144,14 @@ class TagDatabase extends SqliteDatabase {
         return res.count;
     }
 
+    async countLeaderboard(limit) {
+        const rows = await this.tagQueries.countLeaderboard.all({
+            $limit: limit
+        });
+
+        return Array.from(rows);
+    }
+
     async quotaFetch(user) {
         const quota = await this.quotaQueries.fetch.get({
             $user: user
@@ -167,6 +175,14 @@ class TagDatabase extends SqliteDatabase {
             $user: user,
             $quota: quota
         });
+    }
+
+    async sizeLeaderboard(limit) {
+        const rows = await this.quotaQueries.sizeLeaderboard.all({
+            $limit: limit
+        });
+
+        return Array.from(rows);
     }
 }
 

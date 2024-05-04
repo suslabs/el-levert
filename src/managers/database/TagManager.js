@@ -311,6 +311,37 @@ class TagManager extends DBManager {
         });
     }
 
+    async leaderboard(type, limit = 20) {
+        let leaderboard;
+
+        switch (type) {
+            case "count":
+                leaderboard = await this.tag_db.countLeaderboard(limit);
+                break;
+            case "size":
+                leaderboard = await this.tag_db.sizeLeaderboard(limit);
+                break;
+            default:
+                leaderboard = [];
+                break;
+        }
+
+        for (const entry of leaderboard) {
+            const id = entry.user,
+                user = await getClient().findUserById(id);
+
+            if (user) {
+                entry.user = user;
+            } else {
+                entry.user = {
+                    username: "NOT FOUND"
+                };
+            }
+        }
+
+        return leaderboard;
+    }
+
     async getQuota(user) {
         return await this.tag_db.quotaFetch(user);
     }

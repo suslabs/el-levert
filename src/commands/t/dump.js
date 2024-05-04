@@ -27,7 +27,7 @@ export default {
                 space = parseInt(s_str);
 
                 if (isNaN(space)) {
-                    return ":warning: Invalid indentation: " + split[1];
+                    return ":warning: Invalid indentation: " + s_str;
                 }
             }
 

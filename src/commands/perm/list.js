@@ -3,9 +3,9 @@ import { EmbedBuilder } from "discord.js";
 import { getClient } from "../../LevertClient.js";
 
 function formatGroups(groups) {
-    const format = groups.map((group, i) => `${i + 1}. ${group.formatUsers()}`).join("\n");
+    const format = groups.map((group, i) => `${i + 1}. ${group.formatUsers()}`);
 
-    return format;
+    return format.join("\n");
 }
 
 export default {
