@@ -14,7 +14,7 @@ export default {
         }
 
         const [t_name, i_type] = Util.splitArgs(args),
-            isRaw = i_type === "raw";
+            raw = i_type === "raw";
 
         if (this.isSubName(t_name)) {
             return `:police_car: ${t_name} is a __command__, not a __tag__. You can't manipulate commands.`;
@@ -31,7 +31,7 @@ export default {
             return `:warning: Tag **${t_name}** doesn't exist.`;
         }
 
-        const info = await tag.getInfo(isRaw);
+        const info = await tag.getInfo(raw);
 
         return `:information_source: Tag info for **${t_name}**:
 \`\`\`js

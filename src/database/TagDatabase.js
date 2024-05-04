@@ -135,6 +135,15 @@ class TagDatabase extends SqliteDatabase {
         return tags;
     }
 
+    async count(countAll, user) {
+        const res = await this.tagQueries.count.get({
+            $countAll: countAll,
+            $user: user ?? ""
+        });
+
+        return res.count;
+    }
+
     async quotaFetch(user) {
         const quota = await this.quotaQueries.fetch.get({
             $user: user

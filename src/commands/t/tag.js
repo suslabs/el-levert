@@ -99,6 +99,7 @@ export default {
         "add",
         "alias",
         "chown",
+        "count",
         "delete",
         "dump",
         "edit",

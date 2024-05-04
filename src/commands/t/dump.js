@@ -8,14 +8,14 @@ export default {
     parent: "tag",
     subcommand: true,
     handler: async args => {
-        const split = args.split(" "),
-            full = split[0] === "full",
-            inline = split[0] === "inline";
+        const [d_type, s_str] = Util.splitArgs(args),
+            full = d_type === "full",
+            inline = d_type === "inline";
 
         const tags = await getClient().tagManager.dump(full);
 
         if (tags.length < 1) {
-            return ":information_source: There are no registered tags.";
+            return ":information_source: There are no tags registered.";
         }
 
         let format;
@@ -23,8 +23,8 @@ export default {
         if (full) {
             let space;
 
-            if (split.length > 1) {
-                space = parseInt(split[1]);
+            if (s_str.length > 0) {
+                space = parseInt(s_str);
 
                 if (isNaN(space)) {
                     return ":warning: Invalid indentation: " + split[1];

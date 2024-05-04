@@ -292,6 +292,16 @@ class TagManager extends DBManager {
         };
     }
 
+    async count(user) {
+        const countAll = user === null || typeof user === "undefined" || user.length < 1;
+
+        if (countAll) {
+            return await this.tag_db.count(true);
+        } else {
+            return await this.tag_db.count(false, user);
+        }
+    }
+
     async search(query, maxResults = 20) {
         query = query.toLowerCase();
         const tags = await this.dump();

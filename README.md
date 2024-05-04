@@ -71,6 +71,7 @@ Subcommands:
 -   add `type (name) (body)` - Adds the tag `(name)`. If `body` contains a code block, it will be treated as a script tag. If an image file is attached, it will be added as a url. If a text file is attached, it will be added as a script. If the first argument is `vm2` the tag will be added as a vm2 script.
 -   alias `(name) (alias_name) args` - If tag `(name)` doesn't exist, it will be created and aliased to `(alias_name)` with `args` being appended to `tag.args`. If `(name)` already exists and is owned by you, it will be updated to be an alias. Moderators can bypass ownership checks.
 -   chown `(name) (new_owner)` - Transfers the tag to another user, specified either as a username, tag, mention or id.
+-   count `[me/user]` - Sends the number of tags that have been registered in total or by the specified user.
 -   delete `(name)` - Deletes tag `(name)` if it's owned by you or if you are a moderator.
 -   dump `[inline/full] (space)` - Sends a list of all tags.
 -   edit `(name) (new_body)` - Edits tag `(name)` with a new body, same ownership and attachment rules as `add`.
