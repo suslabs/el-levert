@@ -33,7 +33,7 @@ class SedHandler extends Handler {
     }
 
     canSed(str) {
-        if (typeof str !== "string") {
+        if (!this.enabled || typeof str !== "string") {
             return false;
         }
 
