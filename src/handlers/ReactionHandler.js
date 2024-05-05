@@ -32,8 +32,8 @@ function logRemoveTime(t1) {
 }
 
 class ReactionHandler extends Handler {
-    constructor() {
-        super(getClient().reactions.enableReacts, false);
+    constructor(enabled) {
+        super(enabled, false);
 
         this.funnyWords = getClient().reactions.funnyWords;
         this.parans = getClient().reactions.parans;

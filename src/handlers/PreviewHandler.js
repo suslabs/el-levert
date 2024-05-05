@@ -28,8 +28,8 @@ function logSendTime(t1) {
 }
 
 class PreviewHandler extends Handler {
-    constructor() {
-        super(true, true);
+    constructor(enabaled) {
+        super(enabaled, true);
 
         this.outCharLimit = Util.clamp(getClient().config.outCharLimit, 0, 2000);
         this.outNewlineLimit = Util.clamp(getClient().config.outNewlineLimit, 0, 2000);

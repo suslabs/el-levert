@@ -101,9 +101,9 @@ class LevertClient extends DiscordClient {
 
         const handlers = {
             commandHandler: new CommandHandler(),
-            previewHandler: new PreviewHandler(),
-            reactionHandler: new ReactionHandler(),
-            sedHandler: new SedHandler()
+            previewHandler: new PreviewHandler(this.config.enablePreviews),
+            reactionHandler: new ReactionHandler(this.reactions.enableReacts),
+            sedHandler: new SedHandler(this.config.enableSed)
         };
 
         this.handlers = handlers;

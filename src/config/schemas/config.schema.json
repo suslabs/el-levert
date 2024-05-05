@@ -79,6 +79,9 @@
         "permissionAdminLevel": {
             "type": "number"
         },
+        "enablePreviews": {
+            "type": "boolean"
+        },
         "enableSed": {
             "type": "boolean"
         },
@@ -151,6 +154,7 @@
         "maxGroupNameLength",
         "tagModeratorLevel",
         "permissionAdminLevel",
+        "enablePreviews",
         "enableSed",
         "enableOtherLangs",
         "enableVM2",

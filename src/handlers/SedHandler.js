@@ -28,8 +28,8 @@ function logSendTime(t1) {
 }
 
 class SedHandler extends Handler {
-    constructor() {
-        super(getClient().config.enableSed, true);
+    constructor(enabled) {
+        super(enabled, true);
     }
 
     canSed(str) {
