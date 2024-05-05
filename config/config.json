@@ -1,5 +1,5 @@
 {
-    "logFile": "./logs/debug.log",
+    "logFile": "./logs/bot.log",
     "importLogFile": "./logs/import.log",
     "eventsPath": "./src/events",
     "commandsPath": "./src/commands",

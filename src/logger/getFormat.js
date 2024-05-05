@@ -1,11 +1,11 @@
 import winston from "winston";
 
-import CreateLoggerError from "../errors/CreateLoggerError.js";
+import LoggerError from "../errors/LoggerError.js";
 
 const validFormats = Object.getOwnPropertyNames(winston.format).filter(name => !["length", "combine"].includes(name));
 
 function getFormat(config) {
-    if (config === undefined) {
+    if (typeof config === "undefined") {
         return winston.format.simple();
     } else if (typeof config === "string") {
         config = [config];
@@ -21,7 +21,7 @@ function getFormat(config) {
         }
 
         if (!validFormats.includes(name)) {
-            throw new CreateLoggerError("Invalid format: " + name);
+            throw new LoggerError("Invalid format: " + name);
         }
 
         return winston.format[name](opts);

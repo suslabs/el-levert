@@ -1,4 +1,4 @@
-class CreateLoggerError extends Error {
+class LoggerError extends Error {
     constructor(message = "", ...args) {
         super(message, ...args);
 
@@ -7,4 +7,4 @@ class CreateLoggerError extends Error {
     }
 }
 
-export default CreateLoggerError;
+export default LoggerError;
