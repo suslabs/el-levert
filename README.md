@@ -1,9 +1,8 @@
-<h1 align="center">
-    <img src="./assets/bigrat.jpg" alt="EL LEVERT" style="width:35%;height:35%;">
+<div align="center"">
+    <h1>EL LEVERT JR</h1>
     <br>
-    EL LEVERT JR
-    <br>
-</h1>
+    <img src="./assets/bigrat.jpg" alt="EL LEVERT" style="width: 45%; height: 45%;">
+</div>
 
 <h4 align="center">Romanian version of Leveret by Neeve</h4>
 
@@ -20,7 +19,6 @@
     <a href="https://github.com/WeslayCodes/BoarBot/main">
         <img src="https://img.shields.io/github/last-commit/Alex31TheDev/el-levert" alt="Last commit">
     </a>
-
 </p>
 
 <p align="center">
@@ -240,6 +238,8 @@ To delete all imported tags, run `node ./scripts/importer/importer.js --p1`.
 ⠀⠀⠀⠀⠀⠀⠀⠈⠛⠻⠿⠿⠿⠿⠋⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ```
 
+#
+
 <h1 align="center">
-    <img src="https://i.imgur.com/oDZ2nYI.png" alt="EL LEVERT" style="width:75%;height:50%;">
+    <img src="https://i.imgur.com/oDZ2nYI.png" alt="Licensing" style="width:75%;height:50%;">
 </h1>
