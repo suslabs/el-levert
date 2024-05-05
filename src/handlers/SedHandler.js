@@ -6,7 +6,7 @@ import HandlerError from "../errors/HandlerError.js";
 import { getClient, getLogger } from "../LevertClient.js";
 import Util from "../util/Util.js";
 
-const sedRegex = /^sed\/(.+?)\/([^/]*)\/?(.{1,2})?/,
+const sedRegex = /^sed\/(?<regex_str>.+?)\/(?<replace>[^/]*)\/?(?<flags_str>.{1,2})?/,
     sedUsage = "Usage: sed/regex/replace/flags (optional)";
 
 function logUsage(msg) {
@@ -72,9 +72,8 @@ class SedHandler extends Handler {
             throw new HandlerError("Invalid input string");
         }
 
-        const parsedRegex = match[1],
-            replace = match[2],
-            flag = match[3] ?? "" + "i";
+        const { regex_str, replace, flags_str } = match.groups,
+            flags = flags_str ?? "" + "i";
 
         if (match.length < 3) {
             throw new HandlerError("Invalid regex args");
@@ -83,7 +82,7 @@ class SedHandler extends Handler {
         let regex, sedMsg;
 
         try {
-            regex = new RegExp(parsedRegex, flag);
+            regex = new RegExp(regex_str, flags);
         } catch (err) {
             throw new HandlerError("Invalid regex or flags");
         }
