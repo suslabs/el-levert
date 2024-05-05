@@ -6,7 +6,10 @@ class SqliteResult extends ProxiedResult {
         super();
 
         this.setData(data);
-        this.setInfo(st);
+        this.setInfo({
+            lastID: st.lastID,
+            changes: st.changes
+        });
 
         return new Proxy(this, ResultProxyHandler);
     }
