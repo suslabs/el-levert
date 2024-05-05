@@ -24,7 +24,7 @@
 <p align="center">
   <a href="#commands">Commands</a>
   •
-  <a href="#usage-example">Example</a>
+  <a href="#command-usage-example">Example</a>
   •
   <a href="#evaluation-api">API</a>
   •
@@ -131,20 +131,76 @@ Subcommands:
 -   remove `(index)` - Removes reminder at the specified index in your list.
 -   remove_all - Removes all reminders.
 
-# Usage example
+# Command usage example
 
 <img src="./assets/firefox_jT1LBFOYqe.png" alt="wet_rat">
 
+# Other responses
+
+### 1. Previews
+
+The bot will respond to message links with an embed of the message and/or the first attachment when present.
+If the link's sender can't read the message, the bot won't respond, making it impossible to leak private channels.
+Previews will also be generated for message links in the output of tags.
+
+Can be disabled using the `enablePreviews` config option.
+
+Example:
+
+<img src="./assets/firefox_isuR1U1lI5.png" alt="preview">
+
+### 2. Sed replace
+
+The following syntax:
+
+`sed/regex/replace/flags (optional)`
+
+Can be used to replace a pattern in a previous message with another pattern.
+When replying, only the referenced message is going to be replaced. Otherwise, the first matching message will be replaced.
+Match groups can be referenced in the output using `$1`, `$2`, etc.
+
+Can be disabled using the `enableSed` config option.
+
+Example:
+
+<img src="./assets/firefox_umHSjufnTE.png" alt="sed">
+
+### 3. Reactions
+
+The bot will react to certain words in a message with configured emojis.
+It will also react to mismatched brackets if the emoji ids are set.
+
+Needs to be enabled and configured in `config/reactions.json`.
+
+Example:
+
+<img src="./assets/firefox_FQdOi533TL.png" alt="reactions">
+
 # Evaluation API
 
-### 1. `eval` / pure js API
+### 1. `eval` / pure JS API
 
 Mirrors the API of Leveret; see https://gist.github.com/NotMyWing/632d738644c17aa71931169af5cb2767.
-If the output is empty, `Cannot send an empty message.` will be sent instead.
 
-### 2. `vm2` / nodejs API
+Main differences:
+
+-   `util.dumpTags` can be called with `true` to recieve a full dump
+-   `msg.reply` exits the script right away
+-   `util.executeTag` isn't implemented
+-   `util.fetchMessage(ch_id | null, msg_id)` allows fetching a single message
+-   `util.fetchMessages` accepts message fetch options
+
+If the output is an object or an array, it will be automatically formatted into a string.
+If it is empty, `Cannot send an empty message.` will be sent instead.
+
+Example:
+
+<img src="./assets/firefox_jeZ2rL701m.png" alt="reactions">
+
+### 2. `vm2` / NodeJS API
 
 Allows for more advanced scripts than the pure js API, allowing for async functions and importing internal and external libraries.
+Tags can use VM2 scripts by doing `%t add (name) vm2 (script)`
 
 **When not using `reply`, script output must be sent with `return`.**
 
@@ -160,14 +216,9 @@ Allows for more advanced scripts than the pure js API, allowing for async functi
 -   util
 -   zlib
 
-### External module whitelist:
-
--   canvas.cjs - Customized canvas and webgl implementation
--   three - three.js
-
 ### Global scope:
 
--   tag - Similar to the `tag` object in pure js.
+-   tag - Similar to the `tag` object in pure js. Only available when executing from a tag.
 -   msg - Similar to the `msg` object in pure js.
 -   reply, request, fetchTag, dumpTags, findUsers - Async versions of their pure js counterparts.
 
