@@ -161,7 +161,7 @@ class BaseCommandManager extends Manager {
         }
 
         command.addSubcommand(subcommand);
-        getLogger().info(`Bound subcommand "${subcommand.name}" to command "${command.name}".`);
+        getLogger().debug(`Bound subcommand "${subcommand.name}" to command "${command.name}".`);
 
         return true;
     }
@@ -208,7 +208,7 @@ class BaseCommandManager extends Manager {
         if (this.commandLoader.loaded) {
             this.commandLoader.deleteCommands();
         } else {
-            getLogger().info("No commands to delete.");
+            getLogger().debug("No commands to delete.");
         }
 
         delete this.commandLoader;

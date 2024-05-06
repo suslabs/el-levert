@@ -211,7 +211,7 @@ class JsonLoader extends FileLoader {
         if (status === LoadStatus.failed) {
             return status;
         } else {
-            this.logger?.info(`Validated ${this.getName()}.`);
+            this.logger?.debug(`Validated ${this.getName()}.`);
         }
 
         return status;

@@ -10,11 +10,11 @@ import VMUtil from "../../util/vm/VMUtil.js";
 const logInspectorPackets = false;
 
 function logUsage(code) {
-    getLogger().info(`Running script:${Util.formatLog(code)}`);
+    getLogger().debug(`Running script:${Util.formatLog(code)}`);
 }
 
 function logTime(t1) {
-    getLogger().info(`Running script took ${(Date.now() - t1).toLocaleString()}ms.`);
+    getLogger().debug(`Running script took ${(Date.now() - t1).toLocaleString()}ms.`);
 }
 
 class TagVM {
@@ -74,7 +74,7 @@ class TagVM {
             out = await context.runScript(code);
 
             out = VMUtil.formatOutput(out);
-            getLogger().info(`Returning script output:${Util.formatLog(out)}`);
+            getLogger().debug(`Returning script output:${Util.formatLog(out)}`);
         } catch (err) {
             out = this.handleError(err);
         } finally {
@@ -89,22 +89,22 @@ class TagVM {
     handleError(err) {
         switch (err.name) {
             case "VMError":
-                getLogger().error(`VM error: ${err.message}`);
+                getLogger().debug(`VM error: ${err.message}`);
                 return `:no_entry_sign: ${err.message}.`;
             case "ExitError":
-                getLogger().info(`Returning exit data:${Util.formatLog(err.exitData)}`);
+                getLogger().debug(`Returning exit data:${Util.formatLog(err.exitData)}`);
                 return err.exitData;
             case "ManevraError":
-                getLogger().info(`Returning reply data:${Util.formatLog(err.message)}`);
+                getLogger().debug(`Returning reply data:${Util.formatLog(err.message)}`);
                 return this.processReply(err.message);
         }
 
         switch (err.message) {
             case VMErrors.timeout:
-                getLogger().error("VM error: Script execution timed out.");
+                getLogger().debug("VM error: Script execution timed out.");
                 return ":no_entry_sign: Script execution timed out.";
             case VMErrors.memLimit:
-                getLogger().error("VM error: Memory limit reached.");
+                getLogger().debug("VM error: Memory limit reached.");
                 return ":no_entry_sign: Memory limit reached.";
             default:
                 throw err;

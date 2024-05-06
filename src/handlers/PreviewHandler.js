@@ -16,11 +16,11 @@ function logUsage(msg, str) {
 }
 
 function logSending(preview) {
-    getLogger().info(`Sending preview:${Util.formatLog(preview)}`);
+    getLogger().debug(`Sending preview:${Util.formatLog(preview)}`);
 }
 
 function logGenTime(t1) {
-    getLogger().info(`Preview generation took ${(Date.now() - t1).toLocaleString()}ms.`);
+    getLogger().debug(`Preview generation took ${(Date.now() - t1).toLocaleString()}ms.`);
 }
 
 function logSendTime(t1) {

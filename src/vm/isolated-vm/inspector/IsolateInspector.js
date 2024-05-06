@@ -24,7 +24,7 @@ class IsolateInspector {
             return;
         }
 
-        getLogger().info("Creating inspector channel...");
+        getLogger().debug("Creating inspector channel...");
 
         if (typeof isolate === "undefined") {
             isolate = this.isolate;
@@ -38,7 +38,7 @@ class IsolateInspector {
             try {
                 this.sendReply(msg);
             } catch (err) {
-                getLogger().error(err);
+                getLogger().debug("Reply error:", err);
                 this.disposeChannel();
             }
         }.bind(this);
@@ -46,7 +46,7 @@ class IsolateInspector {
         channel.onResponse = (_, msg) => wrappedReply(msg);
         channel.onNotification = wrappedReply;
 
-        getLogger().info("Created channel.");
+        getLogger().debug("Created channel.");
         this.channel = channel;
     }
 
@@ -63,7 +63,7 @@ class IsolateInspector {
         try {
             this.channel.dispose();
         } catch (err) {
-            getLogger().error(err);
+            getLogger().debug("Dispose error:", err);
         }
 
         this.channel = null;

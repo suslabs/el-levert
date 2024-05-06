@@ -16,11 +16,11 @@ function logUsage(msg) {
 }
 
 function logSending(sed) {
-    getLogger().info(`Sending replaced message:${Util.formatLog(sed)}`);
+    getLogger().debug(`Sending replaced message:${Util.formatLog(sed)}`);
 }
 
 function logGenTime(t1) {
-    getLogger().info(`Sed generation took ${(Date.now() - t1).toLocaleString()}ms.`);
+    getLogger().debug(`Sed generation took ${(Date.now() - t1).toLocaleString()}ms.`);
 }
 
 function logSendTime(t1) {

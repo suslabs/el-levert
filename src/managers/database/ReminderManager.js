@@ -111,13 +111,13 @@ class ReminderManager extends DBManager {
     }
 
     async sendReminders() {
-        getLogger().info(`Checking reminders... (${Util.round(this.sendInterval * Util.durationSeconds.milli, 1)}s)`);
+        getLogger().debug(`Checking reminders... (${Util.round(this.sendInterval * Util.durationSeconds.milli, 1)}s)`);
 
         const t1 = Date.now(),
             reminders = await this.getPastReminders();
 
         if (reminders.length < 1) {
-            getLogger().info("No reminders to send.");
+            getLogger().debug("No reminders to send.");
             return;
         }
 

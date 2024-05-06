@@ -32,7 +32,7 @@ class DirectoryLoader extends Loader {
     }
 
     loadFilePaths() {
-        this.logger?.info(`Reading ${this.getName()}...`);
+        this.logger?.debug(`Reading ${this.getName()}...`);
 
         if (typeof this.dirPath !== "string") {
             return this.failure(`Invalid ${this.getName()}`);
@@ -71,7 +71,7 @@ class DirectoryLoader extends Loader {
 
         this.files = files;
 
-        this.logger?.info(`Read ${this.getName()}.`);
+        this.logger?.debug(`Read ${this.getName()}.`);
         return LoadStatus.successful;
     }
 

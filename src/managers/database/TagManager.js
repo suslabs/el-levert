@@ -367,7 +367,7 @@ class TagManager extends DBManager {
         }
 
         await this.tag_db.quotaSet(user, newQuota);
-        getLogger().info(`Updated quota for: ${user} diff: ${diff}`);
+        getLogger().debug(`Updated quota for: ${user} diff: ${diff}`);
     }
 
     async downloadBody(msg) {

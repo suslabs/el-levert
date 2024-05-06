@@ -31,7 +31,7 @@ class CommandLoader extends DirectoryLoader {
     }
 
     deleteCommands() {
-        this.logger?.info("Deleting commands...");
+        this.logger?.debug("Deleting commands...");
 
         let i = 0;
         for (; i < this.commands.length; i++) {
@@ -42,7 +42,7 @@ class CommandLoader extends DirectoryLoader {
             this.commands.shift();
         }
 
-        this.logger?.info(`Deleted ${i} commands.`);
+        this.logger?.debug(`Deleted ${i} commands.`);
     }
 
     getLoadingMessage() {

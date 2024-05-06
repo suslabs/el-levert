@@ -18,17 +18,17 @@ function logWordsUsage(msg, words) {
 }
 
 function logReactTime(t1) {
-    getLogger().info(`Reacting took ${(Date.now() - t1).toLocaleString()}ms.`);
+    getLogger().debug(`Reacting took ${(Date.now() - t1).toLocaleString()}ms.`);
 }
 
 function logRemove(msg, count) {
-    getLogger().info(
+    getLogger().debug(
         `Removing ${count} reactions from message ${msg.id} sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${msg.channel.name}).`
     );
 }
 
 function logRemoveTime(t1) {
-    getLogger().info(`Removing reactions took ${(Date.now() - t1).toLocaleString()}ms.`);
+    getLogger().debug(`Removing reactions took ${(Date.now() - t1).toLocaleString()}ms.`);
 }
 
 class ReactionHandler extends Handler {

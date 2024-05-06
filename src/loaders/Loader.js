@@ -14,7 +14,7 @@ function _load(...args) {
     }
 
     if (loadingMessage.length > 0) {
-        this.logger?.info(loadingMessage);
+        this.logger?.debug(loadingMessage);
     }
 
     this.result = {};
@@ -41,7 +41,7 @@ function _write(data, ...args) {
     }
 
     if (writingMessage.length > 0) {
-        this.logger?.info(writingMessage);
+        this.logger?.debug(writingMessage);
     }
 
     data ??= this.data;
