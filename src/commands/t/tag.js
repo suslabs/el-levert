@@ -131,11 +131,12 @@ export default {
         let tag = await getClient().tagManager.fetch(t_name);
 
         if (!tag) {
-            let find = await getClient().tagManager.search(t_name, 5),
-                out = `:warning: Tag **${t_name}** doesn't exist.`;
+            let out = `:warning: Tag **${t_name}** doesn't exist.`,
+                find = await getClient().tagManager.search(t_name, 5);
 
             if (find.length > 0) {
-                out += `\nDid you mean: **${find.join("**, **")}**?`;
+                const names = `**${find.join("**, **")}**`;
+                out += `\nDid you mean: ${names}?`;
             }
 
             return out;

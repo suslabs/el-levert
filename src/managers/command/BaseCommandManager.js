@@ -121,9 +121,11 @@ class BaseCommandManager extends Manager {
             }
 
             if (discord) {
-                categoryFormat += `\\- \`${cmdNames.join("`, `")}\``;
+                const names = `\`${cmdNames.join("`, `")}\``;
+                categoryFormat += "\\- " + names;
             } else {
-                categoryFormat += `- ${cmdNames.join(", ")}`;
+                const names = cmdNames.join(", ");
+                categoryFormat += "- " + names;
             }
 
             format[i] = categoryFormat;

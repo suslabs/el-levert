@@ -42,7 +42,7 @@ export default {
             return ":warning: Invalid leaderboard type.";
         }
 
-        let limit;
+        let limit = 20;
 
         if (l_str.length > 0) {
             limit = parseInt(l_str);
