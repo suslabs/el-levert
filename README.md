@@ -6,7 +6,7 @@
 
 <h4 align="center">Romanian version of Leveret by Neeve</h4>
 
-<p align="center">
+<div align="center">
     <a href="https://opensource.org/license/mit/">
         <img src="https://img.shields.io/github/license/Alex31TheDev/el-levert" alt="License">
     </a>
@@ -19,9 +19,9 @@
     <a href="https://github.com/WeslayCodes/BoarBot/main">
         <img src="https://img.shields.io/github/last-commit/Alex31TheDev/el-levert" alt="Last commit">
     </a>
-</p>
+</div>
 
-<p align="center">
+<div align="center">
   <a href="#commands">Commands</a>
   •
   <a href="#command-usage-example">Example</a>
@@ -33,7 +33,16 @@
   <a href="#importing">Importing</a>
   •
   <a href="#amogus">Amogus</a>
-</p>
+</div>
+
+# Features
+
+-   Tags
+-   JS eval
+-   Permission system
+-   Reminders
+-   Message previews
+-   ...and more!
 
 # TODO
 
@@ -85,18 +94,21 @@ Subcommands:
 
 ### 4. eval `(script)`
 
-Evaluate specified script. See the API section for more information.
+Evaluates specified script. See the [API](#evaluation-api) section for more information.
 
 Subcommands:
 
 -   langs - Sends the list of enabled languages.
--   vm2 `(script)` - Eval script with the vm2 backend. See API/vm2 for more information.
--   c, cpp, py `(script)` - Eval script with the external vm backend, quite slow.
+-   vm2 `(script)` - Eval script with the VM2 backend. See [API/vm2](#2-vm2--nodejs-api) for more information.
+-   c, cpp, py `(script)` - Eval script with the external VM backend, quite slow.
+
+By default, only the default JS eval is enabled. The other eval contexts can be enabled in the config.
+VM2 eval only works under Linux/WSL and the external VM backend needs [judge0](https://judge0.com/) to be installed and configured.
 
 ### 5. perm
 
 Root command for the permission manager. Can be executed by anyone.
-For this feature to work properly, set the `owner` field in `config.json`.
+For this feature to work properly, set the `owner` field in `auth.json`.
 
 Subcommands:
 
@@ -111,9 +123,21 @@ Subcommands:
 -   update_group `(group_name) [new_name/unchanged] [new_level/unchanged]` - Updates `(group_name)` with a new name and level.
 -   check `(user)` - Sends permission details for `(user)`. Can be executed by anyone.
 
+The `owner` group is a special group which only contains the bot owner if configured. It can't be updated or removed and users can't be added or removed from it.
+
+Default permission levels:
+
+-   user: 0
+-   moderator: 1 (`tagModeratorLevel`)
+-   admin: 2 (`permissionAdminLevel`)
+-   owner: 2147483647
+
+These levels can be adjusted in the config file and commands can be locked to different levels by adding the `allowed: level` property.
+
 ### 6. oc `-version (EU/t) (duration)`
 
 Calculates overclock EU, duration, and tier for the specified parameters.
+
 If `-version` is not specified, the calculator defaults to `ceu`. Allowed versions are:
 
 -   ceu
@@ -126,10 +150,14 @@ Root command for the reminder manager.
 
 Subcommands:
 
--   add `(date) "message"` - Adds a reminder for the specified date.
+-   add `(date) "message"` - Adds a reminder for the specified date. The message must be enclosed in quotes.
 -   list `(user)` - Lists all of your reminders. If `user` is specified, their reminders will be listed instead.
 -   remove `(index)` - Removes reminder at the specified index in your list.
 -   remove_all - Removes all reminders.
+
+You will be reminded via a DM from the bot. Example message:
+
+<img src="./assets/firefox_LAxLHjgmYR.png" alt="reminder">
 
 # Command usage example
 
@@ -180,7 +208,7 @@ Example:
 
 ### 1. `eval` / pure JS API
 
-Mirrors the API of Leveret; see https://gist.github.com/NotMyWing/632d738644c17aa71931169af5cb2767.
+Mirrors the API of Leveret; see [Neeve's API documentation](https://gist.github.com/NotMyWing/632d738644c17aa71931169af5cb2767).
 
 Main differences:
 
@@ -196,6 +224,8 @@ If it is empty, `Cannot send an empty message.` will be sent instead.
 Example:
 
 <img src="./assets/firefox_jeZ2rL701m.png" alt="reactions">
+
+When the `enableInspector` config option is set, the Chrome inspector can be used to debug tag scripts. The link will be printed to the console and scripts will wait for the inspector to be connected before executing. When you are done debugging, closing the inspector tab will let the script finish normally.
 
 ### 2. `vm2` / NodeJS API
 
@@ -291,6 +321,6 @@ To delete all imported tags, run `node ./scripts/importer/importer.js --p1`.
 
 #
 
-<h1 align="center">
+<div align="center">
     <img src="https://i.imgur.com/oDZ2nYI.png" alt="Licensing" style="width:75%;height:50%;">
-</h1>
+</div>
