@@ -20,6 +20,7 @@ const hopsSeparator = ",";
 
 class Tag {
     static defaultValues = defaultValues;
+    static hopsSeparator = hopsSeparator;
 
     constructor(data) {
         if (typeof data?.hops === "string") {

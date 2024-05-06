@@ -103,6 +103,14 @@ class TagDatabase extends SqliteDatabase {
         });
     }
 
+    async updateHops(name, newName, sep) {
+        return await this.tagQueries.updateHops.run({
+            $name: name,
+            $newName: newName,
+            $sep: sep
+        });
+    }
+
     async delete(tag) {
         return await this.tagQueries.delete.run({
             $name: tag.name
