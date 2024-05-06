@@ -87,7 +87,12 @@ class TagManager extends DBManager {
             throw new TagError("Tag already exists", existingTag);
         }
 
-        if (typeof body === "undefined" || body.length < 1) {
+        if (body === null || typeof body === "undefined") {
+            throw new TagError("Invalid tag body");
+        }
+
+        body = body.trim();
+        if (body.length < 1) {
             throw new TagError("Can't add an empty tag");
         }
 
@@ -112,7 +117,12 @@ class TagManager extends DBManager {
             throw new TagError("Tag doesn't exist");
         }
 
-        if (typeof body === "undefined" || body.length < 1) {
+        if (body === null || typeof body === "undefined") {
+            throw new TagError("Invalid tag body");
+        }
+
+        body = body.trim();
+        if (body.length < 1) {
             throw new TagError("Tag body is empty");
         }
 
@@ -192,6 +202,8 @@ class TagManager extends DBManager {
         const name = tag.name ?? createOptions.name,
             owner = tag.owner ?? createOptions.owner,
             hops = [name].concat(aliasTag.hops);
+
+        args = args?.trim();
 
         const newTag = new Tag({
             hops,

@@ -52,6 +52,7 @@ class ReminderManager extends DBManager {
             throw new ReminderError("Invalid end time");
         }
 
+        msg = msg?.trim();
         const reminder = new Reminder({ user, end, msg });
 
         await this.remind_db.add(reminder);
