@@ -256,7 +256,7 @@ class TagManager extends DBManager {
         await this.tag_db.rename(tag, newName);
         await this.tag_db.updateHops(oldName, newName, Tag.hopsSeparator);
 
-        getLogger.info(`Renamed tag: "${oldName}" to: "${newName}"`);
+        getLogger().info(`Renamed tag: "${oldName}" to: "${newName}"`);
         return tag;
     }
 

@@ -9,7 +9,7 @@ export default {
     subcommand: true,
     handler: async args => {
         if (args.length === 0) {
-            return ":information_source: `t search query (max_results)`";
+            return ":information_source: `t search query (all/max_results)`";
         }
 
         const [t_name, m_str] = Util.splitArgs(args),
