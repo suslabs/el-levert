@@ -58,7 +58,11 @@ class PermissionManager extends DBManager {
 
     checkLevel(level) {
         if (isNaN(level) || level < 0) {
-            throw new PermissionError("Invalid level");
+            throw new PermissionError("Invalid group level");
+        }
+
+        if (level <= Group.defaultValues.level) {
+            throw new PermissionError("Group level must be higher than the default level");
         }
 
         return true;
