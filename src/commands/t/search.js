@@ -12,7 +12,8 @@ export default {
             return ":information_source: `t search query (max_results)`";
         }
 
-        const [t_name, m_str] = Util.splitArgs(args);
+        const [t_name, m_str] = Util.splitArgs(args),
+            all = m_str === "all";
 
         const e = getClient().tagManager.checkName(t_name);
         if (e) {
@@ -21,7 +22,9 @@ export default {
 
         let maxResults = 20;
 
-        if (m_str.length > 0) {
+        if (all) {
+            maxResults = Infinity;
+        } else if (m_str.length > 0) {
             maxResults = parseInt(m_str);
 
             if (isNaN(maxResults) || maxResults < 1) {

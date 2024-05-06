@@ -50,6 +50,8 @@ export default {
             if (isNaN(limit) || limit < 1) {
                 return ":warning: Invalid limit: " + l_str;
             }
+
+            limit = Util.clamp(limit, 1, 100);
         }
 
         const leaderboard = await getClient().tagManager.leaderboard(l_type, limit);

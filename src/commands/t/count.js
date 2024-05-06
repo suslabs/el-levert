@@ -9,11 +9,14 @@ export default {
     handler: async (args, msg) => {
         let user;
 
-        if (args.length > 0) {
+        findUser: if (args.length > 0) {
             const [u_name] = Util.splitArgs(args),
+                all = u_name === "all",
                 own = u_name === "me";
 
-            if (own) {
+            if (all) {
+                break findUser;
+            } else if (own) {
                 user = msg.author;
             } else {
                 const find = (await getClient().findUsers(u_name))[0];

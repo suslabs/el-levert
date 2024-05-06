@@ -28,7 +28,9 @@ function search(haystack, needle, options = {}) {
         results[i] = haystack[ind];
     }
 
-    if (typeof maxResults !== "undefined") {
+    const limitResults = ![undefined, null, Infinity].includes(maxResults);
+
+    if (limitResults) {
         results = results.slice(0, maxResults);
     }
 

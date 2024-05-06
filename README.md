@@ -78,18 +78,18 @@ Subcommands:
 -   add `(name) [type] (body)` - Adds the tag `(name)`. If `body` contains a code block, it will be treated as a script tag. If an image file is attached, it will be added as a url. If a text file is attached, it will be added as a script. If the first argument is `vm2` the tag will be added as a vm2 script.
 -   alias `(name) (alias_name) args` - If tag `(name)` doesn't exist, it will be created and aliased to `(alias_name)` with `args` being appended to `tag.args`. If `(name)` already exists and is owned by you, it will be updated to be an alias. Moderators can bypass ownership checks.
 -   chown `(name) (new_owner)` - Transfers the tag to another user, specified either as a username, tag, mention or id.
--   count `[me/user]` - Sends the number of tags that have been registered in total or by the specified user.
+-   count `[all/me/user]` - Sends the number of tags that have been registered in total or by the specified user.
 -   delete `(name)` - Deletes tag `(name)` if it's owned by you or if you are a moderator.
 -   dump `[inline/full] (space)` - Sends a list of all tags.
 -   edit `(name) [type] (new_body)` - Edits tag `(name)` with a new body, same ownership and attachment rules as `add`.
 -   info `(name) [raw]` - Sends the properties of tag `(name)`. Moderator only.
--   leaderboard `(count/size) [limit < 100]` - Sends the tag leaderboard up to the specified limit.
+-   leaderboard `(count/size) [limit=20 < 100]` - Sends the tag leaderboard up to the specified limit.
 -   list `(user)` - Lists all of your tags. If `user` is specified, their tags will be listed instead.
 -   owner `(name)` - Sends the owner of tag `(name)`.
 -   quota - Sends your quota, affected by `add`, `alias`, `chown`, `delete` and `edit`. If your quota reaches the limit, you will not be able to add any more tags until you free up some space.
 -   raw `(name)` - Sends the text or source code of tag `(name)`.
 -   rename `(name) (new_name)` - Renames tag `(name)` to `(new_name)` if it's owned by you or if you are a moderator.
--   search `(query) [max_results]` - Searches the tags list for `(query)`. Matches are approximated, suspicious results are to be expected.
+-   search `(query) [max_results=20/all]` - Searches the tags list for `(query)`. Matches are approximated, suspicious results are to be expected.
 -   set_type `(name) (type)/[version]` - Sets the type or version properties of tag `(name)`. Moderator only.
 
 ### 4. eval `(script)`
