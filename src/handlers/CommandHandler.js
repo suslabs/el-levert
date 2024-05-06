@@ -1,3 +1,5 @@
+import { bold } from "discord.js";
+
 import Handler from "./Handler.js";
 
 import { getClient, getLogger } from "../LevertClient.js";
@@ -72,7 +74,7 @@ class CommandHandler extends Handler {
 
             try {
                 const reply = await msg.reply({
-                    content: `:no_entry_sign: Encountered exception while executing command **${cmd.name}**:`,
+                    content: `:no_entry_sign: Encountered exception while executing command ${bold(cmd.name)}:`,
                     ...Util.getFileAttach(err1.stack, "error.js")
                 });
 

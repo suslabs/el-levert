@@ -3,7 +3,7 @@ import { EmbedBuilder } from "discord.js";
 import { getClient } from "../../LevertClient.js";
 
 function formatGroups(groups) {
-    const format = groups.map((group, i) => `${i + 1}. ${group.formatUsers()}`);
+    const format = groups.map((group, i) => `${i + 1}. ${group.formatUsers(true)}`);
 
     return format.join("\n");
 }

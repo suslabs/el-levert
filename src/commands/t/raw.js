@@ -29,7 +29,7 @@ export default {
             return `:warning: Tag **${t_name}** doesn't exist.`;
         }
 
-        const out = tag.getRaw();
+        const out = tag.getRaw(true);
         out.content = out.content ? `:information_source: ${out.content}` : out.content;
 
         return out;

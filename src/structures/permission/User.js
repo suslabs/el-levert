@@ -32,12 +32,17 @@ class User {
         this.username = username;
     }
 
-    format() {
+    format(discord = false) {
         if (this.username.length > 0) {
-            return `${this.username} (${inlineCode(this.user)})`;
+            const formattedUser = discord ? inlineCode(this.user) : this.user;
+            return `${this.username} (${formattedUser})`;
         }
 
-        return inlineCode(this.user);
+        if (discord) {
+            return inlineCode(this.user);
+        }
+
+        return this.user;
     }
 }
 

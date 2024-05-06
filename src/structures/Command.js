@@ -1,3 +1,5 @@
+import { codeBlock } from "discord.js";
+
 import CommandError from "../errors/CommandError.js";
 
 import { getClient } from "../LevertClient.js";
@@ -161,19 +163,21 @@ class Command {
         return false;
     }
 
-    getHelpText() {
+    getHelpText(discord = true) {
         let help = "";
 
         if (this.description.length > 0) {
-            help += `Description:\n\`\`\`\n${this.description}\n\`\`\``;
-
-            if (typeof this.usage !== "undefined") {
-                help += "\n\n";
-            }
+            const formattedDescription = discord ? codeBlock(this.description) : this.description;
+            help += `Description:\n${formattedDescription}`;
         }
 
         if (this.usage.length > 0) {
-            help += `Usage:\n\`\`\`\n${this.usage}\n\`\`\``;
+            if (help.length > 0) {
+                help += "\n\n";
+            }
+
+            const formattedUsage = discord ? codeBlock(this.usage) : this.usage;
+            help += `Usage:\n${formattedUsage}`;
         }
 
         return help;

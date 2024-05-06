@@ -8,7 +8,7 @@ const defaultValues = {
     users: []
 };
 
-const indent = " ";
+const indentation = 4;
 
 class Group {
     static defaultValues = defaultValues;
@@ -23,13 +23,22 @@ class Group {
         this.users = groupUsers;
     }
 
-    formatUsers() {
-        let format = `Group ${bold(this.name)} - Level ${this.level} - User(s):\n`;
+    formatUsers(discord = false) {
+        const formattedName = discord ? bold(this.name) : this.name,
+            s = this.users.length > 1 ? "s" : "";
+
+        let format = `Group ${formattedName} - Level ${this.level} - User${s}:\n`;
 
         if (this.users.length > 0) {
+            let indent = " ";
+
+            if (!discord) {
+                indent = indent.repeat(indentation);
+            }
+
             const userFormat = this.users
                 .map((user, i) => {
-                    const name = user.format();
+                    const name = user.format(discord);
                     return `${indent}${i + 1}. ${name}`;
                 })
                 .join("\n");

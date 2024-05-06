@@ -214,35 +214,54 @@ class Tag {
         return this.isEquivalent(tag) && this.sameHops(tag);
     }
 
-    getRaw() {
-        let out = {};
-
+    getRaw(discord = false) {
         const body = this.body.trim(),
             args = this.args.trim();
 
         if (this.isScript) {
-            out.content = `Script type is **${this.getType()}**`;
+            const formattedType = discord ? bold(this.getType()) : this.getType(),
+                header = `Script type is ${formattedType}`;
 
-            out = {
-                ...out,
-                ...Util.getFileAttach(body, "script.js")
-            };
-        } else if (this.isAlias) {
-            out.content = `${bold(this.name)} is an alias of ${bold(this.aliasName)}`;
-
-            if (this.args.length > 0) {
-                out.content += ` (with args: )`;
-
-                out = {
-                    ...out,
-                    ...Util.getFileAttach(args, "args.txt")
+            if (discord) {
+                return {
+                    content: header,
+                    ...Util.getFileAttach(body, "script.js")
                 };
             }
-        } else {
-            out = Util.getFileAttach(body, "tag.txt");
+
+            return `${header}\n---\n${body}\n---`;
         }
 
-        return out;
+        if (this.isAlias) {
+            const formattedName = discord ? bold(this.name) : this.name,
+                formattedAliasName = discord ? bold(this.aliasName) : this.aliasName,
+                header = `${formattedName} is an alias of ${formattedAliasName}`;
+
+            let out = header;
+
+            if (this.args.length > 0) {
+                out += ` (with args: `;
+
+                if (discord) {
+                    out += ")";
+
+                    return {
+                        content: out,
+                        ...Util.getFileAttach(args, "args.txt")
+                    };
+                }
+
+                out += `${this.args})`;
+            }
+
+            return out;
+        }
+
+        if (discord) {
+            return Util.getFileAttach(body, "tag.txt");
+        }
+
+        return body;
     }
 
     async getInfo(raw = false) {

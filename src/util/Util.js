@@ -23,6 +23,30 @@ const durationSeconds = {
 
 const Util = {
     durationSeconds,
+    delay: ms => {
+        return new Promise(resolve => {
+            setTimeout(resolve, ms);
+        });
+    },
+    waitForCondition: (condition, timeoutError = "", timeout = 0, interval = 100) => {
+        return new Promise((resolve, reject) => {
+            let _timeout;
+
+            if (timeout > 0) {
+                _timeout = setTimeout(() => reject(timeoutError), timeout);
+            }
+
+            setInterval(() => {
+                if (condition()) {
+                    if (_timeout) {
+                        clearTimeout(_timeout);
+                    }
+
+                    resolve();
+                }
+            }, interval);
+        });
+    },
     splitArgs: str => {
         const ind = str.indexOf(" ");
         let name, args;
@@ -192,25 +216,6 @@ const Util = {
         }
 
         return " " + str;
-    },
-    waitForCondition: (condition, timeoutError = "", timeout = 0, interval = 100) => {
-        return new Promise((resolve, reject) => {
-            let _timeout;
-
-            if (timeout > 0) {
-                _timeout = setTimeout(() => reject(timeoutError), timeout);
-            }
-
-            setInterval(() => {
-                if (condition()) {
-                    if (_timeout) {
-                        clearTimeout(_timeout);
-                    }
-
-                    resolve();
-                }
-            }, interval);
-        });
     },
     duration: (delta, format = false, include) => {
         const durationNames = Object.keys(durationSeconds).filter(name => {
