@@ -124,7 +124,7 @@ class ReminderManager extends DBManager {
         getLogger().info(`Sending ${reminders.length} reminder(s)...`);
 
         for (const reminder of reminders) {
-            this.sendReminder(reminder);
+            await this.sendReminder(reminder);
         }
 
         logTime(t1);

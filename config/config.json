@@ -31,7 +31,7 @@
     "enablePermissions": true,
     "enableReminders": true,
     "enableGlobalHandler": true,
-    "reminderSendInterval": 100000000,
+    "reminderSendInterval": 10000,
     "wrapEvents": true,
     "setActivity": false,
     "activity": {
