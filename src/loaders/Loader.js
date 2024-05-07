@@ -105,9 +105,10 @@ class Loader {
             return [undefined, status];
         }
 
-        let loadedMessage = "";
+        let ignored = status === LoadStatus.ignore,
+            loadedMessage = "";
 
-        if (status !== LoadStatus.ignore) {
+        if (!ignored) {
             if (typeof this.getLoadedMessage === "function") {
                 loadedMessage = this.getLoadedMessage();
             } else {
@@ -118,7 +119,7 @@ class Loader {
         }
 
         if (loadedMessage.length > 0) {
-            this.logger?.info(loadedMessage);
+            this.logger?.log(ignored ? "debug" : "info", loadedMessage);
         }
 
         this.loaded = true;
@@ -135,9 +136,10 @@ class Loader {
             return status;
         }
 
-        let writtenMessage = "";
+        let ignored = status === LoadStatus.ignore,
+            writtenMessage = "";
 
-        if (status !== LoadStatus.ignore) {
+        if (!ignored) {
             if (typeof this.getWrittenMessage === "function") {
                 writtenMessage = this.getWrittenMessage();
             } else {
@@ -148,7 +150,7 @@ class Loader {
         }
 
         if (writtenMessage.length > 0) {
-            this.logger?.info(writtenMessage);
+            this.logger?.log(ignored ? "debug" : "info", loadedMessage);
         }
 
         this.data = data;

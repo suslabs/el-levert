@@ -167,7 +167,7 @@ class BaseCommandManager extends Manager {
     }
 
     bindSubcommands() {
-        getLogger().info("Loading subcommands...");
+        getLogger().debug("Loading subcommands...");
 
         let total = 0,
             bound = 0;
