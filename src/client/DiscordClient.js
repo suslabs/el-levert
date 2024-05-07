@@ -45,6 +45,10 @@ class DiscordClient {
         this.intents = intents ?? defaultIntents;
         this.partials = partials ?? defaultPartials;
 
+        this.timeout = 60 / Util.durationSeconds.milli;
+        this.mentionUsers = false;
+        this.pingReply = true;
+
         this.buildClient();
 
         this.wrapEvents = false;
@@ -52,10 +56,6 @@ class DiscordClient {
 
         this.onLogout = _ => {};
         this.onKill = _ => {};
-
-        this.timeout = 60 / Util.durationSeconds.milli;
-        this.mentionUsers = false;
-        this.pingReply = true;
     }
 
     buildClient() {
@@ -67,7 +67,10 @@ class DiscordClient {
 
         const options = {
             intents: this.intents,
-            partials: this.partials
+            partials: this.partials,
+            rest: {
+                timeout: this.timeout + 1
+            }
         };
 
         const client = new Client(options);
@@ -95,10 +98,6 @@ class DiscordClient {
             this[key] = option;
         }
 
-        const rest = {
-            timeout: this.timeout + 1
-        };
-
         const allowedMentions = {
             repliedUser: this.pingReply
         };
@@ -111,7 +110,6 @@ class DiscordClient {
 
         this.client.options = {
             ...this.client.options,
-            rest,
             allowedMentions
         };
     }
