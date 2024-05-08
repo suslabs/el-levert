@@ -126,6 +126,18 @@
         },
         "pingReply": {
             "type": "boolean"
+        },
+        "logToDiscord": {
+            "type": "boolean"
+        },
+        "discordLogLevel": {
+            "type": "string"
+        },
+        "logChannelId": {
+            "type": "string"
+        },
+        "logWebhook": {
+            "type": "string"
         }
     },
     "required": [
@@ -166,6 +178,10 @@
         "setActivity",
         "activity",
         "mentionUsers",
-        "pingReply"
+        "pingReply",
+        "logToDiscord",
+        "discordLogLevel",
+        "logChannelId",
+        "logWebhook"
     ]
 }

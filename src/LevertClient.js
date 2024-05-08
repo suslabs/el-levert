@@ -5,6 +5,9 @@ import version from "../version.js";
 
 import createLogger from "./logger/createLogger.js";
 import getDefaultLoggerConfig from "./logger/DefaultLoggerConfig.js";
+import ChannelTransport from "./logger/discord/ChannelTransport.js";
+import WebhookTransport from "./logger/discord/WebhookTransport.js";
+import getDefaultDiscordConfig from "./logger/discord/DefaultDiscordConfig.js";
 
 import wrapEvent from "./client/wrapEvent.js";
 import executeAllHandlers from "./client/executeAllHandlers.js";
@@ -27,6 +30,8 @@ import TagVM from "./vm/isolated-vm/TagVM.js";
 import TagVM2 from "./vm/vm2/TagVM2.js";
 import ExternalVM from "./vm/judge0/ExternalVM.js";
 
+let token, client;
+
 class LevertClient extends DiscordClient {
     constructor(configs) {
         super();
@@ -42,8 +47,7 @@ class LevertClient extends DiscordClient {
         this.setConfigs(configs);
         this.setupLogger();
 
-        this.started = false;
-        this.startedAt = -1;
+        this.setStopped();
     }
 
     get uptime() {
@@ -239,6 +243,66 @@ class LevertClient extends DiscordClient {
         }
     }
 
+    addDiscordTransports() {
+        if (!this.config.logToDiscord) {
+            return;
+        }
+
+        this.logger.info("Adding Discord transport...");
+
+        const useChannel = this.config.logChannelId !== "",
+            useWebhook = this.config.logWebhook !== "";
+
+        if (!useChannel && !useWebhook) {
+            this.logger.error("If logging to Discord is enabled, a channel id or a webhook url must be provided.");
+            return;
+        }
+
+        const commonOpts = getDefaultDiscordConfig(this.config.discordLogLevel);
+        commonOpts.client = this.client;
+
+        if (useChannel) {
+            try {
+                const transport = new ChannelTransport({
+                    ...commonOpts,
+                    channelId: this.config.logChannelId
+                });
+
+                this.logger.add(transport);
+            } catch (err) {
+                this.logger.error("Couldn't add channel transport:", err);
+            }
+        }
+
+        if (useWebhook) {
+            try {
+                const transport = new WebhookTransport({
+                    ...commonOpts,
+                    url: this.config.logWebhook
+                });
+
+                this.logger.add(transport);
+            } catch (err) {
+                this.logger.error("Couldn't add webhook transport:", err);
+            }
+        }
+    }
+
+    removeDiscordTransports() {
+        const channelTransport = this.logger.transports.find(
+                transport => transport.channelId === this.config.logChannelId
+            ),
+            webhookTransport = this.logger.transports.find(transport => transport.url === this.config.logWebhook);
+
+        if (typeof channelTransport !== "undefined") {
+            this.logger.remove(channelTransport);
+        }
+
+        if (typeof webhookTransport !== "undefined") {
+            this.logger.remove(webhookTransport);
+        }
+    }
+
     async start() {
         if (this.started) {
             throw new ClientError("The client can only be started once");
@@ -262,8 +326,8 @@ class LevertClient extends DiscordClient {
             registerGlobalErrorHandler(this.logger);
         }
 
-        this.started = true;
-        this.startedAt = Date.now();
+        this.setStarted();
+        this.addDiscordTransports();
 
         this.logger.info("Startup complete.");
     }
@@ -274,6 +338,7 @@ class LevertClient extends DiscordClient {
         }
 
         this.logger.info("Stopping client...");
+        this.removeDiscordTransports();
 
         if (this.config.enableGlobalHandler) {
             removeGlobalErrorHandler();
@@ -287,9 +352,7 @@ class LevertClient extends DiscordClient {
         this.unloadVMs();
 
         await this.logout(kill);
-
-        this.started = false;
-        this.startedAt = -1;
+        this.setStopped();
 
         this.logger.info("Client stopped.");
     }
@@ -321,9 +384,17 @@ class LevertClient extends DiscordClient {
     onKill() {
         this.deleteLogger();
     }
-}
 
-let token, client;
+    setStopped() {
+        this.started = false;
+        this.startedAt = -1;
+    }
+
+    setStarted() {
+        this.started = true;
+        this.startedAt = Date.now();
+    }
+}
 
 function getClient() {
     return client;

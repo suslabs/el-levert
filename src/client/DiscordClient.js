@@ -17,7 +17,7 @@ const {
     ChannelType
 } = discord;
 
-const clientOptions = ["wrapEvents", "eventsDir", "loginTimeout", "onLogout", "onKill", "mentionUsers", "pingReply"];
+const clientOptions = ["wrapEvents", "eventsDir", "loginTimeout", "mentionUsers", "pingReply"];
 
 const defaultIntents = [
         GatewayIntentBits.Guilds,
@@ -53,9 +53,6 @@ class DiscordClient {
 
         this.wrapEvents = false;
         this.eventsDir = "";
-
-        this.onLogout = _ => {};
-        this.onKill = _ => {};
     }
 
     buildClient() {
@@ -158,7 +155,9 @@ class DiscordClient {
     }
 
     async logout(kill = false) {
-        this.onLogout();
+        if (typeof this.onLogout === "function") {
+            this.onLogout();
+        }
 
         await this.client.destroy();
         delete this.client;
@@ -172,7 +171,10 @@ class DiscordClient {
     }
 
     killProcess() {
-        this.onKill();
+        if (typeof this.onKill === "function") {
+            this.onKill();
+        }
+
         process.exit(0);
     }
 

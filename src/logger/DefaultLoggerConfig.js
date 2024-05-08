@@ -44,12 +44,13 @@ const consoleFormat = [
     }
 ];
 
-function getDefaultLoggerConfig(name, fileOutput, consoleOutput, filename) {
+function getDefaultLoggerConfig(name, fileOutput, consoleOutput, filename, level) {
     const config = {
         name,
         fileOutput,
         consoleOutput,
         filename,
+        level,
         fileFormat,
         consoleFormat
     };
