@@ -60,8 +60,17 @@ class MysqlConnection extends EventEmitter {
 
     end(options) {
         return new Promise((resolve, reject) => {
-            if (typeof this.db === "undefined") {
-                reject(new DatabaseError("Cannot end connection. The connection hasn't been created"));
+            if (typeof this.con === "undefined") {
+                const err = new DatabaseError("The connection hasn't been created");
+                this.emit(ConnectionEvents.promiseError, err);
+
+                if (this.throwErrors) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+
+                return;
             }
 
             this.con.end(options, err => {
@@ -86,7 +95,16 @@ class MysqlConnection extends EventEmitter {
     connect(options) {
         return new Promise((resolve, reject) => {
             if (typeof this.con === "undefined") {
-                reject(new DatabaseError("The connection hasn't been created"));
+                const err = new DatabaseError("The connection hasn't been created");
+                this.emit(ConnectionEvents.promiseError, err);
+
+                if (this.throwErrors) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+
+                return;
             }
 
             this.con.connect(options, err => {
@@ -98,6 +116,8 @@ class MysqlConnection extends EventEmitter {
                     } else {
                         resolve();
                     }
+
+                    return;
                 }
 
                 resolve();
@@ -108,7 +128,16 @@ class MysqlConnection extends EventEmitter {
     query(...args) {
         return new Promise((resolve, reject) => {
             if (typeof this.con === "undefined") {
-                reject(new DatabaseError("The connection hasn't been created"));
+                const err = new DatabaseError("The connection hasn't been created");
+                this.emit(ConnectionEvents.promiseError, err);
+
+                if (this.throwErrors) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+
+                return;
             }
 
             this.con.query(...args, (err, res) => {
@@ -130,6 +159,8 @@ class MysqlConnection extends EventEmitter {
                     } else {
                         resolve();
                     }
+
+                    return;
                 }
 
                 resolve(new MysqlResult(res));
@@ -140,7 +171,16 @@ class MysqlConnection extends EventEmitter {
     ping(options) {
         return new Promise((resolve, reject) => {
             if (typeof this.con === "undefined") {
-                reject(new DatabaseError("The connection hasn't been created"));
+                const err = new DatabaseError("The connection hasn't been created");
+                this.emit(ConnectionEvents.promiseError, err);
+
+                if (this.throwErrors) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+
+                return;
             }
 
             this.con.ping(options, err => {
@@ -152,6 +192,8 @@ class MysqlConnection extends EventEmitter {
                     } else {
                         resolve();
                     }
+
+                    return;
                 }
 
                 resolve();
@@ -162,7 +204,16 @@ class MysqlConnection extends EventEmitter {
     statistics(options) {
         return new Promise((resolve, reject) => {
             if (typeof this.con === "undefined") {
-                reject(new DatabaseError("The connection hasn't been created"));
+                const err = new DatabaseError("The connection hasn't been created");
+                this.emit(ConnectionEvents.promiseError, err);
+
+                if (this.throwErrors) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+
+                return;
             }
 
             this.con.statistics(options, err => {
@@ -174,6 +225,8 @@ class MysqlConnection extends EventEmitter {
                     } else {
                         resolve();
                     }
+
+                    return;
                 }
 
                 resolve();
@@ -184,7 +237,16 @@ class MysqlConnection extends EventEmitter {
     changeUser(options) {
         return new Promise((resolve, reject) => {
             if (typeof this.con === "undefined") {
-                reject(new DatabaseError("The connection hasn't been created"));
+                const err = new DatabaseError("The connection hasn't been created");
+                this.emit(ConnectionEvents.promiseError, err);
+
+                if (this.throwErrors) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+
+                return;
             }
 
             this.con.changeUser(options, err => {
@@ -196,6 +258,8 @@ class MysqlConnection extends EventEmitter {
                     } else {
                         resolve();
                     }
+
+                    return;
                 }
 
                 resolve();
@@ -206,7 +270,16 @@ class MysqlConnection extends EventEmitter {
     beginTransaction(options) {
         return new Promise((resolve, reject) => {
             if (typeof this.con === "undefined") {
-                reject(new DatabaseError("The connection hasn't been created"));
+                const err = new DatabaseError("The connection hasn't been created");
+                this.emit(ConnectionEvents.promiseError, err);
+
+                if (this.throwErrors) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+
+                return;
             }
 
             if (this.inTransaction) {
@@ -236,7 +309,16 @@ class MysqlConnection extends EventEmitter {
     commit(options) {
         return new Promise((resolve, reject) => {
             if (typeof this.con === "undefined") {
-                reject(new DatabaseError("The connection hasn't been created"));
+                const err = new DatabaseError("The connection hasn't been created");
+                this.emit(ConnectionEvents.promiseError, err);
+
+                if (this.throwErrors) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+
+                return;
             }
 
             if (!this.inTransaction) {
@@ -263,6 +345,8 @@ class MysqlConnection extends EventEmitter {
                     } else {
                         resolve();
                     }
+
+                    return;
                 }
 
                 resolve();
@@ -273,7 +357,16 @@ class MysqlConnection extends EventEmitter {
     rollback(options) {
         return new Promise((resolve, reject) => {
             if (typeof this.con === "undefined") {
-                reject(new DatabaseError("The connection hasn't been created"));
+                const err = new DatabaseError("The connection hasn't been created");
+                this.emit(ConnectionEvents.promiseError, err);
+
+                if (this.throwErrors) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+
+                return;
             }
 
             if (!this.inTransaction) {
@@ -292,6 +385,8 @@ class MysqlConnection extends EventEmitter {
                     } else {
                         resolve();
                     }
+
+                    return;
                 }
 
                 resolve();
@@ -301,7 +396,14 @@ class MysqlConnection extends EventEmitter {
 
     destroy() {
         if (typeof this.con === "undefined") {
-            throw new DatabaseError("Cannot destroy the connection. The connection hasn't been created");
+            const err = new DatabaseError("Cannot destroy the connection. The connection hasn't been created");
+            this.emit(ConnectionEvents.promiseError, err);
+
+            if (this.throwErrors) {
+                throw err;
+            } else {
+                return;
+            }
         }
 
         this.deleteConnection();
@@ -310,7 +412,14 @@ class MysqlConnection extends EventEmitter {
 
     pause() {
         if (typeof this.con === "undefined") {
-            throw new DatabaseError("The connection hasn't been created");
+            const err = new DatabaseError("The connection hasn't been created");
+            this.emit(ConnectionEvents.promiseError, err);
+
+            if (this.throwErrors) {
+                throw err;
+            } else {
+                return;
+            }
         }
 
         this.con.pause();
@@ -318,7 +427,14 @@ class MysqlConnection extends EventEmitter {
 
     resume() {
         if (typeof this.con === "undefined") {
-            throw new DatabaseError("The connection hasn't been created");
+            const err = new DatabaseError("The connection hasn't been created");
+            this.emit(ConnectionEvents.promiseError, err);
+
+            if (this.throwErrors) {
+                throw err;
+            } else {
+                return;
+            }
         }
 
         this.con.resume();
