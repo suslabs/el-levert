@@ -53,7 +53,7 @@
 -   [ ] Add cabal
 -   [ ] Add the option to save tag attachments locally
 -   [ ] Add support for slash commands (perhaps)
--   [ ] Add the option to log to a channel
+-   [x] Add the option to log to a channel
 -   [ ] Loading extensions
 -   [ ] Rewrite importer & add db check script
 -   [ ] Add support for other databases

@@ -4,6 +4,7 @@
     "eventsPath": "./src/events",
     "commandsPath": "./src/commands",
     "cliCommandsPath": "./src/commands/cli",
+    "logLevel": "debug",
     "dbPath": "./db",
     "cmdPrefix": "%",
     "enableCliCommands": true,

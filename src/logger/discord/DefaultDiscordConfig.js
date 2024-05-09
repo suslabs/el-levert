@@ -1,7 +1,7 @@
 import getFormat from "../getFormat.js";
 
 const discordFormat = [
-    "timestamp ",
+    "timestamp",
     {
         name: "errors",
         opts: {

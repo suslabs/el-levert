@@ -22,6 +22,9 @@
         "dbPath": {
             "type": "string"
         },
+        "logLevel": {
+            "type": "string"
+        },
         "cmdPrefix": {
             "type": "string"
         },
@@ -147,6 +150,7 @@
         "commandsPath",
         "cliCommandsPath",
         "dbPath",
+        "logLevel",
         "cmdPrefix",
         "enableCliCommands",
         "cliCmdPrefix",

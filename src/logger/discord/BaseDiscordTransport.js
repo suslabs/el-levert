@@ -1,5 +1,5 @@
 import Transport from "winston-transport";
-import { EmbedBuilder, codeBlock } from "discord.js";
+import { EmbedBuilder, TimestampStyles, codeBlock, time, DiscordAPIError } from "discord.js";
 
 import { EmbedColors, defaultColor } from "./EmbedColors.js";
 import LoggerError from "../../errors/LoggerError.js";
@@ -19,12 +19,13 @@ class BaseDiscordTransport extends Transport {
 
         this.initialized = false;
         this.buffer = [];
+        this.disableCodes = [];
 
         const charLimit = opts.charLimit ?? embedCharLimit;
         this.charLimit = Util.clamp(charLimit, 0, embedCharLimit);
 
-        this.sendInterval = opts.sendInterval ?? 2 / Util.durationSeconds.milli;
-        this.sendDelayed = this.sendInterval > 0;
+        this.sendInterval = opts.sendInterval;
+        this.client = opts.client;
 
         if (typeof this.init === "function") {
             this.init(opts);
@@ -33,6 +34,10 @@ class BaseDiscordTransport extends Transport {
         }
 
         this.startSendLoop();
+    }
+
+    get sendDelayed() {
+        return this.sendInterval > 0;
     }
 
     log(info, callback) {
@@ -48,9 +53,7 @@ class BaseDiscordTransport extends Transport {
         if (this.sendDelayed) {
             this.buffer.push(info);
         } else {
-            this.logToDiscord(info).catch(err => {
-                console.error("Error occured while sending message to Discord:", err);
-            });
+            this.logToDiscord(info).catch(err => this.discordErrorHandler(err));
         }
 
         callback();
@@ -102,8 +105,27 @@ class BaseDiscordTransport extends Transport {
         }
 
         if (typeof info.timestamp !== "undefined") {
-            embed.setTimestamp(info.timestamp);
+            const date = new Date(info.timestamp),
+                timestamp = Math.floor(date.getTime() * Util.durationSeconds.milli),
+                formattedTimestamp = time(timestamp, TimestampStyles.RelativeTime);
+
+            embed.setTimestamp(date);
+            embed.setTitle(`${embed.data.title} | ${formattedTimestamp}`);
+
             totalEmbedChars += info.timestamp.length;
+            totalEmbedChars += formattedTimestamp.length + " | ".length;
+        }
+
+        if (typeof this.client !== "undefined") {
+            const username = this.client.user.displayName,
+                avatar = this.client.user.displayAvatarURL();
+
+            embed.setAuthor({
+                name: username,
+                iconURL: avatar
+            });
+
+            totalEmbedChars += username.length;
         }
 
         if (info.message.length < this.charLimit - totalEmbedChars) {
@@ -131,15 +153,34 @@ class BaseDiscordTransport extends Transport {
     }
 
     sendLogs() {
+        if (!this.initialized) {
+            return;
+        }
+
         const info = this.buffer.shift();
 
         if (typeof info === "undefined") {
             return;
         }
 
-        this.logToDiscord(info).catch(err => {
-            console.error("Error occured while sending message to discord:", err);
-        });
+        this.logToDiscord(info).catch(err => this.discordErrorHandler(err));
+    }
+
+    discordErrorHandler(err) {
+        console.error("Error occured while sending message to discord:", err);
+
+        if (!(err instanceof DiscordAPIError)) {
+            return;
+        }
+
+        if (this.disableCodes.includes(err.code)) {
+            if (typeof this.getDisabledMessage === "function") {
+                const disabledMessage = this.getDisabledMessage();
+                console.info(disabledMessage);
+            }
+
+            this.close();
+        }
     }
 
     startSendLoop() {
@@ -161,6 +202,7 @@ class BaseDiscordTransport extends Transport {
     }
 
     close() {
+        this.initialized = false;
         this.stopSendLoop();
     }
 }

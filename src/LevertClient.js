@@ -83,9 +83,11 @@ class LevertClient extends DiscordClient {
             this.deleteLogger();
         }
 
-        const config = getDefaultLoggerConfig("El Levert", true, true, this.config.logFile);
-        this.logger = createLogger(config);
+        const name = "El Levert",
+            configOpts = [name, true, true, this.config.logFile, this.config.logLevel],
+            config = getDefaultLoggerConfig(...configOpts);
 
+        this.logger = createLogger(config);
         this.wrapEvent = wrapEvent.bind(undefined, this.logger);
     }
 
@@ -98,6 +100,66 @@ class LevertClient extends DiscordClient {
 
         delete this.logger;
         delete this.wrapEvent;
+    }
+
+    addDiscordTransports() {
+        if (!this.config.logToDiscord) {
+            return;
+        }
+
+        this.logger.info("Adding Discord transport...");
+
+        const useChannel = this.config.logChannelId !== "",
+            useWebhook = this.config.logWebhook !== "";
+
+        if (!useChannel && !useWebhook) {
+            this.logger.error("If logging to Discord is enabled, a channel id or a webhook url must be provided.");
+            return;
+        }
+
+        const commonOpts = getDefaultDiscordConfig(this.config.discordLogLevel);
+        commonOpts.client = this.client;
+
+        if (useChannel) {
+            try {
+                const transport = new ChannelTransport({
+                    ...commonOpts,
+                    channelId: this.config.logChannelId
+                });
+
+                this.logger.add(transport);
+            } catch (err) {
+                this.logger.error("Couldn't add channel transport:", err);
+            }
+        }
+
+        if (useWebhook) {
+            try {
+                const transport = new WebhookTransport({
+                    ...commonOpts,
+                    url: this.config.logWebhook
+                });
+
+                this.logger.add(transport);
+            } catch (err) {
+                this.logger.error("Couldn't add webhook transport:", err);
+            }
+        }
+    }
+
+    removeDiscordTransports() {
+        const channelTransport = this.logger.transports.find(
+                transport => transport.channelId === this.config.logChannelId
+            ),
+            webhookTransport = this.logger.transports.find(transport => transport.url === this.config.logWebhook);
+
+        if (typeof channelTransport !== "undefined") {
+            this.logger.remove(channelTransport);
+        }
+
+        if (typeof webhookTransport !== "undefined") {
+            this.logger.remove(webhookTransport);
+        }
     }
 
     loadHandlers() {
@@ -240,66 +302,6 @@ class LevertClient extends DiscordClient {
             await this.setActivity(this.config.activity);
         } catch (err) {
             this.logger.error("Error occured while setting activity:", err);
-        }
-    }
-
-    addDiscordTransports() {
-        if (!this.config.logToDiscord) {
-            return;
-        }
-
-        this.logger.info("Adding Discord transport...");
-
-        const useChannel = this.config.logChannelId !== "",
-            useWebhook = this.config.logWebhook !== "";
-
-        if (!useChannel && !useWebhook) {
-            this.logger.error("If logging to Discord is enabled, a channel id or a webhook url must be provided.");
-            return;
-        }
-
-        const commonOpts = getDefaultDiscordConfig(this.config.discordLogLevel);
-        commonOpts.client = this.client;
-
-        if (useChannel) {
-            try {
-                const transport = new ChannelTransport({
-                    ...commonOpts,
-                    channelId: this.config.logChannelId
-                });
-
-                this.logger.add(transport);
-            } catch (err) {
-                this.logger.error("Couldn't add channel transport:", err);
-            }
-        }
-
-        if (useWebhook) {
-            try {
-                const transport = new WebhookTransport({
-                    ...commonOpts,
-                    url: this.config.logWebhook
-                });
-
-                this.logger.add(transport);
-            } catch (err) {
-                this.logger.error("Couldn't add webhook transport:", err);
-            }
-        }
-    }
-
-    removeDiscordTransports() {
-        const channelTransport = this.logger.transports.find(
-                transport => transport.channelId === this.config.logChannelId
-            ),
-            webhookTransport = this.logger.transports.find(transport => transport.url === this.config.logWebhook);
-
-        if (typeof channelTransport !== "undefined") {
-            this.logger.remove(channelTransport);
-        }
-
-        if (typeof webhookTransport !== "undefined") {
-            this.logger.remove(webhookTransport);
         }
     }
 

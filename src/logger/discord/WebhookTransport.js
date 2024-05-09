@@ -1,4 +1,4 @@
-import { WebhookClient, DiscordAPIError, RESTJSONErrorCodes } from "discord.js";
+import { WebhookClient, RESTJSONErrorCodes } from "discord.js";
 
 import BaseDiscordTransport from "./BaseDiscordTransport.js";
 
@@ -8,15 +8,23 @@ const urlRegex = /^https:\/\/discord\.com\/api\/webhooks\/(?<id>\d+)\/(?<token>[
 
 class WebhookTransport extends BaseDiscordTransport {
     constructor(opts) {
-        super(opts);
+        super({
+            sendInterval: 0,
+            ...opts
+        });
 
         let webhook = opts.webhook;
 
         if (typeof webhook === "undefined") {
             webhook = this.getWebhook(opts.url);
+        } else {
+            this.webhookUrl = webhook.url;
+            this.webhookId = webhook.id;
+            this.webhookToken = webhook.token;
         }
 
         this.webhook = webhook;
+        this.disableCodes = [RESTJSONErrorCodes.InvalidWebhookToken, RESTJSONErrorCodes.UnknownWebhook];
     }
 
     getWebhook(url) {
@@ -33,11 +41,19 @@ class WebhookTransport extends BaseDiscordTransport {
         const { id, token } = match.groups,
             webhook = new WebhookClient({ id, token });
 
+        this.webhookUrl = url;
+        this.webhookId = id;
+        this.webhookToken = token;
+
         return webhook;
     }
 
     async sendLog(log) {
         await this.webhook.send(log);
+    }
+
+    getDisabledMessage() {
+        return "Disabled webhook transport.";
     }
 }
 

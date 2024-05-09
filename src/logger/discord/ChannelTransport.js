@@ -1,32 +1,38 @@
+import { RESTJSONErrorCodes } from "discord.js";
+
 import BaseDiscordTransport from "./BaseDiscordTransport.js";
 
+import Util from "../../util/Util.js";
 import LoggerError from "../../errors/LoggerError.js";
 
 class ChannelTransport extends BaseDiscordTransport {
     constructor(opts) {
-        super(opts);
+        super({
+            sendInterval: 2 / Util.durationSeconds.milli,
+            ...opts
+        });
 
         let channel = opts.channel;
 
         if (typeof channel === "undefined") {
-            const { client, channelId } = opts;
-            channel = this.getChannel(client, channelId);
+            channel = this.getChannel(opts.channelId);
+        } else {
+            this.channelId = channel.id;
         }
 
         this.channel = channel;
+        this.disableCodes = [RESTJSONErrorCodes.CannotSendMessagesInNonTextChannel];
     }
 
-    getChannel(client, id) {
-        if (typeof client === "undefined" || typeof id === "undefined" || id.length < 1) {
+    getChannel(id) {
+        if (typeof this.client === "undefined" || typeof id === "undefined" || id.length < 1) {
             throw new LoggerError(
                 "If a channel object wasn't provided, a client object and a channel id must be provided instead"
             );
         }
 
-        this.client = client;
         this.channelId = id;
-
-        const channel = client.channels.cache.get(id);
+        const channel = this.client.channels.cache.get(id);
 
         if (typeof channel === "undefined") {
             throw new LoggerError("Channel not found");
@@ -37,6 +43,10 @@ class ChannelTransport extends BaseDiscordTransport {
 
     async sendLog(log) {
         await this.channel.send(log);
+    }
+
+    getDisabledMessage() {
+        return "Disabled channel transport.";
     }
 }
 

@@ -1,4 +1,4 @@
-import { time, bold } from "discord.js";
+import { TimestampStyles, time, bold } from "discord.js";
 
 import Util from "../util/Util.js";
 
@@ -25,7 +25,7 @@ class Reminder {
         return this.end <= date;
     }
 
-    getTimestamp(style = "f") {
+    getTimestamp(style = TimestampStyles.ShortDateTime) {
         const timestamp = Math.floor(this.end * Util.durationSeconds.milli);
         return time(timestamp, style);
     }
