@@ -38,7 +38,7 @@ class CommandHandler extends Handler {
             return false;
         }
 
-        if (this.userTracker.searchUser(msg.author.id)) {
+        if (this.userTracker.findUser(msg.author.id)) {
             const reply = await msg.reply(":warning: Please wait for the previous command to finish.");
             this.messageTracker.addMsg(reply, msg.id);
 
@@ -56,13 +56,13 @@ class CommandHandler extends Handler {
         this.userTracker.addUser(msg.author.id);
         logUsage(msg, cmd.name, args);
 
-        await this.executeCommand(msg, cmd, args);
+        await this.executeCommand(cmd, msg, args);
         this.userTracker.removeUser(msg.author.id);
 
         return true;
     }
 
-    async executeCommand(msg, cmd, args) {
+    async executeCommand(cmd, msg, args) {
         let out;
 
         try {

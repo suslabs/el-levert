@@ -23,7 +23,7 @@ class UserTracker {
         }
     }
 
-    searchUser(id) {
+    findUser(id) {
         return this.trackedUsers.find(x => x.id === id);
     }
 
