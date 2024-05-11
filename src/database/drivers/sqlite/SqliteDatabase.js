@@ -34,7 +34,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
 
     open() {
         return new Promise((resolve, reject) => {
-            if (typeof this.db === "undefined") {
+            if (typeof this.db !== "undefined") {
                 const err = new DatabaseError("Cannot open database. The database is already open");
                 this.emit(DatabaseEvents.promiseError, err);
 

@@ -55,6 +55,10 @@ class WebhookTransport extends BaseDiscordTransport {
     getDisabledMessage() {
         return "Disabled webhook transport.";
     }
+
+    onClose() {
+        this.webhook.destroy();
+    }
 }
 
 export default WebhookTransport;

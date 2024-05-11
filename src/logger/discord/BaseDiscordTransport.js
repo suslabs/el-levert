@@ -202,6 +202,10 @@ class BaseDiscordTransport extends Transport {
     }
 
     close() {
+        if (typeof this.onClose === "function") {
+            this.onClose();
+        }
+
         this.initialized = false;
         this.stopSendLoop();
     }
