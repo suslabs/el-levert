@@ -11,11 +11,13 @@ const inspectorUrl = "devtools://devtools/bundled/inspector.html",
     };
 
 function listener(socket) {
-    getLogger().debug("Inspector server: Recieved connection.");
+    getLogger().info("Inspector server: Recieved connection.");
     this.inspectorSocket = socket;
 
     if (this.inspectorContext === null) {
+        getLogger().info("No script is running. Disconnecting inspector.");
         this.closeSocket();
+
         return;
     }
 
