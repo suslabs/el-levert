@@ -8,6 +8,7 @@ const GregicUtil = {
         nomi: ["ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "MAX"],
         ceu: ["LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UXV", "OpV", "MAX"]
     },
+
     oc: function (eu, dur, type) {
         let t_dur = dur * 20,
             currTier = getTier(eu),

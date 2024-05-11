@@ -37,6 +37,7 @@ class TagVM {
         const server = new InspectorServer(enable, port, options);
         server.setup();
 
+        this.enableInspector = enable;
         this.inspectorServer = server;
     }
 
@@ -78,13 +79,13 @@ class TagVM {
         } catch (err) {
             out = this.handleError(err);
         } finally {
-            getLogger().debug("Script execution finished.");
-
             this.inspectorServer?.executionFinished();
             context.dispose();
         }
 
+        getLogger().log(this.enableInspector ? "info" : "debug", "Script execution finished.");
         logTime(t1);
+
         return out;
     }
 

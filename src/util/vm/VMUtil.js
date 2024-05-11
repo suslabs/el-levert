@@ -34,6 +34,7 @@ const VMUtil = {
 
         return recRemove(obj, []);
     },
+
     formatReply: (text, msg) => {
         let out = {};
 
@@ -64,11 +65,13 @@ const VMUtil = {
 
         return out;
     },
+
     sockWrite: (socket, packetType, obj) => {
         obj.packetType = packetType ?? "unknown";
 
         socket.write(JSON.stringify(obj) + "\n");
     },
+
     formatOutput: out => {
         if (out === null) {
             return undefined;

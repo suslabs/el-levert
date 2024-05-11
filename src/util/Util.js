@@ -23,11 +23,13 @@ const durationSeconds = {
 
 const Util = {
     durationSeconds,
+
     delay: ms => {
         return new Promise(resolve => {
             setTimeout(resolve, ms);
         });
     },
+
     waitForCondition: (condition, timeoutError = "", timeout = 0, interval = 100) => {
         return new Promise((resolve, reject) => {
             let _timeout;
@@ -47,6 +49,7 @@ const Util = {
             }, interval);
         });
     },
+
     splitArgs: str => {
         const ind = str.indexOf(" ");
         let name, args;
@@ -61,6 +64,7 @@ const Util = {
 
         return [name.toLowerCase(), args];
     },
+
     getFileAttach: (data, name = "message.txt") => {
         const attachment = new AttachmentBuilder(Buffer.from(data), {
             name: name
@@ -70,6 +74,7 @@ const Util = {
             files: [attachment]
         };
     },
+
     setValuesWithDefaults: (target, source, defaults = {}) => {
         const values = {};
 
@@ -87,6 +92,7 @@ const Util = {
             ...values
         });
     },
+
     getFilesRecSync: dir_path => {
         const files = [];
 
@@ -106,6 +112,7 @@ const Util = {
 
         return files;
     },
+
     directoryExists: async path => {
         let stat;
 
@@ -123,12 +130,14 @@ const Util = {
             return stat.isDirectory();
         }
     },
+
     import: async modulePath => {
         let fileURL = URL.pathToFileURL(modulePath);
         fileURL += `?update=${Date.now()}`;
 
         return (await import(fileURL)).default;
     },
+
     formatScript: str => {
         const match = str.match(scriptRegex);
 
@@ -146,6 +155,7 @@ const Util = {
 
         return [true, body, lang];
     },
+
     getByteLen: str => {
         let s = str.length;
 
@@ -164,26 +174,31 @@ const Util = {
 
         return s;
     },
+
     capitalize: str => {
         return str[0].toUpperCase() + str.substring(1);
     },
+
     clamp: (x, a, b) => {
         return Math.max(Math.min(x, b), a);
     },
+
     round: (num, digits) => {
         return Math.round((num + Number.EPSILON) * 10 ** digits) / 10 ** digits;
     },
+
     randomElement: (arr, a = 0, b = arr.length) => {
         return arr[a + ~~(Math.random() * (b - a))];
     },
+
     formatLog(str, splitLength = 80, maxLength = 1000) {
         if (str === null) {
-            return " ";
+            return " none";
         }
 
         switch (typeof str) {
             case "undefined":
-                return " ";
+                return " none";
             case "bigint":
             case "boolean":
             case "number":
@@ -196,6 +211,12 @@ const Util = {
                 } catch (err) {
                     return ` error: ${err.message}`;
                 }
+            case "string":
+                if (str.length < 1) {
+                    return " none";
+                }
+
+                break;
         }
 
         str = str.replaceAll(/[\n\r]/g, "\\$1");
@@ -217,9 +238,10 @@ const Util = {
 
         return " " + str;
     },
+
     duration: (delta, format = false, include) => {
         const durationNames = Object.keys(durationSeconds).filter(name => {
-                if (typeof include !== "undefined") {
+                if (Array.isArray(include)) {
                     return include.includes(name);
                 }
 

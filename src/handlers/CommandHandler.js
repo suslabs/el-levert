@@ -14,9 +14,7 @@ function logUsage(msg, name, args) {
 }
 
 function logOutput(cmd, out) {
-    const cmdOut = typeof out === "object" ? JSON.stringify(out) : out;
-
-    getLogger().debug(`Command "${cmd.name}" returned:${Util.formatLog(cmdOut)}`);
+    getLogger().debug(`Command "${cmd.name}" returned:${Util.formatLog(out)}`);
 }
 
 function logTime(t1) {
