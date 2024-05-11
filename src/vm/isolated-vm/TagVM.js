@@ -72,12 +72,14 @@ class TagVM {
 
         try {
             out = await context.runScript(code);
-
             out = VMUtil.formatOutput(out);
+
             getLogger().debug(`Returning script output:${Util.formatLog(out)}`);
         } catch (err) {
             out = this.handleError(err);
         } finally {
+            getLogger().debug("Script execution finished.");
+
             this.inspectorServer?.executionFinished();
             context.dispose();
         }
