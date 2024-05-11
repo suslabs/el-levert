@@ -13,7 +13,7 @@ function resolveObj(path, propertyMap) {
     try {
         split = path.split(".");
     } catch (err) {
-        obj = undefined;
+        return;
     }
 
     while (split.length > 0) {

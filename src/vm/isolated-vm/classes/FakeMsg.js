@@ -48,11 +48,7 @@ class FakeMsg {
         };
     }
 
-    reply(text, msg) {
-        if (typeof this.msg === "undefined") {
-            return;
-        }
-
+    static reply(text, msg) {
         const formatted = VMUtil.formatReply(text, msg);
         return JSON.stringify(formatted);
     }

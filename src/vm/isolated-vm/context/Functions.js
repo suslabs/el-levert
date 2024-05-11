@@ -1,5 +1,6 @@
 import FuncTypes from "../../../structures/vm/FuncTypes.js";
 
+import FakeMsg from "../classes/FakeMsg.js";
 import FakeUtil from "../classes/FakeUtil.js";
 import FakeAxios from "../classes/FakeAxios.js";
 
@@ -9,7 +10,7 @@ const Functions = {
     msg: {
         reply: {
             type: FuncTypes.regular,
-            ref: "msg.reply",
+            ref: FakeMsg.reply,
             exits: true,
             errorClass: ManevraError
         }

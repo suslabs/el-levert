@@ -13,6 +13,7 @@ const FakeUtil = {
 
         return new ExternalCopy(data).copyInto();
     },
+
     fetchTag: async name => {
         let tag = await getClient().tagManager.fetch(name);
 
@@ -27,14 +28,17 @@ const FakeUtil = {
 
         return new ExternalCopy(tag).copyInto();
     },
+
     findTags: async query => {
         const tags = await getClient().tagManager.search(query);
         return new ExternalCopy(tags).copyInto();
     },
+
     dumpTags: async full => {
         const tags = await getClient().tagManager.dump(full);
         return new ExternalCopy(tags).copyInto();
     },
+
     fetchMessage: async (user_id, default_id, ch_id, msg_id) => {
         if (ch_id === null || typeof ch_id === "undefined") {
             ch_id = default_id;
@@ -49,6 +53,7 @@ const FakeUtil = {
         msg = VMUtil.removeCircRef(msg);
         return new ExternalCopy(msg).copyInto();
     },
+
     fetchMessages: async (user_id, default_id, ch_id, options) => {
         if (ch_id === null || typeof ch_id === "undefined") {
             ch_id = default_id;
