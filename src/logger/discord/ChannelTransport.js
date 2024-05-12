@@ -8,6 +8,7 @@ import LoggerError from "../../errors/LoggerError.js";
 class ChannelTransport extends BaseDiscordTransport {
     constructor(opts) {
         super({
+            name: "discord.channel",
             sendInterval: 2 / Util.durationSeconds.milli,
             ...opts
         });

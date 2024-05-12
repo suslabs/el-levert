@@ -24,7 +24,8 @@ class BaseDiscordTransport extends Transport {
         const charLimit = opts.charLimit ?? embedCharLimit;
         this.charLimit = Util.clamp(charLimit, 0, embedCharLimit);
 
-        this.sendInterval = opts.sendInterval;
+        this.name = opts.name;
+        this.sendInterval = opts.sendInterval ?? 0;
         this.client = opts.client;
 
         if (typeof this.init === "function") {

@@ -9,7 +9,7 @@ const urlRegex = /^https:\/\/discord\.com\/api\/webhooks\/(?<id>\d+)\/(?<token>[
 class WebhookTransport extends BaseDiscordTransport {
     constructor(opts) {
         super({
-            sendInterval: 0,
+            name: "discord.webhook",
             ...opts
         });
 

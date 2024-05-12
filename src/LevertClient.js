@@ -117,8 +117,10 @@ class LevertClient extends DiscordClient {
             return;
         }
 
-        const commonOpts = getDefaultDiscordConfig(this.config.discordLogLevel);
-        commonOpts.client = this.client;
+        const commonOpts = {
+            ...getDefaultDiscordConfig(this.config.discordLogLevel),
+            client: this.client
+        };
 
         if (useChannel) {
             try {
@@ -148,10 +150,8 @@ class LevertClient extends DiscordClient {
     }
 
     removeDiscordTransports() {
-        const channelTransport = this.logger.transports.find(
-                transport => transport.channelId === this.config.logChannelId
-            ),
-            webhookTransport = this.logger.transports.find(transport => transport.url === this.config.logWebhook);
+        const channelTransport = this.logger.transports.find(x => x.name === "discord.channel"),
+            webhookTransport = this.logger.transports.find(x => x.name === "discord.webhook");
 
         if (typeof channelTransport !== "undefined") {
             this.logger.remove(channelTransport);
@@ -159,6 +159,19 @@ class LevertClient extends DiscordClient {
 
         if (typeof webhookTransport !== "undefined") {
             this.logger.remove(webhookTransport);
+        }
+    }
+
+    silenceDiscordTransports(silent = true) {
+        const channelTransport = this.logger.transports.find(x => x.name === "discord.channel"),
+            webhookTransport = this.logger.transports.find(x => x.name === "discord.webhook");
+
+        if (typeof channelTransport !== "undefined") {
+            channelTransport.silent = silent;
+        }
+
+        if (typeof webhookTransport !== "undefined") {
+            webhookTransport.silent = silent;
         }
     }
 
@@ -344,7 +357,7 @@ class LevertClient extends DiscordClient {
 
     async stop(kill = false) {
         if (!this.started) {
-            throw new ClientError("The client can't be stopped if it hasn't been started");
+            throw new ClientError("The client can't be stopped if it hasn't been started already");
         }
 
         this.logger.info("Stopping client...");
@@ -369,10 +382,11 @@ class LevertClient extends DiscordClient {
 
     async restart(configs) {
         if (!this.started) {
-            throw new ClientError("The client can't be restarted if it hasn't been started");
+            throw new ClientError("The client can't be restarted if it hasn't been started already");
         }
 
         this.logger.info("Restarting client...");
+        this.silenceDiscordTransports(true);
 
         await this.stop();
         this.buildClient();

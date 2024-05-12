@@ -5,8 +5,11 @@ export default {
     ownerOnly: true,
     category: "owner-only",
     handler: async _ => {
+        getClient().silenceDiscordTransports(true);
+
         await getClient().commandManager.reloadCommands();
 
+        getClient().silenceDiscordTransports(false);
         return ":white_check_mark: Reloaded commands!";
     }
 };
