@@ -30,28 +30,9 @@ const Util = {
         });
     },
 
-    waitForCondition: (condition, timeoutError = "", timeout = 0, interval = 100) => {
-        return new Promise((resolve, reject) => {
-            let _timeout;
-
-            if (timeout > 0) {
-                _timeout = setTimeout(() => reject(timeoutError), timeout);
-            }
-
-            setInterval(() => {
-                if (condition()) {
-                    if (_timeout) {
-                        clearTimeout(_timeout);
-                    }
-
-                    resolve();
-                }
-            }, interval);
-        });
-    },
-
     splitArgs: str => {
         const ind = str.indexOf(" ");
+
         let name, args;
 
         if (ind === -1) {
@@ -131,6 +112,26 @@ const Util = {
         }
     },
 
+    waitForCondition: (condition, timeoutError = "", timeout = 0, interval = 100) => {
+        return new Promise((resolve, reject) => {
+            let _timeout;
+
+            if (timeout > 0) {
+                _timeout = setTimeout(() => reject(timeoutError), timeout);
+            }
+
+            setInterval(() => {
+                if (condition()) {
+                    if (typeof _timeout !== "undefined") {
+                        clearTimeout(_timeout);
+                    }
+
+                    resolve();
+                }
+            }, interval);
+        });
+    },
+
     import: async modulePath => {
         let fileURL = URL.pathToFileURL(modulePath);
         fileURL += `?update=${Date.now()}`;
@@ -157,14 +158,15 @@ const Util = {
     },
 
     getByteLen: str => {
-        let s = str.length;
+        let len = str.length;
 
         for (let i = str.length - 1; i >= 0; i--) {
-            var code = str.charCodeAt(i);
+            const code = str.charCodeAt(i);
+
             if (code > 0x7f && code <= 0x7ff) {
-                s++;
+                len++;
             } else if (code > 0x7ff && code <= 0xffff) {
-                s += 2;
+                len += 2;
             }
 
             if (code >= 0xdc00 && code <= 0xdfff) {
@@ -172,7 +174,7 @@ const Util = {
             }
         }
 
-        return s;
+        return len;
     },
 
     capitalize: str => {
@@ -219,24 +221,29 @@ const Util = {
                 break;
         }
 
-        str = str.replaceAll(/[\n\r]/g, "\\$1");
+        str = str.replace(/\n|\r\n/g, "\\n");
+        str = str.replaceAll("`", "\\`");
 
         if (str.length > maxLength) {
+            const trimmed = str.substring(0, maxLength);
+
             const diff = str.length - maxLength,
                 s = diff > 1 ? "s" : "";
 
-            return `\n---\n${str.substring(0, maxLength)} ... (${diff} more character${s})\n---`;
+            return `\n---\n${trimmed} ... (${diff} more character${s})\n---`;
         }
 
         if (str.length > splitLength) {
             return `\n---\n${str}\n---`;
         }
 
-        if (!/^(["'`])[\s\S]*\1$/.test(str)) {
-            return ` "${str}"`;
+        const quotesExp = /^(["'])[\s\S]*\1$/;
+
+        if (quotesExp.test(str)) {
+            return " " + str;
         }
 
-        return " " + str;
+        return ` "${str}"`;
     },
 
     duration: (delta, format = false, include) => {

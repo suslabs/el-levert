@@ -24,20 +24,24 @@ class TagVM {
 
         this.outCharLimit = getClient().config.outCharLimit;
         this.outNewlineLimit = getClient().config.outNewlineLimit;
+
+        this.enableInspector = getClient().config.enableInspector;
     }
 
     setupInspectorServer() {
-        const enable = getClient().config.enableInspector,
-            port = getClient().config.inspectorPort;
+        if (!this.enableInspector) {
+            return;
+        }
+
+        const inspectorPort = getClient().config.inspectorPort;
 
         const options = {
             logPackets: logInspectorPackets
         };
 
-        const server = new InspectorServer(enable, port, options);
+        const server = new InspectorServer(this.enableInspector, inspectorPort, options);
         server.setup();
 
-        this.enableInspector = enable;
         this.inspectorServer = server;
     }
 
@@ -48,7 +52,7 @@ class TagVM {
                 timeLimit: this.timeLimit
             },
             {
-                enable: this.inspectorServer?.enable ?? false,
+                enable: this.enableInspector,
                 sendReply: this.inspectorServer?.sendReply
             }
         );
@@ -69,6 +73,7 @@ class TagVM {
         }
 
         const context = await this.getContext(msg, tag, args);
+
         let out;
 
         try {
@@ -143,7 +148,10 @@ class TagVM {
     }
 
     unload() {
-        this.inspectorServer?.close();
+        if (typeof this.inspectorServer !== "undefined") {
+            this.inspectorServer.close();
+            delete this.inspectorServer;
+        }
     }
 }
 

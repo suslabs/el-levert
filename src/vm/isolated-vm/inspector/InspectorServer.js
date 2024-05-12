@@ -11,11 +11,11 @@ const inspectorUrl = "devtools://devtools/bundled/inspector.html",
     };
 
 function listener(socket) {
-    getLogger().info("Inspector server: Recieved connection.");
+    getLogger().debug("Inspector server: Recieved connection.");
     this.inspectorSocket = socket;
 
     if (this.inspectorContext === null) {
-        getLogger().info("No script is running. Disconnecting inspector.");
+        getLogger().debug("No script is running. Disconnecting inspector.");
         this.closeSocket();
 
         return;
@@ -60,7 +60,7 @@ function sendReply(msg) {
 }
 
 class InspectorServer {
-    constructor(enable, port, options = {}) {
+    constructor(enable, port = 8080, options = {}) {
         this.enable = enable;
         this.port = port;
 
@@ -108,8 +108,8 @@ class InspectorServer {
 
         this.bindEvents();
 
+        getLogger().info("## Inspector:\n" + this.getInspectorUrl());
         this.running = true;
-        getLogger().info("## Inspector: " + this.getInspectorUrl());
     }
 
     bindEvents() {

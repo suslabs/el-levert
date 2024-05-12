@@ -268,6 +268,8 @@ class LevertClient extends DiscordClient {
     }
 
     loadVMs() {
+        getLogger().info("Loading VMs...");
+
         this.tagVM = new TagVM();
         this.tagVM.setupInspectorServer();
 
@@ -276,9 +278,13 @@ class LevertClient extends DiscordClient {
         if (this.config.enableOtherLangs) {
             this.externalVM = new ExternalVM();
         }
+
+        getLogger().info("Loaded VMs.");
     }
 
     unloadVMs() {
+        getLogger().info("Unloading VMs...");
+
         this.tagVM.unload();
         delete this.tagVM;
 
@@ -291,6 +297,8 @@ class LevertClient extends DiscordClient {
         if (this.config.enableOtherLangs) {
             delete this.externalVM;
         }
+
+        getLogger().info("Unloaded VMs.");
     }
 
     async setActivityFromConfig() {

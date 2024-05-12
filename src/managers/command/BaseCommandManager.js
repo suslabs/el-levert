@@ -196,7 +196,7 @@ class BaseCommandManager extends Manager {
 
         if (unbound > 0) {
             const unboundCmds = this.commands.filter(cmd => cmd.isSubcmd && !cmd.bound),
-                format = unboundCmds.map(cmd => `    "${cmd.name}" -> "${cmd.parent}"`).join("\n");
+                format = unboundCmds.map((cmd, i) => `${i + 1}. "${cmd.name}" -> "${cmd.parent}"`).join("\n");
 
             getLogger().warn(`Found ${unbound} unbound subcommand(s):\n${format}`);
         }
