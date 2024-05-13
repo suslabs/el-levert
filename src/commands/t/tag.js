@@ -159,6 +159,7 @@ export default {
             }
         }
 
+        const evalArgs = t_args + tag.args;
         let out;
 
         switch (tag.getType()) {
@@ -166,10 +167,10 @@ export default {
                 out = tag.body;
                 break;
             case "ivm":
-                out = await getClient().tagVM.runScript(tag.body, msg, tag, t_args);
+                out = await getClient().tagVM.runScript(tag.body, msg, tag, evalArgs);
                 break;
             case "vm2":
-                out = await getClient().tagVM2.runScript(tag.body, msg, t_args);
+                out = await getClient().tagVM2.runScript(tag.body, msg, evalArgs);
                 break;
         }
 
