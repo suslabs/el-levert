@@ -74,9 +74,9 @@ ${spaces}${className} = ${classCode};
 
 function closure(body) {
     const header = "(function() {\n",
-        footer = "})();";
+        footer = "\n})();";
 
-    body = indent(body) + "\n";
+    body = indent(body);
     return header + body + footer;
 }
 
