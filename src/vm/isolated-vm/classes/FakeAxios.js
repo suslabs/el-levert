@@ -9,7 +9,7 @@ async function request(...args) {
     try {
         return await axios.request(...args);
     } catch (err) {
-        getLogger().err("Request error:", err);
+        getLogger().error("Request error:", err);
         throw err;
     }
 }
