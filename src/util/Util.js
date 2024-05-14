@@ -30,8 +30,8 @@ const Util = {
         });
     },
 
-    splitArgs: str => {
-        const ind = str.indexOf(" ");
+    splitArgs: (str, sep = " ") => {
+        const ind = str.indexOf(sep);
 
         let name, args;
 
@@ -40,7 +40,7 @@ const Util = {
             args = "";
         } else {
             name = str.substring(0, ind);
-            args = str.substring(ind + 1);
+            args = str.substring(ind + sep.length);
         }
 
         return [name.toLowerCase(), args];
