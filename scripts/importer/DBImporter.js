@@ -113,7 +113,7 @@ class DBImporter {
         };
 
         const find = await this.tag_db.fetch(tag.name),
-            [isScript, body] = Util.formatScript(tag.body);
+            [isScript, body] = Util.parseScript(tag.body);
 
         tag.body = body;
         tag.args = tag.args.split(" ")[0];

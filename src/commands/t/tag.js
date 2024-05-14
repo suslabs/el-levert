@@ -49,7 +49,7 @@ async function parseBase(t_args, msg) {
             tagBody = t_body;
         }
 
-        [isScript, body] = Util.formatScript(tagBody);
+        [isScript, body] = Util.parseScript(tagBody);
     }
 
     let type;

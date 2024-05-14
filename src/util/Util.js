@@ -139,11 +139,11 @@ const Util = {
         return (await import(fileURL)).default;
     },
 
-    formatScript: str => {
-        const match = str.match(scriptRegex);
+    parseScript: script => {
+        const match = script.match(scriptRegex);
 
         if (!match) {
-            return [false, str];
+            return [false, script];
         }
 
         let lang = match[1],
