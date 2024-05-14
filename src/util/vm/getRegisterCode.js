@@ -7,9 +7,8 @@ const funcOptions = {
 const indentation = 4,
     spaces = " ".repeat(indentation);
 
-function indent(code, times) {
+function indent(code, times = 1) {
     let lines = code.split("\n");
-
     lines = lines.map(line => spaces.repeat(times) + line);
 
     return lines.join("\n");
@@ -38,7 +37,7 @@ ${spaces}${objName} = {};
 }
 
 function funcDeclaration(objName, funcName, body) {
-    body = indent(body, 1);
+    body = indent(body);
     let code = "";
 
     if (typeof objName !== "undefined" && objName.length > 0) {
@@ -61,7 +60,7 @@ function classDeclaration(_class) {
     const className = getClassName(_class);
 
     let classCode = _class.toString();
-    classCode = indent(classCode, 1);
+    classCode = indent(classCode);
     classCode = classCode.trim();
 
     const code = `
@@ -77,8 +76,7 @@ function closure(body) {
     const header = "(function() {\n",
         footer = "})();";
 
-    body = indent(body, 1) + "\n";
-
+    body = indent(body) + "\n";
     return header + body + footer;
 }
 
