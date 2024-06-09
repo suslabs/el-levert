@@ -1,7 +1,7 @@
 <div align="center"">
     <h1>EL LEVERT JR</h1>
     <br>
-    <img src="./assets/bigrat.jpg" alt="EL LEVERT" style="width: 45%; height: 45%;">
+    <img src="./assets/rgbrat.jpg" alt="EL LEVERT" style="width: 45%; height: 45%;">
 </div>
 
 <h4 align="center">Romanian version of Leveret by Neeve</h4>
