@@ -7,6 +7,9 @@
         "enableReacts": {
             "type": "boolean"
         },
+        "multipleReacts": {
+            "type": "boolean"
+        },
         "parans": {
             "type": "object",
             "properties": {
@@ -39,5 +42,5 @@
             }
         }
     },
-    "required": ["enableReacts", "funnyWords"]
+    "required": ["enableReacts", "multipleReacts", "funnyWords"]
 }

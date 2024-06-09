@@ -3,17 +3,15 @@ import Handler from "./Handler.js";
 import { getClient, getLogger } from "../LevertClient.js";
 import Util from "../util/Util.js";
 
-const emojiChars = ":;=-x+";
-
-function logParansUsage(msg, count) {
+function logParansUsage(msg, parans) {
     getLogger().info(
-        `Reacting with ${count} parans to message sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${msg.channel.name}).`
+        `Reacting with ${parans.total} parans to message sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${msg.channel.name}).`
     );
 }
 
 function logWordsUsage(msg, words) {
     getLogger().info(
-        `Reacting to words: "${words.join('", "')}" sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${msg.channel.name}).`
+        `Reacting to word(s): "${words.join('", "')}" sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${msg.channel.name}).`
     );
 }
 
@@ -31,75 +29,145 @@ function logRemoveTime(t1) {
     getLogger().debug(`Removing reactions took ${(Date.now() - t1).toLocaleString()}ms.`);
 }
 
+function getReact(list) {
+    if (list.length === 1) {
+        return list[0];
+    }
+
+    return Util.randomElement(list);
+}
+
+const emojiChars = ":;=-x+";
+
+const emojiExpRight = new RegExp(`[${emojiChars}][\\(\\)]+`, "g"),
+    emojiExpLeft = new RegExp(`[\\(\\)]+[${emojiChars}]`, "g");
+
 class ReactionHandler extends Handler {
     constructor(enabled) {
         super(enabled, false);
 
-        this.funnyWords = getClient().reactions.funnyWords;
-        this.parans = getClient().reactions.parans;
+        this.multipleReacts = getClient().reactions.multipleReacts ?? false;
+
+        this.setWords();
+        this.setParans();
     }
 
-    countParans(str) {
-        let parans = 0,
-            isEmoji = false;
+    getWordList(funnyWords) {
+        let wordList = [];
 
-        const split = str.split("");
+        for (const elem of funnyWords) {
+            const words = elem.word ?? elem.words;
 
-        for (const char of split) {
-            if (emojiChars.includes(char)) {
-                isEmoji = true;
-            } else {
-                switch (char) {
-                    case "(":
-                        if (isEmoji) {
-                            return 0;
-                        }
-
-                        parans++;
-                        break;
-                    case ")":
-                        if (isEmoji) {
-                            return 0;
-                        }
-
-                        parans--;
-                        break;
-                    default:
-                        isEmoji = false;
-                        break;
-                }
+            if (Array.isArray(words)) {
+                wordList = wordList.concat(words);
+                continue;
+            } else if (typeof words === "string") {
+                wordList.push(words);
             }
         }
 
-        const count = Util.clamp(parans, -this.parans.left.length, this.parans.right.length);
-        return isEmoji ? 0 : count;
+        return wordList;
+    }
+
+    getReactMap(funnyWords) {
+        const reactMap = new Map();
+
+        for (const elem of funnyWords) {
+            let words = elem.word ?? elem.words,
+                reacts = elem.react ?? elem.reacts;
+
+            if (typeof reacts === "string") {
+                reacts = [reacts];
+            }
+
+            if (Array.isArray(words)) {
+                words.forEach(word => reactMap.set(word, reacts));
+            } else if (typeof words === "string") {
+                reactMap.set(words, reacts);
+            }
+        }
+
+        return reactMap;
+    }
+
+    setWords() {
+        this.funnyWords = getClient().reactions.funnyWords;
+
+        this.wordList = this.getWordList(this.funnyWords);
+        this.reactMap = this.getReactMap(this.funnyWords);
+    }
+
+    setParans() {
+        this.parans = getClient().reactions.parans;
+
+        this.enableParans = typeof this.parans.left !== "undefined" && typeof this.parans.right !== "undefined";
+    }
+
+    countUnmatchedParans(str) {
+        if (!str.includes("(") && !str.includes(")")) {
+            return;
+        }
+
+        let open = 0;
+
+        const parans = {
+            left: 0,
+            right: 0,
+            total: 0
+        };
+
+        let cleaned = str.replace(emojiExpRight, match => " ".repeat(match.length));
+        cleaned = cleaned.replace(emojiExpLeft, match => " ".repeat(match.length));
+
+        for (let i = 0; i < cleaned.length; i++) {
+            const char = cleaned[i];
+
+            switch (char) {
+                case "(":
+                    open++;
+                    break;
+                case ")":
+                    if (open > 0) {
+                        open--;
+                    } else {
+                        parans.right++;
+                    }
+
+                    break;
+            }
+        }
+
+        parans.left = Util.clamp(open, 0, this.parans.right.length);
+        parans.right = Util.clamp(parans.right, 0, this.parans.left.length);
+
+        parans.total = parans.left + parans.right;
+
+        return parans;
     }
 
     async paransReact(msg) {
-        if (typeof this.parans.left === "undefined" || typeof this.parans.right === "undefined") {
-            return;
-        }
-
         const t1 = Date.now(),
-            parans = this.countParans(msg.content);
+            parans = this.countUnmatchedParans(msg.content);
 
-        if (parans === 0) {
-            return;
+        if (typeof parans === "undefined") {
+            return false;
         }
 
-        logParansUsage(parans);
+        logParansUsage(msg, parans);
 
-        if (parans > 0) {
+        if (parans.left > 0) {
             try {
-                for (let i = 0; i < parans; i++) {
+                for (let i = 0; i < parans.left; i++) {
                     await msg.react(this.parans.right[i]);
                 }
             } catch (err) {
                 getLogger().error("Failed to react to message:", err);
             }
-        } else if (parans < 0) {
+        }
+
+        if (parans.right < 0) {
             try {
-                for (let i = 0; i < Math.abs(parans); i++) {
+                for (let i = 0; i < parans.right; i++) {
                     await msg.react(this.parans.left[i]);
                 }
             } catch (err) {
@@ -108,81 +176,138 @@ class ReactionHandler extends Handler {
         }
 
         logReactTime(t1);
+        return true;
     }
 
-    findWord(word) {
-        return this.funnyWords.find(x => {
-            const words = x.word ?? x.words;
-
-            if (Array.isArray(words)) {
-                return words.includes(word);
-            } else if (typeof words === "string") {
-                return words === word;
-            }
-
-            return false;
-        });
-    }
-
-    getReact(word) {
-        const reacts = word.react ?? word.reacts;
-
-        if (Array.isArray(reacts)) {
-            return Util.randomElement(reacts);
-        } else if (typeof reacts === "string") {
-            return reacts;
-        }
-
-        return;
-    }
-
-    getWords(str) {
+    getWordCounts(str) {
         let normStr = str.toLowerCase();
-        normStr = str.normalize("NFKD");
+        normStr = normStr.normalize("NFKD");
 
-        const split = normStr.split(" "),
-            words = [];
+        const foundWords = this.wordList.map(word => [word, normStr.indexOf(word)]).filter(x => x[1] >= 0);
 
-        for (const w of split) {
-            const word = this.findWord(w);
+        if (foundWords.length < 1) {
+            return;
+        }
 
-            if (typeof word !== "undefined") {
-                words.push(word);
+        let counts = foundWords.reduce(
+            (counts, [word]) => ({
+                ...counts,
+                [word]: 0
+            }),
+            {}
+        );
+
+        let foundOne = false;
+        for (let [word, index] of foundWords) {
+            while (index !== -1) {
+                const startValid = index === 0 || normStr[index - 1] === " ",
+                    endValid = index + word.length === normStr.length || normStr[index + word.length] === " ";
+
+                if (startValid && endValid) {
+                    counts[word]++;
+                    foundOne = true;
+
+                    if (!this.multipleReacts) {
+                        break;
+                    }
+                }
+
+                index = normStr.indexOf(word, index + 1);
             }
         }
 
-        return words;
+        if (!foundOne) {
+            return;
+        }
+
+        for (const key of Object.keys(counts)) {
+            if (counts[key] === 0) {
+                delete counts[key];
+            }
+        }
+
+        return counts;
+    }
+
+    async singleReact(msg, words) {
+        const keys = Object.keys(words),
+            reactLists = new Set(keys.map(w => this.reactMap.get(w)));
+
+        for (const list of reactLists) {
+            const react = getReact(list);
+
+            if (typeof react !== "undefined") {
+                await msg.react(react);
+            }
+        }
+    }
+
+    async multipleReact(msg, words) {
+        const reacts = new Set();
+
+        for (const [key, count] of Object.entries(words)) {
+            const reactList = this.reactMap.get(key);
+
+            for (let i = 0; i < count; i++) {
+                const react = this.getReact(reactList);
+
+                if (typeof react !== "undefined") {
+                    reacts.add(react);
+                }
+            }
+        }
+
+        for (const react of reacts) {
+            await msg.react(react);
+        }
     }
 
     async funnyReact(msg) {
         const t1 = Date.now(),
-            words = this.getWords(msg.content);
+            words = this.getWordCounts(msg.content);
 
-        logWordsUsage(msg, words);
+        if (typeof words === "undefined") {
+            return false;
+        }
+
+        logWordsUsage(msg, Object.keys(words));
+
+        let reactFunc;
+
+        if (this.multipleReacts) {
+            reactFunc = this.multipleReact;
+        } else {
+            reactFunc = this.singleReact;
+        }
+
+        reactFunc = reactFunc.bind(this);
 
         try {
-            for (const word of words) {
-                const react = this.getReact(word);
-
-                if (typeof react !== "undefined") {
-                    await msg.react(react);
-                }
-            }
+            await reactFunc(msg, words);
         } catch (err) {
             getLogger().error("Failed to react to message:", err);
         }
 
         logReactTime(t1);
+        return true;
     }
 
     async execute(msg) {
-        await this.paransReact(msg);
-        await this.funnyReact(msg);
+        const res = await this.funnyReact(msg);
+
+        if (res && !this.multipleReacts) {
+            return;
+        }
+
+        if (this.enableParans) {
+            await this.paransReact(msg);
+        }
     }
 
     async removeReacts(msg) {
-        const t1 = Date.now(),
-            botId = getClient().client.user.id,
+        const t1 = Date.now();
+
+        const botId = getClient().client.user.id,
             botReacts = msg.reactions.cache.filter(react => react.users.cache.has(botId));
 
         if (botReacts.size < 1) {

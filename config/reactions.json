@@ -1,5 +1,6 @@
 {
-    "enableReacts": false,
+    "enableReacts": true,
+    "multipleReacts": false,
     "parans": {},
     "funnyWords": [
         {
