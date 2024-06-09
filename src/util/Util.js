@@ -276,7 +276,7 @@ const Util = {
             const [name, dur] = entry,
                 s = dur > 1 ? "s" : "";
 
-            return `${dur} ${Util.capitalize(name)}${s}`;
+            return `${dur} ${name}${s}`;
         });
 
         return _format.join(", ");
