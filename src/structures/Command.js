@@ -46,60 +46,74 @@ class Command {
         return this.description.length > 0 || this.usage.length > 0;
     }
 
-    matches(name) {
+    matches(name, checkAliases = true) {
         if (this.name === name) {
             return true;
         }
 
-        if (this.aliases.length > 0) {
+        if (this.aliases.length > 0 && checkAliases) {
             return this.aliases.includes(name);
         }
 
         return false;
     }
 
-    getName() {
-        let names = [this.name].concat(this.aliases);
-        names = names.join("/");
+    getName(aliasSep = "/", parentSep = ":") {
+        let name;
 
-        if (this.isSubcmd) {
-            return this.parentCmd.name + ": " + names;
+        if (this.aliases.length > 0 && aliasSep !== false) {
+            const names = [this.name].concat(this.aliases);
+            name = names.join(aliasSep);
+        } else {
+            name = this.name;
         }
 
-        return names;
+        if (this.isSubcmd && parentSep !== false) {
+            name = this.parentCmd.name + `${parentSep} ` + name;
+        }
+
+        return name;
     }
 
-    getSubcmdNames() {
-        let subNames;
+    getSubNames(includeAliases = true) {
+        let cmd = this;
 
         if (this.isSubcmd) {
-            subNames = this.parentCmd.subcommands;
-        } else {
-            subNames = this.subcommands;
+            cmd = this.parentCmd;
         }
 
+        if (!includeAliases) {
+            return cmd.subcommands;
+        }
+
+        const subNames = Array.from(cmd.subcmds.keys());
         return subNames;
     }
 
-    isSubName(name) {
-        const subNames = this.getSubcmdNames();
+    isSubName(name, checkAliases = true) {
+        const subNames = this.getSubNames(checkAliases);
         return subNames.includes(name);
     }
 
-    getSubcmdMap() {
-        let subcmds;
+    getSubcmdMap(includeAliases = true) {
+        let cmd = this;
 
         if (this.isSubcmd) {
-            subcmds = this.parentCmd.subcmds;
-        } else {
-            subcmds = this.subcmds;
+            cmd = this.parentCmd;
         }
 
-        return subcmds;
+        const subMap = cmd.subcmds;
+
+        if (includeAliases) {
+            return subMap;
+        }
+
+        const entries = subMap.entries().filter(x => x[0] === x[1].name);
+        return new Map(entries);
     }
 
-    getSubcmd(name) {
-        const subcmds = this.getSubcmdMap();
+    getSubcmd(name, includeAliases = true) {
+        const subcmds = this.getSubcmdMap(includeAliases);
 
         if (subcmds.size < 1) {
             return;
@@ -109,16 +123,13 @@ class Command {
     }
 
     getSubcmds(perm) {
-        const subcmds = this.getSubcmdMap(),
-            subcmdList = Array.from(subcmds.entries())
-                .filter(x => x[0] === x[1].name)
-                .map(x => x[1]);
+        const subList = Array.from(this.getSubcmdMap(false).values());
 
-        if (typeof perm === "undefined") {
-            return subcmdList;
+        if (perm === null || typeof perm === "undefined") {
+            return subList;
         }
 
-        const allowedSubcmds = subcmdList.filter(subcmd => {
+        const allowedSubcmds = subList.filter(subcmd => {
             if (subcmd.ownerOnly) {
                 return perm === getClient().permManager.ownerLevel;
             }
@@ -129,7 +140,7 @@ class Command {
         return allowedSubcmds;
     }
 
-    getSubcmdList(perm, separator = "|") {
+    getSubcmdList(perm, sep = "|") {
         if (this.isSubcmd) {
             return "";
         }
@@ -137,14 +148,14 @@ class Command {
         let subNames;
 
         if (typeof perm === "undefined") {
-            subNames = this.getSubcmdNames();
+            subNames = this.getSubNames();
         } else {
             const subcmds = this.getSubcmds(perm);
             subNames = subcmds.map(command => command.name);
         }
 
         subNames.sort();
-        return subNames.join(separator);
+        return subNames.join(sep);
     }
 
     isHelpCall(args) {

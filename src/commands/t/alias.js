@@ -15,7 +15,7 @@ export default {
             [a_name, a_args] = Util.splitArgs(t_args);
 
         if (this.isSubName(t_name)) {
-            return `:police_car: ${t_name} is a __command__, not a __tag__. You can't manipulate commands.`;
+            return `:police_car: **${t_name}** is a __command__, not a __tag__. You can't manipulate commands.`;
         }
 
         const e1 = getClient().tagManager.checkName(t_name),

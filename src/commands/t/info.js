@@ -17,7 +17,7 @@ export default {
             raw = i_type === "raw";
 
         if (this.isSubName(t_name)) {
-            return `:police_car: ${t_name} is a __command__, not a __tag__. You can't manipulate commands.`;
+            return `:police_car: **${t_name}** is a __command__, not a __tag__. You can't manipulate commands.`;
         }
 
         const e = getClient().tagManager.checkName(t_name);

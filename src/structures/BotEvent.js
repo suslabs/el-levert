@@ -44,7 +44,7 @@ class BotEvent {
             throw new EventError("Event hasn't been registered");
         }
 
-        this.client.removeAllListeners(this.name);
+        this.client.removeListener(this.name, this.listener);
         this.registered = false;
     }
 }
