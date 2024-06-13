@@ -1,6 +1,5 @@
 import { Buffer } from "node:buffer";
 import { AttachmentBuilder } from "discord.js";
-import cloneDeep from "lodash.clonedeep";
 
 import syncFs from "node:fs";
 import fs from "node:fs/promises";
@@ -63,7 +62,7 @@ const Util = {
             const sourceVal = source[key];
 
             if (sourceVal === null || typeof sourceVal === "undefined") {
-                const defaultValue = cloneDeep(defaults[key]);
+                const defaultValue = structuredClone(defaults[key]);
                 values[key] = defaultValue;
             }
         }

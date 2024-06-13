@@ -108,7 +108,9 @@ class Command {
             return subMap;
         }
 
-        const entries = subMap.entries().filter(x => x[0] === x[1].name);
+        const entries = Array.from(subMap.entries()),
+            uniqueSubcmds = entries.filter(x => x[0] === x[1].name);
+
         return new Map(entries);
     }
 
