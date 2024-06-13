@@ -18,7 +18,9 @@ function logTime(t1) {
 }
 
 class TagVM {
-    constructor() {
+    constructor(enabled) {
+        this.enabled = enabled;
+
         this.memLimit = getClient().config.memLimit;
         this.timeLimit = getClient().config.timeLimit;
 
@@ -29,7 +31,7 @@ class TagVM {
     }
 
     setupInspectorServer() {
-        if (!this.enableInspector) {
+        if (!this.enabled || !this.enableInspector) {
             return;
         }
 
@@ -64,6 +66,10 @@ class TagVM {
     }
 
     async runScript(code, msg, tag, args) {
+        if (!this.enabled) {
+            return "Eval is disabled.";
+        }
+
         const t1 = Date.now();
         logUsage(code);
 

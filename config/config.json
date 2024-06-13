@@ -27,6 +27,7 @@
     "permissionAdminLevel": 2,
     "enablePreviews": true,
     "enableSed": true,
+    "enableEval": true,
     "enableOtherLangs": false,
     "enableVM2": false,
     "enablePermissions": true,

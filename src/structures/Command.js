@@ -111,7 +111,7 @@ class Command {
         const entries = Array.from(subMap.entries()),
             uniqueSubcmds = entries.filter(x => x[0] === x[1].name);
 
-        return new Map(entries);
+        return new Map(uniqueSubcmds);
     }
 
     getSubcmd(name, includeAliases = true) {

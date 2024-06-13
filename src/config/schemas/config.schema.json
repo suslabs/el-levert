@@ -88,6 +88,9 @@
         "enableSed": {
             "type": "boolean"
         },
+        "enableEval": {
+            "type": "boolean"
+        },
         "enableOtherLangs": {
             "type": "boolean"
         },
@@ -172,6 +175,7 @@
         "permissionAdminLevel",
         "enablePreviews",
         "enableSed",
+        "enableEval",
         "enableOtherLangs",
         "enableVM2",
         "enablePermissions",

@@ -32,8 +32,8 @@ function formatCode(code) {
 }
 
 class TagVM2 {
-    constructor() {
-        this.enabled = getClient().config.enableVM2;
+    constructor(enabled) {
+        this.enabled = enabled;
 
         this.memLimit = getClient().config.otherMemLimit;
         this.timeLimit = getClient().config.otherTimeLimit;
@@ -44,6 +44,10 @@ class TagVM2 {
     }
 
     createProcPool() {
+        if (!this.enabled) {
+            return;
+        }
+
         this.procPool = new VM2ProcPool({
             min: 1,
             max: 3,

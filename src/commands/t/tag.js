@@ -159,19 +159,16 @@ export default {
             }
         }
 
-        const evalArgs = t_args + tag.args;
         let out;
 
-        switch (tag.getType()) {
-            case "text":
-                out = tag.body;
-                break;
-            case "ivm":
-                out = await getClient().tagVM.runScript(tag.body, msg, tag, evalArgs);
-                break;
-            case "vm2":
-                out = await getClient().tagVM2.runScript(tag.body, msg, evalArgs);
-                break;
+        try {
+            out = await getClient().tagManager.execute(tag, t_args, msg);
+        } catch (err) {
+            if (err.name === "TagError") {
+                return `:warning: ${err.message}.`;
+            }
+
+            throw err;
         }
 
         if (getClient().previewHandler.canPreview(out)) {

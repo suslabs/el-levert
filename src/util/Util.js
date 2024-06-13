@@ -62,7 +62,15 @@ const Util = {
             const sourceVal = source[key];
 
             if (sourceVal === null || typeof sourceVal === "undefined") {
-                const defaultValue = structuredClone(defaults[key]);
+                let defaultValue = defaults[key];
+
+                switch (typeof defaultValue) {
+                    case "function":
+                        break;
+                    default:
+                        defaultValue = structuredClone(defaultValue);
+                }
+
                 values[key] = defaultValue;
             }
         }

@@ -80,6 +80,47 @@ class TagManager extends DBManager {
         return lastTag;
     }
 
+    async execute(tag, args, msg) {
+        const ivm = getClient().tagVM,
+            vm2 = getClient().tagVM2;
+
+        const evalArgs = args + tag.args;
+
+        let out;
+
+        switch (tag.getType()) {
+            case "text":
+                out = tag.body;
+                break;
+            case "ivm":
+                if (typeof ivm === "undefined") {
+                    throw new TagError("Can't execute script tag. isolated-vm isn't initialized");
+                }
+
+                if (!ivm.enabled) {
+                    throw new TagError("Can't execute script tag. isolated-vm isn't enabled");
+                }
+
+                out = await ivm.runScript(tag.body, msg, tag, evalArgs);
+                break;
+            case "vm2":
+                if (typeof vm2 === "undefined") {
+                    throw new TagError("Can't execute script tag. vm2 isn't initialized");
+                }
+
+                if (!vm2.enabled) {
+                    throw new TagError("Can't execute script tag. vm2 isn't enabled");
+                }
+
+                out = await vm2.runScript(tag.body, msg, evalArgs);
+                break;
+            default:
+                throw new TagError("Invalid tag type");
+        }
+
+        return out;
+    }
+
     async add(name, body, owner, type) {
         const existingTag = await this.fetch(name);
 

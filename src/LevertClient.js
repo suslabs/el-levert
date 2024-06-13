@@ -283,10 +283,10 @@ class LevertClient extends DiscordClient {
     loadVMs() {
         getLogger().info("Loading VMs...");
 
-        this.tagVM = new TagVM();
+        this.tagVM = new TagVM(this.config.enableEval);
         this.tagVM.setupInspectorServer();
 
-        this.tagVM2 = new TagVM2();
+        this.tagVM2 = new TagVM2(this.config.enableVM2);
 
         if (this.config.enableOtherLangs) {
             this.externalVM = new ExternalVM();

@@ -113,6 +113,10 @@ export default {
     aliases: ["e", "exec"],
     subcommands: ["c", "cpp", "py", "vm2", "langs"],
     load: function () {
+        if (!getClient().config.enableEval) {
+            return false;
+        }
+
         this.evalBase = evalBase.bind(this);
         this.langNames = langNames;
 
