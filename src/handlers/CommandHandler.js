@@ -13,12 +13,12 @@ function logUsage(msg, name, args) {
     );
 }
 
-function logOutput(cmd, out) {
-    getLogger().debug(`Command "${cmd.name}" returned:${Util.formatLog(out)}`);
-}
-
 function logTime(t1) {
     getLogger().info(`Command execution took ${(Date.now() - t1).toLocaleString()}ms.`);
+}
+
+function logOutput(cmd, out) {
+    getLogger().debug(`Command "${cmd.name}" returned:${Util.formatLog(out)}`);
 }
 
 class CommandHandler extends Handler {
@@ -64,25 +64,28 @@ class CommandHandler extends Handler {
         let out;
 
         try {
-            const t1 = Date.now();
-            out = await cmd.execute(args, msg);
-            logTime(t1);
-        } catch (err1) {
-            getLogger().error("Command execution failed:", err1);
-
-            try {
-                const reply = await msg.reply({
-                    content: `:no_entry_sign: Encountered exception while executing command ${bold(cmd.name)}:`,
-                    ...Util.getFileAttach(err1.stack, "error.js")
-                });
-
-                this.messageTracker.addMsg(reply, msg.id);
-            } catch (err2) {
-                getLogger().error("Reporting error failed:", err2);
-            }
+            out = await this.getCommandOutput(cmd, msg, args);
+        } catch (err) {
+            await this.handleExecutionError(err, cmd, msg);
 
             return;
         }
+
+        logOutput(cmd, out);
+
+        try {
+            const reply = await msg.reply(out);
+            this.messageTracker.addMsg(reply, msg.id);
+        } catch (err) {
+            await this.handleReplyError(err);
+            return;
+        }
+    }
+
+    async getCommandOutput(cmd, msg, args) {
+        const t1 = Date.now();
+
+        let out = await cmd.execute(args, msg);
 
         if (typeof out === "string") {
             const split = out.split("\n");
@@ -92,33 +95,43 @@ class CommandHandler extends Handler {
             }
         }
 
-        logOutput(cmd, out);
+        logTime(t1);
+    }
+
+    async handleExecutionError(err, cmd, msg) {
+        getLogger().error("Command execution failed:", err);
 
         try {
-            const reply = await msg.reply(out);
+            const reply = await msg.reply({
+                content: `:no_entry_sign: Encountered exception while executing command ${bold(cmd.name)}:`,
+                ...Util.getFileAttach(err.stack, "error.js")
+            });
+
             this.messageTracker.addMsg(reply, msg.id);
-        } catch (err1) {
-            if (err1.message === "Cannot send an empty message") {
-                const reply = await msg.reply(`:no_entry_sign: ${err1.message}.`);
-                this.messageTracker.addMsg(reply, msg.id);
+        } catch (err) {
+            getLogger().error("Reporting error failed:", err);
+        }
+    }
 
-                return;
-            }
-
-            getLogger().error("Reply failed:", err1);
-
-            try {
-                const reply = await msg.reply({
-                    content: ":no_entry_sign: Encountered exception while sending reply:",
-                    ...Util.getFileAttach(err1.stack, "error.js")
-                });
-
-                this.messageTracker.addMsg(reply, msg.id);
-            } catch (err2) {
-                getLogger().error("Reporting error failed:", err2);
-            }
+    async handleReplyError(err, msg) {
+        if (err.message === "Cannot send an empty message") {
+            const reply = await msg.reply(`:no_entry_sign: ${err.message}.`);
+            this.messageTracker.addMsg(reply, msg.id);
 
             return;
+        }
+
+        getLogger().error("Reply failed:", err);
+
+        try {
+            const reply = await msg.reply({
+                content: ":no_entry_sign: Encountered exception while sending reply:",
+                ...Util.getFileAttach(err.stack, "error.js")
+            });
+
+            this.messageTracker.addMsg(reply, msg.id);
+        } catch (err) {
+            getLogger().error("Reporting error failed:", err);
         }
     }
 }
