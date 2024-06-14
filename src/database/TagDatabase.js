@@ -2,8 +2,10 @@ import SqliteDatabase from "./SqlDatabase.js";
 
 import Tag from "../structures/tag/Tag.js";
 
+import Util from "../util/Util.js";
+
 function sortTags(tags) {
-    const objs = typeof tags[0] !== "string";
+    const objs = typeof Util.firstElement(tags) !== "string";
 
     tags.sort((a, b) => {
         if (objs) {

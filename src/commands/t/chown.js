@@ -27,7 +27,7 @@ export default {
             return ":warning: Invalid target user. You must specifically mention the target user.";
         }
 
-        const find = (await getClient().findUsers(t_args))[0];
+        const find = Util.firstElement(await getClient().findUsers(t_args));
 
         if (typeof find === "undefined") {
             return `:warning: User \`${t_args}\` not found.`;

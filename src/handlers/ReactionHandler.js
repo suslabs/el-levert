@@ -31,7 +31,7 @@ function logRemoveTime(t1) {
 
 function getReact(list) {
     if (list.length === 1) {
-        return list[0];
+        return Util.firstElement(list);
     }
 
     return Util.randomElement(list);
@@ -189,7 +189,7 @@ class ReactionHandler extends Handler {
             return;
         }
 
-        let counts = foundWords.reduce(
+        const counts = foundWords.reduce(
             (counts, [word]) => ({
                 ...counts,
                 [word]: 0
@@ -198,6 +198,7 @@ class ReactionHandler extends Handler {
         );
 
         let foundOne = false;
+
         for (let [word, index] of foundWords) {
             while (index !== -1) {
                 const startValid = index === 0 || normStr[index - 1] === " ",
@@ -230,8 +231,8 @@ class ReactionHandler extends Handler {
     }
 
     async singleReact(msg, words) {
-        const keys = Object.keys(words),
-            reactLists = new Set(keys.map(w => this.reactMap.get(w)));
+        words = Object.keys(words);
+        const reactLists = new Set(words.map(w => this.reactMap.get(w)));
 
         for (const list of reactLists) {
             const react = getReact(list);
@@ -245,8 +246,8 @@ class ReactionHandler extends Handler {
     async multipleReact(msg, words) {
         const reacts = new Set();
 
-        for (const [key, count] of Object.entries(words)) {
-            const reactList = this.reactMap.get(key);
+        for (const [word, count] of Object.entries(words)) {
+            const reactList = this.reactMap.get(word);
 
             for (let i = 0; i < count; i++) {
                 const react = this.getReact(reactList);
@@ -293,9 +294,9 @@ class ReactionHandler extends Handler {
     }
 
     async execute(msg) {
-        const res = await this.funnyReact(msg);
+        const reacted = await this.funnyReact(msg);
 
-        if (res && !this.multipleReacts) {
+        if (reacted && !this.multipleReacts) {
             return;
         }
 

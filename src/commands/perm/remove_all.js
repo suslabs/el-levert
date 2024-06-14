@@ -15,7 +15,7 @@ export default {
             return ":information_source: `perm remove_all [ping/id/username]`";
         }
 
-        const find = (await getClient().findUsers(u_name))[0];
+        const find = Util.firstElement(await getClient().findUsers(u_name));
 
         if (typeof find === "undefined") {
             if (getClient().permManager.isOwner(msg.author.id)) {

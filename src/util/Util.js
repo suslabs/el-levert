@@ -196,6 +196,14 @@ const Util = {
         return Math.round((num + Number.EPSILON) * 10 ** digits) / 10 ** digits;
     },
 
+    firstElement: (arr, start = 0) => {
+        return arr[start];
+    },
+
+    lastElement: (arr, start = 0) => {
+        return arr[arr.length + start - 1];
+    },
+
     randomElement: (arr, a = 0, b = arr.length - 1) => {
         return arr[a + ~~(Math.random() * (b - a))];
     },

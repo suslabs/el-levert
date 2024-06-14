@@ -9,7 +9,7 @@ function formatGroups(groups) {
         format = groups.map((group, i) => `${i + 1}. ${group.format()}`);
         format = format.join("\n");
     } else {
-        format = groups[0].format();
+        format = Util.firstElement(groups).format();
     }
 
     return format;
@@ -24,7 +24,7 @@ export default {
 
         if (args.length > 0) {
             const [u_name] = Util.splitArgs(args),
-                find = (await getClient().findUsers(u_name))[0];
+                find = Util.firstElement(await getClient().findUsers(u_name));
 
             if (typeof find === "undefined") {
                 user = {

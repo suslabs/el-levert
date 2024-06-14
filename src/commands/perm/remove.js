@@ -31,7 +31,7 @@ export default {
             return `:warning: Can't remove a user from a group with a higher level your own. (${maxLevel} < ${group.level})`;
         }
 
-        const find = (await getClient().findUsers(u_name))[0];
+        const find = Util.firstElement(await getClient().findUsers(u_name));
 
         if (typeof find === "undefined") {
             return `:warning: User \`${u_name}\` not found.`;

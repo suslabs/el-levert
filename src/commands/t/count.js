@@ -19,7 +19,7 @@ export default {
             } else if (own) {
                 user = msg.author;
             } else {
-                const find = (await getClient().findUsers(u_name))[0];
+                const find = Util.firstElement(await getClient().findUsers(u_name));
 
                 if (typeof find === "undefined") {
                     return `:warning: User \`${u_name}\` not found.`;

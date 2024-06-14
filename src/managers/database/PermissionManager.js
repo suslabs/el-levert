@@ -7,6 +7,7 @@ import User from "../../structures/permission/User.js";
 
 import PermissionError from "../../errors/PermissionError.js";
 
+import Util from "../../util/Util.js";
 import { getClient, getLogger } from "../../LevertClient.js";
 
 const groupNameRegex = /^[A-Za-z0-9\-_]+$/;
@@ -102,7 +103,7 @@ class PermissionManager extends DBManager {
         let maxLevel;
 
         if (groups.length === 1) {
-            maxLevel = groups[0].level;
+            maxLevel = Util.firstElement(groups).level;
         } else {
             const levels = groups.map(x => x.level);
             maxLevel = Math.max(...levels);

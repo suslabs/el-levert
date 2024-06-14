@@ -222,7 +222,7 @@ class DiscordClient {
         const presence = this.client.user.setActivity(config.text, {
                 type: num
             }),
-            activity = presence.activities[0];
+            activity = Util.firstElement(presence.activities);
 
         const setType = ActivityType[activity.type],
             setText = activity.name;

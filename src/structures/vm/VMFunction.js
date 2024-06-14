@@ -17,7 +17,7 @@ function resolveObj(path, propertyMap) {
     }
 
     while (split.length > 0) {
-        const propertyName = split[0];
+        const propertyName = Util.firstElement(split);
 
         if (typeof obj === "undefined") {
             obj = propertyMap[propertyName];
