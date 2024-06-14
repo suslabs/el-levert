@@ -50,24 +50,39 @@ class CommandHandler extends Handler {
         }
 
         await msg.channel.sendTyping();
-
         this.userTracker.addUser(msg.author.id);
-        logUsage(msg, cmd.name, args);
 
-        await this.executeCommand(cmd, msg, args);
+        await this.executeAndReply(cmd, msg, args);
         this.userTracker.removeUser(msg.author.id);
 
         return true;
     }
 
     async executeCommand(cmd, msg, args) {
+        logUsage(msg, cmd.name, args);
+        const t1 = Date.now();
+
+        let out = await cmd.execute(args, msg);
+
+        if (typeof out === "string") {
+            const split = out.split("\n");
+
+            if (out.length > this.outCharLimit || split.length > this.outNewlineLimit) {
+                out = Util.getFileAttach(out);
+            }
+        }
+
+        logTime(t1);
+        return out;
+    }
+
+    async executeAndReply(cmd, msg, args) {
         let out;
 
         try {
-            out = await this.getCommandOutput(cmd, msg, args);
+            out = await this.executeCommand(cmd, msg, args);
         } catch (err) {
-            await this.handleExecutionError(err, cmd, msg);
-
+            await this.handleExecutionError(err, msg, cmd);
             return;
         }
 
@@ -82,23 +97,7 @@ class CommandHandler extends Handler {
         }
     }
 
-    async getCommandOutput(cmd, msg, args) {
-        const t1 = Date.now();
-
-        let out = await cmd.execute(args, msg);
-
-        if (typeof out === "string") {
-            const split = out.split("\n");
-
-            if (out.length > this.outCharLimit || split.length > this.outNewlineLimit) {
-                out = Util.getFileAttach(out);
-            }
-        }
-
-        logTime(t1);
-    }
-
-    async handleExecutionError(err, cmd, msg) {
+    async handleExecutionError(err, msg, cmd) {
         getLogger().error("Command execution failed:", err);
 
         try {
