@@ -59,7 +59,7 @@ const Util = {
         const values = {};
 
         for (const key of Object.keys(defaults)) {
-            const sourceVal = source[key];
+            const sourceVal = source ? source[key] : undefined;
 
             if (sourceVal === null || typeof sourceVal === "undefined") {
                 let defaultValue = defaults[key];
@@ -196,7 +196,7 @@ const Util = {
         return Math.round((num + Number.EPSILON) * 10 ** digits) / 10 ** digits;
     },
 
-    randomElement: (arr, a = 0, b = arr.length) => {
+    randomElement: (arr, a = 0, b = arr.length - 1) => {
         return arr[a + ~~(Math.random() * (b - a))];
     },
 
