@@ -154,12 +154,12 @@ class DiscordClient {
         this.logger?.info(`The bot is online. Logged in as "${this.client.user.username}".`);
     }
 
-    async logout(kill = false) {
+    logout(kill = false) {
         if (typeof this.onLogout === "function") {
             this.onLogout();
         }
 
-        await this.client.destroy();
+        this.client.destroy();
         delete this.client;
 
         this.loggedIn = false;

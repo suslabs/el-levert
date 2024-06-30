@@ -374,7 +374,7 @@ class LevertClient extends DiscordClient {
 
         this.unloadVMs();
 
-        await this.logout(kill);
+        this.logout(kill);
         this.setStopped();
 
         this.logger.info("Client stopped.");
