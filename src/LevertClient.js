@@ -64,6 +64,7 @@ class LevertClient extends DiscordClient {
         }
 
         const { config, reactions, auth } = configs;
+
         this.config = config;
         this.reactions = reactions;
 
@@ -88,6 +89,7 @@ class LevertClient extends DiscordClient {
             config = getDefaultLoggerConfig(...configOpts);
 
         this.logger = createLogger(config);
+
         this.wrapEvent = wrapEvent.bind(undefined, this.logger);
     }
 

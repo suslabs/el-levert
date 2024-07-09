@@ -25,6 +25,7 @@ class MysqlPool extends EventEmitter {
         }
 
         this.config = config;
+
         this.throwErrors = config.throwErrors ?? true;
 
         const pool = mysql.createPool(config);

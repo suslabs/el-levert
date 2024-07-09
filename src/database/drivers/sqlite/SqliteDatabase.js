@@ -26,6 +26,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         this.mode = mode ?? OpenModes.OPEN_RWCREATE;
 
         this.config = config;
+
         this.throwErrors = config.throwErrors ?? true;
         this.autoRollback = config.autoRollback ?? false;
 

@@ -64,6 +64,7 @@ class MysqlDatabase extends StatementDatabase(EventEmitter) {
 
     static setConfig(config, open = false) {
         this.config = config;
+
         this.throwErrors = config.throwErrors;
 
         if (open) {

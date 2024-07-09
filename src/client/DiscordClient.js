@@ -79,6 +79,8 @@ class DiscordClient {
     }
 
     setOptions(options) {
+        this.options = {};
+
         const optionsList = typeof options !== "undefined" ? clientOptions : [];
 
         for (const key of optionsList) {
@@ -92,6 +94,7 @@ class DiscordClient {
                 option = option.bind(this);
             }
 
+            this.options[key] = option;
             this[key] = option;
         }
 

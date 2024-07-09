@@ -11,6 +11,8 @@ class SqlDatabase {
         this.dbPath = dbPath;
         this.queryPath = queryPath;
 
+        this.options = options;
+
         this.queryExtension = options.queryExtension ?? ".sql";
         this.queryEncoding = options.queryEncoding ?? "utf-8";
 

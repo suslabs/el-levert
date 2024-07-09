@@ -21,12 +21,14 @@ function _unload(...args) {
 }
 
 class Manager {
-    constructor(enabled = true) {
+    constructor(enabled = true, options = {}) {
         if (typeof this.load !== "function") {
             throw new ManagerError("Child class must have a load function");
         }
 
         this.enabled = enabled;
+
+        this.options = options;
 
         this.childLoad = this.load;
         this.load = _load.bind(this);

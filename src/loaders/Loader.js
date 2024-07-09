@@ -68,6 +68,8 @@ class Loader {
         this.name = name;
         this.logger = logger;
 
+        this.options = options;
+
         this.type = options.type ?? "";
         this.throwOnFailure = options.throwOnFailure ?? true;
 

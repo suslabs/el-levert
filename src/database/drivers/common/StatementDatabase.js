@@ -2,8 +2,8 @@ import DatabaseError from "../../../errors/DatabaseError.js";
 
 export default function (base) {
     class StatementDatabase extends base {
-        constructor() {
-            super();
+        constructor(...args) {
+            super(...args);
 
             this.statements = [];
         }
