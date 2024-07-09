@@ -8,6 +8,7 @@ export default {
     parent: "perm",
     subcommand: true,
     allowed: getClient().permManager.adminLevel,
+
     handler: async (args, msg) => {
         let [g_name, g_data] = Util.splitArgs(args),
             [newName, newLevel] = Util.splitArgs(g_data);

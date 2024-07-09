@@ -31,6 +31,7 @@ export default {
     name: "leaderboard",
     parent: "tag",
     subcommand: true,
+
     handler: async args => {
         if (args.length === 0) {
             return ":information_source: `t leaderboard (count/size) [limit < 100]`";

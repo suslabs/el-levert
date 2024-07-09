@@ -13,6 +13,7 @@ export default {
     name: "langs",
     parent: "eval",
     subcommand: true,
+
     handler: function () {
         const format = formatNames(this.parentCmd.langNames),
             embed = new EmbedBuilder().setDescription(format);

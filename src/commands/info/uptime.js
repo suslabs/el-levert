@@ -5,6 +5,7 @@ import Util from "../../util/Util.js";
 export default {
     name: "uptime",
     category: "info",
+
     handler: _ => {
         const startedDate = new Date(getClient().startedAt).toLocaleString("en-GB", {
                 weekday: "short",

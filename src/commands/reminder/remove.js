@@ -5,6 +5,7 @@ export default {
     aliases: ["delete"],
     parent: "reminder",
     subcommand: true,
+
     handler: async (args, msg) => {
         const index = parseInt(args, 10);
 

@@ -6,6 +6,7 @@ export default {
     name: "count",
     parent: "tag",
     subcommand: true,
+
     handler: async (args, msg) => {
         let user;
 

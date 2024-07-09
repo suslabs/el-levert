@@ -112,6 +112,7 @@ export default {
     name: "eval",
     aliases: ["e", "exec"],
     subcommands: ["c", "cpp", "py", "vm2", "langs"],
+
     load: function () {
         if (!getClient().config.enableEval) {
             return false;
@@ -127,6 +128,7 @@ export default {
         this.altevalBase = altevalBase.bind(this);
         Object.assign(this.langNames, altLangNames);
     },
+
     handler: async function (args, msg) {
         const parsed = await this.evalBase(args, msg),
             body = parsed.body;

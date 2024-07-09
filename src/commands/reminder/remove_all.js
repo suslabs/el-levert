@@ -5,6 +5,7 @@ export default {
     aliases: ["delete_all"],
     parent: "reminder",
     subcommand: true,
+
     handler: async (_, msg) => {
         const res = await getClient().reminderManager.removeAll(msg.author.id);
 

@@ -19,6 +19,7 @@ export default {
     name: "check",
     parent: "perm",
     subcommand: true,
+
     handler: async (args, msg) => {
         let user = msg.author;
 

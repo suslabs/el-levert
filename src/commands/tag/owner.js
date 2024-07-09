@@ -6,6 +6,7 @@ export default {
     name: "owner",
     parent: "tag",
     subcommand: true,
+
     handler: async function (args) {
         if (args.length === 0) {
             return ":information_source: `t owner name`";

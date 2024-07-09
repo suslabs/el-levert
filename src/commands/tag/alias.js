@@ -6,6 +6,7 @@ export default {
     name: "alias",
     parent: "tag",
     subcommand: true,
+
     handler: async function (args, msg, perm) {
         if (args.length === 0) {
             return ":information_source: `t alias name other_tag [args]`";

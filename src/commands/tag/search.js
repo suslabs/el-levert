@@ -7,6 +7,7 @@ export default {
     aliases: ["find", "query"],
     parent: "tag",
     subcommand: true,
+
     handler: async args => {
         if (args.length === 0) {
             return ":information_source: `t search query (all/max_results)`";

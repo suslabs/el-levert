@@ -6,6 +6,7 @@ const minSize = 5,
 export default {
     name: "cleanroomcalc",
     category: "util",
+
     handler: args => {
         const dims = args.split("x");
 

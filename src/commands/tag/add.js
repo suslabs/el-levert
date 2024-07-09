@@ -7,6 +7,7 @@ export default {
     aliases: ["create"],
     parent: "tag",
     subcommand: true,
+
     handler: async function (args, msg) {
         if (args.length === 0) {
             return ":information_source: `t add name body`";

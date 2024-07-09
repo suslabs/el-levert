@@ -7,6 +7,7 @@ export default {
     parent: "tag",
     subcommand: true,
     allowed: getClient().permManager.modLevel,
+
     handler: async function (args) {
         if (args.length < 2) {
             return ":information_source: `t set_type name version/type`";

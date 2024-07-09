@@ -7,6 +7,7 @@ export default {
     aliases: ["transfer"],
     parent: "tag",
     subcommand: true,
+
     handler: async function (args, msg, perm) {
         if (args.length === 0) {
             return ":information_source: `t chown name new_owner_mention`";

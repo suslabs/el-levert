@@ -8,6 +8,7 @@ export default {
     parent: "tag",
     subcommand: true,
     allowed: getClient().permManager.modLevel,
+
     handler: async function (args) {
         if (args.length === 0) {
             return ":information_source: `t info name`";

@@ -9,6 +9,7 @@ export default {
     aliases: ["create"],
     parent: "reminder",
     subcommand: true,
+
     handler: async (args, msg) => {
         const match = args.match(messageRegex),
             date = match[1] ?? "",

@@ -4,6 +4,7 @@ export default {
     name: "reload_commands",
     ownerOnly: true,
     category: "owner-only",
+
     handler: async _ => {
         getClient().silenceDiscordTransports(true);
 

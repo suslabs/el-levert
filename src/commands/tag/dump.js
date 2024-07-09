@@ -7,6 +7,7 @@ export default {
     aliases: ["all", "list_all"],
     parent: "tag",
     subcommand: true,
+
     handler: async args => {
         const [d_type, s_str] = Util.splitArgs(args),
             full = d_type === "full",

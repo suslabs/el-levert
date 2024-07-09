@@ -11,6 +11,7 @@ export default {
     name: "list",
     parent: "tag",
     subcommand: true,
+
     handler: async (args, msg) => {
         let user = msg.author;
 

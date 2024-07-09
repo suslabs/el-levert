@@ -7,6 +7,7 @@ export default {
     aliases: ["remove"],
     parent: "tag",
     subcommand: true,
+
     handler: async function (args, msg, perm) {
         if (args.length === 0) {
             return ":information_source: `t delete name`";

@@ -12,6 +12,7 @@ export default {
     aliases: ["all"],
     parent: "reminder",
     subcommand: true,
+
     handler: async (_, msg) => {
         const reminders = await getClient().reminderManager.list(msg.author.id);
 

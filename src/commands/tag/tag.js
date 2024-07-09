@@ -113,9 +113,11 @@ export default {
         "search",
         "set_type"
     ],
+
     load: function () {
         this.parseBase = parseBase.bind(this);
     },
+
     handler: async function (args, msg, perm) {
         if (args.length === 0) {
             return `:information_source: %t [${this.getSubcmdList(perm)}] tag_name [tag_args]`;

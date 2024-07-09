@@ -6,6 +6,7 @@ export default {
     name: "quota",
     parent: "tag",
     subcommand: true,
+
     handler: async (_, msg) => {
         const tags = await getClient().tagManager.list(msg.author.id);
 
