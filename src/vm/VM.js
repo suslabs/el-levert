@@ -24,7 +24,7 @@ function _unload(...args) {
     return this.childUnload(...args);
 }
 
-function _runScript(script, ...args) {
+function _runScript(code, ...args) {
     if (!this.enabled) {
         if (typeof this.getDisabledMessage === "function") {
             return this.getDisabledMessage();
@@ -33,7 +33,7 @@ function _runScript(script, ...args) {
         return;
     }
 
-    return this.childRunScript(...args);
+    return this.childRunScript(code, ...args);
 }
 
 class VM {

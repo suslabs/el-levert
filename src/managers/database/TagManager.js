@@ -81,6 +81,10 @@ class TagManager extends DBManager {
     }
 
     async execute(tag, args, msg) {
+        if (tag.isAlias && !tag.fetched) {
+            tag = await this.fetchAlias(tag);
+        }
+
         const ivm = getClient().tagVM,
             vm2 = getClient().tagVM2;
 
