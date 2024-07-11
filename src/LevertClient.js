@@ -115,7 +115,7 @@ class LevertClient extends DiscordClient {
             useWebhook = this.config.logWebhook !== "";
 
         if (!useChannel && !useWebhook) {
-            this.logger.error("If logging to Discord is enabled, a channel id or a webhook url must be provided.");
+            this.logger.error("Can't add Discord transports. No channel id or a webhook url was provided.");
             return;
         }
 
@@ -151,9 +151,15 @@ class LevertClient extends DiscordClient {
         }
     }
 
+    getDiscordTransports() {
+        const channelTransport = this.logger.transports.find(x => x.name === ChannelTransport.name),
+            webhookTransport = this.logger.transports.find(x => x.name === WebhookTransport.name);
+
+        return [channelTransport.webhookTransport];
+    }
+
     removeDiscordTransports() {
-        const channelTransport = this.logger.transports.find(x => x.name === "discord.channel"),
-            webhookTransport = this.logger.transports.find(x => x.name === "discord.webhook");
+        const [channelTransport, webhookTransport] = this.getDiscordTransports();
 
         if (typeof channelTransport !== "undefined") {
             this.logger.remove(channelTransport);
@@ -165,8 +171,7 @@ class LevertClient extends DiscordClient {
     }
 
     silenceDiscordTransports(silent = true) {
-        const channelTransport = this.logger.transports.find(x => x.name === "discord.channel"),
-            webhookTransport = this.logger.transports.find(x => x.name === "discord.webhook");
+        const [channelTransport, webhookTransport] = this.getDiscordTransports();
 
         if (typeof channelTransport !== "undefined") {
             channelTransport.silent = silent;

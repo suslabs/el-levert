@@ -6,6 +6,10 @@ import LoggerError from "../../errors/LoggerError.js";
 
 import Util from "../../util/Util.js";
 
+function getEmbedColor(level) {
+    return EmbedColors[level] ?? defaultColor;
+}
+
 const msgCharLimit = 2000,
     embedCharLimit = 4096;
 
@@ -60,18 +64,13 @@ class BaseDiscordTransport extends Transport {
         callback();
     }
 
-    async logToDiscord(info) {
+    formatLog(info) {
         let content = "",
             fileContent = "",
             embed = new EmbedBuilder();
 
-        let totalEmbedChars = 0;
-
         embed.setTitle(Util.capitalize(info.level));
-        totalEmbedChars += info.level.length;
-
-        const color = EmbedColors[info.level] ?? defaultColor;
-        embed.setColor(color);
+        embed.setColor(getEmbedColor(info.level));
 
         if (typeof info.stack !== "undefined") {
             if (info.stack.length < msgCharLimit) {
@@ -98,13 +97,6 @@ class BaseDiscordTransport extends Transport {
             });
         }
 
-        if (typeof embed.data.fields !== "undefined") {
-            totalEmbedChars += embed.data.fields.reduce((sum, val) => {
-                const { name, value } = val;
-                return sum + name.length + value.length;
-            }, 0);
-        }
-
         if (typeof info.timestamp !== "undefined") {
             const date = new Date(info.timestamp),
                 timestamp = Math.floor(date.getTime() * Util.durationSeconds.milli),
@@ -112,9 +104,6 @@ class BaseDiscordTransport extends Transport {
 
             embed.setTimestamp(date);
             embed.setTitle(`${embed.data.title} | ${formattedTimestamp}`);
-
-            totalEmbedChars += info.timestamp.length;
-            totalEmbedChars += formattedTimestamp.length + " | ".length;
         }
 
         if (typeof this.client !== "undefined") {
@@ -125,15 +114,13 @@ class BaseDiscordTransport extends Transport {
                 name: username,
                 iconURL: avatar
             });
-
-            totalEmbedChars += username.length;
         }
+
+        const totalEmbedChars = Util.getEmbedSize(embed);
 
         if (info.message.length < this.charLimit - totalEmbedChars) {
             const formattedMessage = codeBlock(info.message);
             embed.setDescription(formattedMessage);
-
-            totalEmbedChars += formattedMessage.length;
         } else {
             fileContent += `--- Log message:\n${info.message}`;
         }
@@ -149,7 +136,10 @@ class BaseDiscordTransport extends Transport {
                 ...Util.getFileAttach(fileContent, "log.txt")
             };
         }
+    }
 
+    async logToDiscord(info) {
+        const out = this.formatLog(info);
         await this.sendLog(out);
     }
 

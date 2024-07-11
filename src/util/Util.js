@@ -20,13 +20,26 @@ const durationSeconds = {
     milli: 1 / 1000
 };
 
+const discordEpoch = 1420070400000;
+
 const Util = {
     durationSeconds,
+    discordEpoch,
 
     delay: ms => {
         return new Promise(resolve => {
             setTimeout(resolve, ms);
         });
+    },
+
+    import: async (modulePath, cache = true) => {
+        let fileURL = URL.pathToFileURL(modulePath);
+
+        if (!cache) {
+            fileURL += `?update=${Date.now()}`;
+        }
+
+        return (await import(fileURL)).default;
     },
 
     splitArgs: (str, sep = " ") => {
@@ -139,13 +152,6 @@ const Util = {
         });
     },
 
-    import: async modulePath => {
-        let fileURL = URL.pathToFileURL(modulePath);
-        fileURL += `?update=${Date.now()}`;
-
-        return (await import(fileURL)).default;
-    },
-
     parseScript: script => {
         const match = script.match(scriptRegex);
 
@@ -185,6 +191,7 @@ const Util = {
     },
 
     capitalize: str => {
+        str = ("" + str).toLowerCase();
         return str[0].toUpperCase() + str.substring(1);
     },
 
@@ -193,7 +200,8 @@ const Util = {
     },
 
     round: (num, digits) => {
-        return Math.round((num + Number.EPSILON) * 10 ** digits) / 10 ** digits;
+        const exp = 10 ** digits;
+        return Math.round((num + Number.EPSILON) * exp) / exp;
     },
 
     firstElement: (arr, start = 0) => {
@@ -206,6 +214,59 @@ const Util = {
 
     randomElement: (arr, a = 0, b = arr.length - 1) => {
         return arr[a + ~~(Math.random() * (b - a))];
+    },
+
+    snowflakeFromDate: date => {
+        const timestamp = date.getTime() - discordEpoch,
+            snowflakeBits = BigInt(timestamp) << 22n;
+
+        return snowflakeBits.toString(10);
+    },
+
+    dateFromSnowflake: snowflake => {
+        const snowflakeBits = BigInt.asUintN(64, snowflake),
+            timestamp = Number(snowflakeBits >> 22n);
+
+        return new Date(timestamp + discordEpoch);
+    },
+
+    getEmbedSize(embed) {
+        if (typeof embed.data !== "undefined") {
+            embed = embed.data;
+        }
+
+        let size = 0;
+
+        size += embed.title?.length ?? 0;
+        size += embed.description?.length ?? 0;
+
+        size += embed.url?.length ?? 0;
+        size += embed.thumbnail?.url?.length ?? 0;
+        size += embed.image?.url?.length ?? 0;
+
+        size += embed.author?.name?.length ?? 0;
+        size += embed.author?.icon_url?.length ?? 0;
+        size += embed.author?.url?.length ?? 0;
+
+        size += embed.timestamp?.length ?? 0;
+
+        size += embed.footer?.text?.length ?? 0;
+        size += embed.footer?.icon_url?.length ?? 0;
+
+        if (typeof embed.fields === "undefined") {
+            return size;
+        }
+
+        size += embed.fields.reduce((sum, val) => {
+            const { name, value } = val;
+
+            const nameLength = name?.length ?? 0,
+                valueLength = value?.length ?? 0;
+
+            return sum + nameLength + valueLength;
+        }, 0);
+
+        return size;
     },
 
     formatLog(str, splitLength = 80, maxLength = 1000) {

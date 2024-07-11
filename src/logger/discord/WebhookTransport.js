@@ -7,9 +7,11 @@ import LoggerError from "../../errors/LoggerError.js";
 const urlRegex = /^https:\/\/discord\.com\/api\/webhooks\/(?<id>\d+)\/(?<token>[\w_-]+)$/;
 
 class WebhookTransport extends BaseDiscordTransport {
+    static name = "discord.webhook";
+
     constructor(opts) {
         super({
-            name: "discord.webhook",
+            name: WebhookTransport.name,
             ...opts
         });
 

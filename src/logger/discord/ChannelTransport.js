@@ -6,9 +6,11 @@ import Util from "../../util/Util.js";
 import LoggerError from "../../errors/LoggerError.js";
 
 class ChannelTransport extends BaseDiscordTransport {
+    static name = "discord.channel";
+
     constructor(opts) {
         super({
-            name: "discord.channel",
+            name: ChannelTransport.name,
             sendInterval: 2 / Util.durationSeconds.milli,
             ...opts
         });
