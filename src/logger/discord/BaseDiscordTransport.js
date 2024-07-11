@@ -136,6 +136,8 @@ class BaseDiscordTransport extends Transport {
                 ...Util.getFileAttach(fileContent, "log.txt")
             };
         }
+
+        return out;
     }
 
     async logToDiscord(info) {
