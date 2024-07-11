@@ -230,7 +230,7 @@ const Util = {
         return new Date(timestamp + discordEpoch);
     },
 
-    getEmbedSize(embed) {
+    getEmbedSize(embed, countURLs = false) {
         if (typeof embed.data !== "undefined") {
             embed = embed.data;
         }
@@ -240,18 +240,20 @@ const Util = {
         size += embed.title?.length ?? 0;
         size += embed.description?.length ?? 0;
 
-        size += embed.url?.length ?? 0;
-        size += embed.thumbnail?.url?.length ?? 0;
-        size += embed.image?.url?.length ?? 0;
-
         size += embed.author?.name?.length ?? 0;
-        size += embed.author?.icon_url?.length ?? 0;
-        size += embed.author?.url?.length ?? 0;
-
         size += embed.timestamp?.length ?? 0;
-
         size += embed.footer?.text?.length ?? 0;
-        size += embed.footer?.icon_url?.length ?? 0;
+
+        if (countURLs) {
+            size += embed.url?.length ?? 0;
+            size += embed.thumbnail?.url?.length ?? 0;
+            size += embed.image?.url?.length ?? 0;
+
+            size += embed.author?.icon_url?.length ?? 0;
+            size += embed.author?.url?.length ?? 0;
+
+            size += embed.footer?.icon_url?.length ?? 0;
+        }
 
         if (typeof embed.fields === "undefined") {
             return size;
