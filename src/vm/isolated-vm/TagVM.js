@@ -1,3 +1,5 @@
+import VM from "../VM.js";
+
 import EvalContext from "./context/EvalContext.js";
 import InspectorServer from "./inspector/InspectorServer.js";
 
@@ -17,9 +19,9 @@ function logTime(t1) {
     getLogger().debug(`Running script took ${(Date.now() - t1).toLocaleString()}ms.`);
 }
 
-class TagVM {
+class TagVM extends VM {
     constructor(enabled) {
-        this.enabled = enabled;
+        super(enabled);
 
         this.memLimit = getClient().config.memLimit;
         this.timeLimit = getClient().config.timeLimit;
@@ -66,10 +68,6 @@ class TagVM {
     }
 
     async runScript(code, msg, tag, args) {
-        if (!this.enabled) {
-            return "Eval is disabled.";
-        }
-
         const t1 = Date.now();
         logUsage(code);
 
@@ -153,11 +151,19 @@ class TagVM {
         return out;
     }
 
+    load() {
+        this.setupInspectorServer();
+    }
+
     unload() {
         if (typeof this.inspectorServer !== "undefined") {
             this.inspectorServer.close();
             delete this.inspectorServer;
         }
+    }
+
+    getDisabledMessage() {
+        return "Eval is disabled.";
     }
 }
 

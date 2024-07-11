@@ -38,16 +38,10 @@ class TagVM2 {
         this.memLimit = getClient().config.otherMemLimit;
         this.timeLimit = getClient().config.otherTimeLimit;
 
-        this.createProcPool();
-
         this.vmOptions = vmOptions;
     }
 
     createProcPool() {
-        if (!this.enabled) {
-            return;
-        }
-
         this.procPool = new VM2ProcPool({
             min: 1,
             max: 3,
@@ -95,10 +89,6 @@ class TagVM2 {
     }
 
     async runScript(code, msg, args) {
-        if (!this.enabled) {
-            return "VM2 is disabled.";
-        }
-
         const { vmObjects, vmFuncs, outputVars } = this.getContext(msg, args),
             formattedCode = formatCode(code);
 
@@ -120,10 +110,6 @@ class TagVM2 {
     }
 
     kill() {
-        if (!this.enabled) {
-            return false;
-        }
-
         try {
             this.procPool.kill();
         } catch (err) {
@@ -132,6 +118,24 @@ class TagVM2 {
         }
 
         return true;
+    }
+
+    load() {
+        this.createProcPool();
+    }
+
+    unload() {
+        const killed = this.kill();
+
+        if (killed) {
+            getLogger().info("Killed VM2 child process.");
+        }
+
+        return killed;
+    }
+
+    getDisabledMessage() {
+        return "VM2 is disabled.";
     }
 }
 

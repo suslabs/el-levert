@@ -290,13 +290,29 @@ class LevertClient extends DiscordClient {
     loadVMs() {
         getLogger().info("Loading VMs...");
 
-        this.tagVM = new TagVM(this.config.enableEval);
-        this.tagVM.setupInspectorServer();
-
-        this.tagVM2 = new TagVM2(this.config.enableVM2);
+        const VMs = {
+            tagVM: new TagVM(this.config.enableEval),
+            tagVM2: new TagVM2(this.config.enableVM2)
+        };
 
         if (this.config.enableOtherLangs) {
-            this.externalVM = new ExternalVM();
+            VMs.externalVM = new ExternalVM();
+        }
+
+        this.VMs = VMs;
+        this.VMList = Object.values(VMs);
+
+        for (const [name, VM] of Object.entries(VMs)) {
+            this.logger.info(`Loading VM: ${name}`);
+
+            VM.load();
+
+            Object.defineProperty(this, name, {
+                value: VM,
+                configurable: true
+            });
+
+            this.logger.info(`Loaded VM: ${name}`);
         }
 
         getLogger().info("Loaded VMs.");
@@ -305,18 +321,23 @@ class LevertClient extends DiscordClient {
     unloadVMs() {
         getLogger().info("Unloading VMs...");
 
-        this.tagVM.unload();
-        delete this.tagVM;
+        for (const name in this.managers) {
+            this.logger.info(`Unloading VM: ${name}`);
 
-        if (this.tagVM2.kill()) {
-            this.logger.info("Killed VM2 child process.");
+            this.VMs[name].unload();
+
+            delete this.VMs[name];
+            delete this[name];
+
+            this.logger.info(`Unloaded VM: ${name}`);
         }
 
-        delete this.tagVM2;
-
-        if (this.config.enableOtherLangs) {
-            delete this.externalVM;
+        for (let i = 0; i < this.VMList.length; i++) {
+            delete this.VMList[i];
         }
+
+        delete this.VMs;
+        delete this.VMList;
 
         getLogger().info("Unloaded VMs.");
     }
