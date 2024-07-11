@@ -59,6 +59,14 @@ function _write(data, ...args) {
     }
 }
 
+function _dispose() {
+    if (typeof this.childDispose !== "function") {
+        return;
+    }
+
+    return this.childDispose();
+}
+
 class Loader {
     constructor(name = "", logger, options = {}) {
         if (typeof this.load !== "function") {
@@ -82,6 +90,9 @@ class Loader {
 
         this.childWrite = this.write;
         this.write = _write.bind(this);
+
+        this.childDispose = this.dispose;
+        this.dispose = _dispose.bind(this);
     }
 
     getName(capitalized = false) {

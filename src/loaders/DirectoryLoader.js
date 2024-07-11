@@ -24,11 +24,8 @@ class DirectoryLoader extends Loader {
 
         this.excludeDirs = options.excludeDirs ?? [];
         this.fileExtension = options.fileExtension ?? "any";
-        this.fileLoaderClass = options.fileLoaderClass ?? FileLoader;
-    }
 
-    getLogName() {
-        return this.name ?? "file";
+        this.fileLoaderClass = options.fileLoaderClass ?? FileLoader;
     }
 
     loadFilePaths() {
@@ -73,24 +70,6 @@ class DirectoryLoader extends Loader {
 
         this.logger?.debug(`Read ${this.getName()}.`);
         return LoadStatus.successful;
-    }
-
-    deleteData() {
-        if (this.loaders instanceof Map) {
-            for (const path of this.loaders.keys()) {
-                this.loaders.delete(path);
-            }
-        } else {
-            this.loaders = new Map();
-        }
-
-        if (this.data instanceof Map) {
-            for (const path of this.data.keys()) {
-                this.data.delete(path);
-            }
-        } else {
-            this.data = new Map();
-        }
     }
 
     getLoadArgs(path, options) {
@@ -224,6 +203,28 @@ class DirectoryLoader extends Loader {
         };
 
         return LoadStatus.successful;
+    }
+
+    getLogName() {
+        return this.name ?? "file";
+    }
+
+    deleteData() {
+        if (this.loaders instanceof Map) {
+            for (const path of this.loaders.keys()) {
+                this.loaders.delete(path);
+            }
+        } else {
+            this.loaders = new Map();
+        }
+
+        if (this.data instanceof Map) {
+            for (const path of this.data.keys()) {
+                this.data.delete(path);
+            }
+        } else {
+            this.data = new Map();
+        }
     }
 }
 

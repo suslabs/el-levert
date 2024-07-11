@@ -167,6 +167,10 @@ class JsonLoader extends FileLoader {
         return LoadStatus.successful;
     }
 
+    removeValidator() {
+        ajv.removeSchema(this.schema.$id);
+    }
+
     schemaValidate(data) {
         if (this.schemaLoadStatus === LoadStatus.failed || this.initValidator() === LoadStatus.failed) {
             if (this.forceSchemaValidation) {

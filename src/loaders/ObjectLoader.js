@@ -11,6 +11,7 @@ class ObjectLoader extends Loader {
         });
 
         this.path = filePath;
+        this.cache = options.cache ?? false;
     }
 
     async load() {
@@ -23,7 +24,7 @@ class ObjectLoader extends Loader {
                 return this.failure("Invalid file path.");
         }
 
-        const object = await Util.import(this.path);
+        const object = await Util.import(this.path, this.cache);
 
         if (typeof object === "undefined") {
             return LoadStatus.failed;
