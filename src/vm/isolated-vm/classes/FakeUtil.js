@@ -26,7 +26,8 @@ const FakeUtil = {
             tag.setName(name);
         }
 
-        return new ExternalCopy(tag).copyInto();
+        const data = tag.getData();
+        return new ExternalCopy(data).copyInto();
     },
 
     findTags: async query => {
@@ -35,7 +36,12 @@ const FakeUtil = {
     },
 
     dumpTags: async full => {
-        const tags = await getClient().tagManager.dump(full);
+        let tags = await getClient().tagManager.dump(full);
+
+        if (full) {
+            tags = tags.map(tag => tag.getData());
+        }
+
         return new ExternalCopy(tags).copyInto();
     },
 

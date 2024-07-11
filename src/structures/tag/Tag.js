@@ -18,6 +18,8 @@ const defaultValues = {
 
 const hopsSeparator = ",";
 
+const privateProps = ["fetched"];
+
 class Tag {
     static defaultValues = defaultValues;
     static hopsSeparator = hopsSeparator;
@@ -39,6 +41,8 @@ class Tag {
         if (typeof this.type === "string") {
             this.setType(this.type);
         }
+
+        this.fetched = false;
     }
 
     get isAlias() {
@@ -83,6 +87,8 @@ class Tag {
     setAliasProps(hops, args) {
         this.hops = hops ?? defaultValues.hops;
         this.args = args ?? defaultValues.args;
+
+        this.fetched = true;
     }
 
     setRegistered(time) {
@@ -91,6 +97,15 @@ class Tag {
 
     setLastEdited(time) {
         this.lastEdited = time ?? Date.now();
+    }
+
+    getData() {
+        const filtered = Object.entries(this).filter(x => {
+            const key = x[0];
+            return !privateProps.includes(key);
+        });
+
+        return Object.fromEntries(filtered);
     }
 
     getType() {
@@ -266,11 +281,7 @@ class Tag {
 
     async getInfo(raw = false) {
         if (raw) {
-            const info = {
-                ...this
-            };
-
-            return info;
+            return this.getData();
         }
 
         const aliasName = this.isAlias ? this.aliasName : "none",
