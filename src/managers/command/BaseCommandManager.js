@@ -11,7 +11,7 @@ import categoryNames from "./categoryNames.json" assert { type: "json" };
 
 class BaseCommandManager extends Manager {
     constructor(enabled, commandsDir, commandPrefix, options = {}) {
-        super(enabled);
+        super(enabled, options);
 
         this.commandsDir = commandsDir;
         this.commandPrefix = commandPrefix;
@@ -42,14 +42,7 @@ class BaseCommandManager extends Manager {
             return commands;
         }
 
-        const allowedCmds = commands.filter(command => {
-            if (command.ownerOnly) {
-                return perm === getClient().permManager.ownerLevel;
-            }
-
-            return perm >= command.allowed;
-        });
-
+        const allowedCmds = commands.filter(command => command.canExecute(perm));
         return allowedCmds;
     }
 
@@ -58,7 +51,7 @@ class BaseCommandManager extends Manager {
         return commands.find(command => command.matches(name));
     }
 
-    getHelp(perm, discord = true, indentation = 4) {
+    categorizeCommands(perm, sort = false) {
         const allowedCmds = this.getCommands(perm),
             categories = new Map();
 
@@ -67,28 +60,59 @@ class BaseCommandManager extends Manager {
                 categories.set(command.category, []);
             }
 
-            const name = command.getName();
-            categories.get(command.category).push(name);
+            const category = categories.get(command.category);
+            category.push(command);
         }
 
-        const sortedNames = Array.from(categories.keys()).sort((a, b) => {
-            if (a === Command.defaultValues.category) {
+        if (!sort) {
+            return categories;
+        }
+
+        let entries = Array.from(categories.entries());
+
+        entries.sort((a, b) => {
+            const aName = a[0],
+                bName = b[0];
+
+            if (aName === Command.defaultValues.category) {
                 return -1;
             }
 
-            if (b === Command.defaultValues.category) {
+            if (bName === Command.defaultValues.category) {
                 return 1;
             }
 
-            return a.localeCompare(b);
+            return aName.localeCompare(bName);
         });
 
+        for (const [_, cmds] of entries) {
+            cmds.sort((a, b) => {
+                const aName = a.name,
+                    bName = b.name;
+
+                return aName.localeCompare(bName, undefined, {
+                    numeric: true,
+                    sensitivity: "base"
+                });
+            });
+        }
+
+        return new Map(entries);
+    }
+
+    getCategoryHeaders(categories, discord = false) {
+        if (!(categories instanceof Map)) {
+            const perm = categories;
+            categories = this.categorizeCommands(perm, true);
+        }
+
         const headers = Array(categories.size),
-            spaces = " ".repeat(indentation);
+            categoryNames = categories.keys();
 
-        let num = 1;
+        let i = 0,
+            num = 1;
 
-        for (const [i, name] of sortedNames.entries()) {
+        for (const name of categoryNames) {
             let formattedName = categoryNames[name],
                 header;
 
@@ -106,18 +130,32 @@ class BaseCommandManager extends Manager {
             }
 
             headers[i] = header;
+            i++;
         }
 
-        const format = Array(categories.size);
+        return headers;
+    }
 
-        for (const [i, name] of sortedNames.entries()) {
-            const cmdNames = categories.get(name);
-            cmdNames.sort();
+    getCategoryCmdNames(categories, discord = false, indentation = 0) {
+        if (!(categories instanceof Map)) {
+            const perm = categories;
+            categories = this.categorizeCommands(perm, true);
+        }
 
-            let categoryFormat = headers[i];
+        const namesFormat = Array(categories.size),
+            categoryEntries = categories.entries();
+
+        const spaces = " ".repeat(indentation);
+
+        let i = 0;
+
+        for (const [name, cmds] of categoryEntries) {
+            const cmdNames = cmds.map(cmd => cmd.getName());
+
+            let categoryFormat = "";
 
             if (name !== Command.defaultValues.category) {
-                categoryFormat += `\n${spaces}`;
+                categoryFormat = `\n${spaces}`;
             }
 
             if (discord) {
@@ -128,8 +166,25 @@ class BaseCommandManager extends Manager {
                 categoryFormat += "- " + names;
             }
 
-            format[i] = categoryFormat;
+            namesFormat[i] = categoryFormat;
+            i++;
         }
+
+        return namesFormat;
+    }
+
+    getHelp(perm, discord = true, indentation = 4) {
+        const categories = this.categorizeCommands(perm, true);
+
+        const headers = this.getCategoryHeaders(categories, discord),
+            names = this.getCategoryCmdNames(categories, discord, indentation);
+
+        const format = Array.from(
+            {
+                length: categories.size
+            },
+            (_, i) => headers[i] + names[i]
+        );
 
         return format.join("\n\n");
     }

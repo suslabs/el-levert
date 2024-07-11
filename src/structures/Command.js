@@ -75,6 +75,15 @@ class Command {
         return name;
     }
 
+    canExecute(perm) {
+        if (!this.ownerOnly) {
+            return perm >= this.allowed;
+        }
+
+        const canExecute = perm === getClient().permManager.ownerLevel;
+        return canExecute ? true : 0;
+    }
+
     getSubNames(includeAliases = true) {
         let cmd = this;
 
@@ -131,14 +140,7 @@ class Command {
             return subList;
         }
 
-        const allowedSubcmds = subList.filter(subcmd => {
-            if (subcmd.ownerOnly) {
-                return perm === getClient().permManager.ownerLevel;
-            }
-
-            return perm >= subcmd.allowed;
-        });
-
+        const allowedSubcmds = subList.filter(subcmd => subcmd.canExecute(perm));
         return allowedSubcmds;
     }
 
@@ -239,12 +241,13 @@ class Command {
             perm = getClient().permManager.ownerLevel;
         }
 
-        if (this.ownerOnly && perm !== getClient().permManager.ownerLevel) {
-            return ":warning: Access denied.\nOnly the bot owner can execute this command.";
-        }
+        const canExecute = this.canExecute(perm);
 
-        if (perm < this.allowed) {
-            return `:warning: Access denied.\nOnly permission level ${this.allowed} and above can execute this command.`;
+        switch (canExecute) {
+            case 0:
+                return ":warning: Access denied.\nOnly the bot owner can execute this command.";
+            case false:
+                return `:warning: Access denied.\nOnly permission level ${this.allowed} and above can execute this command.`;
         }
 
         if (this.isHelpCall(args)) {
