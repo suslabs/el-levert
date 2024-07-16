@@ -1,4 +1,5 @@
 import mysql from "mysql";
+import crypto from "node:crypto";
 
 const DatabaseUtil = {
     escape: (value, ...args) => {
@@ -52,6 +53,10 @@ const DatabaseUtil = {
             const name = `${prefix}_${event}`;
             DatabaseUtil.removeEvent(source, target, name);
         }
+    },
+
+    getEventId() {
+        return crypto.randomBytes(4).toString("hex");
     }
 };
 

@@ -2,6 +2,7 @@ import mysql from "mysql";
 import EventEmitter from "node:events";
 
 import MysqlResult from "./MysqlResult.js";
+import EventPrefixes from "./EventPrefixes.js";
 import ConnectionEvents from "./ConnectionEvents.js";
 
 import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
@@ -16,6 +17,11 @@ class MysqlConnection extends EventEmitter {
         } else {
             this.create(config);
         }
+
+        this.registeredEvents = false;
+
+        this.eventId = DatabaseUtil.getEventId();
+        this.eventName = `${EventPrefixes.connection}:${this.eventId}`;
     }
 
     create(config) {

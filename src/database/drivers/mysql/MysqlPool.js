@@ -12,6 +12,7 @@ import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
 class MysqlPool extends EventEmitter {
     constructor(config) {
         super();
+
         this.create(config);
     }
 
@@ -85,21 +86,33 @@ class MysqlPool extends EventEmitter {
                 return;
             }
 
-            this.pool.getConnection((err, connection) => {
-                if (err) {
-                    this.emit(PoolEvents.promiseError, err);
+            try {
+                this.pool.getConnection((err, connection) => {
+                    if (err) {
+                        this.emit(PoolEvents.promiseError, err);
 
-                    if (this.throwErrors) {
-                        reject(new DatabaseError(err));
-                    } else {
-                        resolve();
+                        if (this.throwErrors) {
+                            reject(new DatabaseError(err));
+                        } else {
+                            resolve();
+                        }
+
+                        return;
                     }
 
-                    return;
+                    resolve(new MysqlPoolConnection(this, connection));
+                });
+            } catch (err) {
+                this.emit(PoolEvents.promiseError, err);
+
+                if (this.throwErrors) {
+                    reject(new DatabaseError(err));
+                } else {
+                    resolve();
                 }
 
-                resolve(new MysqlPoolConnection(this, connection));
-            });
+                return;
+            }
         });
     }
 
@@ -149,48 +162,28 @@ class MysqlPool extends EventEmitter {
     }
 
     releaseConnection(connection) {
-        return new Promise((resolve, reject) => {
-            if (typeof this.pool === "undefined") {
-                const err = new DatabaseError("The pool hasn't been created");
-                this.emit(PoolEvents.promiseError, err);
+        if (typeof this.pool === "undefined") {
+            const err = new DatabaseError("The pool hasn't been created");
+            this.emit(PoolEvents.promiseError, err);
 
-                if (this.throwErrors) {
-                    reject(err);
-                } else {
-                    resolve();
-                }
-
-                return;
+            if (this.throwErrors) {
+                throw err;
             }
 
-            try {
-                this.pool.releaseConnection(connection.con, err => {
-                    if (err) {
-                        this.emit(PoolEvents.promiseError, err);
+            return;
+        }
 
-                        if (this.throwErrors) {
-                            reject(new DatabaseError(err));
-                        } else {
-                            resolve();
-                        }
+        try {
+            this.pool.releaseConnection(connection.con);
+        } catch (err) {
+            this.emit(PoolEvents.promiseError, err);
 
-                        return;
-                    }
-
-                    resolve();
-                });
-            } catch (err) {
-                this.emit(PoolEvents.promiseError, err);
-
-                if (this.throwErrors) {
-                    reject(new DatabaseError(err));
-                } else {
-                    resolve();
-                }
-
-                return;
+            if (this.throwErrors) {
+                reject(new DatabaseError(err));
             }
-        });
+
+            return;
+        }
     }
 
     async query(...args) {

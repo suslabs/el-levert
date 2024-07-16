@@ -2,7 +2,7 @@ import ProxiedResult from "../common/ProxiedResult.js";
 import ResultProxyHandler from "../common/ResultProxyHandler.js";
 
 class MysqlResult extends ProxiedResult {
-    constructor(data) {
+    constructor(data, st) {
         super();
 
         this.setData(data);

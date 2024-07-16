@@ -31,12 +31,11 @@ class MysqlDatabase extends StatementDatabase(EventEmitter) {
     constructor() {
         super();
 
-        if (typeof this.config === "undefined") {
+        if (typeof MysqlDatabase.config === "undefined") {
             throw new DatabaseError("No config provided");
         }
 
         this.inTransaction = false;
-        DatabaseUtil.registerPrefixedEvents(this.pool, this, EventPrefixes.pool, PoolEvents);
 
         this.config = MysqlDatabase.config;
         this.pool = MysqlDatabase.pool;
@@ -46,6 +45,8 @@ class MysqlDatabase extends StatementDatabase(EventEmitter) {
             await this.finalizeAll();
             await MysqlDatabase.close();
         };
+
+        DatabaseUtil.registerPrefixedEvents(this.pool, this, EventPrefixes.pool, PoolEvents);
     }
 
     static open() {
@@ -72,36 +73,59 @@ class MysqlDatabase extends StatementDatabase(EventEmitter) {
         }
     }
 
-    run(sql, ...param) {
+    async run(sql, ...param) {
         const st = this.prepare(sql);
-        return st.run(...param);
+
+        try {
+            const res = await st.run(...param);
+            return res;
+        } finally {
+            this.removeStatement(st);
+        }
     }
 
-    get(sql, ...param) {
+    async get(sql, ...param) {
         const st = this.prepare(sql);
-        return st.get(...param);
+
+        try {
+            const res = await st.get(...param);
+            return res;
+        } finally {
+            this.removeStatement(st);
+        }
     }
 
-    all(sql, ...param) {
+    async all(sql, ...param) {
         const st = this.prepare(sql);
-        return st.all(...param);
+
+        try {
+            const res = await st.all(...param);
+            return res;
+        } finally {
+            this.removeStatement(st);
+        }
     }
 
-    each(sql, param, callback) {
+    async each(sql, param, callback) {
         const st = this.prepare(sql);
-        return st.each(param, callback);
+
+        try {
+            const res = await st.each(param, callback);
+            return res;
+        } finally {
+            this.removeStatement(st);
+        }
     }
 
-    async exec(sql) {
+    async query(sql) {
         const con = await this.getConnection(false);
 
         try {
-            await con.query(sql);
+            const res = await con.query(sql);
+            return res;
         } finally {
             this.releaseConnection(con);
         }
-
-        return this;
     }
 
     prepare(sql, ...param) {
@@ -118,7 +142,7 @@ class MysqlDatabase extends StatementDatabase(EventEmitter) {
         con.registeredEvents = registerEvents;
 
         if (registerEvents) {
-            DatabaseUtil.registerPrefixedEvents(con, this, EventPrefixes.connection, ConnectionEvents);
+            DatabaseUtil.registerPrefixedEvents(con, this, con.eventName, ConnectionEvents);
         }
 
         return con;
@@ -126,7 +150,7 @@ class MysqlDatabase extends StatementDatabase(EventEmitter) {
 
     releaseConnection(con) {
         if (con.registeredEvents) {
-            DatabaseUtil.removePrefixedEvents(con, this, EventPrefixes.connection, ConnectionEvents);
+            DatabaseUtil.removePrefixedEvents(con, this, con.eventName, ConnectionEvents);
         }
 
         con.release();

@@ -1,3 +1,5 @@
+import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
+
 class MysqlStatement {
     constructor(db, sql, defaultParam) {
         this.db = db;
@@ -27,17 +29,17 @@ class MysqlStatement {
         return this;
     }
 
-    run(sql, ...param) {}
+    async run(sql, ...param) {}
 
-    get(sql, ...param) {}
+    async get(sql, ...param) {}
 
-    all(sql, ...param) {}
+    async all(sql, ...param) {}
 
-    each(sql, param, callback) {}
+    async each(sql, param, callback) {}
 
     async getConnection() {
         if (typeof this.con !== "undefined") {
-            this.releaseConnection();
+            return this.con;
         }
 
         const con = await this.db.getConnection(false);

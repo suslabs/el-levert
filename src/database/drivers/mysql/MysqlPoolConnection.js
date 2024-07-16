@@ -13,7 +13,7 @@ class MysqlPoolConnection extends MysqlConnection {
     }
 
     release() {
-        return this.pool.releaseConnection(this);
+        this.pool.releaseConnection(this);
     }
 }
 
