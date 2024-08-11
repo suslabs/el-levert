@@ -20,6 +20,8 @@ class PermissionManager extends DBManager {
 
         this.setOwner(getClient().owner);
         this.setLevels({
+            disabledLevel: DisabledGroup.level,
+            defaultLevel: Group.defaultValues.level,
             modLevel: getClient().config.tagModeratorLevel,
             adminLevel: getClient().config.permissionAdminLevel,
             ownerLevel: OwnerGroup.level
@@ -34,10 +36,14 @@ class PermissionManager extends DBManager {
     }
 
     setLevels(levels) {
-        const { modLevel, adminLevel, ownerLevel } = levels;
+        const { disabledLevel, defaultLevel, modLevel, adminLevel, ownerLevel } = levels;
+
+        this.disabledLevel = disabledLevel ?? this.disabledLevel;
+        this.defaultLevel = defaultLevel ?? this.defaultLevel;
 
         this.modLevel = modLevel ?? this.modLevel;
         this.adminLevel = adminLevel ?? this.adminLevel;
+
         this.ownerLevel = ownerLevel ?? this.ownerLevel;
     }
 
@@ -62,11 +68,19 @@ class PermissionManager extends DBManager {
             throw new PermissionError("Invalid group level");
         }
 
-        if (level <= Group.defaultValues.level) {
+        if (level <= this.defaultLevel) {
             throw new PermissionError("Group level must be higher than the default level");
         }
 
         return true;
+    }
+
+    getDefaultLevel() {
+        if (!this.enabled) {
+            return this.disabledLevel;
+        }
+
+        return this.defaultLevel;
     }
 
     isOwner(id) {
@@ -74,12 +88,12 @@ class PermissionManager extends DBManager {
     }
 
     async fetch(id) {
-        if (id === this.owner.user) {
-            return [OwnerGroup];
-        }
-
         if (!this.enabled) {
             return [DisabledGroup];
+        }
+
+        if (id === this.owner.user) {
+            return [OwnerGroup];
         }
 
         return await this.perm_db.fetch(id);
@@ -97,7 +111,7 @@ class PermissionManager extends DBManager {
         const groups = await this.fetch(id);
 
         if (!groups) {
-            return DisabledGroup.level;
+            return this.defaultLevel;
         }
 
         let maxLevel;
@@ -170,6 +184,10 @@ class PermissionManager extends DBManager {
     async addGroup(name, level) {
         if (name === OwnerGroup.name) {
             throw new PermissionError('Can\'t create a group with the name "owner"');
+        }
+
+        if (level >= this.ownerLevel) {
+            throw new PermissionError("Can't create a group with a level higher or equal than the owner group");
         }
 
         const existingGroup = await getClient().permManager.fetchGroup(name);

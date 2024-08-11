@@ -5,6 +5,17 @@ import CommandError from "../errors/CommandError.js";
 import { getClient } from "../LevertClient.js";
 import Util from "../util/Util.js";
 
+async function getPermLevel(options) {
+    const { msg, asUser } = options,
+        userId = asUser ?? msg?.author.id;
+
+    if (typeof userId === "undefined") {
+        return getClient().permManager.getDefaultLevel();
+    }
+
+    return await getClient().permManager.maxLevel(msg.author.id);
+}
+
 const defaultValues = {
     parent: "",
     allowed: 0,
@@ -37,6 +48,12 @@ class Command {
         delete options.subcommand;
 
         Util.setValuesWithDefaults(this, options, defaultValues);
+
+        if (this.ownerOnly) {
+            this.allowed = getClient().permManager.ownerLevel;
+        } else if (this.allowed === getClient().permManager.ownerLevel) {
+            this.ownerOnly = true;
+        }
 
         this.subcmds = new Map();
         this.bound = false;
@@ -151,7 +168,7 @@ class Command {
 
         let subNames;
 
-        if (typeof perm === "undefined") {
+        if (perm === null || typeof perm === "undefined") {
             subNames = this.getSubNames();
         } else {
             const subcmds = this.getSubcmds(perm);
@@ -223,25 +240,20 @@ class Command {
         this.bound = true;
     }
 
-    async execute(args, msg) {
+    async execute(args, options = {}) {
+        const { msg, asUser, asLevel } = options;
+
         if (!this.isSubcmd) {
             const [subName, subArgs] = Util.splitArgs(args),
                 subCmd = this.getSubcmd(subName);
 
             if (typeof subCmd !== "undefined") {
-                return await subCmd.execute(subArgs, msg);
+                return await subCmd.execute(subArgs, options);
             }
         }
 
-        let perm;
-
-        if (typeof msg !== "undefined") {
-            perm = await getClient().permManager.maxLevel(msg.author.id);
-        } else {
-            perm = getClient().permManager.ownerLevel;
-        }
-
-        const canExecute = this.canExecute(perm);
+        const perm = asLevel ?? (await getPermLevel({ msg, asUser })),
+            canExecute = this.canExecute(perm);
 
         switch (canExecute) {
             case 0:

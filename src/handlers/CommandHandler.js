@@ -62,7 +62,7 @@ class CommandHandler extends Handler {
         logUsage(msg, cmd.name, args);
         const t1 = Date.now();
 
-        let out = await cmd.execute(args, msg);
+        let out = await cmd.execute(args, { msg });
 
         if (typeof out === "string") {
             const split = out.split("\n");
