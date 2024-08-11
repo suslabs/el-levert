@@ -12,8 +12,10 @@ export default {
 
         findUser: if (args.length > 0) {
             const [u_name] = Util.splitArgs(args),
-                all = u_name === "all",
-                own = u_name === "me";
+                lowercaseName = u_name.toLowerCase();
+
+            const all = lowercaseName === "all",
+                own = lowercaseName === "me";
 
             if (all) {
                 break findUser;

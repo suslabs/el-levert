@@ -13,7 +13,7 @@ export default {
             return ":information_source: `t set_type name version/type`";
         }
 
-        const [t_name, t_args] = Util.splitArgs(args);
+        const [t_name, t_args] = Util.splitArgs(args, true);
 
         if (this.isSubName(t_name)) {
             return `:police_car: **${t_name}** is a __command__, not a __tag__. You can't manipulate commands.`;
@@ -24,7 +24,7 @@ export default {
             return ":warning: " + e;
         }
 
-        let [type, version] = Util.splitArgs(t_args),
+        let [type, version] = Util.splitArgs(t_args, [true, true]),
             setVersion = type === "version";
 
         const tag = await getClient().tagManager.fetch(t_name);

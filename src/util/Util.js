@@ -7,7 +7,10 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import URL from "node:url";
 
-const scriptRegex = /^`{3}([\S]+)?\n([\s\S]+)`{3}$/;
+import { isPromise } from "./TypeTester.js";
+
+const regexEscapeExp = /[.*+?^${}()|[\]\\]/g,
+    scriptParseExp = /^`{3}([\S]+)?\n([\s\S]+)`{3}$/;
 
 const durationSeconds = {
     year: 31536000,
@@ -26,12 +29,6 @@ const Util = {
     durationSeconds,
     discordEpoch,
 
-    delay: ms => {
-        return new Promise(resolve => {
-            setTimeout(resolve, ms);
-        });
-    },
-
     import: async (modulePath, cache = true) => {
         let fileURL = URL.pathToFileURL(modulePath);
 
@@ -40,58 +37,6 @@ const Util = {
         }
 
         return (await import(fileURL)).default;
-    },
-
-    splitArgs: (str, sep = " ") => {
-        const ind = str.indexOf(sep);
-
-        let name, args;
-
-        if (ind === -1) {
-            name = str;
-            args = "";
-        } else {
-            name = str.substring(0, ind);
-            args = str.substring(ind + sep.length);
-        }
-
-        return [name.toLowerCase(), args];
-    },
-
-    getFileAttach: (data, name = "message.txt") => {
-        const attachment = new AttachmentBuilder(Buffer.from(data), {
-            name: name
-        });
-
-        return {
-            files: [attachment]
-        };
-    },
-
-    setValuesWithDefaults: (target, source, defaults = {}) => {
-        const values = {};
-
-        for (const key of Object.keys(defaults)) {
-            const sourceVal = source ? source[key] : undefined;
-
-            if (sourceVal === null || typeof sourceVal === "undefined") {
-                let defaultValue = defaults[key];
-
-                switch (typeof defaultValue) {
-                    case "function":
-                        break;
-                    default:
-                        defaultValue = structuredClone(defaultValue);
-                }
-
-                values[key] = defaultValue;
-            }
-        }
-
-        return Object.assign(target, {
-            ...source,
-            ...values
-        });
     },
 
     getFilesRecSync: dir_path => {
@@ -132,11 +77,47 @@ const Util = {
         }
     },
 
-    waitForCondition: (condition, timeoutError = "", timeout = 0, interval = 100) => {
+    setValuesWithDefaults: (target, source, defaults = {}) => {
+        const values = {};
+
+        for (const key of Object.keys(defaults)) {
+            const sourceVal = source ? source[key] : undefined;
+
+            if (sourceVal === null || typeof sourceVal === "undefined") {
+                let defaultValue = defaults[key];
+
+                switch (typeof defaultValue) {
+                    case "function":
+                        break;
+                    default:
+                        defaultValue = structuredClone(defaultValue);
+                }
+
+                values[key] = defaultValue;
+            }
+        }
+
+        return Object.assign(target, {
+            ...source,
+            ...values
+        });
+    },
+
+    delay: ms => {
+        return new Promise(resolve => {
+            setTimeout(resolve, ms);
+        });
+    },
+
+    waitForCondition: (condition, timeoutError, timeout = 0, interval = 100) => {
         return new Promise((resolve, reject) => {
             let _timeout;
 
             if (timeout > 0) {
+                if (typeof timeoutError === "undefined") {
+                    timeoutError = new Error("Condition timed out");
+                }
+
                 _timeout = setTimeout(() => reject(timeoutError), timeout);
             }
 
@@ -152,8 +133,284 @@ const Util = {
         });
     },
 
+    removeItem: (arr, item, cb) => {
+        const ind = arr.indexOf(item);
+
+        if (ind === -1) {
+            return false;
+        }
+
+        if (typeof cb === "undefined") {
+            delete arr[ind];
+            arr.splice(ind, 1);
+
+            return true;
+        }
+
+        const ret = cb(item);
+
+        if (isPromise(ret)) {
+            return ret.then(_ => true);
+        } else {
+            delete arr[ind];
+            arr.splice(ind, 1);
+
+            return true;
+        }
+    },
+
+    wipeArray: (arr, cb) => {
+        let length = arr.length,
+            i = 0;
+
+        if (typeof cb === "undefined") {
+            for (let i = 0; i < length; i++) {
+                delete arr[i];
+            }
+
+            arr.length = 0;
+            return length;
+        }
+
+        let n = 0;
+
+        let ret,
+            loopPromise = false;
+
+        for (; i < length; i++) {
+            const item = arr[i];
+            ret = cb(item, i);
+
+            if (isPromise(ret)) {
+                loopPromise = true;
+                i++;
+
+                break;
+            }
+
+            const shouldDelete = ret ?? true;
+
+            if (shouldDelete) {
+                delete arr[i];
+                n++;
+            }
+        }
+
+        if (loopPromise) {
+            return (async _ => {
+                ret = await ret;
+
+                for (; i < length; i++) {
+                    const item = arr[i];
+                    await cb(item, i);
+
+                    const shouldDelete = ret ?? true;
+
+                    if (shouldDelete) {
+                        delete arr[i];
+                        n++;
+                    }
+                }
+
+                arr.length = 0;
+                return n;
+            })();
+        } else {
+            arr.length = 0;
+            return n;
+        }
+    },
+
+    wipeObject: (obj, cb) => {
+        if (typeof cb === "undefined") {
+            const keys = Object.keys(obj);
+
+            for (let i = 0; i < keys.length; i++) {
+                const key = keys[i];
+                delete obj[key];
+            }
+
+            return keys.length;
+        }
+
+        const entries = Object.entries(obj);
+
+        let length = entries.length,
+            i = 0,
+            n = 0;
+
+        let ret,
+            loopPromise = false;
+
+        for (; i < length; i++) {
+            const [key, item] = entries[i];
+            ret = cb(key, item, i);
+
+            if (isPromise(ret)) {
+                loopPromise = true;
+                i++;
+
+                break;
+            }
+
+            const shouldDelete = ret ?? true;
+
+            if (shouldDelete) {
+                delete obj[key];
+                n++;
+            }
+        }
+
+        if (loopPromise) {
+            return (async _ => {
+                ret = await ret;
+
+                for (; i < length; i++) {
+                    const [key, item] = entries[i];
+                    await cb(key, item, i);
+
+                    const shouldDelete = ret ?? true;
+
+                    if (shouldDelete) {
+                        delete obj[key];
+                        n++;
+                    }
+                }
+
+                return n;
+            })();
+        } else {
+            return n;
+        }
+    },
+
+    capitalize: str => {
+        str = String(str).toLowerCase();
+        return str[0].toUpperCase() + str.substring(1);
+    },
+
+    clamp: (x, a, b) => {
+        return Math.max(Math.min(x, b), a);
+    },
+
+    round: (num, digits) => {
+        const exp = 10 ** digits;
+        return Math.round((num + Number.EPSILON) * exp) / exp;
+    },
+
+    firstElement: (arr, start = 0) => {
+        return arr[start];
+    },
+
+    lastElement: (arr, start = 0) => {
+        return arr[arr.length + start - 1];
+    },
+
+    randomElement: (arr, a = 0, b = arr.length - 1) => {
+        return arr[a + ~~(Math.random() * (b - a))];
+    },
+
+    escapeRegex: str => {
+        return str.replace(regexEscapeExp, "\\$&");
+    },
+
+    splitArgs: (str, lowercase = false, options = {}) => {
+        let multipleLowercase = Array.isArray(lowercase);
+
+        if (!multipleLowercase && typeof lowercase === "object") {
+            options = lowercase;
+
+            lowercase = options.lowercase ?? false;
+            multipleLowercase = Array.isArray(lowercase);
+        }
+
+        const lowercaseFirst = multipleLowercase ? lowercase[0] ?? false : lowercase,
+            lowercaseSecond = multipleLowercase ? lowercase[1] ?? false : false;
+
+        let { sep, n } = options;
+        sep = sep ?? [" ", "\n"];
+        n = n ?? 1;
+
+        if (sep.length === 0) {
+            if (lowercaseFirst) {
+                return [str.toLowerCase(), ""];
+            }
+
+            return [str, ""];
+        }
+
+        if (!Array.isArray(sep)) {
+            sep = [sep];
+        }
+
+        let name, args;
+        let ind = -1,
+            sepLength;
+
+        if (sep.length === 1) {
+            sep = sep[0] ?? sep;
+
+            ind = str.indexOf(sep);
+            sepLength = sep.length;
+
+            if (n > 1) {
+                for (let i = 1; i < n; i++) {
+                    ind = str.indexOf(sep, ind + 1);
+
+                    if (ind === -1) {
+                        break;
+                    }
+                }
+            }
+        } else {
+            const escaped = sep.map(x => Util.escapeRegex(x)),
+                exp = new RegExp(escaped.join("|"), "g");
+
+            if (n <= 1) {
+                const match = exp.exec(str);
+
+                if (match) {
+                    ind = match.index;
+                    sepLength = match[0].length;
+                }
+            } else {
+                let match;
+
+                for (let i = 1; (match = exp.exec(str)) !== null; i++) {
+                    if (i === n) {
+                        ind = match.index;
+                        sepLength = match[0].length;
+
+                        break;
+                    } else if (i > n) {
+                        ind = -1;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (ind === -1) {
+            name = str;
+            args = "";
+        } else {
+            name = str.substring(0, ind);
+            args = str.substring(ind + sepLength);
+        }
+
+        if (lowercaseFirst) {
+            name = name.toLowerCase();
+        }
+
+        if (lowercaseSecond) {
+            args = args.toLowerCase();
+        }
+
+        return [name, args];
+    },
+
     parseScript: script => {
-        const match = script.match(scriptRegex);
+        const match = script.match(scriptParseExp);
 
         if (!match) {
             return [false, script];
@@ -190,30 +447,14 @@ const Util = {
         return len;
     },
 
-    capitalize: str => {
-        str = ("" + str).toLowerCase();
-        return str[0].toUpperCase() + str.substring(1);
-    },
+    getFileAttach: (data, name = "message.txt") => {
+        const attachment = new AttachmentBuilder(Buffer.from(data), {
+            name: name
+        });
 
-    clamp: (x, a, b) => {
-        return Math.max(Math.min(x, b), a);
-    },
-
-    round: (num, digits) => {
-        const exp = 10 ** digits;
-        return Math.round((num + Number.EPSILON) * exp) / exp;
-    },
-
-    firstElement: (arr, start = 0) => {
-        return arr[start];
-    },
-
-    lastElement: (arr, start = 0) => {
-        return arr[arr.length + start - 1];
-    },
-
-    randomElement: (arr, a = 0, b = arr.length - 1) => {
-        return arr[a + ~~(Math.random() * (b - a))];
+        return {
+            files: [attachment]
+        };
     },
 
     snowflakeFromDate: date => {
@@ -282,7 +523,7 @@ const Util = {
             case "bigint":
             case "boolean":
             case "number":
-                str = str.toString();
+                str = str.toString(10);
                 break;
             case "object":
                 try {
@@ -322,6 +563,13 @@ const Util = {
         }
 
         return ` "${str}"`;
+    },
+
+    timeDelta: (d1, d2) => {
+        const t1 = typeof d1 === "object" ? d1.getTime() : Number(d1),
+            t2 = typeof d2 === "object" ? d2.getTime() : Number(d2);
+
+        return t2 - t1;
     },
 
     duration: (delta, format = false, include) => {

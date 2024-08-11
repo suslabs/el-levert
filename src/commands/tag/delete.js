@@ -13,7 +13,7 @@ export default {
             return ":information_source: `t delete name`";
         }
 
-        const [t_name] = Util.splitArgs(args);
+        const [t_name] = Util.splitArgs(args, true);
 
         if (this.isSubName(t_name)) {
             return `:police_car: **${t_name}** is a __command__, not a __tag__. You can't manipulate commands.`;

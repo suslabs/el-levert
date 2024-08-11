@@ -13,7 +13,7 @@ export default {
             return ":information_source: `t search query (all/max_results)`";
         }
 
-        const [t_name, m_str] = Util.splitArgs(args),
+        const [t_name, m_str] = Util.splitArgs(args, [true, true]),
             all = m_str === "all";
 
         const e = getClient().tagManager.checkName(t_name);

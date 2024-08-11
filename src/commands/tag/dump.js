@@ -9,7 +9,7 @@ export default {
     subcommand: true,
 
     handler: async args => {
-        const [d_type, s_str] = Util.splitArgs(args),
+        const [d_type, s_str] = Util.splitArgs(args, true),
             full = d_type === "full",
             inline = d_type === "inline";
 

@@ -37,7 +37,7 @@ export default {
             return ":information_source: `t leaderboard (count/size) [limit < 100]`";
         }
 
-        const [l_type, l_str] = Util.splitArgs(args);
+        const [l_type, l_str] = Util.splitArgs(args, true);
 
         if (!["count", "size"].includes(l_type)) {
             return ":warning: Invalid leaderboard type.";

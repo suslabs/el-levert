@@ -9,7 +9,7 @@ const dummyMsg = {
 };
 
 async function parseBase(t_args, msg) {
-    const [t_type, t_body] = Util.splitArgs(t_args);
+    const [t_type, t_body] = Util.splitArgs(t_args, true);
 
     if (typeof msg === "undefined") {
         msg = dummyMsg;
@@ -123,7 +123,7 @@ export default {
             return `:information_source: %t [${this.getSubcmdList(perm)}] tag_name [tag_args]`;
         }
 
-        const [t_name, t_args] = Util.splitArgs(args);
+        const [t_name, t_args] = Util.splitArgs(args, true);
 
         const e = getClient().tagManager.checkName(t_name);
         if (e) {

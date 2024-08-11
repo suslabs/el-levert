@@ -14,7 +14,7 @@ export default {
             return ":information_source: `t info name`";
         }
 
-        const [t_name, i_type] = Util.splitArgs(args),
+        const [t_name, i_type] = Util.splitArgs(args, [true, true]),
             raw = i_type === "raw";
 
         if (this.isSubName(t_name)) {

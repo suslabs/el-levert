@@ -12,8 +12,8 @@ export default {
             return ":information_source: `t alias name other_tag [args]`";
         }
 
-        const [t_name, t_args] = Util.splitArgs(args),
-            [a_name, a_args] = Util.splitArgs(t_args);
+        const [t_name, t_args] = Util.splitArgs(args, true),
+            [a_name, a_args] = Util.splitArgs(t_args, true);
 
         if (this.isSubName(t_name)) {
             return `:police_car: **${t_name}** is a __command__, not a __tag__. You can't manipulate commands.`;
