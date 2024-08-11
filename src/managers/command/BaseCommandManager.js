@@ -32,7 +32,11 @@ class BaseCommandManager extends Manager {
     }
 
     isCommand(str) {
-        return str.startsWith(this.commandPrefix) && str.length > this.commandPrefix.length;
+        if (str.length <= this.commandPrefix.length) {
+            return false;
+        }
+
+        return str.startsWith(this.commandPrefix);
     }
 
     getCommands(perm) {
@@ -195,14 +199,17 @@ class BaseCommandManager extends Manager {
             fileExtension: this.cmdFileExtension
         });
 
+        this.commandLoader = commandLoader;
         const [commands, status] = await commandLoader.load();
 
-        if (status !== LoadStatus.failed) {
-            this.commands = commands;
-            this.bindSubcommands();
+        if (status === LoadStatus.failed) {
+            return;
         }
 
-        this.commandLoader = commandLoader;
+        this.commands = commands;
+
+        this.deleteDuplicates();
+        this.bindSubcommands();
     }
 
     bindSubcommand(command, subName) {
@@ -253,10 +260,65 @@ class BaseCommandManager extends Manager {
             const unboundCmds = this.commands.filter(cmd => cmd.isSubcmd && !cmd.bound),
                 format = unboundCmds.map((cmd, i) => `${i + 1}. "${cmd.name}" -> "${cmd.parent}"`).join("\n");
 
-            getLogger().warn(`Found ${unbound} unbound subcommand(s):\n${format}`);
+            getLogger().warn(`Found ${unbound} orphaned subcommand(s):\n${format}`);
         }
 
         return bound;
+    }
+
+    deleteDuplicates() {
+        const duplicates = this.findDuplicates();
+
+        Util.wipeArray(duplicates, command => {
+            this.deleteCommand(command, false);
+            getLogger().info(`Deleted duplicate of "${command.name}".`);
+        });
+    }
+
+    findDuplicates() {
+        const commands = this.getCommands(),
+            duplicates = [];
+
+        for (const [i, command] of commands.entries()) {
+            const previous = commands.slice(0, i);
+
+            const duplicate = previous.findLast(cmd => {
+                if (cmd.name === command.name) {
+                    return true;
+                }
+
+                return cmd.aliases.includes(command.name);
+            });
+
+            if (typeof duplicate === "undefined") {
+                continue;
+            }
+
+            const duplicatePath = this.commandLoader.getPath(duplicate);
+            getLogger().warn(`Duplicate command of "${command.name}" found: ${duplicatePath}`);
+
+            duplicates.push(duplicate);
+        }
+
+        return duplicates;
+    }
+
+    deleteCommand(command, removeSubcommands = true) {
+        Util.removeItem(this.commands, command);
+        this.commandLoader.deleteData(command);
+
+        if (!removeSubcommands) {
+            return;
+        }
+
+        if (command.subcmds.size < 1) {
+            return;
+        }
+
+        for (const subcmd of command.getSubcmds()) {
+            Util.removeItem(this.commands, subcmd);
+            this.commandLoader.deleteData(subcmd);
+        }
     }
 
     deleteCommands() {

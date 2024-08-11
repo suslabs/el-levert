@@ -101,7 +101,7 @@ class DirectoryLoader extends Loader {
             return this.failure(`Couldn't find any ${this.logName}s.`);
         }
 
-        this.deleteData();
+        this.deleteAllData();
 
         let ok = 0,
             bad = 0;
@@ -205,11 +205,48 @@ class DirectoryLoader extends Loader {
         return LoadStatus.successful;
     }
 
-    getLogName() {
-        return this.name ?? "file";
+    getLoader(data) {
+        for (const loader of this.loaders.data()) {
+            if (loader.getData() === data) {
+                return loader;
+            }
+        }
     }
 
-    deleteData() {
+    getPath(data) {
+        if (!(this.data instanceof Map)) {
+            const loader = this.getLoader(data);
+            return loader?.path;
+        }
+
+        for (const [path, value] of this.data.entries()) {
+            if (value === data) {
+                return path;
+            }
+        }
+    }
+
+    deleteData(data) {
+        const path = this.getPath(data);
+
+        if (typeof path === "undefined") {
+            return false;
+        }
+
+        this.loaders.delete(path);
+
+        if (this.data instanceof Map) {
+            return this.data.delete(path);
+        }
+
+        if (Array.isArray(this.data)) {
+            return Util.removeItem(this.data, data);
+        }
+
+        return false;
+    }
+
+    deleteAllData() {
         if (this.loaders instanceof Map) {
             for (const path of this.loaders.keys()) {
                 this.loaders.delete(path);
@@ -225,6 +262,10 @@ class DirectoryLoader extends Loader {
         } else {
             this.data = new Map();
         }
+    }
+
+    getLogName() {
+        return this.name ?? "file";
     }
 }
 

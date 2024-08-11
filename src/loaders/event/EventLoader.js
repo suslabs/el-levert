@@ -7,6 +7,7 @@ class EventLoader extends DirectoryLoader {
         super("event", dirPath, logger, {
             throwOnFailure: true,
             ...options,
+            dataField: "events",
             fileLoaderClass: EventObjectLoader
         });
 
@@ -31,10 +32,12 @@ class EventLoader extends DirectoryLoader {
     }
 
     getEvents() {
-        const events = Array.from(this.data.values());
+        if (typeof this.events === "undefined") {
+            const events = Array.from(this.data.values());
+            this.events = events;
+        }
 
-        this.events = events;
-        this.data = events;
+        return events;
     }
 
     wrapEvent(event) {
@@ -75,15 +78,11 @@ class EventLoader extends DirectoryLoader {
     removeListeners() {
         for (let i = 0; i < this.events.length; i++) {
             this.events[i].unregister();
-
             delete this.events[i];
-            delete this.data[i];
         }
 
-        while (this.events.length > 0) {
-            this.events.shift();
-            this.data.shift();
-        }
+        delete this.events;
+        this.deleteAllData();
 
         this.logger?.info("Removed all event listeners.");
     }

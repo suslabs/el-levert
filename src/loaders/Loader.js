@@ -80,6 +80,7 @@ class Loader {
 
         this.type = options.type ?? "";
         this.throwOnFailure = options.throwOnFailure ?? true;
+        this.dataField = options.dataField ?? "data";
 
         this.data = null;
         this.loaded = false;
@@ -113,6 +114,16 @@ class Loader {
         return name;
     }
 
+    getData() {
+        const data = this[this.dataField];
+
+        if (typeof data === "undefined") {
+            throw new LoaderError("Data field not found");
+        }
+
+        return data;
+    }
+
     loadSync(status) {
         if (status === LoadStatus.failed) {
             return [undefined, status];
@@ -136,7 +147,7 @@ class Loader {
         }
 
         this.loaded = true;
-        return [this.data, status ?? LoadStatus.successful];
+        return [this.getData(), status ?? LoadStatus.successful];
     }
 
     async loadAsync(promise, data) {

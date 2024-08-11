@@ -7,6 +7,7 @@ class CommandLoader extends DirectoryLoader {
         super("command", dirPath, logger, {
             throwOnFailure: false,
             ...options,
+            dataField: "commands",
             fileLoaderClass: CommandObjectLoader
         });
     }
@@ -24,10 +25,12 @@ class CommandLoader extends DirectoryLoader {
     }
 
     getCommands() {
-        const commands = Array.from(this.data.values());
+        if (typeof this.commands === "undefined") {
+            const commands = Array.from(this.data.values());
+            this.commands = commands;
+        }
 
-        this.commands = commands;
-        this.data = commands;
+        return this.commands;
     }
 
     deleteCommands() {
@@ -38,9 +41,8 @@ class CommandLoader extends DirectoryLoader {
             delete this.commands[i];
         }
 
-        while (this.commands.length > 0) {
-            this.commands.shift();
-        }
+        delete this.commands;
+        this.deleteAllData();
 
         this.logger?.debug(`Deleted ${i} commands.`);
     }
