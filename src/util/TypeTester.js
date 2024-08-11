@@ -4,7 +4,20 @@ function tagTester(name) {
     return obj => Object.prototype.toString.call(obj) === tag;
 }
 
-const isFunction = tagTester("Function");
+const isObject = tagTester("Object"),
+    isFunction = tagTester("Function");
+
+function isClass(obj) {
+    if (typeof obj !== "function") {
+        return false;
+    }
+
+    if (obj.toString().startsWith("class")) {
+        return true;
+    }
+
+    return Object.getOwnPropertyNames(obj.prototype).length > 1;
+}
 
 function isPromise(obj) {
     if (typeof obj === "undefined") {
@@ -14,4 +27,4 @@ function isPromise(obj) {
     return isFunction(obj.then);
 }
 
-export { isPromise };
+export { isFunction, isObject, isClass, isPromise };

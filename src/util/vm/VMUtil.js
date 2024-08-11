@@ -44,7 +44,7 @@ const VMUtil = {
             out.content = text ?? "";
         }
 
-        if (typeof msg === "undefined") {
+        if (msg === null || typeof msg === "undefined") {
             return out;
         }
 
@@ -85,7 +85,7 @@ const VMUtil = {
             case "bigint":
             case "boolean":
             case "number":
-                return out.toString();
+                return out.toString(10);
             case "function":
             case "symbol":
                 return undefined;
