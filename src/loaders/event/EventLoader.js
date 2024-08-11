@@ -2,6 +2,8 @@ import DirectoryLoader from "../DirectoryLoader.js";
 import EventObjectLoader from "./EventObjectLoader.js";
 import LoadStatus from "../LoadStatus.js";
 
+import Util from "../../util/Util.js";
+
 class EventLoader extends DirectoryLoader {
     constructor(dirPath, client, logger, options = {}) {
         super("event", dirPath, logger, {
@@ -37,7 +39,7 @@ class EventLoader extends DirectoryLoader {
             this.events = events;
         }
 
-        return events;
+        return this.events;
     }
 
     wrapEvent(event) {
@@ -76,13 +78,10 @@ class EventLoader extends DirectoryLoader {
     }
 
     removeListeners() {
-        for (let i = 0; i < this.events.length; i++) {
-            this.events[i].unregister();
-            delete this.events[i];
-        }
-
-        delete this.events;
         this.deleteAllData();
+
+        Util.wipeArray(this.events, event => event.unregister());
+        delete this.events;
 
         this.logger?.info("Removed all event listeners.");
     }

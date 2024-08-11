@@ -221,12 +221,7 @@ class ReactionHandler extends Handler {
             return;
         }
 
-        for (const key of Object.keys(counts)) {
-            if (counts[key] === 0) {
-                delete counts[key];
-            }
-        }
-
+        Util.wipeObject(counts, (_, count) => count === 0);
         return counts;
     }
 

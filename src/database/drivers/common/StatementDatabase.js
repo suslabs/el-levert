@@ -1,5 +1,7 @@
 import DatabaseError from "../../../errors/DatabaseError.js";
 
+import Util from "../../../util/Util.js";
+
 export default function (base) {
     class StatementDatabase extends base {
         constructor(...args) {
@@ -13,14 +15,11 @@ export default function (base) {
         }
 
         removeStatement(statement) {
-            const ind = this.statements.indexOf(statement);
+            const removed = Util.removeItem(this.statements, statement);
 
-            if (!ind) {
+            if (!removed) {
                 throw new DatabaseError("Statement not found");
             }
-
-            delete this.statements[ind];
-            this.statements.splice(ind, 1);
         }
 
         async finalizeStatement(statement) {
@@ -38,7 +37,6 @@ export default function (base) {
                     await st.finalize(false);
                 } catch (err) {
                     if (err.name !== "DatabaseError") {
-                        this.removeStatement(st);
                         throw err;
                     }
                 }

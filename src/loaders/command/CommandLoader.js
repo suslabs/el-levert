@@ -2,6 +2,8 @@ import DirectoryLoader from "../DirectoryLoader.js";
 import CommandObjectLoader from "./CommandObjectLoader.js";
 import LoadStatus from "../LoadStatus.js";
 
+import Util from "../../util/Util.js";
+
 class CommandLoader extends DirectoryLoader {
     constructor(dirPath, logger, options = {}) {
         super("command", dirPath, logger, {
@@ -36,15 +38,12 @@ class CommandLoader extends DirectoryLoader {
     deleteCommands() {
         this.logger?.debug("Deleting commands...");
 
-        let i = 0;
-        for (; i < this.commands.length; i++) {
-            delete this.commands[i];
-        }
-
-        delete this.commands;
         this.deleteAllData();
 
-        this.logger?.debug(`Deleted ${i} commands.`);
+        const n = Util.wipeArray(this.commands);
+        delete this.commands;
+
+        this.logger?.debug(`Deleted ${n} commands.`);
     }
 
     getLoadingMessage() {

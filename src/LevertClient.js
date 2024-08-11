@@ -30,6 +30,8 @@ import TagVM from "./vm/isolated-vm/TagVM.js";
 import TagVM2 from "./vm/vm2/TagVM2.js";
 import ExternalVM from "./vm/judge0/ExternalVM.js";
 
+import Util from "./util/Util.js";
+
 let token, client;
 
 class LevertClient extends DiscordClient {
@@ -55,7 +57,7 @@ class LevertClient extends DiscordClient {
             return 0;
         }
 
-        return Date.now() - this.startedAt;
+        return Util.timeDelta(Date.now(), this.startedAt);
     }
 
     setConfigs(configs) {
@@ -155,7 +157,7 @@ class LevertClient extends DiscordClient {
         const channelTransport = this.logger.transports.find(x => x.name === ChannelTransport.name),
             webhookTransport = this.logger.transports.find(x => x.name === WebhookTransport.name);
 
-        return [channelTransport.webhookTransport];
+        return [channelTransport, webhookTransport];
     }
 
     removeDiscordTransports() {
@@ -215,16 +217,16 @@ class LevertClient extends DiscordClient {
     unloadHandlers() {
         this.logger.info("Unloading handlers...");
 
-        for (const name in this.handlers) {
-            this.handlers[name].unload();
+        Util.wipeObject(this.handlers, (name, handler) => {
+            this.logger.info(`Unloading handler: ${name}`);
 
-            delete this.handlers[name];
+            handler.unload();
+
+            this.logger.info(`Unloaded handler: ${name}`);
             delete this[name];
-        }
+        });
 
-        for (let i = 0; i < this.handlerList.length; i++) {
-            delete this.handlerList[i];
-        }
+        Util.wipeArray(this.handlerList);
 
         delete this.handlers;
         delete this.handlerList;
@@ -266,20 +268,16 @@ class LevertClient extends DiscordClient {
     async unloadManagers() {
         this.logger.info("Unloading managers...");
 
-        for (const name in this.managers) {
+        await Util.wipeObject(this.managers, async (name, manager) => {
             this.logger.info(`Unloading manager: ${name}`);
 
-            await this.managers[name].unload();
-
-            delete this.managers[name];
-            delete this[name];
+            await manager.unload();
 
             this.logger.info(`Unloaded manager: ${name}`);
-        }
+            delete this[name];
+        });
 
-        for (let i = 0; i < this.managerList.length; i++) {
-            delete this.managerList[i];
-        }
+        Util.wipeArray(this.managerList);
 
         delete this.managers;
         delete this.managerList;
@@ -321,20 +319,16 @@ class LevertClient extends DiscordClient {
     unloadVMs() {
         getLogger().info("Unloading VMs...");
 
-        for (const name in this.managers) {
+        Util.wipeObject(this.VMs, (name, VM) => {
             this.logger.info(`Unloading VM: ${name}`);
 
-            this.VMs[name].unload();
-
-            delete this.VMs[name];
-            delete this[name];
+            VM.unload();
 
             this.logger.info(`Unloaded VM: ${name}`);
-        }
+            delete this[name];
+        });
 
-        for (let i = 0; i < this.VMList.length; i++) {
-            delete this.VMList[i];
-        }
+        Util.wipeArray(this.VMList);
 
         delete this.VMs;
         delete this.VMList;
@@ -433,10 +427,6 @@ class LevertClient extends DiscordClient {
         await this.start();
     }
 
-    onKill() {
-        this.deleteLogger();
-    }
-
     setStopped() {
         this.started = false;
         this.startedAt = -1;
@@ -445,6 +435,10 @@ class LevertClient extends DiscordClient {
     setStarted() {
         this.started = true;
         this.startedAt = Date.now();
+    }
+
+    onKill() {
+        this.deleteLogger();
     }
 }
 

@@ -22,7 +22,10 @@ class DirectoryLoader extends Loader {
 
         this.logName = this.getLogName();
 
-        this.excludeDirs = options.excludeDirs ?? [];
+        let excludeDirs = options.excludeDirs ?? [];
+        excludeDirs = excludeDirs.map(dir => path.resolve(dir));
+        this.excludeDirs = excludeDirs;
+
         this.fileExtension = options.fileExtension ?? "any";
 
         this.fileLoaderClass = options.fileLoaderClass ?? FileLoader;
@@ -47,10 +50,8 @@ class DirectoryLoader extends Loader {
             }
         }
 
-        const excludeDirs = this.excludeDirs.map(dir => path.resolve(dir));
-
         files = files.filter(file => {
-            for (const excludeDir of excludeDirs) {
+            for (const excludeDir of this.excludeDirs) {
                 if (file.startsWith(excludeDir)) {
                     return false;
                 }

@@ -160,13 +160,8 @@ class SqlDatabase {
     }
 
     async unloadQueries() {
-        for (let i = 0; i < this.queryList.length; i++) {
-            delete this.queryList[i];
-        }
-
-        for (const category in this.queryStrings) {
-            delete this[category];
-        }
+        Util.wipeArray(this.queryList);
+        Util.wipeObject(this.queryStrings, category => delete this[category]);
     }
 
     async close() {
