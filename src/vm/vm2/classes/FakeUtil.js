@@ -16,14 +16,17 @@ const FakeUtil = {
 
         reply.reply = format;
     },
+
     findUsers: name => {
         const func = getClient().findUsers.bind(getClient());
         return func(name);
     },
+
     dumpTags: _ => {
         const func = getClient().tagManager.dump.bind(getClient().tagManager);
         return func();
     },
+
     fetchTag: async name => {
         let tag = await getClient().tagManager.fetch(name);
 

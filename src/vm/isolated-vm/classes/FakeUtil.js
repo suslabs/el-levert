@@ -50,7 +50,9 @@ const FakeUtil = {
             ch_id = default_id;
         }
 
-        let msg = await getClient().fetchMessage(ch_id, msg_id, user_id);
+        let msg = await getClient().fetchMessage(ch_id, msg_id, {
+            user_id
+        });
 
         if (!msg) {
             return undefined;
@@ -60,12 +62,18 @@ const FakeUtil = {
         return new ExternalCopy(msg).copyInto();
     },
 
-    fetchMessages: async (user_id, default_id, ch_id, options) => {
+    fetchMessages: async (user_id, default_id, ch_id, fetchOptions) => {
         if (ch_id === null || typeof ch_id === "undefined") {
             ch_id = default_id;
         }
 
-        let msgs = await getClient().fetchMessages(ch_id, options, user_id);
+        let msgs = await getClient().fetchMessages(
+            ch_id,
+            {
+                user_id
+            },
+            fetchOptions
+        );
 
         if (!msgs) {
             return undefined;

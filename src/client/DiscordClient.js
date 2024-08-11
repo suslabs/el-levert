@@ -32,11 +32,42 @@ const defaultIntents = [
 const userIdRegex = /(\d{17,20})/,
     mentionRegex = /<@(\d{17,20})>/;
 
-const defaultMessageFetchOptions = {
-        limit: 100
+const defaultGuildOptions = {
+    cache: true
+};
+
+const defaultMemberOptions = {
+    cache: true
+};
+
+const defaultChannelOptions = {
+    cache: true,
+    checkAccess: true
+};
+
+const defaultMessageOptions = {
+    cache: true,
+    checkAccess: true
+};
+
+const defaultMessagesOptions = {
+        checkAccess: true
     },
-    defaultUserFetchOptions = {
-        fetchLimit: 100,
+    defaultMessagesFetchOptions = {
+        limit: 100
+    };
+
+const defaultUserOptions = {
+    cache: true
+};
+
+const defaultUsersOptions = {
+        onlyMembers: false,
+        searchMembers: true,
+        searchMinDist: 0,
+        limit: 10
+    },
+    defaultUsersFetchOptions = {
         limit: 100
     };
 
@@ -173,14 +204,6 @@ class DiscordClient {
         }
     }
 
-    killProcess() {
-        if (typeof this.onKill === "function") {
-            this.onKill();
-        }
-
-        process.exit(0);
-    }
-
     async loadEvents() {
         if (this.eventsDir === "") {
             throw new ClientError("Events directory not set");
@@ -231,13 +254,92 @@ class DiscordClient {
             setText = activity.name;
 
         this.logger?.info(`Set activity status: "${setType} ${setText}"`);
+        return activity;
     }
 
-    async getChannel(ch_id, user_id, checkAccess = true) {
+    async fetchGuild(sv_id, options = {}) {
+        if (sv_id === null || typeof sv_id === "undefined") {
+            throw new ClientError("No guild ID provided");
+        }
+
+        Util.setValuesWithDefaults(options, options, defaultGuildOptions);
+
+        let guild;
+
+        try {
+            guild = await this.client.guilds.fetch(sv_id, {
+                force: !options.cache
+            });
+        } catch (err) {
+            if (err.code === RESTJSONErrorCodes.UnknownGuild) {
+                return false;
+            }
+
+            throw err;
+        }
+
+        return guild;
+    }
+
+    async fetchMember(sv_id, user_id, options = {}) {
+        if (sv_id === null || typeof sv_id === "undefined") {
+            throw new ClientError("No guild or guild ID provided");
+        }
+
+        if (user_id === null || typeof user_id === "undefined") {
+            throw new ClientError("No user ID provided");
+        }
+
+        let guild;
+
+        switch (typeof sv_id) {
+            case "string":
+                guild = await this.fetchGuild(ch_id, channelOptions);
+
+                if (!guild) {
+                    return false;
+                }
+
+                break;
+            case "object":
+                guild = sv_id;
+                break;
+            default:
+                throw new ClientError("Invalid guild or guild ID");
+        }
+
+        Util.setValuesWithDefaults(options, options, defaultMemberOptions);
+
+        let member;
+
+        try {
+            member = await guild.members.fetch(user_id, {
+                force: !options.cache
+            });
+        } catch (err) {
+            if (err.code === RESTJSONErrorCodes.UnknownMember) {
+                return false;
+            }
+
+            throw err;
+        }
+
+        return member;
+    }
+
+    async fetchChannel(ch_id, options = {}) {
+        if (ch_id === null || typeof ch_id === "undefined") {
+            throw new ClientError("No channel ID provided");
+        }
+
+        Util.setValuesWithDefaults(options, options, defaultChannelOptions);
+
         let channel;
 
         try {
-            channel = await this.client.channels.fetch(ch_id);
+            channel = await this.client.channels.fetch(ch_id, {
+                force: !options.cache
+            });
         } catch (err) {
             if ([RESTJSONErrorCodes.UnknownChannel, RESTJSONErrorCodes.MissingAccess].includes(err.code)) {
                 return false;
@@ -246,23 +348,29 @@ class DiscordClient {
             throw err;
         }
 
-        if (!checkAccess) {
+        if (!options.checkAccess) {
             return channel;
         }
 
-        if (user_id === null || typeof user_id === "undefined") {
-            throw new ClientError("No user id provided");
+        if (options.user_id === null || typeof options.user_id === "undefined") {
+            throw new ClientError("No user ID provided");
         }
 
         switch (channel.type) {
             case ChannelType.DM:
-                if (channel.recipientId !== user_id) {
+                if (channel.recipientId !== options.user_id) {
                     return false;
                 }
 
                 break;
             default:
-                const perms = channel.permissionsFor(user_id);
+                const member = await this.fetchMember(channel.guild, options.user_id, cache);
+
+                if (!member) {
+                    return false;
+                }
+
+                const perms = channel.memberPermissions(member, true);
 
                 if (perms === null || !perms.has(PermissionsBitField.Flags.ViewChannel)) {
                     return false;
@@ -274,23 +382,44 @@ class DiscordClient {
         return channel;
     }
 
-    async fetchMessage(ch_id, msg_id, user_id, checkAccess) {
-        if (typeof ch_id === "undefined") {
-            throw new ClientError("No channel id provided");
+    async fetchMessage(ch_id, msg_id, options = {}) {
+        if (ch_id === null || typeof ch_id === "undefined") {
+            throw new ClientError("No channel or channel ID provided");
         }
 
-        if (typeof msg_id === "undefined") {
-            throw new ClientError("No message id provided");
+        if (msg_id === null || typeof msg_id === "undefined") {
+            throw new ClientError("No message ID provided");
         }
 
-        const channel = await this.getChannel(ch_id, user_id, checkAccess);
+        let channel;
 
-        if (!channel) {
-            return false;
+        switch (typeof ch_id) {
+            case "string":
+                const channelOptions = {
+                    checkAccess: options.checkAccess,
+                    user_id: options.user_id
+                };
+
+                channel = await this.fetchChannel(ch_id, channelOptions);
+
+                if (!channel) {
+                    return false;
+                }
+
+                break;
+            case "object":
+                channel = ch_id;
+                break;
+            default:
+                throw new ClientError("Invalid channel or channel ID");
         }
+
+        Util.setValuesWithDefaults(options, options, defaultMessageOptions);
 
         try {
-            return await channel.messages.fetch(msg_id);
+            return await channel.messages.fetch(msg_id, {
+                force: !options.cache
+            });
         } catch (err) {
             if (err.code === RESTJSONErrorCodes.UnknownMessage) {
                 return false;
@@ -300,21 +429,43 @@ class DiscordClient {
         }
     }
 
-    async fetchMessages(ch_id, options = {}, user_id, checkAccess) {
-        if (typeof ch_id === "undefined") {
-            throw new ClientError("No channel id provided");
+    async fetchMessages(ch_id, options = {}, fetchOptions = {}) {
+        if (ch_id === null || typeof ch_id === "undefined") {
+            throw new ClientError("No channel or channel ID provided");
         }
 
-        const channel = await this.getChannel(ch_id, user_id, checkAccess);
+        Util.setValuesWithDefaults(options, options, defaultMessagesOptions);
 
-        if (!channel) {
-            return false;
+        let channel;
+
+        switch (typeof ch_id) {
+            case "string":
+                const channelOptions = {
+                    checkAccess: options.checkAccess,
+                    user_id: options.user_id
+                };
+
+                channel = await this.fetchChannel(ch_id, channelOptions);
+
+                if (!channel) {
+                    return false;
+                }
+
+                break;
+            case "object":
+                channel = ch_id;
+                break;
+            default:
+                throw new ClientError("Invalid channel or channel ID");
         }
 
-        Util.setValuesWithDefaults(options, options, defaultMessageFetchOptions);
+        Util.setValuesWithDefaults(fetchOptions, fetchOptions, defaultMessagesFetchOptions);
+        fetchOptions.force = !options.cache;
+
+        let messages;
 
         try {
-            return await channel.messages.fetch(options);
+            messages = await channel.messages.fetch(fetchOptions);
         } catch (err) {
             if (err instanceof DiscordAPIError) {
                 return false;
@@ -322,15 +473,25 @@ class DiscordClient {
 
             throw err;
         }
+
+        return messages;
     }
 
-    async findUserById(id) {
+    async findUserById(user_id, options = {}) {
+        if (user_id === null || typeof user_id === "undefined") {
+            throw new ClientError("No user ID provided");
+        }
+
+        Util.setValuesWithDefaults(options, options, defaultUserOptions);
+
         let user;
 
         try {
-            user = await this.client.users.fetch(id);
+            user = await this.client.users.fetch(user_id, {
+                force: !options.cache
+            });
         } catch (err) {
-            if (err.code === RESTJSONErrorCodes.UnknownMember) {
+            if (err.code === RESTJSONErrorCodes.UnknownUser) {
                 return false;
             }
 
@@ -340,27 +501,30 @@ class DiscordClient {
         return user;
     }
 
-    async findUsers(query, options = {}) {
+    async findUsers(query, options = {}, fetchOptions = {}) {
         const guilds = this.client.guilds.cache;
 
         const idMatch = query.match(userIdRegex),
             mentionMatch = query.match(mentionRegex);
 
-        if (idMatch ?? mentionMatch) {
-            const id = idMatch[1] ?? mentionMatch[1];
+        Util.setValuesWithDefaults(options, options, defaultUsersOptions);
 
-            for (let i = 0; i < guilds.size; i++) {
-                try {
-                    const user = await guilds.at(i).members.fetch({ user: id });
-                    return [user];
-                } catch (err) {
-                    if (err.code !== RESTJSONErrorCodes.UnknownMember) {
-                        throw err;
-                    }
+        if (idMatch ?? mentionMatch) {
+            const user_id = idMatch[1] ?? mentionMatch[1];
+
+            for (const guild of guilds.values()) {
+                const member = await this.fetchMember(guild, user_id);
+
+                if (member) {
+                    return [member];
                 }
             }
 
-            const user = await this.client.users.fetch(id);
+            if (options.onlyMembers) {
+                return [];
+            }
+
+            const user = await this.findUserById(user_id);
 
             if (!user) {
                 return [];
@@ -370,31 +534,43 @@ class DiscordClient {
             return [user];
         }
 
-        Util.setValuesWithDefaults(options, options, defaultUserFetchOptions);
-
-        let users = [],
-            foundIds = [];
-
-        for (let i = 0; i < guilds.size; i++) {
-            const guildUsers = await guilds.at(i).members.fetch({
-                query,
-                limit: options.fetchLimit
-            });
-
-            const newUsers = guildUsers.filter(user => !foundIds.includes(user.id)),
-                userIds = newUsers.keys();
-
-            users.push(...newUsers.values());
-            foundIds.push(...userIds);
+        if (!options.searchMembers) {
+            return [];
         }
 
-        users = search(users, query, {
+        Util.setValuesWithDefaults(fetchOptions, fetchOptions, defaultUsersFetchOptions);
+
+        let members = [],
+            foundIds = [];
+
+        for (const guild of guilds.values()) {
+            const guildMembers = await guild.members.fetch({
+                query,
+                limit: fetchOptions.fetchLimit
+            });
+
+            const newMembers = guildMembers.filter(user => !foundIds.includes(user.id)),
+                memberIds = newMembers.keys();
+
+            members.push(...newMembers.values());
+            foundIds.push(...memberIds);
+        }
+
+        members = search(members, query, {
             maxResults: options.limit,
-            minDist: 0,
+            minDist: options.searchMinDist,
             searchKey: "username"
         });
 
-        return users;
+        return members;
+    }
+
+    killProcess() {
+        if (typeof this.onKill === "function") {
+            this.onKill();
+        }
+
+        process.exit(0);
     }
 }
 
