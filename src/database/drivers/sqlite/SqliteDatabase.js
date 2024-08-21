@@ -18,9 +18,9 @@ const transactionSql = {
     rollback: "ROLLBACK TRANSACTION;"
 };
 
-const journalModeSql = {
-    enableWAL: "PRAGMA journal_mode=WAL;",
-    disableWAL: "PRAGMA journal_mode=DELETE;"
+const journalModePragma = {
+    enableWAL: "journal_mode=WAL",
+    disableWAL: "journal_mode=DELETE"
 };
 
 class SqliteDatabase extends StatementDatabase(EventEmitter) {
@@ -507,13 +507,18 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         });
     }
 
+    async pragma(pragma) {
+        const sql = `PRAGMA ${pragma};`;
+        await this.exec(pragmaSql);
+    }
+
     async enableWALMode() {
-        await this.exec(journalModeSql.enableWAL);
+        await this.pragma(journalModePragma.enableWAL);
         this.WALMode = true;
     }
 
     async disableWALMode() {
-        await this.exec(journalModeSql.disableWAL);
+        await this.pragma(journalModePragma.disableWAL);
         this.WALMode = false;
     }
 
