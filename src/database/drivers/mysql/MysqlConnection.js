@@ -81,10 +81,11 @@ class MysqlConnection extends EventEmitter {
 
             this.con.end(options, err => {
                 if (err) {
+                    err = new DatabaseError(err);
                     this.emit(ConnectionEvents.promiseError, err);
 
                     if (this.throwErrors) {
-                        reject(new DatabaseError(err));
+                        reject(err);
                     } else {
                         resolve();
                     }
@@ -115,10 +116,11 @@ class MysqlConnection extends EventEmitter {
 
             this.con.connect(options, err => {
                 if (err) {
+                    err = new DatabaseError(err);
                     this.emit(ConnectionEvents.promiseError, err);
 
                     if (this.throwErrors) {
-                        reject(new DatabaseError(err));
+                        reject(err);
                     } else {
                         resolve();
                     }
@@ -148,20 +150,23 @@ class MysqlConnection extends EventEmitter {
 
             this.con.query(...args, (err, res) => {
                 if (err) {
+                    err = new DatabaseError(err);
                     this.emit(ConnectionEvents.promiseError, err);
 
                     if (this.autoRollback && this.inTransaction) {
-                        this.con.rollback(() => {
-                            this.inTransaction = false;
+                        this.con
+                            .rollback(() => {
+                                this.inTransaction = false;
 
-                            if (this.throwErrors) {
-                                reject(new DatabaseError(err));
-                            } else {
-                                resolve();
-                            }
-                        });
+                                if (this.throwErrors) {
+                                    reject(err);
+                                } else {
+                                    resolve();
+                                }
+                            })
+                            .catch(reject);
                     } else if (this.throwErrors) {
-                        reject(new DatabaseError(err));
+                        reject(err);
                     } else {
                         resolve();
                     }
@@ -191,10 +196,11 @@ class MysqlConnection extends EventEmitter {
 
             this.con.ping(options, err => {
                 if (err) {
+                    err = new DatabaseError(err);
                     this.emit(ConnectionEvents.promiseError, err);
 
                     if (this.throwErrors) {
-                        reject(new DatabaseError(err));
+                        reject(err);
                     } else {
                         resolve();
                     }
@@ -224,10 +230,11 @@ class MysqlConnection extends EventEmitter {
 
             this.con.statistics(options, err => {
                 if (err) {
+                    err = new DatabaseError(err);
                     this.emit(ConnectionEvents.promiseError, err);
 
                     if (this.throwErrors) {
-                        reject(new DatabaseError(err));
+                        reject(err);
                     } else {
                         resolve();
                     }
@@ -257,10 +264,11 @@ class MysqlConnection extends EventEmitter {
 
             this.con.changeUser(options, err => {
                 if (err) {
+                    err = new DatabaseError(err);
                     this.emit(ConnectionEvents.promiseError, err);
 
                     if (this.throwErrors) {
-                        reject(new DatabaseError(err));
+                        reject(err);
                     } else {
                         resolve();
                     }
@@ -295,10 +303,11 @@ class MysqlConnection extends EventEmitter {
 
             this.con.beginTransaction(options, err => {
                 if (err) {
+                    err = new DatabaseError(err);
                     this.emit(ConnectionEvents.promiseError, err);
 
                     if (this.throwErrors) {
-                        reject(new DatabaseError(err));
+                        reject(err);
                     } else {
                         resolve();
                     }
@@ -336,18 +345,21 @@ class MysqlConnection extends EventEmitter {
                 this.inTransaction = false;
 
                 if (err) {
+                    err = new DatabaseError(err);
                     this.emit(ConnectionEvents.promiseError, err);
 
                     if (this.inTransaction) {
-                        this.con.rollback(() => {
-                            if (this.throwErrors) {
-                                reject(new DatabaseError(err));
-                            } else {
-                                resolve();
-                            }
-                        });
+                        this.con
+                            .rollback(() => {
+                                if (this.throwErrors) {
+                                    reject(err);
+                                } else {
+                                    resolve();
+                                }
+                            })
+                            .catch(reject);
                     } else if (this.throwErrors) {
-                        reject(new DatabaseError(err));
+                        reject(err);
                     } else {
                         resolve();
                     }
@@ -384,10 +396,11 @@ class MysqlConnection extends EventEmitter {
                 this.inTransaction = false;
 
                 if (err) {
+                    err = new DatabaseError(err);
                     this.emit(ConnectionEvents.promiseError, err);
 
                     if (this.throwErrors) {
-                        reject(new DatabaseError(err));
+                        reject(err);
                     } else {
                         resolve();
                     }
@@ -413,7 +426,17 @@ class MysqlConnection extends EventEmitter {
         }
 
         this.deleteConnection();
-        this.con.destroy();
+
+        try {
+            this.con.destroy();
+        } catch (err) {
+            err = new DatabaseError(err);
+            this.emit(ConnectionEvents.promiseError, err);
+
+            if (this.throwErrors) {
+                throw err;
+            }
+        }
     }
 
     pause() {
@@ -428,7 +451,16 @@ class MysqlConnection extends EventEmitter {
             }
         }
 
-        this.con.pause();
+        try {
+            this.con.pause();
+        } catch (err) {
+            err = new DatabaseError(err);
+            this.emit(ConnectionEvents.promiseError, err);
+
+            if (this.throwErrors) {
+                throw err;
+            }
+        }
     }
 
     resume() {
@@ -443,7 +475,16 @@ class MysqlConnection extends EventEmitter {
             }
         }
 
-        this.con.resume();
+        try {
+            this.con.resume();
+        } catch (err) {
+            err = new DatabaseError(err);
+            this.emit(ConnectionEvents.promiseError, err);
+
+            if (this.throwErrors) {
+                throw err;
+            }
+        }
     }
 
     initConnection(con) {

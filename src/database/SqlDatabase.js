@@ -32,10 +32,14 @@ class SqlDatabase {
     }
 
     async open(mode) {
+        const dbConfig = {
+            enableWALMode: true
+        };
+
         let db;
 
         if (typeof this.db === "undefined") {
-            db = new SqliteDatabase(this.dbPath, mode);
+            db = new SqliteDatabase(this.dbPath, mode, dbConfig);
         } else {
             db = this.db;
         }

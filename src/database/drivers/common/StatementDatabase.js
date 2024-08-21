@@ -18,8 +18,16 @@ export default function (base) {
             const removed = Util.removeItem(this.statements, statement);
 
             if (!removed) {
-                throw new DatabaseError("Statement not found");
+                const err = new DatabaseError("Statement not found");
+
+                if (this.throwErrors) {
+                    throw err;
+                }
+
+                return false;
             }
+
+            return true;
         }
 
         async finalizeStatement(statement) {

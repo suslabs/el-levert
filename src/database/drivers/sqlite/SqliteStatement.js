@@ -34,8 +34,11 @@ class SqliteStatement {
                 }
 
                 if (err) {
+                    err = new DatabaseError(err);
+                    this.db.emit(DatabaseEvents.promiseError, err);
+
                     if (this.db.throwErrors) {
-                        reject(new DatabaseError(err));
+                        reject(err);
                         return;
                     } else {
                         resolve();
@@ -65,8 +68,11 @@ class SqliteStatement {
 
             this.st.bind(...param, err => {
                 if (err) {
+                    err = new DatabaseError(err);
+                    this.db.emit(DatabaseEvents.promiseError, err);
+
                     if (this.db.throwErrors) {
-                        reject(new DatabaseError(err));
+                        reject(err);
                     } else {
                         resolve();
                     }
@@ -117,18 +123,22 @@ class SqliteStatement {
 
             this.st.run(...param, err => {
                 if (err) {
+                    err = new DatabaseError(err);
                     this.db.emit(DatabaseEvents.promiseError, err);
 
                     if (this.db.autoRollback && this.db.inTransaction) {
-                        this.db.rollback().then(_ => {
-                            if (this.db.throwErrors) {
-                                reject(new DatabaseError(err));
-                            } else {
-                                resolve();
-                            }
-                        });
+                        this.db
+                            .rollback()
+                            .then(_ => {
+                                if (this.db.throwErrors) {
+                                    reject(err);
+                                } else {
+                                    resolve();
+                                }
+                            })
+                            .catch(reject);
                     } else if (this.db.throwErrors) {
-                        reject(new DatabaseError(err));
+                        reject(err);
                     } else {
                         resolve();
                     }
@@ -158,18 +168,22 @@ class SqliteStatement {
 
             this.st.get(...param, (err, row) => {
                 if (err) {
+                    err = new DatabaseError(err);
                     this.db.emit(DatabaseEvents.promiseError, err);
 
                     if (this.db.autoRollback && this.db.inTransaction) {
-                        this.db.rollback().then(_ => {
-                            if (this.db.throwErrors) {
-                                reject(new DatabaseError(err));
-                            } else {
-                                resolve();
-                            }
-                        });
+                        this.db
+                            .rollback()
+                            .then(_ => {
+                                if (this.db.throwErrors) {
+                                    reject(err);
+                                } else {
+                                    resolve();
+                                }
+                            })
+                            .catch(reject);
                     } else if (this.db.throwErrors) {
-                        reject(new DatabaseError(err));
+                        reject(err);
                     } else {
                         resolve();
                     }
@@ -199,18 +213,22 @@ class SqliteStatement {
 
             this.st.all(...param, (err, rows) => {
                 if (err) {
+                    err = new DatabaseError(err);
                     this.db.emit(DatabaseEvents.promiseError, err);
 
                     if (this.db.autoRollback && this.db.inTransaction) {
-                        this.db.rollback().then(_ => {
-                            if (this.db.throwErrors) {
-                                reject(new DatabaseError(err));
-                            } else {
-                                resolve();
-                            }
-                        });
+                        this.db
+                            .rollback()
+                            .then(_ => {
+                                if (this.db.throwErrors) {
+                                    reject(err);
+                                } else {
+                                    resolve();
+                                }
+                            })
+                            .catch(reject);
                     } else if (this.db.throwErrors) {
-                        reject(new DatabaseError(err));
+                        reject(err);
                     } else {
                         resolve();
                     }
@@ -240,18 +258,22 @@ class SqliteStatement {
 
             this.st.each(...param, (err, nrows) => {
                 if (err) {
+                    err = new DatabaseError(err);
                     this.db.emit(DatabaseEvents.promiseError, err);
 
                     if (this.db.autoRollback && this.db.inTransaction) {
-                        this.db.rollback().then(_ => {
-                            if (this.db.throwErrors) {
-                                reject(new DatabaseError(err));
-                            } else {
-                                resolve();
-                            }
-                        });
+                        this.db
+                            .rollback()
+                            .then(_ => {
+                                if (this.db.throwErrors) {
+                                    reject(err);
+                                } else {
+                                    resolve();
+                                }
+                            })
+                            .catch(reject);
                     } else if (this.db.throwErrors) {
-                        reject(new DatabaseError(err));
+                        reject(err);
                     } else {
                         resolve();
                     }

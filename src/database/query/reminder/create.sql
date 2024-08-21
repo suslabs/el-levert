@@ -4,4 +4,4 @@ CREATE TABLE "Reminders" (
 	"end"	INTEGER,
 	"msg"	TEXT,
 	PRIMARY KEY("id" AUTOINCREMENT)
-);
+) STRICT;

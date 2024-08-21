@@ -2,7 +2,7 @@ CREATE TABLE "Quotas" (
 	"user"	TEXT,
 	"quota"	REAL,
 	PRIMARY KEY("user")
-);
+) STRICT;
 ---
 CREATE TABLE "Tags" (
 	"hops"	TEXT,
@@ -15,4 +15,4 @@ CREATE TABLE "Tags" (
 	"type"	INTEGER,
 	PRIMARY KEY("name"),
 	FOREIGN KEY("owner") REFERENCES Quotas("user")
-);
+) STRICT;

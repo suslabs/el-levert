@@ -18,6 +18,11 @@ const transactionSql = {
     rollback: "ROLLBACK TRANSACTION;"
 };
 
+const journalModeSql = {
+    enableWAL: "PRAGMA journal_mode=WAL;",
+    disableWAL: "PRAGMA journal_mode=DELETE;"
+};
+
 class SqliteDatabase extends StatementDatabase(EventEmitter) {
     constructor(filename, mode, config = {}) {
         super();
@@ -27,6 +32,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
 
         this.config = config;
 
+        this.WALMode = config.enableWALMode ?? false;
         this.throwErrors = config.throwErrors ?? true;
         this.autoRollback = config.autoRollback ?? false;
 
@@ -50,10 +56,11 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
 
             const db = new sqlite.Database(this.filename, this.mode, err => {
                 if (err) {
+                    err = new DatabaseError(err);
                     this.emit(DatabaseEvents.promiseError, err);
 
                     if (this.throwErrors) {
-                        reject(new DatabaseError(err));
+                        reject(err);
                     } else {
                         resolve();
                     }
@@ -64,6 +71,12 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
                 this.initDatabase(db);
                 resolve();
             });
+        }).then(_ => {
+            if (!this.WALMode) {
+                return;
+            }
+
+            return this.enableWALMode();
         });
     }
 
@@ -86,10 +99,11 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
                 .then(_ => {
                     this.db.close(err => {
                         if (err) {
+                            err = new DatabaseError(err);
                             this.emit(DatabaseEvents.promiseError, err);
 
                             if (this.throwErrors) {
-                                reject(new DatabaseError(err));
+                                reject(err);
                             } else {
                                 resolve();
                             }
@@ -101,7 +115,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
                         resolve();
                     });
                 })
-                .catch();
+                .catch(reject);
         });
     }
 
@@ -117,7 +131,16 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
             return;
         }
 
-        return this.db.configure(option, value);
+        try {
+            return this.db.configure(option, value);
+        } catch (err) {
+            err = new DatabaseError(err);
+            this.emit(DatabaseEvents.promiseError, err);
+
+            if (this.throwErrors) {
+                throw err;
+            }
+        }
     }
 
     run(sql, ...param) {
@@ -140,18 +163,22 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
                 const st = this;
 
                 if (err) {
+                    err = new DatabaseError(err);
                     _this.emit(DatabaseEvents.promiseError, err);
 
                     if (_this.autoRollback && _this.inTransaction) {
-                        _this.rollback().then(_ => {
-                            if (_this.throwErrors) {
-                                reject(new DatabaseError(err));
-                            } else {
-                                resolve();
-                            }
-                        });
+                        _this
+                            .rollback()
+                            .then(_ => {
+                                if (_this.throwErrors) {
+                                    reject(err);
+                                } else {
+                                    resolve();
+                                }
+                            })
+                            .catch(reject);
                     } else if (_this.throwErrors) {
-                        reject(new DatabaseError(err));
+                        reject(err);
                     } else {
                         resolve();
                     }
@@ -184,18 +211,22 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
                 const st = this;
 
                 if (err) {
+                    err = new DatabaseError(err);
                     _this.emit(DatabaseEvents.promiseError, err);
 
                     if (_this.autoRollback && _this.inTransaction) {
-                        _this.rollback().then(_ => {
-                            if (_this.throwErrors) {
-                                reject(new DatabaseError(err));
-                            } else {
-                                resolve();
-                            }
-                        });
+                        _this
+                            .rollback()
+                            .then(_ => {
+                                if (_this.throwErrors) {
+                                    reject(err);
+                                } else {
+                                    resolve();
+                                }
+                            })
+                            .catch(reject);
                     } else if (_this.throwErrors) {
-                        reject(new DatabaseError(err));
+                        reject(err);
                     } else {
                         resolve();
                     }
@@ -228,18 +259,22 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
                 const st = this;
 
                 if (err) {
+                    err = new DatabaseError(err);
                     _this.emit(DatabaseEvents.promiseError, err);
 
                     if (_this.autoRollback && _this.inTransaction) {
-                        _this.rollback().then(_ => {
-                            if (_this.throwErrors) {
-                                reject(new DatabaseError(err));
-                            } else {
-                                resolve();
-                            }
-                        });
+                        _this
+                            .rollback()
+                            .then(_ => {
+                                if (_this.throwErrors) {
+                                    reject(err);
+                                } else {
+                                    resolve();
+                                }
+                            })
+                            .catch(reject);
                     } else if (_this.throwErrors) {
-                        reject(new DatabaseError(err));
+                        reject(err);
                     } else {
                         resolve();
                     }
@@ -272,18 +307,22 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
                 const st = this;
 
                 if (err) {
+                    err = new DatabaseError(err);
                     _this.emit(DatabaseEvents.promiseError, err);
 
                     if (_this.autoRollback && _this.inTransaction) {
-                        _this.rollback().then(_ => {
-                            if (_this.throwErrors) {
-                                reject(new DatabaseError(err));
-                            } else {
-                                resolve();
-                            }
-                        });
+                        _this
+                            .rollback()
+                            .then(_ => {
+                                if (_this.throwErrors) {
+                                    reject(err);
+                                } else {
+                                    resolve();
+                                }
+                            })
+                            .catch(reject);
                     } else if (_this.throwErrors) {
-                        reject(new DatabaseError(err));
+                        reject(err);
                     } else {
                         resolve();
                     }
@@ -313,10 +352,11 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
 
             this.db.exec(sql, err => {
                 if (err) {
+                    err = new DatabaseError(err);
                     this.emit(DatabaseEvents.promiseError, err);
 
                     if (this.throwErrors) {
-                        reject(new DatabaseError(err));
+                        reject(err);
                     } else {
                         resolve();
                     }
@@ -348,10 +388,11 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
 
             let callback = err => {
                 if (err) {
+                    err = new DatabaseError(err);
                     this.emit(DatabaseEvents.promiseError, err);
 
                     if (this.throwErrors) {
-                        reject(new DatabaseError(err));
+                        reject(err);
                     } else {
                         resolve();
                     }
@@ -449,10 +490,11 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
 
             this.db.loadExtension(path, err => {
                 if (err) {
+                    err = new DatabaseError(err);
                     this.emit(DatabaseEvents.promiseError, err);
 
                     if (this.throwErrors) {
-                        reject(new DatabaseError(err));
+                        reject(err);
                     } else {
                         resolve(this);
                     }
@@ -465,8 +507,27 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         });
     }
 
+    async enableWALMode() {
+        await this.exec(journalModeSql.enableWAL);
+        this.WALMode = true;
+    }
+
+    async disableWALMode() {
+        await this.exec(journalModeSql.disableWAL);
+        this.WALMode = false;
+    }
+
     interrupt() {
-        this.db.interrupt();
+        try {
+            this.db.interrupt();
+        } catch (err) {
+            err = new DatabaseError(err);
+            this.emit(DatabaseEvents.promiseError, err);
+
+            if (this.throwErrors) {
+                throw err;
+            }
+        }
     }
 
     initDatabase(db) {
