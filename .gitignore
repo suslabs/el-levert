@@ -135,3 +135,6 @@ dist
 # Bot
 config/auth.json
 db
+
+# Other
+.VSCodeCounter
