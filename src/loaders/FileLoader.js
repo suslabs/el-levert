@@ -3,6 +3,7 @@ import path from "node:path";
 
 import Loader from "./Loader.js";
 import LoadStatus from "./LoadStatus.js";
+import WriteMode from "./WriteMode.js";
 
 class FileLoader extends Loader {
     constructor(name, filePath, logger, options = {}) {
@@ -22,6 +23,23 @@ class FileLoader extends Loader {
         this.encoding = options.encoding ?? "utf-8";
     }
 
+    get fsConfig() {
+        return {
+            encoding: this.encoding
+        };
+    }
+
+    checkPath() {
+        switch (typeof this.path) {
+            case "string":
+                break;
+            case "undefined":
+                return this.failure("No file path provided.");
+            default:
+                return this.failure("Invalid file path.");
+        }
+    }
+
     getTempPath() {
         if (typeof this.path !== "string") {
             return;
@@ -33,30 +51,23 @@ class FileLoader extends Loader {
         return tempPath;
     }
 
-    get fsConfig() {
-        return {
-            encoding: this.encoding
-        };
-    }
-
     async deleteTemp() {
         try {
             await fs.unlink(this.tempPath);
         } catch (err) {
-            if (err.code !== "ENOENT") {
-                this.logger?.error("Error occured while deleting temp file:", err);
+            if (err.code === "ENOENT") {
+                this.logger?.error("Temp file not found");
+                return;
             }
+
+            this.logger?.error("Error occured while deleting temp file:", err);
         }
     }
 
     async load() {
-        switch (typeof this.path) {
-            case "string":
-                break;
-            case "undefined":
-                return this.failure("No file path provided.");
-            default:
-                return this.failure("Invalid file path.");
+        const err = this.checkPath();
+        if (err) {
+            return err;
         }
 
         let text;
@@ -77,30 +88,39 @@ class FileLoader extends Loader {
         return LoadStatus.successful;
     }
 
-    async write(data) {
-        switch (typeof this.path) {
-            case "string":
-                break;
-            case "undefined":
-                return this.failure("No file path provided.");
-            default:
-                return this.failure("Invalid file path.");
+    async write(data, mode = WriteMode.replace) {
+        switch (mode) {
+            case WriteMode.append:
+                return await this.append(data);
+        }
+
+        const err = this.checkPath();
+        if (err) {
+            return err;
         }
 
         try {
             await fs.writeFile(this.tempPath, data, this.fsConfig);
         } catch (err) {
             await this.deleteTemp();
-
             return this.failure(err, `Error occured while writing ${this.getName()}:`);
         }
 
         try {
             await fs.rename(this.tempPath, this.path);
         } catch (err) {
-            await this.deleteTemp();
-
             return this.failure(err, `Error occured while writing ${this.getName()}:`);
+        } finally {
+            await this.deleteTemp();
+        }
+
+        return LoadStatus.successful;
+    }
+
+    async append(data) {
+        const err = this.checkPath();
+        if (err) {
+            return err;
         }
 
         return LoadStatus.successful;

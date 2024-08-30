@@ -3,6 +3,7 @@ import Ajv from "ajv";
 
 import FileLoader from "./FileLoader.js";
 import LoadStatus from "./LoadStatus.js";
+import WriteMode from "./WriteMode.js";
 
 import Util from "../util/Util.js";
 
@@ -74,6 +75,10 @@ class JsonLoader extends FileLoader {
 
         this.schema = options.schema;
         this.schemaPath = this.getSchemaPath(options);
+
+        this.customStringify = options.stringify;
+        this.replacer = options.replacer;
+        this.space = options.space ?? 0;
 
         this.childValidate = this.validate;
         this.validate = validate.bind(this);
@@ -191,6 +196,22 @@ class JsonLoader extends FileLoader {
         }
     }
 
+    stringifyData(data, options) {
+        const stringify = options.stringify ?? this.customStringify,
+            replacer = options.replacer ?? this.replacer,
+            space = options.space ?? this.space;
+
+        let jsonData;
+
+        if (typeof stringify === "function") {
+            jsonData = stringify(data, options);
+        } else {
+            jsonData = JSON.stringify(data, replacer, space);
+        }
+
+        return jsonData;
+    }
+
     async load() {
         let status;
 
@@ -221,24 +242,30 @@ class JsonLoader extends FileLoader {
         return status;
     }
 
-    async write(data, options = {}) {
+    async write(data, options = {}, mode = WriteMode.replace) {
+        switch (mode) {
+            case WriteMode.append:
+                return await this.append(data, options);
+        }
+
         const status = this.validate(data);
 
         if (status === LoadStatus.failed) {
             return status;
         }
 
-        let jsonData;
+        const jsonData = this.stringifyData(data, options);
+        return await super.write(jsonData);
+    }
 
-        const { stringify, space } = options;
+    async append(data, options = {}) {
+        const status = this.validate(data);
 
-        if (typeof stringify === "function") {
-            jsonData = stringify(data);
-        } else {
-            jsonData = JSON.stringify(data, undefined, space);
+        if (status === LoadStatus.failed) {
+            return status;
         }
 
-        return await super.write(jsonData);
+        return LoadStatus.successful;
     }
 }
 

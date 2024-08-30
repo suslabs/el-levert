@@ -206,60 +206,84 @@ class DirectoryLoader extends Loader {
         return LoadStatus.successful;
     }
 
-    getLoader(data) {
+    getLoader(data, errorIfNotFound = false) {
+        let dataLoader;
+
         for (const loader of this.loaders.data()) {
             if (loader.getData() === data) {
-                return loader;
+                dataLoader = loader;
+                break;
             }
         }
+
+        if (errorIfNotFound && typeof dataLoader === "undefined") {
+            return this.failure("Data loader not found");
+        }
+
+        return dataLoader;
     }
 
-    getPath(data) {
+    getPath(data, errorIfNotFound = false) {
         if (!(this.data instanceof Map)) {
-            const loader = this.getLoader(data);
+            const loader = this.getLoader(data, errorIfNotFound);
             return loader?.path;
         }
 
+        let dataPath;
+
         for (const [path, value] of this.data.entries()) {
             if (value === data) {
-                return path;
+                dataPath = path;
+                break;
             }
         }
+
+        if (errorIfNotFound && typeof dataPath === "undefined") {
+            return this.failure("Data path not found");
+        }
+
+        return dataPath;
     }
 
-    deleteData(data) {
-        const path = this.getPath(data);
+    deleteData(data, errorIfNotFound = false) {
+        const path = this.getPath(data, errorIfNotFound);
 
         if (typeof path === "undefined") {
             return false;
         }
 
-        this.loaders.delete(path);
+        const loaderDeleted = this.loaders.delete(path);
+
+        if (errorIfNotFound && !loaderDeleted) {
+            return this.failure("Couldn't delete data: loader not found");
+        }
+
+        let dataDeleted = false;
 
         if (this.data instanceof Map) {
-            return this.data.delete(path);
+            dataDeleted = this.data.delete(path);
         }
 
         if (Array.isArray(this.data)) {
-            return Util.removeItem(this.data, data);
+            dataDeleted = Util.removeItem(this.data, data);
         }
 
-        return false;
+        if (errorIfNotFound && !dataDeleted) {
+            return this.failure("Couldn't delete data: data not found");
+        }
+
+        return errorIfNotFound ? LoadStatus.successful : dataDeleted;
     }
 
     deleteAllData() {
         if (this.loaders instanceof Map) {
-            for (const path of this.loaders.keys()) {
-                this.loaders.delete(path);
-            }
+            this.loaders.clear();
         } else {
             this.loaders = new Map();
         }
 
         if (this.data instanceof Map) {
-            for (const path of this.data.keys()) {
-                this.data.delete(path);
-            }
+            this.data.clear();
         } else {
             this.data = new Map();
         }
