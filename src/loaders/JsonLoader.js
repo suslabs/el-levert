@@ -1,7 +1,7 @@
 import path from "node:path";
 import Ajv from "ajv";
 
-import FileLoader from "./FileLoader.js";
+import TextFileLoader from "./TextFileLoader.js";
 import LoadStatus from "./LoadStatus.js";
 import WriteMode from "./WriteMode.js";
 
@@ -66,7 +66,7 @@ function validate(data) {
     return LoadStatus.successful;
 }
 
-class JsonLoader extends FileLoader {
+class JsonLoader extends TextFileLoader {
     constructor(name, filePath, logger, options = {}) {
         super(name, filePath, logger, options);
 
@@ -128,7 +128,7 @@ class JsonLoader extends FileLoader {
 
     async loadSchemaFile() {
         const schemaOptions = { throwOnFailure: this.throwOnFailure },
-            schemaLoader = new FileLoader("schema", this.schemaPath, this.logger, schemaOptions);
+            schemaLoader = new TextFileLoader("schema", this.schemaPath, this.logger, schemaOptions);
 
         const [schemaString, status] = await schemaLoader.load();
 
