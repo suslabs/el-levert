@@ -187,12 +187,18 @@ class Loader {
     }
 
     failure(err, loggerMsg, logLevel = "error") {
-        if (this.throwOnFailure) {
-            if (typeof err === "string") {
-                throw new LoaderError(err);
-            } else {
-                throw err;
+        if (typeof err === "string") {
+            let message = err;
+
+            if (message.endsWith(".")) {
+                message = message.slice(0, -1);
             }
+
+            err = new LoaderError(message);
+        }
+
+        if (this.throwOnFailure) {
+            throw err;
         }
 
         if (typeof loggerMsg !== "undefined") {
