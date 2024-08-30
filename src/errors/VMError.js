@@ -1,10 +1,5 @@
-class VMError extends Error {
-    constructor(message = "", ...args) {
-        super(message, ...args);
+import CustomError from "./CustomError.js";
 
-        this.name = "VMError";
-        this.message = message;
-    }
-}
+class VMError extends CustomError {}
 
 export default VMError;

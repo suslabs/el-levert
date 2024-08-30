@@ -1,10 +1,5 @@
-class ManagerError extends Error {
-    constructor(message = "", ...args) {
-        super(message, ...args);
+import CustomError from "./CustomError.js";
 
-        this.name = "ManagerError";
-        this.message = message;
-    }
-}
+class ManagerError extends CustomError {}
 
 export default ManagerError;

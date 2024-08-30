@@ -1,10 +1,5 @@
-class CommandError extends Error {
-    constructor(message = "", ...args) {
-        super(message, ...args);
+import CustomError from "./CustomError.js";
 
-        this.name = "CommandError";
-        this.message = message;
-    }
-}
+class CommandError extends CustomError {}
 
 export default CommandError;

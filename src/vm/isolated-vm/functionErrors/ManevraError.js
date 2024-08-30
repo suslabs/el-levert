@@ -1,9 +1,8 @@
 class ManevraError extends Error {
-    constructor(message = "", ...args) {
-        super(message, ...args);
+    constructor(message = "") {
+        super(message);
 
-        this.name = "ManevraError";
-        this.message = message;
+        this.name = this.constructor.name;
     }
 }
 

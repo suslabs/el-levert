@@ -1,10 +1,5 @@
-class EventError extends Error {
-    constructor(message = "", ...args) {
-        super(message, ...args);
+import CustomError from "./CustomError.js";
 
-        this.name = "EventError";
-        this.message = message;
-    }
-}
+class EventError extends CustomError {}
 
 export default EventError;

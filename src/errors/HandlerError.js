@@ -1,10 +1,5 @@
-class HandlerError extends Error {
-    constructor(message = "", ...args) {
-        super(message, ...args);
+import CustomError from "./CustomError.js";
 
-        this.name = "HandlerError";
-        this.message = message;
-    }
-}
+class HandlerError extends CustomError {}
 
 export default HandlerError;

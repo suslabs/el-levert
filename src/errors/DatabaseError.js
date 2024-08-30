@@ -1,4 +1,6 @@
-class DatabaseError extends Error {
+import CustomError from "./CustomError.js";
+
+class DatabaseError extends CustomError {
     constructor(obj, ...args) {
         let message = "";
 
@@ -10,13 +12,8 @@ class DatabaseError extends Error {
 
         super(message, ...args);
 
-        this.name = "DatabaseError";
-        this.message = message;
-
-        if (typeof obj === "object") {
-            this.code = obj.code;
-            this.errno = obj.errno;
-        }
+        this.code = obj?.code;
+        this.errno = obj?.errno;
     }
 }
 

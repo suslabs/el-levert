@@ -1,10 +1,5 @@
-class LoggerError extends Error {
-    constructor(message = "", ...args) {
-        super(message, ...args);
+import CustomError from "./CustomError.js";
 
-        this.name = "CreateLoggerError";
-        this.message = message;
-    }
-}
+class LoggerError extends CustomError {}
 
 export default LoggerError;

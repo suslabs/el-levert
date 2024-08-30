@@ -1,10 +1,5 @@
-class ClientError extends Error {
-    constructor(message = "", ...args) {
-        super(message, ...args);
+import CustomError from "./CustomError.js";
 
-        this.name = "ClientError";
-        this.message = message;
-    }
-}
+class ClientError extends CustomError {}
 
 export default ClientError;

@@ -1,10 +1,5 @@
-class PermissionError extends Error {
-    constructor(message = "", ...args) {
-        super(message, ...args);
+import CustomError from "./CustomError.js";
 
-        this.name = "PermissionError";
-        this.message = message;
-    }
-}
+class PermissionError extends CustomError {}
 
 export default PermissionError;

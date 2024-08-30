@@ -1,10 +1,5 @@
-class ReminderError extends Error {
-    constructor(message = "", ...args) {
-        super(message, ...args);
+import CustomError from "./CustomError.js";
 
-        this.name = "ReminderError";
-        this.message = message;
-    }
-}
+class ReminderError extends CustomError {}
 
 export default ReminderError;

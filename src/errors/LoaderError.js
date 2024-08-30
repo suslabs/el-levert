@@ -1,10 +1,5 @@
-class LoaderError extends Error {
-    constructor(message = "", ...args) {
-        super(message, ...args);
+import CustomError from "./CustomError.js";
 
-        this.name = "LoaderError";
-        this.message = message;
-    }
-}
+class LoaderError extends CustomError {}
 
 export default LoaderError;
