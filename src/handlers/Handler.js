@@ -51,6 +51,10 @@ function _resubmit(msg) {
 
 class Handler {
     constructor(enabled = true, hasMessageTracker = true, hasUserTracker = false, options = {}) {
+        if (typeof this.constructor.name === "undefined") {
+            throw new HandlerError("Handler must have a name");
+        }
+
         if (typeof this.execute !== "function") {
             throw new HandlerError("Child class must have an execute function");
         }
@@ -61,6 +65,7 @@ class Handler {
         this.hasUserTracker = hasUserTracker;
 
         this.options = options;
+        this.priority ??= options.priority ?? 0;
 
         this.childExecute = this.execute;
         this.execute = _execute.bind(this);

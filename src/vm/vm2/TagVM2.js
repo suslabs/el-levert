@@ -1,3 +1,5 @@
+import VM from "../VM.js";
+
 import VM2ProcPool from "./process-pool/ProcessPool.js";
 
 import FakeUtil from "./classes/FakeUtil.js";
@@ -31,14 +33,16 @@ function formatCode(code) {
     return code;
 }
 
-class TagVM2 {
-    constructor(enabled) {
-        this.enabled = enabled;
+class TagVM2 extends VM {
+    static name = "vm2";
+
+    constructor(enabled, options) {
+        super(enabled, options);
+
+        this.vmOptions = options.vmOptions;
 
         this.memLimit = getClient().config.otherMemLimit;
         this.timeLimit = getClient().config.otherTimeLimit;
-
-        this.vmOptions = vmOptions;
     }
 
     createProcPool() {

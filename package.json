@@ -4,6 +4,7 @@
     "description": "",
     "main": "index.js",
     "type": "module",
+    "private": true,
     "scripts": {
         "start": "node --no-warnings=ExperimentalWarning index.js",
         "lint": "eslint \"**/*.js\" --ignore-pattern node_modules/",

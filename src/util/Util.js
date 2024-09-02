@@ -111,23 +111,47 @@ const Util = {
 
     waitForCondition: (condition, timeoutError, timeout = 0, interval = 100) => {
         return new Promise((resolve, reject) => {
-            let _timeout;
+            let _timeout, _interval;
+
+            function clearTimers() {
+                if (typeof _timeout !== "undefined") {
+                    clearTimeout(_timeout);
+                }
+
+                clearInterval(_interval);
+
+                _timeout = undefined;
+                _interval = undefined;
+            }
 
             if (timeout > 0) {
                 if (typeof timeoutError === "undefined") {
                     timeoutError = new Error("Condition timed out");
                 }
 
-                _timeout = setTimeout(() => reject(timeoutError), timeout);
+                _timeout = setTimeout(_ => {
+                    reject(timeoutError);
+                    clearTimers();
+                }, timeout);
             }
 
-            setInterval(() => {
-                if (condition()) {
-                    if (typeof _timeout !== "undefined") {
-                        clearTimeout(_timeout);
-                    }
+            _interval = setInterval(_ => {
+                let res;
 
+                try {
+                    res = condition();
+                } catch (err) {
+                    reject(err);
+                    clearTimers();
+
+                    return;
+                }
+
+                if (res) {
                     resolve();
+                    clearTimers();
+
+                    return;
                 }
             }, interval);
         });

@@ -13,22 +13,7 @@ import wrapEvent from "./client/wrapEvent.js";
 import executeAllHandlers from "./client/executeAllHandlers.js";
 import { registerGlobalErrorHandler, removeGlobalErrorHandler } from "./client/GlobalErrorHandler.js";
 
-import ReactionHandler from "./handlers/ReactionHandler.js";
-import CommandHandler from "./handlers/CommandHandler.js";
-import PreviewHandler from "./handlers/PreviewHandler.js";
-import SedHandler from "./handlers/SedHandler.js";
-
 import MessageProcessor from "./client/MessageProcessor.js";
-
-import CommandManager from "./managers/command/CommandManager.js";
-import TagManager from "./managers/database/TagManager.js";
-import PermissionManager from "./managers/database/PermissionManager.js";
-import ReminderManager from "./managers/database/ReminderManager.js";
-import CLICommandManager from "./managers/command/CLICommandManager.js";
-
-import TagVM from "./vm/isolated-vm/TagVM.js";
-import TagVM2 from "./vm/vm2/TagVM2.js";
-import ExternalVM from "./vm/judge0/ExternalVM.js";
 
 import Util from "./util/Util.js";
 
@@ -184,6 +169,12 @@ class LevertClient extends DiscordClient {
         }
     }
 
+    initializeHandlers() {
+        this.logger.info("Initializing handlers...");
+
+        this.logger.info("Initialized handlers.");
+    }
+
     loadHandlers() {
         this.logger.info("Loading handlers...");
 
@@ -202,7 +193,8 @@ class LevertClient extends DiscordClient {
 
             Object.defineProperty(this, name, {
                 value: handler,
-                configurable: true
+                configurable: true,
+                writable: true
             });
 
             this.logger.info(`Loaded handler: ${name}`);
@@ -258,7 +250,8 @@ class LevertClient extends DiscordClient {
 
             Object.defineProperty(this, name, {
                 value: manager,
-                configurable: true
+                configurable: true,
+                writable: true
             });
 
             this.logger.info(`Loaded manager: ${name}`);
@@ -307,7 +300,8 @@ class LevertClient extends DiscordClient {
 
             Object.defineProperty(this, name, {
                 value: VM,
-                configurable: true
+                configurable: true,
+                writable: true
             });
 
             this.logger.info(`Loaded VM: ${name}`);

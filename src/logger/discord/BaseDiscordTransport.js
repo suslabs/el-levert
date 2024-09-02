@@ -17,8 +17,12 @@ class BaseDiscordTransport extends Transport {
     constructor(opts) {
         super(opts);
 
+        if (typeof this.constructor.name === "undefined") {
+            throw new LoggerError("Discord transport must have a name");
+        }
+
         if (typeof this.sendLog !== "function") {
-            throw new LoggerError("Discord transport must have a sendLog function");
+            throw new LoggerError("Chuld class must have a sendLog function");
         }
 
         this.initialized = false;

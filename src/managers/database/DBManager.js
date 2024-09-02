@@ -14,10 +14,10 @@ const dbOptions = {
 };
 
 class DBManager extends Manager {
-    constructor(enabled, name, classType, fieldName) {
+    constructor(enabled, dbName, classType, fieldName) {
         super(enabled);
 
-        this.name = name;
+        this.dbName = dbName;
         this.classType = classType;
         this.fieldName = fieldName;
 
@@ -27,11 +27,11 @@ class DBManager extends Manager {
     setPaths() {
         this.dbDir = getClient().config.dbPath;
 
-        const dbFilename = dbFilenames[this.name];
+        const dbFilename = dbFilenames[this.dbName];
         this.dbPath = path.resolve(this.dbDir, dbFilename);
 
         const queryBase = dbFilenames.queryPath;
-        this.queryDir = path.resolve(queryBase, this.name);
+        this.queryDir = path.resolve(queryBase, this.dbName);
     }
 
     async checkDatabase() {
@@ -51,7 +51,7 @@ class DBManager extends Manager {
     }
 
     async createDatabase() {
-        const name = Util.capitalize(this.name);
+        const name = Util.capitalize(this.dbName);
         getLogger().info(`${name} database not found. Creating at path: ${this.dbPath}`);
 
         await this[this.fieldName].create();
@@ -66,7 +66,7 @@ class DBManager extends Manager {
         }
 
         await db.load();
-        getLogger().info(`Successfully loaded ${this.name} database.`);
+        getLogger().info(`Successfully loaded ${this.dbName} database.`);
     }
 
     async closeDatabase() {

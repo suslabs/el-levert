@@ -38,11 +38,17 @@ function _runScript(code, ...args) {
 
 class VM {
     constructor(enabled, options) {
+        if (typeof this.constructor.name === "undefined") {
+            throw new VMError("VM must have a name");
+        }
+
         if (typeof this.runScript !== "function") {
             throw new VMError("Child class must have a runScript function");
         }
 
         this.enabled = enabled;
+
+        this.options = options;
 
         this.childLoad = this.load;
         this.load = _load.bind(this);

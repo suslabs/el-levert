@@ -14,6 +14,8 @@ function logTime(t1) {
 }
 
 class ReminderManager extends DBManager {
+    static name = "reminderManager";
+
     constructor(enabled) {
         super(enabled, "reminder", ReminderDatabase, "remind_db");
 
