@@ -52,7 +52,7 @@ export default {
                     case "Group already exists":
                         return `:warning: Group **${g_name}** already exists.`;
                     case "Invalid level":
-                        return `Invalid level: \`${level}\`. Level must be an int larger than 0.`;
+                        return `Invalid level: \`${newLevel}\`. Level must be an int larger than 0.`;
                     default:
                         return `:warning: ${err.message}.`;
                 }

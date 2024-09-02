@@ -75,7 +75,7 @@ class SqlDatabase {
         }
 
         if (parsed.ext !== this.queryExtension) {
-            return fasle;
+            return false;
         }
 
         return true;

@@ -509,7 +509,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
 
     async pragma(pragma) {
         const sql = `PRAGMA ${pragma};`;
-        await this.exec(pragmaSql);
+        await this.exec(sql);
     }
 
     async enableWALMode() {

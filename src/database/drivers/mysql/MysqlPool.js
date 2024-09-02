@@ -156,9 +156,7 @@ class MysqlPool extends EventEmitter {
                 this.emit(PoolEvents.promiseError, err);
 
                 if (this.throwErrors) {
-                    reject(err);
-                } else {
-                    resolve();
+                    throw err;
                 }
 
                 return;
@@ -185,7 +183,7 @@ class MysqlPool extends EventEmitter {
             this.emit(PoolEvents.promiseError, err);
 
             if (this.throwErrors) {
-                reject(err);
+                throw err;
             }
         }
     }

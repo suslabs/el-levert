@@ -287,7 +287,9 @@ class PermissionManager extends DBManager {
 
             try {
                 find = await getClient().findUserById(user.user);
-            } catch (err) {}
+            } catch (err) {
+                getLogger().error("Error occured while fetching user:", err);
+            }
 
             user.setUsername(find?.username);
         }
