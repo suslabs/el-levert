@@ -1,19 +1,13 @@
 import ivm from "isolated-vm";
 const { ExternalCopy } = ivm;
 
+import FakeMsg from "./FakeMsg.js";
 import FakeUser from "./FakeUser.js";
 
 import { getClient } from "../../../LevertClient.js";
 import VMUtil from "../../../util/vm/VMUtil.js";
 
 const FakeUtil = {
-    findUsers: async search => {
-        let data = await getClient().findUsers(search);
-        data = data.map(user => new FakeUser(user).fixedUser);
-
-        return new ExternalCopy(data).copyInto();
-    },
-
     fetchTag: async name => {
         let tag = await getClient().tagManager.fetch(name);
 
@@ -58,7 +52,7 @@ const FakeUtil = {
             return undefined;
         }
 
-        msg = VMUtil.removeCircRef(msg);
+        msg = new FakeMsg(msg).fixedMsg;
         return new ExternalCopy(msg).copyInto();
     },
 
@@ -79,8 +73,15 @@ const FakeUtil = {
             return undefined;
         }
 
-        msgs = msgs.map(msg => VMUtil.removeCircRef(msg));
+        msgs = msgs.map(msg => new FakeMsg(msg).fixedMsg);
         return new ExternalCopy(msgs).copyInto();
+    },
+
+    findUsers: async query => {
+        let data = await getClient().findUsers(query);
+        data = data.map(user => new FakeUser(user).fixedUser);
+
+        return new ExternalCopy(data).copyInto();
     }
 };
 

@@ -15,7 +15,7 @@ class FakeMsg {
 
         const attachments = Array.from(msg.attachments.values());
 
-        this.fixedMsg = {
+        this.fixedMsg = VMUtil.removeCircRef({
             channelId: msg.channelId,
             guildId: msg.guildId,
             id: msg.id,
@@ -45,7 +45,7 @@ class FakeMsg {
             cleanContent: msg.content,
             channel: msg.channel,
             author: msg.author
-        };
+        });
     }
 
     static reply(text, msg) {
