@@ -1,4 +1,5 @@
 const TagFlags = {
+    old: 0,
     new: 1,
     script: 1 << 1,
     vm2: 1 << 2

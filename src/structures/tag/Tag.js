@@ -5,6 +5,8 @@ import { TagFlags, TagTypes } from "./TagTypes.js";
 import { getClient } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 
+import TagError from "../../errors/TagError.js";
+
 const defaultValues = {
     hops: [],
     name: "",
@@ -125,25 +127,69 @@ class Tag {
     }
 
     setType(type) {
-        let newType = TagFlags.new;
+        let version,
+            multipleType = false;
 
-        if (typeof type === "undefined" || type === TagTypes.defaultType) {
+        if (Array.isArray(type)) {
+            if (type.length === 0 || type.length > 2) {
+                throw new TagError("Invalid type");
+            }
+
+            [type, version] = type;
+            multipleType = true;
+        }
+
+        if (typeof type !== "string" || type.length < 1) {
+            throw new TagError("Invalid type");
+        }
+
+        if (multipleType && (typeof version !== "string" || version.length < 1)) {
+            throw new TagError("Invalid version");
+        }
+
+        let newType;
+
+        if (multipleType) {
+            newType = TagFlags[version];
+
+            if (typeof newType === "undefined") {
+                throw new TagError("Unknown version: " + version);
+            }
+        } else {
+            const versionNum = TagTypes.versionTypes.indexOf(type);
+
+            switch (versionNum) {
+                case 0:
+                    return this.setOld();
+                case 1:
+                    return this.setNew();
+                default:
+                    newType = TagFlags.new;
+            }
+        }
+
+        if (type === TagTypes.defaultType) {
             this.type = newType;
             return;
         }
 
         if (TagTypes.scriptTypes.includes(type)) {
             newType |= TagFlags.script;
+
+            this.type = newType;
+            return;
         }
 
         for (const specialType of TagTypes.specialScriptTypes) {
             if (type === specialType) {
                 newType |= TagFlags[specialType];
-                break;
+
+                this.type = newType;
+                return;
             }
         }
 
-        this.type = newType;
+        throw new TagError("Unknown type: " + type);
     }
 
     getVersion() {
@@ -267,6 +313,12 @@ class Tag {
                 }
 
                 out += `${this.args})`;
+            }
+
+            if (discord) {
+                return {
+                    content: out
+                };
             }
 
             return out;
