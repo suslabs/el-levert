@@ -174,7 +174,7 @@ class Loader {
         }
 
         if (writtenMessage.length > 0) {
-            this.logger?.log(ignored ? "debug" : "info", loadedMessage);
+            this.logger?.log(ignored ? "debug" : "info", writtenMessage);
         }
 
         this.data = data;

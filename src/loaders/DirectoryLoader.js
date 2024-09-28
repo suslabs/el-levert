@@ -173,7 +173,7 @@ class DirectoryLoader extends Loader {
             try {
                 status = await loader[filename].write(fileData);
             } catch (err) {
-                this.failure(err, `Error occured while writing ${this.logName}: ` + file);
+                this.failure(err, `Error occured while writing ${this.logName}: ` + filename);
 
                 bad++;
                 continue;
