@@ -95,7 +95,7 @@ class CommandHandler extends Handler {
             const reply = await msg.reply(out);
             this.messageTracker.addMsg(reply, msg.id);
         } catch (err) {
-            await this.handleReplyError(err);
+            await this.handleReplyError(err, msg);
             return;
         }
     }

@@ -43,14 +43,19 @@ class SedHandler extends Handler {
     }
 
     async fetchMatch(ch_id, regex, ignore_id, limit = 100) {
-        const msgs = await getClient().fetchMessages(ch_id, { limit }, null, false);
+        const msgs = await getClient().fetchMessages(ch_id, {
+            limit,
+            checkAccess: false
+        });
 
         if (!msgs) {
             return false;
         }
 
         const msg = msgs.find(msg => {
-            if (msg.author.id === getClient().client.user.id || msg.id === ignore_id) {
+            const isBot = msg.author.id === getClient().client.user.id;
+
+            if (isBot || msg.id === ignore_id) {
                 return false;
             }
 
@@ -142,7 +147,15 @@ class SedHandler extends Handler {
                 return true;
             }
 
-            throw err;
+            const reply = await msg.reply({
+                content: ":no_entry_sign: Encountered exception while generating sed replace:",
+                ...Util.getFileAttach(err.stack, "error.js")
+            });
+
+            this.messageTracker.addMsg(reply, msg.id);
+
+            getLogger().error("Sed generation failed:", err);
+            return false;
         }
 
         logSending(sed);
@@ -155,7 +168,7 @@ class SedHandler extends Handler {
             this.messageTracker.addMsg(reply, msg.id);
         } catch (err) {
             const reply = await msg.reply({
-                content: `:no_entry_sign: Encountered exception while sending preview:`,
+                content: `:no_entry_sign: Encountered exception while sending sed replace:`,
                 ...Util.getFileAttach(err.stack, "error.js")
             });
 

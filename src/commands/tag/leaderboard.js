@@ -4,6 +4,9 @@ import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 
+const leaderboardTypes = ["count", "size"],
+    defaultUserLimit = 10;
+
 function formatLeaderboard(leaderboard, type) {
     const format = leaderboard.map((entry, i) => {
         let str = `${i + 1}. \`${entry.user.username}\`: `;
@@ -39,23 +42,23 @@ export default {
 
         const [l_type, l_str] = Util.splitArgs(args, true);
 
-        if (!["count", "size"].includes(l_type)) {
+        if (!leaderboardTypes.includes(l_type)) {
             return ":warning: Invalid leaderboard type.";
         }
 
-        let limit = 20;
+        let maxUsers = defaultUserLimit;
 
         if (l_str.length > 0) {
-            limit = parseInt(l_str);
+            maxUsers = parseInt(l_str);
 
-            if (isNaN(limit) || limit < 1) {
+            if (isNaN(maxUsers) || maxUsers < 1) {
                 return ":warning: Invalid limit: " + l_str;
             }
 
-            limit = Util.clamp(limit, 1, 100);
+            maxUsers = Util.clamp(maxUsers, 1, 100);
         }
 
-        const leaderboard = await getClient().tagManager.leaderboard(l_type, limit);
+        const leaderboard = await getClient().tagManager.leaderboard(l_type, maxUsers);
 
         if (leaderboard.length < 1) {
             return ":information_source: There are no tags registered.";

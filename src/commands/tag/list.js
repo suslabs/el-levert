@@ -47,7 +47,7 @@ export default {
                 format += "\n\n";
             }
 
-            format += `Leveret 1 tags:\n${formatTagList(tags.oldTags)}`;
+            format += `OG Leveret tags:\n${formatTagList(tags.oldTags)}`;
         }
 
         const out = {

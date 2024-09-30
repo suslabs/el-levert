@@ -383,7 +383,7 @@ class TagManager extends DBManager {
                 leaderboard = await this.tag_db.sizeLeaderboard(limit);
                 break;
             default:
-                leaderboard = [];
+                throw new TagError("Invalid leaderboard type: " + type);
                 break;
         }
 

@@ -143,29 +143,20 @@ class Tag {
             throw new TagError("Invalid type");
         }
 
-        if (multipleType && (typeof version !== "string" || version.length < 1)) {
-            throw new TagError("Invalid version");
-        }
-
         let newType;
 
         if (multipleType) {
-            newType = TagFlags[version];
+            if (typeof version !== "string" || version.length < 1) {
+                throw new TagError("Invalid version");
+            }
 
-            if (typeof newType === "undefined") {
+            if (!TagTypes.versionTypes.includes(version)) {
                 throw new TagError("Unknown version: " + version);
             }
-        } else {
-            const versionNum = TagTypes.versionTypes.indexOf(type);
 
-            switch (versionNum) {
-                case 0:
-                    return this.setOld();
-                case 1:
-                    return this.setNew();
-                default:
-                    newType = TagFlags.new;
-            }
+            newType = TagFlags[version];
+        } else if (!this.setVersion(type)) {
+            newType = TagFlags.new;
         }
 
         if (type === TagTypes.defaultType) {
@@ -214,17 +205,24 @@ class Tag {
     }
 
     setVersion(version) {
+        if (typeof version !== "string" || version.length < 1) {
+            throw new TagError("Invalid version");
+        }
+
         const versionNum = TagTypes.versionTypes.indexOf(version);
 
-        if (versionNum === -1) {
-            return;
+        switch (versionNum) {
+            case -1:
+                return false;
+            case 0:
+                this.setOld();
+                break;
+            case 1:
+                this.setNew();
+                break;
         }
 
-        if (versionNum) {
-            this.setNew();
-        } else {
-            this.setOld();
-        }
+        return true;
     }
 
     getHopsString() {

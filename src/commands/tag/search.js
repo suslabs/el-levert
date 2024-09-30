@@ -2,6 +2,8 @@ import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 
+const defaultResultLimit = 20;
+
 export default {
     name: "search",
     aliases: ["find", "query"],
@@ -21,7 +23,7 @@ export default {
             return ":warning: " + e;
         }
 
-        let maxResults = 20;
+        let maxResults = defaultResultLimit;
 
         if (all) {
             maxResults = Infinity;
@@ -42,10 +44,12 @@ export default {
         const s = find.length > 1 ? "s" : "",
             header = `:information_source: Found **${find.length}** similar tag${s}:`;
 
-        let outLength = find.reduce((sum, name) => sum + name.length, 0);
+        let outLength = header.length + 1;
+
+        outLength += find.reduce((sum, name) => sum + name.length, 0);
         outLength += (find.length - 1) * "**, **".length + 2 * "**".length;
 
-        if (outLength + 1 >= getClient().commandHandler.outCharLimit - header.length) {
+        if (outLength >= getClient().commandHandler.outCharLimit) {
             const names = find.join(", ");
 
             return {
