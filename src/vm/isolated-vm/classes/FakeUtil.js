@@ -78,9 +78,11 @@ const FakeUtil = {
     },
 
     findUsers: async query => {
-        let data = await getClient().findUsers(query);
-        data = data.map(user => new FakeUser(user).fixedUser);
+        let data = await getClient().findUsers(query, {
+            onlyMembers: true
+        });
 
+        data = data.map(user => new FakeUser(user).fixedUser);
         return new ExternalCopy(data).copyInto();
     }
 };

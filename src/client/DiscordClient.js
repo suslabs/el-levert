@@ -14,7 +14,9 @@ const {
     Partials,
     ActivityType,
     PermissionsBitField,
-    ChannelType
+    ChannelType,
+    User,
+    GuildMember
 } = discord;
 
 const clientOptions = ["wrapEvents", "eventsDir", "loginTimeout", "mentionUsers", "pingReply"];
@@ -287,14 +289,18 @@ class DiscordClient {
         }
 
         if (user_id === null || typeof user_id === "undefined") {
-            throw new ClientError("No user ID provided");
+            throw new ClientError("No user or user ID provided");
         }
 
         let guild;
 
         switch (typeof sv_id) {
             case "string":
-                guild = await this.fetchGuild(ch_id, channelOptions);
+                if (sv_id.length < 1) {
+                    throw new ClientError("Invalid guild ID provided (length = 0)");
+                }
+
+                guild = await this.fetchGuild(sv_id);
 
                 if (!guild) {
                     return false;
@@ -305,7 +311,22 @@ class DiscordClient {
                 guild = sv_id;
                 break;
             default:
-                throw new ClientError("Invalid guild or guild ID");
+                throw new ClientError("Invalid guild or guild ID provided");
+        }
+
+        switch (typeof user_id) {
+            case "string":
+                if (user_id.length < 1) {
+                    throw new ClientError("Invalid user ID provided (length = 0)");
+                }
+
+                break;
+            case "object":
+                const user = user_id;
+                user_id = user.id;
+                break;
+            default:
+                throw new ClientError("Invalid user or user ID provided");
         }
 
         Util.setValuesWithDefaults(options, options, defaultMemberOptions);
@@ -332,6 +353,17 @@ class DiscordClient {
             throw new ClientError("No channel ID provided");
         }
 
+        switch (typeof ch_id) {
+            case "string":
+                if (ch_id.length < 1) {
+                    throw new ClientError("Invalid channel ID provided (length = 0)");
+                }
+
+                break;
+            default:
+                throw new ClientError("Invalid channel ID provided");
+        }
+
         Util.setValuesWithDefaults(options, options, defaultChannelOptions);
 
         let channel;
@@ -352,22 +384,52 @@ class DiscordClient {
             return channel;
         }
 
-        if (options.user_id === null || typeof options.user_id === "undefined") {
-            throw new ClientError("No user ID provided");
+        let user_id = options.user_id,
+            user,
+            member;
+
+        if (user_id === null || typeof user_id === "undefined") {
+            throw new ClientError("No user/member or user ID provided");
+        }
+
+        switch (typeof user_id) {
+            case "string":
+                if (user_id.length < 1) {
+                    throw new ClientError("Invalid user ID provided (length = 0)");
+                }
+
+                break;
+            case "object":
+                if (user_id instanceof User) {
+                    user = user_id;
+                } else if (user_id instanceof GuildMember) {
+                    member = user_id;
+
+                    if (member.guild !== channel.guild) {
+                        throw new ClientError("The member's guild isn't the same as the channel's guild");
+                    }
+                }
+
+                user_id = user?.id ?? member?.id;
+                break;
+            default:
+                throw new ClientError("Invalid user/member or user ID provided");
         }
 
         switch (channel.type) {
             case ChannelType.DM:
-                if (channel.recipientId !== options.user_id) {
+                if (channel.recipientId !== user_id) {
                     return false;
                 }
 
                 break;
             default:
-                const member = await this.fetchMember(channel.guild, options.user_id, cache);
+                if (typeof member === "undefined") {
+                    member = await this.fetchMember(channel.guild, user_id);
 
-                if (!member) {
-                    return false;
+                    if (!member) {
+                        return false;
+                    }
                 }
 
                 const perms = channel.memberPermissions(member, true);
@@ -383,12 +445,23 @@ class DiscordClient {
     }
 
     async fetchMessage(ch_id, msg_id, options = {}) {
+        if (msg_id === null || typeof msg_id === "undefined") {
+            throw new ClientError("No message ID provided");
+        }
+
         if (ch_id === null || typeof ch_id === "undefined") {
             throw new ClientError("No channel or channel ID provided");
         }
 
-        if (msg_id === null || typeof msg_id === "undefined") {
-            throw new ClientError("No message ID provided");
+        switch (typeof msg_id) {
+            case "string":
+                if (msg_id.length < 1) {
+                    throw new ClientError("Invalid message ID provided (length = 0)");
+                }
+
+                break;
+            default:
+                throw new ClientError("Invalid message ID provided");
         }
 
         let channel;
@@ -411,7 +484,7 @@ class DiscordClient {
                 channel = ch_id;
                 break;
             default:
-                throw new ClientError("Invalid channel or channel ID");
+                throw new ClientError("Invalid channel or channel ID provided");
         }
 
         Util.setValuesWithDefaults(options, options, defaultMessageOptions);
@@ -502,15 +575,20 @@ class DiscordClient {
     }
 
     async findUsers(query, options = {}, fetchOptions = {}) {
-        const guilds = this.client.guilds.cache;
-
-        const idMatch = query.match(userIdRegex),
-            mentionMatch = query.match(mentionRegex);
+        if (query === null || typeof query === "undefined") {
+            throw new ClientError("No query provided");
+        }
 
         Util.setValuesWithDefaults(options, options, defaultUsersOptions);
 
-        if (idMatch ?? mentionMatch) {
-            const user_id = idMatch[1] ?? mentionMatch[1];
+        const guilds = this.client.guilds.cache;
+
+        const idMatch = query.match(userIdRegex),
+            mentionMatch = query.match(mentionRegex),
+            userMatch = idMatch ?? mentionMatch;
+
+        if (userMatch !== null) {
+            const user_id = userMatch[1];
 
             for (const guild of guilds.values()) {
                 const member = await this.fetchMember(guild, user_id);
@@ -526,12 +604,12 @@ class DiscordClient {
 
             const user = await this.findUserById(user_id);
 
-            if (!user) {
-                return [];
+            if (user) {
+                user.user = user;
+                return [user];
             }
 
-            user.user = user;
-            return [user];
+            return [];
         }
 
         if (!options.searchMembers) {
