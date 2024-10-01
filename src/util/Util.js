@@ -593,7 +593,7 @@ const Util = {
         const t1 = typeof d1 === "object" ? d1.getTime() : Number(d1),
             t2 = typeof d2 === "object" ? d2.getTime() : Number(d2);
 
-        return t2 - t1;
+        return Math.abs(t2 - t1);
     },
 
     duration: (delta, format = false, include) => {
@@ -604,29 +604,35 @@ const Util = {
 
                 return name !== "milli";
             }),
-            dur = {};
+            durations = {};
 
         let d_secs = delta * durationSeconds.milli;
 
-        for (const name of durationNames) {
-            const secs = durationSeconds[name],
-                num = Math.floor(d_secs / secs);
+        if (d_secs < 1) {
+            durations["second"] = d_secs;
+        } else {
+            for (const name of durationNames) {
+                const secs = durationSeconds[name],
+                    duration = Math.floor(d_secs / secs);
 
-            if (num > 0) {
-                d_secs -= num * secs;
-                dur[name] = num;
+                if (duration > 0) {
+                    d_secs -= duration * secs;
+                    durations[name] = duration;
+                }
             }
         }
 
         if (!format) {
-            return dur;
+            return durations;
         }
 
-        const _format = Object.entries(dur).map(entry => {
-            const [name, dur] = entry,
-                s = dur > 1 ? "s" : "";
+        const _format = Object.entries(durations).map(entry => {
+            const [name, duration] = entry;
 
-            return `${dur} ${name}${s}`;
+            const durStr = duration.toLocaleString(),
+                s = duration !== 1 ? "s" : "";
+
+            return `${durStr} ${name}${s}`;
         });
 
         return _format.join(", ");
