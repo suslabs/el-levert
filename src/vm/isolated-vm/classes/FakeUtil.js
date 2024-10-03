@@ -45,7 +45,8 @@ const FakeUtil = {
         }
 
         let msg = await getClient().fetchMessage(ch_id, msg_id, {
-            user_id
+            user_id,
+            checkAccess: true
         });
 
         if (!msg) {
@@ -64,7 +65,8 @@ const FakeUtil = {
         let msgs = await getClient().fetchMessages(
             ch_id,
             {
-                user_id
+                user_id,
+                checkAccess: true
             },
             fetchOptions
         );

@@ -10,7 +10,7 @@ import { getClient, getLogger } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 import VMUtil from "../../util/vm/VMUtil.js";
 
-const vmOptions = {
+const defaultVMOptions = {
     allowAsync: true,
     wrapper: "none",
     console: "inherit",
@@ -36,10 +36,10 @@ function formatCode(code) {
 class TagVM2 extends VM {
     static name = "vm2";
 
-    constructor(enabled, options) {
+    constructor(enabled, options = {}) {
         super(enabled, options);
 
-        this.vmOptions = options.vmOptions;
+        this.vmOptions = options.vmOptions ?? defaultVMOptions;
 
         this.memLimit = getClient().config.otherMemLimit;
         this.timeLimit = getClient().config.otherTimeLimit;

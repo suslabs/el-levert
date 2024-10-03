@@ -44,16 +44,16 @@ const defaultMemberOptions = {
 
 const defaultChannelOptions = {
     cache: true,
-    checkAccess: true
+    checkAccess: false
 };
 
 const defaultMessageOptions = {
     cache: true,
-    checkAccess: true
+    checkAccess: false
 };
 
 const defaultMessagesOptions = {
-        checkAccess: true
+        checkAccess: false
     },
     defaultMessagesFetchOptions = {
         limit: 100
@@ -264,6 +264,10 @@ class DiscordClient {
             throw new ClientError("No guild ID provided");
         }
 
+        if (typeof options !== "object") {
+            throw new ClientError("Invalid options provided");
+        }
+
         Util.setValuesWithDefaults(options, options, defaultGuildOptions);
 
         let guild;
@@ -290,6 +294,10 @@ class DiscordClient {
 
         if (user_id === null || typeof user_id === "undefined") {
             throw new ClientError("No user or user ID provided");
+        }
+
+        if (typeof options !== "object") {
+            throw new ClientError("Invalid options provided");
         }
 
         let guild;
@@ -351,6 +359,10 @@ class DiscordClient {
     async fetchChannel(ch_id, options = {}) {
         if (ch_id === null || typeof ch_id === "undefined") {
             throw new ClientError("No channel ID provided");
+        }
+
+        if (typeof options !== "object") {
+            throw new ClientError("Invalid options provided");
         }
 
         switch (typeof ch_id) {
@@ -432,7 +444,8 @@ class DiscordClient {
                     }
                 }
 
-                const perms = channel.memberPermissions(member, true);
+                const threadChannel = [ChannelType.PublicThread, ChannelType.PrivateThread].includes(channel.type),
+                    perms = (threadChannel ? channel.parent : channel).memberPermissions(member, true);
 
                 if (perms === null || !perms.has(PermissionsBitField.Flags.ViewChannel)) {
                     return false;
@@ -451,6 +464,10 @@ class DiscordClient {
 
         if (ch_id === null || typeof ch_id === "undefined") {
             throw new ClientError("No channel or channel ID provided");
+        }
+
+        if (typeof options !== "object") {
+            throw new ClientError("Invalid options provided");
         }
 
         switch (typeof msg_id) {
@@ -507,6 +524,10 @@ class DiscordClient {
             throw new ClientError("No channel or channel ID provided");
         }
 
+        if (typeof options !== "object" || typeof fetchOptions !== "object") {
+            throw new ClientError("Invalid options provided");
+        }
+
         Util.setValuesWithDefaults(options, options, defaultMessagesOptions);
 
         let channel;
@@ -555,6 +576,10 @@ class DiscordClient {
             throw new ClientError("No user ID provided");
         }
 
+        if (typeof options !== "object") {
+            throw new ClientError("Invalid options provided");
+        }
+
         Util.setValuesWithDefaults(options, options, defaultUserOptions);
 
         let user;
@@ -577,6 +602,10 @@ class DiscordClient {
     async findUsers(query, options = {}, fetchOptions = {}) {
         if (query === null || typeof query === "undefined") {
             throw new ClientError("No query provided");
+        }
+
+        if (typeof options !== "object" || typeof fetchOptions !== "object") {
+            throw new ClientError("Invalid options provided");
         }
 
         Util.setValuesWithDefaults(options, options, defaultUsersOptions);

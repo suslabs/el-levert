@@ -26,8 +26,8 @@ class TagVM extends VM {
         this.memLimit = getClient().config.memLimit;
         this.timeLimit = getClient().config.timeLimit;
 
-        this.outCharLimit = getClient().config.outCharLimit;
-        this.outNewlineLimit = getClient().config.outNewlineLimit;
+        this.outCharLimit = Util.clamp(getClient().config.outCharLimit, 0, 2000);
+        this.outNewlineLimit = Util.clamp(getClient().config.outNewlineLimit, 0, 2000);
 
         this.enableInspector = getClient().config.enableInspector;
     }

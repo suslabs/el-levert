@@ -1,4 +1,4 @@
-import { EmbedBuilder, hyperlink } from "discord.js";
+import { ChannelType, EmbedBuilder, hyperlink } from "discord.js";
 
 import Handler from "./Handler.js";
 import HandlerError from "../errors/HandlerError.js";
@@ -60,10 +60,12 @@ class PreviewHandler extends Handler {
         }
 
         const rawMsgUrl = match[0],
-            { sv_id, ch_id, msg_id } = match.groups,
-            inDms = sv_id === "@me";
+            { sv_id, ch_id, msg_id } = match.groups;
 
-        const prevMsg = await getClient().fetchMessage(ch_id, msg_id, msg.author.id);
+        const prevMsg = await getClient().fetchMessage(ch_id, msg_id, {
+            user_id: msg.author.id,
+            checkAccess: true
+        });
 
         if (!prevMsg) {
             throw new HandlerError("Preview message not found");
@@ -98,6 +100,9 @@ class PreviewHandler extends Handler {
             }
         }
 
+        const inDms = prevMsg.channel.type === ChannelType.DM,
+            inThread = [ChannelType.PublicThread, ChannelType.PrivateThread].includes(prevMsg.channel.type);
+
         if (!inDms) {
             const msgUrl = new URL(rawMsgUrl);
             msgUrl.protocol = "https";
@@ -111,10 +116,16 @@ class PreviewHandler extends Handler {
 
         if (inDms) {
             channel = "DMs";
-        } else if (sv_id === msg.guild?.id) {
-            channel = `#${prevMsg.channel.name}`;
         } else {
-            channel = `#${prevMsg.channel.name} - ${prevMsg.guild.name}`;
+            channel = `#${inThread ? prevMsg.channel.parent.name : prevMsg.channel.name}`;
+
+            if (typeof msg.guild !== "undefined" && sv_id !== msg.guild.id) {
+                channel += ` - ${prevMsg.guild.name}`;
+            }
+
+            if (inThread) {
+                channel = `"${prevMsg.channel.name}" (thread of parent channel ${channel})`;
+            }
         }
 
         const username = prevMsg.author.displayName,

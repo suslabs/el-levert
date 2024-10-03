@@ -1,4 +1,4 @@
-import { EmbedBuilder, MessageType } from "discord.js";
+import { ChannelType, MessageType, EmbedBuilder } from "discord.js";
 
 import Handler from "./Handler.js";
 import HandlerError from "../errors/HandlerError.js";
@@ -43,10 +43,7 @@ class SedHandler extends Handler {
     }
 
     async fetchMatch(ch_id, regex, ignore_id, limit = 100) {
-        const msgs = await getClient().fetchMessages(ch_id, {
-            limit,
-            checkAccess: false
-        });
+        const msgs = await getClient().fetchMessages(ch_id, { limit });
 
         if (!msgs) {
             return false;
@@ -94,20 +91,38 @@ class SedHandler extends Handler {
             throw new HandlerError("Invalid regex or flags");
         }
 
-        if (msg.type === MessageType.Reply) {
-            sedMsg = await getClient().fetchMessage(msg.channel.id, msg.reference.messageId, null, false);
-        } else {
-            sedMsg = await this.fetchMatch(msg.channel.id, regex, msg.id);
+        switch (msg.type) {
+            case MessageType.Reply:
+                sedMsg = await getClient().fetchMessage(msg.channel.id, msg.reference.messageId);
+                break;
+            default:
+                sedMsg = await this.fetchMatch(msg.channel.id, regex, msg.id);
+                break;
         }
 
         if (!sedMsg) {
             throw new HandlerError("No matching message found");
         }
 
+        const replacedContent = sedMsg.content.replace(regex, replace ?? "");
+
+        const inDms = sedMsg.channel.type === ChannelType.DM,
+            inThread = [ChannelType.PublicThread, ChannelType.PrivateThread].includes(sedMsg.channel.type);
+
+        let channel;
+
+        if (inDms) {
+            channel = "DMs";
+        } else {
+            channel = `#${inThread ? sedMsg.channel.parent.name : sedMsg.channel.name}`;
+
+            if (inThread) {
+                channel = `"${sedMsg.channel.name}" (thread of parent channel ${channel})`;
+            }
+        }
+
         const username = sedMsg.author.displayName,
             avatar = sedMsg.author.displayAvatarURL(),
-            content = sedMsg.content.replace(regex, replace ?? ""),
-            channel = `#${sedMsg.channel.name}`,
             timestamp = sedMsg.editedTimestamp ?? sedMsg.createdTimestamp,
             image = sedMsg.attachments.at(0)?.url;
 
@@ -116,7 +131,7 @@ class SedHandler extends Handler {
                 name: username,
                 iconURL: avatar
             })
-            .setDescription(content)
+            .setDescription(replacedContent)
             .setTimestamp(timestamp)
             .setImage(image)
             .setFooter({
@@ -141,7 +156,17 @@ class SedHandler extends Handler {
             sed = await this.genSed(msg, msg.content);
         } catch (err) {
             if (err.name === "HandlerError") {
-                const reply = msg.reply(`:warning: ${err.message}.\n${sedUsage}`);
+                let emoji;
+
+                switch (err.message) {
+                    case "No matching message found":
+                        emoji = ":no_entry_sign:";
+                        break;
+                    default:
+                        emoji = ":warning:";
+                }
+
+                const reply = msg.reply(`${emoji} ${err.message}.\n${sedUsage}`);
                 this.messageTracker.addMsg(reply, msg.id);
 
                 return true;
@@ -175,7 +200,6 @@ class SedHandler extends Handler {
             this.messageTracker.addMsg(reply, msg.id);
 
             getLogger().error("Reply failed", err);
-
             return false;
         }
 
