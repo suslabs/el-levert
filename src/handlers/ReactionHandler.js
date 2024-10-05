@@ -158,20 +158,20 @@ class ReactionHandler extends Handler {
 
         logParansUsage(msg, parans);
 
-        if (parans.left > 0) {
+        if (parans.right > 0) {
             try {
-                for (let i = 0; i < parans.left; i++) {
-                    await msg.react(this.parans.right[i]);
+                for (let i = 0; i < parans.right; i++) {
+                    await msg.react(this.parans.left[i]);
                 }
             } catch (err) {
                 getLogger().error("Failed to react to message:", err);
             }
         }
 
-        if (parans.right < 0) {
+        if (parans.left > 0) {
             try {
-                for (let i = 0; i < parans.right; i++) {
-                    await msg.react(this.parans.left[i]);
+                for (let i = 0; i < parans.left; i++) {
+                    await msg.react(this.parans.right[i]);
                 }
             } catch (err) {
                 getLogger().error("Failed to react to message:", err);
