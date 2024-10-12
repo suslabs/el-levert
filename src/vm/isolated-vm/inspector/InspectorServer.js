@@ -15,7 +15,7 @@ function listener(socket) {
     this.inspectorSocket = socket;
 
     if (this.inspectorContext === null) {
-        getLogger().debug("No script is running. Disconnecting inspector.");
+        getLogger().info("No script is running. Disconnecting inspector.");
         this.closeSocket();
 
         return;
@@ -24,7 +24,7 @@ function listener(socket) {
     this.connectInspector();
 
     socket.on("error", err => {
-        getLogger().debug("Inspector websocket error:", err);
+        getLogger().error("Inspector websocket error:", err);
         this.disconnectInspector();
     });
 
@@ -41,7 +41,7 @@ function listener(socket) {
         try {
             this.inspectorContext?.inspector.sendMessage(msg);
         } catch (err) {
-            getLogger().debug("Error sending message to inspector:", err);
+            getLogger().error("Error occured while sending message to inspector:", err);
             socket.close();
         }
     });
@@ -60,9 +60,11 @@ function sendReply(msg) {
 }
 
 class InspectorServer {
-    constructor(enable, port = 8080, options = {}) {
-        this.enable = enable;
+    constructor(enabled, port = 8080, options = {}) {
+        this.enabled = enabled;
         this.port = port;
+
+        this.options = options;
 
         this.logPackets = options.logPackets ?? false;
 
@@ -88,7 +90,7 @@ class InspectorServer {
     }
 
     setContext(context) {
-        if (!this.enable) {
+        if (!this.enabled) {
             return;
         }
 
@@ -96,7 +98,7 @@ class InspectorServer {
     }
 
     setup() {
-        if (!this.enable) {
+        if (!this.enabled) {
             return;
         }
 
@@ -114,7 +116,7 @@ class InspectorServer {
 
     bindEvents() {
         this.websocketServer.on("connection", listener.bind(this));
-        this.websocketServer.on("close", _ => getLogger().debug("Inspector server closed."));
+        this.websocketServer.on("close", _ => getLogger().debug("Inspector websocket server closed."));
     }
 
     get inspectorConnected() {
@@ -164,7 +166,7 @@ class InspectorServer {
     }
 
     executionFinished() {
-        if (!this.enable) {
+        if (!this.enabled) {
             return;
         }
 
@@ -172,14 +174,14 @@ class InspectorServer {
     }
 
     close() {
-        if (!this.enable) {
+        if (!this.enabled) {
             return;
         }
 
         this.websocketServer.close();
         this.deleteReferences();
 
-        getLogger().debug("Closed inspector server.");
+        getLogger().info("Closed inspector server.");
     }
 }
 

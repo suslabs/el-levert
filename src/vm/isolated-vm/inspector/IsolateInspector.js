@@ -3,11 +3,26 @@ import VMError from "../../../errors/VMError.js";
 import { getLogger } from "../../../LevertClient.js";
 import Util from "../../../util/Util.js";
 
-class IsolateInspector {
-    constructor(enable, options) {
-        this.enable = enable;
+const initialBreakpoint = "/* break on script start */ debugger;";
 
-        if (enable && typeof options.sendReply !== "function") {
+function getWrappedReplyFunc(inspector) {
+    return function wrappedReply(msg) {
+        try {
+            this.sendReply(msg);
+        } catch (err) {
+            getLogger().error("Inspector reply error:", err);
+            this.dispose();
+        }
+    }.bind(inspector);
+}
+
+class IsolateInspector {
+    constructor(enabled, options) {
+        this.enabled = enabled;
+
+        this.options = options;
+
+        if (enabled && typeof options.sendReply !== "function") {
             throw new VMError("No reply function provided");
         } else {
             this.sendReply = options.sendReply;
@@ -20,7 +35,7 @@ class IsolateInspector {
     }
 
     create(isolate) {
-        if (!this.enable) {
+        if (!this.enabled) {
             return;
         }
 
@@ -32,45 +47,20 @@ class IsolateInspector {
             this.isolate = isolate;
         }
 
-        const channel = isolate.createInspectorSession();
-
-        const wrappedReply = function (msg) {
-            try {
-                this.sendReply(msg);
-            } catch (err) {
-                getLogger().debug("Reply error:", err);
-                this.disposeChannel();
-            }
-        }.bind(this);
+        const channel = isolate.createInspectorSession(),
+            wrappedReply = getWrappedReplyFunc(this);
 
         channel.onResponse = (_, msg) => wrappedReply(msg);
         channel.onNotification = wrappedReply;
 
-        getLogger().debug("Created channel.");
         this.channel = channel;
-    }
+        this.wrappedReply = wrappedReply;
 
-    sendMessage(msg) {
-        const str = String(msg);
-        this.channel.dispatchProtocolMessage(str);
-    }
-
-    dispose() {
-        if (this.channel === null) {
-            return;
-        }
-
-        try {
-            this.channel.dispose();
-        } catch (err) {
-            getLogger().debug("Dispose error:", err);
-        }
-
-        this.channel = null;
+        getLogger().debug("Created channel.");
     }
 
     async waitForConnection() {
-        if (!this.enable) {
+        if (!this.enabled) {
             return;
         }
 
@@ -81,6 +71,19 @@ class IsolateInspector {
             new VMError("Inspector wasn't connected in time"),
             this.connectTimeout
         );
+    }
+
+    getDebuggerCode(code) {
+        if (!this.enabled) {
+            return code;
+        }
+
+        return initialBreakpoint + "\n\n" + code;
+    }
+
+    sendMessage(msg) {
+        const str = String(msg);
+        this.channel.dispatchProtocolMessage(str);
     }
 
     onConnection() {
@@ -106,6 +109,21 @@ class IsolateInspector {
 
         this.dispose();
         this.connected = false;
+    }
+
+    dispose() {
+        if (this.channel === null) {
+            return;
+        }
+
+        try {
+            this.channel.dispose();
+        } catch (err) {
+            getLogger().error("Error occured while disposing inspector channel:", err);
+        }
+
+        this.channel = null;
+        delete this.wrappedReply;
     }
 }
 

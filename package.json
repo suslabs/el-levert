@@ -19,7 +19,7 @@
         "chrono-node": "^2.7.6",
         "discord.js": "^14.15.3",
         "generic-pool": "^3.9.0",
-        "isolated-vm": "^4.7.2",
+        "isolated-vm": "^5.0.1",
         "mysql": "^2.18.1",
         "sqlite3": "^5.1.7",
         "vm2": "^3.9.19",

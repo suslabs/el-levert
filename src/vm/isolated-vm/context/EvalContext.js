@@ -141,6 +141,8 @@ class EvalContext {
     }
 
     async compileScript(code, setReference = true) {
+        code = this.inspector.getDebuggerCode(code);
+
         const script = await this.isolate.compileScript(code, {
             filename: `file:///${filename}`
         });
