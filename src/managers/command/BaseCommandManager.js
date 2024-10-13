@@ -4,6 +4,8 @@ import Command from "../../structures/Command.js";
 import CommandLoader from "../../loaders/command/CommandLoader.js";
 import LoadStatus from "../../loaders/LoadStatus.js";
 
+import CommandError from "../../errors/CommandError.js";
+
 import { getClient, getLogger } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 
@@ -42,7 +44,7 @@ class BaseCommandManager extends Manager {
     getCommands(perm) {
         const commands = this.commands.filter(command => !command.isSubcmd);
 
-        if (typeof perm === "undefined") {
+        if (perm === null || typeof perm === "undefined") {
             return commands;
         }
 
@@ -208,7 +210,7 @@ class BaseCommandManager extends Manager {
 
         this.commands = commands;
 
-        this.deleteDuplicates();
+        this.deleteDuplicateCommands();
         this.bindSubcommands();
     }
 
@@ -261,13 +263,17 @@ class BaseCommandManager extends Manager {
                 format = unboundCmds.map((cmd, i) => `${i + 1}. "${cmd.name}" -> "${cmd.parent}"`).join("\n");
 
             getLogger().warn(`Found ${unbound} orphaned subcommand(s):\n${format}`);
+
+            Util.wipeArray(unboundCmds, command => {
+                this.deleteSubcommand(command);
+            });
         }
 
         return bound;
     }
 
-    deleteDuplicates() {
-        const duplicates = this.findDuplicates();
+    deleteDuplicateCommands() {
+        const duplicates = this.findDuplicateCommands();
 
         Util.wipeArray(duplicates, command => {
             this.deleteCommand(command, false);
@@ -275,7 +281,7 @@ class BaseCommandManager extends Manager {
         });
     }
 
-    findDuplicates() {
+    findDuplicateCommands() {
         const commands = this.getCommands(),
             duplicates = [];
 
@@ -303,24 +309,6 @@ class BaseCommandManager extends Manager {
         return duplicates;
     }
 
-    deleteCommand(command, removeSubcommands = true) {
-        Util.removeItem(this.commands, command);
-        this.commandLoader.deleteData(command);
-
-        if (!removeSubcommands) {
-            return;
-        }
-
-        if (command.subcmds.size < 1) {
-            return;
-        }
-
-        for (const subcmd of command.getSubcmds()) {
-            Util.removeItem(this.commands, subcmd);
-            this.commandLoader.deleteData(subcmd);
-        }
-    }
-
     deleteCommands() {
         if (this.commandLoader.loaded) {
             this.commandLoader.deleteCommands();
@@ -329,6 +317,80 @@ class BaseCommandManager extends Manager {
         }
 
         delete this.commandLoader;
+    }
+
+    deleteCommand(command, removeSubcommands = true, errorIfNotFound = false) {
+        if (command.isSubcmd) {
+            throw new CommandError("Can only delete parent commands");
+        }
+
+        let deleted = Util.removeItem(this.commands, command);
+
+        if (errorIfNotFound && !deleted) {
+            throw new CommandError(`Couldn't delete command ${command.name}`);
+        }
+
+        this.commandLoader.deleteData(command, errorIfNotFound);
+
+        if (!removeSubcommands) {
+            return deleted;
+        }
+
+        if (command.subcmds.size < 1) {
+            return deleted;
+        }
+
+        this.deleteSubcommands(command, errorIfNotFound);
+        return deleted;
+    }
+
+    deleteSubcommands(command, errorIfNotFound = false) {
+        if (command.subcmds.size < 1) {
+            if (errorIfNotFound) {
+                throw new CommandError("Command has no subcommands");
+            }
+
+            return false;
+        }
+
+        let deleted = true;
+
+        for (const subcmd of command.getSubcmds()) {
+            deleted &= Util.removeItem(this.commands, subcmd);
+
+            if (errorIfNotFound && !deleted) {
+                throw new CommandError(`Couldn't delete subcommand ${subcmd.name} of command ${command.name}`);
+            }
+
+            this.commandLoader.deleteData(subcmd, errorIfNotFound);
+        }
+
+        command.removeSubcommands();
+        return deleted;
+    }
+
+    deleteSubcommand(subcmd, parent, errorIfNotFound = false) {
+        if (!subcmd.isSubcmd) {
+            throw new CommandError("Can only delete subcommands");
+        }
+
+        parent = subcmd.parentCmd ?? parent;
+        const hasParent = parent !== null && typeof parent !== "undefined";
+
+        const deleted = Util.removeItem(this.commands, subcmd);
+
+        if (errorIfNotFound && !deleted) {
+            throw new CommandError(
+                `Couldn't delete subcommand ${subcmd.name}` + hasParent ? ` of command ${parent.name}` : ""
+            );
+        }
+
+        if (!hasParent) {
+            return deleted;
+        }
+
+        parent.removeSubcommand(subcmd);
+        return deleted;
     }
 
     async reloadCommands() {

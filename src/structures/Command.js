@@ -215,20 +215,39 @@ class Command {
         return help;
     }
 
-    addSubcommand(command) {
+    addSubcommand(subcmd) {
         if (this.isSubcmd) {
             throw new CommandError("Only parent commands can have subcommands");
         }
 
-        this.subcmds.set(command.name, command);
+        if (!this.subcommands.includes(subcmd.name)) {
+            this.subcommands.push(subcmd.name);
+        }
 
-        if (command.aliases.length > 0) {
-            for (const alias of command.aliases) {
-                this.subcmds.set(alias, command);
+        this.subcmds.set(subcmd.name, subcmd);
+
+        if (subcmd.aliases.length > 0) {
+            for (const alias of subcmd.aliases) {
+                this.subcmds.set(alias, subcmd);
             }
         }
 
-        command.bind(this);
+        subcmd.bind(this);
+    }
+
+    removeSubcommand(command) {
+        if (this.isSubcmd) {
+            throw new CommandError("Only parent commands can have subcommands");
+        }
+    }
+
+    removeSubcommands() {
+        if (this.isSubcmd) {
+            throw new CommandError("Only parent commands can have subcommands");
+        }
+
+        Util.wipeArray(this.subcommands);
+        this.subcmds.clear();
     }
 
     bind(command) {
