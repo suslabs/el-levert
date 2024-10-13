@@ -3,6 +3,7 @@ const { Isolate, ExternalCopy } = ivm;
 
 import FakeTag from "../classes/FakeTag.js";
 import FakeMsg from "../classes/FakeMsg.js";
+import FakeVM from "../classes/FakeVM.js";
 
 import VMFunction from "../../../structures/vm/VMFunction.js";
 import VMError from "../../../errors/VMError.js";
@@ -22,6 +23,7 @@ class EvalContext {
         this.timeLimit = options.timeLimit;
 
         this.setupInspector(inspectorOptions);
+        this.vmObjects = [];
     }
 
     setupInspector(options) {
@@ -36,26 +38,44 @@ class EvalContext {
 
         this.global = global;
         await global.set("global", global.derefInto());
+
+        this.vmObjects.push({ targetName: "global" });
+    }
+
+    async setVMObject(name, _class, params, targetProp = "this") {
+        const obj = new _class(...params),
+            targetObj = targetProp === "this" ? obj : obj[targetProp];
+
+        if (typeof targetObj === "undefined") {
+            throw new VMError(`Invalid target property "${targetProp}" on object: ${name}`);
+        }
+
+        const targetName = "vm" + Util.capitalize(name),
+            vmName = globalNames[name];
+
+        if (typeof vmName === "undefined") {
+            throw new VMError("Unknown global object: " + name);
+        }
+
+        const vmObj = new ExternalCopy(targetObj);
+        await this.global.set(vmName, vmObj.copyInto());
+
+        this[name] = obj;
+        this[targetName] = vmObj;
+
+        this.vmObjects.push({ name, targetName });
     }
 
     async setTag(tag, args) {
-        const fakeTag = new FakeTag(tag, args);
-
-        this.tag = fakeTag;
-        const vmTag = new ExternalCopy(fakeTag.fixedTag);
-
-        this.vmTag = vmTag;
-        await this.global.set(globalNames.tag, vmTag.copyInto());
+        await this.setVMObject("tag", FakeTag, [tag, args], "fixedTag");
     }
 
     async setMsg(msg) {
-        const fakeMsg = new FakeMsg(msg);
+        await this.setVMObject("msg", FakeMsg, [msg], "fixedMsg");
+    }
 
-        this.msg = fakeMsg;
-        const vmMsg = new ExternalCopy(fakeMsg.fixedMsg);
-
-        this.vmMsg = vmMsg;
-        await this.global.set(globalNames.msg, vmMsg.copyInto());
+    async setVM() {
+        await this.setVMObject("vm", FakeVM, [this.isolate], "vmProps");
     }
 
     constructFuncs(objMap, names) {
@@ -114,9 +134,11 @@ class EvalContext {
 
         await this.setMsg(msg);
         await this.setTag(tag, args);
+        await this.setVM();
 
         this.propertyMap = {
-            msg: this.msg
+            msg: this.msg,
+            vm: this.vm
         };
 
         await this.registerFuncs();
@@ -186,13 +208,16 @@ class EvalContext {
     }
 
     disposeVMObjects() {
-        this.global?.release();
-        this.vmTag?.release();
-        this.vmMsg?.release();
+        Util.wipeArray(this.vmObjects, obj => {
+            if (typeof obj.name !== "undefined") {
+                delete this[obj.name];
+            }
 
-        delete this.global;
-        delete this.vmTag;
-        delete this.vmMsg;
+            if (typeof obj.targetName !== "undefined") {
+                this[obj.targetName]?.release();
+                delete this[obj.targetName];
+            }
+        });
     }
 
     disposeScript() {
@@ -203,6 +228,8 @@ class EvalContext {
     disposeContext() {
         this.context?.release();
         delete this.context;
+
+        delete this.propertyMap;
     }
 
     disposeIsolate() {

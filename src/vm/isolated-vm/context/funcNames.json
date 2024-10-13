@@ -2,6 +2,10 @@
     "msg": {
         "reply": "reply"
     },
+    "vm": {
+        "getCpuTime": "getCpuTime",
+        "getWallTime": "getWallTime"
+    },
     "util": {
         "findUsers": "findUsers",
         "fetchTag": "fetchTag",

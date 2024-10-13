@@ -7,16 +7,21 @@ import getRegisterCode from "../../util/vm/getRegisterCode.js";
 import Util from "../../util/Util.js";
 
 function resolveObj(path, propertyMap) {
-    let split = [],
-        obj;
-
-    try {
-        split = path.split(".");
-    } catch (err) {
-        return;
+    if (typeof path !== "string") {
+        throw new VMError("Invalid path provided");
     }
 
+    if (typeof propertyMap === "undefined") {
+        throw new VMError("Can't resolve object, no property map provided");
+    }
+
+    const split = path.split(".");
+
+    let parent, obj;
+
     while (split.length > 0) {
+        parent = obj;
+
         const propertyName = Util.firstElement(split);
 
         if (typeof obj === "undefined") {
@@ -32,7 +37,7 @@ function resolveObj(path, propertyMap) {
         split.shift();
     }
 
-    return obj;
+    return { obj, parent };
 }
 
 const defaultValues = {
@@ -68,31 +73,29 @@ class VMFunction {
             return;
         }
 
-        if (typeof propertyMap === "undefined") {
-            throw new VMError("Cannot resolve reference function");
+        const path = this.ref,
+            { obj: refFunc, parent } = resolveObj(path, propertyMap);
+
+        if (typeof refFunc === "undefined") {
+            throw new VMError("Couldn't resolve reference function");
         }
 
-        const path = this.ref;
-        this.ref = resolveObj(path, propertyMap);
-
-        if (typeof this.ref === "undefined") {
-            throw new VMError("Cannot resolve reference function");
-        }
+        this.ref = refFunc.bind(parent);
     }
 
     resolveBinds(propertyMap) {
-        if (typeof propertyMap === "undefined" || this.binds.length === 0) {
+        if (this.binds.length === 0) {
             return;
         }
 
         const argList = [];
 
         for (const path of this.binds) {
-            const obj = resolveObj(path, propertyMap);
+            const obj = resolveObj(path, propertyMap).obj;
             argList.push(obj);
         }
 
-        this.ref = this.ref.bind(...argList);
+        this.ref = Util.bindArgs(this.ref, ...argList);
     }
 
     getRegisterCode() {

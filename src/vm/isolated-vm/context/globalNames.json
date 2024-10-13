@@ -1,6 +1,7 @@
 {
     "msg": "msg",
     "tag": "tag",
+    "vm": "vm",
     "util": "util",
     "http": "http"
 }

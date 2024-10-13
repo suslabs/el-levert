@@ -15,6 +15,16 @@ const Functions = {
             errorClass: ManevraError
         }
     },
+    vm: {
+        getCpuTime: {
+            type: FuncTypes.regular,
+            ref: "vm.getCpuTime"
+        },
+        getWallTime: {
+            type: FuncTypes.regular,
+            ref: "vm.getWallTime"
+        }
+    },
     util: {
         findUsers: {
             type: FuncTypes.syncPromise,
@@ -35,12 +45,12 @@ const Functions = {
         fetchMessage: {
             type: FuncTypes.syncPromise,
             ref: FakeUtil.fetchMessage,
-            binds: [null, "msg.msg.author.id", "msg.msg.channelId"]
+            binds: ["msg.msg.author.id", "msg.msg.channelId"]
         },
         fetchMessages: {
             type: FuncTypes.syncPromise,
             ref: FakeUtil.fetchMessages,
-            binds: [null, "msg.msg.author.id", "msg.msg.channelId"]
+            binds: ["msg.msg.author.id", "msg.msg.channelId"]
         }
     },
     http: {

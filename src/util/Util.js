@@ -636,6 +636,12 @@ const Util = {
         });
 
         return _format.join(", ");
+    },
+
+    bindArgs: (fn, ...boundArgs) => {
+        return function (...args) {
+            return fn.apply(this, boundArgs.concat(args));
+        };
     }
 };
 
