@@ -33,6 +33,7 @@ const ResultProxyHandler = {
                 return target.data[prop];
         }
     },
+
     set: (target, prop, newVal) => {
         if (passthroughProps.includes(prop)) {
             Reflect.set(target, prop, newVal);
@@ -66,6 +67,7 @@ const ResultProxyHandler = {
                 return true;
         }
     },
+
     has: (target, prop) => {
         if (typeof prop === "symbol" || passthroughProps.includes(prop)) {
             return prop in target;
@@ -73,6 +75,7 @@ const ResultProxyHandler = {
 
         return prop in target.info || prop in target.data;
     },
+
     ownKeys: target => {
         if (target.data === null || typeof target.data === "undefined") {
             return [];
@@ -80,6 +83,7 @@ const ResultProxyHandler = {
 
         return Reflect.ownKeys(target.data);
     },
+
     getOwnPropertyDescriptor: (target, prop) => {
         const dataProp = Reflect.getOwnPropertyDescriptor(target.data, prop);
         dataProp.configurable = true;

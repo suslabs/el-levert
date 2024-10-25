@@ -15,6 +15,7 @@ const Functions = {
             errorClass: ManevraError
         }
     },
+
     vm: {
         getCpuTime: {
             type: FuncTypes.regular,
@@ -25,6 +26,7 @@ const Functions = {
             ref: "vm.getWallTime"
         }
     },
+
     util: {
         findUsers: {
             type: FuncTypes.syncPromise,
@@ -53,6 +55,7 @@ const Functions = {
             binds: ["msg.msg.author.id", "msg.msg.channelId"]
         }
     },
+
     http: {
         request: {
             type: FuncTypes.syncPromise,
