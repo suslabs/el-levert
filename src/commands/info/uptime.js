@@ -18,7 +18,10 @@ export default {
                 timeZoneName: "short",
                 timeZone: "UTC"
             }),
-            uptime = Util.duration(getClient().uptime, true);
+            uptime = Util.duration(getClient().uptime, {
+                format: true,
+                largestN: 3
+            });
 
         return `:information_source: The bot has been running for **${uptime}** (since **${startedDate}**).`;
     }

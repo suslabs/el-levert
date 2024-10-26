@@ -596,21 +596,29 @@ const Util = {
         return Math.abs(t2 - t1);
     },
 
-    duration: (delta, format = false, include) => {
-        const durationNames = Object.keys(durationSeconds).filter(name => {
-                if (Array.isArray(include)) {
-                    return include.includes(name);
-                }
+    duration: (delta, options = {}) => {
+        const format = options.format ?? false,
+            largestOnly = options.largestOnly ?? false,
+            largestN = options.largestN ?? 0;
 
-                return name !== "milli";
+        const whitelist = Array.isArray(options.whitelist) ? options.whitelist : [],
+            blacklist = Array.isArray(options.blacklist) ? options.blacklist : ["milli"];
+
+        const durationNames = Object.keys(durationSeconds).filter(name => {
+                const inWhitelist = whitelist.length ? blacklist.includes(name) : true,
+                    inBlacklist = blacklist.includes(name);
+
+                return inWhitelist && !inBlacklist;
             }),
             durations = {};
 
         let d_secs = delta * durationSeconds.milli;
 
-        if (d_secs < 1) {
+        if (d_secs < 1 && durationNames.includes("second")) {
             durations["second"] = d_secs;
         } else {
+            let n = 0;
+
             for (const name of durationNames) {
                 const secs = durationSeconds[name],
                     duration = Math.floor(d_secs / secs);
@@ -618,6 +626,15 @@ const Util = {
                 if (duration > 0) {
                     d_secs -= duration * secs;
                     durations[name] = duration;
+                    n++;
+
+                    if (largestOnly) {
+                        break;
+                    }
+
+                    if (largestN > 0 && n >= largestN) {
+                        break;
+                    }
                 }
             }
         }
