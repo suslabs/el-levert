@@ -1,7 +1,5 @@
 {
     "name": "el-levert",
-    "version": "1.0.0",
-    "description": "",
     "main": "index.js",
     "type": "module",
     "private": true,
@@ -10,8 +8,6 @@
         "lint": "eslint \"**/*.js\" --ignore-pattern node_modules/",
         "prettier-format": "prettier --config .prettierrc --write **/*.js"
     },
-    "author": "",
-    "license": "ISC",
     "dependencies": {
         "@leeoniya/ufuzzy": "^1.0.14",
         "ajv": "^8.16.0",
