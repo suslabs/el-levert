@@ -1,3 +1,4 @@
+/* eslint-disable no-fallthrough */
 import { dataProps, infoProps, passthroughProps, targetProp } from "./ResultProperties.js";
 
 const ResultProxyHandler = {

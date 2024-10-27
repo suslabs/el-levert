@@ -2,22 +2,21 @@
     "parser": "@babel/eslint-parser",
     "env": {
         "node": true,
-        "es2021": true
+        "es2023": true
     },
     "extends": "eslint:recommended",
-    "overrides": [
-    ],
+    "overrides": [],
     "parserOptions": {
         "requireConfigFile": false,
         "babelOptions": {
-            "plugins": [
-                "@babel/plugin-syntax-import-assertions"
-            ]
+            "plugins": ["@babel/plugin-syntax-import-assertions"]
         },
         "ecmaVersion": "latest",
         "sourceType": "module"
     },
     "rules": {
-        "no-unused-vars": 0
+        "no-unused-vars": "off",
+        "no-ex-assign": "off",
+        "no-case-declarations": "off"
     }
 }

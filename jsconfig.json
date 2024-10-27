@@ -1,24 +1,14 @@
 {
-  "compilerOptions": {
-    "checkJs": false,
-    "resolveJsonModule": true,
-    "moduleResolution": "node",
-    "target": "es2020",
-    "module": "es2015"
-  },
-  "exclude": [
-    "dist",
-    "node_modules",
-    "build",
-    ".vscode",
-    "coverage",
-    ".npm",
-    ".yarn"
-  ],
-  "typeAcquisition": {
-    "enable": true,
-    "include": [
-      "node"
-    ]
-  }
+    "compilerOptions": {
+        "checkJs": false,
+        "resolveJsonModule": true,
+        "moduleResolution": "node",
+        "target": "ES2023",
+        "module": "ES6"
+    },
+    "exclude": ["dist", "node_modules", "build", ".vscode", "coverage", ".npm", ".yarn"],
+    "typeAcquisition": {
+        "enable": true,
+        "include": ["node"]
+    }
 }
