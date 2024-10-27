@@ -1,8 +1,10 @@
 import { Events } from "discord.js";
 
+import { getLogger } from "../LevertClient.js";
+
 export default {
     name: Events.Error,
     listener: err => {
-        debugger;
+        getLogger().error("Discord client error:", err);
     }
 };

@@ -384,7 +384,6 @@ class TagManager extends DBManager {
                 break;
             default:
                 throw new TagError("Invalid leaderboard type: " + type);
-                break;
         }
 
         for (const entry of leaderboard) {
