@@ -10,21 +10,21 @@
     },
     "dependencies": {
         "@leeoniya/ufuzzy": "^1.0.14",
-        "ajv": "^8.16.0",
-        "axios": "^1.7.2",
-        "chrono-node": "^2.7.6",
-        "discord.js": "^14.15.3",
+        "ajv": "^8.17.1",
+        "axios": "^1.7.7",
+        "chrono-node": "^2.7.7",
+        "discord.js": "^14.16.3",
         "generic-pool": "^3.9.0",
         "isolated-vm": "^5.0.1",
         "mysql": "^2.18.1",
         "sqlite3": "^5.1.7",
         "vm2": "^3.9.19",
-        "winston": "^3.13.0"
+        "winston": "^3.15.0"
     },
     "devDependencies": {
-        "@babel/eslint-parser": "^7.24.1",
-        "@babel/plugin-syntax-import-assertions": "^7.24.1",
-        "eslint": "^8.57.0",
-        "prettier": "3.2.5"
+        "@babel/eslint-parser": "^7.25.9",
+        "@babel/plugin-syntax-import-assertions": "^7.26.0",
+        "eslint": "^8.57.1",
+        "prettier": "3.3.3"
     }
 }
