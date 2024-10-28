@@ -13,7 +13,5 @@
             "title": "Owner id"
         }
     },
-    "required": [
-        "token"
-    ]
+    "required": ["token"]
 }

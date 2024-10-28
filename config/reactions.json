@@ -1,5 +1,5 @@
 {
-    "enableReacts": true,
+    "enableReacts": false,
     "multipleReacts": false,
     "parans": {},
     "funnyWords": [
@@ -8,29 +8,16 @@
             "react": "🐀"
         },
         {
-            "words": [
-                "example2",
-                "example3"
-            ],
+            "words": ["example2", "example3"],
             "react": "🇳🇴"
         },
         {
             "word": "example4",
-            "reacts": [
-                "🐰",
-                "🐇"
-            ] 
+            "reacts": ["🐰", "🐇"]
         },
         {
-            "words": [
-                "example5",
-                "example6"
-            ],
-            "reacts": [
-                "🕥",
-                "🕟",
-                "⏳"
-            ] 
+            "words": ["example5", "example6"],
+            "reacts": ["🕥", "🕟", "⏳"]
         }
     ]
 }
