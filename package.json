@@ -5,8 +5,8 @@
     "private": true,
     "scripts": {
         "start": "node --no-warnings=ExperimentalWarning index.js",
-        "lint": "eslint \"**/*.js\" --config .eslintrc.json --ignore-pattern node_modules/",
-        "format": "prettier --config .prettierrc --write **/*.js"
+        "lint": "eslint . --config .eslintrc.json --ignore-path .gitignore --ext .js",
+        "format": "prettier --config .prettierrc --ignore-path .prettierignore --write **/*.{js,cjs,json}"
     },
     "dependencies": {
         "@leeoniya/ufuzzy": "^1.0.14",
