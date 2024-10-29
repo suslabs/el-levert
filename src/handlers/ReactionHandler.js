@@ -16,7 +16,8 @@ function logWordsUsage(msg, words) {
 }
 
 function logReactTime(t1) {
-    getLogger().debug(`Reacting took ${(Date.now() - t1).toLocaleString()}ms.`);
+    const t2 = performance.now();
+    getLogger().debug(`Reacting took ${Util.timeDelta(t2, t1).toLocaleString()}ms.`);
 }
 
 function logRemove(msg, count) {
@@ -26,7 +27,8 @@ function logRemove(msg, count) {
 }
 
 function logRemoveTime(t1) {
-    getLogger().debug(`Removing reactions took ${(Date.now() - t1).toLocaleString()}ms.`);
+    const t2 = performance.now();
+    getLogger().debug(`Removing reactions took ${Util.timeDelta(t2, t1).toLocaleString()}ms.`);
 }
 
 function getReact(list) {
@@ -149,7 +151,7 @@ class ReactionHandler extends Handler {
     }
 
     async paransReact(msg) {
-        const t1 = Date.now(),
+        const t1 = performance.now(),
             parans = this.countUnmatchedParans(msg.content);
 
         if (typeof parans === "undefined") {
@@ -262,7 +264,7 @@ class ReactionHandler extends Handler {
     }
 
     async funnyReact(msg) {
-        const t1 = Date.now(),
+        const t1 = performance.now(),
             words = this.getWordCounts(msg.content);
 
         if (typeof words === "undefined") {
@@ -304,7 +306,7 @@ class ReactionHandler extends Handler {
     }
 
     async removeReacts(msg) {
-        const t1 = Date.now();
+        const t1 = performance.now();
 
         const botId = getClient().client.user.id,
             botReacts = msg.reactions.cache.filter(react => react.users.cache.has(botId));

@@ -14,7 +14,8 @@ function logUsage(msg, name, args) {
 }
 
 function logTime(t1) {
-    getLogger().info(`Command execution took ${(Date.now() - t1).toLocaleString()}ms.`);
+    const t2 = performance.now();
+    getLogger().info(`Command execution took ${Util.timeDelta(t2, t1).toLocaleString()}ms.`);
 }
 
 function logOutput(cmd, out) {
@@ -63,7 +64,7 @@ class CommandHandler extends Handler {
 
     async executeCommand(cmd, msg, args) {
         logUsage(msg, cmd.name, args);
-        const t1 = Date.now();
+        const t1 = performance.now();
 
         let out = await cmd.execute(args, { msg });
 

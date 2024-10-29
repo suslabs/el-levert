@@ -20,11 +20,13 @@ function logSending(preview) {
 }
 
 function logGenTime(t1) {
-    getLogger().debug(`Preview generation took ${(Date.now() - t1).toLocaleString()}ms.`);
+    const t2 = performance.now();
+    getLogger().debug(`Preview generation took ${Util.timeDelta(t2, t1).toLocaleString()}ms.`);
 }
 
 function logSendTime(t1) {
-    getLogger().info(`Sending preview took ${(Date.now() - t1).toLocaleString()}ms.`);
+    const t2 = performance.now();
+    getLogger().info(`Sending preview took ${Util.timeDelta(t2, t1).toLocaleString()}ms.`);
 }
 
 class PreviewHandler extends Handler {
@@ -52,7 +54,7 @@ class PreviewHandler extends Handler {
     async genPreview(msg, str) {
         logUsage(msg, str);
 
-        const t1 = Date.now(),
+        const t1 = performance.now(),
             match = str.match(msgUrlRegex);
 
         if (!match) {
@@ -153,7 +155,7 @@ class PreviewHandler extends Handler {
             return false;
         }
 
-        let t1 = Date.now(),
+        let t1 = performance.now(),
             preview;
 
         try {

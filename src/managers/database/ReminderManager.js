@@ -10,7 +10,8 @@ import Util from "../../util/Util.js";
 const maxMsgLength = 512;
 
 function logTime(t1) {
-    getLogger().info(`Sending reminders took ${(Date.now() - t1).toLocaleString()}ms.`);
+    const t2 = performance.now();
+    getLogger().info(`Sending reminders took ${Util.timeDelta(t2, t1).toLocaleString()}ms.`);
 }
 
 class ReminderManager extends DBManager {

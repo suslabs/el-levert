@@ -20,11 +20,13 @@ function logSending(sed) {
 }
 
 function logGenTime(t1) {
-    getLogger().debug(`Sed generation took ${(Date.now() - t1).toLocaleString()}ms.`);
+    const t2 = performance.now();
+    getLogger().debug(`Sed generation took ${Util.timeDelta(t2, t1).toLocaleString()}ms.`);
 }
 
 function logSendTime(t1) {
-    getLogger().info(`Sending replaced message took ${(Date.now() - t1).toLocaleString()}ms.`);
+    const t2 = performance.now();
+    getLogger().info(`Sending replaced message took ${Util.timeDelta(t2, t1).toLocaleString()}ms.`);
 }
 
 class SedHandler extends Handler {
@@ -69,7 +71,7 @@ class SedHandler extends Handler {
     async genSed(msg, str) {
         logUsage(msg);
 
-        const t1 = Date.now(),
+        const t1 = performance.now(),
             match = str.match(sedRegex);
 
         if (!match) {
@@ -147,7 +149,7 @@ class SedHandler extends Handler {
             return false;
         }
 
-        let t1 = Date.now(),
+        let t1 = performance.now(),
             sed;
 
         await msg.channel.sendTyping();

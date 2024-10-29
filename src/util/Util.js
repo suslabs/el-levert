@@ -348,8 +348,8 @@ const Util = {
             multipleLowercase = Array.isArray(lowercase);
         }
 
-        const lowercaseFirst = multipleLowercase ? lowercase[0] ?? false : lowercase,
-            lowercaseSecond = multipleLowercase ? lowercase[1] ?? false : false;
+        const lowercaseFirst = multipleLowercase ? (lowercase[0] ?? false) : lowercase,
+            lowercaseSecond = multipleLowercase ? (lowercase[1] ?? false) : false;
 
         let { sep, n } = options;
         sep = sep ?? [" ", "\n"];
@@ -589,11 +589,22 @@ const Util = {
         return ` "${str}"`;
     },
 
-    timeDelta: (d1, d2) => {
-        const t1 = typeof d1 === "object" ? d1.getTime() : Number(d1),
-            t2 = typeof d2 === "object" ? d2.getTime() : Number(d2);
+    timeDelta: (d1, d2, div = 1) => {
+        let t1 = d1.getTime?.() ?? d1,
+            t2 = d2.getTime?.() ?? d2;
 
-        return Math.abs(t2 - t1);
+        if ([typeof d1, typeof d2].includes("bigint")) {
+            t1 = BigInt(t1);
+            t2 = BigInt(t2);
+
+            div = BigInt(div);
+        } else {
+            t1 = Number(t1);
+            t2 = Number(t2);
+        }
+
+        const dt = (t2 - t1) / div;
+        return ~~Math.abs(dt);
     },
 
     duration: (delta, options = {}) => {
