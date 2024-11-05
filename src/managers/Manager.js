@@ -22,7 +22,7 @@ function _unload(...args) {
 
 class Manager {
     constructor(enabled = true, options = {}) {
-        if (typeof this.constructor.name === "undefined") {
+        if (typeof this.constructor.$name === "undefined") {
             throw new ManagerError("Manager must have a name");
         }
 

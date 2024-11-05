@@ -30,7 +30,7 @@ function logSendTime(t1) {
 }
 
 class PreviewHandler extends Handler {
-    static name = "previewHandler";
+    static $name = "previewHandler";
 
     constructor(enabaled) {
         super(enabaled, true);

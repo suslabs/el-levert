@@ -3,7 +3,8 @@ import BaseCommandManager from "./BaseCommandManager.js";
 import { getClient } from "../../LevertClient.js";
 
 class CommandManager extends BaseCommandManager {
-    static name = "commandManager";
+    static $name = "commandManager";
+    static loadPriority = 2;
 
     constructor() {
         const commandsDir = getClient().config.commandsPath,

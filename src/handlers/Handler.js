@@ -51,7 +51,7 @@ function _resubmit(msg) {
 
 class Handler {
     constructor(enabled = true, hasMessageTracker = true, hasUserTracker = false, options = {}) {
-        if (typeof this.constructor.name === "undefined") {
+        if (typeof this.constructor.$name === "undefined") {
             throw new HandlerError("Handler must have a name");
         }
 

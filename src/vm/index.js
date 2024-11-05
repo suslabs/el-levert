@@ -1,5 +1,5 @@
 import * as VMs from "./VMs.js";
 
-import Util from "../util/Util.js";
+import compileExports from "../util/compileExports.js";
 
-export default compileImports(VMs);
+export default compileExports(VMs);

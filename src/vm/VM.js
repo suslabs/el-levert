@@ -38,7 +38,7 @@ function _runScript(code, ...args) {
 
 class VM {
     constructor(enabled, options) {
-        if (typeof this.constructor.name === "undefined") {
+        if (typeof this.constructor.$name === "undefined") {
             throw new VMError("VM must have a name");
         }
 

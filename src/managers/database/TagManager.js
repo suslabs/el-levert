@@ -11,7 +11,8 @@ import Util from "../../util/Util.js";
 import search from "../../util/search/uFuzzySearch.js";
 
 class TagManager extends DBManager {
-    static name = "tagManager";
+    static $name = "tagManager";
+    static loadPriority = 0;
 
     constructor() {
         super(true, "tag", TagDatabase, "tag_db");

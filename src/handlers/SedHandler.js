@@ -30,7 +30,7 @@ function logSendTime(t1) {
 }
 
 class SedHandler extends Handler {
-    static name = "sedHandler";
+    static $name = "sedHandler";
 
     constructor(enabled) {
         super(enabled, true);

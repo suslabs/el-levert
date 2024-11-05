@@ -45,7 +45,7 @@ const emojiExpRight = new RegExp(`[${emojiChars}][\\(\\)]+`, "g"),
     emojiExpLeft = new RegExp(`[\\(\\)]+[${emojiChars}]`, "g");
 
 class ReactionHandler extends Handler {
-    static name = "reactionHandler";
+    static $name = "reactionHandler";
     priority = -1;
 
     constructor(enabled) {

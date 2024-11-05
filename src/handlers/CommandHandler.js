@@ -23,7 +23,7 @@ function logOutput(cmd, out) {
 }
 
 class CommandHandler extends Handler {
-    static name = "commandHandler";
+    static $name = "commandHandler";
     priority = 1;
 
     constructor() {

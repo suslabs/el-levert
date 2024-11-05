@@ -15,7 +15,8 @@ function logTime(t1) {
 }
 
 class ReminderManager extends DBManager {
-    static name = "reminderManager";
+    static $name = "reminderManager";
+    static loadPriority = 3;
 
     constructor(enabled) {
         super(enabled, "reminder", ReminderDatabase, "remind_db");

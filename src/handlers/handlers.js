@@ -1,4 +1,4 @@
-export { default as ReactionHandler } from "./handlers/ReactionHandler.js";
-export { default as CommandHandler } from "./handlers/CommandHandler.js";
-export { default as PreviewHandler } from "./handlers/PreviewHandler.js";
-export { default as SedHandler } from "./handlers/SedHandler.js";
+export { default as ReactionHandler } from "./ReactionHandler.js";
+export { default as CommandHandler } from "./CommandHandler.js";
+export { default as PreviewHandler } from "./PreviewHandler.js";
+export { default as SedHandler } from "./SedHandler.js";

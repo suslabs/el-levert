@@ -1,5 +1,5 @@
 import * as Managers from "./managers.js";
 
-import compileImports from "../util/compileImports.js";
+import compileExports from "../util/compileExports.js";
 
-export default compileImports(Managers);
+export default compileExports(Managers);

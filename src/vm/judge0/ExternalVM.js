@@ -6,6 +6,9 @@ import VMError from "../../errors/VMError.js";
 import { getClient } from "../../LevertClient.js";
 
 class ExternalVM {
+    static $name = "externalVM";
+    static loadPriority = 3;
+
     constructor() {
         this.memLimit = getClient().config.otherMemLimit;
         this.timeLimit = getClient().config.otherTimeLimit;

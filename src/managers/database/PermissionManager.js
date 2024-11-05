@@ -13,7 +13,8 @@ import { getClient, getLogger } from "../../LevertClient.js";
 const groupNameRegex = /^[A-Za-z0-9\-_]+$/;
 
 class PermissionManager extends DBManager {
-    static name = "permissionManager";
+    static $name = "permManager";
+    static loadPriority = 1;
 
     constructor(enabled) {
         super(enabled, "permission", PermissionDatabase, "perm_db");

@@ -19,7 +19,14 @@ function logTime(t1) {
     getLogger().debug(`Running script took ${(Date.now() - t1).toLocaleString()}ms.`);
 }
 
+function logFinished(info) {
+    getLogger().log(info ? "info" : "debug", "Script execution finished.");
+}
+
 class TagVM extends VM {
+    static $name = "tagVM";
+    static loadPriority = 1;
+
     constructor(enabled) {
         super(enabled);
 
@@ -84,17 +91,17 @@ class TagVM extends VM {
             out = await context.runScript(code);
             out = VMUtil.formatOutput(out);
 
+            logFinished(this.enableInspector);
             getLogger().debug(`Returning script output:${Util.formatLog(out)}`);
         } catch (err) {
+            logFinished(this.enableInspector);
             out = this.handleError(err);
         } finally {
             this.inspectorServer?.executionFinished();
             context.dispose();
         }
 
-        getLogger().log(this.enableInspector ? "info" : "debug", "Script execution finished.");
         logTime(t1);
-
         return out;
     }
 

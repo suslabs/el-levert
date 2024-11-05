@@ -183,6 +183,37 @@ const Util = {
         }
     },
 
+    maybeAsyncForEach: (arr, cb) => {
+        let length = arr.length,
+            i = 0;
+
+        let ret,
+            loopPromise = false;
+
+        for (; i < length; i++) {
+            const item = arr[i];
+            ret = cb(item, i);
+
+            if (isPromise(ret)) {
+                loopPromise = true;
+                i++;
+
+                break;
+            }
+        }
+
+        if (loopPromise) {
+            return (async _ => {
+                ret = await ret;
+
+                for (; i < length; i++) {
+                    const item = arr[i];
+                    await cb(item, i);
+                }
+            })();
+        }
+    },
+
     wipeArray: (arr, cb) => {
         let length = arr.length,
             i = 0;
@@ -670,6 +701,39 @@ const Util = {
         return function (...args) {
             return fn.apply(this, boundArgs.concat(args));
         };
+    },
+
+    outOfRange(propName, min, max, ...args) {
+        const hasPropName = typeof propName === "string",
+            getProp = hasPropName ? obj => obj[propName] : obj => obj;
+
+        if (!hasPropName) {
+            args = [max].concat(args);
+
+            max = min;
+            min = propName;
+        }
+
+        if (args.length === 1) {
+            const obj = args[0],
+                prop = getProp(obj);
+
+            if (typeof prop === "undefined") {
+                return false;
+            }
+
+            return prop < min || prop > max;
+        }
+
+        return args.find(obj => {
+            const prop = getProp(obj);
+
+            if (typeof prop === "undefined") {
+                return false;
+            }
+
+            return prop < min || prop > max;
+        });
     }
 };
 
