@@ -41,8 +41,8 @@ function getReact(list) {
 
 const emojiChars = ":;=-x+";
 
-const emojiExpRight = new RegExp(`[${emojiChars}][\\(\\)]+`, "g"),
-    emojiExpLeft = new RegExp(`[\\(\\)]+[${emojiChars}]`, "g");
+const emojiExpRight = new RegExp(`[${Util.escapeCharClass(emojiChars)}][()]+`, "g"),
+    emojiExpLeft = new RegExp(`[()]+[${Util.escapeCharClass(emojiChars)}]`, "g");
 
 class ReactionHandler extends Handler {
     static $name = "reactionHandler";

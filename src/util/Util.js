@@ -10,6 +10,7 @@ import URL from "node:url";
 import { isPromise } from "./TypeTester.js";
 
 const regexEscapeExp = /[.*+?^${}()|[\]\\]/g,
+    charClassExcapeExp = /[-\\\]^]/g,
     scriptParseExp = /^`{3}([\S]+)?\n([\s\S]+)`{3}$/;
 
 const durationSeconds = {
@@ -369,6 +370,10 @@ const Util = {
         return str.replace(regexEscapeExp, "\\$&");
     },
 
+    escapeCharClass: str => {
+        return str.replace(charClassExcapeExp, "\\$&");
+    },
+
     splitArgs: (str, lowercase = false, options = {}) => {
         let multipleLowercase = Array.isArray(lowercase);
 
@@ -659,24 +664,30 @@ const Util = {
         if (d_secs < 1 && durationNames.includes("second")) {
             durations["second"] = d_secs;
         } else {
-            let n = 0;
+            let hitFirst = false,
+                n = 0;
 
             for (const name of durationNames) {
                 const secs = durationSeconds[name],
                     duration = Math.floor(d_secs / secs);
 
                 if (duration > 0) {
+                    hitFirst = true;
+
                     d_secs -= duration * secs;
                     durations[name] = duration;
-                    n++;
 
                     if (largestOnly) {
                         break;
                     }
+                }
 
-                    if (largestN > 0 && n >= largestN) {
-                        break;
-                    }
+                if (hitFirst) {
+                    n++;
+                }
+
+                if (largestN > 0 && n >= largestN) {
+                    break;
                 }
             }
         }
