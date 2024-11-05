@@ -17,12 +17,12 @@ class BaseDiscordTransport extends Transport {
     constructor(opts) {
         super(opts);
 
-        if (typeof this.constructor.name === "undefined") {
-            throw new LoggerError("Discord transport must have a name");
+        if (typeof this.constructor.$name === "undefined") {
+            throw new LoggerError("Discord transport must have a default name");
         }
 
         if (typeof this.sendLog !== "function") {
-            throw new LoggerError("Chuld class must have a sendLog function");
+            throw new LoggerError("Child class must have a sendLog function");
         }
 
         this.initialized = false;
@@ -32,7 +32,7 @@ class BaseDiscordTransport extends Transport {
         const charLimit = opts.charLimit ?? embedCharLimit;
         this.charLimit = Util.clamp(charLimit, 0, embedCharLimit);
 
-        this.name = opts.name;
+        this.name = opts.name ?? this.constructor.$name;
         this.sendInterval = opts.sendInterval ?? 0;
         this.client = opts.client;
 
