@@ -1,6 +1,7 @@
 import ivm from "isolated-vm";
 const { Isolate, ExternalCopy } = ivm;
 
+import FakeUtil from "../classes/FakeUtil.js";
 import FakeTag from "../classes/FakeTag.js";
 import FakeMsg from "../classes/FakeMsg.js";
 import FakeVM from "../classes/FakeVM.js";
@@ -64,6 +65,10 @@ class EvalContext {
         this[targetName] = vmObj;
 
         this.vmObjects.push({ name, targetName });
+    }
+
+    async setInfo() {
+        this.setVMObject("util", Object, [FakeUtil.getInfo()]);
     }
 
     async setTag(tag, args) {
@@ -132,6 +137,7 @@ class EvalContext {
 
         await this.setGlobal();
 
+        await this.setInfo();
         await this.setMsg(msg);
         await this.setTag(tag, args);
         await this.setVM();

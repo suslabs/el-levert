@@ -8,6 +8,10 @@ import { getClient } from "../../../LevertClient.js";
 import VMUtil from "../../../util/vm/VMUtil.js";
 
 const FakeUtil = {
+    getInfo: _ => ({
+        env: `El Levert ${getClient().version}`
+    }),
+
     fetchTag: async name => {
         let tag = await getClient().tagManager.fetch(name);
 
