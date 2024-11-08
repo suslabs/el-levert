@@ -5,11 +5,19 @@ import FakeMsg from "./FakeMsg.js";
 import FakeUser from "./FakeUser.js";
 
 import { getClient } from "../../../LevertClient.js";
+import Util from "../../../util/Util.js";
 import VMUtil from "../../../util/vm/VMUtil.js";
 
 const FakeUtil = {
     getInfo: _ => ({
-        env: `El Levert ${getClient().version}`
+        version: getClient().version,
+        env: `El Levert ${getClient().version}`,
+
+        timeLimit: getClient().tagVM.timeLimit / Util.durationSeconds.milli,
+        inspectorEnabled: getClient().tagVM.enableInspector,
+
+        outCharLimit: getClient().tagVM.outCharLimit,
+        outNewlineLimit: getClient().tagVM.outNewlineLimit
     }),
 
     fetchTag: async name => {

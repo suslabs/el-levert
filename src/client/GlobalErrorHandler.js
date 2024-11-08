@@ -10,7 +10,7 @@ function exceptionHandler(err1) {
 }
 
 function rejectionHandler(reason, promise) {
-    logger_.error("Unhandled rejection at:", promise, `\nReason: ${reason}`);
+    logger_.error("Unhandled promise rejection:", reason);
 }
 
 function registerGlobalErrorHandler(logger) {

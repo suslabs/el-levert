@@ -131,13 +131,15 @@ class TagVM extends VM {
     }
 
     processReply(msg) {
-        let out = JSON.parse(msg);
+        const out = JSON.parse(msg),
+            files = [];
 
         if (typeof out.content !== "undefined") {
             const split = out.content.split("\n");
 
             if (out.content.length > this.outCharLimit || split.length > this.outNewlineLimit) {
-                return Util.getFileAttach(out.content);
+                files.push(...Util.getFileAttach(out.content).files);
+                delete out.content;
             }
         }
 
@@ -149,10 +151,11 @@ class TagVM extends VM {
                 data = Object.values(data);
             }
 
-            out = {
-                ...out,
-                ...Util.getFileAttach(data, name)
-            };
+            files.push(...Util.getFileAttach(data, name).files);
+        }
+
+        if (files.length > 0) {
+            out.files = files;
         }
 
         return out;
