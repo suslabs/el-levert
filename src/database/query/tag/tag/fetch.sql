@@ -1,1 +1,1 @@
-SELECT * FROM Tags WHERE name = $name;
+SELECT * FROM Tags WHERE name = $name LIMIT 1;

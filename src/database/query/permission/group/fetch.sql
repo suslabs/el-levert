@@ -1,1 +1,1 @@
-SELECT * FROM Groups WHERE name = $name;
+SELECT * FROM Groups WHERE name = $name LIMIT 1;

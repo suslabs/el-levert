@@ -1,1 +1,1 @@
-SELECT quota FROM Quotas WHERE user = $user;
+SELECT quota FROM Quotas WHERE user = $user LIMIT 1;
