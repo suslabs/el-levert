@@ -1,11 +1,5 @@
-import CustomError from "./CustomError.js";
+import RefError from "./RefError.js";
 
-class TagError extends CustomError {
-    constructor(message = "", ref, ...args) {
-        super(message, ...args);
-
-        this.ref = ref;
-    }
-}
+class TagError extends RefError {}
 
 export default TagError;
