@@ -16,7 +16,8 @@ function logUsage(code) {
 }
 
 function logTime(t1) {
-    getLogger().debug(`Running script took ${(Date.now() - t1).toLocaleString()}ms.`);
+    const t2 = performance.now();
+    getLogger().debug(`Running script took ${Util.timeDelta(t2, t1).toLocaleString()}ms.`);
 }
 
 function logFinished(info) {
@@ -75,7 +76,7 @@ class TagVM extends VM {
     }
 
     async runScript(code, msg, tag, args) {
-        const t1 = Date.now();
+        const t1 = performance.now();
         logUsage(code);
 
         if (this.inspectorServer?.inspectorConnected) {
