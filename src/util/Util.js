@@ -9,6 +9,9 @@ import URL from "node:url";
 
 import { isPromise } from "./TypeTester.js";
 
+const urlExp = /(\S*?):\/\/(?:([^\/\.]+)\.)?([^\/\.]+)\.([^\/\s]+)\/?(\S*)?/,
+    validUrlExp = new RegExp(`^${urlExp.toString()}$`);
+
 const regexEscapeExp = /[.*+?^${}()|[\]\\]/g,
     charClassExcapeExp = /[-\\\]^]/g,
     scriptParseExp = /^`{3}([\S]+)?\n([\s\S]+)`{3}$/;
@@ -29,6 +32,7 @@ const discordEpoch = 1420070400000;
 const Util = {
     durationSeconds,
     discordEpoch,
+    urlRegex: urlExp,
 
     import: async (modulePath, cache = true) => {
         let fileURL = URL.pathToFileURL(modulePath);
@@ -372,6 +376,10 @@ const Util = {
 
     escapeCharClass: str => {
         return str.replace(charClassExcapeExp, "\\$&");
+    },
+
+    validUrl: url => {
+        return validUrlExp.test(exp);
     },
 
     splitArgs: (str, lowercase = false, options = {}) => {
