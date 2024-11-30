@@ -17,7 +17,7 @@ const FakeUtil = {
         inspectorEnabled: getClient().tagVM.enableInspector,
 
         outCharLimit: getClient().tagVM.outCharLimit,
-        outNewlineLimit: getClient().tagVM.outNewlineLimit
+        outLineLimit: getClient().tagVM.outLineLimit
     }),
 
     fetchTag: async name => {

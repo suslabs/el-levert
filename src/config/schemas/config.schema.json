@@ -55,7 +55,7 @@
         "outCharLimit": {
             "type": "number"
         },
-        "outNewlineLimit": {
+        "outLineLimit": {
             "type": "number"
         },
         "reminderMsgLimit": {
@@ -164,7 +164,7 @@
         "enableInspector",
         "inspectorPort",
         "outCharLimit",
-        "outNewlineLimit",
+        "outLineLimit",
         "reminderMsgLimit",
         "reminderSendInterval",
         "tagNameRegex",

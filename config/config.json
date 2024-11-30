@@ -16,7 +16,7 @@
     "enableInspector": false,
     "inspectorPort": 8080,
     "outCharLimit": 2000,
-    "outNewlineLimit": 30,
+    "outLineLimit": 30,
     "reminderMsgLimit": 512,
     "reminderSendInterval": 10000,
     "tagNameRegex": "^[A-Za-z0-9\\-_]+$",

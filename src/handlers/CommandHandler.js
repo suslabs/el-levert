@@ -32,7 +32,7 @@ class CommandHandler extends Handler {
         });
 
         this.outCharLimit = Util.clamp(getClient().config.outCharLimit, 0, 2000);
-        this.outNewlineLimit = Util.clamp(getClient().config.outNewlineLimit, 0, 2000);
+        this.outLineLimit = Util.clamp(getClient().config.outLineLimit, 0, 2000);
     }
 
     async execute(msg) {
@@ -69,9 +69,7 @@ class CommandHandler extends Handler {
         let out = await cmd.execute(args, { msg });
 
         if (typeof out === "string") {
-            const split = out.split("\n");
-
-            if (out.length > this.outCharLimit || split.length > this.outNewlineLimit) {
+            if (out.length > this.outCharLimit || Util.countLines(out) > this.outLineLimit) {
                 out = Util.getFileAttach(out);
             }
         }

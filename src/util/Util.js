@@ -529,6 +529,26 @@ const Util = {
         return length;
     },
 
+    countLines: str => {
+        return str.split("\n").length;
+    },
+
+    findNthCharacter: (str, char, n) => {
+        let index = -1;
+
+        while (n > 0) {
+            index = str.indexOf(char, index + 1);
+
+            if (index === -1) {
+                return -1;
+            }
+
+            n--;
+        }
+
+        return index;
+    },
+
     getFileAttach: (data, name = "message.txt") => {
         const attachment = new AttachmentBuilder(Buffer.from(data), {
             name: name

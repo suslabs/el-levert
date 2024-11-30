@@ -36,7 +36,7 @@ class PreviewHandler extends Handler {
         super(enabaled, true);
 
         this.outCharLimit = Util.clamp(getClient().config.outCharLimit, 0, 2000);
-        this.outNewlineLimit = Util.clamp(getClient().config.outNewlineLimit, 0, 2000);
+        this.outLineLimit = Util.clamp(getClient().config.outLineLimit, 0, 2000);
     }
 
     canPreview(str) {
@@ -74,16 +74,17 @@ class PreviewHandler extends Handler {
         }
 
         let content = prevMsg.content,
-            image,
             split = content.split("\n");
 
         if (content.length > this.outCharLimit) {
             content = content.substring(0, this.outCharLimit) + "...";
         }
 
-        if (split.length > this.outNewlineLimit) {
-            content = split.slice(0, this.outNewlineLimit).join("\n") + "...";
+        if (split.length > this.outLineLimit) {
+            content = split.slice(0, this.outLineLimit).join("\n") + "...";
         }
+
+        let image;
 
         if (prevMsg.attachments.size > 0) {
             const attach = prevMsg.attachments.first(),
