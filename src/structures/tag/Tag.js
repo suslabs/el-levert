@@ -230,8 +230,8 @@ class Tag {
     }
 
     getSize() {
-        const bodySize = Util.getByteLen(this.body),
-            argsSize = Util.getByteLen(this.args);
+        const bodySize = Util.getUtf8ByteLength(this.body),
+            argsSize = Util.getUtf8ByteLength(this.args);
 
         const totalSize = bodySize + argsSize;
         return totalSize / 1024;

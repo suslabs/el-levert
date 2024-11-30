@@ -34,6 +34,11 @@ const Util = {
     discordEpoch,
     urlRegex: urlExp,
 
+    zip: (arr_1, arr_2) => {
+        const len = Math.min(arr_1.length, arr_2.length);
+        return Array.from({ length: len }, (_, i) => [arr_1[i], arr_2[i]]);
+    },
+
     import: async (modulePath, cache = true) => {
         let fileURL = URL.pathToFileURL(modulePath);
 
@@ -503,24 +508,25 @@ const Util = {
         return [true, body, lang];
     },
 
-    getByteLen: str => {
-        let len = str.length;
+    getUtf8ByteLength: str => {
+        let length = 0;
 
-        for (let i = str.length - 1; i >= 0; i--) {
-            const code = str.charCodeAt(i);
+        for (let i = 0; i < str.length; i++) {
+            const codepoint = str.codePointAt(i);
 
-            if (code > 0x7f && code <= 0x7ff) {
-                len++;
-            } else if (code > 0x7ff && code <= 0xffff) {
-                len += 2;
-            }
-
-            if (code >= 0xdc00 && code <= 0xdfff) {
-                i--;
+            if (codepoint <= 0x7f) {
+                length += 1;
+            } else if (codepoint <= 0x7ff) {
+                length += 2;
+            } else if (codepoint <= 0xffff) {
+                length += 3;
+            } else {
+                length += 4;
+                i++;
             }
         }
 
-        return len;
+        return length;
     },
 
     getFileAttach: (data, name = "message.txt") => {

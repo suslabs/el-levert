@@ -41,7 +41,7 @@ class DBImporter {
     }
 
     async addRegular(tag, quota) {
-        quota += Util.getByteLen(tag.body) / 1024;
+        quota += Util.getUtf8ByteLength(tag.body) / 1024;
 
         if (quota > config.maxQuota) {
             this.logger.info("Cannot add tag: " + tag.name);
@@ -58,7 +58,7 @@ class DBImporter {
 
     async addAlias(tag, quota) {
         if (tag.args.length > 0) {
-            quota += Util.getByteLen(tag.args) / 1024;
+            quota += Util.getUtf8ByteLength(tag.args) / 1024;
 
             if (quota > config.maxQuota) {
                 this.logger.info("Cannot add tag: " + tag.name);
@@ -76,10 +76,10 @@ class DBImporter {
     }
 
     async editRegular(tag, find, quota) {
-        let t_quota = Util.getByteLen(tag.body) / 1024 - Util.getByteLen(find.body) / 1024;
+        let t_quota = Util.getUtf8ByteLength(tag.body) / 1024 - Util.getUtf8ByteLength(find.body) / 1024;
 
         if (find.args.length > 0) {
-            t_quota -= Util.getByteLen(find.args);
+            t_quota -= Util.getUtf8ByteLength(find.args);
         }
 
         quota += t_quota;
@@ -147,7 +147,7 @@ class DBImporter {
 
     async deleteTag(tag) {
         let quota = await this.tag_db.quotaFetch(tag.owner);
-        quota -= Util.getByteLen(tag.body ?? "") / 1024;
+        quota -= Util.getUtf8ByteLength(tag.body ?? "") / 1024;
 
         await this.tag_db.quotaSet(tag.owner, quota);
 
