@@ -379,7 +379,7 @@ const Util = {
         return arr[arr.length + start - 1];
     },
 
-    randomElement: (arr, a = 0, b = arr.length - 1) => {
+    randomElement: (arr, a = 0, b = arr.length) => {
         return arr[a + ~~(Math.random() * (b - a))];
     },
 
