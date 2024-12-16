@@ -117,7 +117,7 @@ class DiscordClient {
         const optionsList = typeof options !== "undefined" ? clientOptions : [];
 
         for (const key of optionsList) {
-            if (typeof options[key] === "undefined") {
+            if (!(key in options)) {
                 continue;
             }
 
