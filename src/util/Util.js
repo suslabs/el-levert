@@ -14,7 +14,7 @@ const urlExp = /(\S*?):\/\/(?:([^\/\.]+)\.)?([^\/\.]+)\.([^\/\s]+)\/?(\S*)?/,
 
 const regexEscapeExp = /[.*+?^${}()|[\]\\]/g,
     charClassExcapeExp = /[-\\\]^]/g,
-    scriptParseExp = /^`{3}([\S]+)?\n([\s\S]+)`{3}$/;
+    scriptParseExp = /^(?:`{3}([\S]+\n)?([\s\S]+)`{3}|`([^`]+)`)$/;
 
 const durationSeconds = {
     year: 31536000,
@@ -371,6 +371,16 @@ const Util = {
         return Math.round((num + Number.EPSILON) * exp) / exp;
     },
 
+    smallRound: (num, digits) => {
+        const tresh = 1 / 10 ** digits;
+
+        if (Math.abs(num) <= tresh) {
+            digits = -Math.floor(Math.log10(Math.abs(num)));
+        }
+
+        return Util.round(num, digits);
+    },
+
     firstElement: (arr, start = 0) => {
         return arr[start];
     },
@@ -494,17 +504,16 @@ const Util = {
         const match = script.match(scriptParseExp);
 
         if (!match) {
-            return [false, script];
+            return [false, script, ""];
         }
 
-        let lang = match[1],
-            body = match[2];
+        const body = (match[2] ?? match[3])?.trim();
 
         if (typeof body === "undefined") {
-            body = lang;
-            lang = "";
+            return [false, script, ""];
         }
 
+        const lang = match[1]?.trim() ?? "";
         return [true, body, lang];
     },
 

@@ -22,7 +22,7 @@ export default {
 
         const maxQuota = getClient().config.maxQuota,
             perc = Util.round((quota / maxQuota) * 100, 2),
-            roundedQuota = Util.round(quota, 2);
+            roundedQuota = Util.smallRound(quota, 2);
 
         return `:information_source: You're using **${roundedQuota}/${maxQuota}kb** of the available storage (**${perc}%**).`;
     }
