@@ -41,7 +41,7 @@ const VMUtil = {
         if (typeof text === "object") {
             msg = text;
         } else {
-            out.content = text ?? "";
+            out.content = VMUtil.formatOutput(text) ?? "";
         }
 
         if (msg === null || typeof msg === "undefined") {
@@ -49,7 +49,7 @@ const VMUtil = {
         }
 
         if (typeof msg.content !== "undefined") {
-            out.content = msg.content;
+            out.content = VMUtil.formatOutput(msg.content);
         }
 
         if (typeof msg.embed !== "undefined") {
