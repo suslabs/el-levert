@@ -233,7 +233,7 @@ class DiscordClient {
     setActivity(config) {
         const validTypes = Object.entries(ActivityType)
                 .filter(([key, value]) => !isNaN(key) && value !== "Custom")
-                .map(([_, value]) => value),
+                .map(([, value]) => value),
             lowercaseTypes = validTypes.map(x => x.toLowerCase());
 
         let activityType = config.type.toLowerCase(),

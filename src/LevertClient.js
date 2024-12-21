@@ -205,7 +205,7 @@ class LevertClient extends DiscordClient {
                 compClass.loadPriority ??= maxPriority;
             }
         });
-        components.sort(([_1, a], [_2, b]) => a.loadPriority - b.loadPriority);
+        components.sort(([, a], [, b]) => a.loadPriority - b.loadPriority);
 
         const compInstances = components
             .filter(([compName]) => ctorArgs[compName] !== false)
@@ -218,7 +218,7 @@ class LevertClient extends DiscordClient {
             }
         });
 
-        const compList = compInstances.map(([_, compInst]) => compInst).sort((a, b) => b.priority - a.priority);
+        const compList = compInstances.map(([, compInst]) => compInst).sort((a, b) => b.priority - a.priority);
 
         this[pluralName] = Object.fromEntries(compInstances);
         this[listName] = compList;

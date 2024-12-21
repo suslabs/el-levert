@@ -91,7 +91,7 @@ class BaseCommandManager extends Manager {
             return aName.localeCompare(bName);
         });
 
-        for (const [_, cmds] of entries) {
+        for (const [, cmds] of entries) {
             cmds.sort((a, b) => {
                 const aName = a.name,
                     bName = b.name;

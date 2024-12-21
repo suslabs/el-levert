@@ -19,7 +19,7 @@ function search(haystack, needle, options = {}) {
         searchHaystack = haystack.map(x => x[searchKey]);
     }
 
-    const [_, info, order] = uf.search(searchHaystack, needle);
+    const [, info, order] = uf.search(searchHaystack, needle);
 
     let results = Array(order.length);
 

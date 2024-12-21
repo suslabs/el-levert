@@ -24,7 +24,7 @@ async function evalBase(args, msg) {
             };
         }
     } else {
-        [_, body] = Util.parseScript(body);
+        [, body] = Util.parseScript(body);
     }
 
     if (body.length < 1) {
