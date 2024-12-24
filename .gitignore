@@ -133,8 +133,8 @@ dist
 .vscode
 
 # Bot
-config/auth.json
-db
+/config/auth.json
+/db/
 
 # Other
 .VSCodeCounter
