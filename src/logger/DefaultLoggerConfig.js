@@ -5,6 +5,7 @@ import path from "node:path";
 
 const includeCalls = false;
 
+// eslint-disable-next-line no-undef
 const rootUrl = pathToFileURL(projRoot).toString(),
     logCallDepth = 3;
 
