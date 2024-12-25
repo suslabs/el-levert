@@ -255,13 +255,7 @@ class JsonLoader extends TextFileLoader {
         }
 
         const jsonData = this.stringifyData(data, options);
-        status = await super.write(jsonData);
-
-        if (status === LoadStatus.successful) {
-            this.data = data;
-        }
-
-        return status;
+        return await super.write(jsonData);
     }
 
     async append(data, options = {}) {

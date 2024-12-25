@@ -95,7 +95,6 @@ class TextFileLoader extends FileLoader {
             return this.failure(err, `Error occured while writing ${this.getName()}:`);
         }
 
-        this.data = data;
         return LoadStatus.successful;
     }
 

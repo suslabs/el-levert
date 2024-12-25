@@ -150,9 +150,9 @@ class Loader {
         return [this.getData(), status ?? LoadStatus.successful];
     }
 
-    async loadAsync(promise, data) {
+    async loadAsync(promise) {
         const status = await promise;
-        return this.loadSync(status, data);
+        return this.loadSync(status);
     }
 
     writeSync(status, data) {
@@ -181,9 +181,9 @@ class Loader {
         return status ?? LoadStatus.successful;
     }
 
-    async writeAsync(promise) {
+    async writeAsync(promise, data) {
         const status = await promise;
-        return this.writeSync(status);
+        return this.writeSync(status, data);
     }
 
     failure(err, loggerMsg, logLevel = "error") {
