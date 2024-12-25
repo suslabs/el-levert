@@ -18,5 +18,8 @@
         "no-unused-vars": "off",
         "no-ex-assign": "off",
         "no-case-declarations": "off"
+    },
+    "globals": {
+        "projRoot": "readonly"
     }
 }

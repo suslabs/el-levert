@@ -9,7 +9,7 @@ import URL from "node:url";
 
 import { isPromise } from "./TypeTester.js";
 
-const urlExp = /(\S*?):\/\/(?:([^\/\.]+)\.)?([^\/\.]+)\.([^\/\s]+)\/?(\S*)?/,
+const urlExp = /(\S*?):\/\/(?:([^/.]+)\.)?([^/.]+)\.([^/\s]+)\/?(\S*)?/,
     validUrlExp = new RegExp(`^${urlExp.toString()}$`);
 
 const regexEscapeExp = /[.*+?^${}()|[\]\\]/g,
@@ -402,7 +402,7 @@ const Util = {
     },
 
     validUrl: url => {
-        return validUrlExp.test(exp);
+        return validUrlExp.test(url);
     },
 
     splitArgs: (str, lowercase = false, options = {}) => {
