@@ -39,19 +39,20 @@ class TextFileLoader extends FileLoader {
             await fs.unlink(this.tempPath);
         } catch (err) {
             if (err.code === "ENOENT") {
-                this.logger?.error("Temp file not found");
-                return;
+                this.logger?.error(`Temp file for ${this.getName()} not found.`);
+            } else {
+                this.logger?.error(`Error occured while deleting temp file for ${this.getName()}:`, err);
             }
 
-            this.logger?.error("Error occured while deleting temp file:", err);
+            return LoadStatus.failed;
         }
+
+        return LoadStatus.successful;
     }
 
     async load() {
         const err = this.checkPath();
-        if (err) {
-            return err;
-        }
+        if (err) return err;
 
         let text;
 
@@ -78,9 +79,7 @@ class TextFileLoader extends FileLoader {
         }
 
         const err = this.checkPath();
-        if (err) {
-            return err;
-        }
+        if (err) return err;
 
         try {
             await fs.writeFile(this.tempPath, data, this.fsConfig);
@@ -92,21 +91,23 @@ class TextFileLoader extends FileLoader {
         try {
             await fs.rename(this.tempPath, this.path);
         } catch (err) {
-            return this.failure(err, `Error occured while writing ${this.getName()}:`);
-        } finally {
             await this.deleteTemp();
+            return this.failure(err, `Error occured while writing ${this.getName()}:`);
         }
 
+        this.data = data;
         return LoadStatus.successful;
     }
 
     async append(data) {
-        const err = this.checkPath();
-        if (err) {
-            return err;
+        const status = await this.load();
+
+        if (status === LoadStatus.failed) {
+            return status;
         }
 
-        return LoadStatus.successful;
+        const newData = this.data + data;
+        return await this.write(newData);
     }
 
     getLoadingMessage() {

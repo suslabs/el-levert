@@ -54,7 +54,7 @@ const Util = {
 
         function recursiveFunc(dir_path, arr) {
             syncFs.readdirSync(dir_path).forEach(itm => {
-                const itmPath = path.resolve(dir_path, itm);
+                const itmPath = path.join(dir_path, itm);
 
                 if (syncFs.statSync(itmPath).isDirectory()) {
                     recursiveFunc(itmPath, arr);

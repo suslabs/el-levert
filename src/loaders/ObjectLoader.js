@@ -15,9 +15,7 @@ class ObjectLoader extends FileLoader {
 
     async load() {
         const err = this.checkPath();
-        if (err) {
-            return err;
-        }
+        if (err) return err;
 
         const object = await Util.import(this.path, this.cache);
 

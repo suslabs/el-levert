@@ -15,15 +15,14 @@ class DirectoryLoader extends Loader {
         });
 
         if (typeof dirPath === "string") {
-            this.dirPath = path.resolve(dirPath);
+            this.dirPath = path.resolve(projRoot, dirPath);
         } else {
             this.dirPath = dirPath;
         }
 
         this.logName = this.getLogName();
 
-        let excludeDirs = options.excludeDirs ?? [];
-        excludeDirs = excludeDirs.map(dir => path.resolve(dir));
+        const excludeDirs = (options.excludeDirs ?? []).map(dir => path.resolve(projRoot, dir));
         this.excludeDirs = excludeDirs;
 
         this.fileExtension = options.fileExtension ?? "any";

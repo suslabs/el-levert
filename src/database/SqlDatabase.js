@@ -111,7 +111,7 @@ class SqlDatabase {
             items = await fs.readdir(dirPath);
 
         for (const item of items) {
-            const itemPath = path.resolve(dirPath, item),
+            const itemPath = path.join(dirPath, item),
                 stat = await fs.stat(itemPath);
 
             if (stat.isDirectory()) {
@@ -130,7 +130,7 @@ class SqlDatabase {
         const items = await fs.readdir(this.queryPath);
 
         for (const item of items) {
-            const itemPath = path.resolve(this.queryPath, item),
+            const itemPath = path.join(this.queryPath, item),
                 stat = await fs.stat(itemPath);
 
             if (stat.isDirectory()) {

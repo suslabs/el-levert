@@ -18,7 +18,7 @@ export default {
         let [tagPrefix, split1] = Util.splitArgs(args),
             [owner, inputDir] = Util.splitArgs(split1);
 
-        inputDir = path.resolve(inputDir);
+        inputDir = path.resolve(projRoot, inputDir);
         const files = fs.readdirSync(inputDir);
 
         files.sort((a, b) =>
@@ -31,7 +31,7 @@ export default {
 
         for (let i = 0; i < files.length; i++) {
             const filePath = path.join(inputDir, files[i]),
-                contents = fs.readFileSync(filePath, "utf8");
+                contents = fs.readFileSync(filePath, "utf-8");
 
             const tagName = tagPrefix + (i + 1).toString();
 

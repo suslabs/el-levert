@@ -248,24 +248,31 @@ class JsonLoader extends TextFileLoader {
                 return await this.append(data, options);
         }
 
-        const status = this.validate(data);
+        let status = this.validate(data);
 
         if (status === LoadStatus.failed) {
             return status;
         }
 
         const jsonData = this.stringifyData(data, options);
-        return await super.write(jsonData);
+        status = await super.write(jsonData);
+
+        if (status === LoadStatus.successful) {
+            this.data = data;
+        }
+
+        return status;
     }
 
     async append(data, options = {}) {
-        const status = this.validate(data);
+        let status = await this.load();
 
         if (status === LoadStatus.failed) {
             return status;
         }
 
-        return LoadStatus.successful;
+        const newData = { ...this.data, ...data };
+        return await this.write(newData);
     }
 }
 

@@ -20,7 +20,7 @@ function modify() {
 class BaseConfigLoader extends JsonLoader {
     constructor(name, logger, options = {}) {
         const configFilename = configPaths[name],
-            configPath = path.resolve(configPaths.dir, configFilename);
+            configPath = path.join(configPaths.dir, configFilename);
 
         super(name, configPath, logger, {
             validateWithSchema: true,

@@ -28,10 +28,10 @@ class DBManager extends Manager {
         this.dbDir = getClient().config.dbPath;
 
         const dbFilename = dbFilenames[this.dbName];
-        this.dbPath = path.resolve(this.dbDir, dbFilename);
+        this.dbPath = path.resolve(projRoot, this.dbDir, dbFilename);
 
         const queryBase = dbFilenames.queryPath;
-        this.queryDir = path.resolve(queryBase, this.dbName);
+        this.queryDir = path.resolve(projRoot, queryBase, this.dbName);
     }
 
     async checkDatabase() {

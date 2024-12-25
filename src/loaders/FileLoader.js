@@ -10,7 +10,7 @@ class FileLoader extends Loader {
         });
 
         if (typeof filePath === "string") {
-            this.path = path.resolve(filePath);
+            this.path = path.resolve(projRoot, filePath);
         } else {
             this.path = filePath;
         }
