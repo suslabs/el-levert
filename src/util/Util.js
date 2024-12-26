@@ -8,6 +8,7 @@ import path from "node:path";
 import URL from "node:url";
 
 import { isPromise } from "./TypeTester.js";
+import UtilError from "../errors/UtilError.js";
 
 const urlExp = /(\S*?):\/\/(?:([^/.]+)\.)?([^/.]+)\.([^/\s]+)\/?(\S*)?/,
     validUrlExp = new RegExp(`^${urlExp.toString()}$`);
@@ -136,7 +137,7 @@ const Util = {
 
             if (timeout > 0) {
                 if (typeof timeoutError === "undefined") {
-                    timeoutError = new Error("Condition timed out");
+                    timeoutError = new UtilError("Condition timed out");
                 }
 
                 _timeout = setTimeout(_ => {

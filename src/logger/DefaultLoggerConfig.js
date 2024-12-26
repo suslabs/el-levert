@@ -1,37 +1,10 @@
-import getCallStack from "../util/getCallStack.js";
+import { getCallInfo } from "../util/getCallStack.js";
 
-import { pathToFileURL } from "node:url";
-import path from "node:path";
-
-const includeCalls = false;
-
-const rootUrl = pathToFileURL(projRoot).toString(),
-    logCallDepth = 3;
-
-function getCallInfo() {
-    let site = "";
-
-    try {
-        const stack = getCallStack().slice(logCallDepth);
-        site = stack.find(x => x.getFileName().startsWith(rootUrl));
-    } catch (err) {
-        if (err.message === "Invalid callstack") {
-            return "no info";
-        } else {
-            throw err;
-        }
-    }
-
-    const siteFile = site.getFileName().slice(rootUrl.length + 1),
-        siteIndex = `${site.getLineNumber()}:${site.getColumnNumber()}`,
-        siteFunction = site.getFunctionName();
-
-    const callInfo = `${siteFile}:${siteIndex} (${siteFunction})`;
-    return callInfo;
-}
+const includeCalls = false,
+    logCallDepth = 2;
 
 function printfTemplate(info) {
-    const callInfo = includeCalls ? " " + getCallInfo() : "";
+    const callInfo = includeCalls ? " " + getCallInfo({ depth: logCallDepth }) : "";
 
     let log = `[${info.timestamp}]${callInfo} - ${info.service} - ${info.level}: ${info.message}`;
 
@@ -44,12 +17,14 @@ function printfTemplate(info) {
 
 const fileFormat = [
     "json",
+
     {
         name: "timestamp",
         opts: {
             format: "YYYY-MM-DD HH:mm:ss"
         }
     },
+
     {
         name: "errors",
         opts: {
@@ -60,18 +35,21 @@ const fileFormat = [
 
 const consoleFormat = [
     "colorize",
+
     {
         name: "timestamp",
         opts: {
             format: "YYYY-MM-DD HH:mm:ss"
         }
     },
+
     {
         name: "errors",
         opts: {
             stack: true
         }
     },
+
     {
         name: "printf",
         opts: printfTemplate

@@ -1,2 +1,2 @@
-Error.stackTraceLimit = 1000;
+Error.stackTraceLimit = 20;
 global.projRoot = import.meta.dirname;
