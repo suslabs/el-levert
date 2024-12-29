@@ -1,5 +1,7 @@
 import { getClient } from "../../LevertClient.js";
 
+import Util from "../../util/Util.js";
+
 export default {
     name: "remove",
     aliases: ["delete"],
@@ -7,9 +9,9 @@ export default {
     subcommand: true,
 
     handler: async (args, msg) => {
-        const index = parseInt(args, 10);
+        const index = Util.parseInt(args);
 
-        if (args.length <= 0 || isNaN(index)) {
+        if (args.length <= 0 || Number.isNaN(index)) {
             return ":information_source: `reminder remove [index]`";
         }
 

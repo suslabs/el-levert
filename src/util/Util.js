@@ -35,6 +35,25 @@ const Util = {
     discordEpoch,
     urlRegex: urlExp,
 
+    parseInt: (str, radix = 10) => {
+        if (typeof str !== "string" || typeof radix !== "number") {
+            return NaN;
+        }
+
+        if (radix < 2 || radix > 36) {
+            return NaN;
+        }
+
+        const validChars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ".slice(0, radix),
+            exp = new RegExp(`^[+-]?[${validChars}]+$`, "i");
+
+        if (!exp.test(str)) {
+            return NaN;
+        }
+
+        return Number.parseInt(str, radix);
+    },
+
     zip: (arr_1, arr_2) => {
         const len = Math.min(arr_1.length, arr_2.length);
         return Array.from({ length: len }, (_, i) => [arr_1[i], arr_2[i]]);

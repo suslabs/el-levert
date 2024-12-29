@@ -28,9 +28,9 @@ export default {
         if (all) {
             maxResults = Infinity;
         } else if (m_str.length > 0) {
-            maxResults = parseInt(m_str);
+            maxResults = Util.parseInt(m_str);
 
-            if (isNaN(maxResults) || maxResults < 1) {
+            if (Number.isNaN(maxResults) || maxResults < 1) {
                 return ":warning: Invalid number: " + m_str;
             }
         }

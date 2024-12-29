@@ -25,9 +25,9 @@ export default {
             let space;
 
             if (s_str.length > 0) {
-                space = parseInt(s_str);
+                space = Util.parseInt(s_str);
 
-                if (isNaN(space) || space < 0) {
+                if (Number.isNaN(space) || space < 0) {
                     return ":warning: Invalid indentation: " + s_str;
                 }
             }

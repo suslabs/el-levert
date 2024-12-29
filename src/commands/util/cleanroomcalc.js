@@ -1,5 +1,7 @@
 import { EmbedBuilder } from "discord.js";
 
+import Util from "../../util/Util.js";
+
 const minSize = 5,
     maxSize = 15;
 
@@ -14,11 +16,11 @@ export default {
             return ":warning: Must specify all dimensions in LxWxH format.";
         }
 
-        const l = parseInt(dims[0], 10),
-            w = parseInt(dims[1], 10),
-            h = parseInt(dims[2], 10);
+        const l = Util.parseInt(dims[0]),
+            w = Util.parseInt(dims[1]),
+            h = Util.parseInt(dims[2]);
 
-        if (isNaN(l) || isNaN(w) || isNaN(h)) {
+        if ((Number.isNaN(l) || Number.isNaN(w) || Number, isNaN(h))) {
             return `:warning: Invalid dimensions: \`${dims[0]}\`x\`${dims[1]}\`x\`${dims[2]}\`.`;
         }
 

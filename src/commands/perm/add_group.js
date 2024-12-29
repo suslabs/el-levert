@@ -11,7 +11,7 @@ export default {
 
     handler: async (args, msg) => {
         let [g_name, level] = Util.splitArgs(args);
-        level = parseInt(level, 10);
+        level = Util.parseInt(level);
 
         if (args.length === 0 || g_name.length === 0 || level.length === 0) {
             return ":information_source: `perm add_group [group name] [level]`";

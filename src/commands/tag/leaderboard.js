@@ -49,9 +49,9 @@ export default {
         let maxUsers = defaultUserLimit;
 
         if (l_str.length > 0) {
-            maxUsers = parseInt(l_str);
+            maxUsers = Util.parseInt(l_str);
 
-            if (isNaN(maxUsers) || maxUsers < 1) {
+            if (Number.isNaN(maxUsers) || maxUsers < 1) {
                 return ":warning: Invalid limit: " + l_str;
             }
 
