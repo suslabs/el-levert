@@ -29,6 +29,10 @@ class TagManager extends DBManager {
     }
 
     checkName(name) {
+        if (name.length < 1) {
+            return "Invalid tag name.";
+        }
+
         if (name.length > this.maxTagNameLength) {
             return `The tag name can be at most ${this.maxTagNameLength} characters long.`;
         }
