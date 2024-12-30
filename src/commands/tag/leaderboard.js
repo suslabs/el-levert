@@ -4,8 +4,10 @@ import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 
-const leaderboardTypes = ["count", "size"],
-    defaultUserLimit = 10;
+const leaderboardTypes = ["count", "size"];
+
+const defaultLimit = 10,
+    maxLimit = 50;
 
 function formatLeaderboard(leaderboard, type) {
     const format = leaderboard.map((entry, i) => {
@@ -46,7 +48,7 @@ export default {
             return ":warning: Invalid leaderboard type.";
         }
 
-        let maxUsers = defaultUserLimit;
+        let maxUsers = defaultLimit;
 
         if (l_str.length > 0) {
             maxUsers = Util.parseInt(l_str);
@@ -55,7 +57,7 @@ export default {
                 return ":warning: Invalid limit: " + l_str;
             }
 
-            maxUsers = Util.clamp(maxUsers, 1, 100);
+            maxUsers = Util.clamp(maxUsers, 1, maxLimit);
         }
 
         const leaderboard = await getClient().tagManager.leaderboard(l_type, maxUsers);

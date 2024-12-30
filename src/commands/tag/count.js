@@ -10,12 +10,15 @@ export default {
     handler: async (args, msg) => {
         let user;
 
+        let all = false,
+            own = false;
+
         findUser: if (args.length > 0) {
             const [u_name] = Util.splitArgs(args),
                 lowercaseName = u_name.toLowerCase();
 
-            const all = lowercaseName === "all",
-                own = lowercaseName === "me";
+            all = lowercaseName === "all";
+            own = lowercaseName === "me";
 
             if (all) {
                 break findUser;
@@ -34,7 +37,13 @@ export default {
 
         const count = await getClient().tagManager.count(user?.id);
 
-        if (typeof user !== "undefined") {
+        if (own) {
+            if (count === 0) {
+                return `:information_source: You have no tags.`;
+            }
+
+            return `:information_source: You have **${count}** tags.`;
+        } else if (typeof user !== "undefined") {
             if (count === 0) {
                 return `:information_source: User \`${user.username}\` has no tags.`;
             }
