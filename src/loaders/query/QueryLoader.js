@@ -19,9 +19,7 @@ function getCategory(filePath, rootPath) {
     return categoryName;
 }
 
-getQueryName(filePath) {
-    
-}
+function getQueryName(filePath) {}
 
 class QueryLoader extends DirectoryLoader {
     constructor(dirPath, db, logger, options = {}) {

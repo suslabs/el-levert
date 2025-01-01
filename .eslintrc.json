@@ -17,7 +17,9 @@
     "rules": {
         "no-unused-vars": "off",
         "no-ex-assign": "off",
-        "no-case-declarations": "off"
+        "no-case-declarations": "off",
+        "no-empty": "off",
+        "eqeqeq": ["error", "always", { "null": "ignore" }]
     },
     "globals": {
         "projRoot": "readonly"
