@@ -15,8 +15,13 @@ function logUsage(msg, str) {
     );
 }
 
+function logCancelled(reason) {
+    getLogger().info(`Generationg preview cancelled: ${reason}.`);
+}
+
 function logSending(preview) {
-    getLogger().debug(`Sending preview:${Util.formatLog(preview)}`);
+    const text = preview.data.description;
+    getLogger().debug(`Sending preview:${Util.formatLog(text)}`);
 }
 
 function logGenTime(t1) {
@@ -163,6 +168,7 @@ class PreviewHandler extends Handler {
             preview = await this.genPreview(msg, msg.content);
         } catch (err) {
             if (err.name === "HandlerError") {
+                logCancelled(err.message);
                 return false;
             }
 

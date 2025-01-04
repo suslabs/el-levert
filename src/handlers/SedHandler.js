@@ -16,7 +16,8 @@ function logUsage(msg) {
 }
 
 function logSending(sed) {
-    getLogger().debug(`Sending replaced message:${Util.formatLog(sed)}`);
+    const text = sed.data.description;
+    getLogger().debug(`Sending replaced message:${Util.formatLog(text)}`);
 }
 
 function logGenTime(t1) {

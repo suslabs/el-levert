@@ -4,8 +4,10 @@ import { getClient, getLogger } from "../LevertClient.js";
 import Util from "../util/Util.js";
 
 function logParansUsage(msg, parans) {
+    const s = parans.total > 0 ? "e" : "i";
+
     getLogger().info(
-        `Reacting with ${parans.total} parans to message sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${msg.channel.name}).`
+        `Reacting with ${parans.total} parenthes${s}s to message sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${msg.channel.name}).`
     );
 }
 
@@ -154,7 +156,7 @@ class ReactionHandler extends Handler {
         const t1 = performance.now(),
             parans = this.countUnmatchedParans(msg.content);
 
-        if (typeof parans === "undefined") {
+        if (typeof parans === "undefined" || parans.total < 1) {
             return false;
         }
 
