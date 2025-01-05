@@ -197,7 +197,7 @@ class EvalContext {
         await this.inspector.waitForConnection();
 
         const res = await script.run(this.context, {
-            timeout: this.timeLimit / Util.durationSeconds.milli,
+            timeout: this.timeLimit,
             copy: true
         });
 

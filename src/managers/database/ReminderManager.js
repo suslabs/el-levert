@@ -21,7 +21,12 @@ class ReminderManager extends DBManager {
     constructor(enabled) {
         super(enabled, "reminder", ReminderDatabase, "remind_db");
 
-        this.sendInterval = getClient().config.reminderSendInterval;
+        const sendInterval = getClient().config.reminderSendInterval,
+            intervalMs = Math.floor(sendInterval / Util.durationSeconds.milli);
+
+        this.intervalSeconds = sendInterval;
+        this.sendInterval = intervalMs;
+
         this.maxMsgLength = Util.clamp(maxMsgLength, 0, 1500);
     }
 
@@ -116,7 +121,7 @@ class ReminderManager extends DBManager {
     }
 
     async sendReminders() {
-        getLogger().debug(`Checking reminders... (${Util.round(this.sendInterval * Util.durationSeconds.milli, 1)}s)`);
+        getLogger().debug(`Checking reminders... (${Util.round(this.intervalSeconds, 1)}s)`);
 
         const t1 = performance.now(),
             reminders = await this.getPastReminders();

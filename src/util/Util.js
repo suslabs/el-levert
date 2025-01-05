@@ -711,7 +711,7 @@ const Util = {
         }
 
         const dt = (t2 - t1) / div;
-        return ~~Math.abs(dt);
+        return Math.floor(Math.abs(dt));
     },
 
     duration: (delta, options = {}) => {

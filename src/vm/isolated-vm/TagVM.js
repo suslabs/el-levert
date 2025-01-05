@@ -31,8 +31,11 @@ class TagVM extends VM {
     constructor(enabled) {
         super(enabled);
 
+        const timeLimit = getClient().config.otherTimeLimit,
+            limitMs = Math.floor(timeLimit / Util.durationSeconds.milli);
+
         this.memLimit = getClient().config.memLimit;
-        this.timeLimit = getClient().config.timeLimit;
+        this.timeLimit = limitMs;
 
         this.outCharLimit = Util.clamp(getClient().config.outCharLimit, 0, 2000);
         this.outLineLimit = Util.clamp(getClient().config.outLineLimit, 0, 2000);

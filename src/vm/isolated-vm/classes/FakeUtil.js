@@ -13,7 +13,7 @@ const FakeUtil = {
         version: getClient().version,
         env: `El Levert ${getClient().version}`,
 
-        timeLimit: getClient().tagVM.timeLimit / Util.durationSeconds.milli,
+        timeLimit: getClient().tagVM.timeLimit,
         inspectorEnabled: getClient().tagVM.enableInspector,
 
         outCharLimit: getClient().tagVM.outCharLimit,

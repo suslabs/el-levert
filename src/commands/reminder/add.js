@@ -2,7 +2,7 @@ import { parseDate } from "chrono-node";
 
 import { getClient } from "../../LevertClient.js";
 
-const messageRegex = /(.+?)\s*(?:(?:"((?:[^"\\]|\\.)*)")|$)/;
+const messageRegex = /(.+?)\s*(?:(?:(['"`])((?:[^\2\\]|\\.)*?)\2)|$)/;
 
 export default {
     name: "add",
@@ -12,11 +12,17 @@ export default {
 
     handler: async (args, msg) => {
         const match = args.match(messageRegex),
-            date = match[1] ?? "",
-            message = match[2] ?? "";
+            date = match[1] ?? "";
+
+        let quote = match[2],
+            message = match[3] ?? "";
 
         if (args.length === 0 || date.length === 0) {
             return ':information_source: `reminder add [date] "message"`';
+        }
+
+        if (message.length > 0) {
+            message = message.replaceAll("\\" + quote, quote);
         }
 
         const e = getClient().reminderManager.checkMessage(message);
