@@ -162,9 +162,11 @@ class EvalContext {
     }
 
     async getIsolate(options) {
-        const { msg, tag, args } = options;
+        if (typeof this.isolate === "undefined") {
+            const { msg, tag, args } = options;
+            await this.setupIsolate(msg, tag, args);
+        }
 
-        await this.setupIsolate(msg, tag, args);
         return this.isolate;
     }
 

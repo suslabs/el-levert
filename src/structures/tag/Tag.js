@@ -366,6 +366,7 @@ class Tag {
             name: this.name,
             aliasName,
             body,
+            isScript: this.isScript,
             owner,
             ownerId: this.owner,
             args,
@@ -373,7 +374,6 @@ class Tag {
             lastEdited,
             registeredTimestamp: this.registered,
             lastEditedTimestamp: this.lastEdited,
-            isScript: this.isScript,
             type,
             version,
             typeInt: this.type

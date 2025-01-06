@@ -4,7 +4,7 @@ import { getClient, getLogger } from "../LevertClient.js";
 import Util from "../util/Util.js";
 
 function logParansUsage(msg, parans) {
-    const s = parans.total > 0 ? "e" : "i";
+    const s = parans.total > 1 ? "e" : "i";
 
     getLogger().info(
         `Reacting with ${parans.total} parenthes${s}s to message sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${msg.channel.name}).`

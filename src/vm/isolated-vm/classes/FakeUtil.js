@@ -84,7 +84,17 @@ const FakeUtil = {
         );
 
         if (!msgs) {
-            return undefined;
+            const msg_id = ch_id,
+                msg = await getClient().fetchMessage(default_id, msg_id, {
+                    user_id,
+                    checkAccess: true
+                });
+
+            if (!msg) {
+                return undefined;
+            }
+
+            msgs = [msg];
         }
 
         msgs = msgs.map(msg => new FakeMsg(msg).fixedMsg);

@@ -1,37 +1,44 @@
 class FakeUser {
-    constructor(user) {
-        this.user = user;
+    constructor(member) {
+        this.member = member;
 
-        if (typeof user === "undefined") {
+        if (typeof member === "undefined") {
             this.fixedUser = {};
             return this;
         }
 
-        this.fakeUser = {
-            guildId: user.guild.id,
-            joinedTimestamp: user.joinedTimestamp,
-            premiumSinceTimestamp: user.premiumSinceTimestamp,
-            nickname: user.nickname,
-            pending: user.pending,
-            communicationDisabledUntilTimestamp: user.communicationDisabledUntilTimestamp,
-            userId: user.user.id,
-            avatar: user.user.avatar,
-            displayName: user.displayName,
-            roles: user._roles,
-            avatarURL: user.user.avatarURL(),
-            displayAvatarURL: user.user.displayAvatarURL(),
-            id: user.user.id,
+        const user = member.user ?? member,
+            id = user.id;
+
+        this.member = user;
+
+        this.fixedUser = {
+            id,
             bot: user.bot,
             system: user.system,
-            flags: user.flags,
-            username: user.user.username,
-            discriminator: user.user.discriminator,
-            banner: user.user.banner,
-            accentColor: user.user.accentColor,
-            createdTimestamp: user.user.createdTimestamp,
-            defaultAvatarURL: user.user.defaultAvatarURL,
-            hexAccentColor: user.user.hexAccentColor,
-            tag: user.user.tag
+            flags: user.flags.bitfield,
+            username: user.username,
+            discriminator: user.discriminator,
+            avatar: user.avatar,
+            banner: user.banner,
+            accentColor: user.accentColor,
+            createdTimestamp: user.createdTimestamp,
+            defaultAvatarURL: user.defaultAvatarURL,
+            hexAccentColor: user.hexAccentColor,
+            tag: user.tag,
+            avatarURL: user.avatarURL(),
+            displayAvatarURL: user.displayAvatarURL(),
+            bannerURL: user.bannerURL(),
+            guildId: member.guild?.id,
+            joinedTimestamp: member.joinedTimestamp,
+            premiumSinceTimestamp: member.premiumSinceTimestamp,
+            nickname: member.nickname,
+            pending: member.pending,
+            communicationDisabledUntilTimestamp: member.communicationDisabledUntilTimestamp,
+            userId: id,
+            displayName: member.displayName,
+            globalName: user.globalName,
+            roles: member._roles
         };
     }
 }

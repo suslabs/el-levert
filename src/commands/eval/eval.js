@@ -33,9 +33,7 @@ async function evalBase(args, msg) {
         };
     }
 
-    return {
-        body: body
-    };
+    return { body };
 }
 
 async function altevalBase(args, msg, lang) {

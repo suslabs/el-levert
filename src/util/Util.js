@@ -579,9 +579,7 @@ const Util = {
     },
 
     getFileAttach: (data, name = "message.txt") => {
-        const attachment = new AttachmentBuilder(Buffer.from(data), {
-            name: name
-        });
+        const attachment = new AttachmentBuilder(Buffer.from(data), { name });
 
         return {
             files: [attachment]
