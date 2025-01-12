@@ -14,7 +14,7 @@ function indent(code, times = 1) {
     return lines.join("\n");
 }
 
-function funcBody(type, ret = true) {
+function funcBody(type, ret) {
     const prefix = ret ? "return" : "const res =",
         options = JSON.stringify(funcOptions, undefined, 4);
 
@@ -31,7 +31,8 @@ function objDeclaration(objName) {
     const code = `
 if(typeof ${objName} === "undefined") {
 ${spaces}${objName} = {};
-}`;
+}
+`;
 
     return code.trim();
 }
@@ -47,27 +48,33 @@ function funcDeclaration(objName, funcName, body) {
     code += `
 ${funcName} = (...args) => {
 ${body}
-}`;
+}
+`.trim();
 
-    return code.trim();
+    return code;
 }
 
 function getClassName(_class) {
     return _class.prototype.constructor.name;
 }
 
-function classDeclaration(_class) {
+function classDeclaration(_class, global) {
     const className = getClassName(_class);
 
-    let classCode = _class.toString();
-    classCode = indent(classCode);
-    classCode = classCode.trim();
+    let classCode = _class.toString().trim(),
+        code;
 
-    const code = `
+    if (global) {
+        classCode = indent(classCode).trimStart();
+
+        code = `
 if(typeof ${className} === "undefined") {
 ${spaces}${className} = ${classCode};
 }
-`;
+        `;
+    } else {
+        code = classCode;
+    }
 
     return code.trim();
 }
@@ -81,22 +88,29 @@ function closure(body) {
 }
 
 function getRegisterCode(options, errorOptions = {}) {
-    const { objName, funcName, type } = options,
-        { errorClass } = errorOptions;
+    const { objName, funcName, type } = options;
 
-    const useError = typeof errorClass !== "undefined";
+    const errClass = errorOptions.class,
+        useError = typeof errClass !== "undefined",
+        errAccessible = errorOptions.accessible ?? true;
 
     let declCode = objDeclaration(objName),
         body = funcBody(type, !useError);
 
     if (useError) {
-        const errName = getClassName(errorClass);
+        const errName = getClassName(errClass),
+            errDecl = classDeclaration(errClass, errAccessible);
 
-        if (declCode.length > 0) {
-            declCode += "\n\n";
+        if (errAccessible) {
+            if (declCode.length > 0) {
+                declCode += "\n\n";
+            }
+
+            declCode += errDecl;
+        } else {
+            body = `${errDecl}\n\n${body}`;
         }
 
-        declCode += classDeclaration(errorClass);
         body += `\n\nthrow new ${errName}(res);`;
     }
 

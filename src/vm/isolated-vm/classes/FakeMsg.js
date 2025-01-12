@@ -19,9 +19,9 @@ class FakeMsg {
 
         const mentions = msg.mentions,
             channel = msg.channel,
-            guild = channel.guild;
+            guild = channel?.guild;
 
-        const messageIds = channel.messages.cache.map(msg => msg.id).slice(1, messagesCount + 1);
+        const messageIds = channel?.messages?.cache.map(msg => msg.id).slice(1, messagesCount + 1);
 
         this.fixedMsg = VMUtil.removeCircRef({
             channelId: msg.channelId,
@@ -31,29 +31,29 @@ class FakeMsg {
             type: msg.type,
             system: msg.system,
             content: msg.content,
-            authorId: msg.author.id,
+            authorId: msg.author?.id,
             pinned: msg.pinned,
             tts: msg.tts,
             nonce: msg.nonce,
             embeds: msg.embeds,
             components: msg.components,
-            attachments: Array.from(msg.attachments.values()),
-            stickers: Array.from(msg.stickers.values()),
+            attachments: msg.attachments && Array.from(msg.attachments.values()),
+            stickers: msg.stickers && Array.from(msg.stickers.values()),
             position: msg.position,
             roleSubscriptionData: msg.roleSubscriptionData,
             editedTimestamp: msg.editedTimestamp,
 
             mentions: {
-                everyone: mentions.everyone,
-                users: Array.from(mentions.users.values()),
-                roles: Array.from(mentions.roles.values()),
-                crosspostedChannels: Array.from(mentions.crosspostedChannels.values()),
-                repliedUser: mentions.repliedUser?.id,
-                members: Array.from(mentions.members.values()),
-                channels: Array.from(mentions.channels.values())
+                everyone: mentions?.everyone,
+                users: mentions?.users && Array.from(mentions.users.values()),
+                roles: mentions?.roles && Array.from(mentions.roles.values()),
+                crosspostedChannels: mentions?.crosspostedChannels && Array.from(mentions.crosspostedChannels.values()),
+                repliedUser: mentions?.repliedUser?.id,
+                members: mentions?.members && Array.from(mentions.members.values()),
+                channels: mentions?.channels && Array.from(mentions.channels.values())
             },
 
-            groupActivityApplicationId: channel.groupActivityApplicationId,
+            groupActivityApplicationId: channel?.groupActivityApplicationId,
             webhookId: msg.webhookId,
             groupActivityApplicationId: msg.groupActivityApplicationId,
             applicationId: msg.applicationId,
@@ -64,32 +64,32 @@ class FakeMsg {
             cleanContent: msg.content,
 
             channel: {
-                type: channel.type,
-                flags: channel.flags.bitfield,
-                id: channel.id,
-                recipientId: channel.recipientId,
-                lastPinTimestamp: channel.lastPinTimestamp,
-                name: channel.name,
-                parentId: channel.parentId,
-                topic: channel.topic,
+                type: channel?.type,
+                flags: channel?.flags.bitfield,
+                id: channel?.id,
+                recipientId: channel?.recipientId,
+                lastPinTimestamp: channel?.lastPinTimestamp,
+                name: channel?.name,
+                parentId: channel?.parentId,
+                topic: channel?.topic,
                 messages: messageIds,
-                lastMessageId: channel.lastMessageId,
-                createdTimestamp: channel.createdTimestamp,
-                rateLimitPerUser: channel.rateLimitPerUser
+                lastMessageId: channel?.lastMessageId,
+                createdTimestamp: channel?.createdTimestamp,
+                rateLimitPerUser: channel?.rateLimitPerUser
             },
 
             author: new FakeUser(msg.author).fixedUser,
 
             guild: {
-                id: guild.id,
-                name: guild.name,
-                icon: guild.icon,
-                banner: guild.banner,
-                description: guild.description,
-                memberCount: guild.memberCount,
-                premiumTier: guild.premiumTier,
-                createdTimestamp: guild.createdTimestamp,
-                ownerId: guild.ownerId
+                id: guild?.id,
+                name: guild?.name,
+                icon: guild?.icon,
+                banner: guild?.banner,
+                description: guild?.description,
+                memberCount: guild?.memberCount,
+                premiumTier: guild?.premiumTier,
+                createdTimestamp: guild?.createdTimestamp,
+                ownerId: guild?.ownerId
             }
         });
     }

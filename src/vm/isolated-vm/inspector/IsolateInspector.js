@@ -1,9 +1,8 @@
 import VMError from "../../../errors/VMError.js";
 
 import { getLogger } from "../../../LevertClient.js";
+import VMUtil from "../../../util/vm/VMUtil.js";
 import Util from "../../../util/Util.js";
-
-const initialBreakpoint = "/* break on script start */ debugger;";
 
 function getWrappedReplyFunc(inspector) {
     return function wrappedReply(msg) {
@@ -78,7 +77,7 @@ class IsolateInspector {
             return code;
         }
 
-        return initialBreakpoint + "\n\n" + code;
+        return VMUtil.addDebuggerStmt(code);
     }
 
     sendMessage(msg) {

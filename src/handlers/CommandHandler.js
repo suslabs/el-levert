@@ -105,7 +105,7 @@ class CommandHandler extends Handler {
         try {
             const reply = await msg.reply({
                 content: `:no_entry_sign: Encountered exception while executing command ${bold(cmd.name)}:`,
-                ...Util.getFileAttach(err.stack, "error.js")
+                ...Util.getFileAttach(err.stack ?? err.toString(), "error.js")
             });
 
             this.messageTracker.addMsg(reply, msg.id);

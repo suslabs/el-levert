@@ -89,14 +89,15 @@ class TagVM extends VM {
 
         const context = await this.getContext(msg, tag, args);
 
-        let out;
-
         try {
-            out = await context.runScript(code);
-            out = VMUtil.formatOutput(out);
+            const out = await context.runScript(code);
 
             logFinished(this.enableInspector);
+            logTime(t1);
+
             getLogger().debug(`Returning script output:${Util.formatLog(out)}`);
+
+            return VMUtil.formatOutput(out);
         } catch (err) {
             logFinished(this.enableInspector);
             out = this.handleError(err);
@@ -104,20 +105,17 @@ class TagVM extends VM {
             this.inspectorServer?.executionFinished();
             context.dispose();
         }
-
-        logTime(t1);
-        return out;
     }
 
     handleError(err) {
         switch (err.name) {
-            case "VMError":
+            case VMErrors.custom[0]:
                 getLogger().debug(`VM error: ${err.message}`);
                 return `:no_entry_sign: ${err.message}.`;
-            case "ExitError":
+            case VMErrors.custom[1]:
                 getLogger().debug(`Returning exit data:${Util.formatLog(err.exitData)}`);
                 return err.exitData;
-            case "ManevraError":
+            case VMErrors.custom[2]:
                 getLogger().debug(`Returning reply data:${Util.formatLog(err.message)}`);
                 return this.processReply(err.message);
         }

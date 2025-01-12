@@ -13,10 +13,14 @@ import Functions from "./Functions.js";
 import globalNames from "./globalNames.json" assert { type: "json" };
 import funcNames from "./funcNames.json" assert { type: "json" };
 
-import Util from "../../../util/Util.js";
+import VMErrors from "../VMErrors.js";
 import IsolateInspector from "../inspector/IsolateInspector.js";
 
-const filename = "script.js";
+import Util from "../../../util/Util.js";
+import VMUtil from "../../../util/vm/VMUtil.js";
+
+const filename = "script.js",
+    evaluated = "evaluated script";
 
 class EvalContext {
     constructor(options, inspectorOptions = {}) {
@@ -24,6 +28,8 @@ class EvalContext {
         this.timeLimit = options.timeLimit;
 
         this.setupInspector(inspectorOptions);
+
+        this.scriptName = this.enableInspector ? `file:///${filename}` : `(<${evaluated}>)`;
         this.vmObjects = [];
     }
 
@@ -170,14 +176,14 @@ class EvalContext {
         return this.isolate;
     }
 
-    async compileScript(code, setReference = true) {
+    async compileScript(code, setField = true) {
         code = this.inspector.getDebuggerCode(code);
 
         const script = await this.isolate.compileScript(code, {
-            filename: `file:///${filename}`
+            filename: this.scriptName
         });
 
-        if (setReference) {
+        if (setField) {
             this.script = script;
         } else {
             return script;
@@ -185,8 +191,9 @@ class EvalContext {
     }
 
     async runScript(code) {
-        let compileNow = typeof code !== "undefined",
-            script;
+        const compileNow = typeof code !== "undefined";
+
+        let script;
 
         if (compileNow) {
             script = await this.compileScript(code, false);
@@ -198,16 +205,29 @@ class EvalContext {
 
         await this.inspector.waitForConnection();
 
-        const res = await script.run(this.context, {
-            timeout: this.timeLimit,
-            copy: true
-        });
+        try {
+            return await script.run(this.context, {
+                timeout: this.timeLimit,
+                copy: true
+            });
+        } catch (err) {
+            if (this.enableInspector || VMErrors.custom.includes(err.name)) {
+                throw err;
+            }
 
-        if (compileNow) {
-            script.release();
+            if (typeof err.stack === "string") {
+                const newStack = VMUtil.rewriteIVMStackTrace(err);
+
+                delete err.stack;
+                err.stack = newStack;
+            }
+
+            throw err;
+        } finally {
+            if (compileNow) {
+                script.release();
+            }
         }
-
-        return res;
     }
 
     disposeInspector() {

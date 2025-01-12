@@ -109,7 +109,8 @@ class VMFunction {
 
         if (this.exits) {
             errorOptions = {
-                errorClass: this.errorClass
+                class: this.errorClass,
+                accessible: false
             };
         }
 
