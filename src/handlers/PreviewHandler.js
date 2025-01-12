@@ -11,7 +11,7 @@ const msgUrlRegex =
 
 function logUsage(msg, str) {
     getLogger().info(
-        `Generating preview for "${str.match(msgUrlRegex)[0]}", issued by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${msg.channel.name}).`
+        `Generating preview for "${str.match(msgUrlRegex)[0]}", issued by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${Util.formatChannelName(msg.channel)}).`
     );
 }
 
@@ -108,10 +108,7 @@ class PreviewHandler extends Handler {
             }
         }
 
-        const inDms = prevMsg.channel.type === ChannelType.DM,
-            inThread = [ChannelType.PublicThread, ChannelType.PrivateThread].includes(prevMsg.channel.type);
-
-        if (!inDms) {
+        if (prevMsg.channel.type !== ChannelType.DM) {
             const msgUrl = new URL(rawMsgUrl);
             msgUrl.protocol = "https";
             msgUrl.hostname = "discord.com";
@@ -120,20 +117,10 @@ class PreviewHandler extends Handler {
             content += hyperlink("[Jump to Message]", msgUrl.href);
         }
 
-        let channel;
+        let channel = Util.formatChannelName(prevMsg.channel);
 
-        if (inDms) {
-            channel = "DMs";
-        } else {
-            channel = `#${inThread ? prevMsg.channel.parent.name : prevMsg.channel.name}`;
-
-            if (typeof msg.guild !== "undefined" && sv_id !== msg.guild.id) {
-                channel += ` - ${prevMsg.guild.name}`;
-            }
-
-            if (inThread) {
-                channel = `"${prevMsg.channel.name}" (thread of parent channel ${channel})`;
-            }
+        if (prevMsg.guild && sv_id !== prevMsg.guild.id) {
+            channel += ` - ${prevMsg.guild.name}`;
         }
 
         const username = prevMsg.author.displayName,

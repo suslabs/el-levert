@@ -100,7 +100,7 @@ class TagVM extends VM {
             return VMUtil.formatOutput(out);
         } catch (err) {
             logFinished(this.enableInspector);
-            out = this.handleError(err);
+            return this.handleError(err);
         } finally {
             this.inspectorServer?.executionFinished();
             context.dispose();

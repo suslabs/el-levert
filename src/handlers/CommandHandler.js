@@ -9,7 +9,7 @@ function logUsage(msg, name, args) {
     const cmdArgs = args.length > 0 ? ` with args:${Util.formatLog(args)}` : ".";
 
     getLogger().info(
-        `User ${msg.author.id} (${msg.author.username}) used command "${name}" in channel ${msg.channel.id} (${msg.channel.name})${cmdArgs}`
+        `User ${msg.author.id} (${msg.author.username}) used command "${name}" in channel ${msg.channel.id} (${Util.formatChannelName(msg.channel)})${cmdArgs}`
     );
 }
 

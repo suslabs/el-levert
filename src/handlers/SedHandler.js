@@ -11,7 +11,7 @@ const sedRegex = /^sed\/(?<regex_str>.+?)\/(?<replace>[^/]*)\/?(?<flags_str>.{1,
 
 function logUsage(msg) {
     getLogger().info(
-        `Generating sed for "${msg.content}", issued by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${msg.channel.name}).`
+        `Generating sed for "${msg.content}", issued by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${Util.formatChannelName(msg.channel)}).`
     );
 }
 
@@ -109,25 +109,11 @@ class SedHandler extends Handler {
 
         const replacedContent = sedMsg.content.replace(regex, replace ?? "");
 
-        const inDms = sedMsg.channel.type === ChannelType.DM,
-            inThread = [ChannelType.PublicThread, ChannelType.PrivateThread].includes(sedMsg.channel.type);
-
-        let channel;
-
-        if (inDms) {
-            channel = "DMs";
-        } else {
-            channel = `#${inThread ? sedMsg.channel.parent.name : sedMsg.channel.name}`;
-
-            if (inThread) {
-                channel = `"${sedMsg.channel.name}" (thread of parent channel ${channel})`;
-            }
-        }
-
         const username = sedMsg.author.displayName,
             avatar = sedMsg.author.displayAvatarURL(),
             timestamp = sedMsg.editedTimestamp ?? sedMsg.createdTimestamp,
-            image = sedMsg.attachments.at(0)?.url;
+            image = sedMsg.attachments.at(0)?.url,
+            channel = Util.formatChannelName(sedMsg.channel);
 
         const embed = new EmbedBuilder()
             .setAuthor({

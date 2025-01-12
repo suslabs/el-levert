@@ -1,3 +1,5 @@
+import { ChannelType } from "discord.js";
+
 import Handler from "./Handler.js";
 
 import { getClient, getLogger } from "../LevertClient.js";
@@ -7,13 +9,13 @@ function logParansUsage(msg, parans) {
     const s = parans.total > 1 ? "e" : "i";
 
     getLogger().info(
-        `Reacting with ${parans.total} parenthes${s}s to message sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${msg.channel.name}).`
+        `Reacting with ${parans.total} parenthes${s}s to message sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${Util.formatChannelName(msg.channel)}).`
     );
 }
 
 function logWordsUsage(msg, words) {
     getLogger().info(
-        `Reacting to word(s): "${words.join('", "')}" sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${msg.channel.name}).`
+        `Reacting to word(s): "${words.join('", "')}" sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${Util.formatChannelName(msg.channel)}).`
     );
 }
 
@@ -24,7 +26,7 @@ function logReactTime(t1) {
 
 function logRemove(msg, count) {
     getLogger().debug(
-        `Removing ${count} reactions from message ${msg.id} sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${msg.channel.name}).`
+        `Removing ${count} reactions from message ${msg.id} sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${Util.formatChannelName(msg.channel)}).`
     );
 }
 
@@ -296,6 +298,10 @@ class ReactionHandler extends Handler {
     }
 
     async execute(msg) {
+        if (msg.channel.type === ChannelType.DM) {
+            return;
+        }
+
         const reacted = await this.funnyReact(msg);
 
         if (reacted && !this.multipleReacts) {

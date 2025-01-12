@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer";
-import { AttachmentBuilder } from "discord.js";
+import { ChannelType, AttachmentBuilder } from "discord.js";
 
 import syncFs from "node:fs";
 import fs from "node:fs/promises";
@@ -814,6 +814,22 @@ const Util = {
 
             return prop < min || prop > max;
         });
+    },
+
+    formatChannelName: channel => {
+        const inDms = channel.type === ChannelType.DM;
+
+        if (inDms) {
+            return "DMs";
+        }
+
+        const inThread = [ChannelType.PublicThread, ChannelType.PrivateThread].includes(channel.type);
+
+        if (inThread) {
+            return `"${channel.name}" (thread of parent channel #${channel.parent.name})`;
+        }
+
+        return `#${channel.name}`;
     }
 };
 
