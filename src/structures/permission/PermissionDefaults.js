@@ -6,7 +6,7 @@ const DisabledGroup = new Group({
     level: 0
 });
 
-const ownerLevel = 2147483647,
+const ownerLevel = 2 ** 31 - 1,
     OwnerGroup = new Group({
         name: "owner",
         level: ownerLevel

@@ -25,28 +25,26 @@ class Group {
 
     formatUsers(discord = false) {
         const formattedName = discord ? bold(this.name) : this.name,
-            s = this.users.length > 1 ? "s" : "";
+            formattedLevel = discord ? bold(this.level) : this.level,
+            s = this.users.length > 1 ? "s" : "",
+            title = `Group ${formattedName} - Level ${formattedLevel} - User${s}:`;
 
-        let format = `Group ${formattedName} - Level ${this.level} - User${s}:\n`,
-            indent = " ";
+        const indent = discord ? "" : " ".repeat(indentation);
 
-        if (!discord) {
-            indent = indent.repeat(indentation);
-        }
+        let userFormat;
 
         if (this.users.length > 0) {
-            const userFormat = this.users
+            userFormat = this.users
                 .map((user, i) => {
                     const name = user.format(discord);
-                    return `${indent}${i + 1}. ${name}`;
+                    return `${indent}${discord ? "-" : `${i + 1}.`} ${name}`;
                 })
                 .join("\n");
-
-            format += userFormat;
         } else {
-            format += `${indent}None`;
+            userFormat = `${indent}None`;
         }
 
+        const format = `${title}\n${userFormat}`;
         return format;
     }
 
