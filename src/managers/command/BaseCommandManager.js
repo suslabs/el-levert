@@ -22,23 +22,38 @@ class BaseCommandManager extends Manager {
         this.excludeDirs = options.excludeDirs;
         this.cmdFileExtension = options.cmdFileExtension ?? ".js";
 
+        if (getClient().useBridgeBot) {
+            this.bridgeBotExp = new RegExp(`^${getClient().config.bridgeBotMessageFormat}${this.commandPrefix}(.+)`);
+        }
+
         this.commands = [];
     }
 
-    getCommand(str) {
-        const content = str.substring(this.commandPrefix.length),
-            [name, args] = Util.splitArgs(content);
+    getCommand(str, author) {
+        let content;
+
+        if (getClient().isBridgeBot(author)) {
+            content = str.match(this.bridgeBotExp)[1];
+        } else {
+            content = str.substring(this.commandPrefix.length);
+        }
+
+        const [name, args] = Util.splitArgs(content);
 
         const cmd = this.searchCommands(name);
         return [cmd, args];
     }
 
-    isCommand(str) {
-        if (str.length <= this.commandPrefix.length) {
-            return false;
-        }
+    isCommand(str, author) {
+        if (getClient().isBridgeBot(author)) {
+            return this.bridgeBotExp.test(str);
+        } else {
+            if (str.length <= this.commandPrefix.length) {
+                return false;
+            }
 
-        return str.startsWith(this.commandPrefix);
+            return str.startsWith(this.commandPrefix);
+        }
     }
 
     getCommands(perm) {

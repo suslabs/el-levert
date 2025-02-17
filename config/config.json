@@ -45,5 +45,7 @@
     "logToDiscord": false,
     "discordLogLevel": "info",
     "logChannelId": "",
-    "logWebhook": ""
+    "logWebhook": "",
+    "bridgeBotIds": [],
+    "bridgeBotMessageFormat": "\\*{2}.+?:\\*{2}\\s"
 }

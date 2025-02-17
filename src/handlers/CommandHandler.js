@@ -36,7 +36,7 @@ class CommandHandler extends Handler {
     }
 
     async execute(msg) {
-        if (!getClient().commandManager.isCommand(msg.content)) {
+        if (!getClient().commandManager.isCommand(msg.content, msg.author.id)) {
             return false;
         }
 
@@ -47,7 +47,7 @@ class CommandHandler extends Handler {
             return false;
         }
 
-        const [cmd, args] = getClient().commandManager.getCommand(msg.content);
+        const [cmd, args] = getClient().commandManager.getCommand(msg.content, msg.author.id);
 
         if (typeof cmd === "undefined") {
             return false;

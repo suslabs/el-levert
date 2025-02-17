@@ -6,11 +6,11 @@ class MessageProcessor {
     }
 
     shouldProcess(msg) {
-        if (msg.author.bot) {
-            return false;
+        if (this.client.isBridgeBot(msg.author.id)) {
+            return true;
         }
 
-        return true;
+        return !msg.author.bot;
     }
 
     async processMessage(msg, handler) {

@@ -144,6 +144,12 @@
         },
         "logWebhook": {
             "type": "string"
+        },
+        "bridgeBotIds": {
+            "type": "array"
+        },
+        "bridgeBotMessageFormat": {
+            "type": "string"
         }
     },
     "required": [
@@ -190,6 +196,8 @@
         "logToDiscord",
         "discordLogLevel",
         "logChannelId",
-        "logWebhook"
+        "logWebhook",
+        "bridgeBotIds",
+        "bridgeBotMessageFormat"
     ]
 }

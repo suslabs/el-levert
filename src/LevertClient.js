@@ -74,6 +74,8 @@ class LevertClient extends DiscordClient {
             pingReply: config.pingReply,
             mentionUsers: config.mentionUsers
         });
+
+        this.useBridgeBot = config.bridgeBotIds.length > 0;
     }
 
     setupLogger() {
@@ -532,6 +534,14 @@ class LevertClient extends DiscordClient {
 
     onKill() {
         this.deleteLogger();
+    }
+
+    isBridgeBot(id) {
+        if (!this.useBridgeBot || typeof id === "undefined" || id === null) {
+            return false;
+        }
+
+        return this.config.bridgeBotIds.includes(id);
     }
 }
 
