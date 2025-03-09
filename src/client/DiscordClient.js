@@ -19,8 +19,6 @@ const {
     GuildMember
 } = discord;
 
-const clientOptions = ["wrapEvents", "eventsDir", "loginTimeout", "mentionUsers", "pingReply"];
-
 const defaultIntents = [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
@@ -72,6 +70,8 @@ const defaultUsersOptions = {
     defaultUsersFetchOptions = {
         limit: 100
     };
+
+const clientOptions = ["wrapEvents", "eventsDir", "loginTimeout", "mentionUsers", "pingReply"];
 
 class DiscordClient {
     constructor(intents, partials) {

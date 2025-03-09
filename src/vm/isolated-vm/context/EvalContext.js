@@ -22,6 +22,8 @@ import VMUtil from "../../../util/vm/VMUtil.js";
 const filename = "script.js",
     evaluated = "evaluated script";
 
+const allowPromiseReturn = true;
+
 class EvalContext {
     constructor(options, inspectorOptions = {}) {
         this.memLimit = options.memLimit;
@@ -206,10 +208,13 @@ class EvalContext {
         await this.inspector.waitForConnection();
 
         try {
-            return await script.run(this.context, {
+            const val = await script.run(this.context, {
                 timeout: this.timeLimit,
+                promise: allowPromiseReturn,
                 copy: true
             });
+
+            return val;
         } catch (err) {
             if (this.enableInspector || VMErrors.custom.includes(err.name)) {
                 throw err;
