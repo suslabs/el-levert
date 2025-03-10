@@ -8,11 +8,6 @@ import Util from "../../util/Util.js";
 
 import dbFilenames from "../../database/config/dbFilenames.json" assert { type: "json" };
 
-const dbOptions = {
-    queryExtension: dbFilenames.queryExtension,
-    queryEncoding: dbFilenames.queryEncoding
-};
-
 class DBManager extends Manager {
     constructor(enabled, dbName, classType, fieldName) {
         super(enabled);
@@ -21,28 +16,18 @@ class DBManager extends Manager {
         this.classType = classType;
         this.fieldName = fieldName;
 
-        this.setPaths();
-    }
-
-    setPaths() {
-        this.dbDir = getClient().config.dbPath;
-
-        const dbFilename = dbFilenames[this.dbName];
-        this.dbPath = path.resolve(projRoot, this.dbDir, dbFilename);
-
-        const queryBase = dbFilenames.queryPath;
-        this.queryDir = path.resolve(projRoot, queryBase, this.dbName);
+        this._setPaths();
     }
 
     async checkDatabase() {
-        if (!(await Util.directoryExists(this.dbDir))) {
-            await fs.mkdir(this.dbDir, {
+        if (!(await Util.directoryExists(this._dbDir))) {
+            await fs.mkdir(this._dbDir, {
                 recursive: true
             });
         }
 
         try {
-            await fs.access(this.dbPath);
+            await fs.access(this._dbPath);
         } catch (err) {
             return false;
         }
@@ -50,35 +35,50 @@ class DBManager extends Manager {
         return true;
     }
 
-    async createDatabase() {
+    async load() {
+        return await this._loadDatabase();
+    }
+
+    async unload() {
+        return await this._closeDatabase();
+    }
+
+    static _dbOptions = {
+        queryExtension: dbFilenames.queryExtension,
+        queryEncoding: dbFilenames.queryEncoding
+    };
+
+    _setPaths() {
+        this._dbDir = getClient().config.dbPath;
+
+        const dbFilename = dbFilenames[this.dbName];
+        this._dbPath = path.resolve(projRoot, this._dbDir, dbFilename);
+
+        const queryBase = dbFilenames.queryPath;
+        this._queryDir = path.resolve(projRoot, queryBase, this.dbName);
+    }
+
+    async _createDatabase() {
         const name = Util.capitalize(this.dbName);
-        getLogger().info(`${name} database not found. Creating at path: ${this.dbPath}`);
+        getLogger().info(`${name} database not found. Creating at path: ${this._dbPath}`);
 
         await this[this.fieldName].create();
     }
 
-    async loadDatabase() {
-        const db = new this.classType(this.dbPath, this.queryDir, dbOptions);
+    async _loadDatabase() {
+        const db = new this.classType(this._dbPath, this._queryDir, DBManager._dbOptions);
         this[this.fieldName] = db;
 
         if (!(await this.checkDatabase())) {
-            await this.createDatabase();
+            await this._createDatabase();
         }
 
         await db.load();
         getLogger().info(`Successfully loaded ${this.dbName} database.`);
     }
 
-    async closeDatabase() {
+    async _closeDatabase() {
         await this[this.fieldName].close();
-    }
-
-    async load() {
-        return await this.loadDatabase();
-    }
-
-    async unload() {
-        return await this.closeDatabase();
     }
 }
 

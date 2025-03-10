@@ -12,52 +12,19 @@ class TextFileLoader extends FileLoader {
             ...options
         });
 
-        this.tempPath = this.getTempPath();
-
         this.encoding = options.encoding ?? "utf-8";
-    }
 
-    get fsConfig() {
-        return {
-            encoding: this.encoding
-        };
-    }
-
-    getTempPath() {
-        if (typeof this.path !== "string") {
-            return;
-        }
-
-        const parsed = path.parse(this.path),
-            tempPath = path.join(parsed.dir, parsed.name + ".tmp");
-
-        return tempPath;
-    }
-
-    async deleteTemp() {
-        try {
-            await fs.unlink(this.tempPath);
-        } catch (err) {
-            if (err.code === "ENOENT") {
-                this.logger?.error(`Temp file for ${this.getName()} not found.`);
-            } else {
-                this.logger?.error(`Error occured while deleting temp file for ${this.getName()}:`, err);
-            }
-
-            return LoadStatus.failed;
-        }
-
-        return LoadStatus.successful;
+        this._tempPath = this._getTempPath();
     }
 
     async load() {
-        const err = this.checkPath();
+        const err = this._checkPath();
         if (err) return err;
 
         let text;
 
         try {
-            text = await fs.readFile(this.path, this.fsConfig);
+            text = await fs.readFile(this.path, this._fsConfig);
         } catch (err) {
             if (err.code === "ENOENT") {
                 return this.failure(`${this.getName(true)} not found at path: ${this.path}`);
@@ -78,20 +45,20 @@ class TextFileLoader extends FileLoader {
                 return await this.append(data);
         }
 
-        const err = this.checkPath();
+        const err = this._checkPath();
         if (err) return err;
 
         try {
-            await fs.writeFile(this.tempPath, data, this.fsConfig);
+            await fs.writeFile(this._tempPath, data, this._fsConfig);
         } catch (err) {
-            await this.deleteTemp();
+            await this._deleteTemp();
             return this.failure(err, `Error occured while writing ${this.getName()}:`);
         }
 
         try {
-            await fs.rename(this.tempPath, this.path);
+            await fs.rename(this._tempPath, this.path);
         } catch (err) {
-            await this.deleteTemp();
+            await this._deleteTemp();
             return this.failure(err, `Error occured while writing ${this.getName()}:`);
         }
 
@@ -115,6 +82,39 @@ class TextFileLoader extends FileLoader {
 
     getWritingMessage() {
         return `Writing ${this.getName()}: ${this.path}`;
+    }
+
+    get _fsConfig() {
+        return {
+            encoding: this.encoding
+        };
+    }
+
+    _getTempPath() {
+        if (typeof this.path !== "string") {
+            return;
+        }
+
+        const parsed = path.parse(this.path),
+            tempPath = path.join(parsed.dir, parsed.name + ".tmp");
+
+        return tempPath;
+    }
+
+    async _deleteTemp() {
+        try {
+            await fs.unlink(this._tempPath);
+        } catch (err) {
+            if (err.code === "ENOENT") {
+                this.logger?.error(`Temp file for ${this.getName()} not found.`);
+            } else {
+                this.logger?.error(`Error occured while deleting temp file for ${this.getName()}:`, err);
+            }
+
+            return LoadStatus.failed;
+        }
+
+        return LoadStatus.successful;
     }
 }
 

@@ -1,15 +1,5 @@
 import TrackedUser from "./TrackedUser.js";
 
-function sweepUsers() {
-    for (const user of this.trackedUsers) {
-        const timeDiff = Date.now() - user.time;
-
-        if (timeDiff > this.sweepInterval) {
-            this.removeUser(user.id);
-        }
-    }
-}
-
 class UserTracker {
     constructor(sweepInterval = 0) {
         this.sweepInterval = sweepInterval;
@@ -19,7 +9,7 @@ class UserTracker {
         this.enableChecks = enableChecks;
 
         if (enableChecks) {
-            this.setSweepInterval();
+            this._setSweepInterval();
         }
     }
 
@@ -42,22 +32,32 @@ class UserTracker {
         }
     }
 
-    setSweepInterval() {
-        if (typeof this.sweepTimer !== "undefined") {
-            this.clearSweepInterval();
-        }
+    _sweepUsers() {
+        for (const user of this.trackedUsers) {
+            const timeDiff = Date.now() - user.time;
 
-        const sweepUsersFunc = sweepUsers.bind(this);
-        this.sweepTimer = setInterval(sweepUsersFunc, this.sweepInterval);
+            if (timeDiff > this.sweepInterval) {
+                this.removeUser(user.id);
+            }
+        }
     }
 
-    clearSweepInterval() {
-        if (typeof this.sweepTimer === "undefined") {
+    _setSweepInterval() {
+        if (typeof this._sweepTimer !== "undefined") {
+            this._clearSweepInterval();
+        }
+
+        const sweepUsersFunc = this._sweepUsers.bind(this);
+        this._sweepTimer = setInterval(sweepUsersFunc, this.sweepInterval);
+    }
+
+    _clearSweepInterval() {
+        if (typeof this._sweepTimer === "undefined") {
             return;
         }
 
-        clearInterval(this.sweepTimer);
-        delete this.sweepTimer;
+        clearInterval(this._sweepTimer);
+        delete this._sweepTimer;
     }
 }
 

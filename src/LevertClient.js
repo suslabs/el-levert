@@ -24,10 +24,10 @@ import { isPromise } from "./util/TypeTester.js";
 
 let token, client;
 
-const minPriority = -999,
-    maxPriority = 999;
-
 class LevertClient extends DiscordClient {
+    static minPriority = -999;
+    static maxPriority = 999;
+
     constructor(configs) {
         super();
 
@@ -39,12 +39,11 @@ class LevertClient extends DiscordClient {
 
         this.version = version;
         this.setConfigs(configs);
+        this._setStopped();
 
         this.components = new Map();
 
-        this.setupLogger();
-
-        this.setStopped();
+        this._setupLogger();
     }
 
     get uptime() {
@@ -53,6 +52,14 @@ class LevertClient extends DiscordClient {
         }
 
         return Util.timeDelta(this.startedAt, Date.now());
+    }
+
+    isBridgeBot(id) {
+        if (!this.useBridgeBot || typeof id === "undefined" || id === null) {
+            return false;
+        }
+
+        return this.config.bridgeBotIds.includes(id);
     }
 
     setConfigs(configs) {
@@ -78,110 +85,6 @@ class LevertClient extends DiscordClient {
         this.useBridgeBot = config.bridgeBotIds.length > 0;
     }
 
-    setupLogger() {
-        if (typeof this.logger !== "undefined") {
-            this.deleteLogger();
-        }
-
-        const name = "El Levert",
-            configOpts = [name, true, true, this.config.logFile, this.config.logLevel],
-            config = getDefaultLoggerConfig(...configOpts);
-
-        this.logger = createLogger(config);
-        this.wrapEvent = wrapEvent.bind(undefined, this.logger);
-    }
-
-    deleteLogger() {
-        if (typeof this.logger === "undefined") {
-            return;
-        }
-
-        this.logger.end();
-
-        delete this.logger;
-        delete this.wrapEvent;
-    }
-
-    addDiscordTransports() {
-        if (!this.config.logToDiscord) {
-            return;
-        }
-
-        this.logger.info("Adding Discord transport(s)...");
-
-        const useChannel = this.config.logChannelId !== "",
-            useWebhook = this.config.logWebhook !== "";
-
-        if (!useChannel && !useWebhook) {
-            this.logger.error("Can't add Discord transports. No channel id or a webhook url was provided.");
-            return;
-        }
-
-        const commonOpts = {
-            ...getDefaultDiscordConfig(this.config.discordLogLevel),
-            client: this.client
-        };
-
-        if (useChannel) {
-            try {
-                const transport = new ChannelTransport({
-                    ...commonOpts,
-                    channelId: this.config.logChannelId
-                });
-
-                this.logger.info("Added channel transport.");
-                this.logger.add(transport);
-            } catch (err) {
-                this.logger.error("Couldn't add channel transport:", err);
-            }
-        }
-
-        if (useWebhook) {
-            try {
-                const transport = new WebhookTransport({
-                    ...commonOpts,
-                    url: this.config.logWebhook
-                });
-
-                this.logger.info("Added webhook transport.");
-                this.logger.add(transport);
-            } catch (err) {
-                this.logger.error("Couldn't add webhook transport:", err);
-            }
-        }
-    }
-
-    getDiscordTransports() {
-        const channelTransport = this.logger.transports.find(x => x.name === ChannelTransport.$name),
-            webhookTransport = this.logger.transports.find(x => x.name === WebhookTransport.$name);
-
-        return [channelTransport, webhookTransport];
-    }
-
-    removeDiscordTransports() {
-        const [channelTransport, webhookTransport] = this.getDiscordTransports();
-
-        if (typeof channelTransport !== "undefined") {
-            this.logger.remove(channelTransport);
-        }
-
-        if (typeof webhookTransport !== "undefined") {
-            this.logger.remove(webhookTransport);
-        }
-    }
-
-    silenceDiscordTransports(silent = true) {
-        const [channelTransport, webhookTransport] = this.getDiscordTransports();
-
-        if (typeof channelTransport !== "undefined") {
-            channelTransport.silent = silent;
-        }
-
-        if (typeof webhookTransport !== "undefined") {
-            webhookTransport.silent = silent;
-        }
-    }
-
     loadComponent(name, barrel, ctorArgs = {}, options = {}) {
         let compInfo = this.components.get(name) ?? {};
 
@@ -201,10 +104,10 @@ class LevertClient extends DiscordClient {
 
         const components = Object.entries(barrel);
         components.forEach(([compName, compClass]) => {
-            if (Util.outOfRange(minPriority, maxPriority, compClass.loadPriority)) {
+            if (Util.outOfRange(LevertClient.minPriority, LevertClient.maxPriority, compClass.loadPriority)) {
                 throw new ClientError(`Invalid load priority ${compClass.loadPriority} for component ${compName}`);
             } else {
-                compClass.loadPriority ??= maxPriority;
+                compClass.loadPriority ??= LevertClient.maxPriority;
             }
         });
         components.sort(([, a], [, b]) => a.loadPriority - b.loadPriority);
@@ -213,10 +116,10 @@ class LevertClient extends DiscordClient {
             .filter(([compName]) => ctorArgs[compName] !== false)
             .map(([compName, compClass]) => [compName, new compClass(...(ctorArgs[compName] ?? []))]);
         compInstances.forEach(([compName, compInst]) => {
-            if (Util.outOfRange(minPriority, maxPriority, compInst.priority)) {
+            if (Util.outOfRange(LevertClient.minPriority, LevertClient.maxPriority, compInst.priority)) {
                 throw new ClientError(`Invalid priority ${compInst.priority} for component ${compName}`);
             } else {
-                compInst.priority ??= minPriority;
+                compInst.priority ??= LevertClient.minPriority;
             }
         });
 
@@ -363,86 +266,6 @@ class LevertClient extends DiscordClient {
         unloadFinished();
     }
 
-    loadHandlers() {
-        this.loadComponent(
-            "handler",
-            Handlers,
-            {
-                commandHandler: [],
-                previewHandler: [this.config.enablePreviews],
-                reactionHandler: [this.reactions.enableReacts],
-                sedHandler: [this.config.enableSed]
-            },
-            {
-                showLoadingMessages: false
-            }
-        );
-
-        this.executeAllHandlers = executeAllHandlers.bind(undefined, this);
-        this.messageProcessor = new MessageProcessor(this);
-
-        this.logger.info("Loaded MessageProcessor.");
-    }
-
-    unloadHandlers() {
-        this.unloadComponent("handler", {
-            showUnloadingMessages: false
-        });
-
-        delete this.executeAllHandlers;
-        delete this.messageProcessor;
-
-        this.logger.info("Unloaded MessageProcessor.");
-    }
-
-    async loadManagers() {
-        await this.loadComponent("manager", Managers, {
-            tagManager: [],
-            permManager: [this.config.enablePermissions],
-            commandManager: [],
-            reminderManager: [this.config.enableReminders],
-            cliCommandManager: [this.config.enableCliCommands]
-        });
-    }
-
-    async unloadManagers() {
-        await this.unloadComponent("manager");
-    }
-
-    loadVMs() {
-        const vmArgs = {
-            tagVM: [this.config.enableEval],
-            tagVM2: [this.config.enableVM2],
-            externalVM: false
-        };
-
-        if (this.config.enableOtherLangs) {
-            vmArgs.externalVM = [];
-        }
-
-        this.loadComponent("VM", VMs, vmArgs, {
-            showLoadingMessages: false
-        });
-    }
-
-    unloadVMs() {
-        this.unloadComponent("VM", {
-            showUnloadingMessages: false
-        });
-    }
-
-    async setActivityFromConfig() {
-        if (!this.config.setActivity) {
-            return;
-        }
-
-        try {
-            await this.setActivity(this.config.activity);
-        } catch (err) {
-            this.logger.error("Error occured while setting activity:", err);
-        }
-    }
-
     async start() {
         if (this.started) {
             throw new ClientError("The client can only be started once");
@@ -450,24 +273,24 @@ class LevertClient extends DiscordClient {
 
         this.logger.info("Starting client...");
 
-        await this.loadManagers();
-        this.loadHandlers();
+        await this._loadManagers();
+        this._loadHandlers();
 
-        await this.loadEvents();
+        await this._loadEvents();
 
-        this.loadVMs();
+        this._loadVMs();
 
         await this.login(token, true);
 
-        await this.setActivityFromConfig();
+        await this._setActivityFromConfig();
         this.reminderManager.startSendLoop();
 
         if (this.config.enableGlobalHandler) {
             registerGlobalErrorHandler(this.logger);
         }
 
-        this.setStarted();
-        this.addDiscordTransports();
+        this._setStarted();
+        this._addDiscordTransports();
 
         this.logger.info("Startup complete.");
     }
@@ -478,21 +301,21 @@ class LevertClient extends DiscordClient {
         }
 
         this.logger.info("Stopping client...");
-        this.removeDiscordTransports();
+        this._removeDiscordTransports();
 
         if (this.config.enableGlobalHandler) {
             removeGlobalErrorHandler();
         }
 
-        this.unloadEvents();
+        this._unloadEvents();
 
-        this.unloadHandlers();
-        await this.unloadManagers();
+        this._unloadHandlers();
+        await this._unloadManagers();
 
-        this.unloadVMs();
+        this._unloadVMs();
 
         this.logout(kill);
-        this.setStopped();
+        this._setStopped();
 
         this.logger.info("Client stopped.");
     }
@@ -506,7 +329,7 @@ class LevertClient extends DiscordClient {
         this.silenceDiscordTransports(true);
 
         await this.stop();
-        this.buildClient();
+        this._buildClient();
 
         switch (typeof configs) {
             case "object":
@@ -522,26 +345,202 @@ class LevertClient extends DiscordClient {
         await this.start();
     }
 
-    setStopped() {
-        this.started = false;
-        this.startedAt = -1;
+    silenceDiscordTransports(silent = true) {
+        const [channelTransport, webhookTransport] = this._getDiscordTransports();
+
+        if (typeof channelTransport !== "undefined") {
+            channelTransport.silent = silent;
+        }
+
+        if (typeof webhookTransport !== "undefined") {
+            webhookTransport.silent = silent;
+        }
     }
 
-    setStarted() {
+    _setStarted() {
         this.started = true;
         this.startedAt = Date.now();
     }
 
-    onKill() {
-        this.deleteLogger();
+    _setStopped() {
+        this.started = false;
+        this.startedAt = -1;
     }
 
-    isBridgeBot(id) {
-        if (!this.useBridgeBot || typeof id === "undefined" || id === null) {
-            return false;
+    _setupLogger() {
+        if (typeof this.logger !== "undefined") {
+            this._deleteLogger();
         }
 
-        return this.config.bridgeBotIds.includes(id);
+        const name = "El Levert",
+            configOpts = [name, true, true, this.config.logFile, this.config.logLevel],
+            config = getDefaultLoggerConfig(...configOpts);
+
+        this.logger = createLogger(config);
+        this._wrapEvent = wrapEvent.bind(undefined, this.logger);
+    }
+
+    _deleteLogger() {
+        if (typeof this.logger === "undefined") {
+            return;
+        }
+
+        this.logger.end();
+
+        delete this.logger;
+        delete this._wrapEvent;
+    }
+
+    _loadHandlers() {
+        this.loadComponent(
+            "handler",
+            Handlers,
+            {
+                commandHandler: [],
+                previewHandler: [this.config.enablePreviews],
+                reactionHandler: [this.reactions.enableReacts],
+                sedHandler: [this.config.enableSed]
+            },
+            {
+                showLoadingMessages: false
+            }
+        );
+
+        this._executeAllHandlers = executeAllHandlers.bind(undefined, this);
+        this.messageProcessor = new MessageProcessor(this);
+
+        this.logger.info("Loaded MessageProcessor.");
+    }
+
+    _unloadHandlers() {
+        this.unloadComponent("handler", {
+            showUnloadingMessages: false
+        });
+
+        delete this._executeAllHandlers;
+        delete this.messageProcessor;
+
+        this.logger.info("Unloaded MessageProcessor.");
+    }
+
+    async _loadManagers() {
+        await this.loadComponent("manager", Managers, {
+            tagManager: [],
+            permManager: [this.config.enablePermissions],
+            commandManager: [],
+            reminderManager: [this.config.enableReminders],
+            cliCommandManager: [this.config.enableCliCommands]
+        });
+    }
+
+    async _unloadManagers() {
+        await this.unloadComponent("manager");
+    }
+
+    _loadVMs() {
+        const vmArgs = {
+            tagVM: [this.config.enableEval],
+            tagVM2: [this.config.enableVM2],
+            externalVM: false
+        };
+
+        if (this.config.enableOtherLangs) {
+            vmArgs.externalVM = [];
+        }
+
+        this.loadComponent("VM", VMs, vmArgs, {
+            showLoadingMessages: false
+        });
+    }
+
+    _unloadVMs() {
+        this.unloadComponent("VM", {
+            showUnloadingMessages: false
+        });
+    }
+
+    _addDiscordTransports() {
+        if (!this.config.logToDiscord) {
+            return;
+        }
+
+        this.logger.info("Adding Discord transport(s)...");
+
+        const useChannel = this.config.logChannelId !== "",
+            useWebhook = this.config.logWebhook !== "";
+
+        if (!useChannel && !useWebhook) {
+            this.logger.error("Can't add Discord transports. No channel id or a webhook url was provided.");
+            return;
+        }
+
+        const commonOpts = {
+            ...getDefaultDiscordConfig(this.config.discordLogLevel),
+            client: this.client
+        };
+
+        if (useChannel) {
+            try {
+                const transport = new ChannelTransport({
+                    ...commonOpts,
+                    channelId: this.config.logChannelId
+                });
+
+                this.logger.info("Added channel transport.");
+                this.logger.add(transport);
+            } catch (err) {
+                this.logger.error("Couldn't add channel transport:", err);
+            }
+        }
+
+        if (useWebhook) {
+            try {
+                const transport = new WebhookTransport({
+                    ...commonOpts,
+                    url: this.config.logWebhook
+                });
+
+                this.logger.info("Added webhook transport.");
+                this.logger.add(transport);
+            } catch (err) {
+                this.logger.error("Couldn't add webhook transport:", err);
+            }
+        }
+    }
+
+    _getDiscordTransports() {
+        const channelTransport = this.logger.transports.find(x => x.name === ChannelTransport.$name),
+            webhookTransport = this.logger.transports.find(x => x.name === WebhookTransport.$name);
+
+        return [channelTransport, webhookTransport];
+    }
+
+    _removeDiscordTransports() {
+        const [channelTransport, webhookTransport] = this._getDiscordTransports();
+
+        if (typeof channelTransport !== "undefined") {
+            this.logger.remove(channelTransport);
+        }
+
+        if (typeof webhookTransport !== "undefined") {
+            this.logger.remove(webhookTransport);
+        }
+    }
+
+    async _setActivityFromConfig() {
+        if (!this.config.setActivity) {
+            return;
+        }
+
+        try {
+            await this.setActivity(this.config.activity);
+        } catch (err) {
+            this.logger.error("Error occured while setting activity:", err);
+        }
+    }
+
+    _onKill() {
+        this._deleteLogger();
     }
 }
 

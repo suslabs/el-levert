@@ -9,8 +9,6 @@ import { getClient, getLogger } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 import VMUtil from "../../util/vm/VMUtil.js";
 
-const logInspectorPackets = false;
-
 function logUsage(code) {
     getLogger().debug(`Running script:${Util.formatLog(code)}`);
 }
@@ -28,6 +26,8 @@ class TagVM extends VM {
     static $name = "tagVM";
     static loadPriority = 1;
 
+    static logInspectorPackets = false;
+
     constructor(enabled) {
         super(enabled);
 
@@ -43,51 +43,16 @@ class TagVM extends VM {
         this.enableInspector = getClient().config.enableInspector;
     }
 
-    setupInspectorServer() {
-        if (!this.enabled || !this.enableInspector) {
-            return;
-        }
-
-        const inspectorPort = getClient().config.inspectorPort;
-
-        const options = {
-            logPackets: logInspectorPackets
-        };
-
-        const server = new InspectorServer(this.enableInspector, inspectorPort, options);
-        server.setup();
-
-        this.inspectorServer = server;
-    }
-
-    async getContext(msg, tag, args) {
-        const context = new EvalContext(
-            {
-                memLimit: this.memLimit,
-                timeLimit: this.timeLimit
-            },
-            {
-                enable: this.enableInspector,
-                sendReply: this.inspectorServer?.sendReply
-            }
-        );
-
-        await context.getIsolate({ msg, tag, args });
-        this.inspectorServer?.setContext(context);
-
-        return context;
-    }
-
     async runScript(code, msg, tag, args) {
         const t1 = performance.now();
         logUsage(code);
 
-        if (this.inspectorServer?.inspectorConnected) {
+        if (this._inspectorServer?.inspectorConnected) {
             getLogger().info("Can't run script: inspector is already connected.");
             return ":no_entry_sign: Inspector is already connected.";
         }
 
-        const context = await this.getContext(msg, tag, args);
+        const context = await this._getContext(msg, tag, args);
 
         try {
             const out = await context.runScript(code);
@@ -100,14 +65,64 @@ class TagVM extends VM {
             return VMUtil.formatOutput(out);
         } catch (err) {
             logFinished(this.enableInspector);
-            return this.handleError(err);
+            return this._handleError(err);
         } finally {
-            this.inspectorServer?.executionFinished();
+            this._inspectorServer?.executionFinished();
             context.dispose();
         }
     }
 
-    handleError(err) {
+    load() {
+        this._setupInspectorServer();
+    }
+
+    unload() {
+        if (typeof this._inspectorServer !== "undefined") {
+            this._inspectorServer.close();
+            delete this._inspectorServer;
+        }
+    }
+
+    getDisabledMessage() {
+        return "Eval is disabled.";
+    }
+
+    _setupInspectorServer() {
+        if (!this.enabled || !this.enableInspector) {
+            return;
+        }
+
+        const inspectorPort = getClient().config.inspectorPort;
+
+        const options = {
+            logPackets: TagVM.logInspectorPackets
+        };
+
+        const server = new InspectorServer(this.enableInspector, inspectorPort, options);
+        server.setup();
+
+        this._inspectorServer = server;
+    }
+
+    async _getContext(msg, tag, args) {
+        const context = new EvalContext(
+            {
+                memLimit: this.memLimit,
+                timeLimit: this.timeLimit
+            },
+            {
+                enable: this.enableInspector,
+                sendReply: this._inspectorServer?.sendReply
+            }
+        );
+
+        await context.getIsolate({ msg, tag, args });
+        this._inspectorServer?.setContext(context);
+
+        return context;
+    }
+
+    _handleError(err) {
         switch (err.name) {
             case VMErrors.custom[0]:
                 getLogger().debug(`VM error: ${err.message}`);
@@ -117,7 +132,7 @@ class TagVM extends VM {
                 return err.exitData;
             case VMErrors.custom[2]:
                 getLogger().debug(`Returning reply data:${Util.formatLog(err.message)}`);
-                return this.processReply(err.message);
+                return this._processReply(err.message);
         }
 
         switch (err.message) {
@@ -132,7 +147,7 @@ class TagVM extends VM {
         }
     }
 
-    processReply(msg) {
+    _processReply(msg) {
         const out = JSON.parse(msg),
             files = [];
 
@@ -161,21 +176,6 @@ class TagVM extends VM {
         }
 
         return out;
-    }
-
-    load() {
-        this.setupInspectorServer();
-    }
-
-    unload() {
-        if (typeof this.inspectorServer !== "undefined") {
-            this.inspectorServer.close();
-            delete this.inspectorServer;
-        }
-    }
-
-    getDisabledMessage() {
-        return "Eval is disabled.";
     }
 }
 

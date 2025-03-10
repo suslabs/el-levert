@@ -7,8 +7,6 @@ import ReminderError from "../../errors/ReminderError.js";
 import { getClient, getLogger } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 
-const maxMsgLength = 512;
-
 function logTime(t1) {
     const t2 = performance.now();
     getLogger().info(`Sending reminders took ${Util.timeDelta(t2, t1).toLocaleString()}ms.`);
@@ -17,6 +15,8 @@ function logTime(t1) {
 class ReminderManager extends DBManager {
     static $name = "reminderManager";
     static loadPriority = 3;
+
+    static maxMsgLength = 512;
 
     constructor(enabled) {
         super(enabled, "reminder", ReminderDatabase, "remind_db");
@@ -27,7 +27,7 @@ class ReminderManager extends DBManager {
         this.intervalSeconds = sendInterval;
         this.sendInterval = intervalMs;
 
-        this.maxMsgLength = Util.clamp(maxMsgLength, 0, 1500);
+        this.maxMsgLength = Util.clamp(ReminderManager.maxMsgLength, 0, 1500);
     }
 
     checkMessage(msg) {
@@ -120,7 +120,22 @@ class ReminderManager extends DBManager {
         await user.send(out);
     }
 
-    async sendReminders() {
+    startSendLoop() {
+        if (!this.enabled) {
+            return;
+        }
+
+        const sendFunc = this._sendReminders.bind(this);
+        this._sendTimer = setInterval(sendFunc, this.sendInterval);
+
+        getLogger().info("Started reminder loop.");
+    }
+
+    unload() {
+        this._stopSendLoop();
+    }
+
+    async _sendReminders() {
         getLogger().debug(`Checking reminders... (${Util.round(this.intervalSeconds, 1)}s)`);
 
         const t1 = performance.now(),
@@ -140,30 +155,15 @@ class ReminderManager extends DBManager {
         logTime(t1);
     }
 
-    startSendLoop() {
-        if (!this.enabled) {
+    _stopSendLoop() {
+        if (typeof this._sendTimer === "undefined") {
             return;
         }
 
-        const sendFunc = this.sendReminders.bind(this);
-        this.sendTimer = setInterval(sendFunc, this.sendInterval);
-
-        getLogger().info("Started reminder loop.");
-    }
-
-    stopSendLoop() {
-        if (typeof this.sendTimer === "undefined") {
-            return;
-        }
-
-        clearInterval(this.sendTimer);
-        delete this.sendTimer;
+        clearInterval(this._sendTimer);
+        delete this._sendTimer;
 
         getLogger().info("Stopped reminder loop.");
-    }
-
-    unload() {
-        this.stopSendLoop();
     }
 }
 

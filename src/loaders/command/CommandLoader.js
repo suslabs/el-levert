@@ -21,29 +21,9 @@ class CommandLoader extends DirectoryLoader {
             return status;
         }
 
-        this.getCommands();
+        this._getCommands();
 
         return LoadStatus.successful;
-    }
-
-    getCommands() {
-        if (typeof this.commands === "undefined") {
-            const commands = Array.from(this.data.values());
-            this.commands = commands;
-        }
-
-        return this.commands;
-    }
-
-    deleteCommands() {
-        this.logger?.debug("Deleting commands...");
-
-        this.deleteAllData();
-
-        const n = Util.wipeArray(this.commands);
-        delete this.commands;
-
-        this.logger?.debug(`Deleted ${n} commands.`);
     }
 
     getLoadingMessage() {
@@ -52,6 +32,26 @@ class CommandLoader extends DirectoryLoader {
 
     getLoadedMessage() {
         return `Loaded ${this.name}s successfully.`;
+    }
+
+    _getCommands() {
+        if (typeof this.commands === "undefined") {
+            const commands = Array.from(this.data.values());
+            this.commands = commands;
+        }
+
+        return this.commands;
+    }
+
+    _deleteCommands() {
+        this.logger?.debug("Deleting commands...");
+
+        this.deleteAllData();
+
+        const n = Util.wipeArray(this.commands);
+        delete this.commands;
+
+        this.logger?.debug(`Deleted ${n} commands.`);
     }
 }
 

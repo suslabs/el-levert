@@ -72,7 +72,138 @@ class BaseCommandManager extends Manager {
         return commands.find(command => command.matches(name));
     }
 
-    categorizeCommands(perm, sort = false) {
+    getHelp(perm, discord = true, indentation = 4) {
+        const categories = this._categorizeCommands(perm, true);
+
+        const headers = this._getCategoryHeaders(categories, discord),
+            names = this._getCategoryCmdNames(categories, discord, indentation);
+
+        const format = Array.from(
+            {
+                length: categories.size
+            },
+            (_, i) => headers[i] + names[i]
+        );
+
+        return format.join("\n\n");
+    }
+
+    bindSubcommand(command, subName) {
+        const subcommand = this.commands.find(cmd => {
+            return cmd.name === subName && cmd.parent === command.name;
+        });
+
+        if (typeof subcommand === "undefined") {
+            getLogger().warn(`Subcommand "${subName}" of command "${command.name}" not found.`);
+            return false;
+        }
+
+        command.addSubcommand(subcommand);
+        getLogger().debug(`Bound subcommand "${subcommand.name}" to command "${command.name}".`);
+
+        return true;
+    }
+
+    deleteCommands() {
+        if (this._commandLoader.loaded) {
+            this._commandLoader._deleteCommands();
+        } else {
+            getLogger().debug("No commands to delete.");
+        }
+
+        delete this._commandLoader;
+    }
+
+    deleteCommand(command, removeSubcommands = true, errorIfNotFound = false) {
+        if (command.isSubcmd) {
+            throw new CommandError("Can only delete parent commands");
+        }
+
+        let deleted = Util.removeItem(this.commands, command);
+
+        if (errorIfNotFound && !deleted) {
+            throw new CommandError(`Couldn't delete command ${command.name}`);
+        }
+
+        this._commandLoader.deleteData(command, errorIfNotFound);
+
+        if (!removeSubcommands) {
+            return deleted;
+        }
+
+        if (command.subcmds.size < 1) {
+            return deleted;
+        }
+
+        this.deleteSubcommands(command, errorIfNotFound);
+        return deleted;
+    }
+
+    deleteSubcommands(command, errorIfNotFound = false) {
+        if (command.subcmds.size < 1) {
+            if (errorIfNotFound) {
+                throw new CommandError("Command has no subcommands");
+            }
+
+            return false;
+        }
+
+        let deleted = true;
+
+        for (const subcmd of command.getSubcmds()) {
+            deleted &= Util.removeItem(this.commands, subcmd);
+
+            if (errorIfNotFound && !deleted) {
+                throw new CommandError(`Couldn't delete subcommand ${subcmd.name} of command ${command.name}`);
+            }
+
+            this._commandLoader.deleteData(subcmd, errorIfNotFound);
+        }
+
+        command.removeSubcommands();
+        return deleted;
+    }
+
+    deleteSubcommand(subcmd, parent, errorIfNotFound = false) {
+        if (!subcmd.isSubcmd) {
+            throw new CommandError("Can only delete subcommands");
+        }
+
+        parent = subcmd.parentCmd ?? parent;
+        const hasParent = parent !== null && typeof parent !== "undefined";
+
+        const deleted = Util.removeItem(this.commands, subcmd);
+
+        if (errorIfNotFound && !deleted) {
+            throw new CommandError(
+                `Couldn't delete subcommand ${subcmd.name}` + hasParent ? ` of command ${parent.name}` : ""
+            );
+        }
+
+        if (!hasParent) {
+            return deleted;
+        }
+
+        parent.removeSubcommand(subcmd);
+        return deleted;
+    }
+
+    async reloadCommands() {
+        getLogger().info("Reloading commands...");
+
+        this.deleteCommands();
+        await this._loadCommands();
+    }
+
+    async load() {
+        await this._loadCommands();
+    }
+
+    unload() {
+        this.deleteCommands();
+    }
+
+    _categorizeCommands(perm, sort = false) {
         const allowedCmds = this.getCommands(perm),
             categories = new Map();
 
@@ -121,10 +252,10 @@ class BaseCommandManager extends Manager {
         return new Map(entries);
     }
 
-    getCategoryHeaders(categories, discord = false) {
+    _getCategoryHeaders(categories, discord = false) {
         if (!(categories instanceof Map)) {
             const perm = categories;
-            categories = this.categorizeCommands(perm, true);
+            categories = this._categorizeCommands(perm, true);
         }
 
         const headers = Array(categories.size),
@@ -157,10 +288,10 @@ class BaseCommandManager extends Manager {
         return headers;
     }
 
-    getCategoryCmdNames(categories, discord = false, indentation = 0) {
+    _getCategoryCmdNames(categories, discord = false, indentation = 0) {
         if (!(categories instanceof Map)) {
             const perm = categories;
-            categories = this.categorizeCommands(perm, true);
+            categories = this._categorizeCommands(perm, true);
         }
 
         const namesFormat = Array(categories.size),
@@ -194,58 +325,7 @@ class BaseCommandManager extends Manager {
         return namesFormat;
     }
 
-    getHelp(perm, discord = true, indentation = 4) {
-        const categories = this.categorizeCommands(perm, true);
-
-        const headers = this.getCategoryHeaders(categories, discord),
-            names = this.getCategoryCmdNames(categories, discord, indentation);
-
-        const format = Array.from(
-            {
-                length: categories.size
-            },
-            (_, i) => headers[i] + names[i]
-        );
-
-        return format.join("\n\n");
-    }
-
-    async loadCommands() {
-        const commandLoader = new CommandLoader(this.commandsDir, getLogger(), {
-            excludeDirs: this.excludeDirs,
-            fileExtension: this.cmdFileExtension
-        });
-
-        this.commandLoader = commandLoader;
-        const [commands, status] = await commandLoader.load();
-
-        if (status === LoadStatus.failed) {
-            return;
-        }
-
-        this.commands = commands;
-
-        this.deleteDuplicateCommands();
-        this.bindSubcommands();
-    }
-
-    bindSubcommand(command, subName) {
-        const subcommand = this.commands.find(cmd => {
-            return cmd.name === subName && cmd.parent === command.name;
-        });
-
-        if (typeof subcommand === "undefined") {
-            getLogger().warn(`Subcommand "${subName}" of command "${command.name}" not found.`);
-            return false;
-        }
-
-        command.addSubcommand(subcommand);
-        getLogger().debug(`Bound subcommand "${subcommand.name}" to command "${command.name}".`);
-
-        return true;
-    }
-
-    bindSubcommands() {
+    _bindSubcommands() {
         getLogger().debug("Loading subcommands...");
 
         let total = 0,
@@ -287,16 +367,7 @@ class BaseCommandManager extends Manager {
         return bound;
     }
 
-    deleteDuplicateCommands() {
-        const duplicates = this.findDuplicateCommands();
-
-        Util.wipeArray(duplicates, command => {
-            this.deleteCommand(command, false);
-            getLogger().info(`Deleted duplicate of "${command.name}".`);
-        });
-    }
-
-    findDuplicateCommands() {
+    _findDuplicateCommands() {
         const commands = this.getCommands(),
             duplicates = [];
 
@@ -315,7 +386,7 @@ class BaseCommandManager extends Manager {
                 continue;
             }
 
-            const duplicatePath = this.commandLoader.getPath(duplicate);
+            const duplicatePath = this._commandLoader.getPath(duplicate);
             getLogger().warn(`Duplicate command of "${command.name}" found: ${duplicatePath}`);
 
             duplicates.push(duplicate);
@@ -324,103 +395,32 @@ class BaseCommandManager extends Manager {
         return duplicates;
     }
 
-    deleteCommands() {
-        if (this.commandLoader.loaded) {
-            this.commandLoader.deleteCommands();
-        } else {
-            getLogger().debug("No commands to delete.");
-        }
+    _deleteDuplicateCommands() {
+        const duplicates = this._findDuplicateCommands();
 
-        delete this.commandLoader;
+        Util.wipeArray(duplicates, command => {
+            this.deleteCommand(command, false);
+            getLogger().info(`Deleted duplicate of "${command.name}".`);
+        });
     }
 
-    deleteCommand(command, removeSubcommands = true, errorIfNotFound = false) {
-        if (command.isSubcmd) {
-            throw new CommandError("Can only delete parent commands");
+    async _loadCommands() {
+        const commandLoader = new CommandLoader(this.commandsDir, getLogger(), {
+            excludeDirs: this.excludeDirs,
+            fileExtension: this.cmdFileExtension
+        });
+
+        this._commandLoader = commandLoader;
+        const [commands, status] = await commandLoader.load();
+
+        if (status === LoadStatus.failed) {
+            return;
         }
 
-        let deleted = Util.removeItem(this.commands, command);
+        this.commands = commands;
 
-        if (errorIfNotFound && !deleted) {
-            throw new CommandError(`Couldn't delete command ${command.name}`);
-        }
-
-        this.commandLoader.deleteData(command, errorIfNotFound);
-
-        if (!removeSubcommands) {
-            return deleted;
-        }
-
-        if (command.subcmds.size < 1) {
-            return deleted;
-        }
-
-        this.deleteSubcommands(command, errorIfNotFound);
-        return deleted;
-    }
-
-    deleteSubcommands(command, errorIfNotFound = false) {
-        if (command.subcmds.size < 1) {
-            if (errorIfNotFound) {
-                throw new CommandError("Command has no subcommands");
-            }
-
-            return false;
-        }
-
-        let deleted = true;
-
-        for (const subcmd of command.getSubcmds()) {
-            deleted &= Util.removeItem(this.commands, subcmd);
-
-            if (errorIfNotFound && !deleted) {
-                throw new CommandError(`Couldn't delete subcommand ${subcmd.name} of command ${command.name}`);
-            }
-
-            this.commandLoader.deleteData(subcmd, errorIfNotFound);
-        }
-
-        command.removeSubcommands();
-        return deleted;
-    }
-
-    deleteSubcommand(subcmd, parent, errorIfNotFound = false) {
-        if (!subcmd.isSubcmd) {
-            throw new CommandError("Can only delete subcommands");
-        }
-
-        parent = subcmd.parentCmd ?? parent;
-        const hasParent = parent !== null && typeof parent !== "undefined";
-
-        const deleted = Util.removeItem(this.commands, subcmd);
-
-        if (errorIfNotFound && !deleted) {
-            throw new CommandError(
-                `Couldn't delete subcommand ${subcmd.name}` + hasParent ? ` of command ${parent.name}` : ""
-            );
-        }
-
-        if (!hasParent) {
-            return deleted;
-        }
-
-        parent.removeSubcommand(subcmd);
-        return deleted;
-    }
-
-    async reloadCommands() {
-        getLogger().info("Reloading commands...");
-
-        this.deleteCommands();
-        await this.loadCommands();
-    }
-
-    async load() {
-        await this.loadCommands();
-    }
-
-    unload() {
-        this.deleteCommands();
+        this._deleteDuplicateCommands();
+        this._bindSubcommands();
     }
 }
 

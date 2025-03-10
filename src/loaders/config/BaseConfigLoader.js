@@ -5,18 +5,6 @@ import LoadStatus from "../LoadStatus.js";
 
 import configPaths from "../../config/configPaths.json" assert { type: "json" };
 
-function modify() {
-    if (typeof this.childModify !== "function") {
-        return;
-    }
-
-    const modifiedConfig = this.childModify(this.data);
-
-    if (typeof modifiedConfig !== "undefined") {
-        this.config = modifiedConfig;
-    }
-}
-
 class BaseConfigLoader extends JsonLoader {
     constructor(name, logger, options = {}) {
         const configFilename = configPaths[name],
@@ -29,8 +17,8 @@ class BaseConfigLoader extends JsonLoader {
             ...options
         });
 
-        this.childModify = this.modify;
-        this.modify = modify.bind(this);
+        this._childModify = this.modify;
+        this.modify = this._modify;
     }
 
     async load() {
@@ -43,6 +31,18 @@ class BaseConfigLoader extends JsonLoader {
         this.modify();
 
         return LoadStatus.successful;
+    }
+
+    _modify() {
+        if (typeof this._childModify !== "function") {
+            return;
+        }
+
+        const modifiedConfig = this._childModify(this.data);
+
+        if (typeof modifiedConfig !== "undefined") {
+            this.config = modifiedConfig;
+        }
     }
 }
 

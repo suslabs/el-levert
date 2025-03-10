@@ -5,50 +5,6 @@ import UserTracker from "./tracker/UserTracker.js";
 
 import { getLogger } from "../LevertClient.js";
 
-function _execute(msg) {
-    if (!this.enabled) {
-        return false;
-    }
-
-    return this.childExecute(msg);
-}
-
-function _delete(msg) {
-    if (!this.enabled) {
-        return false;
-    }
-
-    let deleteFunc;
-
-    if (typeof this.childDelete === "function") {
-        deleteFunc = this.childDelete;
-    } else if (this.hasMessageTracker) {
-        deleteFunc = this.msgTrackerDelete;
-    } else {
-        deleteFunc = this.defaultDelete;
-    }
-
-    deleteFunc = deleteFunc.bind(this);
-    return deleteFunc(msg);
-}
-
-function _resubmit(msg) {
-    if (!this.enabled) {
-        return false;
-    }
-
-    let resubmitFunc;
-
-    if (typeof this.childResubmit === "function") {
-        resubmitFunc = this.childResubmit;
-    } else {
-        resubmitFunc = this.defaultResubmit;
-    }
-
-    resubmitFunc = resubmitFunc.bind(this);
-    return resubmitFunc(msg);
-}
-
 class Handler {
     constructor(enabled = true, hasMessageTracker = true, hasUserTracker = false, options = {}) {
         if (typeof this.constructor.$name === "undefined") {
@@ -67,21 +23,47 @@ class Handler {
         this.options = options;
         this.priority ??= options.priority ?? 0;
 
-        this.childExecute = this.execute;
-        this.execute = _execute.bind(this);
+        this._childExecute = this.execute;
+        this.execute = this._execute;
 
-        this.childDelete = this.delete;
-        this.delete = _delete.bind(this);
+        this._childDelete = this.delete;
+        this.delete = this._delete;
 
-        this.childResubmit = this.resubmit;
-        this.resubmit = _resubmit.bind(this);
+        this._childResubmit = this.resubmit;
+        this.resubmit = this._resubmit;
     }
 
-    defaultDelete() {
+    _defaultDelete() {
         return false;
     }
 
-    async msgTrackerDelete(msg) {
+    load() {
+        if (!this.enabled) {
+            return;
+        }
+
+        if (this.hasMessageTracker) {
+            this.messageTracker = new MessageTracker();
+        }
+
+        if (this.hasUserTracker) {
+            const userSweepInterval = this.options.userSweepInterval ?? 0;
+            this.userTracker = new UserTracker(userSweepInterval);
+        }
+    }
+
+    unload() {
+        if (this.hasMessageTracker) {
+            this.messageTracker.clearMsgs();
+        }
+
+        if (this.hasUserTracker) {
+            this.userTracker.clearUsers();
+            this.userTracker._clearSweepInterval();
+        }
+    }
+
+    async _msgTrackerDelete(msg) {
         if (!this.hasMessageTracker) {
             return false;
         }
@@ -111,7 +93,7 @@ class Handler {
         return true;
     }
 
-    async defaultResubmit(msg) {
+    async _defaultResubmit(msg) {
         if (!this.enabled) {
             return false;
         }
@@ -120,30 +102,48 @@ class Handler {
         return await this.execute(msg);
     }
 
-    load() {
+    _execute(msg) {
         if (!this.enabled) {
-            return;
+            return false;
         }
 
-        if (this.hasMessageTracker) {
-            this.messageTracker = new MessageTracker();
-        }
-
-        if (this.hasUserTracker) {
-            const userSweepInterval = this.options.userSweepInterval ?? 0;
-            this.userTracker = new UserTracker(userSweepInterval);
-        }
+        return this._childExecute(msg);
     }
 
-    unload() {
-        if (this.hasMessageTracker) {
-            this.messageTracker.clearMsgs();
+    _delete(msg) {
+        if (!this.enabled) {
+            return false;
         }
 
-        if (this.hasUserTracker) {
-            this.userTracker.clearUsers();
-            this.userTracker.clearSweepInterval();
+        let deleteFunc;
+
+        if (typeof this._childDelete === "function") {
+            deleteFunc = this._childDelete;
+        } else if (this.hasMessageTracker) {
+            deleteFunc = this._msgTrackerDelete;
+        } else {
+            deleteFunc = this._defaultDelete;
         }
+
+        deleteFunc = deleteFunc.bind(this);
+        return deleteFunc(msg);
+    }
+
+    _resubmit(msg) {
+        if (!this.enabled) {
+            return false;
+        }
+
+        let resubmitFunc;
+
+        if (typeof this._childResubmit === "function") {
+            resubmitFunc = this._childResubmit;
+        } else {
+            resubmitFunc = this._defaultResubmit;
+        }
+
+        resubmitFunc = resubmitFunc.bind(this);
+        return resubmitFunc(msg);
     }
 }
 

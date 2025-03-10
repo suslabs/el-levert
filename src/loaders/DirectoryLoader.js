@@ -30,68 +30,8 @@ class DirectoryLoader extends Loader {
         this.fileLoaderClass = options.fileLoaderClass ?? FileLoader;
     }
 
-    loadFilePaths() {
-        this.logger?.debug(`Reading ${this.getName()}...`);
-
-        if (typeof this.dirPath !== "string") {
-            return this.failure(`Invalid ${this.getName()}`);
-        }
-
-        let files;
-
-        try {
-            files = Util.getFilesRecSync(this.dirPath);
-        } catch (err) {
-            if (err.code === "ENOENT") {
-                return this.failure(`Couldn't find the ${this.getName()}`);
-            } else {
-                return this.failure(err, `Error occured while reading ${this.getName()}:`);
-            }
-        }
-
-        files = files.filter(file => {
-            for (const excludeDir of this.excludeDirs) {
-                if (file.startsWith(excludeDir)) {
-                    return false;
-                }
-            }
-
-            return true;
-        });
-
-        if (this.fileExtension !== "any") {
-            files = files.filter(file => {
-                const extension = path.extname(file);
-                return extension === this.fileExtension;
-            });
-        }
-
-        this.files = files;
-
-        this.logger?.debug(`Read ${this.getName()}.`);
-        return LoadStatus.successful;
-    }
-
-    getLoadArgs(path, options) {
-        const throwOnFailure = options.throwOnFailure ?? this.throwOnFailure;
-
-        let loadArgs = [path, this.logger];
-
-        if (typeof options.loaderName !== "undefined") {
-            loadArgs = [options.loaderName].concat(loadArgs);
-            delete options.loaderName;
-        }
-
-        loadArgs.push({
-            ...options,
-            throwOnFailure
-        });
-
-        return loadArgs;
-    }
-
     async load(options = {}) {
-        let status = await this.loadFilePaths();
+        let status = await this._loadFilePaths();
 
         if (status === LoadStatus.failed) {
             return status;
@@ -107,7 +47,7 @@ class DirectoryLoader extends Loader {
             bad = 0;
 
         for (const file of this.files) {
-            const loadArgs = this.getLoadArgs(file, options),
+            const loadArgs = this._getLoadArgs(file, options),
                 loader = new this.fileLoaderClass(...loadArgs);
 
             let data;
@@ -290,6 +230,66 @@ class DirectoryLoader extends Loader {
 
     getLogName() {
         return this.name ?? "file";
+    }
+
+    _loadFilePaths() {
+        this.logger?.debug(`Reading ${this.getName()}...`);
+
+        if (typeof this.dirPath !== "string") {
+            return this.failure(`Invalid ${this.getName()}`);
+        }
+
+        let files;
+
+        try {
+            files = Util.getFilesRecSync(this.dirPath);
+        } catch (err) {
+            if (err.code === "ENOENT") {
+                return this.failure(`Couldn't find the ${this.getName()}`);
+            } else {
+                return this.failure(err, `Error occured while reading ${this.getName()}:`);
+            }
+        }
+
+        files = files.filter(file => {
+            for (const excludeDir of this.excludeDirs) {
+                if (file.startsWith(excludeDir)) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
+
+        if (this.fileExtension !== "any") {
+            files = files.filter(file => {
+                const extension = path.extname(file);
+                return extension === this.fileExtension;
+            });
+        }
+
+        this.files = files;
+
+        this.logger?.debug(`Read ${this.getName()}.`);
+        return LoadStatus.successful;
+    }
+
+    _getLoadArgs(path, options) {
+        const throwOnFailure = options.throwOnFailure ?? this.throwOnFailure;
+
+        let loadArgs = [path, this.logger];
+
+        if (typeof options.loaderName !== "undefined") {
+            loadArgs = [options.loaderName].concat(loadArgs);
+            delete options.loaderName;
+        }
+
+        loadArgs.push({
+            ...options,
+            throwOnFailure
+        });
+
+        return loadArgs;
     }
 }
 

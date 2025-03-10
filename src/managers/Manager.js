@@ -1,25 +1,5 @@
 import ManagerError from "../errors/ManagerError.js";
 
-function _load(...args) {
-    if (!this.enabled) {
-        return;
-    }
-
-    return this.childLoad(...args);
-}
-
-function _unload(...args) {
-    if (!this.enabled) {
-        return;
-    }
-
-    if (typeof this.childUnload !== "function") {
-        return;
-    }
-
-    return this.childUnload(...args);
-}
-
 class Manager {
     constructor(enabled = true, options = {}) {
         if (typeof this.constructor.$name === "undefined") {
@@ -34,11 +14,31 @@ class Manager {
 
         this.options = options;
 
-        this.childLoad = this.load;
-        this.load = _load.bind(this);
+        this._childLoad = this.load;
+        this.load = this._load;
 
-        this.childUnload = this.unload;
-        this.unload = _unload.bind(this);
+        this._childUnload = this.unload;
+        this.unload = this._unload;
+    }
+
+    _load(...args) {
+        if (!this.enabled) {
+            return;
+        }
+
+        return this._childLoad(...args);
+    }
+
+    _unload(...args) {
+        if (!this.enabled) {
+            return;
+        }
+
+        if (typeof this._childUnload !== "function") {
+            return;
+        }
+
+        return this._childUnload(...args);
     }
 }
 

@@ -27,10 +27,11 @@ class IsolateInspector {
             this.sendReply = options.sendReply;
         }
 
-        this.connectTimeout = 60 / Util.durationSeconds.milli;
+        this.connectTimeout = options.connectTimeout ?? 60 / Util.durationSeconds.milli;
 
-        this.channel = null;
         this.connected = false;
+
+        this._channel = null;
     }
 
     create(isolate) {
@@ -52,7 +53,7 @@ class IsolateInspector {
         channel.onResponse = (_, msg) => wrappedReply(msg);
         channel.onNotification = wrappedReply;
 
-        this.channel = channel;
+        this._channel = channel;
         this.wrappedReply = wrappedReply;
 
         getLogger().debug("Created channel.");
@@ -82,7 +83,7 @@ class IsolateInspector {
 
     sendMessage(msg) {
         const str = String(msg);
-        this.channel.dispatchProtocolMessage(str);
+        this._channel.dispatchProtocolMessage(str);
     }
 
     onConnection() {
@@ -92,7 +93,7 @@ class IsolateInspector {
 
         getLogger().info("Inspector connected.");
 
-        if (this.channel === null) {
+        if (this._channel === null) {
             this.create();
         }
 
@@ -111,17 +112,17 @@ class IsolateInspector {
     }
 
     dispose() {
-        if (this.channel === null) {
+        if (this._channel === null) {
             return;
         }
 
         try {
-            this.channel.dispose();
+            this._channel.dispose();
         } catch (err) {
             getLogger().error("Error occured while disposing inspector channel:", err);
         }
 
-        this.channel = null;
+        this._channel = null;
         delete this.wrappedReply;
     }
 }

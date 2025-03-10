@@ -2,7 +2,7 @@ class MessageProcessor {
     constructor(client) {
         this.client = client;
 
-        this.executeAllHandlers = client.executeAllHandlers;
+        this.executeAllHandlers = client._executeAllHandlers;
     }
 
     shouldProcess(msg) {

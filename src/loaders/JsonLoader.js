@@ -30,42 +30,6 @@ function formatValidationErrors(errors) {
     return errMessage.join("\n");
 }
 
-function validate(data) {
-    let valid, error;
-
-    if (typeof this.childValidate === "function") {
-        const res = this.childValidate(data);
-
-        if (Array.isArray(res)) {
-            [valid, error] = res;
-        } else {
-            valid = res;
-        }
-
-        if (!valid) {
-            return this.failure("Validation failed." + (error ? `\n${error}` : ""));
-        }
-    }
-
-    if (this.validateWithSchema) {
-        [valid, error] = this.schemaValidate(data);
-
-        if (!valid) {
-            let errMessage = "Validation failed";
-
-            if (typeof error !== "undefined") {
-                errMessage += ":\n" + formatValidationErrors(error);
-            } else {
-                errMessage += ".";
-            }
-
-            return this.failure(errMessage);
-        }
-    }
-
-    return LoadStatus.successful;
-}
-
 class JsonLoader extends TextFileLoader {
     constructor(name, filePath, logger, options = {}) {
         super(name, filePath, logger, options);
@@ -74,161 +38,33 @@ class JsonLoader extends TextFileLoader {
         this.forceSchemaValidation = options.forceSchemaValidation ?? true;
 
         this.schema = options.schema;
-        this.schemaPath = this.getSchemaPath(options);
+        this._schemaPath = this._getSchemaPath(options);
 
         this.customStringify = options.stringify;
         this.replacer = options.replacer;
         this.space = options.space ?? 0;
 
-        this.childValidate = this.validate;
-        this.validate = validate.bind(this);
-    }
-
-    getSchemaPath(options) {
-        if (typeof options.schemaPath === "string") {
-            return options.schemaPath;
-        }
-
-        if (typeof this.path !== "string" || typeof options.schemaDir !== "string") {
-            return;
-        }
-
-        const parsed = path.parse(this.path),
-            schemaPath = path.join(options.schemaDir, parsed.name + ".schema.json");
-
-        return schemaPath;
-    }
-
-    async read() {
-        const status = await super.load();
-
-        if (status === LoadStatus.failed) {
-            return status;
-        }
-
-        this.jsonString = this.data;
-        this.data = {};
-
-        return LoadStatus.successful;
-    }
-
-    parse() {
-        let obj;
-
-        try {
-            obj = JSON.parse(this.jsonString);
-        } catch (err) {
-            return this.failure(`Error occured while parsing ${this.getName()}: ${err.message}`);
-        }
-
-        this.data = obj;
-
-        return LoadStatus.successful;
-    }
-
-    async loadSchemaFile() {
-        const schemaOptions = { throwOnFailure: this.throwOnFailure },
-            schemaLoader = new TextFileLoader("schema", this.schemaPath, this.logger, schemaOptions);
-
-        const [schemaString, status] = await schemaLoader.load();
-
-        if (status === LoadStatus.failed) {
-            return status;
-        }
-
-        const schema = JSON.parse(schemaString);
-        this.schema = schema;
-
-        return LoadStatus.successful;
-    }
-
-    async loadSchema() {
-        if (typeof this.schemaPath === "string") {
-            this.schemaLoadStatus = await this.loadSchemaFile();
-        } else if (typeof this.schema === "undefined") {
-            this.schemaLoadStatus = this.failure("No schema provided.");
-        } else {
-            this.schemaLoadStatus = LoadStatus.successful;
-        }
-    }
-
-    initValidator() {
-        if (typeof this.schema === "undefined") {
-            return this.failure("Can't initialize validator, no schema provided.");
-        }
-
-        if (typeof this.ajvValidate !== "undefined") {
-            delete this.ajvValidate;
-        }
-
-        const existingValidator = ajv.getSchema(this.schema.$id);
-
-        if (typeof existingValidator !== "undefined") {
-            this.ajvValidate = existingValidator;
-        } else {
-            this.ajvValidate = ajv.compile(this.schema);
-        }
-
-        return LoadStatus.successful;
-    }
-
-    removeValidator() {
-        ajv.removeSchema(this.schema.$id);
-    }
-
-    schemaValidate(data) {
-        if (this.schemaLoadStatus === LoadStatus.failed || this.initValidator() === LoadStatus.failed) {
-            if (this.forceSchemaValidation) {
-                return [false, undefined];
-            } else {
-                this.logger?.warn("Schema validation skipped.");
-                return [true, undefined];
-            }
-        }
-
-        const valid = this.ajvValidate(data),
-            errors = this.ajvValidate.errors;
-
-        if (valid) {
-            return [valid, undefined];
-        } else {
-            return [valid, errors];
-        }
-    }
-
-    stringifyData(data, options) {
-        const stringify = options.stringify ?? this.customStringify,
-            replacer = options.replacer ?? this.replacer,
-            space = options.space ?? this.space;
-
-        let jsonData;
-
-        if (typeof stringify === "function") {
-            jsonData = stringify(data, options);
-        } else {
-            jsonData = JSON.stringify(data, replacer, space);
-        }
-
-        return jsonData;
+        this._childValidate = this.validate;
+        this.validate = this._validate;
     }
 
     async load() {
         let status;
 
-        status = await this.read();
+        status = await this._read();
 
         if (status === LoadStatus.failed) {
             return status;
         }
 
-        status = this.parse();
+        status = this._parse();
 
         if (status === LoadStatus.failed) {
             return status;
         }
 
         if (this.validateWithSchema) {
-            await this.loadSchema();
+            await this._loadSchema();
         }
 
         status = this.validate(this.data);
@@ -267,6 +103,170 @@ class JsonLoader extends TextFileLoader {
 
         const newData = { ...this.data, ...data };
         return await this.write(newData);
+    }
+
+    stringifyData(data, options) {
+        const stringify = options.stringify ?? this.customStringify,
+            replacer = options.replacer ?? this.replacer,
+            space = options.space ?? this.space;
+
+        let jsonData;
+
+        if (typeof stringify === "function") {
+            jsonData = stringify(data, options);
+        } else {
+            jsonData = JSON.stringify(data, replacer, space);
+        }
+
+        return jsonData;
+    }
+
+    async _read() {
+        const status = await super.load();
+
+        if (status === LoadStatus.failed) {
+            return status;
+        }
+
+        this._jsonString = this.data;
+        this.data = {};
+
+        return LoadStatus.successful;
+    }
+
+    _parse() {
+        let obj;
+
+        try {
+            obj = JSON.parse(this._jsonString);
+        } catch (err) {
+            return this.failure(`Error occured while parsing ${this.getName()}: ${err.message}`);
+        }
+
+        this.data = obj;
+
+        return LoadStatus.successful;
+    }
+
+    _getSchemaPath(options) {
+        if (typeof options.schemaPath === "string") {
+            return options.schemaPath;
+        }
+
+        if (typeof this.path !== "string" || typeof options.schemaDir !== "string") {
+            return;
+        }
+
+        const parsed = path.parse(this.path),
+            schemaPath = path.join(options.schemaDir, parsed.name + ".schema.json");
+
+        return schemaPath;
+    }
+
+    async _loadSchemaFile() {
+        const schemaOptions = { throwOnFailure: this.throwOnFailure },
+            schemaLoader = new TextFileLoader("schema", this._schemaPath, this.logger, schemaOptions);
+
+        const [schemaString, status] = await schemaLoader.load();
+
+        if (status === LoadStatus.failed) {
+            return status;
+        }
+
+        const schema = JSON.parse(schemaString);
+        this.schema = schema;
+
+        return LoadStatus.successful;
+    }
+
+    async _loadSchema() {
+        if (typeof this._schemaPath === "string") {
+            this._schemaLoadStatus = await this._loadSchemaFile();
+        } else if (typeof this.schema === "undefined") {
+            this._schemaLoadStatus = this.failure("No schema provided.");
+        } else {
+            this._schemaLoadStatus = LoadStatus.successful;
+        }
+    }
+
+    _initValidator() {
+        if (typeof this.schema === "undefined") {
+            return this.failure("Can't initialize validator, no schema provided.");
+        }
+
+        if (typeof this._ajvValidate !== "undefined") {
+            delete this._ajvValidate;
+        }
+
+        const existingValidator = ajv.getSchema(this.schema.$id);
+
+        if (typeof existingValidator !== "undefined") {
+            this._ajvValidate = existingValidator;
+        } else {
+            this._ajvValidate = ajv.compile(this.schema);
+        }
+
+        return LoadStatus.successful;
+    }
+
+    _removeValidator() {
+        ajv.removeSchema(this.schema.$id);
+    }
+
+    _schemaValidate(data) {
+        if (this._schemaLoadStatus === LoadStatus.failed || this._initValidator() === LoadStatus.failed) {
+            if (this.forceSchemaValidation) {
+                return [false, undefined];
+            } else {
+                this.logger?.warn("Schema validation skipped.");
+                return [true, undefined];
+            }
+        }
+
+        const valid = this._ajvValidate(data),
+            errors = this._ajvValidate.errors;
+
+        if (valid) {
+            return [valid, undefined];
+        } else {
+            return [valid, errors];
+        }
+    }
+
+    _validate(data) {
+        let valid, error;
+
+        if (typeof this._childValidate === "function") {
+            const res = this._childValidate(data);
+
+            if (Array.isArray(res)) {
+                [valid, error] = res;
+            } else {
+                valid = res;
+            }
+
+            if (!valid) {
+                return this.failure("Validation failed." + (error ? `\n${error}` : ""));
+            }
+        }
+
+        if (this.validateWithSchema) {
+            [valid, error] = this._schemaValidate(data);
+
+            if (!valid) {
+                let errMessage = "Validation failed";
+
+                if (typeof error !== "undefined") {
+                    errMessage += ":\n" + formatValidationErrors(error);
+                } else {
+                    errMessage += ".";
+                }
+
+                return this.failure(errMessage);
+            }
+        }
+
+        return LoadStatus.successful;
     }
 }
 

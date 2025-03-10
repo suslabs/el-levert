@@ -6,14 +6,10 @@ import LoggerError from "../../errors/LoggerError.js";
 
 import Util from "../../util/Util.js";
 
-function getEmbedColor(level) {
-    return EmbedColors[level] ?? defaultColor;
-}
-
-const msgCharLimit = 2000,
-    embedCharLimit = 4096;
-
 class BaseDiscordTransport extends Transport {
+    static msgCharLimit = 2000;
+    static embedCharLimit = 4096;
+
     constructor(opts) {
         super(opts);
 
@@ -25,16 +21,14 @@ class BaseDiscordTransport extends Transport {
             throw new LoggerError("Child class must have a sendLog function");
         }
 
-        this.initialized = false;
-        this.buffer = [];
-        this.disableCodes = [];
-
-        const charLimit = opts.charLimit ?? embedCharLimit;
-        this.charLimit = Util.clamp(charLimit, 0, embedCharLimit);
+        const charLimit = opts.charLimit ?? BaseDiscordTransport.embedCharLimit;
+        this.charLimit = Util.clamp(charLimit, 0, BaseDiscordTransport.embedCharLimit);
 
         this.name = opts.name ?? this.constructor.$name;
         this.sendInterval = opts.sendInterval ?? 0;
         this.client = opts.client;
+
+        this.initialized = false;
 
         if (typeof this.init === "function") {
             this.init(opts);
@@ -42,7 +36,9 @@ class BaseDiscordTransport extends Transport {
             this.initialized = true;
         }
 
-        this.startSendLoop();
+        this._buffer = [];
+
+        this._startSendLoop();
     }
 
     get sendDelayed() {
@@ -60,24 +56,39 @@ class BaseDiscordTransport extends Transport {
         }
 
         if (this.sendDelayed) {
-            this.buffer.push(info);
+            this._buffer.push(info);
         } else {
-            this.logToDiscord(info).catch(err => this.discordErrorHandler(err));
+            this._logToDiscord(info).catch(err => this._discordErrorHandler(err));
         }
 
         callback();
     }
 
-    formatLog(info) {
+    close() {
+        if (typeof this.onClose === "function") {
+            this.onClose();
+        }
+
+        this.initialized = false;
+        this._stopSendLoop();
+    }
+
+    static _disableCodes = [];
+
+    static _getEmbedColor(level) {
+        return EmbedColors[level] ?? defaultColor;
+    }
+
+    _formatLog(info) {
         let content = "",
             fileContent = "",
             embed = new EmbedBuilder();
 
         embed.setTitle(Util.capitalize(info.level));
-        embed.setColor(getEmbedColor(info.level));
+        embed.setColor(BaseDiscordTransport._getEmbedColor(info.level));
 
         if (typeof info.stack !== "undefined") {
-            if (info.stack.length < msgCharLimit) {
+            if (info.stack.length < BaseDiscordTransport.msgCharLimit) {
                 const formattedStack = codeBlock("js", info.stack);
                 content += formattedStack;
             } else {
@@ -144,33 +155,33 @@ class BaseDiscordTransport extends Transport {
         return out;
     }
 
-    async logToDiscord(info) {
-        const out = this.formatLog(info);
+    async _logToDiscord(info) {
+        const out = this._formatLog(info);
         await this.sendLog(out);
     }
 
-    sendLogs() {
+    _sendLogs() {
         if (!this.initialized) {
             return;
         }
 
-        const info = this.buffer.shift();
+        const info = this._buffer.shift();
 
         if (typeof info === "undefined") {
             return;
         }
 
-        this.logToDiscord(info).catch(err => this.discordErrorHandler(err));
+        this._logToDiscord(info).catch(err => this._discordErrorHandler(err));
     }
 
-    discordErrorHandler(err) {
+    _discordErrorHandler(err) {
         console.error("Error occured while sending message to discord:", err);
 
         if (!(err instanceof DiscordAPIError)) {
             return;
         }
 
-        if (this.disableCodes.includes(err.code)) {
+        if (this.constructor._disableCodes.includes(err.code)) {
             if (typeof this.getDisabledMessage === "function") {
                 const disabledMessage = this.getDisabledMessage();
                 console.info(disabledMessage);
@@ -180,31 +191,22 @@ class BaseDiscordTransport extends Transport {
         }
     }
 
-    startSendLoop() {
+    _startSendLoop() {
         if (!this.sendDelayed) {
             return;
         }
 
-        const sendFunc = this.sendLogs.bind(this);
-        this.sendTimer = setInterval(sendFunc, this.sendInterval);
+        const sendFunc = this._sendLogs.bind(this);
+        this._sendTimer = setInterval(sendFunc, this.sendInterval);
     }
 
-    stopSendLoop() {
-        if (typeof this.sendTimer === "undefined") {
+    _stopSendLoop() {
+        if (typeof this._sendTimer === "undefined") {
             return;
         }
 
-        clearInterval(this.sendTimer);
-        delete this.sendTimer;
-    }
-
-    close() {
-        if (typeof this.onClose === "function") {
-            this.onClose();
-        }
-
-        this.initialized = false;
-        this.stopSendLoop();
+        clearInterval(this._sendTimer);
+        delete this._sendTimer;
     }
 }
 

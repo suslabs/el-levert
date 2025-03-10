@@ -37,102 +37,8 @@ class SedHandler extends Handler {
         super(enabled, true);
     }
 
-    canSed(str) {
-        if (!this.enabled || typeof str !== "string") {
-            return false;
-        }
-
-        return sedRegex.test(str);
-    }
-
-    async fetchMatch(ch_id, regex, ignore_id, limit = 100) {
-        const msgs = await getClient().fetchMessages(ch_id, { limit });
-
-        if (!msgs) {
-            return false;
-        }
-
-        const msg = msgs.find(msg => {
-            const isBot = msg.author.id === getClient().client.user.id;
-
-            if (isBot || msg.id === ignore_id) {
-                return false;
-            }
-
-            return regex.test(msg);
-        });
-
-        if (typeof msg === "undefined") {
-            return false;
-        }
-
-        return msg;
-    }
-
-    async genSed(msg, str) {
-        logUsage(msg);
-
-        const t1 = performance.now(),
-            match = str.match(sedRegex);
-
-        if (!match) {
-            throw new HandlerError("Invalid input string");
-        }
-
-        const { regex_str, replace, flags_str } = match.groups,
-            flags = flags_str ?? "" + "i";
-
-        if (match.length < 3) {
-            throw new HandlerError("Invalid regex args");
-        }
-
-        let regex, sedMsg;
-
-        try {
-            regex = new RegExp(regex_str, flags);
-        } catch (err) {
-            throw new HandlerError("Invalid regex or flags");
-        }
-
-        switch (msg.type) {
-            case MessageType.Reply:
-                sedMsg = await getClient().fetchMessage(msg.channel.id, msg.reference.messageId);
-                break;
-            default:
-                sedMsg = await this.fetchMatch(msg.channel.id, regex, msg.id);
-                break;
-        }
-
-        if (!sedMsg) {
-            throw new HandlerError("No matching message found");
-        }
-
-        const replacedContent = sedMsg.content.replace(regex, replace ?? "");
-
-        const username = sedMsg.author.displayName,
-            avatar = sedMsg.author.displayAvatarURL(),
-            timestamp = sedMsg.editedTimestamp ?? sedMsg.createdTimestamp,
-            image = sedMsg.attachments.at(0)?.url,
-            channel = Util.formatChannelName(sedMsg.channel);
-
-        const embed = new EmbedBuilder()
-            .setAuthor({
-                name: username,
-                iconURL: avatar
-            })
-            .setDescription(replacedContent)
-            .setTimestamp(timestamp)
-            .setImage(image)
-            .setFooter({
-                text: `From ${channel}`
-            });
-
-        logGenTime(t1);
-        return embed;
-    }
-
     async execute(msg) {
-        if (!this.canSed(msg.content)) {
+        if (!this._canSed(msg.content)) {
             return false;
         }
 
@@ -142,7 +48,7 @@ class SedHandler extends Handler {
         await msg.channel.sendTyping();
 
         try {
-            sed = await this.genSed(msg, msg.content);
+            sed = await this._genSed(msg, msg.content);
         } catch (err) {
             if (err.name === "HandlerError") {
                 let emoji;
@@ -194,6 +100,100 @@ class SedHandler extends Handler {
 
         logSendTime(t1);
         return true;
+    }
+
+    _canSed(str) {
+        if (!this.enabled || typeof str !== "string") {
+            return false;
+        }
+
+        return sedRegex.test(str);
+    }
+
+    async _fetchMatch(ch_id, regex, ignore_id, limit = 100) {
+        const msgs = await getClient().fetchMessages(ch_id, { limit });
+
+        if (!msgs) {
+            return false;
+        }
+
+        const msg = msgs.find(msg => {
+            const isBot = msg.author.id === getClient().client.user.id;
+
+            if (isBot || msg.id === ignore_id) {
+                return false;
+            }
+
+            return regex.test(msg);
+        });
+
+        if (typeof msg === "undefined") {
+            return false;
+        }
+
+        return msg;
+    }
+
+    async _genSed(msg, str) {
+        logUsage(msg);
+
+        const t1 = performance.now(),
+            match = str.match(sedRegex);
+
+        if (!match) {
+            throw new HandlerError("Invalid input string");
+        }
+
+        const { regex_str, replace, flags_str } = match.groups,
+            flags = flags_str ?? "" + "i";
+
+        if (match.length < 3) {
+            throw new HandlerError("Invalid regex args");
+        }
+
+        let regex, sedMsg;
+
+        try {
+            regex = new RegExp(regex_str, flags);
+        } catch (err) {
+            throw new HandlerError("Invalid regex or flags");
+        }
+
+        switch (msg.type) {
+            case MessageType.Reply:
+                sedMsg = await getClient().fetchMessage(msg.channel.id, msg.reference.messageId);
+                break;
+            default:
+                sedMsg = await this._fetchMatch(msg.channel.id, regex, msg.id);
+                break;
+        }
+
+        if (!sedMsg) {
+            throw new HandlerError("No matching message found");
+        }
+
+        const replacedContent = sedMsg.content.replace(regex, replace ?? "");
+
+        const username = sedMsg.author.displayName,
+            avatar = sedMsg.author.displayAvatarURL(),
+            timestamp = sedMsg.editedTimestamp ?? sedMsg.createdTimestamp,
+            image = sedMsg.attachments.at(0)?.url,
+            channel = Util.formatChannelName(sedMsg.channel);
+
+        const embed = new EmbedBuilder()
+            .setAuthor({
+                name: username,
+                iconURL: avatar
+            })
+            .setDescription(replacedContent)
+            .setTimestamp(timestamp)
+            .setImage(image)
+            .setFooter({
+                text: `From ${channel}`
+            });
+
+        logGenTime(t1);
+        return embed;
     }
 }
 

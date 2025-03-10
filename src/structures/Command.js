@@ -16,20 +16,18 @@ async function getPermLevel(options) {
     return await getClient().permManager.maxLevel(msg.author.id);
 }
 
-const defaultValues = {
-    parent: "",
-    allowed: 0,
-    ownerOnly: false,
-    subcommands: [],
-    description: "",
-    usage: "",
-    aliases: [],
-    helpArgs: ["help", "-help", "-h", "usage"],
-    category: "none"
-};
-
 class Command {
-    static defaultValues = defaultValues;
+    static defaultValues = {
+        parent: "",
+        allowed: 0,
+        ownerOnly: false,
+        subcommands: [],
+        description: "",
+        usage: "",
+        aliases: [],
+        helpArgs: ["help", "-help", "-h", "usage"],
+        category: "none"
+    };
 
     constructor(options) {
         if (typeof options.name === "undefined") {
@@ -47,7 +45,7 @@ class Command {
         this.isSubcmd = options.subcommand ?? false;
         delete options.subcommand;
 
-        Util.setValuesWithDefaults(this, options, defaultValues);
+        Util.setValuesWithDefaults(this, options, Command.defaultValues);
 
         if (this.ownerOnly) {
             this.allowed = getClient().permManager.ownerLevel;

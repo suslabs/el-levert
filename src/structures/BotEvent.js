@@ -2,12 +2,10 @@ import EventError from "../errors/EventError.js";
 
 import Util from "../util/Util.js";
 
-const defaultValues = {
-    once: false
-};
-
 class BotEvent {
-    static defaultValues = defaultValues;
+    static defaultValues = {
+        once: false
+    };
 
     constructor(options) {
         if (typeof options.name === "undefined") {
@@ -18,7 +16,7 @@ class BotEvent {
             throw new EventError("Event must have a listener");
         }
 
-        Util.setValuesWithDefaults(this, options, defaultValues);
+        Util.setValuesWithDefaults(this, options, BotEvent.defaultValues);
 
         this.registered = false;
     }

@@ -1,41 +1,5 @@
 import VMError from "../errors/VMError.js";
 
-function _load(...args) {
-    if (!this.enabled) {
-        return;
-    }
-
-    if (typeof this.childLoad !== "function") {
-        return;
-    }
-
-    return this.childLoad(...args);
-}
-
-function _unload(...args) {
-    if (!this.enabled) {
-        return;
-    }
-
-    if (typeof this.childUnload !== "function") {
-        return;
-    }
-
-    return this.childUnload(...args);
-}
-
-function _runScript(code, ...args) {
-    if (!this.enabled) {
-        if (typeof this.getDisabledMessage === "function") {
-            return this.getDisabledMessage();
-        }
-
-        return;
-    }
-
-    return this.childRunScript(code, ...args);
-}
-
 class VM {
     constructor(enabled, options) {
         if (typeof this.constructor.$name === "undefined") {
@@ -50,14 +14,50 @@ class VM {
 
         this.options = options;
 
-        this.childLoad = this.load;
-        this.load = _load.bind(this);
+        this._childLoad = this.load;
+        this.load = this._load;
 
-        this.childUnload = this.unload;
-        this.unload = _unload.bind(this);
+        this._childUnload = this.unload;
+        this.unload = this._unload;
 
-        this.childRunScript = this.runScript;
-        this.runScript = _runScript.bind(this);
+        this._childRunScript = this.runScript;
+        this.runScript = this._runScript;
+    }
+
+    _load(...args) {
+        if (!this.enabled) {
+            return;
+        }
+
+        if (typeof this._childLoad !== "function") {
+            return;
+        }
+
+        return this._childLoad(...args);
+    }
+
+    _unload(...args) {
+        if (!this.enabled) {
+            return;
+        }
+
+        if (typeof this._childUnload !== "function") {
+            return;
+        }
+
+        return this._childUnload(...args);
+    }
+
+    _runScript(code, ...args) {
+        if (!this.enabled) {
+            if (typeof this.getDisabledMessage === "function") {
+                return this.getDisabledMessage();
+            }
+
+            return;
+        }
+
+        return this._childRunScript(code, ...args);
     }
 }
 

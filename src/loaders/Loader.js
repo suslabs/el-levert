@@ -4,69 +4,6 @@ import LoadStatus from "./LoadStatus.js";
 import Util from "../util/Util.js";
 import { isPromise } from "../util/TypeTester.js";
 
-function _load(...args) {
-    let loadingMessage;
-
-    if (typeof this.getLoadingMessage === "function") {
-        loadingMessage = this.getLoadingMessage();
-    } else {
-        loadingMessage = `Loading ${this.getName()}...`;
-    }
-
-    if (loadingMessage.length > 0) {
-        this.logger?.debug(loadingMessage);
-    }
-
-    this.result = {};
-    const res = this.childLoad(...args);
-
-    if (isPromise(res)) {
-        return this.loadAsync(res);
-    } else {
-        return this.loadSync(res);
-    }
-}
-
-function _write(data, ...args) {
-    if (typeof this.childWrite !== "function") {
-        return LoadStatus.successful;
-    }
-
-    let writingMessage;
-
-    if (typeof this.getWritingMessage === "function") {
-        writingMessage = this.getWritingMessage();
-    } else {
-        writingMessage = `Writing ${this.getName()}...`;
-    }
-
-    if (writingMessage.length > 0) {
-        this.logger?.debug(writingMessage);
-    }
-
-    data ??= this.data;
-    if (data === null) {
-        return this.failure(`Can't write ${this.getName()}, no data provided.`);
-    }
-
-    this.result = {};
-    const res = this.childWrite(data, ...args);
-
-    if (isPromise(res)) {
-        return this.writeAsync(res, data);
-    } else {
-        return this.writeSync(res, data);
-    }
-}
-
-function _dispose() {
-    if (typeof this.childDispose !== "function") {
-        return;
-    }
-
-    return this.childDispose();
-}
-
 class Loader {
     constructor(name = "", logger, options = {}) {
         if (typeof this.load !== "function") {
@@ -86,14 +23,14 @@ class Loader {
         this.loaded = false;
         this.result = {};
 
-        this.childLoad = this.load;
-        this.load = _load.bind(this);
+        this._childLoad = this.load;
+        this.load = this._load;
 
-        this.childWrite = this.write;
-        this.write = _write.bind(this);
+        this._childWrite = this.write;
+        this.write = this._write;
 
-        this.childDispose = this.dispose;
-        this.dispose = _dispose.bind(this);
+        this._childDispose = this.dispose;
+        this.dispose = this._dispose;
     }
 
     getName(capitalized = false) {
@@ -124,7 +61,31 @@ class Loader {
         return data;
     }
 
-    loadSync(status) {
+    failure(err, loggerMsg, logLevel = "error") {
+        if (typeof err === "string") {
+            let message = err;
+
+            if (message.endsWith(".")) {
+                message = message.slice(0, -1);
+            }
+
+            err = new LoaderError(message);
+        }
+
+        if (this.throwOnFailure) {
+            throw err;
+        }
+
+        if (typeof loggerMsg !== "undefined") {
+            this.logger?.log(logLevel, loggerMsg, err);
+        } else {
+            this.logger?.log(logLevel, err);
+        }
+
+        return LoadStatus.failed;
+    }
+
+    _loadSync(status) {
         if (status === LoadStatus.failed) {
             return [undefined, status];
         }
@@ -150,12 +111,12 @@ class Loader {
         return [this.getData(), status ?? LoadStatus.successful];
     }
 
-    async loadAsync(promise) {
+    async _loadAsync(promise) {
         const status = await promise;
-        return this.loadSync(status);
+        return this._loadSync(status);
     }
 
-    writeSync(status, data) {
+    _writeSync(status, data) {
         if (status === LoadStatus.failed) {
             return status;
         }
@@ -181,33 +142,72 @@ class Loader {
         return status ?? LoadStatus.successful;
     }
 
-    async writeAsync(promise, data) {
+    async _writeAsync(promise, data) {
         const status = await promise;
-        return this.writeSync(status, data);
+        return this._writeSync(status, data);
     }
 
-    failure(err, loggerMsg, logLevel = "error") {
-        if (typeof err === "string") {
-            let message = err;
+    _load(...args) {
+        let loadingMessage;
 
-            if (message.endsWith(".")) {
-                message = message.slice(0, -1);
-            }
-
-            err = new LoaderError(message);
-        }
-
-        if (this.throwOnFailure) {
-            throw err;
-        }
-
-        if (typeof loggerMsg !== "undefined") {
-            this.logger?.log(logLevel, loggerMsg, err);
+        if (typeof this.getLoadingMessage === "function") {
+            loadingMessage = this.getLoadingMessage();
         } else {
-            this.logger?.log(logLevel, err);
+            loadingMessage = `Loading ${this.getName()}...`;
         }
 
-        return LoadStatus.failed;
+        if (loadingMessage.length > 0) {
+            this.logger?.debug(loadingMessage);
+        }
+
+        this.result = {};
+        const res = this._childLoad(...args);
+
+        if (isPromise(res)) {
+            return this._loadAsync(res);
+        } else {
+            return this._loadSync(res);
+        }
+    }
+
+    _write(data, ...args) {
+        if (typeof this._childWrite !== "function") {
+            return LoadStatus.successful;
+        }
+
+        let writingMessage;
+
+        if (typeof this.getWritingMessage === "function") {
+            writingMessage = this.getWritingMessage();
+        } else {
+            writingMessage = `Writing ${this.getName()}...`;
+        }
+
+        if (writingMessage.length > 0) {
+            this.logger?.debug(writingMessage);
+        }
+
+        data ??= this.data;
+        if (data === null) {
+            return this.failure(`Can't write ${this.getName()}, no data provided.`);
+        }
+
+        this.result = {};
+        const res = this._childWrite(data, ...args);
+
+        if (isPromise(res)) {
+            return this._writeAsync(res, data);
+        } else {
+            return this._writeSync(res, data);
+        }
+    }
+
+    _dispose() {
+        if (typeof this._childDispose !== "function") {
+            return;
+        }
+
+        return this._childDispose();
     }
 }
 

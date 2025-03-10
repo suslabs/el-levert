@@ -22,33 +22,26 @@ import VMUtil from "../../../util/vm/VMUtil.js";
 const filename = "script.js",
     evaluated = "evaluated script";
 
-const allowPromiseReturn = true;
-
 class EvalContext {
+    static allowPromiseReturn = true;
+
     constructor(options, inspectorOptions = {}) {
         this.memLimit = options.memLimit;
         this.timeLimit = options.timeLimit;
 
-        this.setupInspector(inspectorOptions);
+        this._setupInspector(inspectorOptions);
 
         this.scriptName = this.enableInspector ? `file:///${filename}` : `(<${evaluated}>)`;
-        this.vmObjects = [];
+        this._vmObjects = [];
     }
 
-    setupInspector(options) {
-        const enableInspector = options.enable ?? false;
+    async getIsolate(options) {
+        if (typeof this._isolate === "undefined") {
+            const { msg, tag, args } = options;
+            await this._setupIsolate(msg, tag, args);
+        }
 
-        this.inspector = new IsolateInspector(enableInspector, options);
-        this.enableInspector = enableInspector;
-    }
-
-    async setGlobal() {
-        const global = this.context.global;
-
-        this.global = global;
-        await global.set("global", global.derefInto());
-
-        this.vmObjects.push({ targetName: "global" });
+        return this._isolate;
     }
 
     async setVMObject(name, _class, params, targetProp = "this") {
@@ -67,31 +60,109 @@ class EvalContext {
         }
 
         const vmObj = new ExternalCopy(targetObj);
-        await this.global.set(vmName, vmObj.copyInto());
+        await this._global.set(vmName, vmObj.copyInto());
 
         this[name] = obj;
         this[targetName] = vmObj;
 
-        this.vmObjects.push({ name, targetName });
+        this._vmObjects.push({ name, targetName });
     }
 
-    async setInfo() {
+    async compileScript(code, setField = true) {
+        code = this.inspector.getDebuggerCode(code);
+
+        const script = await this._isolate.compileScript(code, {
+            filename: this.scriptName
+        });
+
+        if (setField) {
+            this._script = script;
+        } else {
+            return script;
+        }
+    }
+
+    async runScript(code) {
+        const compileNow = typeof code !== "undefined";
+
+        let script;
+
+        if (compileNow) {
+            script = await this.compileScript(code, false);
+        } else if (typeof this._script === "undefined") {
+            throw new VMError("Can't run script, no script was compiled");
+        } else {
+            script = this._script;
+        }
+
+        await this.inspector.waitForConnection();
+
+        try {
+            return await script.run(this._context, {
+                timeout: this.timeLimit,
+                promise: EvalContext.allowPromiseReturn,
+                copy: true
+            });
+        } catch (err) {
+            if (this.enableInspector || VMErrors.custom.includes(err.name)) {
+                throw err;
+            }
+
+            if (typeof err.stack === "string") {
+                const newStack = VMUtil.rewriteIVMStackTrace(err);
+
+                delete err.stack;
+                err.stack = newStack;
+            }
+
+            throw err;
+        } finally {
+            if (compileNow) {
+                script.release();
+            }
+        }
+    }
+
+    dispose() {
+        this._disposeInspector();
+        this._disposeVMObjects();
+        this._disposeScript();
+        this._disposeIsolate();
+    }
+
+    _setupInspector(options) {
+        const enableInspector = options.enable ?? false;
+
+        this.inspector = new IsolateInspector(enableInspector, options);
+        this.enableInspector = enableInspector;
+    }
+
+    async _setGlobal() {
+        const global = this._context.global;
+
+        this._global = global;
+        await global.set("global", global.derefInto());
+
+        this._vmObjects.push({ targetName: "global" });
+    }
+
+    async _setInfo() {
         this.setVMObject("util", Object, [FakeUtil.getInfo()]);
     }
 
-    async setTag(tag, args) {
+    async _setTag(tag, args) {
         await this.setVMObject("tag", FakeTag, [tag, args], "fixedTag");
     }
 
-    async setMsg(msg) {
+    async _setMsg(msg) {
         await this.setVMObject("msg", FakeMsg, [msg], "fixedMsg");
     }
 
-    async setVM() {
-        await this.setVMObject("vm", FakeVM, [this.isolate], "vmProps");
+    async _setVM() {
+        await this.setVMObject("vm", FakeVM, [this._isolate], "vmProps");
     }
 
-    constructFuncs(objMap, names) {
+    _constructFuncs(objMap, names) {
         let funcs = [];
 
         for (const [objKey, funcMap] of Object.entries(objMap)) {
@@ -119,7 +190,7 @@ class EvalContext {
                     name: funcName
                 };
 
-                const func = new VMFunction(funcProperties, this.propertyMap);
+                const func = new VMFunction(funcProperties, this._propertyMap);
                 funcs.push(func);
             }
         }
@@ -127,121 +198,55 @@ class EvalContext {
         return funcs;
     }
 
-    async registerFuncs() {
-        this.funcs = this.constructFuncs(Functions, {
+    async _registerFuncs() {
+        this._funcs = this._constructFuncs(Functions, {
             global: globalNames,
             func: funcNames
         });
 
-        for (const func of this.funcs) {
-            await func.register(this.context);
+        for (const func of this._funcs) {
+            await func.register(this._context);
         }
     }
 
-    async setupContext(msg, tag, args) {
-        this.context = await this.isolate.createContext({
+    async _setupContext(msg, tag, args) {
+        this._context = await this._isolate.createContext({
             inspector: this.enableInspector
         });
 
-        await this.setGlobal();
+        await this._setGlobal();
 
-        await this.setInfo();
-        await this.setMsg(msg);
-        await this.setTag(tag, args);
-        await this.setVM();
+        await this._setInfo();
+        await this._setMsg(msg);
+        await this._setTag(tag, args);
+        await this._setVM();
 
-        this.propertyMap = {
+        this._propertyMap = {
             msg: this.msg,
             vm: this.vm
         };
 
-        await this.registerFuncs();
+        await this._registerFuncs();
     }
 
-    async setupIsolate(msg, tag, args) {
-        this.isolate = new Isolate({
+    async _setupIsolate(msg, tag, args) {
+        this._isolate = new Isolate({
             memoryLimit: this.memLimit,
             inspector: this.enableInspector
         });
 
-        await this.setupContext(msg, tag, args);
+        await this._setupContext(msg, tag, args);
 
-        this.inspector.create(this.isolate);
+        this.inspector.create(this._isolate);
     }
 
-    async getIsolate(options) {
-        if (typeof this.isolate === "undefined") {
-            const { msg, tag, args } = options;
-            await this.setupIsolate(msg, tag, args);
-        }
-
-        return this.isolate;
-    }
-
-    async compileScript(code, setField = true) {
-        code = this.inspector.getDebuggerCode(code);
-
-        const script = await this.isolate.compileScript(code, {
-            filename: this.scriptName
-        });
-
-        if (setField) {
-            this.script = script;
-        } else {
-            return script;
-        }
-    }
-
-    async runScript(code) {
-        const compileNow = typeof code !== "undefined";
-
-        let script;
-
-        if (compileNow) {
-            script = await this.compileScript(code, false);
-        } else if (typeof this.script === "undefined") {
-            throw new VMError("Can't run script, no script was compiled");
-        } else {
-            script = this.script;
-        }
-
-        await this.inspector.waitForConnection();
-
-        try {
-            const val = await script.run(this.context, {
-                timeout: this.timeLimit,
-                promise: allowPromiseReturn,
-                copy: true
-            });
-
-            return val;
-        } catch (err) {
-            if (this.enableInspector || VMErrors.custom.includes(err.name)) {
-                throw err;
-            }
-
-            if (typeof err.stack === "string") {
-                const newStack = VMUtil.rewriteIVMStackTrace(err);
-
-                delete err.stack;
-                err.stack = newStack;
-            }
-
-            throw err;
-        } finally {
-            if (compileNow) {
-                script.release();
-            }
-        }
-    }
-
-    disposeInspector() {
+    _disposeInspector() {
         this.inspector.dispose();
         delete this.inspector;
     }
 
-    disposeVMObjects() {
-        Util.wipeArray(this.vmObjects, obj => {
+    _disposeVMObjects() {
+        Util.wipeArray(this._vmObjects, obj => {
             if (typeof obj.name !== "undefined") {
                 delete this[obj.name];
             }
@@ -253,35 +258,28 @@ class EvalContext {
         });
     }
 
-    disposeScript() {
-        this.script?.release();
-        delete this.script;
+    _disposeScript() {
+        this._script?.release();
+        delete this._script;
     }
 
-    disposeContext() {
-        this.context?.release();
-        delete this.context;
+    _disposeContext() {
+        this._context?.release();
+        delete this._context;
 
-        delete this.propertyMap;
+        delete this._propertyMap;
     }
 
-    disposeIsolate() {
-        if (typeof this.isolate === "undefined") {
+    _disposeIsolate() {
+        if (typeof this._isolate === "undefined") {
             return;
         }
 
-        if (!this.isolate.isDisposed) {
-            this.isolate.dispose();
+        if (!this._isolate.isDisposed) {
+            this._isolate.dispose();
         }
 
-        delete this.isolate;
-    }
-
-    dispose() {
-        this.disposeInspector();
-        this.disposeVMObjects();
-        this.disposeScript();
-        this.disposeIsolate();
+        delete this._isolate;
     }
 }
 

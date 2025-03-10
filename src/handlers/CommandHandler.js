@@ -56,13 +56,13 @@ class CommandHandler extends Handler {
         await msg.channel.sendTyping();
         this.userTracker.addUser(msg.author.id);
 
-        await this.executeAndReply(cmd, msg, args);
+        await this._executeAndReply(cmd, msg, args);
         this.userTracker.removeUser(msg.author.id);
 
         return true;
     }
 
-    async executeCommand(cmd, msg, args) {
+    async _executeCommand(cmd, msg, args) {
         logUsage(msg, cmd.name, args);
         const t1 = performance.now();
 
@@ -78,11 +78,11 @@ class CommandHandler extends Handler {
         return out;
     }
 
-    async executeAndReply(cmd, msg, args) {
+    async _executeAndReply(cmd, msg, args) {
         let out;
 
         try {
-            out = await this.executeCommand(cmd, msg, args);
+            out = await this._executeCommand(cmd, msg, args);
         } catch (err) {
             await this.handleExecutionError(err, msg, cmd);
             return;
@@ -94,7 +94,7 @@ class CommandHandler extends Handler {
             const reply = await msg.reply(out);
             this.messageTracker.addMsg(reply, msg.id);
         } catch (err) {
-            await this.handleReplyError(err, msg);
+            await this._handleReplyError(err, msg);
             return;
         }
     }
@@ -114,7 +114,7 @@ class CommandHandler extends Handler {
         }
     }
 
-    async handleReplyError(err, msg) {
+    async _handleReplyError(err, msg) {
         if (err.message === "Cannot send an empty message") {
             const reply = await msg.reply(`:no_entry_sign: ${err.message}.`);
             this.messageTracker.addMsg(reply, msg.id);

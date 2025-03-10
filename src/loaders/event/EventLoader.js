@@ -26,55 +26,11 @@ class EventLoader extends DirectoryLoader {
             return status;
         }
 
-        this.getEvents();
-        this.wrapEvents();
-        this.registerEvents();
+        this._getEvents();
+        this._wrapEvents();
+        this._registerEvents();
 
         return LoadStatus.successful;
-    }
-
-    getEvents() {
-        if (typeof this.events === "undefined") {
-            const events = Array.from(this.data.values());
-            this.events = events;
-        }
-
-        return this.events;
-    }
-
-    wrapEvent(event) {
-        let listener = event.listener;
-
-        if (this.shouldWrap) {
-            if (typeof this.wrapFunc !== "function") {
-                this.failure("Couldn't wrap event: " + event.name, undefined, "warn");
-            } else {
-                listener = this.wrapFunc(listener);
-            }
-        } else {
-            this.logger?.info("Didn't wrap event: " + event.name);
-        }
-
-        event.listener = listener;
-    }
-
-    wrapEvents() {
-        for (const event of this.events) {
-            this.wrapEvent(event);
-        }
-    }
-
-    registerEvents() {
-        this.logger?.info("Registering events...");
-
-        let n = 0;
-
-        for (const event of this.events) {
-            event.register(this.client);
-            n++;
-        }
-
-        this.logger?.info(`Registered ${n} events.`);
     }
 
     removeListeners() {
@@ -92,6 +48,48 @@ class EventLoader extends DirectoryLoader {
 
     getLoadedMessage() {
         return `Loaded ${this.name}s successfully.`;
+    }
+
+    _getEvents() {
+        if (typeof this.events === "undefined") {
+            const events = Array.from(this.data.values());
+            this.events = events;
+        }
+
+        return this.events;
+    }
+
+    _wrapEvent(event) {
+        let listener = event.listener;
+
+        if (this.shouldWrap) {
+            if (typeof this.wrapFunc !== "function") {
+                this.failure("Couldn't wrap event: " + event.name, undefined, "warn");
+            } else {
+                listener = this.wrapFunc(listener);
+            }
+        }
+
+        event.listener = listener;
+    }
+
+    _wrapEvents() {
+        for (const event of this.events) {
+            this._wrapEvent(event);
+        }
+    }
+
+    _registerEvents() {
+        this.logger?.info("Registering events...");
+
+        let n = 0;
+
+        for (const event of this.events) {
+            event.register(this.client);
+            n++;
+        }
+
+        this.logger?.info(`Registered ${n} events.`);
     }
 }
 

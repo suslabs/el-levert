@@ -2,18 +2,16 @@ import { TimestampStyles, time, bold } from "discord.js";
 
 import Util from "../util/Util.js";
 
-const defaultValues = {
-    id: 0,
-    user: "0",
-    end: 0,
-    msg: ""
-};
-
 class Reminder {
-    static defaultValues = defaultValues;
+    static defaultValues = {
+        id: 0,
+        user: "0",
+        end: 0,
+        msg: ""
+    };
 
     constructor(data) {
-        Util.setValuesWithDefaults(this, data, defaultValues);
+        Util.setValuesWithDefaults(this, data, Reminder.defaultValues);
     }
 
     get hasMessage() {

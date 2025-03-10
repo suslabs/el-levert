@@ -157,7 +157,7 @@ class TagManager extends DBManager {
 
         const tagSize = tag.getSize();
 
-        await this.updateQuota(owner, tagSize);
+        await this._updateQuota(owner, tagSize);
         await this.tag_db.add(tag);
 
         getLogger().info(`Added tag: "${name}" with type: "${type}", body:${Util.formatLog(body)}`);
@@ -193,7 +193,7 @@ class TagManager extends DBManager {
             newTagSize = newTag.getSize(),
             sizeDiff = newTagSize - oldTagSize;
 
-        await this.updateQuota(tag.owner, sizeDiff);
+        await this._updateQuota(tag.owner, sizeDiff);
         await this.tag_db.edit(newTag);
 
         getLogger().info(`Edited tag: "${tag.name}" with type: "${type}", body:${Util.formatLog(body)}`);
@@ -223,10 +223,10 @@ class TagManager extends DBManager {
                 sizeDiff = newTagSize - oldTagSize;
 
             if (oldTag.owner === tag.owner) {
-                await this.updateQuota(tag.owner, sizeDiff);
+                await this._updateQuota(tag.owner, sizeDiff);
             } else {
-                await this.updateQuota(oldTag.owner, -sizeDiff);
-                await this.updateQuota(tag.owner, sizeDiff);
+                await this._updateQuota(oldTag.owner, -sizeDiff);
+                await this._updateQuota(tag.owner, sizeDiff);
             }
         }
 
@@ -276,7 +276,7 @@ class TagManager extends DBManager {
             sizeDiff -= oldTagSize;
         }
 
-        await this.updateQuota(tag.owner, sizeDiff);
+        await this._updateQuota(tag.owner, sizeDiff);
 
         if (create) {
             await this.tag_db.add(newTag);
@@ -295,8 +295,8 @@ class TagManager extends DBManager {
 
         const tagSize = tag.getSize();
 
-        await this.updateQuota(tag.owner, -tagSize);
-        await this.updateQuota(newOwner, tagSize);
+        await this._updateQuota(tag.owner, -tagSize);
+        await this._updateQuota(newOwner, tagSize);
 
         await this.tag_db.chown(tag, newOwner);
 
@@ -331,7 +331,7 @@ class TagManager extends DBManager {
 
         const tagSize = tag.getSize();
 
-        await this.updateQuota(tag.owner, -tagSize);
+        await this._updateQuota(tag.owner, -tagSize);
         await this.tag_db.delete(tag);
 
         getLogger().info(`Deleted tag: "${tag.name}".`);
@@ -411,7 +411,7 @@ class TagManager extends DBManager {
         return await this.tag_db.quotaFetch(user);
     }
 
-    async updateQuota(user, diff) {
+    async _updateQuota(user, diff) {
         if (diff === 0) {
             return;
         }
@@ -433,7 +433,7 @@ class TagManager extends DBManager {
         getLogger().debug(`Updated quota for: ${user} diff: ${diff}`);
     }
 
-    async downloadBody(msg) {
+    async _downloadBody(msg) {
         let body,
             isScript = false;
 

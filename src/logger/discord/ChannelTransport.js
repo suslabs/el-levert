@@ -17,16 +17,25 @@ class ChannelTransport extends BaseDiscordTransport {
         let channel = opts.channel;
 
         if (typeof channel === "undefined") {
-            channel = this.getChannel(opts.channelId);
+            channel = this._getChannel(opts.channelId);
         } else {
             this.channelId = channel.id;
         }
 
         this.channel = channel;
-        this.disableCodes = [RESTJSONErrorCodes.CannotSendMessagesInNonTextChannel];
     }
 
-    getChannel(id) {
+    async sendLog(log) {
+        await this.channel.send(log);
+    }
+
+    getDisabledMessage() {
+        return "Disabled channel transport.";
+    }
+
+    static _disableCodes = [RESTJSONErrorCodes.CannotSendMessagesInNonTextChannel];
+
+    _getChannel(id) {
         if (typeof this.client === "undefined" || typeof id === "undefined" || id.length < 1) {
             throw new LoggerError(
                 "If a channel object wasn't provided, a client object and a channel id must be provided instead"
@@ -41,14 +50,6 @@ class ChannelTransport extends BaseDiscordTransport {
         }
 
         return channel;
-    }
-
-    async sendLog(log) {
-        await this.channel.send(log);
-    }
-
-    getDisabledMessage() {
-        return "Disabled channel transport.";
     }
 }
 

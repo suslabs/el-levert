@@ -2,19 +2,17 @@ import { bold } from "discord.js";
 
 import Util from "../../util/Util.js";
 
-const defaultValues = {
-    name: "",
-    level: 0,
-    users: []
-};
-
-const indentation = 4;
-
 class Group {
-    static defaultValues = defaultValues;
+    static defaultValues = {
+        name: "",
+        level: 0,
+        users: []
+    };
+
+    static indentation = 4;
 
     constructor(data) {
-        Util.setValuesWithDefaults(this, data, defaultValues);
+        Util.setValuesWithDefaults(this, data, Group.defaultValues);
     }
 
     setUsers(users) {
@@ -29,7 +27,7 @@ class Group {
             s = this.users.length > 1 ? "s" : "",
             title = `Group ${formattedName} - Level ${formattedLevel} - User${s}:`;
 
-        const indent = discord ? "" : " ".repeat(indentation);
+        const indent = discord ? "" : " ".repeat(Group.indentation);
 
         let userFormat;
 

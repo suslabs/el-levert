@@ -16,7 +16,15 @@ class FileLoader extends Loader {
         }
     }
 
-    checkPath() {
+    load() {
+        return this.failure("Not implemeted: base class");
+    }
+
+    write() {
+        return this.failure("Not implemeted: base class");
+    }
+
+    _checkPath() {
         switch (typeof this.path) {
             case "string":
                 break;
@@ -25,14 +33,6 @@ class FileLoader extends Loader {
             default:
                 return this.failure("Invalid file path.");
         }
-    }
-
-    load() {
-        return this.failure("Not implemeted: base class");
-    }
-
-    write() {
-        return this.failure("Not implemeted: base class");
     }
 }
 

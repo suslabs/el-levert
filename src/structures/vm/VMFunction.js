@@ -40,16 +40,14 @@ function resolveObj(path, propertyMap) {
     return { obj, parent };
 }
 
-const defaultValues = {
-    parent: "",
-    type: FuncTypes.regular,
-    exits: false,
-    errorClass: ExitError,
-    binds: []
-};
-
 class VMFunction {
-    static defaultValues = defaultValues;
+    static defaultValues = {
+        parent: "",
+        type: FuncTypes.regular,
+        exits: false,
+        errorClass: ExitError,
+        binds: []
+    };
 
     constructor(options, propertyMap) {
         if (typeof options.name === "undefined") {
@@ -60,15 +58,33 @@ class VMFunction {
             throw new VMError("VM function must have a reference function");
         }
 
-        Util.setValuesWithDefaults(this, options, defaultValues);
+        Util.setValuesWithDefaults(this, options, VMFunction.defaultValues);
 
-        this.resolveReference(propertyMap);
-        this.resolveBinds(propertyMap);
+        this._resolveReference(propertyMap);
+        this._resolveBinds(propertyMap);
 
         this.registered = false;
     }
 
-    resolveReference(propertyMap) {
+    async register(context) {
+        if (this.registered) {
+            throw new VMError("VM function has already been registered");
+        }
+
+        this.context = context;
+
+        const code = this._getRegisterCode(),
+            res = await context.evalClosure(code, [this.ref], {
+                arguments: {
+                    reference: true
+                }
+            });
+
+        this.registered = true;
+        return res;
+    }
+
+    _resolveReference(propertyMap) {
         if (typeof this.ref === "function") {
             return;
         }
@@ -83,7 +99,7 @@ class VMFunction {
         this.ref = refFunc.bind(parent);
     }
 
-    resolveBinds(propertyMap) {
+    _resolveBinds(propertyMap) {
         if (this.binds.length === 0) {
             return;
         }
@@ -98,7 +114,7 @@ class VMFunction {
         this.ref = Util.bindArgs(this.ref, ...argList);
     }
 
-    getRegisterCode() {
+    _getRegisterCode() {
         const options = {
             objName: this.parent,
             funcName: this.name,
@@ -115,24 +131,6 @@ class VMFunction {
         }
 
         return getRegisterCode(options, errorOptions);
-    }
-
-    async register(context) {
-        if (this.registered) {
-            throw new VMError("VM function has already been registered");
-        }
-
-        this.context = context;
-
-        const code = this.getRegisterCode(),
-            res = await context.evalClosure(code, [this.ref], {
-                arguments: {
-                    reference: true
-                }
-            });
-
-        this.registered = true;
-        return res;
     }
 }
 

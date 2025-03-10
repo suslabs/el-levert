@@ -19,96 +19,73 @@ const {
     GuildMember
 } = discord;
 
-const defaultIntents = [
+const userIdRegex = /(\d{17,20})/,
+    mentionRegex = /<@(\d{17,20})>/;
+
+const clientOptions = ["wrapEvents", "eventsDir", "loginTimeout", "mentionUsers", "pingReply"];
+
+class DiscordClient {
+    static defaultIntents = [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildInvites,
         GatewayIntentBits.DirectMessages
-    ],
-    defaultPartials = [Partials.Channel];
+    ];
+    static defaultPartials = [Partials.Channel];
 
-const userIdRegex = /(\d{17,20})/,
-    mentionRegex = /<@(\d{17,20})>/;
+    static defaultGuildOptions = {
+        cache: true
+    };
 
-const defaultGuildOptions = {
-    cache: true
-};
+    static defaultMemberOptions = {
+        cache: true
+    };
 
-const defaultMemberOptions = {
-    cache: true
-};
-
-const defaultChannelOptions = {
-    cache: true,
-    checkAccess: false
-};
-
-const defaultMessageOptions = {
-    cache: true,
-    checkAccess: false
-};
-
-const defaultMessagesOptions = {
+    static defaultChannelOptions = {
+        cache: true,
         checkAccess: false
-    },
-    defaultMessagesFetchOptions = {
+    };
+
+    static defaultMessageOptions = {
+        cache: true,
+        checkAccess: false
+    };
+
+    static defaultMessagesOptions = {
+        checkAccess: false
+    };
+    static defaultMessagesFetchOptions = {
         limit: 100
     };
 
-const defaultUserOptions = {
-    cache: true
-};
+    static defaultUserOptions = {
+        cache: true
+    };
 
-const defaultUsersOptions = {
+    static defaultUsersOptions = {
         onlyMembers: false,
         searchMembers: true,
         searchMinDist: 0,
         limit: 10
-    },
-    defaultUsersFetchOptions = {
+    };
+    static defaultUsersFetchOptions = {
         limit: 100
     };
 
-const clientOptions = ["wrapEvents", "eventsDir", "loginTimeout", "mentionUsers", "pingReply"];
-
-class DiscordClient {
     constructor(intents, partials) {
-        this.intents = intents ?? defaultIntents;
-        this.partials = partials ?? defaultPartials;
+        this.intents = intents ?? DiscordClient.defaultIntents;
+        this.partials = partials ?? DiscordClient.defaultPartials;
 
         this.timeout = 60 / Util.durationSeconds.milli;
         this.mentionUsers = false;
         this.pingReply = true;
 
-        this.buildClient();
+        this._buildClient();
 
         this.wrapEvents = false;
         this.eventsDir = "";
-    }
-
-    buildClient() {
-        if (typeof this.client !== "undefined") {
-            new ClientError("Can't create a new client without disposing the old one");
-        }
-
-        this.logger?.info("Creating client...");
-
-        const options = {
-            intents: this.intents,
-            partials: this.partials,
-            rest: {
-                timeout: this.timeout + 1
-            }
-        };
-
-        const client = new Client(options);
-
-        this.client = client;
-        this.loggedIn = false;
-
-        this.setOptions();
     }
 
     setOptions(options) {
@@ -185,11 +162,6 @@ class DiscordClient {
         }
     }
 
-    onReady() {
-        this.loggedIn = true;
-        this.logger?.info(`The bot is online. Logged in as "${this.client.user.username}".`);
-    }
-
     logout(kill = false) {
         if (typeof this.onLogout === "function") {
             this.onLogout();
@@ -204,30 +176,6 @@ class DiscordClient {
         if (kill) {
             this.killProcess();
         }
-    }
-
-    async loadEvents() {
-        if (this.eventsDir === "") {
-            throw new ClientError("Events directory not set");
-        }
-
-        const eventLoader = new EventLoader(this.eventsDir, this.client, this.logger, {
-            client: this.client,
-            wrapFunc: this.wrapEvent,
-            wrapEvents: this.wrapEvents
-        });
-
-        await eventLoader.load();
-        this.eventLoader = eventLoader;
-    }
-
-    unloadEvents() {
-        if (typeof this.eventLoader === "undefined" || !this.eventLoader.loaded) {
-            throw new ClientError("Can't unload events, events weren't loaded");
-        }
-
-        this.eventLoader.removeListeners();
-        delete this.eventLoader;
     }
 
     setActivity(config) {
@@ -268,7 +216,7 @@ class DiscordClient {
             throw new ClientError("Invalid options provided");
         }
 
-        Util.setValuesWithDefaults(options, options, defaultGuildOptions);
+        Util.setValuesWithDefaults(options, options, DiscordClient.defaultGuildOptions);
 
         let guild;
 
@@ -337,7 +285,7 @@ class DiscordClient {
                 throw new ClientError("Invalid user or user ID provided");
         }
 
-        Util.setValuesWithDefaults(options, options, defaultMemberOptions);
+        Util.setValuesWithDefaults(options, options, DiscordClient.defaultMemberOptions);
 
         let member;
 
@@ -376,7 +324,7 @@ class DiscordClient {
                 throw new ClientError("Invalid channel ID provided");
         }
 
-        Util.setValuesWithDefaults(options, options, defaultChannelOptions);
+        Util.setValuesWithDefaults(options, options, DiscordClient.defaultChannelOptions);
 
         let channel;
 
@@ -504,7 +452,7 @@ class DiscordClient {
                 throw new ClientError("Invalid channel or channel ID provided");
         }
 
-        Util.setValuesWithDefaults(options, options, defaultMessageOptions);
+        Util.setValuesWithDefaults(options, options, DiscordClient.defaultMessageOptions);
 
         try {
             return await channel.messages.fetch(msg_id, {
@@ -528,7 +476,7 @@ class DiscordClient {
             throw new ClientError("Invalid options provided");
         }
 
-        Util.setValuesWithDefaults(options, options, defaultMessagesOptions);
+        Util.setValuesWithDefaults(options, options, DiscordClient.defaultMessagesOptions);
 
         let channel;
 
@@ -553,7 +501,7 @@ class DiscordClient {
                 throw new ClientError("Invalid channel or channel ID");
         }
 
-        Util.setValuesWithDefaults(fetchOptions, fetchOptions, defaultMessagesFetchOptions);
+        Util.setValuesWithDefaults(fetchOptions, fetchOptions, DiscordClient.defaultMessagesFetchOptions);
         fetchOptions.force = !options.cache;
 
         let messages;
@@ -580,7 +528,7 @@ class DiscordClient {
             throw new ClientError("Invalid options provided");
         }
 
-        Util.setValuesWithDefaults(options, options, defaultUserOptions);
+        Util.setValuesWithDefaults(options, options, DiscordClient.defaultUserOptions);
 
         let user;
 
@@ -608,7 +556,7 @@ class DiscordClient {
             throw new ClientError("Invalid options provided");
         }
 
-        Util.setValuesWithDefaults(options, options, defaultUsersOptions);
+        Util.setValuesWithDefaults(options, options, DiscordClient.defaultUsersOptions);
 
         const guilds = this.client.guilds.cache;
 
@@ -645,7 +593,7 @@ class DiscordClient {
             return [];
         }
 
-        Util.setValuesWithDefaults(fetchOptions, fetchOptions, defaultUsersFetchOptions);
+        Util.setValuesWithDefaults(fetchOptions, fetchOptions, DiscordClient.defaultUsersFetchOptions);
 
         let members = [],
             foundIds = [];
@@ -678,6 +626,58 @@ class DiscordClient {
         }
 
         process.exit(0);
+    }
+
+    onReady() {
+        this.loggedIn = true;
+        this.logger?.info(`The bot is online. Logged in as "${this.client.user.username}".`);
+    }
+
+    _buildClient() {
+        if (typeof this.client !== "undefined") {
+            new ClientError("Can't create a new client without disposing the old one");
+        }
+
+        this.logger?.info("Creating client...");
+
+        const options = {
+            intents: this.intents,
+            partials: this.partials,
+            rest: {
+                timeout: this.timeout + 1
+            }
+        };
+
+        const client = new Client(options);
+
+        this.client = client;
+        this.loggedIn = false;
+
+        this.setOptions();
+    }
+
+    async _loadEvents() {
+        if (this.eventsDir === "") {
+            throw new ClientError("Events directory not set");
+        }
+
+        const eventLoader = new EventLoader(this.eventsDir, this.client, this.logger, {
+            client: this.client,
+            wrapFunc: this._wrapEvent,
+            wrapEvents: this.wrapEvents
+        });
+
+        await eventLoader.load();
+        this._eventLoader = eventLoader;
+    }
+
+    _unloadEvents() {
+        if (typeof this._eventLoader === "undefined" || !this._eventLoader.loaded) {
+            throw new ClientError("Can't unload events, events weren't loaded");
+        }
+
+        this._eventLoader.removeListeners();
+        delete this._eventLoader;
     }
 }
 

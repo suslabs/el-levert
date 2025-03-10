@@ -7,36 +7,31 @@ import Util from "../../util/Util.js";
 
 import TagError from "../../errors/TagError.js";
 
-const defaultValues = {
-    hops: [],
-    name: "",
-    body: "",
-    owner: "0",
-    args: "",
-    registered: 0,
-    lastEdited: 0,
-    type: TagFlags.new
-};
-
-const hopsSeparator = ",";
-
-const privateProps = ["fetched"];
-
 class Tag {
-    static defaultValues = defaultValues;
-    static hopsSeparator = hopsSeparator;
+    static defaultValues = {
+        hops: [],
+        name: "",
+        body: "",
+        owner: "0",
+        args: "",
+        registered: 0,
+        lastEdited: 0,
+        type: TagFlags.new
+    };
+
+    static hopsSeparator = ",";
 
     constructor(data) {
         if (typeof data?.hops === "string") {
             data.hops = data.hops.split(hopsSeparator);
         }
 
-        Util.setValuesWithDefaults(this, data, defaultValues);
+        Util.setValuesWithDefaults(this, data, Tag.defaultValues);
 
         if (this.hops.length === 0) {
             this.hops.push(this.name);
         } else if (this.isAlias) {
-            this.body = defaultValues.body;
+            this.body = Tag.defaultValues.body;
             this.type &= TagFlags.new;
         }
 
@@ -44,7 +39,7 @@ class Tag {
             this.setType(this.type);
         }
 
-        this.fetched = false;
+        this._fetched = false;
     }
 
     get isAlias() {
@@ -68,18 +63,18 @@ class Tag {
     }
 
     setName(name) {
-        name ??= defaultValues.name;
+        name ??= Tag.defaultValues.name;
 
         this.name = name;
         this.hops[0] = name;
     }
 
     setOwner(owner) {
-        this.owner = owner ?? defaultValues.owner;
+        this.owner = owner ?? Tag.defaultValues.owner;
     }
 
     setBody(body, type) {
-        this.body = body ?? defaultValues.body;
+        this.body = body ?? Tag.defaultValues.body;
 
         if (typeof type !== "undefined") {
             this.setType(type);
@@ -87,10 +82,10 @@ class Tag {
     }
 
     setAliasProps(hops, args) {
-        this.hops = hops ?? defaultValues.hops;
-        this.args = args ?? defaultValues.args;
+        this.hops = hops ?? Tag.defaultValues.hops;
+        this.args = args ?? Tag.defaultValues.args;
 
-        this.fetched = true;
+        this._fetched = true;
     }
 
     setRegistered(time) {
@@ -104,7 +99,7 @@ class Tag {
     getData() {
         const filtered = Object.entries(this).filter(x => {
             const key = x[0];
-            return !privateProps.includes(key);
+            return !key.startsWith("_");
         });
 
         return Object.fromEntries(filtered);
@@ -340,7 +335,7 @@ class Tag {
 
         let owner;
 
-        if (this.owner === defaultValues.owner) {
+        if (this.owner === Tag.defaultValues.owner) {
             owner = "invalid";
         } else {
             const find = await getClient().findUserById(this.owner);
@@ -353,9 +348,9 @@ class Tag {
         }
 
         const registered =
-                this.registered === defaultValues.registered ? "not set" : new Date(this.registered).toUTCString(),
+                this.registered === Tag.defaultValues.registered ? "not set" : new Date(this.registered).toUTCString(),
             lastEdited =
-                this.lastEdited === defaultValues.lastEdited ? "not set" : new Date(this.lastEdited).toUTCString();
+                this.lastEdited === Tag.defaultValues.lastEdited ? "not set" : new Date(this.lastEdited).toUTCString();
 
         const type = this.getType(),
             version = this.getVersion();

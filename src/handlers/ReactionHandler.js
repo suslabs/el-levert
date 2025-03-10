@@ -57,11 +57,68 @@ class ReactionHandler extends Handler {
 
         this.multipleReacts = getClient().reactions.multipleReacts ?? false;
 
-        this.setWords();
-        this.setParans();
+        this._setWords();
+        this._setParans();
     }
 
-    getWordList(funnyWords) {
+    async execute(msg) {
+        if (msg.channel.type === ChannelType.DM) {
+            return;
+        }
+
+        const reacted = await this._funnyReact(msg);
+
+        if (reacted && !this.multipleReacts) {
+            return;
+        }
+
+        if (this.enableParans) {
+            await this._paransReact(msg);
+        }
+    }
+
+    async removeReacts(msg) {
+        const t1 = performance.now();
+
+        const botId = getClient().client.user.id,
+            botReacts = msg.reactions.cache.filter(react => react.users.cache.has(botId));
+
+        if (botReacts.size < 1) {
+            return;
+        }
+
+        logRemove(msg, botReacts.size);
+
+        try {
+            for (const react of botReacts.values()) {
+                await react.users.remove(botId);
+            }
+        } catch (err) {
+            getLogger().error("Failed to remove reactions from message:", err);
+        }
+
+        logRemoveTime(t1);
+    }
+
+    async resubmit(msg) {
+        await this.removeReacts(msg);
+        await this.execute(msg);
+    }
+
+    _setWords() {
+        this.funnyWords = getClient().reactions.funnyWords;
+
+        this._wordList = this._getWordList(this.funnyWords);
+        this._reactMap = this._getReactMap(this.funnyWords);
+    }
+
+    _setParans() {
+        this.parans = getClient().reactions.parans;
+
+        this.enableParans = typeof this.parans.left !== "undefined" && typeof this.parans.right !== "undefined";
+    }
+
+    _getWordList(funnyWords) {
         let wordList = [];
 
         for (const elem of funnyWords) {
@@ -78,7 +135,7 @@ class ReactionHandler extends Handler {
         return wordList;
     }
 
-    getReactMap(funnyWords) {
+    _getReactMap(funnyWords) {
         const reactMap = new Map();
 
         for (const elem of funnyWords) {
@@ -99,20 +156,7 @@ class ReactionHandler extends Handler {
         return reactMap;
     }
 
-    setWords() {
-        this.funnyWords = getClient().reactions.funnyWords;
-
-        this.wordList = this.getWordList(this.funnyWords);
-        this.reactMap = this.getReactMap(this.funnyWords);
-    }
-
-    setParans() {
-        this.parans = getClient().reactions.parans;
-
-        this.enableParans = typeof this.parans.left !== "undefined" && typeof this.parans.right !== "undefined";
-    }
-
-    countUnmatchedParans(str) {
+    _countUnmatchedParans(str) {
         if (!str.includes("(") && !str.includes(")")) {
             return;
         }
@@ -154,9 +198,9 @@ class ReactionHandler extends Handler {
         return parans;
     }
 
-    async paransReact(msg) {
+    async _paransReact(msg) {
         const t1 = performance.now(),
-            parans = this.countUnmatchedParans(msg.content);
+            parans = this._countUnmatchedParans(msg.content);
 
         if (typeof parans === "undefined" || parans.total < 1) {
             return false;
@@ -188,11 +232,11 @@ class ReactionHandler extends Handler {
         return true;
     }
 
-    getWordCounts(str) {
+    _getWordCounts(str) {
         let normStr = str.toLowerCase();
         normStr = normStr.normalize("NFKD");
 
-        const foundWords = this.wordList.map(word => [word, normStr.indexOf(word)]).filter(x => x[1] >= 0);
+        const foundWords = this._wordList.map(word => [word, normStr.indexOf(word)]).filter(x => x[1] >= 0);
 
         if (foundWords.length < 1) {
             return;
@@ -234,9 +278,9 @@ class ReactionHandler extends Handler {
         return counts;
     }
 
-    async singleReact(msg, words) {
+    async _singleReact(msg, words) {
         words = Object.keys(words);
-        const reactLists = new Set(words.map(w => this.reactMap.get(w)));
+        const reactLists = new Set(words.map(w => this._reactMap.get(w)));
 
         for (const list of reactLists) {
             const react = getReact(list);
@@ -247,11 +291,11 @@ class ReactionHandler extends Handler {
         }
     }
 
-    async multipleReact(msg, words) {
+    async _multipleReact(msg, words) {
         const reacts = new Set();
 
         for (const [word, count] of Object.entries(words)) {
-            const reactList = this.reactMap.get(word);
+            const reactList = this._reactMap.get(word);
 
             for (let i = 0; i < count; i++) {
                 const react = this.getReact(reactList);
@@ -267,9 +311,9 @@ class ReactionHandler extends Handler {
         }
     }
 
-    async funnyReact(msg) {
+    async _funnyReact(msg) {
         const t1 = performance.now(),
-            words = this.getWordCounts(msg.content);
+            words = this._getWordCounts(msg.content);
 
         if (typeof words === "undefined") {
             return false;
@@ -280,9 +324,9 @@ class ReactionHandler extends Handler {
         let reactFunc;
 
         if (this.multipleReacts) {
-            reactFunc = this.multipleReact;
+            reactFunc = this._multipleReact;
         } else {
-            reactFunc = this.singleReact;
+            reactFunc = this._singleReact;
         }
 
         reactFunc = reactFunc.bind(this);
@@ -295,50 +339,6 @@ class ReactionHandler extends Handler {
 
         logReactTime(t1);
         return true;
-    }
-
-    async execute(msg) {
-        if (msg.channel.type === ChannelType.DM) {
-            return;
-        }
-
-        const reacted = await this.funnyReact(msg);
-
-        if (reacted && !this.multipleReacts) {
-            return;
-        }
-
-        if (this.enableParans) {
-            await this.paransReact(msg);
-        }
-    }
-
-    async removeReacts(msg) {
-        const t1 = performance.now();
-
-        const botId = getClient().client.user.id,
-            botReacts = msg.reactions.cache.filter(react => react.users.cache.has(botId));
-
-        if (botReacts.size < 1) {
-            return;
-        }
-
-        logRemove(msg, botReacts.size);
-
-        try {
-            for (const react of botReacts.values()) {
-                await react.users.remove(botId);
-            }
-        } catch (err) {
-            getLogger().error("Failed to remove reactions from message:", err);
-        }
-
-        logRemoveTime(t1);
-    }
-
-    async resubmit(msg) {
-        await this.removeReacts(msg);
-        await this.execute(msg);
     }
 }
 

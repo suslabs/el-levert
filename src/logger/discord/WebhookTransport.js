@@ -15,7 +15,7 @@ class WebhookTransport extends BaseDiscordTransport {
         let webhook = opts.webhook;
 
         if (typeof webhook === "undefined") {
-            webhook = this.getWebhook(opts.url);
+            webhook = this._getWebhook(opts.url);
         } else {
             this.webhookUrl = webhook.url;
             this.webhookId = webhook.id;
@@ -23,10 +23,23 @@ class WebhookTransport extends BaseDiscordTransport {
         }
 
         this.webhook = webhook;
-        this.disableCodes = [RESTJSONErrorCodes.InvalidWebhookToken, RESTJSONErrorCodes.UnknownWebhook];
     }
 
-    getWebhook(url) {
+    async sendLog(log) {
+        await this.webhook.send(log);
+    }
+
+    getDisabledMessage() {
+        return "Disabled webhook transport.";
+    }
+
+    onClose() {
+        this.webhook.destroy();
+    }
+
+    static _disableCodes = [RESTJSONErrorCodes.InvalidWebhookToken, RESTJSONErrorCodes.UnknownWebhook];
+
+    _getWebhook(url) {
         if (typeof url === "undefined" || url.length < 1) {
             throw new LoggerError("If a webhook object wasn't provided, a webhook url must be provided instead");
         }
@@ -45,18 +58,6 @@ class WebhookTransport extends BaseDiscordTransport {
         this.webhookToken = token;
 
         return webhook;
-    }
-
-    async sendLog(log) {
-        await this.webhook.send(log);
-    }
-
-    getDisabledMessage() {
-        return "Disabled webhook transport.";
-    }
-
-    onClose() {
-        this.webhook.destroy();
     }
 }
 
