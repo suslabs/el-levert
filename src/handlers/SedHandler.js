@@ -6,8 +6,7 @@ import HandlerError from "../errors/HandlerError.js";
 import { getClient, getLogger } from "../LevertClient.js";
 import Util from "../util/Util.js";
 
-const sedRegex = /^sed\/(?<regex_str>.+?)\/(?<replace>[^/]*)\/?(?<flags_str>.{1,2})?/,
-    sedUsage = "Usage: sed/regex/replace/flags (optional)";
+const sedUsage = "Usage: sed/regex/replace/flags (optional)";
 
 function logUsage(msg) {
     getLogger().info(
@@ -32,6 +31,8 @@ function logSendTime(t1) {
 
 class SedHandler extends Handler {
     static $name = "sedHandler";
+
+    static sedRegex = /^sed\/(?<regex_str>.+?)\/(?<replace>[^/]*)\/?(?<flags_str>.{1,2})?/;
 
     constructor(enabled) {
         super(enabled, true);
@@ -107,7 +108,7 @@ class SedHandler extends Handler {
             return false;
         }
 
-        return sedRegex.test(str);
+        return SedHandler.sedRegex.test(str);
     }
 
     async _fetchMatch(ch_id, regex, ignore_id, limit = 100) {
@@ -138,7 +139,7 @@ class SedHandler extends Handler {
         logUsage(msg);
 
         const t1 = performance.now(),
-            match = str.match(sedRegex);
+            match = str.match(SedHandler.sedRegex);
 
         if (!match) {
             throw new HandlerError("Invalid input string");

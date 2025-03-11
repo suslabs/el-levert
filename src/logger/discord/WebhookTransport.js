@@ -4,8 +4,6 @@ import BaseDiscordTransport from "./BaseDiscordTransport.js";
 
 import LoggerError from "../../errors/LoggerError.js";
 
-const urlRegex = /^https:\/\/discord\.com\/api\/webhooks\/(?<id>\d+)\/(?<token>[\w_-]+)$/;
-
 class WebhookTransport extends BaseDiscordTransport {
     static $name = "discord.webhook";
 
@@ -37,6 +35,7 @@ class WebhookTransport extends BaseDiscordTransport {
         this.webhook.destroy();
     }
 
+    static _urlRegex = /^https:\/\/discord\.com\/api\/webhooks\/(?<id>\d+)\/(?<token>[\w_-]+)$/;
     static _disableCodes = [RESTJSONErrorCodes.InvalidWebhookToken, RESTJSONErrorCodes.UnknownWebhook];
 
     _getWebhook(url) {
@@ -44,7 +43,7 @@ class WebhookTransport extends BaseDiscordTransport {
             throw new LoggerError("If a webhook object wasn't provided, a webhook url must be provided instead");
         }
 
-        const match = url.match(urlRegex);
+        const match = url.match(WebhookTransport._urlRegex);
 
         if (match === null) {
             throw new LoggerError("Invalid webhook url");

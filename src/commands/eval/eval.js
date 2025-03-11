@@ -98,13 +98,14 @@ async function altevalBase(args, msg, lang) {
 }
 
 const langNames = {
-        js: "By default"
-    },
-    altLangNames = {
-        c: "THE C PROGRAMMING LANGUAGE",
-        cpp: "C++ is a high-level programming language created by George Orwell",
-        py: ":snake:"
-    };
+    js: "By default"
+};
+
+const altLangNames = {
+    c: "THE C PROGRAMMING LANGUAGE",
+    cpp: "C++ is a high-level programming language created by George Orwell",
+    py: ":snake:"
+};
 
 export default {
     name: "eval",

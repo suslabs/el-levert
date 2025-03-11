@@ -35,22 +35,11 @@ function logRemoveTime(t1) {
     getLogger().debug(`Removing reactions took ${Util.timeDelta(t2, t1).toLocaleString()}ms.`);
 }
 
-function getReact(list) {
-    if (list.length === 1) {
-        return Util.firstElement(list);
-    }
-
-    return Util.randomElement(list);
-}
-
-const emojiChars = ":;=-x+";
-
-const emojiExpRight = new RegExp(`[${Util.escapeCharClass(emojiChars)}][()]+`, "g"),
-    emojiExpLeft = new RegExp(`[()]+[${Util.escapeCharClass(emojiChars)}]`, "g");
-
 class ReactionHandler extends Handler {
     static $name = "reactionHandler";
     priority = -1;
+
+    static emojiChars = ":;=-x+";
 
     constructor(enabled) {
         super(enabled, false);
@@ -103,6 +92,17 @@ class ReactionHandler extends Handler {
     async resubmit(msg) {
         await this.removeReacts(msg);
         await this.execute(msg);
+    }
+
+    static _emojiExpRight = new RegExp(`[${Util.escapeCharClass(this.emojiChars)}][()]+`, "g");
+    static _emojiExpLeft = new RegExp(`[()]+[${Util.escapeCharClass(this.emojiChars)}]`, "g");
+
+    static _getReact(list) {
+        if (list.length === 1) {
+            return Util.firstElement(list);
+        }
+
+        return Util.randomElement(list);
     }
 
     _setWords() {
@@ -169,8 +169,8 @@ class ReactionHandler extends Handler {
             total: 0
         };
 
-        let cleaned = str.replace(emojiExpRight, match => " ".repeat(match.length));
-        cleaned = cleaned.replace(emojiExpLeft, match => " ".repeat(match.length));
+        let cleaned = str.replace(ReactionHandler._emojiExpRight, match => " ".repeat(match.length));
+        cleaned = cleaned.replace(ReactionHandler._emojiExpLeft, match => " ".repeat(match.length));
 
         for (let i = 0; i < cleaned.length; i++) {
             const char = cleaned[i];
@@ -283,7 +283,7 @@ class ReactionHandler extends Handler {
         const reactLists = new Set(words.map(w => this._reactMap.get(w)));
 
         for (const list of reactLists) {
-            const react = getReact(list);
+            const react = ReactionHandler._getReact(list);
 
             if (typeof react !== "undefined") {
                 await msg.react(react);

@@ -10,30 +10,17 @@ import URL from "node:url";
 import { isPromise } from "./TypeTester.js";
 import UtilError from "../errors/UtilError.js";
 
-const urlExp = /(\S*?):\/\/(?:([^/.]+)\.)?([^/.]+)\.([^/\s]+)\/?(\S*)?/,
-    validUrlExp = new RegExp(`^${urlExp.toString()}$`);
-
-const regexEscapeExp = /[.*+?^${}()|[\]\\]/g,
-    charClassExcapeExp = /[-\\\]^]/g,
-    scriptParseExp = /^(?:`{3}([\S]+\n)?([\s\S]+)`{3}|`([^`]+)`)$/;
-
-const durationSeconds = {
-    year: 31536000,
-    month: 2592000,
-    week: 604800,
-    day: 86400,
-    hour: 3600,
-    minute: 60,
-    second: 1,
-    milli: 1 / 1000
-};
-
-const discordEpoch = 1420070400000;
-
 const Util = {
-    durationSeconds,
-    discordEpoch,
-    urlRegex: urlExp,
+    durationSeconds: {
+        year: 31536000,
+        month: 2592000,
+        week: 604800,
+        day: 86400,
+        hour: 3600,
+        minute: 60,
+        second: 1,
+        milli: 1 / 1000
+    },
 
     parseInt: (str, radix = 10) => {
         if (typeof str !== "string" || typeof radix !== "number") {
@@ -413,16 +400,20 @@ const Util = {
         return arr[a + ~~(Math.random() * (b - a))];
     },
 
+    _regexEscapeRegex: /[.*+?^${}()|[\]\\]/g,
     escapeRegex: str => {
-        return str.replace(regexEscapeExp, "\\$&");
+        return str.replace(Util._regexEscapeRegex, "\\$&");
     },
 
+    _charClassExcapeRegex: /[-\\\]^]/g,
     escapeCharClass: str => {
-        return str.replace(charClassExcapeExp, "\\$&");
+        return str.replace(Util._charClassExcapeRegex, "\\$&");
     },
+
+    urlRegex: /(\S*?):\/\/(?:([^/.]+)\.)?([^/.]+)\.([^/\s]+)\/?(\S*)?/,
 
     validUrl: url => {
-        return validUrlExp.test(url);
+        return Util.validUrlRegex.test(url);
     },
 
     splitArgs: (str, lowercase = false, options = {}) => {
@@ -520,8 +511,10 @@ const Util = {
         return [name, args];
     },
 
+    parseScriptRegex: /^(?:`{3}([\S]+\n)?([\s\S]+)`{3}|`([^`]+)`)$/,
+
     parseScript: script => {
-        const match = script.match(scriptParseExp);
+        const match = script.match(Util.parseScriptRegex);
 
         if (!match) {
             return [false, script, ""];
@@ -586,8 +579,46 @@ const Util = {
         };
     },
 
+    userIdRegex: /\d{17,20}/g,
+
+    findUserIds: str => {
+        const matches = Array.from(str.matchAll(Util.userIdRegex));
+        return matches.map(match => match[0]);
+    },
+
+    mentionRegex: /<@(\d{17,20})>/g,
+
+    findMentions: str => {
+        const matches = Array.from(str.matchAll(Util.mentionRegex));
+        return matches.map(match => match[1]);
+    },
+
+    msgUrlRegex:
+        /(?:(https?:)\/\/)?(?:(www|ptb)\.)?discord\.com\/channels\/(?<sv_id>\d{18,19}|@me)\/(?<ch_id>\d{18,19})(?:\/(?<msg_id>\d{18,19}))/g,
+
+    findMessageUrls: str => {
+        const matches = Array.from(str.matchAll(Util.msgUrlRegex));
+
+        return matches.map(match => {
+            const groups = match.groups;
+
+            return {
+                raw: match[0],
+
+                protocol: match[1] ?? "",
+                subdomain: match[2] ?? "",
+
+                sv_id: groups.sv_id,
+                ch_id: groups.ch_id,
+                msg_id: groups.msg_id
+            };
+        });
+    },
+
+    discordEpoch: 1420070400000,
+
     snowflakeFromDate: date => {
-        const timestamp = date.getTime() - discordEpoch,
+        const timestamp = date.getTime() - Util.discordEpoch,
             snowflakeBits = BigInt(timestamp) << 22n;
 
         return snowflakeBits.toString(10);
@@ -597,7 +628,23 @@ const Util = {
         const snowflakeBits = BigInt.asUintN(64, snowflake),
             timestamp = Number(snowflakeBits >> 22n);
 
-        return new Date(timestamp + discordEpoch);
+        return new Date(timestamp + Util.discordEpoch);
+    },
+
+    formatChannelName: channel => {
+        const inDms = channel.type === ChannelType.DM;
+
+        if (inDms) {
+            return "DMs";
+        }
+
+        const inThread = [ChannelType.PublicThread, ChannelType.PrivateThread].includes(channel.type);
+
+        if (inThread) {
+            return `"${channel.name}" (thread of parent channel #${channel.parent.name})`;
+        }
+
+        return `#${channel.name}`;
     },
 
     getEmbedSize(embed, countURLs = false) {
@@ -720,7 +767,7 @@ const Util = {
         const whitelist = Array.isArray(options.whitelist) ? options.whitelist : [],
             blacklist = Array.isArray(options.blacklist) ? options.blacklist : ["milli"];
 
-        const durationNames = Object.keys(durationSeconds).filter(name => {
+        const durationNames = Object.keys(Util.durationSeconds).filter(name => {
                 const inWhitelist = whitelist.length ? blacklist.includes(name) : true,
                     inBlacklist = blacklist.includes(name);
 
@@ -728,7 +775,7 @@ const Util = {
             }),
             durations = {};
 
-        let d_secs = delta * durationSeconds.milli;
+        let d_secs = delta * Util.durationSeconds.milli;
 
         if (d_secs < 1 && durationNames.includes("second")) {
             durations["second"] = d_secs;
@@ -737,7 +784,7 @@ const Util = {
                 n = 0;
 
             for (const name of durationNames) {
-                const secs = durationSeconds[name],
+                const secs = Util.durationSeconds[name],
                     duration = Math.floor(d_secs / secs);
 
                 if (duration > 0) {
@@ -777,12 +824,6 @@ const Util = {
         return _format.join(", ");
     },
 
-    bindArgs: (fn, ...boundArgs) => {
-        return function (...args) {
-            return fn.apply(this, boundArgs.concat(args));
-        };
-    },
-
     outOfRange(propName, min, max, ...args) {
         const hasPropName = typeof propName === "string",
             getProp = hasPropName ? obj => obj[propName] : obj => obj;
@@ -816,21 +857,47 @@ const Util = {
         });
     },
 
-    formatChannelName: channel => {
-        const inDms = channel.type === ChannelType.DM;
+    bindArgs: (fn, ...boundArgs) => {
+        return function (...args) {
+            return fn.apply(this, boundArgs.concat(args));
+        };
+    },
 
-        if (inDms) {
-            return "DMs";
+    resolveObj(path, propertyMap) {
+        if (typeof path !== "string") {
+            throw new UtilError("Invalid path provided");
         }
 
-        const inThread = [ChannelType.PublicThread, ChannelType.PrivateThread].includes(channel.type);
-
-        if (inThread) {
-            return `"${channel.name}" (thread of parent channel #${channel.parent.name})`;
+        if (typeof propertyMap === "undefined") {
+            throw new UtilError("Can't resolve object, no property map provided");
         }
 
-        return `#${channel.name}`;
+        const split = path.split(".");
+
+        let parent, obj;
+
+        while (split.length > 0) {
+            parent = obj;
+
+            const propertyName = Util.firstElement(split);
+
+            if (typeof obj === "undefined") {
+                obj = propertyMap[propertyName];
+            } else {
+                obj = obj[propertyName];
+            }
+
+            if (typeof obj === "undefined") {
+                throw new UtilError("Property not found: " + propertyName);
+            }
+
+            split.shift();
+        }
+
+        return { obj, parent };
     }
 };
+
+Util.validUrlRegex = new RegExp(`^${Util.urlRegex.toString()}$`);
 
 export default Util;

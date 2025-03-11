@@ -1,9 +1,3 @@
-const initialBreakpoint = "/* break on script start */ debugger;",
-    strictRegex = /^\s*(['"])use strict\1;?/;
-
-const indent = " ".repeat(4),
-    boundary = "(<isolated-vm boundary>)";
-
 const VMUtil = {
     removeCircRef: obj => {
         const pathMap = new Map();
@@ -105,13 +99,19 @@ const VMUtil = {
         socket.write(JSON.stringify(obj) + "\n");
     },
 
+    initialBreakpoint: "/* break on script start */ debugger;",
+    strictRegex: /^\s*(['"])use strict\1;?/,
+
     addDebuggerStmt: code => {
-        if (strictRegex.test(code)) {
-            return code.replace(strictRegex, match => `${match}\n${initialBreakpoint}\n`);
+        if (VMUtil.strictRegex.test(code)) {
+            return code.replace(VMUtil.strictRegex, match => `${match}\n${VMUtil.initialBreakpoint}\n`);
         } else {
-            return `${initialBreakpoint}\n\n${code}`;
+            return `${VMUtil.initialBreakpoint}\n\n${code}`;
         }
     },
+
+    indentation: 4,
+    boundary: "(<isolated-vm boundary>)",
 
     rewriteIVMStackTrace: err => {
         let stackFrames = err.stack.split("\n"),
@@ -120,7 +120,7 @@ const VMUtil = {
         [msgLine, ...stackFrames] = stackFrames;
         stackFrames = stackFrames.map(frame => frame.trim());
 
-        const boundaryLine = stackFrames.findIndex(frame => frame.startsWith("at " + boundary));
+        const boundaryLine = stackFrames.findIndex(frame => frame.startsWith("at " + VMUtil.boundary));
 
         if (boundaryLine === -1) {
             return err.stack;
@@ -128,7 +128,9 @@ const VMUtil = {
 
         stackFrames = stackFrames.slice(0, boundaryLine);
 
-        const formattedFrames = stackFrames.map(frame => indent + frame);
+        const spaces = " ".repeat(VMUtil.indentation),
+            formattedFrames = stackFrames.map(frame => spaces + frame);
+
         return msgLine + "\n" + formattedFrames.join("\n");
     }
 };

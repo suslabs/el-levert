@@ -7,30 +7,11 @@ import WriteMode from "./WriteMode.js";
 
 import Util from "../util/Util.js";
 
-const ajvOptions = {
-    allowUnionTypes: true
-};
-
-const ajv = new Ajv(ajvOptions);
-
-function formatValidationErrors(errors) {
-    let errMessage = [];
-
-    for (const err of errors) {
-        const split = err.instancePath.split("/"),
-            newPath = split.slice(1).join(".");
-
-        if (newPath.length > 0) {
-            errMessage.push(`Property ${newPath} ${err.message}`);
-        } else {
-            errMessage.push(Util.capitalize(err.message));
-        }
-    }
-
-    return errMessage.join("\n");
-}
-
 class JsonLoader extends TextFileLoader {
+    static ajvOptions = {
+        allowUnionTypes: true
+    };
+
     constructor(name, filePath, logger, options = {}) {
         super(name, filePath, logger, options);
 
@@ -121,6 +102,25 @@ class JsonLoader extends TextFileLoader {
         return jsonData;
     }
 
+    static _ajv = new Ajv(JsonLoader.ajvOptions);
+
+    static _formatValidationErrors(errors) {
+        let errMessage = [];
+
+        for (const err of errors) {
+            const split = err.instancePath.split("/"),
+                newPath = split.slice(1).join(".");
+
+            if (newPath.length > 0) {
+                errMessage.push(`Property ${newPath} ${err.message}`);
+            } else {
+                errMessage.push(Util.capitalize(err.message));
+            }
+        }
+
+        return errMessage.join("\n");
+    }
+
     async _read() {
         const status = await super.load();
 
@@ -198,19 +198,19 @@ class JsonLoader extends TextFileLoader {
             delete this._ajvValidate;
         }
 
-        const existingValidator = ajv.getSchema(this.schema.$id);
+        const existingValidator = JsonLoader._ajv.getSchema(this.schema.$id);
 
         if (typeof existingValidator !== "undefined") {
             this._ajvValidate = existingValidator;
         } else {
-            this._ajvValidate = ajv.compile(this.schema);
+            this._ajvValidate = JsonLoader._ajv.compile(this.schema);
         }
 
         return LoadStatus.successful;
     }
 
     _removeValidator() {
-        ajv.removeSchema(this.schema.$id);
+        JsonLoader._ajv.removeSchema(this.schema.$id);
     }
 
     _schemaValidate(data) {
@@ -257,7 +257,7 @@ class JsonLoader extends TextFileLoader {
                 let errMessage = "Validation failed";
 
                 if (typeof error !== "undefined") {
-                    errMessage += ":\n" + formatValidationErrors(error);
+                    errMessage += ":\n" + JsonLoader._formatValidationErrors(error);
                 } else {
                     errMessage += ".";
                 }

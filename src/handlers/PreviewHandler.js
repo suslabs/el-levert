@@ -6,12 +6,9 @@ import HandlerError from "../errors/HandlerError.js";
 import { getClient, getLogger } from "../LevertClient.js";
 import Util from "../util/Util.js";
 
-const msgUrlRegex =
-    /(?:(https?):\/\/)?(?:(www|ptb)\.)?discord\.com\/channels\/(?<sv_id>\d{18,19}|@me)\/(?<ch_id>\d{18,19})(?:\/(?<msg_id>\d{18,19}))/;
-
 function logUsage(msg, str) {
     getLogger().info(
-        `Generating preview for "${str.match(msgUrlRegex)[0]}", issued by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${Util.formatChannelName(msg.channel)}).`
+        `Generating preview for "${str.match(Util.msgUrlRegex)[0]}", issued by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${Util.formatChannelName(msg.channel)}).`
     );
 }
 
@@ -49,25 +46,24 @@ class PreviewHandler extends Handler {
             return false;
         }
 
-        return msgUrlRegex.test(str);
+        return Util.msgUrlRegex.test(str);
     }
 
     removeLink(str) {
-        return str.replace(msgUrlRegex, "");
+        return str.replace(Util.msgUrlRegex, "");
     }
 
     async genPreview(msg, str) {
         logUsage(msg, str);
 
         const t1 = performance.now(),
-            match = str.match(msgUrlRegex);
+            match = Util.firstElement(Util.findMessageUrls(str));
 
-        if (!match) {
+        if (typeof match === "undefined") {
             throw new HandlerError("Invalid input string");
         }
 
-        const rawMsgUrl = match[0],
-            { sv_id, ch_id, msg_id } = match.groups;
+        const { raw: rawMsgUrl, sv_id, ch_id, msg_id } = match;
 
         const prevMsg = await getClient().fetchMessage(ch_id, msg_id, {
             user_id: msg.author.id,

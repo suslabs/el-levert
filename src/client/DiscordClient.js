@@ -19,9 +19,6 @@ const {
     GuildMember
 } = discord;
 
-const userIdRegex = /(\d{17,20})/,
-    mentionRegex = /<@(\d{17,20})>/;
-
 const clientOptions = ["wrapEvents", "eventsDir", "loginTimeout", "mentionUsers", "pingReply"];
 
 class DiscordClient {
@@ -560,13 +557,11 @@ class DiscordClient {
 
         const guilds = this.client.guilds.cache;
 
-        const idMatch = query.match(userIdRegex),
-            mentionMatch = query.match(mentionRegex),
-            userMatch = idMatch ?? mentionMatch;
+        const foundId = Util.firstElement(Util.findUserIds(query)),
+            foundMention = Util.firstElement(Util.findMentions(query)),
+            user_id = foundId ?? foundMention;
 
-        if (userMatch !== null) {
-            const user_id = userMatch[1];
-
+        if (typeof user_id !== "undefined") {
             for (const guild of guilds.values()) {
                 const member = await this.fetchMember(guild, user_id);
 

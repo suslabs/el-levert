@@ -4,62 +4,51 @@ import WebSocket from "ws";
 import { getLogger } from "../../../LevertClient.js";
 import Util from "../../../util/Util.js";
 
-const inspectorUrl = "devtools://devtools/bundled/inspector.html",
-    inspectorOptions = {
+class InspectorServer {
+    static inspectorUrl = "devtools://devtools/bundled/inspector.html";
+
+    static inspectorOptions = {
         experiments: true,
         v8only: true
     };
 
-function listener(socket) {
-    getLogger().debug("Inspector server: Recieved connection.");
-    this._inspectorSocket = socket;
+    static listener(socket) {
+        getLogger().debug("Inspector server: Recieved connection.");
+        this._inspectorSocket = socket;
 
-    if (this._inspectorContext === null) {
-        getLogger().info("No script is running. Disconnecting inspector.");
-        this._closeSocket();
+        if (this._inspectorContext === null) {
+            getLogger().info("No script is running. Disconnecting inspector.");
+            this._closeSocket();
 
-        return;
-    }
-
-    this._connectInspector();
-
-    socket.on("error", err => {
-        getLogger().error("Inspector websocket error:", err);
-        this._disconnectInspector();
-    });
-
-    socket.on("close", code => {
-        getLogger().debug(`Inspector websocket closed:${Util.formatLog(code)}`);
-        this._disconnectInspector();
-    });
-
-    socket.on("message", msg => {
-        if (this.logPackets) {
-            getLogger().debug(`Recieved: ${msg}`);
+            return;
         }
 
-        try {
-            this._inspectorContext?.inspector.sendMessage(msg);
-        } catch (err) {
-            getLogger().error("Error occured while sending message to inspector:", err);
-            socket.close();
-        }
-    });
-}
+        this._connectInspector();
 
-function sendReply(msg) {
-    if (this._inspectorSocket === null) {
-        return;
+        socket.on("error", err => {
+            getLogger().error("Inspector websocket error:", err);
+            this._disconnectInspector();
+        });
+
+        socket.on("close", code => {
+            getLogger().debug(`Inspector websocket closed:${Util.formatLog(code)}`);
+            this._disconnectInspector();
+        });
+
+        socket.on("message", msg => {
+            if (this.logPackets) {
+                getLogger().debug(`Recieved: ${msg}`);
+            }
+
+            try {
+                this._inspectorContext?.inspector.sendMessage(msg);
+            } catch (err) {
+                getLogger().error("Error occured while sending message to inspector:", err);
+                socket.close();
+            }
+        });
     }
 
-    if (this.logPackets) {
-        getLogger().debug(`Sending: ${msg}`);
-    }
-
-    this._inspectorSocket.send(msg);
-}
-
-class InspectorServer {
     constructor(enabled, port = 8080, options = {}) {
         this.enabled = enabled;
         this.port = port;
@@ -68,7 +57,9 @@ class InspectorServer {
 
         this.logPackets = options.logPackets ?? false;
 
-        this.sendReply = sendReply.bind(this);
+        const replyFunc = InspectorServer._sendReply.bind(this);
+        this.sendReply = replyFunc;
+
         this.running = false;
 
         this._inspectorContext = null;
@@ -77,11 +68,11 @@ class InspectorServer {
 
     get inspectorUrl() {
         const options = {
-            ...inspectorOptions,
+            ...InspectorServer.inspectorOptions,
             ws: `localhost:${this.port}`
         };
 
-        const url = new URL(inspectorUrl),
+        const url = new URL(InspectorServer.inspectorUrl),
             search = new URLSearchParams(options);
 
         url.search = search;
@@ -141,8 +132,22 @@ class InspectorServer {
         getLogger().info("Closed inspector server.");
     }
 
+    static _sendReply(msg) {
+        if (this._inspectorSocket === null) {
+            return;
+        }
+
+        if (this.logPackets) {
+            getLogger().debug(`Sending: ${msg}`);
+        }
+
+        this._inspectorSocket.send(msg);
+    }
+
     _bindEvents() {
-        this.websocketServer.on("connection", listener.bind(this));
+        const listenerFunc = InspectorServer.listener.bind(this);
+        this.websocketServer.on("connection", listenerFunc);
+
         this.websocketServer.on("close", _ => getLogger().debug("Inspector websocket server closed."));
     }
 

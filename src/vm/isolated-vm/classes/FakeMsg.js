@@ -2,9 +2,9 @@ import FakeUser from "./FakeUser.js";
 
 import VMUtil from "../../../util/vm/VMUtil.js";
 
-const messagesCount = 50;
-
 class FakeMsg {
+    static messageCount = 50;
+
     constructor(msg) {
         if (msg === null) {
             msg = undefined;
@@ -21,7 +21,7 @@ class FakeMsg {
             channel = msg.channel,
             guild = channel?.guild;
 
-        const messageIds = channel?.messages?.cache.map(msg => msg.id).slice(1, messagesCount + 1);
+        const messageIds = channel?.messages?.cache.map(msg => msg.id).slice(1, FakeMsg.messageCount + 1);
 
         this.fixedMsg = VMUtil.removeCircRef({
             channelId: msg.channelId,

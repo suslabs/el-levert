@@ -4,17 +4,6 @@ import { getLogger } from "../../../LevertClient.js";
 import VMUtil from "../../../util/vm/VMUtil.js";
 import Util from "../../../util/Util.js";
 
-function getWrappedReplyFunc(inspector) {
-    return function wrappedReply(msg) {
-        try {
-            this.sendReply(msg);
-        } catch (err) {
-            getLogger().error("Inspector reply error:", err);
-            this.dispose();
-        }
-    }.bind(inspector);
-}
-
 class IsolateInspector {
     constructor(enabled, options) {
         this.enabled = enabled;
@@ -48,7 +37,7 @@ class IsolateInspector {
         }
 
         const channel = isolate.createInspectorSession(),
-            wrappedReply = getWrappedReplyFunc(this);
+            wrappedReply = IsolateInspector_getWrappedReplyFunc(this);
 
         channel.onResponse = (_, msg) => wrappedReply(msg);
         channel.onNotification = wrappedReply;
@@ -124,6 +113,17 @@ class IsolateInspector {
 
         this._channel = null;
         delete this.wrappedReply;
+    }
+
+    static _getWrappedReplyFunc(inspector) {
+        return function wrappedReply(msg) {
+            try {
+                this.sendReply(msg);
+            } catch (err) {
+                getLogger().error("Inspector reply error:", err);
+                this.dispose();
+            }
+        }.bind(inspector);
     }
 }
 

@@ -19,10 +19,10 @@ import IsolateInspector from "../inspector/IsolateInspector.js";
 import Util from "../../../util/Util.js";
 import VMUtil from "../../../util/vm/VMUtil.js";
 
-const filename = "script.js",
-    evaluated = "evaluated script";
-
 class EvalContext {
+    static filename = "script.js";
+    static evaluated = "evaluated script";
+
     static allowPromiseReturn = true;
 
     constructor(options, inspectorOptions = {}) {
@@ -31,7 +31,7 @@ class EvalContext {
 
         this._setupInspector(inspectorOptions);
 
-        this.scriptName = this.enableInspector ? `file:///${filename}` : `(<${evaluated}>)`;
+        this.scriptName = this._getScriptName();
         this._vmObjects = [];
     }
 
@@ -128,6 +128,14 @@ class EvalContext {
         this._disposeVMObjects();
         this._disposeScript();
         this._disposeIsolate();
+    }
+
+    _getScriptName() {
+        if (this.enableInspector) {
+            return `file:///${EvalContext.filename}`;
+        } else {
+            return `(<${EvalContext.evaluated}>)`;
+        }
     }
 
     _setupInspector(options) {

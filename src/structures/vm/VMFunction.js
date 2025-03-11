@@ -6,40 +6,6 @@ import ExitError from "../../vm/isolated-vm/functionErrors/ExitError.js";
 import getRegisterCode from "../../util/vm/getRegisterCode.js";
 import Util from "../../util/Util.js";
 
-function resolveObj(path, propertyMap) {
-    if (typeof path !== "string") {
-        throw new VMError("Invalid path provided");
-    }
-
-    if (typeof propertyMap === "undefined") {
-        throw new VMError("Can't resolve object, no property map provided");
-    }
-
-    const split = path.split(".");
-
-    let parent, obj;
-
-    while (split.length > 0) {
-        parent = obj;
-
-        const propertyName = Util.firstElement(split);
-
-        if (typeof obj === "undefined") {
-            obj = propertyMap[propertyName];
-        } else {
-            obj = obj[propertyName];
-        }
-
-        if (typeof obj === "undefined") {
-            throw new VMError("Property not found: " + propertyName);
-        }
-
-        split.shift();
-    }
-
-    return { obj, parent };
-}
-
 class VMFunction {
     static defaultValues = {
         parent: "",
@@ -90,7 +56,7 @@ class VMFunction {
         }
 
         const path = this.ref,
-            { obj: refFunc, parent } = resolveObj(path, propertyMap);
+            { obj: refFunc, parent } = Util.resolveObj(path, propertyMap);
 
         if (typeof refFunc === "undefined") {
             throw new VMError("Couldn't resolve reference function");
@@ -107,7 +73,7 @@ class VMFunction {
         const argList = [];
 
         for (const path of this.binds) {
-            const obj = resolveObj(path, propertyMap).obj;
+            const obj = Util.resolveObj(path, propertyMap).obj;
             argList.push(obj);
         }
 

@@ -10,8 +10,6 @@ import PermissionError from "../../errors/PermissionError.js";
 import Util from "../../util/Util.js";
 import { getClient, getLogger } from "../../LevertClient.js";
 
-const groupNameRegex = /^[A-Za-z0-9\-_]+$/;
-
 class PermissionManager extends DBManager {
     static $name = "permManager";
     static loadPriority = 1;
@@ -51,7 +49,7 @@ class PermissionManager extends DBManager {
     }
 
     isGroupName(name) {
-        return groupNameRegex.test(name);
+        return PermissionManager._groupNameRegex.test(name);
     }
 
     checkName(name) {
@@ -320,6 +318,8 @@ class PermissionManager extends DBManager {
 
         return groups;
     }
+
+    static _groupNameRegex = /^[A-Za-z0-9\-_]+$/;
 }
 
 export default PermissionManager;
