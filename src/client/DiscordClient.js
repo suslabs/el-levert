@@ -195,7 +195,7 @@ class DiscordClient {
         const presence = this.client.user.setActivity(config.text, {
                 type: num
             }),
-            activity = Util.firstElement(presence.activities);
+            activity = Util.first(presence.activities);
 
         const setType = ActivityType[activity.type],
             setText = activity.name;
@@ -249,7 +249,7 @@ class DiscordClient {
 
         switch (typeof sv_id) {
             case "string":
-                if (sv_id.length < 1) {
+                if (Util.empty(sv_id)) {
                     throw new ClientError("Invalid guild ID provided (length = 0)");
                 }
 
@@ -269,7 +269,7 @@ class DiscordClient {
 
         switch (typeof user_id) {
             case "string":
-                if (user_id.length < 1) {
+                if (Util.empty(user_id)) {
                     throw new ClientError("Invalid user ID provided (length = 0)");
                 }
 
@@ -312,7 +312,7 @@ class DiscordClient {
 
         switch (typeof ch_id) {
             case "string":
-                if (ch_id.length < 1) {
+                if (Util.empty(ch_id)) {
                     throw new ClientError("Invalid channel ID provided (length = 0)");
                 }
 
@@ -351,7 +351,7 @@ class DiscordClient {
 
         switch (typeof user_id) {
             case "string":
-                if (user_id.length < 1) {
+                if (Util.empty(user_id)) {
                     throw new ClientError("Invalid user ID provided (length = 0)");
                 }
 
@@ -417,7 +417,7 @@ class DiscordClient {
 
         switch (typeof msg_id) {
             case "string":
-                if (msg_id.length < 1) {
+                if (Util.empty(msg_id)) {
                     throw new ClientError("Invalid message ID provided (length = 0)");
                 }
 
@@ -557,8 +557,8 @@ class DiscordClient {
 
         const guilds = this.client.guilds.cache;
 
-        const foundId = Util.firstElement(Util.findUserIds(query)),
-            foundMention = Util.firstElement(Util.findMentions(query)),
+        const foundId = Util.first(Util.findUserIds(query)),
+            foundMention = Util.first(Util.findMentions(query)),
             user_id = foundId ?? foundMention;
 
         if (typeof user_id !== "undefined") {

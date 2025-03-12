@@ -13,7 +13,7 @@ export default {
         let all = false,
             own = false;
 
-        findUser: if (args.length > 0) {
+        findUser: if (!Util.empty(args)) {
             const [u_name] = Util.splitArgs(args),
                 lowercaseName = u_name.toLowerCase();
 
@@ -25,7 +25,7 @@ export default {
             } else if (own) {
                 user = msg.author;
             } else {
-                const find = Util.firstElement(await getClient().findUsers(u_name));
+                const find = Util.first(await getClient().findUsers(u_name));
 
                 if (typeof find === "undefined") {
                     return `:warning: User \`${u_name}\` not found.`;

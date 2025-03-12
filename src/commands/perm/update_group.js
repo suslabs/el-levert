@@ -13,11 +13,11 @@ export default {
         let [g_name, g_data] = Util.splitArgs(args),
             [newName, newLevel] = Util.splitArgs(g_data);
 
-        if (args.length === 0 || g_name.length === 0 || g_data.length === 0) {
+        if (Util.empty(args) || Util.empty(g_name) || Util.empty(g_data)) {
             return ":information_source: `perm update_group [group name] [new name/unchanged] [new level/unchanged]`";
         }
 
-        if (newName.length < 1 || newName === "unchanged") {
+        if (Util.empty(newName) || newName === "unchanged") {
             newName = undefined;
         } else {
             const e = getClient().permManager.checkName(g_name);
@@ -26,7 +26,7 @@ export default {
             }
         }
 
-        if (newLevel.length < 1 || newLevel === "unchanged") {
+        if (Util.empty(newLevel) || newLevel === "unchanged") {
             newLevel = undefined;
         } else {
             newLevel = Util.parseInt(newLevel);

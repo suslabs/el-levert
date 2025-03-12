@@ -8,7 +8,7 @@ export default {
     subcommand: true,
 
     handler: async function (args, msg, perm) {
-        if (args.length === 0) {
+        if (Util.empty(args)) {
             return ":information_source: `t rename name new_name`";
         }
 
@@ -25,7 +25,7 @@ export default {
             return ":warning: " + e1 ?? e2;
         }
 
-        if (n_name.length === 0) {
+        if (Util.empty(n_name)) {
             return ":warning: You must specify the new tag name.";
         }
 

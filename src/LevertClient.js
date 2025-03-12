@@ -82,7 +82,7 @@ class LevertClient extends DiscordClient {
             mentionUsers: config.mentionUsers
         });
 
-        this.useBridgeBot = config.bridgeBotIds.length > 0;
+        this.useBridgeBot = !Util.empty(config.bridgeBotIds);
     }
 
     loadComponent(name, barrel, ctorArgs = {}, options = {}) {

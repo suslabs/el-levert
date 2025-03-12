@@ -10,7 +10,7 @@ export default {
     allowed: getClient().permManager.adminLevel,
 
     handler: async (args, msg) => {
-        if (args.length === 0) {
+        if (Util.empty(args)) {
             return ":information_source: `perm remove_group [group name]`";
         }
 

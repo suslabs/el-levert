@@ -15,7 +15,7 @@ export default {
 
         const tags = await getClient().tagManager.dump(full);
 
-        if (tags.length < 1) {
+        if (Util.empty(tags)) {
             return ":information_source: There are no tags registered.";
         }
 
@@ -24,7 +24,7 @@ export default {
         if (full) {
             let space;
 
-            if (s_str.length > 0) {
+            if (!Util.empty(s_str)) {
                 space = Util.parseInt(s_str);
 
                 if (Number.isNaN(space) || space < 0) {

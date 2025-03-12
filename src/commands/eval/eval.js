@@ -6,7 +6,7 @@ async function evalBase(args, msg) {
     let body = args,
         _;
 
-    if (msg.attachments.size > 0) {
+    if (!Util.empty(msg.attachments)) {
         try {
             [body] = await getClient().tagManager.downloadBody(msg);
         } catch (err) {
@@ -27,7 +27,7 @@ async function evalBase(args, msg) {
         [, body] = Util.parseScript(body);
     }
 
-    if (body.length < 1) {
+    if (Util.empty(body)) {
         return {
             err: ":no_entry_sign: Can't eval an empty script."
         };
@@ -82,12 +82,12 @@ async function altevalBase(args, msg, lang) {
 
     let out = "";
 
-    if (evalOut.stdout.length > 0) {
+    if (!Util.empty(evalOut.stdout)) {
         out += `\n${evalOut.stdout}`;
     }
 
-    if (evalOut.stderr.length > 0) {
-        if (out.length > 0) {
+    if (!Util.empty(evalOut.stderr)) {
+        if (!Util.empty(out)) {
             out += "\n\n";
         }
 

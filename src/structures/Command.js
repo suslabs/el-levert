@@ -58,7 +58,7 @@ class Command {
     }
 
     get hasHelp() {
-        return this.description.length > 0 || this.usage.length > 0;
+        return !Util.empty(this.description) || !Util.empty(this.usage);
     }
 
     matches(name, checkAliases = true) {
@@ -66,7 +66,7 @@ class Command {
             return true;
         }
 
-        if (this.aliases.length > 0 && checkAliases) {
+        if (!Util.empty(this.aliases) && checkAliases) {
             return this.aliases.includes(name);
         }
 
@@ -76,7 +76,7 @@ class Command {
     getName(aliasSep = "/", parentSep = ":") {
         let name;
 
-        if (this.aliases.length > 0 && aliasSep !== false) {
+        if (!Util.empty(this.aliases) && aliasSep !== false) {
             const names = [this.name].concat(this.aliases);
             name = names.join(aliasSep);
         } else {
@@ -141,7 +141,7 @@ class Command {
     getSubcmd(name, includeAliases = true) {
         const subcmds = this.getSubcmdMap(includeAliases);
 
-        if (subcmds.size < 1) {
+        if (Util.empty(subcmds)) {
             return;
         }
 
@@ -196,13 +196,13 @@ class Command {
     getHelpText(discord = true) {
         let help = "";
 
-        if (this.description.length > 0) {
+        if (!Util.empty(this.description)) {
             const formattedDescription = discord ? codeBlock(this.description) : this.description;
             help += `Description:\n${formattedDescription}`;
         }
 
-        if (this.usage.length > 0) {
-            if (help.length > 0) {
+        if (!Util.empty(this.usage)) {
+            if (!Util.empty(help)) {
                 help += "\n\n";
             }
 
@@ -224,7 +224,7 @@ class Command {
 
         this.subcmds.set(subcmd.name, subcmd);
 
-        if (subcmd.aliases.length > 0) {
+        if (!Util.empty(subcmd.aliases)) {
             for (const alias of subcmd.aliases) {
                 this.subcmds.set(alias, subcmd);
             }

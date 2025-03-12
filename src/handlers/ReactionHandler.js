@@ -72,7 +72,7 @@ class ReactionHandler extends Handler {
         const botId = getClient().client.user.id,
             botReacts = msg.reactions.cache.filter(react => react.users.cache.has(botId));
 
-        if (botReacts.size < 1) {
+        if (Util.empty(botReacts)) {
             return;
         }
 
@@ -98,8 +98,8 @@ class ReactionHandler extends Handler {
     static _emojiExpLeft = new RegExp(`[()]+[${Util.escapeCharClass(this.emojiChars)}]`, "g");
 
     static _getReact(list) {
-        if (list.length === 1) {
-            return Util.firstElement(list);
+        if (Util.single(list)) {
+            return Util.first(list);
         }
 
         return Util.randomElement(list);
@@ -238,7 +238,7 @@ class ReactionHandler extends Handler {
 
         const foundWords = this._wordList.map(word => [word, normStr.indexOf(word)]).filter(x => x[1] >= 0);
 
-        if (foundWords.length < 1) {
+        if (Util.empty(foundWords)) {
             return;
         }
 

@@ -15,9 +15,9 @@ export default {
     handler: async (args, msg) => {
         let user = msg.author;
 
-        if (args.length > 0) {
+        if (!Util.empty(args)) {
             const [u_name] = Util.splitArgs(args),
-                find = Util.firstElement(await getClient().findUsers(u_name));
+                find = Util.first(await getClient().findUsers(u_name));
 
             if (typeof find === "undefined") {
                 return `:warning: User \`${u_name}\` not found.`;
@@ -38,12 +38,12 @@ export default {
 
         let format = "";
 
-        if (tags.newTags.length > 0) {
+        if (!Util.empty(tags.newTags)) {
             format += `EL LEVERT tags:\n${formatTagList(tags.newTags)}`;
         }
 
-        if (tags.oldTags.length > 0) {
-            if (format.length > 0) {
+        if (!Util.empty(tags.oldTags)) {
+            if (!Util.empty(format)) {
                 format += "\n\n";
             }
 

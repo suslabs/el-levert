@@ -5,11 +5,11 @@ import Util from "../../util/Util.js";
 function formatGroups(groups) {
     let format;
 
-    if (groups.length > 1) {
+    if (Util.multiple(groups)) {
         format = groups.map((group, i) => `${i + 1}. ${group.format()}`);
         format = format.join("\n");
     } else {
-        format = Util.firstElement(groups).format();
+        format = Util.first(groups).format();
     }
 
     return format;
@@ -23,9 +23,9 @@ export default {
     handler: async (args, msg) => {
         let user = msg.author;
 
-        if (args.length > 0) {
+        if (!Util.empty(args)) {
             const [u_name] = Util.splitArgs(args),
-                find = Util.firstElement(await getClient().findUsers(u_name));
+                find = Util.first(await getClient().findUsers(u_name));
 
             if (typeof find === "undefined") {
                 user = {

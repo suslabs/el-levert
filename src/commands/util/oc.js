@@ -7,7 +7,7 @@ export default {
     category: "util",
 
     handler: args => {
-        if (args.length === 0) {
+        if (Util.empty(args)) {
             return ":information_source: %oc (-version) [EU/t] [duration]";
         }
 

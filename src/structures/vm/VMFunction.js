@@ -66,7 +66,7 @@ class VMFunction {
     }
 
     _resolveBinds(propertyMap) {
-        if (this.binds.length === 0) {
+        if (Util.empty(this.binds)) {
             return;
         }
 

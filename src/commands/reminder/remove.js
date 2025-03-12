@@ -4,7 +4,7 @@ import Util from "../../util/Util.js";
 
 export default {
     name: "remove",
-    aliases: ["delete"],
+    aliases: ["unset", "delete"],
     parent: "reminder",
     subcommand: true,
 

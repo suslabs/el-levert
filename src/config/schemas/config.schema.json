@@ -46,6 +46,9 @@
         "otherTimeLimit": {
             "type": "number"
         },
+        "minResponseTime": {
+            "type": "number"
+        },
         "enableInspector": {
             "type": "boolean"
         },
@@ -167,6 +170,7 @@
         "timeLimit",
         "otherMemLimit",
         "otherTimeLimit",
+        "minResponseTime",
         "enableInspector",
         "inspectorPort",
         "outCharLimit",

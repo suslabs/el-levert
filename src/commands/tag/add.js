@@ -9,7 +9,7 @@ export default {
     subcommand: true,
 
     handler: async function (args, msg) {
-        if (args.length === 0) {
+        if (Util.empty(args)) {
             return ":information_source: `t add name body`";
         }
 

@@ -11,7 +11,7 @@ export default {
     ownerOnly: true,
 
     handler: async args => {
-        if (args.length === 0) {
+        if (Util.empty(args)) {
             return "%t massadd tagPrefix owner inputDir";
         }
 

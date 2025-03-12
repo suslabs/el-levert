@@ -37,7 +37,7 @@ class DirectoryLoader extends Loader {
             return status;
         }
 
-        if (this.files.length === 0) {
+        if (Util.empty(this.files)) {
             return this.failure(`Couldn't find any ${this.logName}s.`);
         }
 

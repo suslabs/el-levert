@@ -12,7 +12,7 @@ export default {
     handler: async (args, msg) => {
         const [g_name, u_name] = Util.splitArgs(args);
 
-        if (args.length === 0 || g_name.length === 0 || u_name.length === 0) {
+        if (Util.empty(args) || Util.empty(g_name) || Util.empty(u_name)) {
             return ":information_source: `perm add [group name] [ping/id/username]`";
         }
 
@@ -33,7 +33,7 @@ export default {
             return `:warning: Can't add a user to a group with a higher level your own. (${maxLevel} < ${group.level})`;
         }
 
-        const find = Util.firstElement(await getClient().findUsers(u_name));
+        const find = Util.first(await getClient().findUsers(u_name));
 
         if (typeof find === "undefined") {
             return `:warning: User \`${u_name}\` not found.`;

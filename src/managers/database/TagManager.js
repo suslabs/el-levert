@@ -29,7 +29,7 @@ class TagManager extends DBManager {
     }
 
     checkName(name) {
-        if (name.length < 1) {
+        if (Util.empty(name)) {
             return "Invalid tag name.";
         }
 
@@ -76,7 +76,7 @@ class TagManager extends DBManager {
                 }
             }
 
-            if (lastTag.args.length > 0) {
+            if (!Util.empty(lastTag.args)) {
                 argsList.push(lastTag.args);
             }
         }
@@ -144,7 +144,7 @@ class TagManager extends DBManager {
         }
 
         body = body.trim();
-        if (body.length < 1) {
+        if (Util.empty(body)) {
             throw new TagError("Can't add an empty tag");
         }
 
@@ -174,7 +174,7 @@ class TagManager extends DBManager {
         }
 
         body = body.trim();
-        if (body.length < 1) {
+        if (Util.empty(body)) {
             throw new TagError("Tag body is empty");
         }
 
@@ -359,7 +359,7 @@ class TagManager extends DBManager {
     }
 
     async count(user) {
-        const countAll = user === null || typeof user === "undefined" || user.length < 1;
+        const countAll = user === null || typeof user === "undefined" || Util.empty(user);
 
         if (countAll) {
             return await this.tag_db.count(true);

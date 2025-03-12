@@ -9,7 +9,7 @@ export default {
     subcommand: true,
 
     handler: async function (args, msg, perm) {
-        if (args.length === 0) {
+        if (Util.empty(args)) {
             return ":information_source: `t chown name new_owner_mention`";
         }
 
@@ -24,11 +24,11 @@ export default {
             return ":warning: " + e;
         }
 
-        if (t_args.length === 0) {
+        if (Util.empty(t_args)) {
             return ":warning: Invalid target user. You must specifically mention the target user.";
         }
 
-        const find = Util.firstElement(await getClient().findUsers(t_args));
+        const find = Util.first(await getClient().findUsers(t_args));
 
         if (typeof find === "undefined") {
             return `:warning: User \`${t_args}\` not found.`;

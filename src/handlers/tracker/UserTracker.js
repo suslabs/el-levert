@@ -1,5 +1,7 @@
 import TrackedUser from "./TrackedUser.js";
 
+import Util from "../../util/Util.js";
+
 class UserTracker {
     constructor(sweepInterval = 0) {
         this.sweepInterval = sweepInterval;
@@ -27,7 +29,7 @@ class UserTracker {
     }
 
     clearUsers() {
-        while (this.trackedUsers.length > 0) {
+        while (!Util.empty(this.trackedUsers)) {
             this.trackedUsers.pop();
         }
     }

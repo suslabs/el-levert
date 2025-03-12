@@ -13,7 +13,7 @@ export default {
         let [g_name, level] = Util.splitArgs(args);
         level = Util.parseInt(level);
 
-        if (args.length === 0 || g_name.length === 0 || level.length === 0) {
+        if (Util.empty(args) || Util.empty(g_name) || Util.empty(level)) {
             return ":information_source: `perm add_group [group name] [level]`";
         }
 

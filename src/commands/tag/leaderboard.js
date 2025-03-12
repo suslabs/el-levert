@@ -38,7 +38,7 @@ export default {
     subcommand: true,
 
     handler: async args => {
-        if (args.length === 0) {
+        if (Util.empty(args)) {
             return ":information_source: `t leaderboard (count/size) [limit < 100]`";
         }
 
@@ -50,7 +50,7 @@ export default {
 
         let maxUsers = defaultLimit;
 
-        if (l_str.length > 0) {
+        if (!Util.empty(l_str)) {
             maxUsers = Util.parseInt(l_str);
 
             if (Number.isNaN(maxUsers) || maxUsers < 1) {
@@ -62,7 +62,7 @@ export default {
 
         const leaderboard = await getClient().tagManager.leaderboard(l_type, maxUsers);
 
-        if (leaderboard.length < 1) {
+        if (Util.empty(leaderboard)) {
             return ":information_source: There are no tags registered.";
         }
 

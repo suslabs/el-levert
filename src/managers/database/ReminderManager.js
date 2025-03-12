@@ -141,7 +141,7 @@ class ReminderManager extends DBManager {
         const t1 = performance.now(),
             reminders = await this.getPastReminders();
 
-        if (reminders.length < 1) {
+        if (Util.empty(reminders)) {
             getLogger().debug("No reminders to send.");
             return;
         }

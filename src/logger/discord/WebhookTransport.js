@@ -2,6 +2,7 @@ import { WebhookClient, RESTJSONErrorCodes } from "discord.js";
 
 import BaseDiscordTransport from "./BaseDiscordTransport.js";
 
+import Util from "../../util/Util.js";
 import LoggerError from "../../errors/LoggerError.js";
 
 class WebhookTransport extends BaseDiscordTransport {
@@ -39,7 +40,7 @@ class WebhookTransport extends BaseDiscordTransport {
     static _disableCodes = [RESTJSONErrorCodes.InvalidWebhookToken, RESTJSONErrorCodes.UnknownWebhook];
 
     _getWebhook(url) {
-        if (typeof url === "undefined" || url.length < 1) {
+        if (typeof url === "undefined" || Util.empty(url)) {
             throw new LoggerError("If a webhook object wasn't provided, a webhook url must be provided instead");
         }
 

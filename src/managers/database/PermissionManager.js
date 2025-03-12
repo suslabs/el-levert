@@ -117,8 +117,8 @@ class PermissionManager extends DBManager {
 
         let maxLevel;
 
-        if (groups.length === 1) {
-            maxLevel = Util.firstElement(groups).level;
+        if (Util.single(groups)) {
+            maxLevel = Util.first(groups).level;
         } else {
             const levels = groups.map(x => x.level);
             maxLevel = Math.max(...levels);
@@ -306,7 +306,7 @@ class PermissionManager extends DBManager {
         const groupList = await this.perm_db.listGroups();
         groups = groups.concat(groupList);
 
-        if (groups.length < 1) {
+        if (Util.empty(groups)) {
             return false;
         }
 

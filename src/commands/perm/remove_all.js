@@ -12,11 +12,11 @@ export default {
     handler: async (args, msg) => {
         const [u_name] = Util.splitArgs(args);
 
-        if (args.length === 0 || u_name.length === 0) {
+        if (Util.empty(args) || Util.empty(u_name)) {
             return ":information_source: `perm remove_all [ping/id/username]`";
         }
 
-        const find = Util.firstElement(await getClient().findUsers(u_name));
+        const find = Util.first(await getClient().findUsers(u_name));
 
         if (typeof find === "undefined") {
             if (getClient().permManager.isOwner(msg.author.id)) {

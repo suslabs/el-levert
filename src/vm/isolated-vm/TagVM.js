@@ -154,7 +154,7 @@ class TagVM extends VM {
         if (typeof out.content !== "undefined") {
             const str = out.content;
 
-            if (str.length > this.outCharLimit || Util.countLines(str) > this.outLineLimit) {
+            if (Util.overSizeLimits(str, this.outCharLimit, this.outLineLimit)) {
                 files.push(...Util.getFileAttach(str).files);
                 delete out.content;
             }
@@ -171,7 +171,7 @@ class TagVM extends VM {
             files.push(...Util.getFileAttach(data, name).files);
         }
 
-        if (files.length > 0) {
+        if (!Util.empty(files)) {
             out.files = files;
         }
 

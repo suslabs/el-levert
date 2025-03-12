@@ -8,7 +8,7 @@ export default {
     subcommand: true,
 
     handler: async function (args) {
-        if (args.length === 0) {
+        if (Util.empty(args)) {
             return ":information_source: `t owner name`";
         }
 

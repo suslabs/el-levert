@@ -9,7 +9,7 @@ class PermissionDatabase extends SqliteDatabase {
             $user: id
         });
 
-        if (typeof rows._data === "undefined" || rows.length < 1) {
+        if (typeof rows._data === "undefined" || Util.empty(rows)) {
             return false;
         }
 

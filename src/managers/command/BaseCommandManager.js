@@ -131,7 +131,7 @@ class BaseCommandManager extends Manager {
             return deleted;
         }
 
-        if (command.subcmds.size < 1) {
+        if (Util.empty(command.subcmds)) {
             return deleted;
         }
 
@@ -140,7 +140,7 @@ class BaseCommandManager extends Manager {
     }
 
     deleteSubcommands(command, errorIfNotFound = false) {
-        if (command.subcmds.size < 1) {
+        if (Util.empty(command.subcmds)) {
             if (errorIfNotFound) {
                 throw new CommandError("Command has no subcommands");
             }
@@ -334,7 +334,7 @@ class BaseCommandManager extends Manager {
         for (const command of this.commands) {
             total += +command.isSubcmd;
 
-            if (command.isSubcmd || command.subcommands.length < 1) {
+            if (command.isSubcmd || Util.empty(command.subcommands)) {
                 continue;
             }
 

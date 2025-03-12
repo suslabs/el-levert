@@ -57,7 +57,7 @@ class PreviewHandler extends Handler {
         logUsage(msg, str);
 
         const t1 = performance.now(),
-            match = Util.firstElement(Util.findMessageUrls(str));
+            match = Util.first(Util.findMessageUrls(str));
 
         if (typeof match === "undefined") {
             throw new HandlerError("Invalid input string");
@@ -77,7 +77,7 @@ class PreviewHandler extends Handler {
         let content = prevMsg.content,
             split = content.split("\n");
 
-        if (content.length > this.outCharLimit) {
+        if (Util.overSizeLimit(content, this.outCharLimit)) {
             content = content.substring(0, this.outCharLimit) + "...";
         }
 
@@ -87,7 +87,7 @@ class PreviewHandler extends Handler {
 
         let image;
 
-        if (prevMsg.attachments.size > 0) {
+        if (!Util.empty(prevMsg.attachments)) {
             const attach = prevMsg.attachments.first(),
                 isImage = attach.contentType.startsWith("image/");
 
@@ -95,7 +95,7 @@ class PreviewHandler extends Handler {
                 image = attach.url;
             }
 
-            if (content.length < 1) {
+            if (Util.empty(content)) {
                 if (isImage) {
                     content = hyperlink(`[Image (${attach.name})]`, attach.url);
                 } else {

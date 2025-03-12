@@ -8,7 +8,7 @@ export default {
     subcommand: true,
 
     handler: async function (args, msg, perm) {
-        if (args.length === 0) {
+        if (Util.empty(args)) {
             return ":information_source: `t alias name other_tag [args]`";
         }
 
@@ -26,7 +26,7 @@ export default {
             return ":warning: " + e1 ?? e2;
         }
 
-        if (a_name.length === 0) {
+        if (Util.empty(a_name)) {
             return `:warning: Alias target must be specified.
 If you want to de-alias the tag, \`edit\` it.`;
         }

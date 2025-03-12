@@ -6,7 +6,7 @@ const messageRegex = /(.+?)\s*(?:(?:(['"`])((?:[^\2\\]|\\.)*?)\2)|$)/;
 
 export default {
     name: "add",
-    aliases: ["create"],
+    aliases: ["set", "create"],
     parent: "reminder",
     subcommand: true,
 
@@ -17,11 +17,11 @@ export default {
         let quote = match[2],
             message = match[3] ?? "";
 
-        if (args.length === 0 || date.length === 0) {
+        if (Util.empty(args) || Util.empty(date)) {
             return ':information_source: `reminder add [date] "message"`';
         }
 
-        if (message.length > 0) {
+        if (!Util.empty(message)) {
             message = message.replaceAll("\\" + quote, quote);
         }
 

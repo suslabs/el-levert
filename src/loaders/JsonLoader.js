@@ -111,7 +111,7 @@ class JsonLoader extends TextFileLoader {
             const split = err.instancePath.split("/"),
                 newPath = split.slice(1).join(".");
 
-            if (newPath.length > 0) {
+            if (!Util.empty(newPath)) {
                 errMessage.push(`Property ${newPath} ${err.message}`);
             } else {
                 errMessage.push(Util.capitalize(err.message));

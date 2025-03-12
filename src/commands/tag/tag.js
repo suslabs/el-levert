@@ -15,7 +15,9 @@ async function parseBase(t_args, msg) {
         msg = dummyMsg;
     }
 
-    if (typeof t_args === "undefined" || (t_args.length < 1 && msg.attachments.size === 0)) {
+    const hasAttachments = !Util.empty(msg.attachments);
+
+    if (typeof t_args === "undefined" || (Util.empty(t_args) && !hasAttachments)) {
         return {
             err: ":warning: Tag body is empty."
         };
@@ -23,7 +25,7 @@ async function parseBase(t_args, msg) {
 
     let body, isScript;
 
-    if (msg.attachments.size > 0) {
+    if (hasAttachments) {
         try {
             [body, isScript] = await getClient().tagManager.downloadBody(msg);
         } catch (err) {
@@ -85,7 +87,7 @@ async function getPreview(out, msg) {
         },
         cleanOut = getClient().previewHandler.removeLink(out);
 
-    if (cleanOut.length > 0) {
+    if (!Util.empty(cleanOut)) {
         previewMsg.content = cleanOut;
     }
 
@@ -119,7 +121,7 @@ export default {
     },
 
     handler: async function (args, msg, perm) {
-        if (args.length === 0) {
+        if (Util.empty(args)) {
             return `:information_source: %t [${this.getSubcmdList(perm)}] tag_name [tag_args]`;
         }
 
@@ -136,7 +138,7 @@ export default {
             let out = `:warning: Tag **${t_name}** doesn't exist.`,
                 find = await getClient().tagManager.search(t_name, 5);
 
-            if (find.length > 0) {
+            if (!Util.empty(find)) {
                 const names = `**${find.join("**, **")}**`;
                 out += `\nDid you mean: ${names}?`;
             }

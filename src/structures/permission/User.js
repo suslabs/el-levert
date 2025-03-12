@@ -31,7 +31,7 @@ class User {
     }
 
     format(discord = false) {
-        if (this.username.length > 0) {
+        if (!Util.empty(this.username)) {
             const formattedUser = discord ? inlineCode(this.user) : this.user;
             return `${this.username} (${formattedUser})`;
         }

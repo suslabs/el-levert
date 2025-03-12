@@ -145,7 +145,7 @@ class BaseDiscordTransport extends Transport {
             embeds: [embed]
         };
 
-        if (typeof fileContent.length > 0) {
+        if (!Util.empty(fileContent)) {
             out = {
                 ...out,
                 ...Util.getFileAttach(fileContent, "log.txt")

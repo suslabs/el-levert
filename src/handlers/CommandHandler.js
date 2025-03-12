@@ -4,9 +4,10 @@ import Handler from "./Handler.js";
 
 import { getClient, getLogger } from "../LevertClient.js";
 import Util from "../util/Util.js";
+import VMUtil from "../util/vm/VMUtil.js";
 
 function logUsage(msg, name, args) {
-    const cmdArgs = args.length > 0 ? ` with args:${Util.formatLog(args)}` : ".";
+    const cmdArgs = !Util.empty(args) ? ` with args:${Util.formatLog(args)}` : ".";
 
     getLogger().info(
         `User ${msg.author.id} (${msg.author.username}) used command "${name}" in channel ${msg.channel.id} (${Util.formatChannelName(msg.channel)})${cmdArgs}`
@@ -30,6 +31,8 @@ class CommandHandler extends Handler {
         super(true, true, true, {
             userSweepInterval: 10 / Util.durationSeconds.milli
         });
+
+        this.minResponseTime = getClient().config.minResponseTime / Util.durationSeconds.milli;
 
         this.outCharLimit = Util.clamp(getClient().config.outCharLimit, 0, 2000);
         this.outLineLimit = Util.clamp(getClient().config.outLineLimit, 0, 2000);
@@ -64,26 +67,71 @@ class CommandHandler extends Handler {
 
     async _executeCommand(cmd, msg, args) {
         logUsage(msg, cmd.name, args);
-        const t1 = performance.now();
 
-        let out = await cmd.execute(args, { msg });
+        const t1 = performance.now(),
+            res = await cmd.execute(args, { msg });
 
-        if (typeof out === "string") {
-            if (out.length > this.outCharLimit || Util.countLines(out) > this.outLineLimit) {
-                out = Util.getFileAttach(out);
+        logTime(t1);
+
+        const msgRes = res !== null && typeof res === "object",
+            str = VMUtil.formatOutput(msgRes ? res.content : res)?.trim();
+
+        let out = msgRes ? res : {};
+
+        if (Util.overSizeLimits(str, this.outCharLimit, this.outLineLimit)) {
+            const file = Util.first(Util.getFileAttach(str).files);
+            out.files = out.files ? [file, ...out.files] : [file];
+        } else {
+            out.content = str;
+        }
+
+        if (!Array.isArray(out.embeds)) {
+            return out;
+        }
+
+        for (const [i, embed] of out.embeds.entries()) {
+            const oversized = Util.overSizeLimits(embed, this.outCharLimit, this.outLineLimit);
+
+            if (!oversized) {
+                continue;
+            }
+
+            const [chars, lines] = oversized,
+                n = Util.single(out.embeds) ? "" : ` ${i + 1}`;
+
+            if (chars !== null) {
+                return `:warning: Embed${n} is too long. (${chars} / ${this.outCharLimit})`;
+            }
+
+            if (lines !== null) {
+                return `:warning: Embed${n} has too many newlines. (${lines} / ${this.outLineLimit})`;
             }
         }
 
-        logTime(t1);
         return out;
     }
 
+    async _addDelay(t1) {
+        const t2 = performance.now(),
+            time = Util.timeDelta(t2, t1);
+
+        if (time < this.minResponseTime) {
+            const delay = this.minResponseTime - time;
+            await Util.delay(delay);
+        }
+    }
+
     async _executeAndReply(cmd, msg, args) {
+        const t1 = performance.now();
+
         let out;
 
         try {
             out = await this._executeCommand(cmd, msg, args);
+            await this._addDelay(t1);
         } catch (err) {
+            await this._addDelay(t1);
+
             await this.handleExecutionError(err, msg, cmd);
             return;
         }

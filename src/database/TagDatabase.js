@@ -5,7 +5,7 @@ import Tag from "../structures/tag/Tag.js";
 import Util from "../util/Util.js";
 
 function sortTags(tags) {
-    const objs = typeof Util.firstElement(tags) !== "string";
+    const objs = typeof Util.first(tags) !== "string";
 
     tags.sort((a, b) => {
         if (objs) {
@@ -26,7 +26,7 @@ class TagDatabase extends SqliteDatabase {
             $name: name
         });
 
-        if (typeof row._data === "undefined" || row.length < 1) {
+        if (typeof row._data === "undefined" || Util.empty(row)) {
             return false;
         }
 

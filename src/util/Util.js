@@ -388,11 +388,23 @@ const Util = {
         return Util.round(num, digits);
     },
 
-    firstElement: (arr, start = 0) => {
+    empty: obj => {
+        return (obj?.length ?? obj?.size ?? 0) === 0;
+    },
+
+    single: obj => {
+        return (obj?.length ?? obj?.size ?? 0) === 1;
+    },
+
+    multiple: obj => {
+        return (obj?.length ?? obj?.size ?? 0) > 1;
+    },
+
+    first: (arr, start = 0) => {
         return arr[start];
     },
 
-    lastElement: (arr, start = 0) => {
+    last: (arr, start = 0) => {
         return arr[arr.length + start - 1];
     },
 
@@ -533,7 +545,7 @@ const Util = {
     getUtf8ByteLength: str => {
         let length = 0;
 
-        for (let i = 0; i < str.length; i++) {
+        for (let i = 0; i < str?.length; i++) {
             const codepoint = str.codePointAt(i);
 
             if (codepoint <= 0x7f) {
@@ -551,8 +563,46 @@ const Util = {
         return length;
     },
 
+    countChars: str => {
+        return str?.length ?? 0;
+    },
+
     countLines: str => {
-        return str.split("\n").length;
+        return str ? str.split("\n").length : 0;
+    },
+
+    overSizeLimits: (obj, charLimit, lineLimit) => {
+        if (obj === null || typeof obj === "undefined") {
+            return false;
+        }
+
+        if (typeof charLimit === "number") {
+            const count =
+                typeof obj === "string"
+                    ? Util.countChars(obj)
+                    : Util.getEmbedSize(obj, {
+                          count: "chars"
+                      });
+
+            if (count > charLimit) {
+                return [count, null];
+            }
+        }
+
+        if (typeof lineLimit === "number") {
+            const count =
+                typeof obj === "string"
+                    ? Util.countLines(obj)
+                    : Util.getEmbedSize(obj, {
+                          count: "lines"
+                      });
+
+            if (count > lineLimit) {
+                return [null, count];
+            }
+        }
+
+        return false;
     },
 
     findNthCharacter: (str, char, n) => {
@@ -647,42 +697,61 @@ const Util = {
         return `#${channel.name}`;
     },
 
-    getEmbedSize(embed, countURLs = false) {
+    getEmbedSize(embed, options = {}) {
+        const countType = options.count ?? "chars",
+            countURLs = options.countURLs ?? false;
+
         if (typeof embed.data !== "undefined") {
             embed = embed.data;
         }
 
-        let size = 0;
-
-        size += embed.title?.length ?? 0;
-        size += embed.description?.length ?? 0;
-
-        size += embed.author?.name?.length ?? 0;
-        size += embed.timestamp?.length ?? 0;
-        size += embed.footer?.text?.length ?? 0;
-
-        if (countURLs) {
-            size += embed.url?.length ?? 0;
-            size += embed.thumbnail?.url?.length ?? 0;
-            size += embed.image?.url?.length ?? 0;
-
-            size += embed.author?.icon_url?.length ?? 0;
-            size += embed.author?.url?.length ?? 0;
-
-            size += embed.footer?.icon_url?.length ?? 0;
+        if (embed === null || typeof embed === "undefined") {
+            return 0;
         }
 
-        if (typeof embed.fields === "undefined") {
-            return size;
+        let size = 0,
+            count;
+
+        switch (countType) {
+            case "chars":
+                count = Util.countChars;
+                break;
+            case "lines":
+                count = Util.countLines;
+                break;
+            default:
+                throw new UtilError("Invalid count type: " + countType);
         }
 
-        size += embed.fields.reduce((sum, val) => {
-            const { name, value } = val;
+        size += count(embed.title);
+        size += count(embed.description);
 
-            const nameLength = name?.length ?? 0,
-                valueLength = value?.length ?? 0;
+        size += count(embed.author?.name);
+        size += count(embed.timestamp);
+        size += count(embed.footer?.text);
 
-            return sum + nameLength + valueLength;
+        if (countType === "chars" && countURLs) {
+            size += count(embed.url);
+            size += count(embed.thumbnail?.url);
+            size += count(embed.image?.url);
+
+            size += count(embed.author?.icon_url);
+            size += count(embed.author?.url);
+
+            size += count(embed.footer?.icon_url);
+        }
+
+        size += (embed.fields ?? []).reduce((sum, field) => {
+            const { name, value, inline } = field;
+
+            let nameSize = count(name),
+                valueSize = count(value);
+
+            if (countType === "lines" && name && !inline) {
+                nameSize += 1;
+            }
+
+            return sum + nameSize + valueSize;
         }, 0);
 
         return size;
@@ -879,7 +948,7 @@ const Util = {
         while (split.length > 0) {
             parent = obj;
 
-            const propertyName = Util.firstElement(split);
+            const propertyName = Util.first(split);
 
             if (typeof obj === "undefined") {
                 obj = propertyMap[propertyName];

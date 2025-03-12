@@ -24,14 +24,14 @@ class Group {
     formatUsers(discord = false) {
         const formattedName = discord ? bold(this.name) : this.name,
             formattedLevel = discord ? bold(this.level) : this.level,
-            s = this.users.length > 1 ? "s" : "",
+            s = Util.multiple(this.users) ? "s" : "",
             title = `Group ${formattedName} - Level ${formattedLevel} - User${s}:`;
 
         const spaces = discord ? "" : " ".repeat(Group.indentation);
 
         let userFormat;
 
-        if (this.users.length > 0) {
+        if (!Util.empty(this.users)) {
             userFormat = this.users
                 .map((user, i) => {
                     const name = user.format(discord);

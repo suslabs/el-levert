@@ -35,37 +35,6 @@ const VMUtil = {
         return recRemove(obj, []);
     },
 
-    formatReply: (text, msg) => {
-        let out = {};
-
-        if (typeof text === "object") {
-            msg = text;
-        } else {
-            out.content = VMUtil.formatOutput(text) ?? "";
-        }
-
-        if (msg === null || typeof msg === "undefined") {
-            return out;
-        }
-
-        if (typeof msg.content !== "undefined") {
-            out.content = VMUtil.formatOutput(msg.content);
-        }
-
-        if (typeof msg.embed !== "undefined") {
-            const embed = msg.embed;
-            embed.description ??= "";
-
-            out.embeds = [embed];
-        }
-
-        if (typeof msg.file !== "undefined") {
-            out.file = msg.file;
-        }
-
-        return out;
-    },
-
     formatOutput: out => {
         if (out === null) {
             return undefined;
@@ -94,9 +63,53 @@ const VMUtil = {
         }
     },
 
-    sockWrite: (socket, packetType, obj) => {
-        obj.packetType = packetType ?? "unknown";
-        socket.write(JSON.stringify(obj) + "\n");
+    _allowedEmbedProps: [
+        "author",
+        "color",
+        "description",
+        "fields",
+        "footer",
+        "hexColor",
+        "image",
+        "timestamp",
+        "title",
+        "url"
+    ],
+    formatReply: (text, msg) => {
+        let out = {};
+
+        if (typeof text === "object") {
+            msg = text;
+        } else {
+            out.content = VMUtil.formatOutput(text) ?? "";
+        }
+
+        if (msg === null || typeof msg === "undefined") {
+            return out;
+        }
+
+        if (typeof msg.content !== "undefined") {
+            out.content = VMUtil.formatOutput(msg.content);
+        }
+
+        if (msg.embed !== null && typeof msg.embed === "object") {
+            const embed = {};
+
+            for (const prop of VMUtil._allowedEmbedProps) {
+                if (prop in msg.embed) {
+                    embed[prop] = msg.embed[prop];
+                }
+            }
+
+            embed.description ??= "";
+            out.embeds = [embed];
+        }
+
+        if (msg.file !== null && typeof msg.file === "object") {
+            out.file = msg.file;
+        }
+
+        return out;
     },
 
     initialBreakpoint: "/* break on script start */ debugger;",
@@ -132,6 +145,11 @@ const VMUtil = {
             formattedFrames = stackFrames.map(frame => spaces + frame);
 
         return msgLine + "\n" + formattedFrames.join("\n");
+    },
+
+    sockWrite: (socket, packetType, obj) => {
+        obj.packetType = packetType ?? "unknown";
+        socket.write(JSON.stringify(obj) + "\n");
     }
 };
 

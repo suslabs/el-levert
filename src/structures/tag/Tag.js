@@ -23,12 +23,12 @@ class Tag {
 
     constructor(data) {
         if (typeof data?.hops === "string") {
-            data.hops = data.hops.split(hopsSeparator);
+            data.hops = data.hops.split(Tag.hopsSeparator);
         }
 
         Util.setValuesWithDefaults(this, data, Tag.defaultValues);
 
-        if (this.hops.length === 0) {
+        if (Util.empty(this.hops)) {
             this.hops.push(this.name);
         } else if (this.isAlias) {
             this.body = Tag.defaultValues.body;
@@ -43,7 +43,7 @@ class Tag {
     }
 
     get isAlias() {
-        return this.hops.length > 1;
+        return Util.multiple(this.hops);
     }
 
     get isOld() {
@@ -126,7 +126,7 @@ class Tag {
             multipleType = false;
 
         if (Array.isArray(type)) {
-            if (type.length === 0 || type.length > 2) {
+            if (Util.empty(type) || type.length > 2) {
                 throw new TagError("Invalid type");
             }
 
@@ -134,14 +134,14 @@ class Tag {
             multipleType = true;
         }
 
-        if (typeof type !== "string" || type.length < 1) {
+        if (typeof type !== "string" || Util.empty(type)) {
             throw new TagError("Invalid type");
         }
 
         let newType;
 
         if (multipleType) {
-            if (typeof version !== "string" || version.length < 1) {
+            if (typeof version !== "string" || Util.empty(version)) {
                 throw new TagError("Invalid version");
             }
 
@@ -200,7 +200,7 @@ class Tag {
     }
 
     setVersion(version) {
-        if (typeof version !== "string" || version.length < 1) {
+        if (typeof version !== "string" || Util.empty(version)) {
             throw new TagError("Invalid version");
         }
 
@@ -221,7 +221,7 @@ class Tag {
     }
 
     getHopsString() {
-        return this.hops.join(hopsSeparator);
+        return this.hops.join(Tag.hopsSeparator);
     }
 
     getSize() {
@@ -238,7 +238,7 @@ class Tag {
         if (this.isAlias) {
             format += ` (-> ${this.aliasName}`;
 
-            if (this.args.length > 0) {
+            if (!Util.empty(this.args)) {
                 format += `: ${this.args}`;
             }
 
@@ -293,7 +293,7 @@ class Tag {
 
             let out = header;
 
-            if (this.args.length > 0) {
+            if (!Util.empty(this.args)) {
                 out += ` (with args: `;
 
                 if (discord) {
@@ -330,8 +330,8 @@ class Tag {
         }
 
         const aliasName = this.isAlias ? this.aliasName : "none",
-            body = this.body.length < 1 ? "empty" : this.body,
-            args = this.args.length < 1 ? "none" : this.args;
+            body = Util.empty(this.body) ? "empty" : this.body,
+            args = Util.empty(this.args) ? "none" : this.args;
 
         let owner;
 

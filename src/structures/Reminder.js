@@ -15,7 +15,7 @@ class Reminder {
     }
 
     get hasMessage() {
-        return this.msg.length > 0;
+        return !Util.empty(this.msg);
     }
 
     isPast(date) {

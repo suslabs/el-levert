@@ -36,8 +36,8 @@ class Loader {
     getName(capitalized = false) {
         let name = this.name;
 
-        if (this.type.length > 0) {
-            if (name.length > 0) {
+        if (!Util.empty(this.type)) {
+            if (!Util.empty(name)) {
                 name += " ";
             }
 
@@ -103,7 +103,7 @@ class Loader {
             loadedMessage = this.getIgnoredMessage();
         }
 
-        if (loadedMessage.length > 0) {
+        if (!Util.empty(loadedMessage)) {
             this.logger?.log(ignored ? "debug" : "info", loadedMessage);
         }
 
@@ -134,7 +134,7 @@ class Loader {
             writtenMessage = this.getIgnoredMessage();
         }
 
-        if (writtenMessage.length > 0) {
+        if (!Util.empty(writtenMessage)) {
             this.logger?.log(ignored ? "debug" : "info", writtenMessage);
         }
 
@@ -156,7 +156,7 @@ class Loader {
             loadingMessage = `Loading ${this.getName()}...`;
         }
 
-        if (loadingMessage.length > 0) {
+        if (!Util.empty(loadingMessage)) {
             this.logger?.debug(loadingMessage);
         }
 
@@ -183,7 +183,7 @@ class Loader {
             writingMessage = `Writing ${this.getName()}...`;
         }
 
-        if (writingMessage.length > 0) {
+        if (!Util.empty(writingMessage)) {
             this.logger?.debug(writingMessage);
         }
 
