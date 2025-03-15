@@ -16,7 +16,7 @@ class BotEvent {
             throw new EventError("Event must have a listener");
         }
 
-        Util.setValuesWithDefaults(this, options, BotEvent.defaultValues);
+        Util.setValuesWithDefaults(this, options, this.constructor.defaultValues);
 
         this.registered = false;
     }

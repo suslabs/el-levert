@@ -12,7 +12,7 @@ class Group {
     static indentation = 4;
 
     constructor(data) {
-        Util.setValuesWithDefaults(this, data, Group.defaultValues);
+        Util.setValuesWithDefaults(this, data, this.constructor.defaultValues);
     }
 
     setUsers(users) {

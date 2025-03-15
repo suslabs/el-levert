@@ -13,7 +13,7 @@ class WebhookTransport extends BaseDiscordTransport {
 
         let webhook = opts.webhook;
 
-        if (typeof webhook === "undefined") {
+        if (typeof webhook !== "object") {
             webhook = this._getWebhook(opts.url);
         } else {
             this.webhookUrl = webhook.url;
@@ -40,7 +40,7 @@ class WebhookTransport extends BaseDiscordTransport {
     static _disableCodes = [RESTJSONErrorCodes.InvalidWebhookToken, RESTJSONErrorCodes.UnknownWebhook];
 
     _getWebhook(url) {
-        if (typeof url === "undefined" || Util.empty(url)) {
+        if (typeof url !== "string" || Util.empty(url)) {
             throw new LoggerError("If a webhook object wasn't provided, a webhook url must be provided instead");
         }
 

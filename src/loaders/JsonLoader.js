@@ -173,9 +173,7 @@ class JsonLoader extends TextFileLoader {
             return status;
         }
 
-        const schema = JSON.parse(schemaString);
-        this.schema = schema;
-
+        this.schema = JSON.parse(schemaString);
         return LoadStatus.successful;
     }
 

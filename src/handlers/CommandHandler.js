@@ -65,22 +65,15 @@ class CommandHandler extends Handler {
         return true;
     }
 
-    async _executeCommand(cmd, msg, args) {
-        logUsage(msg, cmd.name, args);
-
-        const t1 = performance.now(),
-            res = await cmd.execute(args, { msg });
-
-        logTime(t1);
-
+    _processResult(res) {
         const msgRes = res !== null && typeof res === "object",
             str = VMUtil.formatOutput(msgRes ? res.content : res)?.trim();
 
         let out = msgRes ? res : {};
 
         if (Util.overSizeLimits(str, this.outCharLimit, this.outLineLimit)) {
-            const file = Util.first(Util.getFileAttach(str).files);
-            out.files = out.files ? [file, ...out.files] : [file];
+            const files = Util.getFileAttach(str).files;
+            out.files = out.files ? [...files, ...out.files] : files;
         } else {
             out.content = str;
         }
@@ -109,6 +102,16 @@ class CommandHandler extends Handler {
         }
 
         return out;
+    }
+
+    async _executeCommand(cmd, msg, args) {
+        logUsage(msg, cmd.name, args);
+
+        const t1 = performance.now(),
+            res = await cmd.execute(args, { msg });
+
+        logTime(t1);
+        return this._processResult(res);
     }
 
     async _addDelay(t1) {

@@ -24,7 +24,7 @@ class VMFunction {
             throw new VMError("VM function must have a reference function");
         }
 
-        Util.setValuesWithDefaults(this, options, VMFunction.defaultValues);
+        Util.setValuesWithDefaults(this, options, this.constructor.defaultValues);
 
         this._resolveReference(propertyMap);
         this._resolveBinds(propertyMap);

@@ -9,12 +9,13 @@ import Util from "../../util/Util.js";
 import dbFilenames from "../../database/config/dbFilenames.json" assert { type: "json" };
 
 class DBManager extends Manager {
-    constructor(enabled, dbName, classType, fieldName) {
+    constructor(enabled, dbName, fieldName, classType) {
         super(enabled);
 
         this.dbName = dbName;
-        this.classType = classType;
         this.fieldName = fieldName;
+
+        this._classType = classType;
 
         this._setPaths();
     }
@@ -66,7 +67,7 @@ class DBManager extends Manager {
     }
 
     async _loadDatabase() {
-        const db = new this.classType(this._dbPath, this._queryDir, DBManager._dbOptions);
+        const db = new this._classType(this._dbPath, this._queryDir, DBManager._dbOptions);
         this[this.fieldName] = db;
 
         if (!(await this.checkDatabase())) {

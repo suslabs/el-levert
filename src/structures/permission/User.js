@@ -11,7 +11,7 @@ class User {
     };
 
     constructor(data) {
-        Util.setValuesWithDefaults(this, data, User.defaultValues);
+        Util.setValuesWithDefaults(this, data, this.constructor.defaultValues);
     }
 
     setUserId(id) {

@@ -11,7 +11,7 @@ class Reminder {
     };
 
     constructor(data) {
-        Util.setValuesWithDefaults(this, data, Reminder.defaultValues);
+        Util.setValuesWithDefaults(this, data, this.constructors.defaultValues);
     }
 
     get hasMessage() {

@@ -15,7 +15,7 @@ class PermissionManager extends DBManager {
     static loadPriority = 1;
 
     constructor(enabled) {
-        super(enabled, "permission", PermissionDatabase, "perm_db");
+        super(enabled, "permission", "perm_db", PermissionDatabase);
 
         this.maxGroupNameLength = getClient().config.maxGroupNameLength;
 

@@ -15,7 +15,7 @@ class TagManager extends DBManager {
     static loadPriority = 0;
 
     constructor() {
-        super(true, "tag", TagDatabase, "tag_db");
+        super(true, "tag", "tag_db", TagDatabase);
 
         this.maxQuota = getClient().config.maxQuota;
         this.maxTagSize = getClient().config.maxTagSize;
@@ -140,10 +140,11 @@ class TagManager extends DBManager {
         }
 
         if (body === null || typeof body === "undefined") {
-            throw new TagError("Invalid tag body");
+            throw new TagError("No tag body provided");
         }
 
-        body = body.trim();
+        body = body.toString().trim();
+
         if (Util.empty(body)) {
             throw new TagError("Can't add an empty tag");
         }
@@ -170,10 +171,11 @@ class TagManager extends DBManager {
         }
 
         if (body === null || typeof body === "undefined") {
-            throw new TagError("Invalid tag body");
+            throw new TagError("No tag body provideds");
         }
 
-        body = body.trim();
+        body = body.toString().trim();
+
         if (Util.empty(body)) {
             throw new TagError("Tag body is empty");
         }
@@ -247,7 +249,7 @@ class TagManager extends DBManager {
             create = true;
 
             if (typeof createOptions === "undefined") {
-                throw new TagError("No info for creating the tag");
+                throw new TagError("No info for creating the tag provided");
             }
         }
 

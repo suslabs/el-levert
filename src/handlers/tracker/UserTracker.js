@@ -5,10 +5,11 @@ import Util from "../../util/Util.js";
 class UserTracker {
     constructor(sweepInterval = 0) {
         this.sweepInterval = sweepInterval;
+        this.enableChecks = sweepInterval > 0;
+
         this.trackedUsers = [];
 
-        const enableChecks = sweepInterval > 0;
-        this.enableChecks = enableChecks;
+        this._sweepTimer = null;
 
         if (enableChecks) {
             this._setSweepInterval();
@@ -45,7 +46,7 @@ class UserTracker {
     }
 
     _setSweepInterval() {
-        if (typeof this._sweepTimer !== "undefined") {
+        if (this._sweepTimer !== null) {
             this._clearSweepInterval();
         }
 
@@ -54,12 +55,12 @@ class UserTracker {
     }
 
     _clearSweepInterval() {
-        if (typeof this._sweepTimer === "undefined") {
+        if (this._sweepTimer === null) {
             return;
         }
 
         clearInterval(this._sweepTimer);
-        delete this._sweepTimer;
+        this._sweepTimer = null;
     }
 }
 

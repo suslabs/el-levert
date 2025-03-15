@@ -45,7 +45,7 @@ class Command {
         this.isSubcmd = options.subcommand ?? false;
         delete options.subcommand;
 
-        Util.setValuesWithDefaults(this, options, Command.defaultValues);
+        Util.setValuesWithDefaults(this, options, this.constructor.defaultValues);
 
         if (this.ownerOnly) {
             this.allowed = getClient().permManager.ownerLevel;

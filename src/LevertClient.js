@@ -43,6 +43,7 @@ class LevertClient extends DiscordClient {
 
         this.components = new Map();
 
+        this.logger = null;
         this._setupLogger();
     }
 
@@ -329,7 +330,7 @@ class LevertClient extends DiscordClient {
         this.silenceDiscordTransports(true);
 
         await this.stop();
-        this._buildClient();
+        this.buildClient();
 
         switch (typeof configs) {
             case "object":
@@ -368,7 +369,7 @@ class LevertClient extends DiscordClient {
     }
 
     _setupLogger() {
-        if (typeof this.logger !== "undefined") {
+        if (this.logger !== null) {
             this._deleteLogger();
         }
 
@@ -381,13 +382,13 @@ class LevertClient extends DiscordClient {
     }
 
     _deleteLogger() {
-        if (typeof this.logger === "undefined") {
+        if (this.logger === null) {
             return;
         }
 
         this.logger.end();
+        this.logger = null;
 
-        delete this.logger;
         delete this._wrapEvent;
     }
 
@@ -395,12 +396,14 @@ class LevertClient extends DiscordClient {
         this.loadComponent(
             "handler",
             Handlers,
+
             {
                 commandHandler: [],
                 previewHandler: [this.config.enablePreviews],
                 reactionHandler: [this.reactions.enableReacts],
                 sedHandler: [this.config.enableSed]
             },
+
             {
                 showLoadingMessages: false
             }

@@ -22,9 +22,7 @@ class DirectoryLoader extends Loader {
 
         this.logName = this.getLogName();
 
-        const excludeDirs = (options.excludeDirs ?? []).map(dir => path.resolve(projRoot, dir));
-        this.excludeDirs = excludeDirs;
-
+        this.excludeDirs = (options.excludeDirs ?? []).map(dir => path.resolve(projRoot, dir));
         this.fileExtension = options.fileExtension ?? "any";
 
         this.fileLoaderClass = options.fileLoaderClass ?? FileLoader;

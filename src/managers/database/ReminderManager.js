@@ -19,7 +19,7 @@ class ReminderManager extends DBManager {
     static maxMsgLength = 512;
 
     constructor(enabled) {
-        super(enabled, "reminder", ReminderDatabase, "remind_db");
+        super(enabled, "reminder", "remind_db", ReminderDatabase);
 
         const sendInterval = getClient().config.reminderSendInterval,
             intervalMs = Math.floor(sendInterval / Util.durationSeconds.milli);
@@ -28,6 +28,8 @@ class ReminderManager extends DBManager {
         this.sendInterval = intervalMs;
 
         this.maxMsgLength = Util.clamp(ReminderManager.maxMsgLength, 0, 1500);
+
+        this._sendTimer = null;
     }
 
     checkMessage(msg) {
@@ -121,7 +123,7 @@ class ReminderManager extends DBManager {
     }
 
     startSendLoop() {
-        if (!this.enabled) {
+        if (!this.enabled || this._sendTimer !== null) {
             return;
         }
 
@@ -156,12 +158,12 @@ class ReminderManager extends DBManager {
     }
 
     _stopSendLoop() {
-        if (typeof this._sendTimer === "undefined") {
+        if (this._sendTimer === null) {
             return;
         }
 
         clearInterval(this._sendTimer);
-        delete this._sendTimer;
+        this._sendTimer = null;
 
         getLogger().info("Stopped reminder loop.");
     }

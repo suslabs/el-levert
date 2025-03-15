@@ -43,7 +43,7 @@ class IsolateInspector {
         channel.onNotification = wrappedReply;
 
         this._channel = channel;
-        this.wrappedReply = wrappedReply;
+        this._wrappedReply = wrappedReply;
 
         getLogger().debug("Created channel.");
     }
@@ -112,7 +112,7 @@ class IsolateInspector {
         }
 
         this._channel = null;
-        delete this.wrappedReply;
+        delete this._wrappedReply;
     }
 
     static _getWrappedReplyFunc(inspector) {

@@ -37,9 +37,6 @@ class TagVM extends VM {
         this.memLimit = getClient().config.memLimit;
         this.timeLimit = limitMs;
 
-        this.outCharLimit = Util.clamp(getClient().config.outCharLimit, 0, 2000);
-        this.outLineLimit = Util.clamp(getClient().config.outLineLimit, 0, 2000);
-
         this.enableInspector = getClient().config.enableInspector;
     }
 
@@ -148,17 +145,7 @@ class TagVM extends VM {
     }
 
     _processReply(msg) {
-        const out = JSON.parse(msg),
-            files = [];
-
-        if (typeof out.content !== "undefined") {
-            const str = out.content;
-
-            if (Util.overSizeLimits(str, this.outCharLimit, this.outLineLimit)) {
-                files.push(...Util.getFileAttach(str).files);
-                delete out.content;
-            }
-        }
+        let out = JSON.parse(msg);
 
         if (typeof out.file !== "undefined") {
             let { data, name } = out.file;
@@ -168,11 +155,10 @@ class TagVM extends VM {
                 data = Object.values(data);
             }
 
-            files.push(...Util.getFileAttach(data, name).files);
-        }
-
-        if (!Util.empty(files)) {
-            out.files = files;
+            out = {
+                ...out,
+                ...Util.getFileAttach(data, name).files
+            };
         }
 
         return out;

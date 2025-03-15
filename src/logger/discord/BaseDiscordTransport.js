@@ -26,7 +26,9 @@ class BaseDiscordTransport extends Transport {
 
         this.name = opts.name ?? this.constructor.$name;
         this.sendInterval = opts.sendInterval ?? 0;
+
         this.client = opts.client;
+        this._hasClient = opts.client === null && typeof opts.client === "undefined";
 
         this.initialized = false;
 
@@ -37,6 +39,7 @@ class BaseDiscordTransport extends Transport {
         }
 
         this._buffer = [];
+        this._sendTimer = null;
 
         this._startSendLoop();
     }
@@ -201,12 +204,12 @@ class BaseDiscordTransport extends Transport {
     }
 
     _stopSendLoop() {
-        if (typeof this._sendTimer === "undefined") {
+        if (this._sendTimer === null) {
             return;
         }
 
         clearInterval(this._sendTimer);
-        delete this._sendTimer;
+        this._sendTimer = null;
     }
 }
 

@@ -79,10 +79,35 @@ class DiscordClient {
         this.mentionUsers = false;
         this.pingReply = true;
 
-        this._buildClient();
+        this.client = null;
+        this.buildClient();
 
         this.wrapEvents = false;
         this.eventsDir = "";
+    }
+
+    buildClient() {
+        if (this.client !== null) {
+            new ClientError("Can't create a new client before disposing the old one");
+        }
+
+        this.logger?.info("Creating client...");
+
+        const options = {
+            intents: this.intents,
+            partials: this.partials,
+
+            rest: {
+                timeout: this.timeout + 1
+            }
+        };
+
+        const client = new Client(options);
+
+        this.client = client;
+        this.loggedIn = false;
+
+        this.setOptions();
     }
 
     setOptions(options) {
@@ -165,7 +190,7 @@ class DiscordClient {
         }
 
         this.client.destroy();
-        delete this.client;
+        this.client = null;
 
         this.loggedIn = false;
         this.logger?.info("Destroyed client.");
@@ -626,29 +651,6 @@ class DiscordClient {
     onReady() {
         this.loggedIn = true;
         this.logger?.info(`The bot is online. Logged in as "${this.client.user.username}".`);
-    }
-
-    _buildClient() {
-        if (typeof this.client !== "undefined") {
-            new ClientError("Can't create a new client without disposing the old one");
-        }
-
-        this.logger?.info("Creating client...");
-
-        const options = {
-            intents: this.intents,
-            partials: this.partials,
-            rest: {
-                timeout: this.timeout + 1
-            }
-        };
-
-        const client = new Client(options);
-
-        this.client = client;
-        this.loggedIn = false;
-
-        this.setOptions();
     }
 
     async _loadEvents() {
