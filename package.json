@@ -9,21 +9,21 @@
         "format": "prettier --config .prettierrc --ignore-path .prettierignore --write **/*.{js,cjs,json}"
     },
     "dependencies": {
-        "@leeoniya/ufuzzy": "^1.0.14",
+        "@leeoniya/ufuzzy": "^1.0.18",
         "ajv": "^8.17.1",
-        "axios": "^1.7.7",
-        "chrono-node": "^2.7.7",
-        "discord.js": "^14.16.3",
+        "axios": "^1.8.3",
+        "chrono-node": "^2.7.8",
+        "discord.js": "^14.18.0",
         "generic-pool": "^3.9.0",
-        "isolated-vm": "^5.0.1",
+        "isolated-vm": "^5.0.4",
         "sqlite3": "^5.1.7",
         "vm2": "^3.9.19",
-        "winston": "^3.15.0"
+        "winston": "^3.17.0"
     },
     "devDependencies": {
         "@babel/eslint-parser": "^7.25.9",
         "@babel/plugin-syntax-import-assertions": "^7.26.0",
         "eslint": "^8.57.1",
-        "prettier": "3.3.3"
+        "prettier": "^3.5.3"
     }
 }
