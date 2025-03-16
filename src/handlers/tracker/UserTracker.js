@@ -11,7 +11,7 @@ class UserTracker {
 
         this._sweepTimer = null;
 
-        if (enableChecks) {
+        if (this.enableChecks) {
             this._setSweepInterval();
         }
     }

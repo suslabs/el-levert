@@ -43,8 +43,9 @@ class SedHandler extends Handler {
             return false;
         }
 
-        let t1 = performance.now(),
-            sed;
+        const t1 = performance.now();
+
+        let sed;
 
         await msg.channel.sendTyping();
 
@@ -138,8 +139,9 @@ class SedHandler extends Handler {
     async _genSed(msg, str) {
         logUsage(msg);
 
-        const t1 = performance.now(),
-            match = str.match(SedHandler.sedRegex);
+        const t1 = performance.now();
+
+        const match = str.match(SedHandler.sedRegex);
 
         if (!match) {
             throw new HandlerError("Invalid input string");

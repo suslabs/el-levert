@@ -53,7 +53,6 @@ class FakeMsg {
                 channels: mentions?.channels && Array.from(mentions.channels.values())
             },
 
-            groupActivityApplicationId: channel?.groupActivityApplicationId,
             webhookId: msg.webhookId,
             groupActivityApplicationId: msg.groupActivityApplicationId,
             applicationId: msg.applicationId,

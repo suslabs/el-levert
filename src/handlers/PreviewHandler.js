@@ -55,9 +55,9 @@ class PreviewHandler extends Handler {
 
     async genPreview(msg, str) {
         logUsage(msg, str);
+        const t1 = performance.now();
 
-        const t1 = performance.now(),
-            match = Util.first(Util.findMessageUrls(str));
+        const match = Util.first(Util.findMessageUrls(str));
 
         if (typeof match === "undefined") {
             throw new HandlerError("Invalid input string");
@@ -144,8 +144,9 @@ class PreviewHandler extends Handler {
             return false;
         }
 
-        let t1 = performance.now(),
-            preview;
+        const t1 = performance.now();
+
+        let preview;
 
         try {
             preview = await this.genPreview(msg, msg.content);

@@ -523,10 +523,10 @@ const Util = {
         return [name, args];
     },
 
-    parseScriptRegex: /^(?:`{3}([\S]+\n)?([\s\S]+)`{3}|`([^`]+)`)$/,
+    codeblockRegex: /(?<!\\)(?:`{3}([\S]+\n)?([\s\S]*?)`{3}|`([^`\n]+)`)/g,
 
     parseScript: script => {
-        const match = script.match(Util.parseScriptRegex);
+        const match = script.match(Util._parseScriptRegex);
 
         if (!match) {
             return [false, script, ""];
@@ -967,6 +967,7 @@ const Util = {
     }
 };
 
-Util.validUrlRegex = new RegExp(`^${Util.urlRegex.toString()}$`);
+Util.validUrlRegex = new RegExp(`^${Util.urlRegex.source}$`);
+Util.parseScriptRegex = new RegExp(`^${Util.codeblockRegex.source}$`);
 
 export default Util;

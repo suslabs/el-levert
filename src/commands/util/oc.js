@@ -2,6 +2,8 @@ import { EmbedBuilder } from "discord.js";
 
 import GregicUtil from "../../util/oc/GregicUtil.js";
 
+import Util from "../../util/Util.js";
+
 export default {
     name: "oc",
     category: "util",

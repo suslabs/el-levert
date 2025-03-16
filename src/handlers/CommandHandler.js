@@ -14,9 +14,8 @@ function logUsage(msg, name, args) {
     );
 }
 
-function logTime(t1) {
-    const t2 = performance.now();
-    getLogger().info(`Command execution took ${Util.timeDelta(t2, t1).toLocaleString()}ms.`);
+function logTime(time) {
+    getLogger().info(`Command execution took ${time.toLocaleString()}ms.`);
 }
 
 function logOutput(cmd, out) {
@@ -65,6 +64,51 @@ class CommandHandler extends Handler {
         return true;
     }
 
+    static _mentionRegex = /@(everyone|here)/g;
+
+    async _executeAndReply(cmd, msg, args) {
+        const t1 = performance.now();
+
+        let out;
+
+        try {
+            const [res] = await this._executeCommand(cmd, msg, args);
+            out = this._processResult(res);
+            this._stripPings(out);
+
+            await this._addDelay(t1);
+        } catch (err) {
+            await this._addDelay(t1);
+
+            await this._handleExecutionError(err, msg, cmd);
+            return;
+        }
+
+        logOutput(cmd, out);
+
+        try {
+            const reply = await msg.reply(out);
+            this.messageTracker.addMsg(reply, msg.id);
+        } catch (err) {
+            await this._handleReplyError(err, msg);
+            return;
+        }
+    }
+
+    async _executeCommand(cmd, msg, args) {
+        logUsage(msg, cmd.name, args);
+
+        const t1 = performance.now();
+
+        const res = await cmd.execute(args, { msg });
+
+        const t2 = performance.now(),
+            time = Util.timeDelta(t2, t1);
+
+        logTime(time);
+        return [res, time];
+    }
+
     _processResult(res) {
         const msgRes = res !== null && typeof res === "object",
             str = VMUtil.formatOutput(msgRes ? res.content : res)?.trim();
@@ -104,14 +148,54 @@ class CommandHandler extends Handler {
         return out;
     }
 
-    async _executeCommand(cmd, msg, args) {
-        logUsage(msg, cmd.name, args);
+    _escapeMentions(str) {
+        if (typeof str !== "string") {
+            return str;
+        }
 
-        const t1 = performance.now(),
-            res = await cmd.execute(args, { msg });
+        const codeblockRanges = Array.from(str.matchAll(Util.codeblockRegex)).map(match => {
+            return [match.index, match.index + match.length];
+        });
 
-        logTime(t1);
-        return this._processResult(res);
+        return str.replaceAll(CommandHandler._mentionRegex, (match, p1, offset) => {
+            for (const [start, end] of codeblockRanges) {
+                if (offset >= start && offset < end) {
+                    return match;
+                }
+            }
+
+            return `\\@${p1}`;
+        });
+    }
+
+    _stripPings(out) {
+        out.content = this._escapeMentions(out.content);
+
+        if (!Array.isArray(out.embeds)) {
+            return out;
+        }
+
+        for (const embed of out.embeds) {
+            embed.title = this._escapeMentions(embed.title);
+            embed.description = this._escapeMentions(embed.description);
+
+            if (typeof embed.footer !== "undefined") {
+                embed.footer.text = this._escapeMentions(embed.footer.text);
+            }
+
+            if (typeof embed.author !== "undefined") {
+                embed.author.name = this._escapeMentions(embed.author.name);
+            }
+
+            if (Array.isArray(embed.fields)) {
+                for (const field of embed.fields) {
+                    field.name = this._escapeMentions(field.name);
+                    field.value = this._escapeMentions(field.value);
+                }
+            }
+        }
+
+        return out;
     }
 
     async _addDelay(t1) {
@@ -124,33 +208,7 @@ class CommandHandler extends Handler {
         }
     }
 
-    async _executeAndReply(cmd, msg, args) {
-        const t1 = performance.now();
-
-        let out;
-
-        try {
-            out = await this._executeCommand(cmd, msg, args);
-            await this._addDelay(t1);
-        } catch (err) {
-            await this._addDelay(t1);
-
-            await this.handleExecutionError(err, msg, cmd);
-            return;
-        }
-
-        logOutput(cmd, out);
-
-        try {
-            const reply = await msg.reply(out);
-            this.messageTracker.addMsg(reply, msg.id);
-        } catch (err) {
-            await this._handleReplyError(err, msg);
-            return;
-        }
-    }
-
-    async handleExecutionError(err, msg, cmd) {
+    async _handleExecutionError(err, msg, cmd) {
         getLogger().error("Command execution failed:", err);
 
         try {

@@ -153,7 +153,7 @@ export default {
                 if (err.name === "TagError") {
                     switch (err.message) {
                         case "Tag recursion detected":
-                            return `:warning: Ebic recursion fail: **${err.ref.join("** -> **")}**`;
+                            return `:warning: Epic recursion fail: **${err.ref.join("** -> **")}**`;
                         case "Hop not found":
                             return `:warning: Tag **${err.ref}** doesn't exist.`;
                     }

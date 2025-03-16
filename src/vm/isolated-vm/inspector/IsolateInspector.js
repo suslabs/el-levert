@@ -37,7 +37,7 @@ class IsolateInspector {
         }
 
         const channel = isolate.createInspectorSession(),
-            wrappedReply = IsolateInspector_getWrappedReplyFunc(this);
+            wrappedReply = IsolateInspector._getWrappedReplyFunc(this);
 
         channel.onResponse = (_, msg) => wrappedReply(msg);
         channel.onNotification = wrappedReply;

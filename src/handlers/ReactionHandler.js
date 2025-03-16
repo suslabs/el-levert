@@ -199,8 +199,9 @@ class ReactionHandler extends Handler {
     }
 
     async _paransReact(msg) {
-        const t1 = performance.now(),
-            parans = this._countUnmatchedParans(msg.content);
+        const t1 = performance.now();
+
+        const parans = this._countUnmatchedParans(msg.content);
 
         if (typeof parans === "undefined" || parans.total < 1) {
             return false;
@@ -312,8 +313,9 @@ class ReactionHandler extends Handler {
     }
 
     async _funnyReact(msg) {
-        const t1 = performance.now(),
-            words = this._getWordCounts(msg.content);
+        const t1 = performance.now();
+
+        const words = this._getWordCounts(msg.content);
 
         if (typeof words === "undefined") {
             return false;

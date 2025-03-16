@@ -8,13 +8,19 @@ import search from "../util/search/diceSearch.js";
 
 const {
     Client,
+
     DiscordAPIError,
     RESTJSONErrorCodes,
+
     GatewayIntentBits,
     Partials,
+
     ActivityType,
-    PermissionsBitField,
     ChannelType,
+    AllowedMentionsTypes,
+
+    PermissionsBitField,
+
     User,
     GuildMember
 } = discord;
@@ -131,11 +137,12 @@ class DiscordClient {
         }
 
         const allowedMentions = {
-            repliedUser: this.pingReply
+            repliedUser: this.pingReply,
+            parse: []
         };
 
         if (this.mentionUsers) {
-            allowedMentions.parse = ["roles", "users"];
+            allowedMentions.parse.push(AllowedMentionsTypes.User, AllowedMentionsTypes.Role);
         } else {
             allowedMentions.users = [];
         }
