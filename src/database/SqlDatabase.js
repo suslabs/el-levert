@@ -23,7 +23,7 @@ class SqlDatabase {
     }
 
     async loadCreateQuery() {
-        const filename = "create" + this.queryExtension,
+        const filename = `create${this.queryExtension}`,
             createPath = path.join(this.queryPath, filename);
 
         this.createString = await fs.readFile(createPath, {

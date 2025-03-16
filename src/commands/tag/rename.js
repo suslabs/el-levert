@@ -40,10 +40,10 @@ export default {
                 out = ":warning: You can only rename your own tags.";
 
             if (!owner) {
-                return `${out} Tag owner not found.`;
+                return out + " Tag owner not found.";
             }
 
-            return `${out} Tag is owned by \`${owner.username}\`.`;
+            return out + ` Tag is owned by \`${owner.username}\`.`;
         }
 
         try {
@@ -57,10 +57,10 @@ export default {
                             out = `:warning: Tag **${t_name}** already exists,`;
 
                         if (!owner) {
-                            return `${out} tag owner not found.`;
+                            return out + " tag owner not found.";
                         }
 
-                        return `${out} and is owned by \`${owner.username}\``;
+                        return out + ` and is owned by \`${owner.username}\``;
                     default:
                         return `:warning: ${err.message}.`;
                 }

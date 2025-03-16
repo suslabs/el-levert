@@ -20,9 +20,10 @@ export default {
         if (Util.empty(newName) || newName === "unchanged") {
             newName = undefined;
         } else {
-            const e = getClient().permManager.checkName(g_name);
-            if (e) {
-                return ":warning: " + e;
+            const err = getClient().permManager.checkName(g_name);
+
+            if (err) {
+                return ":warning: " + err;
             }
         }
 

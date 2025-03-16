@@ -146,13 +146,13 @@ const Util = {
                     timeoutError = new UtilError("Condition timed out");
                 }
 
-                _timeout = setTimeout(_ => {
+                _timeout = setTimeout(() => {
                     reject(timeoutError);
                     clearTimers();
                 }, timeout);
             }
 
-            _interval = setInterval(_ => {
+            _interval = setInterval(() => {
                 let res;
 
                 try {
@@ -220,7 +220,7 @@ const Util = {
         }
 
         if (loopPromise) {
-            return (async _ => {
+            return (async () => {
                 ret = await ret;
 
                 for (; i < length; i++) {
@@ -269,7 +269,7 @@ const Util = {
         }
 
         if (loopPromise) {
-            return (async _ => {
+            return (async () => {
                 ret = await ret;
 
                 for (; i < length; i++) {
@@ -334,7 +334,7 @@ const Util = {
         }
 
         if (loopPromise) {
-            return (async _ => {
+            return (async () => {
                 ret = await ret;
 
                 for (; i < length; i++) {
@@ -358,7 +358,7 @@ const Util = {
 
     capitalize: str => {
         str = String(str).toLowerCase();
-        return str[0].toUpperCase() + str.substring(1);
+        return str[0].toUpperCase() + str.slice(1);
     },
 
     removeRangeStr: (str, i, length = 1) => {
@@ -508,8 +508,8 @@ const Util = {
             name = str;
             args = "";
         } else {
-            name = str.substring(0, ind);
-            args = str.substring(ind + sepLength);
+            name = str.slice(0, ind);
+            args = str.slice(ind + sepLength);
         }
 
         if (lowercaseFirst) {
@@ -789,7 +789,7 @@ const Util = {
         str = str.replaceAll("`", "\\`");
 
         if (str.length > maxLength) {
-            const trimmed = str.substring(0, maxLength);
+            const trimmed = str.slice(0, maxLength);
 
             const diff = str.length - maxLength,
                 s = diff > 1 ? "s" : "";

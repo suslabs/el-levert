@@ -39,10 +39,10 @@ If you want to de-alias the tag, \`edit\` it.`;
                 out = `:warning: You can only edit your own tags.`;
 
             if (!owner) {
-                return `${out} Tag owner not found.`;
+                return out + " Tag owner not found.";
             }
 
-            return `${out} The tag is owned by \`${owner.username}\`.`;
+            return out + ` The tag is owned by \`${owner.username}\`.`;
         }
 
         const a_tag = await getClient().tagManager.fetch(a_name);

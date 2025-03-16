@@ -49,7 +49,7 @@ class BaseDiscordTransport extends Transport {
     }
 
     log(info, callback) {
-        setImmediate(_ => {
+        setImmediate(() => {
             this.emit("logged", info);
         });
 

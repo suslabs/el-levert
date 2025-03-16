@@ -52,7 +52,7 @@ class EvalContext {
             throw new VMError(`Invalid target property "${targetProp}" on object: ${name}`);
         }
 
-        const targetName = "vm" + Util.capitalize(name),
+        const targetName = `vm${Util.capitalize(name)}`,
             vmName = globalNames[name];
 
         if (typeof vmName === "undefined") {

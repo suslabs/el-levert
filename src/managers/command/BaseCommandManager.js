@@ -35,7 +35,7 @@ class BaseCommandManager extends Manager {
         if (getClient().isBridgeBot(author)) {
             content = str.match(this.bridgeBotExp)[1];
         } else {
-            content = str.substring(this.commandPrefix.length);
+            content = str.slice(this.commandPrefix.length);
         }
 
         const [name, args] = Util.splitArgs(content);
@@ -312,10 +312,10 @@ class BaseCommandManager extends Manager {
 
             if (discord) {
                 const names = `\`${cmdNames.join("`, `")}\``;
-                categoryFormat += "\\- " + names;
+                categoryFormat += `\\- ${names}`;
             } else {
                 const names = cmdNames.join(", ");
-                categoryFormat += "- " + names;
+                categoryFormat += `- ${names}`;
             }
 
             namesFormat[i] = categoryFormat;

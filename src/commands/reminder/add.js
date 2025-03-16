@@ -27,15 +27,16 @@ export default {
             message = message.replaceAll("\\" + quote, quote);
         }
 
-        const e = getClient().reminderManager.checkMessage(message);
-        if (e) {
-            return ":warning: " + e;
+        const err = getClient().reminderManager.checkMessage(message);
+
+        if (err) {
+            return ":warning: " + err;
         }
 
         let parsedDate = parseDate(date);
 
         if (!parsedDate) {
-            parsedDate = parseDate("in " + date);
+            parsedDate = parseDate(`in ${date}`);
 
             if (!parsedDate) {
                 return `:warning: Invalid date: \`${date}\`.`;

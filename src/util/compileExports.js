@@ -7,7 +7,7 @@ function compileExports(barrel, nameField = "$name") {
         const className = _class.name,
             name = _class[nameField];
 
-        assert.equal(exportName, className, `Incorrect export name (${exportName} =/= ${className}).`);
+        assert.equal(exportName, className, `Mismatched export name. (${exportName} =/= ${className})`);
         assert.notEqual(typeof name, "undefined", `Class ${className} doesn't have a ${nameField} field.`);
 
         obj[name] = _class;

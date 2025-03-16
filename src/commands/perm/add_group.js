@@ -17,9 +17,10 @@ export default {
             return ":information_source: `perm add_group [group name] [level]`";
         }
 
-        const e = getClient().permManager.checkName(g_name);
-        if (e) {
-            return ":warning: " + e;
+        const err = getClient().permManager.checkName(g_name);
+
+        if (err) {
+            return ":warning: " + err;
         }
 
         const maxLevel = await getClient().permManager.maxLevel(msg.author.id);

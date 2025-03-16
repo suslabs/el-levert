@@ -27,6 +27,6 @@ export default {
 
         rebindMessage(msg, getClient().client);
 
-        return ":white_check_mark: Restarted client!";
+        return ":white_check_mark: Restarted bot!";
     }
 };

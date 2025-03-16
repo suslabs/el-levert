@@ -6,7 +6,7 @@ import LoadStatus from "../LoadStatus.js";
 
 function getCategory(filePath, rootPath) {
     let categoryDir = path.dirname(filePath);
-    categoryDir = categoryDir.substring(rootPath.length);
+    categoryDir = categoryDir.slice(rootPath.length);
 
     let categoryName = categoryDir.split(path.sep)[0];
 

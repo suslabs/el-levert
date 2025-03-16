@@ -8,7 +8,7 @@ import getGlobalFormat from "./GlobalFormat.js";
 
 function getFilename(logFile, level) {
     const parsed = path.parse(logFile),
-        date = new Date().toISOString().substring(0, 10);
+        date = new Date().toISOString().slice(0, 10);
 
     let filename = `${date}-${parsed.name}`;
 

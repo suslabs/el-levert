@@ -84,7 +84,7 @@ class Command {
         }
 
         if (this.isSubcmd && parentSep !== false) {
-            name = this.parentCmd.name + `${parentSep} ` + name;
+            name = `${this.parentCmd.name}${parentSep} ${name}`;
         }
 
         return name;

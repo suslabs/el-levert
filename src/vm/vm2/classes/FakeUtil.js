@@ -22,7 +22,7 @@ const FakeUtil = {
         return func(name);
     },
 
-    dumpTags: _ => {
+    dumpTags: () => {
         const func = getClient().tagManager.dump.bind(getClient().tagManager);
         return func();
     },

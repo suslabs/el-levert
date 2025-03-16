@@ -127,9 +127,10 @@ export default {
 
         const [t_name, t_args] = Util.splitArgs(args, true);
 
-        const e = getClient().tagManager.checkName(t_name);
-        if (e) {
-            return ":warning: " + e;
+        const err = getClient().tagManager.checkName(t_name);
+
+        if (err) {
+            return ":warning: " + err;
         }
 
         let tag = await getClient().tagManager.fetch(t_name);

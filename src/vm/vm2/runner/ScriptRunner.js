@@ -9,7 +9,7 @@ const pendingFuncs = {};
 
 function funcsResolved() {
     return new Promise((resolve, reject) => {
-        const timer = setInterval(_ => {
+        const timer = setInterval(() => {
             if (Object.keys(pendingFuncs).length === 0) {
                 clearInterval(timer);
                 resolve();

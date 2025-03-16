@@ -18,9 +18,10 @@ export default {
             return `:police_car: **${t_name}** is a __command__, not a __tag__. You can't manipulate commands.`;
         }
 
-        const e = getClient().tagManager.checkName(t_name);
-        if (e) {
-            return ":warning: " + e;
+        const err = getClient().tagManager.checkName(t_name);
+
+        if (err) {
+            return ":warning: " + err;
         }
 
         const tag = await getClient().tagManager.fetch(t_name);

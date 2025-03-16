@@ -16,9 +16,10 @@ export default {
 
         const [g_name] = Util.splitArgs(args);
 
-        const e = getClient().permManager.checkName(g_name);
-        if (e) {
-            return ":warning: " + e;
+        const err = getClient().permManager.checkName(g_name);
+
+        if (err) {
+            return ":warning: " + err;
         }
 
         const group = await getClient().permManager.fetchGroup(g_name);

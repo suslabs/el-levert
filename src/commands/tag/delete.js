@@ -19,9 +19,10 @@ export default {
             return `:police_car: **${t_name}** is a __command__, not a __tag__. You can't manipulate commands.`;
         }
 
-        const e = getClient().tagManager.checkName(t_name);
-        if (e) {
-            return ":warning: " + e;
+        const err = getClient().tagManager.checkName(t_name);
+
+        if (err) {
+            return ":warning: " + err;
         }
 
         const tag = await getClient().tagManager.fetch(t_name);
@@ -35,10 +36,10 @@ export default {
                 out = ":warning: You can only delete your own tags.";
 
             if (!owner) {
-                return `${out} Tag owner not found.`;
+                return out + " Tag owner not found.";
             }
 
-            return `${out} Tag is owned by \`${owner.username}\`.`;
+            return out + ` Tag is owned by \`${owner.username}\`.`;
         }
 
         try {

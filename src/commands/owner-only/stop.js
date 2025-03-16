@@ -6,7 +6,7 @@ export default {
     category: "owner-only",
 
     handler: async (_, msg) => {
-        await msg.reply(":information_source: Stopping client...");
+        await msg.reply(":information_source: Stopping bot...");
 
         await getClient().stop(true);
     }

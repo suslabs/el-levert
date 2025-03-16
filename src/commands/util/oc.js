@@ -24,7 +24,7 @@ export default {
                 dur = parseInt(split[1], 10);
                 break;
             case 3:
-                type = split[0].substring(1);
+                type = split[0].slice(1);
 
                 if (!split[0].includes("-") || !Object.keys(GregicUtil.allTiers).includes(type)) {
                     return `:warning: Invalid version: \`${type}\``;

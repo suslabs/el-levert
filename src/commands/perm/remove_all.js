@@ -46,7 +46,7 @@ export default {
             const out = `:information_source: User \`${find.user.username}\` doesn't have any permissions`;
 
             if (getClient().permManager.isOwner(find.user.id)) {
-                return `${out} other than being the bot owner.`;
+                return out + " other than being the bot owner.";
             }
 
             return out + ".";

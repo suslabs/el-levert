@@ -56,7 +56,7 @@ class IsolateInspector {
         getLogger().info("Waiting for inspector connection...");
 
         await Util.waitForCondition(
-            _ => this.connected,
+            () => this.connected,
             new VMError("Inspector wasn't connected in time"),
             this.connectTimeout
         );

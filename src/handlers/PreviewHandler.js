@@ -78,7 +78,7 @@ class PreviewHandler extends Handler {
             split = content.split("\n");
 
         if (Util.overSizeLimit(content, this.outCharLimit)) {
-            content = content.substring(0, this.outCharLimit) + "...";
+            content = content.slice(0, this.outCharLimit) + "...";
         }
 
         if (split.length > this.outLineLimit) {

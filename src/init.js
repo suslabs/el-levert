@@ -4,8 +4,10 @@ import getDefaultLoggerConfig from "./logger/DefaultLoggerConfig.js";
 import loadConfig from "./config/loadConfig.js";
 import { LevertClient } from "./LevertClient.js";
 
+const loggerName = "init";
+
 function setupLogger() {
-    const config = getDefaultLoggerConfig("init", false, true);
+    const config = getDefaultLoggerConfig(loggerName, false, true);
     return createLogger(config);
 }
 

@@ -55,7 +55,7 @@ class ExternalVM {
 
     checkCode(token) {
         return new Promise((resolve, reject) => {
-            const interval = setInterval(async _ => {
+            const interval = setInterval(async () => {
                 const status = (await axios.get(this.base + token + this.statusUrl)).data.status_id;
 
                 if (![1, 2].includes(status)) {
@@ -64,7 +64,7 @@ class ExternalVM {
                 }
             }, 200);
 
-            setTimeout(_ => reject(new VMError("check timed out")), this.timeLimit * 2000);
+            setTimeout(() => reject(new VMError("check timed out")), this.timeLimit * 2000);
         });
     }
 

@@ -96,7 +96,7 @@ class TextFileLoader extends FileLoader {
         }
 
         const parsed = path.parse(this.path),
-            tempPath = path.join(parsed.dir, parsed.name + ".tmp");
+            tempPath = path.join(parsed.dir, `${parsed.name}.tmp`);
 
         return tempPath;
     }

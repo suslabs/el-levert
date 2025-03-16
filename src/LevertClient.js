@@ -25,6 +25,8 @@ import { isPromise } from "./util/TypeTester.js";
 let token, client;
 
 class LevertClient extends DiscordClient {
+    static loggerName = "El Levert";
+
     static minPriority = -999;
     static maxPriority = 999;
 
@@ -87,23 +89,36 @@ class LevertClient extends DiscordClient {
     }
 
     loadComponent(name, barrel, ctorArgs = {}, options = {}) {
-        let compInfo = this.components.get(name) ?? {};
+        let compInfo = this.components.get(name) ?? {},
+            alreadyLoaded = compInfo?.loaded ?? false;
 
-        if (compInfo.loaded ?? false) {
+        if (alreadyLoaded) {
             throw new ClientError(`"${name}" component is already loaded`);
         }
 
-        const pluralName = options.pluralName ?? name + "s",
-            listName = name + "List";
-
         const showLogMessages = options.showLogMessages ?? true,
             showLoadingMessages = options.showLoadingMessages ?? true;
+
+        let pluralName = options.pluralName,
+            listName;
+
+        if (typeof pluralName === "undefined") {
+            if (name.endsWith("s")) {
+                pluralName = name;
+                name = name.slice(0, -1);
+            } else {
+                pluralName = `${name}s`;
+            }
+        }
+
+        listName = `${name}List`;
 
         if (showLogMessages) {
             this.logger.info(`Loading ${pluralName}...`);
         }
 
         const components = Object.entries(barrel);
+
         components.forEach(([compName, compClass]) => {
             if (Util.outOfRange(LevertClient.minPriority, LevertClient.maxPriority, compClass.loadPriority)) {
                 throw new ClientError(`Invalid load priority ${compClass.loadPriority} for component ${compName}`);
@@ -111,14 +126,24 @@ class LevertClient extends DiscordClient {
                 compClass.loadPriority ??= LevertClient.maxPriority;
             }
         });
+
         components.sort(([, a], [, b]) => a.loadPriority - b.loadPriority);
 
         const compInstances = components
             .filter(([compName]) => ctorArgs[compName] !== false)
-            .map(([compName, compClass]) => [compName, new compClass(...(ctorArgs[compName] ?? []))]);
+            .map(([compName, compClass]) => {
+                const compArgs = ctorArgs[compName] ?? [];
+
+                if (!Array.isArray(compArgs)) {
+                    throw new ClientError(`Invalid constructor args for component ${compName}`);
+                }
+
+                return [compName, new compClass(...compArgs)];
+            });
+
         compInstances.forEach(([compName, compInst]) => {
             if (Util.outOfRange(LevertClient.minPriority, LevertClient.maxPriority, compInst.priority)) {
-                throw new ClientError(`Invalid priority ${compInst.priority} for component ${compName}`);
+                throw new ClientError(`Invalid handler priority ${compInst.priority} for component ${compName}`);
             } else {
                 compInst.priority ??= LevertClient.minPriority;
             }
@@ -130,6 +155,7 @@ class LevertClient extends DiscordClient {
         this[listName] = compList;
 
         compInfo = {
+            ...compInfo,
             pluralName,
             listName,
             loaded: false
@@ -151,7 +177,7 @@ class LevertClient extends DiscordClient {
             this[compName] = compInst;
         };
 
-        const loadFinished = _ => {
+        const loadFinished = () => {
             const postLoad = options.postLoad;
 
             if (typeof postLoad === "function") {
@@ -174,7 +200,7 @@ class LevertClient extends DiscordClient {
             const compRes = compInst.load();
 
             if (isPromise(compRes)) {
-                return (async _ => {
+                return (async () => {
                     await compRes;
                     compLoaded(compName, compInst);
                 })();
@@ -184,7 +210,7 @@ class LevertClient extends DiscordClient {
         });
 
         if (isPromise(res)) {
-            return (async _ => {
+            return (async () => {
                 await res;
                 loadFinished();
             })();
@@ -194,10 +220,23 @@ class LevertClient extends DiscordClient {
     }
 
     unloadComponent(name, options = {}) {
-        const compInfo = this.components.get(name);
+        let compInfo, compLoaded;
 
-        if (typeof compInfo === "undefined" || !compInfo.loaded) {
-            throw new ClientError(`"${name}" component isn't loaded`);
+        const checkLoaded = () => {
+            compInfo = this.components.get(name);
+            compLoaded = typeof compInfo !== "undefined" && compInfo.loaded;
+        };
+
+        checkLoaded();
+        if (!compLoaded) {
+            if (name.endsWith("s")) {
+                name = name.slice(0, -1);
+                checkLoaded();
+            }
+
+            if (!compLoaded) {
+                throw new ClientError(`"${name}" component isn't loaded`);
+            }
         }
 
         const pluralName = compInfo.pluralName,
@@ -220,7 +259,7 @@ class LevertClient extends DiscordClient {
             delete this[compName];
         };
 
-        const unloadFinished = _ => {
+        const unloadFinished = () => {
             Util.wipeArray(this[listName]);
 
             delete this[pluralName];
@@ -248,7 +287,7 @@ class LevertClient extends DiscordClient {
             const compRes = compInst.unload();
 
             if (isPromise(compRes)) {
-                return (async _ => {
+                return (async () => {
                     await compRes;
                     compUnloaded(compName);
                 })();
@@ -258,7 +297,7 @@ class LevertClient extends DiscordClient {
         });
 
         if (isPromise(res)) {
-            return (async _ => {
+            return (async () => {
                 await res;
                 unloadFinished();
             })();
@@ -269,10 +308,10 @@ class LevertClient extends DiscordClient {
 
     async start() {
         if (this.started) {
-            throw new ClientError("The client can only be started once");
+            throw new ClientError("The bot can only be started once");
         }
 
-        this.logger.info("Starting client...");
+        this.logger.info("Starting bot...");
 
         await this._loadManagers();
         this._loadHandlers();
@@ -298,10 +337,10 @@ class LevertClient extends DiscordClient {
 
     async stop(kill = false) {
         if (!this.started) {
-            throw new ClientError("The client can't be stopped if it hasn't been started already");
+            throw new ClientError("The bot can't be stopped if it hasn't been started already");
         }
 
-        this.logger.info("Stopping client...");
+        this.logger.info("Stopping bot...");
         this._removeDiscordTransports();
 
         if (this.config.enableGlobalHandler) {
@@ -318,15 +357,15 @@ class LevertClient extends DiscordClient {
         this.logout(kill);
         this._setStopped();
 
-        this.logger.info("Client stopped.");
+        this.logger.info("Bot stopped.");
     }
 
     async restart(configs) {
         if (!this.started) {
-            throw new ClientError("The client can't be restarted if it hasn't been started already");
+            throw new ClientError("The bot can't be restarted if it hasn't been started already");
         }
 
-        this.logger.info("Restarting client...");
+        this.logger.info("Restarting bot...");
         this.silenceDiscordTransports(true);
 
         await this.stop();
@@ -373,8 +412,7 @@ class LevertClient extends DiscordClient {
             this._deleteLogger();
         }
 
-        const name = "El Levert",
-            configOpts = [name, true, true, this.config.logFile, this.config.logLevel],
+        const configOpts = [LevertClient.loggerName, true, true, this.config.logFile, this.config.logLevel],
             config = getDefaultLoggerConfig(...configOpts);
 
         this.logger = createLogger(config);
@@ -394,7 +432,7 @@ class LevertClient extends DiscordClient {
 
     _loadHandlers() {
         this.loadComponent(
-            "handler",
+            "handlers",
             Handlers,
 
             {
@@ -416,7 +454,7 @@ class LevertClient extends DiscordClient {
     }
 
     _unloadHandlers() {
-        this.unloadComponent("handler", {
+        this.unloadComponent("handlers", {
             showUnloadingMessages: false
         });
 
@@ -427,7 +465,7 @@ class LevertClient extends DiscordClient {
     }
 
     async _loadManagers() {
-        await this.loadComponent("manager", Managers, {
+        await this.loadComponent("managers", Managers, {
             tagManager: [],
             permManager: [this.config.enablePermissions],
             commandManager: [],
@@ -437,7 +475,7 @@ class LevertClient extends DiscordClient {
     }
 
     async _unloadManagers() {
-        await this.unloadComponent("manager");
+        await this.unloadComponent("managers");
     }
 
     _loadVMs() {
@@ -451,13 +489,13 @@ class LevertClient extends DiscordClient {
             vmArgs.externalVM = [];
         }
 
-        this.loadComponent("VM", VMs, vmArgs, {
+        this.loadComponent("VMs", VMs, vmArgs, {
             showLoadingMessages: false
         });
     }
 
     _unloadVMs() {
-        this.unloadComponent("VM", {
+        this.unloadComponent("VMs", {
             showUnloadingMessages: false
         });
     }

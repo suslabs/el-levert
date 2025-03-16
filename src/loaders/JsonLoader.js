@@ -158,7 +158,7 @@ class JsonLoader extends TextFileLoader {
         }
 
         const parsed = path.parse(this.path),
-            schemaPath = path.join(options.schemaDir, parsed.name + ".schema.json");
+            schemaPath = path.join(options.schemaDir, `${parsed.name}.schema.json`);
 
         return schemaPath;
     }

@@ -166,7 +166,7 @@ class DiscordClient {
                 resolve(false);
             });
 
-            Util.waitForCondition(_ => this.loggedIn, new ClientError("Login took too long"), this.timeout)
+            Util.waitForCondition(() => this.loggedIn, new ClientError("Login took too long"), this.timeout)
                 .then(_ => {
                     if (exitOnFailure) {
                         resolve(true);

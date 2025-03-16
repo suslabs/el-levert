@@ -18,9 +18,10 @@ export default {
         const [t_name, m_str] = Util.splitArgs(args, [true, true]),
             all = m_str === "all";
 
-        const e = getClient().tagManager.checkName(t_name);
-        if (e) {
-            return ":warning: " + e;
+        const err = getClient().tagManager.checkName(t_name);
+
+        if (err) {
+            return ":warning: " + err;
         }
 
         let maxResults = defaultResultLimit;
