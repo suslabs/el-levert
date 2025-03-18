@@ -9,12 +9,12 @@ export default {
 
     handler: async function (args, msg, perm) {
         if (Util.empty(args)) {
-            return ":information_source: `t edit name body`";
+            return `:information_source: ${this.getArgsHelp("name new_body")}`;
         }
 
         const [t_name, t_args] = Util.splitArgs(args, true);
 
-        if (this.isSubName(t_name)) {
+        if (this.isSubcmdName(t_name)) {
             return `:police_car: **${t_name}** is a __command__, not a __tag__. You can't manipulate commands.`;
         }
 

@@ -1,10 +1,10 @@
-import { getCallInfo } from "../util/getCallStack.js";
+import CallstackUtil from "../util/misc/CallstackUtil.js";
 
 const includeCalls = false,
     logCallDepth = 2;
 
 function printfTemplate(info) {
-    const callInfo = includeCalls ? " " + getCallInfo({ depth: logCallDepth }) : "";
+    const callInfo = includeCalls ? " " + CallstackUtil.getCallInfo({ depth: logCallDepth }) : "";
 
     let log = `[${info.timestamp}]${callInfo} - ${info.service} - ${info.level}: ${info.message}`;
 

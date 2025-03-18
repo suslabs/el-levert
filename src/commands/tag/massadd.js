@@ -10,9 +10,9 @@ export default {
     subcommand: true,
     ownerOnly: true,
 
-    handler: async args => {
+    handler: async function (args) {
         if (Util.empty(args)) {
-            return "%t massadd tagPrefix owner inputDir";
+            return `:information_source: ${this.getArgsHelp("tag_prefix owner input_dir")}`;
         }
 
         let [tagPrefix, split1] = Util.splitArgs(args),

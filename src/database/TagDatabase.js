@@ -26,7 +26,7 @@ class TagDatabase extends SqliteDatabase {
             $name: name
         });
 
-        if (typeof row._data === "undefined" || Util.empty(row)) {
+        if (typeof row._data === "undefined") {
             return false;
         }
 

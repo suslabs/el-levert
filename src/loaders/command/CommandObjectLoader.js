@@ -19,7 +19,11 @@ class CommandObjectLoader extends ObjectLoader {
             return status;
         }
 
-        const command = new Command(this.data);
+        const command = new Command({
+            ...this.data,
+            prefix: this.parentLoader.prefix
+        });
+
         this.data = command;
 
         let shouldLoad;

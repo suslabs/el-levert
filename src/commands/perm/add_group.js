@@ -9,12 +9,11 @@ export default {
     subcommand: true,
     allowed: getClient().permManager.adminLevel,
 
-    handler: async (args, msg) => {
+    handler: async function (args, msg) {
         let [g_name, level] = Util.splitArgs(args);
-        level = Util.parseInt(level);
 
         if (Util.empty(args) || Util.empty(g_name) || Util.empty(level)) {
-            return ":information_source: `perm add_group [group name] [level]`";
+            return `:information_source: ${this.getArgsHelp("group_name level")}`;
         }
 
         const err = getClient().permManager.checkName(g_name);
@@ -23,10 +22,11 @@ export default {
             return ":warning: " + err;
         }
 
+        level = Util.parseInt(level);
         const maxLevel = await getClient().permManager.maxLevel(msg.author.id);
 
         if (maxLevel < level) {
-            return `:warning: Can't create a group with a level that is higher than your own. (${maxLevel} < ${level})`;
+            return `:warning: Can't create a group with a level that is higher than your own. (${level} > ${maxLevel})`;
         }
 
         try {

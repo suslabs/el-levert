@@ -1,8 +1,9 @@
+import { isPromise } from "node:util/types";
+
 import LoaderError from "../errors/LoaderError.js";
 import LoadStatus from "./LoadStatus.js";
 
 import Util from "../util/Util.js";
-import { isPromise } from "../util/TypeTester.js";
 
 class Loader {
     constructor(name = "", logger, options = {}) {
@@ -18,6 +19,7 @@ class Loader {
         this.type = options.type ?? "";
         this.throwOnFailure = options.throwOnFailure ?? true;
         this.dataField = options.dataField ?? "data";
+        this.parentLoader = options.parent ?? null;
 
         this.data = null;
         this.loaded = false;

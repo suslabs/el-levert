@@ -16,7 +16,7 @@ export default {
 
         const quota = await getClient().tagManager.getQuota(msg.author.id);
 
-        if (quota === 0) {
+        if (quota <= 0) {
             return `:information_source: You aren't using any of the available storage.`;
         }
 
@@ -24,6 +24,6 @@ export default {
             perc = Util.round((quota / maxQuota) * 100, 2),
             roundedQuota = Util.smallRound(quota, 2);
 
-        return `:information_source: You're using **${roundedQuota}/${maxQuota}kb** of the available storage (**${perc}%**).`;
+        return `:information_source: You're using **${roundedQuota}/${maxQuota}kb** of the available storage. (**${perc}%**)`;
     }
 };

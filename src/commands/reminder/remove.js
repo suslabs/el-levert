@@ -8,11 +8,11 @@ export default {
     parent: "reminder",
     subcommand: true,
 
-    handler: async (args, msg) => {
+    handler: async function (args, msg) {
         const index = Util.parseInt(args);
 
         if (args.length <= 0 || Number.isNaN(index)) {
-            return ":information_source: `reminder remove [index]`";
+            return `:information_source: ${this.getArgsHelp("index")}`;
         }
 
         let res = false;

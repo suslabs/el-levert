@@ -8,6 +8,6 @@ export default {
     load: _ => getClient().config.enableReminders,
 
     handler: function (_1, _2, perm) {
-        return `:information_source: %reminder [${this.getSubcmdList(perm)}]`;
+        return `:information_source: ${this.getSubcmdHelp(perm)}`;
     }
 };

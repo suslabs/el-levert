@@ -1,3 +1,5 @@
+import { isPromise } from "node:util/types";
+
 import DiscordClient from "./client/DiscordClient.js";
 import ClientError from "./errors/ClientError.js";
 
@@ -20,7 +22,7 @@ import { registerGlobalErrorHandler, removeGlobalErrorHandler } from "./client/G
 import MessageProcessor from "./client/MessageProcessor.js";
 
 import Util from "./util/Util.js";
-import { isPromise } from "./util/TypeTester.js";
+import ExportUtil from "./util/misc/ExportUtil.js";
 
 let token, client;
 
@@ -150,6 +152,18 @@ class LevertClient extends DiscordClient {
         });
 
         const compList = compInstances.map(([, compInst]) => compInst).sort((a, b) => b.priority - a.priority);
+
+        for (const compName of Object.keys(ctorArgs)) {
+            if (ctorArgs[compName] === false) {
+                continue;
+            }
+
+            if (typeof barrel[compName] === "undefined") {
+                this.logger.warn(
+                    `Component "${compName}" specified in constructor args was not found in the available components.`
+                );
+            }
+        }
 
         this[pluralName] = Object.fromEntries(compInstances);
         this[listName] = compList;
@@ -318,6 +332,7 @@ class LevertClient extends DiscordClient {
 
         await this._loadEvents();
 
+        await ExportUtil.resolveBarrel(VMs);
         this._loadVMs();
 
         await this.login(token, true);

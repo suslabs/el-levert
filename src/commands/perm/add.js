@@ -9,11 +9,11 @@ export default {
     subcommand: true,
     allowed: getClient().permManager.adminLevel,
 
-    handler: async (args, msg) => {
+    handler: async function (args, msg) {
         const [g_name, u_name] = Util.splitArgs(args);
 
         if (Util.empty(args) || Util.empty(g_name) || Util.empty(u_name)) {
-            return ":information_source: `perm add [group name] [ping/id/username]`";
+            return `:information_source: ${this.getArgsHelp("group_name (ping/id/username)")}`;
         }
 
         const err = getClient().permManager.checkName(g_name);

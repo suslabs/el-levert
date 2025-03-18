@@ -19,7 +19,8 @@
         "no-ex-assign": "off",
         "no-case-declarations": "off",
         "no-empty": "off",
-        "eqeqeq": ["error", "always", { "null": "ignore" }]
+        "eqeqeq": ["error", "always", { "null": "ignore" }],
+        "curly": ["error", "all"]
     },
     "globals": {
         "projRoot": "readonly"

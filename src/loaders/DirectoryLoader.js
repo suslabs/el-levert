@@ -284,7 +284,8 @@ class DirectoryLoader extends Loader {
 
         loadArgs.push({
             ...options,
-            throwOnFailure
+            throwOnFailure,
+            parent: this
         });
 
         return loadArgs;

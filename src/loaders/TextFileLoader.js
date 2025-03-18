@@ -19,7 +19,10 @@ class TextFileLoader extends FileLoader {
 
     async load() {
         const err = this._checkPath();
-        if (err) return err;
+
+        if (err) {
+            return err;
+        }
 
         let text;
 
@@ -46,7 +49,10 @@ class TextFileLoader extends FileLoader {
         }
 
         const err = this._checkPath();
-        if (err) return err;
+
+        if (err) {
+            return err;
+        }
 
         try {
             await fs.writeFile(this._tempPath, data, this._fsConfig);

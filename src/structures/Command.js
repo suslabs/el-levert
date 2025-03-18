@@ -1,4 +1,4 @@
-import { codeBlock } from "discord.js";
+import { bold, inlineCode, codeBlock } from "discord.js";
 
 import CommandError from "../errors/CommandError.js";
 
@@ -26,7 +26,8 @@ class Command {
         usage: "",
         aliases: [],
         helpArgs: ["help", "-help", "-h", "usage"],
-        category: "none"
+        category: "none",
+        prefix: ""
     };
 
     constructor(options) {
@@ -99,7 +100,7 @@ class Command {
         return canExecute ? true : 0;
     }
 
-    getSubNames(includeAliases = true) {
+    getSubcmdNames(includeAliases = true) {
         let cmd = this;
 
         if (this.isSubcmd) {
@@ -110,13 +111,13 @@ class Command {
             return cmd.subcommands;
         }
 
-        const subNames = Array.from(cmd.subcmds.keys());
-        return subNames;
+        const subcmdNames = Array.from(cmd.subcmds.keys());
+        return subcmdNames;
     }
 
-    isSubName(name, checkAliases = true) {
-        const subNames = this.getSubNames(checkAliases);
-        return subNames.includes(name);
+    isSubcmdName(name, checkAliases = true) {
+        const subcmdNames = this.getSubcmdNames(checkAliases);
+        return subcmdNames.includes(name);
     }
 
     getSubcmdMap(includeAliases = true) {
@@ -167,7 +168,7 @@ class Command {
         let subNames;
 
         if (perm === null || typeof perm === "undefined") {
-            subNames = this.getSubNames();
+            subNames = this.getSubcmdNames();
         } else {
             const subcmds = this.getSubcmds(perm);
             subNames = subcmds.map(command => command.name);
@@ -211,6 +212,24 @@ class Command {
         }
 
         return help;
+    }
+
+    getArgsHelp(args, discord = true) {
+        const hasArgs = typeof args === "string" && !Util.empty(args);
+
+        const prefix = this.prefix + this.isSubcmd ? this.parent + " " : "";
+
+        const formattedName = this.isSubcmd && discord ? bold(this.name) : this.name,
+            formattedArgs = hasArgs ? " " + (discord ? inlineCode(args) : args) : "";
+
+        return `${prefix}${formattedName}${formattedArgs}`;
+    }
+
+    getSubcmdHelp(perm, discord = true) {
+        const subcmds = this.getSubcmdList(perm),
+            formatted = discord ? inlineCode(subcmds) : subcmds;
+
+        return `${this.prefix}${this.name} ${formatted}`;
     }
 
     addSubcommand(subcmd) {

@@ -122,7 +122,7 @@ export default {
 
     handler: async function (args, msg, perm) {
         if (Util.empty(args)) {
-            return `:information_source: %t [${this.getSubcmdList(perm)}] tag_name [tag_args]`;
+            return `:information_source: ${this.getSubcmdHelp()} **tag_name** \`[tag_args]\``;
         }
 
         const [t_name, t_args] = Util.splitArgs(args, true);

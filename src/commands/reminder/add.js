@@ -12,7 +12,7 @@ export default {
     parent: "reminder",
     subcommand: true,
 
-    handler: async (args, msg) => {
+    handler: async function (args, msg) {
         const match = args.match(messageRegex),
             date = match[1] ?? "";
 
@@ -20,7 +20,7 @@ export default {
             message = match[3] ?? "";
 
         if (Util.empty(args) || Util.empty(date)) {
-            return ':information_source: `reminder add [date] "message"`';
+            return `:information_source: ${this.getArgsHelp('date "message"')}`;
         }
 
         if (!Util.empty(message)) {

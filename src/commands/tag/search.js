@@ -10,9 +10,9 @@ export default {
     parent: "tag",
     subcommand: true,
 
-    handler: async args => {
+    handler: async function (args) {
         if (Util.empty(args)) {
-            return ":information_source: `t search query (all/max_results)`";
+            return `:information_source: ${this.getArgsHelp("query [all/max_results]")}`;
         }
 
         const [t_name, m_str] = Util.splitArgs(args, [true, true]),

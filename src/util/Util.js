@@ -1,3 +1,5 @@
+import { isPromise } from "node:util/types";
+
 import { Buffer } from "node:buffer";
 import { ChannelType, AttachmentBuilder } from "discord.js";
 
@@ -7,7 +9,6 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import URL from "node:url";
 
-import { isPromise } from "./TypeTester.js";
 import UtilError from "../errors/UtilError.js";
 
 const Util = {

@@ -9,12 +9,12 @@ export default {
     subcommand: true,
     allowed: getClient().permManager.adminLevel,
 
-    handler: async (args, msg) => {
+    handler: async function (args, msg) {
         let [g_name, g_data] = Util.splitArgs(args),
             [newName, newLevel] = Util.splitArgs(g_data);
 
         if (Util.empty(args) || Util.empty(g_name) || Util.empty(g_data)) {
-            return ":information_source: `perm update_group [group name] [new name/unchanged] [new level/unchanged]`";
+            return `:information_source: ${this.getArgsHelp("group_name (new_name/unchanged) (new_level/unchanged)")}`;
         }
 
         if (Util.empty(newName) || newName === "unchanged") {

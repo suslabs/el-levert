@@ -40,7 +40,11 @@ export default {
         const groups = await getClient().permManager.fetch(user.id);
 
         if (!groups) {
-            return `:information_source: User \`${user.username}\` has no permissions.`;
+            if (user === msg.author) {
+                return `:information_source: You have no permissions.`;
+            } else {
+                return `:information_source: User \`${user.username}\` has no permissions.`;
+            }
         }
 
         const format = formatGroups(groups),
@@ -52,9 +56,9 @@ ${format}
 Level: ${maxLevel}`;
 
         if (user === msg.author) {
-            out = `You have the following permissions:` + out;
+            out = `:information_source: You have the following permissions:` + out;
         } else {
-            out = `User \`${user.username}\` has the following permissions:` + out;
+            out = `:information_source: User \`${user.username}\` has the following permissions:` + out;
         }
 
         return out;

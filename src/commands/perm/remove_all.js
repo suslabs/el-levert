@@ -9,11 +9,11 @@ export default {
     subcommand: true,
     allowed: getClient().permManager.adminLevel,
 
-    handler: async (args, msg) => {
+    handler: async function (args, msg) {
         const [u_name] = Util.splitArgs(args);
 
         if (Util.empty(args) || Util.empty(u_name)) {
-            return ":information_source: `perm remove_all [ping/id/username]`";
+            return `:information_source: ${this.getArgsHelp("(ping/id/username)")}`;
         }
 
         const find = Util.first(await getClient().findUsers(u_name));

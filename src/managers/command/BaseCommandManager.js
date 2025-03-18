@@ -407,7 +407,8 @@ class BaseCommandManager extends Manager {
     async _loadCommands() {
         const commandLoader = new CommandLoader(this.commandsDir, getLogger(), {
             excludeDirs: this.excludeDirs,
-            fileExtension: this.cmdFileExtension
+            fileExtension: this.cmdFileExtension,
+            prefix: this.commandPrefix
         });
 
         this._commandLoader = commandLoader;

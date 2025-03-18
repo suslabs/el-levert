@@ -1,9 +1,7 @@
 import { EmbedBuilder } from "discord.js";
 
+import CleanroomUtil from "../../util/commands/CleanroomUtil.js";
 import Util from "../../util/Util.js";
-
-const minSize = 5,
-    maxSize = 15;
 
 export default {
     name: "cleanroomcalc",
@@ -13,7 +11,7 @@ export default {
         const dims = args.split("x");
 
         if (dims.length !== 3) {
-            return ":warning: Must specify all dimensions in LxWxH format.";
+            return ":warning: Must specify all dimensions in `LxWxH` format.";
         }
 
         const l = Util.parseInt(dims[0]),
@@ -24,26 +22,19 @@ export default {
             return `:warning: Invalid dimensions: \`${dims[0]}\`x\`${dims[1]}\`x\`${dims[2]}\`.`;
         }
 
-        if (l < minSize || w < minSize || h < minSize) {
-            return `:warning: Cleanroom must be at least ${minSize}x${minSize}x${minSize}.`;
+        let info;
+
+        try {
+            info = CleanroomUtil.calc(l, w, h);
+        } catch (err) {
+            if (err.name === "UtilError") {
+                return `:warning: ${err.message}.`;
+            }
+
+            throw err;
         }
 
-        if (l > maxSize || w > maxSize || h > maxSize) {
-            return `:warning: Cleanroom cannot be bigger than ${maxSize}x${maxSize}x${maxSize}.`;
-        }
-
-        const lInner = l - 2,
-            wInner = w - 2,
-            hInner = h - 2;
-
-        const roof = lInner * wInner,
-            lWall = lInner * hInner,
-            wWall = wInner * hInner;
-
-        const shell = l * w * h - roof * hInner,
-            frame = shell - roof * 2 - lWall * 2 - wWall * 2,
-            walls = shell - frame,
-            filters = roof - 1;
+        const { frame, walls, filters } = info;
 
         const embed = new EmbedBuilder()
             .addFields(

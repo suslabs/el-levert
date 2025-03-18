@@ -12,6 +12,8 @@ class CommandLoader extends DirectoryLoader {
             dataField: "commands",
             fileLoaderClass: CommandObjectLoader
         });
+
+        this.prefix = options.prefix;
     }
 
     async load() {

@@ -9,9 +9,9 @@ export default {
     subcommand: true,
     allowed: getClient().permManager.adminLevel,
 
-    handler: async (args, msg) => {
+    handler: async function (args, msg) {
         if (Util.empty(args)) {
-            return ":information_source: `perm remove_group [group name]`";
+            return `:information_source: ${this.getArgsHelp("group_name")}`;
         }
 
         const [g_name] = Util.splitArgs(args);

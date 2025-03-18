@@ -1,5 +1,5 @@
 import * as Handlers from "./handlers.js";
 
-import compileExports from "../util/compileExports.js";
+import ExportUtil from "../util/misc/ExportUtil.js";
 
-export default compileExports(Handlers);
+export default ExportUtil.compileExports(Handlers);
