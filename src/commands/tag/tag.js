@@ -178,8 +178,8 @@ export default {
 
         if (getClient().previewHandler.canPreview(out)) {
             return await getPreview(out, msg);
+        } else {
+            return out;
         }
-
-        return out;
     }
 };

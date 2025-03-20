@@ -9,7 +9,8 @@ const uFuzzyOpts = {
 const uf = new uFuzzy(uFuzzyOpts);
 
 function search(haystack, needle, options = {}) {
-    const { maxResults, searchKey } = options;
+    const { maxResults, searchKey } = options,
+        infoThresh = options.infoThresh ?? 1000;
 
     let searchHaystack;
 
@@ -19,19 +20,28 @@ function search(haystack, needle, options = {}) {
         searchHaystack = haystack.map(x => x[searchKey]);
     }
 
-    const [, info, order] = uf.search(searchHaystack, needle);
+    const idxs = uf.filter(searchHaystack, needle);
 
-    let results = Array(order.length);
-
-    for (let i = 0; i < order.length; i++) {
-        const ind = info.idx[order[i]];
-        results[i] = haystack[ind];
+    if (idxs == null || idxs.length === 0) {
+        return [];
     }
 
-    const limitResults = ![undefined, null, Infinity].includes(maxResults);
+    const count = typeof maxResults === "number" ? Math.min(maxResults, idxs.length) : idxs.length,
+        results = Array(count);
 
-    if (limitResults) {
-        results = results.slice(0, maxResults);
+    if (idxs.length <= infoThresh) {
+        const info = uf.info(idxs, searchHaystack, needle),
+            order = uf.sort(info, searchHaystack, needle);
+
+        for (let i = 0; i < count; i++) {
+            const idx = info.idx[order[i]];
+            results[i] = haystack[idx];
+        }
+    } else {
+        for (let i = 0; i < count; i++) {
+            const idx = idxs[i];
+            results[i] = haystack[idx];
+        }
     }
 
     return results;

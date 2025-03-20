@@ -413,29 +413,7 @@ class TagManager extends DBManager {
         return await this.tag_db.quotaFetch(user);
     }
 
-    async _updateQuota(user, diff) {
-        if (diff === 0) {
-            return;
-        }
-
-        let currQuota = await this.tag_db.quotaFetch(user);
-
-        if (currQuota === false) {
-            await this.tag_db.quotaCreate(user);
-            currQuota = 0;
-        }
-
-        const newQuota = currQuota + diff;
-
-        if (newQuota > this.maxQuota) {
-            throw new TagError(`Maximum quota of ${this.maxQuota}kb has been exceeded`);
-        }
-
-        await this.tag_db.quotaSet(user, newQuota);
-        getLogger().debug(`Updated quota for: ${user} diff: ${diff}`);
-    }
-
-    async _downloadBody(msg) {
+    async downloadBody(msg) {
         let body,
             isScript = false;
 
@@ -459,6 +437,28 @@ class TagManager extends DBManager {
         }
 
         return [body, isScript];
+    }
+
+    async _updateQuota(user, diff) {
+        if (diff === 0) {
+            return;
+        }
+
+        let currQuota = await this.tag_db.quotaFetch(user);
+
+        if (currQuota === false) {
+            await this.tag_db.quotaCreate(user);
+            currQuota = 0;
+        }
+
+        const newQuota = currQuota + diff;
+
+        if (newQuota > this.maxQuota) {
+            throw new TagError(`Maximum quota of ${this.maxQuota}kb has been exceeded`);
+        }
+
+        await this.tag_db.quotaSet(user, newQuota);
+        getLogger().debug(`Updated quota for: ${user} diff: ${diff}`);
     }
 }
 

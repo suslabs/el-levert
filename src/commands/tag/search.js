@@ -45,21 +45,16 @@ export default {
         const s = Util.multiple(find) ? "s" : "",
             header = `:information_source: Found **${find.length}** similar tag${s}:`;
 
-        let outLength = header.length + 1;
-
-        outLength += find.reduce((sum, name) => sum + name.length, 0);
-        outLength += (find.length - 1) * "**, **".length + 2 * "**".length;
-
-        if (outLength >= getClient().commandHandler.outCharLimit) {
+        if (maxResults > defaultResultLimit * 2) {
             const names = find.join(", ");
 
             return {
                 content: header,
                 ...Util.getFileAttach(names, "tags.txt")
             };
+        } else {
+            const names = `**${find.join("**, **")}**`;
+            return `${header} ${names}`;
         }
-
-        const names = `**${find.join("**, **")}**`;
-        return `${header} ${names}`;
     }
 };
