@@ -760,14 +760,18 @@ const Util = {
             size += count(embed.footer?.icon_url);
         }
 
-        size += (embed.fields ?? []).reduce((sum, field) => {
+        size += (embed.fields ?? []).reduce((sum, field, i) => {
             const { name, value, inline } = field;
+
+            if (countType === "lines" && i > 0 && inline) {
+                return sum;
+            }
 
             let nameSize = count(name),
                 valueSize = count(value);
 
-            if (countType === "lines" && name && !inline) {
-                nameSize += 1;
+            if (countType === "lines" && name) {
+                nameSize++;
             }
 
             return sum + nameSize + valueSize;

@@ -126,6 +126,12 @@ class CommandHandler extends Handler {
             return out;
         }
 
+        out.embeds = out.embeds.filter(embed => embed !== null && typeof embed !== "undefined");
+
+        if (Util.empty(out.embeds)) {
+            return out;
+        }
+
         for (const [i, embed] of out.embeds.entries()) {
             const oversized = Util.overSizeLimits(embed, this.outCharLimit, this.outLineLimit);
 
@@ -137,11 +143,15 @@ class CommandHandler extends Handler {
                 n = Util.single(out.embeds) ? "" : ` ${i + 1}`;
 
             if (chars !== null) {
-                return `:warning: Embed${n} is too long. (${chars} / ${this.outCharLimit})`;
+                return {
+                    content: `:warning: Embed${n} is too long. (${chars} / ${this.outCharLimit})`
+                };
             }
 
             if (lines !== null) {
-                return `:warning: Embed${n} has too many newlines. (${lines} / ${this.outLineLimit})`;
+                return {
+                    content: `:warning: Embed${n} has too many newlines. (${lines} / ${this.outLineLimit})`
+                };
             }
         }
 

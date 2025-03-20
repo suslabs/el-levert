@@ -217,7 +217,7 @@ class Command {
     getArgsHelp(args, discord = true) {
         const hasArgs = typeof args === "string" && !Util.empty(args);
 
-        const prefix = this.prefix + this.isSubcmd ? this.parent + " " : "";
+        const prefix = this.prefix + (this.isSubcmd ? this.parent + " " : "");
 
         const formattedName = this.isSubcmd && discord ? bold(this.name) : this.name,
             formattedArgs = hasArgs ? " " + (discord ? inlineCode(args) : args) : "";
