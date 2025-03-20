@@ -371,6 +371,9 @@ const Util = {
     },
 
     clamp: (x, a, b) => {
+        a ??= -Infinity;
+        b ??= Infinity;
+
         return Math.max(Math.min(x, b), a);
     },
 
@@ -421,6 +424,21 @@ const Util = {
     _charClassExcapeRegex: /[-\\\]^]/g,
     escapeCharClass: str => {
         return str.replace(Util._charClassExcapeRegex, "\\$&");
+    },
+
+    getFirstGroup: (match, name) => {
+        if (!match) {
+            return;
+        }
+
+        const groups = Object.keys(match.groups).filter(key => typeof match.groups[key] !== "undefined"),
+            foundName = groups.find(key => key => key.startsWith(name));
+
+        if (typeof foundName === "undefined") {
+            return;
+        }
+
+        return match.groups[foundName];
     },
 
     urlRegex: /(\S*?):\/\/(?:([^/.]+)\.)?([^/.]+)\.([^/\s]+)\/?(\S*)?/,

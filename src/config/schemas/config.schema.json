@@ -153,6 +153,16 @@
         },
         "bridgeBotMessageFormat": {
             "type": "string"
+        },
+        "bridgeBotMessageFormats": {
+            "oneOf": [
+                {
+                    "type": "array"
+                },
+                {
+                    "type": "object"
+                }
+            ]
         }
     },
     "required": [
@@ -201,7 +211,7 @@
         "discordLogLevel",
         "logChannelId",
         "logWebhook",
-        "bridgeBotIds",
-        "bridgeBotMessageFormat"
-    ]
+        "bridgeBotIds"
+    ],
+    "anyOf": [{ "required": ["bridgeBotMessageFormat"] }, { "required": ["bridgeBotMessageFormats"] }]
 }

@@ -49,6 +49,8 @@ class LevertClient extends DiscordClient {
 
         this.logger = null;
         this._setupLogger();
+
+        this._setOtherConfigs();
     }
 
     get uptime() {
@@ -86,8 +88,6 @@ class LevertClient extends DiscordClient {
             pingReply: config.pingReply,
             mentionUsers: config.mentionUsers
         });
-
-        this.useBridgeBot = !Util.empty(config.bridgeBotIds);
     }
 
     loadComponent(name, barrel, ctorArgs = {}, options = {}) {
@@ -412,6 +412,8 @@ class LevertClient extends DiscordClient {
         }
     }
 
+    static _formatContentGroup = "(?<content>)";
+
     _setStarted() {
         this.started = true;
         this.startedAt = Date.now();
@@ -420,6 +422,86 @@ class LevertClient extends DiscordClient {
     _setStopped() {
         this.started = false;
         this.startedAt = -1;
+    }
+
+    _setOtherConfigs() {
+        this._setBridgeBotConfig();
+    }
+
+    _parseBridgeBotFormat(format) {
+        if (typeof format === "string") {
+            format = [format];
+        } else if (!Array.isArray(format)) {
+            return [null, false];
+        }
+
+        format = format.filter(exp => !Util.empty(exp) && exp.includes(LevertClient._formatContentGroup));
+
+        if (Util.empty(format)) {
+            return [null, false];
+        }
+
+        let expStr = `(${format.join(")|(")})`;
+
+        let i = 1;
+        expStr = expStr.replaceAll(LevertClient._formatContentGroup, _ => `(?<content${i++}>)`);
+
+        try {
+            const exp = new RegExp(expStr);
+            return [exp, true];
+        } catch (err) {
+            return [null, false];
+        }
+    }
+
+    _setBridgeBotConfig() {
+        let botIds = this.config.bridgeBotIds,
+            messageFormats = this.config.bridgeBotMessageFormats ?? this.config.bridgeBotMessageFormat;
+
+        let enabled = !Util.empty(botIds);
+
+        if (!enabled) {
+            this.useBridgeBot = enabled;
+            return;
+        }
+
+        const individual = typeof messageFormats === "object" && !Array.isArray(messageFormats);
+        this.individualBridgeBotFormats = individual;
+
+        if (individual) {
+            this.bridgeBotExps = new Map();
+
+            for (let i = botIds.length - 1; i >= 0; i--) {
+                const id = botIds[i],
+                    format = messageFormats[id];
+
+                const [exp, valid] = this._parseBridgeBotFormat(format);
+
+                if (valid) {
+                    this.bridgeBotExps.set(id, exp);
+                } else {
+                    this.logger.warn(`No/invalid regex for bot "${id}".`);
+                    botIds.splice(i, 1);
+                }
+            }
+
+            enabled = !Util.empty(botIds);
+        } else {
+            const [exp, valid] = this._parseBridgeBotFormat(messageFormats);
+
+            if (valid) {
+                this.bridgeBotExp = exp;
+            } else {
+                this.logger.warn("No/invalid bridge bot regex provided.");
+                enabled = false;
+            }
+        }
+
+        if (!enabled) {
+            this.logger.warn("Bridge bot support was disabled.");
+        }
+
+        this.useBridgeBot = enabled;
     }
 
     _setupLogger() {

@@ -22,18 +22,17 @@ class BaseCommandManager extends Manager {
         this.excludeDirs = options.excludeDirs;
         this.cmdFileExtension = options.cmdFileExtension ?? ".js";
 
-        if (getClient().useBridgeBot) {
-            this.bridgeBotExp = new RegExp(`^${getClient().config.bridgeBotMessageFormat}${this.commandPrefix}(.+)`);
-        }
-
         this.commands = [];
+
+        this._setBridgeBotConfig();
     }
 
     getCommand(str, author) {
         let content;
 
         if (getClient().isBridgeBot(author)) {
-            content = str.match(this.bridgeBotExp)[1];
+            const match = str.match(this._getBridgeBotExp(author));
+            content = Util.getFirstGroup(match, "content");
         } else {
             content = str.slice(this.commandPrefix.length);
         }
@@ -46,7 +45,7 @@ class BaseCommandManager extends Manager {
 
     isCommand(str, author) {
         if (getClient().isBridgeBot(author)) {
-            return this.bridgeBotExp.test(str);
+            return this._getBridgeBotExp(author).test(str);
         } else {
             if (str.length <= this.commandPrefix.length) {
                 return false;
@@ -201,6 +200,40 @@ class BaseCommandManager extends Manager {
 
     unload() {
         this.deleteCommands();
+    }
+
+    _wrapBridgeBotExp(exp) {
+        const contentExp = `${this.commandPrefix}(?<content$1>.+)`;
+        return new RegExp("^" + exp.source.replace(/\(\?<content(\d*?)\>\)/g, contentExp));
+    }
+
+    _setBridgeBotConfig() {
+        if (!getClient().useBridgeBot) {
+            return;
+        }
+
+        const individual = getClient().individualBridgeBotFormats;
+        this._individualBridgeBotExps = individual;
+
+        if (individual) {
+            const exp = getClient().bridgeBotExps;
+            this._bridgeBotExps = new Map();
+
+            exp.forEach((value, key) => {
+                this._bridgeBotExps.set(key, this._wrapBridgeBotExp(value));
+            });
+        } else {
+            const exp = getClient().bridgeBotExp;
+            this._bridgeBotExp = this._wrapBridgeBotExp(exp);
+        }
+    }
+
+    _getBridgeBotExp(id) {
+        if (this._individualBridgeBotExps) {
+            return this._bridgeBotExps.get(id);
+        } else {
+            return this._bridgeBotExp;
+        }
     }
 
     _categorizeCommands(perm, sort = false) {
