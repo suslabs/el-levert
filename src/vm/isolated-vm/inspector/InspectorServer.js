@@ -2,6 +2,7 @@ import { URL, URLSearchParams } from "node:url";
 import WebSocket from "ws";
 
 import { getLogger } from "../../../LevertClient.js";
+
 import Util from "../../../util/Util.js";
 
 class InspectorServer {

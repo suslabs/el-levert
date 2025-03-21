@@ -1,9 +1,10 @@
 import path from "node:path";
 import fs from "node:fs/promises";
 
+import SqliteDatabase from "./drivers/sqlite/SqliteDatabase.js";
+
 import Util from "../util/Util.js";
 
-import SqliteDatabase from "./drivers/sqlite/SqliteDatabase.js";
 import OpenModes from "./drivers/sqlite/OpenModes.js";
 
 class SqlDatabase {
@@ -142,11 +143,11 @@ class SqlDatabase {
     }
 
     async bindQueries() {
-        for (const category in this.queryStrings) {
+        for (const category of Object.keys(this.queryStrings)) {
             const queries = {},
                 strings = this.queryStrings[category];
 
-            for (const query in strings) {
+            for (const query of Object.keys(strings)) {
                 const queryString = strings[query],
                     statement = await this.db.prepare(queryString);
 

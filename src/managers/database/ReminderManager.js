@@ -2,10 +2,12 @@ import DBManager from "./DBManager.js";
 import ReminderDatabase from "../../database/ReminderDatabase.js";
 
 import Reminder from "../../structures/Reminder.js";
-import ReminderError from "../../errors/ReminderError.js";
 
 import { getClient, getLogger } from "../../LevertClient.js";
+
 import Util from "../../util/Util.js";
+
+import ReminderError from "../../errors/ReminderError.js";
 
 function logTime(t1) {
     const t2 = performance.now();

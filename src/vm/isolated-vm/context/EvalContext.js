@@ -1,23 +1,24 @@
 import ivm from "isolated-vm";
 const { Isolate, ExternalCopy } = ivm;
 
+import IsolateInspector from "../inspector/IsolateInspector.js";
+
 import FakeUtil from "../classes/FakeUtil.js";
 import FakeTag from "../classes/FakeTag.js";
 import FakeMsg from "../classes/FakeMsg.js";
 import FakeVM from "../classes/FakeVM.js";
 
 import VMFunction from "../../../structures/vm/VMFunction.js";
-import VMError from "../../../errors/VMError.js";
+import VMErrors from "../VMErrors.js";
 
 import Functions from "./Functions.js";
 import globalNames from "./globalNames.json" assert { type: "json" };
 import funcNames from "./funcNames.json" assert { type: "json" };
 
-import VMErrors from "../VMErrors.js";
-import IsolateInspector from "../inspector/IsolateInspector.js";
-
 import Util from "../../../util/Util.js";
 import VMUtil from "../../../util/vm/VMUtil.js";
+
+import VMError from "../../../errors/VMError.js";
 
 class EvalContext {
     static filename = "script.js";

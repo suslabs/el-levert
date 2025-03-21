@@ -5,8 +5,8 @@ import genericPool from "generic-pool";
 
 import VMError from "../../../errors/VMError.js";
 
-import VMUtil from "../../../util/vm/VMUtil.js";
 import Util from "../../../util/Util.js";
+import VMUtil from "../../../util/vm/VMUtil.js";
 
 function listener(socket, funcs) {
     return new Promise((resolve, reject) => {

@@ -3,6 +3,7 @@ import { bold } from "discord.js";
 import Handler from "./Handler.js";
 
 import { getClient, getLogger } from "../LevertClient.js";
+
 import Util from "../util/Util.js";
 import VMUtil from "../util/vm/VMUtil.js";
 
@@ -38,7 +39,7 @@ class CommandHandler extends Handler {
     }
 
     async execute(msg) {
-        if (!getClient().commandManager.isCommand(msg.content, msg.author.id)) {
+        if (!getClient().commandManager.isCommand(msg.content, msg)) {
             return false;
         }
 
@@ -49,7 +50,7 @@ class CommandHandler extends Handler {
             return false;
         }
 
-        const [cmd, args] = getClient().commandManager.getCommand(msg.content, msg.author.id);
+        const [cmd, args] = getClient().commandManager.getCommand(msg.content, msg);
 
         if (typeof cmd === "undefined") {
             return false;
@@ -146,9 +147,7 @@ class CommandHandler extends Handler {
                 return {
                     content: `:warning: Embed${n} is too long. (${chars} / ${this.outCharLimit})`
                 };
-            }
-
-            if (lines !== null) {
+            } else if (lines !== null) {
                 return {
                     content: `:warning: Embed${n} has too many newlines. (${lines} / ${this.outLineLimit})`
                 };

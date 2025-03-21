@@ -1,7 +1,6 @@
 import { isPromise } from "node:util/types";
 
 import DiscordClient from "./client/DiscordClient.js";
-import ClientError from "./errors/ClientError.js";
 
 import version from "../version.js";
 
@@ -23,6 +22,8 @@ import MessageProcessor from "./client/MessageProcessor.js";
 
 import Util from "./util/Util.js";
 import ExportUtil from "./util/misc/ExportUtil.js";
+
+import ClientError from "./errors/ClientError.js";
 
 let token, client;
 

@@ -1,6 +1,7 @@
+import ObjectLoader from "../ObjectLoader.js";
+
 import BotEvent from "../../structures/BotEvent.js";
 
-import ObjectLoader from "../ObjectLoader.js";
 import LoadStatus from "../LoadStatus.js";
 
 class EventObjectLoader extends ObjectLoader {

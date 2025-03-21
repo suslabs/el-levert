@@ -2,10 +2,11 @@ import path from "node:path";
 import Ajv from "ajv";
 
 import TextFileLoader from "./TextFileLoader.js";
-import LoadStatus from "./LoadStatus.js";
-import WriteMode from "./WriteMode.js";
 
 import Util from "../util/Util.js";
+
+import LoadStatus from "./LoadStatus.js";
+import WriteMode from "./WriteMode.js";
 
 class JsonLoader extends TextFileLoader {
     static ajvOptions = {
@@ -109,7 +110,7 @@ class JsonLoader extends TextFileLoader {
 
         for (const err of errors) {
             const split = err.instancePath.split("/"),
-                newPath = split.slice(1).join(".");
+                newPath = Util.after(split).join(".");
 
             if (!Util.empty(newPath)) {
                 errMessage.push(`Property ${newPath} ${err.message}`);

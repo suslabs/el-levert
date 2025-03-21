@@ -30,15 +30,23 @@ export default {
             return `:warning: Tag **${t_name}** doesn't exist.`;
         }
 
-        const owner = await getClient().findUserById(tag.owner);
+        let owner = (
+            await getClient().findUsers(tag.owner, {
+                onlyMembers: true
+            })
+        )[0];
 
-        if (!owner) {
-            return ":warning: Tag owner not found.";
+        if (typeof owner === "undefined") {
+            owner = await getClient().findUserById(tag.owner);
+
+            if (typeof owner === "undefined") {
+                return ":warning: Tag owner not found.";
+            }
         }
 
-        let out = `:information_source: Tag **${t_name}** is owned by \`${owner.username}\``;
+        let out = `:information_source: Tag **${t_name}** is owned by \`${owner.user.username}\``;
 
-        if (typeof owner.nickname !== "undefined") {
+        if (owner.nickname) {
             out += ` (also known as \`${owner.nickname}\`)`;
         }
 

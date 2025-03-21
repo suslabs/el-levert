@@ -362,6 +362,16 @@ const Util = {
         return str[0].toUpperCase() + str.slice(1);
     },
 
+    concat: (a, ...args) => {
+        const concatenated = [].concat(a, ...args);
+
+        if (Array.isArray(a)) {
+            return concatenated;
+        }
+
+        return concatenated.join("");
+    },
+
     removeRangeStr: (str, i, length = 1) => {
         return str.slice(0, i) + str.slice(i + length);
     },
@@ -392,16 +402,28 @@ const Util = {
         return Util.round(num, digits);
     },
 
+    length: obj => {
+        return obj?.length ?? obj?.size ?? 0;
+    },
+
+    stringLength: obj => {
+        if (obj === null || typeof obj === "undefined") {
+            return 0;
+        } else {
+            return String(obj).length;
+        }
+    },
+
     empty: obj => {
-        return (obj?.length ?? obj?.size ?? 0) === 0;
+        return Util.length(obj) === 0;
     },
 
     single: obj => {
-        return (obj?.length ?? obj?.size ?? 0) === 1;
+        return Util.length(obj) === 1;
     },
 
     multiple: obj => {
-        return (obj?.length ?? obj?.size ?? 0) > 1;
+        return Util.length(obj) > 1;
     },
 
     first: (arr, start = 0) => {
@@ -410,6 +432,10 @@ const Util = {
 
     last: (arr, start = 0) => {
         return arr[arr.length + start - 1];
+    },
+
+    after: (arr, start = 0) => {
+        return arr.slice(start + 1);
     },
 
     randomElement: (arr, a = 0, b = arr.length) => {
@@ -562,10 +588,14 @@ const Util = {
     },
 
     getUtf8ByteLength: str => {
-        let length = 0;
+        let i = 0,
+            len = Util.countChars(str);
 
-        for (let i = 0; i < str?.length; i++) {
-            const codepoint = str.codePointAt(i);
+        let codepoint,
+            length = 0;
+
+        for (let i = 0; i < len; i++) {
+            codepoint = str.codePointAt(i);
 
             if (codepoint <= 0x7f) {
                 length += 1;
@@ -587,7 +617,19 @@ const Util = {
     },
 
     countLines: str => {
-        return str ? str.split("\n").length : 0;
+        if (typeof str !== "string") {
+            return 0;
+        }
+
+        let count = 1,
+            pos = 0;
+
+        while ((pos = str.indexOf("\n", pos)) !== -1) {
+            count++;
+            pos++;
+        }
+
+        return count;
     },
 
     overSizeLimits: (obj, charLimit, lineLimit) => {
@@ -622,6 +664,41 @@ const Util = {
         }
 
         return false;
+    },
+
+    trimString: (str, charLimit, lineLimit, showDiff = false) => {
+        const oversized = Util.overSizeLimits(str, charLimit, lineLimit);
+
+        if (!oversized) {
+            return str;
+        }
+
+        const [chars, lines] = oversized;
+
+        if (chars !== null) {
+            const trimmed = str.slice(0, charLimit);
+
+            const diff = chars - charLimit,
+                s = diff > 1 ? "s" : "";
+
+            if (showDiff) {
+                return `${trimmed} ... (${diff} more character${s})`;
+            } else {
+                return trimmed + "...";
+            }
+        } else if (lines !== null) {
+            const split = str.split("\n"),
+                trimmed = split.slice(0, lineLimit).join("\n");
+
+            const diff = lines - lineLimit,
+                s = diff > 1 ? "s" : "";
+
+            if (showDiff) {
+                return `${trimmed} ... (${diff} more line${s})`;
+            } else {
+                return trimmed + "...";
+            }
+        }
     },
 
     findNthCharacter: (str, char, n) => {
@@ -810,15 +887,7 @@ const Util = {
 
         str = str.replace(/\n|\r\n/g, "\\n");
         str = str.replaceAll("`", "\\`");
-
-        if (str.length > maxLength) {
-            const trimmed = str.slice(0, maxLength);
-
-            const diff = str.length - maxLength,
-                s = diff > 1 ? "s" : "";
-
-            return `\n---\n${trimmed} ... (${diff} more character${s})\n---`;
-        }
+        str = Util.trimString(str, maxLength, null, true);
 
         if (str.length > splitLength) {
             return `\n---\n${str}\n---`;

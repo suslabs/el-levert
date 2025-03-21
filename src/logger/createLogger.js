@@ -1,10 +1,10 @@
 import winston from "winston";
 import path from "node:path";
 
-import LoggerError from "../errors/LoggerError.js";
-
 import getFormat from "./getFormat.js";
 import getGlobalFormat from "./GlobalFormat.js";
+
+import LoggerError from "../errors/LoggerError.js";
 
 function getFilename(logFile, level) {
     const parsed = path.parse(logFile),

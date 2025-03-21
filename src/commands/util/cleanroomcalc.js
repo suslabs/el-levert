@@ -1,7 +1,7 @@
 import { EmbedBuilder } from "discord.js";
 
-import CleanroomUtil from "../../util/commands/CleanroomUtil.js";
 import Util from "../../util/Util.js";
+import CleanroomUtil from "../../util/commands/CleanroomUtil.js";
 
 export default {
     name: "cleanroomcalc",

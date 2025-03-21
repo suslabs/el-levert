@@ -1,6 +1,7 @@
+import ObjectLoader from "../ObjectLoader.js";
+
 import Command from "../../structures/Command.js";
 
-import ObjectLoader from "../ObjectLoader.js";
 import LoadStatus from "../LoadStatus.js";
 
 class CommandObjectLoader extends ObjectLoader {

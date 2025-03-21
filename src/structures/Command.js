@@ -1,9 +1,10 @@
 import { bold, inlineCode, codeBlock } from "discord.js";
 
-import CommandError from "../errors/CommandError.js";
-
 import { getClient } from "../LevertClient.js";
+
 import Util from "../util/Util.js";
+
+import CommandError from "../errors/CommandError.js";
 
 async function getPermLevel(options) {
     const { msg, asUser } = options,

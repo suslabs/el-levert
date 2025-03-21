@@ -1,10 +1,12 @@
 import { ChannelType, EmbedBuilder, hyperlink } from "discord.js";
 
 import Handler from "./Handler.js";
-import HandlerError from "../errors/HandlerError.js";
 
 import { getClient, getLogger } from "../LevertClient.js";
+
 import Util from "../util/Util.js";
+
+import HandlerError from "../errors/HandlerError.js";
 
 function logUsage(msg, str) {
     getLogger().info(
@@ -74,16 +76,8 @@ class PreviewHandler extends Handler {
             throw new HandlerError("Preview message not found");
         }
 
-        let content = prevMsg.content,
-            split = content.split("\n");
-
-        if (Util.overSizeLimit(content, this.outCharLimit)) {
-            content = content.slice(0, this.outCharLimit) + "...";
-        }
-
-        if (split.length > this.outLineLimit) {
-            content = split.slice(0, this.outLineLimit).join("\n") + "...";
-        }
+        let content = prevMsg.content;
+        content = Util.trimString(content, this.outCharLimit, this.outLineLimit);
 
         let image;
 

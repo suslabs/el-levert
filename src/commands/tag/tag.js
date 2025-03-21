@@ -1,8 +1,8 @@
-import { TagTypes } from "../../structures/tag/TagTypes.js";
-
 import { getClient, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+
+import { TagTypes } from "../../structures/tag/TagTypes.js";
 
 const dummyMsg = {
     attachments: new Map()

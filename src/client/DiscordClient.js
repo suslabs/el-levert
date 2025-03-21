@@ -1,10 +1,11 @@
 import discord from "discord.js";
 
-import ClientError from "../errors/ClientError.js";
 import EventLoader from "../loaders/event/EventLoader.js";
 
 import Util from "../util/Util.js";
 import search from "../util/search/diceSearch.js";
+
+import ClientError from "../errors/ClientError.js";
 
 const {
     Client,
@@ -573,6 +574,7 @@ class DiscordClient {
             throw err;
         }
 
+        user.user = user;
         return user;
     }
 
@@ -587,22 +589,23 @@ class DiscordClient {
 
         Util.setValuesWithDefaults(options, options, DiscordClient.defaultUsersOptions);
 
-        const guilds = this.client.guilds.cache;
+        const guilds = Array.from(this.client.guilds.cache.values());
 
         const foundId = Util.first(Util.findUserIds(query)),
             foundMention = Util.first(Util.findMentions(query)),
             user_id = foundId ?? foundMention;
 
         if (typeof user_id !== "undefined") {
-            for (const guild of guilds.values()) {
-                const member = await this.fetchMember(guild, user_id);
+            let member;
 
-                if (member) {
-                    return [member];
-                }
+            if (options.searchMembers) {
+                const members = await Promise.all(guilds.map(guild => this.fetchMember(guild, user_id)));
+                member = members.find(Boolean);
             }
 
-            if (options.onlyMembers) {
+            if (typeof member !== "undefined") {
+                return [member];
+            } else if (options.onlyMembers) {
                 return [];
             }
 
@@ -623,19 +626,20 @@ class DiscordClient {
         Util.setValuesWithDefaults(fetchOptions, fetchOptions, DiscordClient.defaultUsersFetchOptions);
 
         let members = [],
-            foundIds = [];
+            foundIds = new Set();
 
-        for (const guild of guilds.values()) {
+        for (const guild of guilds) {
             const guildMembers = await guild.members.fetch({
                 query,
                 limit: fetchOptions.fetchLimit
             });
 
-            const newMembers = guildMembers.filter(user => !foundIds.includes(user.id)),
-                memberIds = newMembers.keys();
-
-            members.push(...newMembers.values());
-            foundIds.push(...memberIds);
+            for (const member of guildMembers.values()) {
+                if (!foundIds.has(member.id)) {
+                    foundIds.add(member.id);
+                    members.push(member);
+                }
+            }
         }
 
         members = search(members, query, {

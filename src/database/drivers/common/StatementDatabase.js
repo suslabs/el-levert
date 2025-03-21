@@ -1,6 +1,6 @@
-import DatabaseError from "../../../errors/DatabaseError.js";
-
 import Util from "../../../util/Util.js";
+
+import DatabaseError from "../../../errors/DatabaseError.js";
 
 export default function (base) {
     class StatementDatabase extends base {

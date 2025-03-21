@@ -30,9 +30,9 @@ export default {
 
         if (tags.count === 0) {
             if (user === msg.author) {
-                return `:information_source: You have no tags.`;
+                return `:information_source: You have **no** tags.`;
             } else {
-                return `:information_source: User \`${user.username}\` has no tags.`;
+                return `:information_source: User \`${user.username}\` has **no** tags.`;
             }
         }
 

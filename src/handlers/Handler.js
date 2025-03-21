@@ -1,9 +1,9 @@
-import HandlerError from "../errors/HandlerError.js";
-
 import MessageTracker from "./tracker/MessageTracker.js";
 import UserTracker from "./tracker/UserTracker.js";
 
 import { getLogger } from "../LevertClient.js";
+
+import HandlerError from "../errors/HandlerError.js";
 
 class Handler {
     constructor(enabled = true, hasMessageTracker = true, hasUserTracker = false, options = {}) {

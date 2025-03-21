@@ -3,14 +3,15 @@ import EventEmitter from "node:events";
 
 import StatementDatabase from "../common/StatementDatabase.js";
 
-import DatabaseEvents from "./DatabaseEvents.js";
-import OpenModes from "./OpenModes.js";
-
 import SqliteStatement from "./SqliteStatement.js";
 import SqliteResult from "./SqliteResult.js";
 
-import DatabaseError from "../../../errors/DatabaseError.js";
 import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
+
+import DatabaseEvents from "./DatabaseEvents.js";
+import OpenModes from "./OpenModes.js";
+
+import DatabaseError from "../../../errors/DatabaseError.js";
 
 const transactionSql = {
     begin: "BEGIN TRANSACTION;",

@@ -35,26 +35,15 @@ export default {
             }
         }
 
-        const count = await getClient().tagManager.count(user?.id);
+        const count = await getClient().tagManager.count(user?.id),
+            registered = count > 0 ? count.toLocaleString() : "no";
 
         if (own) {
-            if (count > 0) {
-                return `:information_source: You have **${count}** tags.`;
-            } else {
-                return `:information_source: You have no tags.`;
-            }
+            return `:information_source: You have **${registered}** tags.`;
         } else if (typeof user !== "undefined") {
-            if (count > 0) {
-                return `:information_source: User \`${user.username}\` has **${count}** tags.`;
-            } else {
-                return `:information_source: User \`${user.username}\` has no tags.`;
-            }
+            return `:information_source: User \`${user.username}\` has **${registered}** tags.`;
         } else {
-            if (count > 0) {
-                return `:information_source: There are **${count}** tags registered.`;
-            } else {
-                return ":information_source: There are no tags registered.";
-            }
+            return `:information_source: There are **${registered}** tags registered.`;
         }
     }
 };

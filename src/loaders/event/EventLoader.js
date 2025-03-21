@@ -1,8 +1,9 @@
 import DirectoryLoader from "../DirectoryLoader.js";
 import EventObjectLoader from "./EventObjectLoader.js";
-import LoadStatus from "../LoadStatus.js";
 
 import Util from "../../util/Util.js";
+
+import LoadStatus from "../LoadStatus.js";
 
 class EventLoader extends DirectoryLoader {
     constructor(dirPath, client, logger, options = {}) {

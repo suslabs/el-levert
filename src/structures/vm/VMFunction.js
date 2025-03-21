@@ -1,10 +1,10 @@
+import Util from "../../util/Util.js";
+import getRegisterCode from "../../util/vm/getRegisterCode.js";
+
 import FuncTypes from "./FuncTypes.js";
 
 import VMError from "../../errors/VMError.js";
 import ExitError from "../../vm/isolated-vm/functionErrors/ExitError.js";
-
-import getRegisterCode from "../../util/vm/getRegisterCode.js";
-import Util from "../../util/Util.js";
 
 class VMFunction {
     static defaultValues = {

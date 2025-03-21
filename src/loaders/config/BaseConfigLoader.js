@@ -1,9 +1,10 @@
 import path from "node:path";
 
 import JsonLoader from "../JsonLoader.js";
-import LoadStatus from "../LoadStatus.js";
 
 import configPaths from "../../config/configPaths.json" assert { type: "json" };
+
+import LoadStatus from "../LoadStatus.js";
 
 class BaseConfigLoader extends JsonLoader {
     constructor(name, logger, options = {}) {

@@ -1,7 +1,8 @@
-import DatabaseError from "../../../errors/DatabaseError.js";
+import SqliteResult from "./SqliteResult.js";
+
 import DatabaseEvents from "./DatabaseEvents.js";
 
-import SqliteResult from "./SqliteResult.js";
+import DatabaseError from "../../../errors/DatabaseError.js";
 
 class SqliteStatement {
     constructor(db, st) {

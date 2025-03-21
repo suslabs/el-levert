@@ -1,8 +1,9 @@
 import DirectoryLoader from "../DirectoryLoader.js";
 import CommandObjectLoader from "./CommandObjectLoader.js";
-import LoadStatus from "../LoadStatus.js";
 
 import Util from "../../util/Util.js";
+
+import LoadStatus from "../LoadStatus.js";
 
 class CommandLoader extends DirectoryLoader {
     constructor(dirPath, logger, options = {}) {

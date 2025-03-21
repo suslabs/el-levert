@@ -1,6 +1,8 @@
 import { pathToFileURL } from "node:url";
 import path from "node:path";
 
+import Util from "../Util.js";
+
 import UtilError from "../../errors/UtilError.js";
 
 const CallstackUtil = {
@@ -22,7 +24,7 @@ const CallstackUtil = {
             throw new UtilError("Invalid callstack");
         }
 
-        return stack.slice(1);
+        return Util.after(stack);
     },
 
     getCallInfo: (options = {}) => {

@@ -4,11 +4,13 @@ import DBManager from "./DBManager.js";
 import TagDatabase from "../../database/TagDatabase.js";
 
 import Tag from "../../structures/tag/Tag.js";
-import TagError from "../../errors/TagError.js";
 
 import { getClient, getLogger } from "../../LevertClient.js";
+
 import Util from "../../util/Util.js";
 import search from "../../util/search/uFuzzySearch.js";
+
+import TagError from "../../errors/TagError.js";
 
 class TagManager extends DBManager {
     static $name = "tagManager";

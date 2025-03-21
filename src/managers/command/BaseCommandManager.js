@@ -1,15 +1,16 @@
 import Manager from "../Manager.js";
+
 import Command from "../../structures/Command.js";
-
 import CommandLoader from "../../loaders/command/CommandLoader.js";
-import LoadStatus from "../../loaders/LoadStatus.js";
-
-import CommandError from "../../errors/CommandError.js";
 
 import { getClient, getLogger } from "../../LevertClient.js";
+
 import Util from "../../util/Util.js";
 
+import LoadStatus from "../../loaders/LoadStatus.js";
 import categoryNames from "./categoryNames.json" assert { type: "json" };
+
+import CommandError from "../../errors/CommandError.js";
 
 class BaseCommandManager extends Manager {
     constructor(enabled, commandsDir, commandPrefix, options = {}) {
@@ -23,36 +24,23 @@ class BaseCommandManager extends Manager {
         this.cmdFileExtension = options.cmdFileExtension ?? ".js";
 
         this.commands = [];
-
-        this._setBridgeBotConfig();
     }
 
-    getCommand(str, author) {
-        let content;
+    getCommand(str, ...etc) {
+        const content = this._getCommandContent(str, ...etc);
 
-        if (getClient().isBridgeBot(author)) {
-            const match = str.match(this._getBridgeBotExp(author));
-            content = Util.getFirstGroup(match, "content");
-        } else {
-            content = str.slice(this.commandPrefix.length);
-        }
+        const [name, args] = Util.splitArgs(content),
+            cmd = this.searchCommands(name);
 
-        const [name, args] = Util.splitArgs(content);
-
-        const cmd = this.searchCommands(name);
         return [cmd, args];
     }
 
-    isCommand(str, author) {
-        if (getClient().isBridgeBot(author)) {
-            return this._getBridgeBotExp(author).test(str);
-        } else {
-            if (str.length <= this.commandPrefix.length) {
-                return false;
-            }
-
-            return str.startsWith(this.commandPrefix);
+    isCommand(str, ...etc) {
+        if (str.length <= this.commandPrefix.length) {
+            return false;
         }
+
+        return str.startsWith(this.commandPrefix);
     }
 
     getCommands(perm) {
@@ -202,38 +190,8 @@ class BaseCommandManager extends Manager {
         this.deleteCommands();
     }
 
-    _wrapBridgeBotExp(exp) {
-        const contentExp = `${this.commandPrefix}(?<content$1>.+)`;
-        return new RegExp("^" + exp.source.replace(/\(\?<content(\d*?)\>\)/g, contentExp));
-    }
-
-    _setBridgeBotConfig() {
-        if (!getClient().useBridgeBot) {
-            return;
-        }
-
-        const individual = getClient().individualBridgeBotFormats;
-        this._individualBridgeBotExps = individual;
-
-        if (individual) {
-            const exp = getClient().bridgeBotExps;
-            this._bridgeBotExps = new Map();
-
-            exp.forEach((value, key) => {
-                this._bridgeBotExps.set(key, this._wrapBridgeBotExp(value));
-            });
-        } else {
-            const exp = getClient().bridgeBotExp;
-            this._bridgeBotExp = this._wrapBridgeBotExp(exp);
-        }
-    }
-
-    _getBridgeBotExp(id) {
-        if (this._individualBridgeBotExps) {
-            return this._bridgeBotExps.get(id);
-        } else {
-            return this._bridgeBotExp;
-        }
+    _getCommandContent(str) {
+        return str.slice(this.commandPrefix.length);
     }
 
     _categorizeCommands(perm, sort = false) {

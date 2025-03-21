@@ -33,11 +33,21 @@ export default {
             return `:warning: Tag **${t_name}** doesn't exist.`;
         }
 
-        const info = await tag.getInfo(raw);
+        const header = `:information_source: Tag info for **${t_name}**:`;
 
-        return `:information_source: Tag info for **${t_name}**:
+        const info = await tag.getInfo(raw),
+            infoJson = JSON.stringify(info, undefined, 4);
+
+        if (infoJson.length + 10 > getClient().commandHandler.outCharLimit) {
+            return {
+                content: header,
+                ...Util.getFileAttach(infoJson, "info.json")
+            };
+        } else {
+            return `${header}
 \`\`\`js
-${JSON.stringify(info, undefined, 4)}
+${infoJson}
 \`\`\``;
+        }
     }
 };

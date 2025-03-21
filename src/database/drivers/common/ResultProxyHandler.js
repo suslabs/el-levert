@@ -1,6 +1,8 @@
 /* eslint-disable no-fallthrough */
 import { dataProps, infoProps, passthroughProps, targetProp } from "./ResultProperties.js";
 
+import Util from "../../../util/Util.js";
+
 const ResultProxyHandler = {
     get: (target, prop) => {
         if (passthroughProps.includes(prop)) {
@@ -12,7 +14,7 @@ const ResultProxyHandler = {
                 return target[prop];
             case "string":
                 if (prop.startsWith("_")) {
-                    const privProp = prop.slice(1);
+                    const privProp = Util.after(prop);
 
                     if (privProp === targetProp) {
                         return target;
@@ -53,7 +55,7 @@ const ResultProxyHandler = {
                 return true;
             case "string":
                 if (prop.startsWith("_")) {
-                    const privProp = prop.slice(1);
+                    const privProp = Util.after(prop);
 
                     if (privProp === targetProp || dataProps.includes(privProp)) {
                         return false;

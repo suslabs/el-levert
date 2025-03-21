@@ -1,10 +1,12 @@
 import { ChannelType, MessageType, EmbedBuilder } from "discord.js";
 
 import Handler from "./Handler.js";
-import HandlerError from "../errors/HandlerError.js";
 
 import { getClient, getLogger } from "../LevertClient.js";
+
 import Util from "../util/Util.js";
+
+import HandlerError from "../errors/HandlerError.js";
 
 const sedUsage = "Usage: sed/regex/replace/flags (optional)";
 

@@ -3,9 +3,9 @@ import path from "node:path";
 import Loader from "./Loader.js";
 import FileLoader from "./FileLoader.js";
 
-import LoadStatus from "./LoadStatus.js";
-
 import Util from "../util/Util.js";
+
+import LoadStatus from "./LoadStatus.js";
 
 class DirectoryLoader extends Loader {
     constructor(name, dirPath, logger, options = {}) {

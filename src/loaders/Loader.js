@@ -1,9 +1,10 @@
 import { isPromise } from "node:util/types";
 
-import LoaderError from "../errors/LoaderError.js";
+import Util from "../util/Util.js";
+
 import LoadStatus from "./LoadStatus.js";
 
-import Util from "../util/Util.js";
+import LoaderError from "../errors/LoaderError.js";
 
 class Loader {
     constructor(name = "", logger, options = {}) {

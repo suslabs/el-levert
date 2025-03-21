@@ -1,5 +1,6 @@
-import loadConfig from "../../config/loadConfig.js";
 import { getClient, getLogger } from "../../LevertClient.js";
+
+import loadConfig from "../../config/loadConfig.js";
 
 function configReloader() {
     getLogger().info("Reloading configs...");

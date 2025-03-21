@@ -3,6 +3,7 @@ import { RESTJSONErrorCodes } from "discord.js";
 import BaseDiscordTransport from "./BaseDiscordTransport.js";
 
 import Util from "../../util/Util.js";
+
 import LoggerError from "../../errors/LoggerError.js";
 
 class ChannelTransport extends BaseDiscordTransport {

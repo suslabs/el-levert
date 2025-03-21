@@ -1,8 +1,9 @@
-import VMError from "../../../errors/VMError.js";
-
 import { getLogger } from "../../../LevertClient.js";
-import VMUtil from "../../../util/vm/VMUtil.js";
+
 import Util from "../../../util/Util.js";
+import VMUtil from "../../../util/vm/VMUtil.js";
+
+import VMError from "../../../errors/VMError.js";
 
 class IsolateInspector {
     constructor(enabled, options) {

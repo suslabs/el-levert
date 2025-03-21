@@ -1,6 +1,6 @@
-import EventError from "../errors/EventError.js";
-
 import Util from "../util/Util.js";
+
+import EventError from "../errors/EventError.js";
 
 class BotEvent {
     static defaultValues = {

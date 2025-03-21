@@ -2,9 +2,10 @@ import Transport from "winston-transport";
 import { EmbedBuilder, TimestampStyles, codeBlock, time, DiscordAPIError } from "discord.js";
 
 import { EmbedColors, defaultColor } from "./EmbedColors.js";
-import LoggerError from "../../errors/LoggerError.js";
 
 import Util from "../../util/Util.js";
+
+import LoggerError from "../../errors/LoggerError.js";
 
 class BaseDiscordTransport extends Transport {
     static msgCharLimit = 2000;

@@ -5,10 +5,11 @@ import { DisabledGroup, OwnerGroup, OwnerUser } from "../../structures/permissio
 import Group from "../../structures/permission/Group.js";
 import User from "../../structures/permission/User.js";
 
-import PermissionError from "../../errors/PermissionError.js";
+import { getClient, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-import { getClient, getLogger } from "../../LevertClient.js";
+
+import PermissionError from "../../errors/PermissionError.js";
 
 class PermissionManager extends DBManager {
     static $name = "permManager";

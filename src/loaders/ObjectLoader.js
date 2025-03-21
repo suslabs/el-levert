@@ -1,7 +1,8 @@
 import FileLoader from "./FileLoader.js";
-import LoadStatus from "./LoadStatus.js";
 
 import Util from "../util/Util.js";
+
+import LoadStatus from "./LoadStatus.js";
 
 class ObjectLoader extends FileLoader {
     constructor(name, filePath, logger, options = {}) {

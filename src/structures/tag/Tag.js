@@ -1,9 +1,10 @@
 import { bold } from "discord.js";
 
-import { TagFlags, TagTypes } from "./TagTypes.js";
-
 import { getClient } from "../../LevertClient.js";
+
 import Util from "../../util/Util.js";
+
+import { TagFlags, TagTypes } from "./TagTypes.js";
 
 import TagError from "../../errors/TagError.js";
 
@@ -324,14 +325,14 @@ class Tag {
         return body;
     }
 
-    async getInfo(raw = false) {
+    async getInfo(raw = false, bodyLimit = 300) {
         if (raw) {
             return this.getData();
         }
 
         const aliasName = this.isAlias ? this.aliasName : "none",
-            body = Util.empty(this.body) ? "empty" : this.body,
-            args = Util.empty(this.args) ? "none" : this.args;
+            body = Util.empty(this.body) ? "empty" : Util.trimString(this.body, bodyLimit, null, true),
+            args = Util.empty(this.args) ? "none" : Util.trimString(this.args, bodyLimit, null, true);
 
         let owner;
 
