@@ -46,7 +46,7 @@
 
 # TODO
 
-- [ ] Fix oc (soon)
+- [x] Fix oc (soon)
 - [ ] Extract responses into a lang file
 - [ ] Rewrite vm2 runner
 - [ ] Finish CLI commands
