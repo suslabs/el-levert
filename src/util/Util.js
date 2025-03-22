@@ -23,20 +23,22 @@ const Util = {
         milli: 1 / 1000
     },
 
-    parseInt: (str, radix = 10) => {
+    parseInt: (str, radix = 10, defaultValue) => {
         if (typeof str !== "string" || typeof radix !== "number") {
-            return NaN;
+            return defaultValue ?? NaN;
         }
 
         if (radix < 2 || radix > 36) {
-            return NaN;
+            return defaultValue ?? NaN;
         }
 
         const validChars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ".slice(0, radix),
             exp = new RegExp(`^[+-]?[${validChars}]+$`, "i");
 
+        str = str.trim();
+
         if (!exp.test(str)) {
-            return NaN;
+            return defaultValue ?? NaN;
         }
 
         return Number.parseInt(str, radix);
@@ -359,7 +361,17 @@ const Util = {
 
     capitalize: str => {
         str = String(str).toLowerCase();
-        return str[0].toUpperCase() + str.slice(1);
+
+        const leading = str.match(/^\s*/)[0],
+            trailing = str.match(/\s*$/)[0];
+
+        const content = str.slice(leading.length, str.length - trailing.length);
+
+        if (content.length < 1) {
+            return str;
+        } else {
+            return leading + content[0].toUpperCase() + content.slice(1) + trailing;
+        }
     },
 
     concat: (a, ...args) => {
@@ -996,26 +1008,20 @@ const Util = {
             min = propName;
         }
 
-        if (args.length === 1) {
-            const obj = args[0],
-                prop = getProp(obj);
-
-            if (typeof prop === "undefined") {
+        const check = val => {
+            if (val === null) {
                 return false;
             }
 
-            return prop < min || prop > max;
+            return Number.isNaN(val) || val < min || val > max;
+        };
+
+        if (args.length === 1) {
+            const obj = args[0];
+            return check(getProp(obj));
         }
 
-        return args.find(obj => {
-            const prop = getProp(obj);
-
-            if (typeof prop === "undefined") {
-                return false;
-            }
-
-            return prop < min || prop > max;
-        });
+        return args.find(obj => isOutOfRange(getProp(obj)));
     },
 
     bindArgs: (fn, ...boundArgs) => {

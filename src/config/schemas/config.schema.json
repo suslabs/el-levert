@@ -46,9 +46,6 @@
         "otherTimeLimit": {
             "type": "number"
         },
-        "minResponseTime": {
-            "type": "number"
-        },
         "enableInspector": {
             "type": "boolean"
         },
@@ -59,6 +56,9 @@
             "type": "number"
         },
         "outLineLimit": {
+            "type": "number"
+        },
+        "minResponseTime": {
             "type": "number"
         },
         "reminderMsgLimit": {
@@ -180,11 +180,11 @@
         "timeLimit",
         "otherMemLimit",
         "otherTimeLimit",
-        "minResponseTime",
         "enableInspector",
         "inspectorPort",
         "outCharLimit",
         "outLineLimit",
+        "minResponseTime",
         "reminderMsgLimit",
         "reminderSendInterval",
         "tagNameRegex",
