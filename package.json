@@ -6,7 +6,8 @@
     "scripts": {
         "start": "node --no-warnings=ExperimentalWarning index.js",
         "lint": "eslint . --config .eslintrc.json --ignore-path .gitignore --ext .js",
-        "format": "prettier --config .prettierrc --ignore-path .prettierignore --write **/*.{js,cjs,json}"
+        "format": "prettier --config .prettierrc --ignore-path .prettierignore --write **/*.{js,cjs,json}",
+        "importer": "cross-env MOCK_MAP_PATH=\"./scripts/importer/mock/mock-map.json\" node --no-warnings=ExperimentalWarning --loader \"./scripts/mock/mock-loader.js\" ./scripts/importer/importer.js"
     },
     "dependencies": {
         "@leeoniya/ufuzzy": "^1.0.18",
@@ -25,6 +26,7 @@
     "devDependencies": {
         "@babel/eslint-parser": "^7.25.9",
         "@babel/plugin-syntax-import-assertions": "^7.26.0",
+        "cross-env": "^7.0.3",
         "eslint": "^8.57.1",
         "prettier": "^3.5.3"
     }

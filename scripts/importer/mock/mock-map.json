@@ -1,0 +1,4 @@
+{
+    "LevertClient.js": "./scripts/importer/mock/FakeClient.js",
+    "Tag.js": "./scripts/importer/mock/FakeTag.js"
+}

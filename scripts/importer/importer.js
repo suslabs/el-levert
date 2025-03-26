@@ -1,32 +1,159 @@
-import yargs from "yargs";
+import path from "node:path";
+import { parseArgs as nodeParseArgs } from "node:util";
+
+import "../../setupGlobals.js";
+
+import createLogger from "../../src/logger/createLogger.js";
+import getDefaultLoggerConfig from "../../src/logger/DefaultLoggerConfig.js";
+
+import ConfigLoader from "../../src/loaders/config/ConfigLoader.js";
+
+import { LevertClient } from "./mock/FakeClient.js";
+import TagManager from "../../src/managers/database/TagManager.js";
 
 import DBImporter from "./DBImporter.js";
 
-(async _ => {
-    const args = yargs(process.argv.slice(2))
-        .version(false)
-        .scriptName("importer")
-        .usage("Usage: $0 -json path")
-        .option("json", {
-            alias: "i",
-            describe: "Tag JSON path",
-            type: "string",
-            nargs: 1
-        })
-        .option("p1", {
-            describe: "Purge Leveret 1 tags",
-            nargs: 0
-        }).argv;
+import Util from "../../src/util/Util.js";
 
-    if (args.json) {
-        const importer = new DBImporter(args.json);
+const help = "Usage: npm run importer [--json-path tags.json] [--fix] [--purge-old] ",
+    usage = "See npm run importer --help for usage.";
 
-        await importer.loadDatabase();
-        await importer.updateDatabase();
-    } else if (args.p1) {
-        const importer = new DBImporter();
-
-        await importer.loadDatabase();
-        await importer.purge1();
+const argsOptions = {
+    help: {
+        type: "boolean",
+        short: "h"
+    },
+    "json-path": {
+        type: "string",
+        short: "t"
+    },
+    fix: {
+        type: "boolean",
+        short: "f"
+    },
+    "purge-old": {
+        type: "boolean",
+        short: "1"
     }
+};
+
+function parseArgs() {
+    let args;
+
+    try {
+        args = nodeParseArgs({
+            options: argsOptions,
+            args: process.argv.slice(2)
+        });
+    } catch (err) {
+        if (err.code?.startsWith("ERR_PARSE")) {
+            console.error(`Error: ${err.message}.`);
+            console.log(usage);
+
+            return null;
+        }
+
+        throw err;
+    }
+
+    return args;
+}
+
+function getInputValues(args) {
+    if (args === null) {
+        return null;
+    }
+
+    const argsNames = Object.keys(args.values),
+        showHelp = Util.empty(argsNames) || args.values.help;
+
+    if (showHelp) {
+        console.log(help);
+        return null;
+    }
+
+    let jsonPath = args.values["json-path"] ?? "",
+        fix = args.values.fix ?? false,
+        purgeOld = args.values["purge-old"] ?? false;
+
+    if (Util.empty(jsonPath)) {
+        if (!fix && !purgeOld) {
+            console.log(help);
+            return null;
+        }
+
+        if (fix) {
+            purgeOld = false;
+        } else if (purgeOld) {
+            fix = false;
+        }
+    } else {
+        jsonPath = path.resolve(jsonPath);
+        fix = purgeOld = false;
+    }
+
+    return {
+        jsonPath,
+        fix,
+        purgeOld
+    };
+}
+
+const loggerName = "Importer",
+    logLevel = "info";
+
+function setupLogger() {
+    const config = getDefaultLoggerConfig(loggerName, false, true, null, logLevel);
+    return createLogger(config);
+}
+
+async function loadConfig(logger) {
+    const configLoader = new ConfigLoader(logger),
+        [config] = await configLoader.load();
+
+    return config;
+}
+
+async function loadClient(config, logger) {
+    return new LevertClient(config, logger);
+}
+
+async function loadTagManager() {
+    const tagManager = new TagManager();
+    await tagManager.load();
+
+    return tagManager;
+}
+
+(async () => {
+    const args = parseArgs();
+
+    if (args === null) {
+        process.exit(1);
+    }
+
+    const input = getInputValues(args);
+
+    if (input === null) {
+        process.exit(1);
+    }
+
+    const logger = setupLogger(),
+        config = await loadConfig(logger);
+
+    const client = loadClient(config, logger),
+        tagManager = await loadTagManager();
+
+    const importer = new DBImporter(tagManager, logger);
+
+    if (!Util.empty(input.jsonPath)) {
+        await importer.updateDatabase(input.jsonPath);
+    } else if (input.fix) {
+        await importer.fix();
+    } else if (input.purgeOld) {
+        await importer.purgeOld();
+    }
+
+    await tagManager.unload();
+    process.exit(0);
 })();
