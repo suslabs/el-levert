@@ -5,13 +5,10 @@ import VMUtil from "../../../util/vm/VMUtil.js";
 
 const FakeUtil = {
     reply: (reply, text, options) => {
-        let format = VMUtil.formatReply(text, options);
+        const format = VMUtil.formatReply(text, options);
 
         if (typeof format.file !== "undefined") {
-            format = {
-                ...format,
-                ...Util.getFileAttach(format.file.data, format.file.name)
-            };
+            Object.assign(format, Util.getFileAttach(format.file.data, format.file.name));
         }
 
         reply.reply = format;
@@ -30,8 +27,8 @@ const FakeUtil = {
     fetchTag: async name => {
         let tag = await getClient().tagManager.fetch(name);
 
-        if (!tag) {
-            return undefined;
+        if (tag === null) {
+            return null;
         }
 
         if (tag.hops.length > 1) {

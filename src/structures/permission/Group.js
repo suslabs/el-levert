@@ -9,8 +9,6 @@ class Group {
         users: []
     };
 
-    static indentation = 4;
-
     constructor(data) {
         Util.setValuesWithDefaults(this, data, this.constructor.defaultValues);
     }
@@ -23,11 +21,12 @@ class Group {
 
     formatUsers(discord = false) {
         const formattedName = discord ? bold(this.name) : this.name,
-            formattedLevel = discord ? bold(this.level) : this.level,
-            s = Util.multiple(this.users) ? "s" : "",
+            formattedLevel = discord ? bold(this.level) : this.level;
+
+        const s = Util.multiple(this.users) ? "s" : "",
             title = `Group ${formattedName} - Level ${formattedLevel} - User${s}:`;
 
-        const spaces = discord ? "" : " ".repeat(Group.indentation);
+        const spaces = Group._getSpaces(discord);
 
         let userFormat;
 
@@ -48,6 +47,12 @@ class Group {
 
     format() {
         return `${this.name} - ${this.level}`;
+    }
+
+    static _indentation = 4;
+
+    static _getSpaces(discord) {
+        return discord ? "" : " ".repeat(Group._indentation);
     }
 }
 

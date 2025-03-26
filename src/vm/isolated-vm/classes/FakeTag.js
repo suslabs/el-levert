@@ -1,23 +1,21 @@
+import Util from "../../../util/Util.js";
+
 class FakeTag {
     constructor(tag, args) {
-        if (tag === null) {
-            tag = undefined;
-        }
-
-        if (args === null || args?.length < 1) {
+        if (Util.empty(args)) {
             args = undefined;
         }
 
-        this.tag = tag;
+        this.tag = tag ?? undefined;
         this.args = args;
 
         const fixedTag = {};
 
-        if (typeof args !== "undefined") {
+        if (args != null) {
             fixedTag.args = args;
         }
 
-        if (typeof tag !== "undefined") {
+        if (tag != null) {
             fixedTag.body = tag.body;
             fixedTag.name = tag.name;
             fixedTag.owner = tag.owner;

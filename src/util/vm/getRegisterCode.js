@@ -1,90 +1,57 @@
+import Util from "../Util.js";
+import Codegen from "./Codegen.js";
+
 const funcOptions = {
     arguments: {
         copy: true
     }
 };
 
-const indentation = 4,
-    spaces = " ".repeat(indentation);
-
-function indent(code, times = 1) {
-    let lines = code.split("\n");
-    lines = lines.map(line => spaces.repeat(times) + line);
-
-    return lines.join("\n");
-}
+const optionsStr = JSON.stringify(funcOptions, undefined, 4);
 
 function funcBody(type, ret) {
-    const prefix = ret ? "return" : "const res =",
-        options = JSON.stringify(funcOptions, undefined, 4);
+    const call = Codegen.call(`$0.${type}`, ["undefined", "args", optionsStr]);
 
-    const body = `${prefix} $0.${type}(undefined, args, ${options});`;
-
-    return body;
+    if (ret) {
+        return Codegen.return(call);
+    } else {
+        return Codegen.declaration("res", call, true);
+    }
 }
 
 function objDeclaration(objName) {
-    if (typeof objName === "undefined" || objName.length < 1) {
+    if (Util.empty(objName)) {
         return "";
     }
 
-    const code = `
-if(typeof ${objName} === "undefined") {
-${spaces}${objName} = {};
-}
-`;
-
-    return code.trim();
+    const decl = Codegen.assignment(objName, "{}");
+    return Codegen.if(Codegen.isUndefined(objName), decl);
 }
 
 function funcDeclaration(objName, funcName, body) {
-    body = indent(body);
-    let code = "";
+    let name = funcName;
 
-    if (typeof objName !== "undefined" && objName.length > 0) {
-        code += `${objName}.`;
+    if (!Util.empty(objName)) {
+        name = Codegen.access([objName, name]);
     }
 
-    code += `
-${funcName} = (...args) => {
-${body}
-}
-`.trim();
+    const func = Codegen.function(null, "...args", body, {
+        arrow: true
+    });
 
-    return code;
-}
-
-function getClassName(_class) {
-    return _class.prototype.constructor.name;
+    return Codegen.assignment(name, func);
 }
 
 function classDeclaration(_class, global) {
-    const className = getClassName(_class);
-
-    let classCode = _class.toString().trim(),
-        code;
+    const className = Util.className(_class),
+        classCode = _class.toString().trim();
 
     if (global) {
-        classCode = indent(classCode).trimStart();
-
-        code = `
-if(typeof ${className} === "undefined") {
-${spaces}${className} = ${classCode};
-}
-        `;
-    } else {
-        code = classCode;
+        const decl = Codegen.assignment(className, classCode);
+        return Codegen.if(Codegen.isUndefined(className), decl);
     }
 
-    return code.trim();
-}
-
-function closure(body) {
-    const header = "(function() {\n",
-        footer = "\n})();";
-
-    body = indent(body);
-    return header + body + footer;
+    return classCode;
 }
 
 function getRegisterCode(options, errorOptions = {}) {
@@ -92,17 +59,17 @@ function getRegisterCode(options, errorOptions = {}) {
 
     const errClass = errorOptions.class,
         useError = typeof errClass !== "undefined",
-        errAccessible = errorOptions.accessible ?? true;
+        errAccessible = errorOptions.accessible ?? false;
 
     let declCode = objDeclaration(objName),
         body = funcBody(type, !useError);
 
     if (useError) {
-        const errName = getClassName(errClass),
+        const errName = Util.className(errClass),
             errDecl = classDeclaration(errClass, errAccessible);
 
         if (errAccessible) {
-            if (declCode.length > 0) {
+            if (!Util.empty(declCode)) {
                 declCode += "\n\n";
             }
 
@@ -111,7 +78,7 @@ function getRegisterCode(options, errorOptions = {}) {
             body = `${errDecl}\n\n${body}`;
         }
 
-        body += `\n\nthrow new ${errName}(res);`;
+        body += "\n\n" + Codegen.throw(errName, "res");
     }
 
     const code = `
@@ -119,7 +86,7 @@ ${declCode}
 
 ${funcDeclaration(objName, funcName, body)}`;
 
-    return closure(code.trim());
+    return Codegen.closure(code);
 }
 
 export default getRegisterCode;

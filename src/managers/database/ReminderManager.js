@@ -11,7 +11,7 @@ import ReminderError from "../../errors/ReminderError.js";
 
 function logTime(t1) {
     const t2 = performance.now();
-    getLogger().info(`Sending reminders took ${Util.timeDelta(t2, t1).toLocaleString()}ms.`);
+    getLogger().info(`Sending reminders took ${Util.formatNumber(Util.timeDelta(t2, t1))}ms.`);
 }
 
 class ReminderManager extends DBManager {
@@ -49,8 +49,8 @@ class ReminderManager extends DBManager {
     async list(user) {
         const reminders = await this.remind_db.fetch(user);
 
-        if (!reminders) {
-            return false;
+        if (reminders === null) {
+            return null;
         }
 
         return reminders;
@@ -77,7 +77,7 @@ class ReminderManager extends DBManager {
     async remove(user, index) {
         const reminders = await this.list(user);
 
-        if (!reminders) {
+        if (reminders === null) {
             return false;
         }
 
@@ -114,7 +114,7 @@ class ReminderManager extends DBManager {
     async sendReminder(reminder) {
         const user = await getClient().findUserById(reminder.user);
 
-        if (!user) {
+        if (user === null) {
             return;
         }
 

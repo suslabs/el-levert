@@ -2,7 +2,7 @@ import VMError from "../errors/VMError.js";
 
 class VM {
     constructor(enabled, options) {
-        if (typeof this.constructor.$name === "undefined") {
+        if (typeof this.constructor.$name !== "string") {
             throw new VMError("VM must have a name");
         }
 

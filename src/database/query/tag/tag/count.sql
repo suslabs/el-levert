@@ -1,1 +1,1 @@
-SELECT COUNT(*) as count FROM Tags WHERE $countAll = true OR owner = $user;
+SELECT COUNT(*) AS count FROM Tags WHERE ($countAll = true OR owner = $user) AND ($flag IS NULL OR (type & $flag) = $flag);

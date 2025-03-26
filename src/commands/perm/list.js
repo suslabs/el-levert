@@ -16,7 +16,7 @@ export default {
     handler: async _ => {
         const groups = await getClient().permManager.listGroups(true);
 
-        if (!groups) {
+        if (groups === null) {
             return ":information_source: No permissions are registered.";
         }
 

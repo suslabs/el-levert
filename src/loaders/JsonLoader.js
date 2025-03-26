@@ -14,7 +14,10 @@ class JsonLoader extends TextFileLoader {
     };
 
     constructor(name, filePath, logger, options = {}) {
-        super(name, filePath, logger, options);
+        super(name, filePath, logger, {
+            type: "json_file",
+            ...options
+        });
 
         this.validateWithSchema = options.validateWithSchema ?? false;
         this.forceSchemaValidation = options.forceSchemaValidation ?? true;
@@ -24,7 +27,7 @@ class JsonLoader extends TextFileLoader {
 
         this.customStringify = options.stringify;
         this.replacer = options.replacer;
-        this.space = options.space ?? 0;
+        this.spaces = options.spaces ?? 0;
 
         this._childValidate = this.validate;
         this.validate = this._validate;
@@ -90,14 +93,14 @@ class JsonLoader extends TextFileLoader {
     stringifyData(data, options) {
         const stringify = options.stringify ?? this.customStringify,
             replacer = options.replacer ?? this.replacer,
-            space = options.space ?? this.space;
+            spaces = options.spaces ?? this.spaces;
 
         let jsonData;
 
         if (typeof stringify === "function") {
             jsonData = stringify(data, options);
         } else {
-            jsonData = JSON.stringify(data, replacer, space);
+            jsonData = JSON.stringify(data, replacer, spaces);
         }
 
         return jsonData;
@@ -130,7 +133,7 @@ class JsonLoader extends TextFileLoader {
         }
 
         this._jsonString = this.data;
-        this.data = {};
+        this.data = null;
 
         return LoadStatus.successful;
     }
@@ -145,7 +148,6 @@ class JsonLoader extends TextFileLoader {
         }
 
         this.data = obj;
-
         return LoadStatus.successful;
     }
 
@@ -165,10 +167,13 @@ class JsonLoader extends TextFileLoader {
     }
 
     async _loadSchemaFile() {
-        const schemaOptions = { throwOnFailure: this.throwOnFailure },
-            schemaLoader = new TextFileLoader("schema", this._schemaPath, this.logger, schemaOptions);
+        const schemaOptions = {
+            type: "json_file",
+            throwOnFailure: this.throwOnFailure
+        };
 
-        const [schemaString, status] = await schemaLoader.load();
+        const schemaLoader = new TextFileLoader("schema", this._schemaPath, this.logger, schemaOptions),
+            [schemaString, status] = await schemaLoader.load();
 
         if (status === LoadStatus.failed) {
             return status;
@@ -199,16 +204,20 @@ class JsonLoader extends TextFileLoader {
 
         const existingValidator = JsonLoader._ajv.getSchema(this.schema.$id);
 
-        if (typeof existingValidator !== "undefined") {
-            this._ajvValidate = existingValidator;
-        } else {
+        if (typeof existingValidator === "undefined") {
             this._ajvValidate = JsonLoader._ajv.compile(this.schema);
+        } else {
+            this._ajvValidate = existingValidator;
         }
 
         return LoadStatus.successful;
     }
 
     _removeValidator() {
+        if (typeof this.schema === "undefined") {
+            return;
+        }
+
         JsonLoader._ajv.removeSchema(this.schema.$id);
     }
 
@@ -245,7 +254,8 @@ class JsonLoader extends TextFileLoader {
             }
 
             if (!valid) {
-                return this.failure("Validation failed." + (error ? `\n${error}` : ""));
+                const errStr = error ? `\n${error}` : "";
+                return this.failure("Validation failed." + errStr);
             }
         }
 
@@ -255,10 +265,10 @@ class JsonLoader extends TextFileLoader {
             if (!valid) {
                 let errMessage = "Validation failed";
 
-                if (typeof error !== "undefined") {
-                    errMessage += ":\n" + JsonLoader._formatValidationErrors(error);
-                } else {
+                if (typeof error === "undefined") {
                     errMessage += ".";
+                } else {
+                    errMessage += ":\n" + JsonLoader._formatValidationErrors(error);
                 }
 
                 return this.failure(errMessage);

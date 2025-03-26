@@ -18,7 +18,7 @@ export default {
         }
 
         if (Util.empty(newName) || newName === "unchanged") {
-            newName = undefined;
+            newName = null;
         } else {
             const err = getClient().permManager.checkName(g_name);
 
@@ -28,14 +28,14 @@ export default {
         }
 
         if (Util.empty(newLevel) || newLevel === "unchanged") {
-            newLevel = undefined;
+            newLevel = null;
         } else {
             newLevel = Util.parseInt(newLevel);
         }
 
         const group = await getClient().permManager.fetchGroup(g_name);
 
-        if (!group) {
+        if (group === null) {
             return `:warning: Group **${g_name}** doesn't exist.`;
         }
 

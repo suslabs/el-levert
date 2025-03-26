@@ -23,7 +23,7 @@ export default {
 
         const group = await getClient().permManager.fetchGroup(g_name);
 
-        if (!group) {
+        if (group === null) {
             return `:warning: Group **${g_name}** doesn't exist.`;
         }
 

@@ -12,7 +12,7 @@ function getFilename(logFile, level) {
 
     let filename = `${date}-${parsed.name}`;
 
-    if (typeof level !== "undefined") {
+    if (level != null) {
         filename += `-${level}`;
     }
 
@@ -21,11 +21,11 @@ function getFilename(logFile, level) {
 }
 
 function getFileTransport(names, filename, level) {
-    if (typeof names === "undefined") {
+    if (names == null) {
         throw new LoggerError("A file format must be provided if outputting to a file");
     }
 
-    if (typeof filename === "undefined") {
+    if (filename == null) {
         throw new LoggerError("A filename must be specified");
     }
 
@@ -41,7 +41,7 @@ function getFileTransport(names, filename, level) {
 }
 
 function getConsoleTransport(names) {
-    if (typeof names === "undefined") {
+    if (names == null) {
         throw new LoggerError("A console format must be provided if outputting to the console");
     }
 
@@ -72,11 +72,11 @@ function getTransports(config) {
 function getDefaultMeta(config) {
     let meta = {};
 
-    if (typeof config.meta !== "undefined") {
+    if (config.meta != null) {
         meta = config.meta;
     }
 
-    if (typeof config.name !== "undefined") {
+    if (config.name != null) {
         meta.service = config.name;
     }
 

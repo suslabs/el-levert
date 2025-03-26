@@ -8,8 +8,6 @@ import Util from "../util/Util.js";
 
 import HandlerError from "../errors/HandlerError.js";
 
-const sedUsage = "Usage: sed/regex/replace/flags (optional)";
-
 function logUsage(msg) {
     getLogger().info(
         `Generating sed for "${msg.content}", issued by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${Util.formatChannelName(msg.channel)}).`
@@ -23,17 +21,18 @@ function logSending(sed) {
 
 function logGenTime(t1) {
     const t2 = performance.now();
-    getLogger().debug(`Sed generation took ${Util.timeDelta(t2, t1).toLocaleString()}ms.`);
+    getLogger().debug(`Sed generation took ${Util.formatNumber(Util.timeDelta(t2, t1))}ms.`);
 }
 
 function logSendTime(t1) {
     const t2 = performance.now();
-    getLogger().info(`Sending replaced message took ${Util.timeDelta(t2, t1).toLocaleString()}ms.`);
+    getLogger().info(`Sending replaced message took ${Util.formatNumber(Util.timeDelta(t2, t1))}ms.`);
 }
 
 class SedHandler extends Handler {
     static $name = "sedHandler";
 
+    static sedUsage = "Usage: sed/regex/replace/flags (optional)";
     static sedRegex = /^sed\/(?<regex_str>.+?)\/(?<replace>[^/]*)\/?(?<flags_str>.{1,2})?/;
 
     constructor(enabled) {
@@ -65,18 +64,14 @@ class SedHandler extends Handler {
                         emoji = ":warning:";
                 }
 
-                const reply = msg.reply(`${emoji} ${err.message}.\n${sedUsage}`);
-                this.messageTracker.addMsg(reply, msg.id);
-
+                await this.reply(msg, `${emoji} ${err.message}.\n${SedHandler.sedUsage}`);
                 return true;
             }
 
-            const reply = await msg.reply({
+            await this.reply(msg, {
                 content: ":no_entry_sign: Encountered exception while generating sed replace:",
                 ...Util.getFileAttach(err.stack, "error.js")
             });
-
-            this.messageTracker.addMsg(reply, msg.id);
 
             getLogger().error("Sed generation failed:", err);
             return false;
@@ -85,18 +80,14 @@ class SedHandler extends Handler {
         logSending(sed);
 
         try {
-            const reply = await msg.reply({
+            await this.reply(msg, {
                 embeds: [sed]
             });
-
-            this.messageTracker.addMsg(reply, msg.id);
         } catch (err) {
-            const reply = await msg.reply({
+            await this.reply(msg, {
                 content: `:no_entry_sign: Encountered exception while sending sed replace:`,
                 ...Util.getFileAttach(err.stack, "error.js")
             });
-
-            this.messageTracker.addMsg(reply, msg.id);
 
             getLogger().error("Reply failed", err);
             return false;
@@ -117,7 +108,7 @@ class SedHandler extends Handler {
     async _fetchMatch(ch_id, regex, ignore_id, limit = 100) {
         const msgs = await getClient().fetchMessages(ch_id, { limit });
 
-        if (!msgs) {
+        if (msgs === null) {
             return false;
         }
 
@@ -173,7 +164,7 @@ class SedHandler extends Handler {
                 break;
         }
 
-        if (!sedMsg) {
+        if (sedMsg === null) {
             throw new HandlerError("No matching message found");
         }
 

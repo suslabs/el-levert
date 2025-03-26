@@ -3,6 +3,7 @@ import discord from "discord.js";
 import EventLoader from "../loaders/event/EventLoader.js";
 
 import Util from "../util/Util.js";
+import { isObject } from "../util/misc/TypeTester.js";
 import search from "../util/search/diceSearch.js";
 
 import ClientError from "../errors/ClientError.js";
@@ -25,8 +26,6 @@ const {
     User,
     GuildMember
 } = discord;
-
-const clientOptions = ["wrapEvents", "eventsDir", "loginTimeout", "mentionUsers", "pingReply"];
 
 class DiscordClient {
     static defaultIntents = [
@@ -78,6 +77,8 @@ class DiscordClient {
         limit: 100
     };
 
+    static clientOptions = ["wrapEvents", "eventsDir", "loginTimeout", "mentionUsers", "pingReply"];
+
     constructor(intents, partials) {
         this.intents = intents ?? DiscordClient.defaultIntents;
         this.partials = partials ?? DiscordClient.defaultPartials;
@@ -119,8 +120,7 @@ class DiscordClient {
 
     setOptions(options) {
         this.options = {};
-
-        const optionsList = typeof options !== "undefined" ? clientOptions : [];
+        const optionsList = isObject(options) ? DiscordClient.clientOptions : [];
 
         for (const key of optionsList) {
             if (!(key in options)) {
@@ -148,10 +148,7 @@ class DiscordClient {
             allowedMentions.users = [];
         }
 
-        this.client.options = {
-            ...this.client.options,
-            allowedMentions
-        };
+        Object.assign(this.client.options, allowedMentions);
     }
 
     async login(token, exitOnFailure = false) {
@@ -212,7 +209,7 @@ class DiscordClient {
         const validTypes = Object.entries(ActivityType)
                 .filter(([key, value]) => !isNaN(key) && value !== "Custom")
                 .map(([, value]) => value),
-            lowercaseTypes = validTypes.map(x => x.toLowerCase());
+            lowercaseTypes = validTypes.map(type => type.toLowerCase());
 
         let activityType = config.type.toLowerCase(),
             num = lowercaseTypes.indexOf(activityType);
@@ -221,7 +218,7 @@ class DiscordClient {
             throw new ClientError(`Invalid activity type: ${activityType}. Valid types are: ${validTypes.join(" ")}`);
         }
 
-        if (typeof config.text === "undefined") {
+        if (config.text == null) {
             throw new ClientError("Invalid activity text");
         }
 
@@ -238,11 +235,11 @@ class DiscordClient {
     }
 
     async fetchGuild(sv_id, options = {}) {
-        if (sv_id === null || typeof sv_id === "undefined") {
+        if (sv_id == null) {
             throw new ClientError("No guild ID provided");
         }
 
-        if (typeof options !== "object") {
+        if (!isObject(options)) {
             throw new ClientError("Invalid options provided");
         }
 
@@ -256,7 +253,7 @@ class DiscordClient {
             });
         } catch (err) {
             if (err.code === RESTJSONErrorCodes.UnknownGuild) {
-                return false;
+                return null;
             }
 
             throw err;
@@ -266,15 +263,15 @@ class DiscordClient {
     }
 
     async fetchMember(sv_id, user_id, options = {}) {
-        if (sv_id === null || typeof sv_id === "undefined") {
+        if (sv_id == null) {
             throw new ClientError("No guild or guild ID provided");
         }
 
-        if (user_id === null || typeof user_id === "undefined") {
+        if (user_id == null) {
             throw new ClientError("No user or user ID provided");
         }
 
-        if (typeof options !== "object") {
+        if (!isObject(options)) {
             throw new ClientError("Invalid options provided");
         }
 
@@ -288,8 +285,8 @@ class DiscordClient {
 
                 guild = await this.fetchGuild(sv_id);
 
-                if (!guild) {
-                    return false;
+                if (guild === null) {
+                    return null;
                 }
 
                 break;
@@ -325,7 +322,7 @@ class DiscordClient {
             });
         } catch (err) {
             if (err.code === RESTJSONErrorCodes.UnknownMember) {
-                return false;
+                return null;
             }
 
             throw err;
@@ -335,11 +332,11 @@ class DiscordClient {
     }
 
     async fetchChannel(ch_id, options = {}) {
-        if (ch_id === null || typeof ch_id === "undefined") {
+        if (ch_id == null) {
             throw new ClientError("No channel ID provided");
         }
 
-        if (typeof options !== "object") {
+        if (!isObject(isObject)) {
             throw new ClientError("Invalid options provided");
         }
 
@@ -364,7 +361,7 @@ class DiscordClient {
             });
         } catch (err) {
             if ([RESTJSONErrorCodes.UnknownChannel, RESTJSONErrorCodes.MissingAccess].includes(err.code)) {
-                return false;
+                return null;
             }
 
             throw err;
@@ -378,7 +375,7 @@ class DiscordClient {
             user,
             member;
 
-        if (user_id === null || typeof user_id === "undefined") {
+        if (user_id == null) {
             throw new ClientError("No user/member or user ID provided");
         }
 
@@ -409,7 +406,7 @@ class DiscordClient {
         switch (channel.type) {
             case ChannelType.DM:
                 if (channel.recipientId !== user_id) {
-                    return false;
+                    return null;
                 }
 
                 break;
@@ -417,8 +414,8 @@ class DiscordClient {
                 if (typeof member === "undefined") {
                     member = await this.fetchMember(channel.guild, user_id);
 
-                    if (!member) {
-                        return false;
+                    if (member === null) {
+                        return null;
                     }
                 }
 
@@ -426,7 +423,7 @@ class DiscordClient {
                     perms = (threadChannel ? channel.parent : channel).memberPermissions(member, true);
 
                 if (perms === null || !perms.has(PermissionsBitField.Flags.ViewChannel)) {
-                    return false;
+                    return null;
                 }
 
                 break;
@@ -436,15 +433,15 @@ class DiscordClient {
     }
 
     async fetchMessage(ch_id, msg_id, options = {}) {
-        if (msg_id === null || typeof msg_id === "undefined") {
+        if (msg_id == null) {
             throw new ClientError("No message ID provided");
         }
 
-        if (ch_id === null || typeof ch_id === "undefined") {
+        if (ch_id == null) {
             throw new ClientError("No channel or channel ID provided");
         }
 
-        if (typeof options !== "object") {
+        if (!isObject(options)) {
             throw new ClientError("Invalid options provided");
         }
 
@@ -470,8 +467,8 @@ class DiscordClient {
 
                 channel = await this.fetchChannel(ch_id, channelOptions);
 
-                if (!channel) {
-                    return false;
+                if (channel === null) {
+                    return null;
                 }
 
                 break;
@@ -490,7 +487,7 @@ class DiscordClient {
             });
         } catch (err) {
             if (err.code === RESTJSONErrorCodes.UnknownMessage) {
-                return false;
+                return null;
             }
 
             throw err;
@@ -498,11 +495,11 @@ class DiscordClient {
     }
 
     async fetchMessages(ch_id, options = {}, fetchOptions = {}) {
-        if (ch_id === null || typeof ch_id === "undefined") {
+        if (ch_id == null) {
             throw new ClientError("No channel or channel ID provided");
         }
 
-        if (typeof options !== "object" || typeof fetchOptions !== "object") {
+        if (!isObject(options) || !isObject(fetchOptions)) {
             throw new ClientError("Invalid options provided");
         }
 
@@ -519,8 +516,8 @@ class DiscordClient {
 
                 channel = await this.fetchChannel(ch_id, channelOptions);
 
-                if (!channel) {
-                    return false;
+                if (channel === null) {
+                    return null;
                 }
 
                 break;
@@ -540,7 +537,7 @@ class DiscordClient {
             messages = await channel.messages.fetch(fetchOptions);
         } catch (err) {
             if (err instanceof DiscordAPIError) {
-                return false;
+                return null;
             }
 
             throw err;
@@ -550,11 +547,11 @@ class DiscordClient {
     }
 
     async findUserById(user_id, options = {}) {
-        if (user_id === null || typeof user_id === "undefined") {
+        if (user_id == null) {
             throw new ClientError("No user ID provided");
         }
 
-        if (typeof options !== "object") {
+        if (!isObject(options)) {
             throw new ClientError("Invalid options provided");
         }
 
@@ -568,7 +565,7 @@ class DiscordClient {
             });
         } catch (err) {
             if (err.code === RESTJSONErrorCodes.UnknownUser) {
-                return false;
+                return null;
             }
 
             throw err;
@@ -579,11 +576,11 @@ class DiscordClient {
     }
 
     async findUsers(query, options = {}, fetchOptions = {}) {
-        if (query === null || typeof query === "undefined") {
+        if (query == null) {
             throw new ClientError("No query provided");
         }
 
-        if (typeof options !== "object" || typeof fetchOptions !== "object") {
+        if (!isObject(options) || !isObject(fetchOptions)) {
             throw new ClientError("Invalid options provided");
         }
 

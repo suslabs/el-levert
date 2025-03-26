@@ -30,7 +30,7 @@ const bounds = {
 };
 
 function parseInput(split) {
-    const args = split.map(value => (value !== "-" ? value : null));
+    const args = split.map(value => (value === "-" ? null : value));
 
     if (args.length < 2) {
         return null;
@@ -98,7 +98,7 @@ export default {
         }
 
         let footer = `Applicable for NFu, tiers adjusted for actual machine tier,
-        for all options and syntax see ${this.getArgsHelp()}.`;
+for all options and syntax see ${this.getArgsHelp()}.`;
 
         if (recipe.oc_type.includes("parallel")) {
             footer += `\n\nFor parallelization, it is assumed that you are running 1A of the specified tier.
@@ -106,6 +106,10 @@ Manually specify the amperage if it differs.`;
         }
 
         const outputs = OCUtil.overclock(recipe);
+
+        if (Util.empty(outputs)) {
+            return ":warning: Could not calculate.";
+        }
 
         const hasChance = outputs.findIndex(row => Boolean(row.chance)) !== -1,
             hasParallel = Boolean(Util.first(outputs).parallel);
@@ -123,14 +127,14 @@ Manually specify the amperage if it differs.`;
         };
 
         const rows = {
-            eu: outputs.map(row => row.eu.toLocaleString() + " EU/t"),
+            eu: outputs.map(row => Util.formatNumber(row.eu, 3) + " EU/t"),
             time: outputs.map(row => OCUtil.formatDuration(row.time)),
             tier: outputs.map(row => OCUtil.getTierName(row.tier))
         };
 
         if (hasChance) {
             columns.chance = "Chance";
-            rows.chance = outputs.map(row => row.chance + "%");
+            rows.chance = outputs.map(row => Util.round(row.chance, 3) + "%");
         }
 
         if (hasParallel) {

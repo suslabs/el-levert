@@ -1,19 +1,31 @@
 class MessageTracker {
     constructor(trackLimit = 100) {
         this.trackLimit = trackLimit;
-        this.trackedMsgs = new Map();
+        this.enableTracking = trackLimit > 0;
+
+        if (this.enableTracking) {
+            this.trackedMsgs = new Map();
+        }
     }
 
     addMsg(msg, triggerId) {
+        if (!this.enableTracking) {
+            return;
+        }
+
         if (this.trackedMsgs.size >= this.trackLimit) {
-            const [key] = this.trackedMsgs.keys();
-            this.trackedMsgs.delete(key);
+            const oldest = this.trackedMsgs.keys().next().value;
+            this.trackedMsgs.delete(oldest);
         }
 
         this.trackedMsgs.set(triggerId, msg);
     }
 
     deleteMsg(triggerId) {
+        if (!this.enableTracking) {
+            return;
+        }
+
         const sentMsg = this.trackedMsgs.get(triggerId);
         this.trackedMsgs.delete(triggerId);
 

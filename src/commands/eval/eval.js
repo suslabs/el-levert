@@ -33,7 +33,7 @@ async function evalBase(args, msg) {
         };
     }
 
-    return { body };
+    return { body, err: null };
 }
 
 async function altevalBase(args, msg, lang) {
@@ -41,7 +41,7 @@ async function altevalBase(args, msg, lang) {
         parsed = await base(args, msg),
         body = parsed.body;
 
-    if (typeof parsed.err !== "undefined") {
+    if (parsed.err !== null) {
         return parsed.err;
     }
 
@@ -60,8 +60,9 @@ async function altevalBase(args, msg, lang) {
             }
 
             const format = Object.values(parsed)
-                .map(x => Util.capitalize(x).join(","))
+                .map(err => Util.capitalize(err).join(","))
                 .join("\n");
+
             return `:no_entry_sign: ${format}.`;
         }
 
@@ -132,7 +133,7 @@ export default {
         const parsed = await this.evalBase(args, msg),
             body = parsed.body;
 
-        if (typeof parsed.err !== "undefined") {
+        if (parsed.err !== null) {
             return parsed.err;
         }
 

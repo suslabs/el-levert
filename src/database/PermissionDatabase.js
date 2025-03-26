@@ -1,18 +1,18 @@
-import SqliteDatabase from "./SqlDatabase.js";
+import SqlDatabase from "./SqlDatabase.js";
 
 import Group from "../structures/permission/Group.js";
 import User from "../structures/permission/User.js";
 
 import Util from "../util/Util.js";
 
-class PermissionDatabase extends SqliteDatabase {
+class PermissionDatabase extends SqlDatabase {
     async fetch(id) {
         const rows = await this.userQueries.fetch.all({
             $user: id
         });
 
         if (typeof rows._data === "undefined" || Util.empty(rows)) {
-            return false;
+            return null;
         }
 
         return rows.map(row => new Group(row));
@@ -57,7 +57,7 @@ class PermissionDatabase extends SqliteDatabase {
         });
 
         if (typeof row._data === "undefined") {
-            return false;
+            return null;
         }
 
         return new Group(row);
@@ -69,7 +69,7 @@ class PermissionDatabase extends SqliteDatabase {
         });
 
         if (typeof row._data === "undefined") {
-            return false;
+            return null;
         }
 
         return new Group(row);

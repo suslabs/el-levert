@@ -5,10 +5,11 @@ import LoggerError from "../errors/LoggerError.js";
 const validFormats = Object.getOwnPropertyNames(winston.format).filter(name => !["length", "combine"].includes(name));
 
 function getFormat(config) {
-    if (typeof config === "undefined") {
-        return winston.format.simple();
-    } else if (typeof config === "string") {
-        config = [config];
+    switch (typeof config) {
+        case "undefined":
+            return winston.format.simple();
+        case "string":
+            config = [config];
     }
 
     const formats = config.map(format => {

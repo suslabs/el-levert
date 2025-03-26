@@ -1,13 +1,9 @@
-import { pathToFileURL } from "node:url";
-import path from "node:path";
-
 import Util from "../Util.js";
+import { isObject } from "./TypeTester.js";
 
 import UtilError from "../../errors/UtilError.js";
 
 const CallstackUtil = {
-    rootUrl: pathToFileURL(projRoot).toString(),
-
     getCallstack: () => {
         const oldLimit = Error.stackTraceLimit;
         Error.stackTraceLimit = 1000;
@@ -20,7 +16,7 @@ const CallstackUtil = {
 
         Error.stackTraceLimit = oldLimit;
 
-        if (stack === null || typeof stack !== "object") {
+        if (!isObject(stack)) {
             throw new UtilError("Invalid callstack");
         }
 
@@ -44,16 +40,14 @@ const CallstackUtil = {
         }
 
         const site = stack.find(
-            site =>
-                site.getFileName().startsWith(CallstackUtil.rootUrl) &&
-                !excludeFunctions.includes(site.getFunctionName())
+            site => site.getFileName().startsWith(projRootUrl) && !excludeFunctions.includes(site.getFunctionName())
         );
 
         if (typeof site === "undefined") {
             return "no info";
         }
 
-        const siteFile = site.getFileName().slice(CallstackUtil.rootUrl.length + 1),
+        const siteFile = site.getFileName().slice(projRootUrl.length + 1),
             siteIndex = `${site.getLineNumber()}:${site.getColumnNumber()}`,
             siteFunction = site.getFunctionName();
 

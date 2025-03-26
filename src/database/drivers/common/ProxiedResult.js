@@ -35,10 +35,10 @@ class ProxiedResult {
         });
     }
 
-    toJSON(space, replacer) {
+    toJSON(spaces, replacer) {
         const data = this._data ?? this.data;
 
-        return JSON.stringify(data, space, replacer);
+        return JSON.stringify(data, spaces, replacer);
     }
 
     [util.inspect.custom](depth, options) {

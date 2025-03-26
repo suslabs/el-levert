@@ -16,6 +16,9 @@ class SqlDatabase {
 
         this.queryExtension = options.queryExtension ?? ".sql";
         this.queryEncoding = options.queryEncoding ?? "utf-8";
+        this.enableWAL = options.enableWAL ?? true;
+
+        this.db = null;
 
         this.createString = "";
         this.queryStrings = {};
@@ -23,23 +26,14 @@ class SqlDatabase {
         this.queryList = [];
     }
 
-    async loadCreateQuery() {
-        const filename = `create${this.queryExtension}`,
-            createPath = path.join(this.queryPath, filename);
-
-        this.createString = await fs.readFile(createPath, {
-            encoding: this.queryEncoding
-        });
-    }
-
     async open(mode) {
         const dbConfig = {
-            enableWALMode: true
+            enableWALMode: this.enableWAL
         };
 
         let db;
 
-        if (typeof this.db === "undefined") {
+        if (this.db === null) {
             db = new SqliteDatabase(this.dbPath, mode, dbConfig);
         } else {
             db = this.db;
@@ -48,7 +42,7 @@ class SqlDatabase {
         try {
             await db.open();
         } catch (err) {
-            if (err.message !== "Cannot open database. The database is already open") {
+            if (err.message !== "Cannot open database. The database is open") {
                 throw err;
             }
         }
@@ -59,16 +53,34 @@ class SqlDatabase {
     async create() {
         await this.open(OpenModes.OPEN_RWCREATE);
 
-        await this.loadCreateQuery();
-        let split = this.createString.split("---");
-        split = split.map(x => x.trim());
+        await this._loadCreateQuery();
+        const queries = this.createString.split("---").map(query => query.trim());
 
-        for (const query of split) {
+        for (const query of queries) {
             await this.db.run(query);
         }
     }
 
-    isValidQueryPath(queryPath) {
+    async load() {
+        await this.open(OpenModes.OPEN_READWRITE);
+        await this._loadQueries();
+    }
+
+    async close() {
+        await this._unloadQueries();
+        await this.db.close();
+    }
+
+    async _loadCreateQuery() {
+        const filename = `create${this.queryExtension}`,
+            createPath = path.join(this.queryPath, filename);
+
+        this.createString = await fs.readFile(createPath, {
+            encoding: this.queryEncoding
+        });
+    }
+
+    _isValidQueryPath(queryPath) {
         const parsed = path.parse(queryPath);
 
         if (parsed.dir === this.queryPath && parsed.name === "create") {
@@ -82,8 +94,8 @@ class SqlDatabase {
         return true;
     }
 
-    async readQuery(queryPath, categoryName) {
-        if (!this.isValidQueryPath(queryPath)) {
+    async _readQuery(queryPath, categoryName) {
+        if (!this._isValidQueryPath(queryPath)) {
             return;
         }
 
@@ -93,10 +105,10 @@ class SqlDatabase {
 
         queryString = queryString.trim();
 
-        if (typeof categoryName === "undefined") {
-            categoryName = "queries";
-        } else {
+        if (typeof categoryName === "string") {
             categoryName += "Queries";
+        } else {
+            categoryName = "queries";
         }
 
         if (typeof this.queryStrings[categoryName] === "undefined") {
@@ -107,7 +119,7 @@ class SqlDatabase {
         this.queryStrings[categoryName][filename] = queryString;
     }
 
-    async readDirectory(dirPath) {
+    async _readDirectory(dirPath) {
         const dirName = path.basename(dirPath),
             items = await fs.readdir(dirPath);
 
@@ -119,15 +131,15 @@ class SqlDatabase {
                 const queryPaths = Util.getFilesRecSync(itemPath);
 
                 for (const queryPath of queryPaths) {
-                    await this.readQuery(queryPath, dirName);
+                    await this._readQuery(queryPath, dirName);
                 }
             } else {
-                await this.readQuery(itemPath, dirName);
+                await this._readQuery(itemPath, dirName);
             }
         }
     }
 
-    async readQueries() {
+    async _readQueries() {
         const items = await fs.readdir(this.queryPath);
 
         for (const item of items) {
@@ -135,14 +147,14 @@ class SqlDatabase {
                 stat = await fs.stat(itemPath);
 
             if (stat.isDirectory()) {
-                await this.readDirectory(itemPath);
+                await this._readDirectory(itemPath);
             } else {
-                await this.readQuery(itemPath);
+                await this._readQuery(itemPath);
             }
         }
     }
 
-    async bindQueries() {
+    async _bindQueries() {
         for (const category of Object.keys(this.queryStrings)) {
             const queries = {},
                 strings = this.queryStrings[category];
@@ -159,24 +171,14 @@ class SqlDatabase {
         }
     }
 
-    async loadQueries() {
-        await this.readQueries();
-        await this.bindQueries();
+    async _loadQueries() {
+        await this._readQueries();
+        await this._bindQueries();
     }
 
-    async unloadQueries() {
+    async _unloadQueries() {
         Util.wipeArray(this.queryList);
         Util.wipeObject(this.queryStrings, category => delete this[category]);
-    }
-
-    async close() {
-        await this.unloadQueries();
-        await this.db.close();
-    }
-
-    async load() {
-        await this.open(OpenModes.OPEN_READWRITE);
-        await this.loadQueries();
     }
 }
 

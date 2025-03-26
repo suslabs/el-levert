@@ -4,7 +4,12 @@ const includeCalls = false,
     logCallDepth = 2;
 
 function printfTemplate(info) {
-    const callInfo = includeCalls ? " " + CallstackUtil.getCallInfo({ depth: logCallDepth }) : "";
+    let callInfo = "";
+
+    if (includeCalls) {
+        callInfo = CallstackUtil.getCallInfo({ depth: logCallDepth });
+        callInfo = " " + callInfo;
+    }
 
     let log = `[${info.timestamp}]${callInfo} - ${info.service} - ${info.level}: ${info.message}`;
 

@@ -4,10 +4,12 @@ import DBManager from "./DBManager.js";
 import TagDatabase from "../../database/TagDatabase.js";
 
 import Tag from "../../structures/tag/Tag.js";
+import { TagTypes } from "../../structures/tag/TagTypes.js";
 
 import { getClient, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import { isObject } from "../../util/misc/TypeTester.js";
 import search from "../../util/search/uFuzzySearch.js";
 
 import TagError from "../../errors/TagError.js";
@@ -51,8 +53,8 @@ class TagManager extends DBManager {
     }
 
     async fetchAlias(tag) {
-        if (!tag) {
-            return false;
+        if (tag === null) {
+            return null;
         }
 
         const hops = [],
@@ -73,7 +75,7 @@ class TagManager extends DBManager {
             } else {
                 lastTag = await this.fetch(hop);
 
-                if (!lastTag) {
+                if (lastTag === null) {
                     throw new TagError("Hop not found", hop);
                 }
             }
@@ -89,49 +91,20 @@ class TagManager extends DBManager {
         return lastTag;
     }
 
-    async execute(tag, args, msg) {
-        if (tag.isAlias && !tag.fetched) {
+    async execute(tag, args, ...extra) {
+        if (tag.isAlias && !tag._fetched) {
             tag = await this.fetchAlias(tag);
         }
 
-        const ivm = getClient().tagVM,
-            vm2 = getClient().tagVM2;
+        const type = tag.getType();
 
-        const evalArgs = args + tag.args;
-
-        let out;
-
-        switch (tag.getType()) {
-            case "text":
-                out = tag.body;
-                break;
-            case "ivm":
-                if (typeof ivm === "undefined") {
-                    throw new TagError("Can't execute script tag. isolated-vm isn't initialized");
-                }
-
-                if (!ivm.enabled) {
-                    throw new TagError("Can't execute script tag. isolated-vm isn't enabled");
-                }
-
-                out = await ivm.runScript(tag.body, msg, tag, evalArgs);
-                break;
-            case "vm2":
-                if (typeof vm2 === "undefined") {
-                    throw new TagError("Can't execute script tag. vm2 isn't initialized");
-                }
-
-                if (!vm2.enabled) {
-                    throw new TagError("Can't execute script tag. vm2 isn't enabled");
-                }
-
-                out = await vm2.runScript(tag.body, msg, evalArgs);
-                break;
-            default:
-                throw new TagError("Invalid tag type");
+        if (type === TagTypes.textType) {
+            return tag.body;
+        } else if (TagTypes.scriptTypes.includes(type)) {
+            return await this._runScriptTag(tag, type, args, ...extra);
+        } else {
+            throw new TagError("Invalid tag type");
         }
-
-        return out;
     }
 
     async add(name, body, owner, type) {
@@ -141,7 +114,7 @@ class TagManager extends DBManager {
             throw new TagError("Tag already exists", existingTag);
         }
 
-        if (body === null || typeof body === "undefined") {
+        if (body == null) {
             throw new TagError("No tag body provided");
         }
 
@@ -158,21 +131,16 @@ class TagManager extends DBManager {
             type
         });
 
-        const tagSize = tag.getSize();
-
-        await this._updateQuota(owner, tagSize);
-        await this.tag_db.add(tag);
-
-        getLogger().info(`Added tag: "${name}" with type: "${type}", body:${Util.formatLog(body)}`);
+        await this._add(tag);
         return tag;
     }
 
     async edit(tag, body, type) {
-        if (!tag) {
+        if (tag === null) {
             throw new TagError("Tag doesn't exist");
         }
 
-        if (body === null || typeof body === "undefined") {
+        if (body == null) {
             throw new TagError("No tag body provideds");
         }
 
@@ -200,18 +168,27 @@ class TagManager extends DBManager {
         await this._updateQuota(tag.owner, sizeDiff);
         await this.tag_db.edit(newTag);
 
-        getLogger().info(`Edited tag: "${tag.name}" with type: "${type}", body:${Util.formatLog(body)}`);
+        getLogger().info(`Edited tag: "${tag.name}" with type: ${type}, body:${Util.formatLog(body)}`);
         return newTag;
     }
 
     async updateProps(name, tag) {
-        const oldTag = await this.fetch(name);
+        let oldTag;
 
-        if (!oldTag) {
-            throw new TagError("Tag doesn't exist");
+        if (name instanceof Tag) {
+            oldTag = name;
+            name = oldTag.name;
+        } else {
+            oldTag = await this.fetch(name);
+
+            if (oldTag === null) {
+                throw new TagError("Tag doesn't exist");
+            }
         }
 
-        tag = new Tag(tag);
+        if (!(tag instanceof Tag)) {
+            tag = new Tag(tag);
+        }
 
         if (name !== tag.name) {
             const existingTag = await this.fetch(tag.name);
@@ -241,31 +218,29 @@ class TagManager extends DBManager {
     }
 
     async alias(tag, aliasTag, args, createOptions) {
-        if (!aliasTag) {
+        if (aliasTag === null) {
             throw new TagError("Alias target doesn't exist");
         }
 
         let create = false;
 
-        if (!tag) {
-            create = true;
-
-            if (typeof createOptions === "undefined") {
+        if (tag === null) {
+            if (!isObject(createOptions)) {
                 throw new TagError("No info for creating the tag provided");
             }
+
+            create = true;
         }
 
         const name = tag.name ?? createOptions.name,
             owner = tag.owner ?? createOptions.owner,
             hops = [name].concat(aliasTag.hops);
 
-        args = args?.trim();
-
         const newTag = new Tag({
             hops,
             name,
             owner,
-            args
+            args: args?.trim()
         });
 
         let newTagSize = newTag.getSize(),
@@ -293,7 +268,7 @@ class TagManager extends DBManager {
     }
 
     async chown(tag, newOwner) {
-        if (!tag) {
+        if (tag === null) {
             throw new TagError("Tag doesn't exist");
         }
 
@@ -309,7 +284,7 @@ class TagManager extends DBManager {
     }
 
     async rename(tag, newName) {
-        if (!tag) {
+        if (tag === null) {
             throw new TagError("Tag doesn't exist");
         }
 
@@ -322,14 +297,14 @@ class TagManager extends DBManager {
         const oldName = tag.name;
 
         await this.tag_db.rename(tag, newName);
-        await this.tag_db.updateHops(oldName, newName, Tag.hopsSeparator);
+        await this.tag_db.updateHops(oldName, newName, Tag._hopsSeparator);
 
         getLogger().info(`Renamed tag: "${oldName}" to: "${newName}"`);
         return tag;
     }
 
     async delete(tag) {
-        if (!tag) {
+        if (tag === null) {
             throw new TagError("Tag doesn't exist");
         }
 
@@ -362,13 +337,14 @@ class TagManager extends DBManager {
         };
     }
 
-    async count(user) {
-        const countAll = user === null || typeof user === "undefined" || Util.empty(user);
+    async count(user, flags) {
+        const countAll = user == null || Util.empty(user),
+            flag = Tag.getFlag(flags) || null;
 
         if (countAll) {
-            return await this.tag_db.count(true);
+            return await this.tag_db.count(true, null, flag);
         } else {
-            return await this.tag_db.count(false, user);
+            return await this.tag_db.count(false, user, flag);
         }
     }
 
@@ -415,30 +391,77 @@ class TagManager extends DBManager {
         return await this.tag_db.quotaFetch(user);
     }
 
-    async downloadBody(msg) {
+    async downloadBody(t_args, msg) {
         let body,
             isScript = false;
 
-        const attach = msg.attachments.at(0);
+        const attach = msg.attachments.at(0),
+            isScriptFile = TagManager._scriptContentTypes.some(ct => attach.contentType.startsWith(ct));
 
-        if (attach.contentType.startsWith("text/plain") || attach.contentType.startsWith("application/javascript")) {
+        if (isScriptFile) {
             if (attach.size > this.maxTagSize * 1024) {
                 throw new TagError(`Scripts can take up at most ${this.maxTagSize}kb`);
             }
 
-            body = (
-                await axios.request({
-                    url: attach.attachment,
-                    responseType: "text"
-                })
-            ).data;
+            const res = await axios.request({
+                url: attach.attachment,
+                responseType: "text"
+            });
 
+            body = res.data;
             isScript = true;
         } else {
-            body = attach.url;
+            body = t_args.trimEnd();
+
+            if (!Util.empty(body)) {
+                body += " ";
+            }
+
+            body += msg.attachments.map(at => at.url).join(" ");
         }
 
         return [body, isScript];
+    }
+
+    async _add(tag) {
+        const tagSize = tag.getSize();
+
+        await this._updateQuota(tag.owner, tagSize);
+        await this.tag_db.add(tag);
+
+        const bodyLogStr = Util.formatLog(Util.trimString(tag.body, 300, null, true));
+        getLogger().info(`Added tag: "${tag.name}" with type: ${tag.type}, body:${bodyLogStr}`);
+    }
+
+    async _runScriptTag(tag, type, args, msg) {
+        const evalArgs = args + tag.args;
+
+        switch (type) {
+            case "ivm":
+                const ivm = getClient().tagVM;
+
+                if (typeof ivm === "undefined") {
+                    throw new TagError("Can't execute script tag. isolated-vm isn't initialized");
+                }
+
+                if (!ivm.enabled) {
+                    throw new TagError("Can't execute script tag. isolated-vm isn't enabled");
+                }
+
+                return await ivm.runScript(tag.body, msg, tag, evalArgs);
+            case "vm2":
+                const vm2 = getClient().tagVM2;
+
+                if (typeof vm2 === "undefined") {
+                    throw new TagError("Can't execute script tag. vm2 isn't initialized");
+                }
+
+                if (!vm2.enabled) {
+                    throw new TagError("Can't execute script tag. vm2 isn't enabled");
+                }
+
+                return await vm2.runScript(tag.body, msg, evalArgs);
+        }
     }
 
     async _updateQuota(user, diff) {
@@ -448,7 +471,7 @@ class TagManager extends DBManager {
 
         let currQuota = await this.tag_db.quotaFetch(user);
 
-        if (currQuota === false) {
+        if (currQuota === null) {
             await this.tag_db.quotaCreate(user);
             currQuota = 0;
         }
@@ -462,6 +485,8 @@ class TagManager extends DBManager {
         await this.tag_db.quotaSet(user, newQuota);
         getLogger().debug(`Updated quota for: ${user} diff: ${diff}`);
     }
+
+    static _scriptContentTypes = ["text/plain", "application/javascript"];
 }
 
 export default TagManager;

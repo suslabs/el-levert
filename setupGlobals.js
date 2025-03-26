@@ -1,2 +1,6 @@
+import { pathToFileURL } from "node:url";
+
 Error.stackTraceLimit = 20;
-global.projRoot = import.meta.dirname;
+
+globalThis.projRoot = import.meta.dirname;
+globalThis.projRootUrl = pathToFileURL(import.meta.dirname).href;

@@ -4,10 +4,12 @@ function search(haystack, needle, options = {}) {
     let { maxResults, minDist, searchKey } = options;
     minDist ??= 0.5;
 
+    const limitResults = ![undefined, null, Infinity].includes(maxResults);
+
     let distances = haystack.map((elem, i) => {
         let val;
 
-        if (typeof searchKey === "undefined") {
+        if (searchKey == null) {
             val = elem;
         } else {
             val = elem[searchKey];
@@ -23,12 +25,7 @@ function search(haystack, needle, options = {}) {
         distances = distances.filter(x => x[1] >= minDist);
     }
 
-    let results = distances.map(x => {
-        const ind = x[0];
-        return haystack[ind];
-    });
-
-    const limitResults = ![undefined, null, Infinity].includes(maxResults);
+    let results = distances.map(x => haystack[x[0]]);
 
     if (limitResults) {
         results = results.slice(0, maxResults);

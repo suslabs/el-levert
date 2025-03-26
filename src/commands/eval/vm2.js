@@ -11,7 +11,7 @@ export default {
         const parsed = await this.parentCmd.evalBase(args, msg),
             body = parsed.body;
 
-        if (typeof parsed.err !== "undefined") {
+        if (parsed.err !== null) {
             return parsed.err;
         }
 

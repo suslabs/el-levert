@@ -25,12 +25,12 @@ function logSending(preview) {
 
 function logGenTime(t1) {
     const t2 = performance.now();
-    getLogger().debug(`Preview generation took ${Util.timeDelta(t2, t1).toLocaleString()}ms.`);
+    getLogger().debug(`Preview generation took ${Util.formatNumber(Util.timeDelta(t2, t1))}ms.`);
 }
 
 function logSendTime(t1) {
     const t2 = performance.now();
-    getLogger().info(`Sending preview took ${Util.timeDelta(t2, t1).toLocaleString()}ms.`);
+    getLogger().info(`Sending preview took ${Util.formatNumber(Util.timeDelta(t2, t1))}ms.`);
 }
 
 class PreviewHandler extends Handler {
@@ -72,7 +72,7 @@ class PreviewHandler extends Handler {
             checkAccess: true
         });
 
-        if (!prevMsg) {
+        if (prevMsg === null) {
             throw new HandlerError("Preview message not found");
         }
 
@@ -150,12 +150,10 @@ class PreviewHandler extends Handler {
                 return false;
             }
 
-            const reply = await msg.reply({
+            await this.reply(msg, {
                 content: ":no_entry_sign: Encountered exception while generating preview:",
                 ...Util.getFileAttach(err.stack, "error.js")
             });
-
-            this.messageTracker.addMsg(reply, msg.id);
 
             getLogger().error("Preview generation failed:", err);
             return false;
@@ -165,18 +163,14 @@ class PreviewHandler extends Handler {
         logSending(preview);
 
         try {
-            const reply = await msg.reply({
+            await this.reply(msg, {
                 embeds: [preview]
             });
-
-            this.messageTracker.addMsg(reply, msg.id);
         } catch (err) {
-            const reply = await msg.reply({
+            await this.reply(msg, {
                 content: ":no_entry_sign: Encountered exception while sending preview:",
                 ...Util.getFileAttach(err.stack, "error.js")
             });
-
-            this.messageTracker.addMsg(reply, msg.id);
 
             getLogger().error("Reply failed:", err);
             return false;

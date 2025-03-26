@@ -10,7 +10,7 @@ async function getPermLevel(options) {
     const { msg, asUser } = options,
         userId = asUser ?? msg?.author.id;
 
-    if (typeof userId === "undefined") {
+    if (userId == null) {
         return getClient().permManager.getDefaultLevel();
     }
 
@@ -32,15 +32,15 @@ class Command {
     };
 
     constructor(options) {
-        if (typeof options.name === "undefined") {
+        if (typeof options.name !== "string") {
             throw new CommandError("Command must have a name");
         }
 
-        if (typeof options.handler === "undefined") {
-            throw new CommandError("Command must have a handler");
+        if (typeof options.handler !== "function") {
+            throw new CommandError("Command must have a handler function");
         }
 
-        if (options.subcommand && typeof options.parent === "undefined") {
+        if (options.subcommand && typeof options.parent !== "string") {
             throw new CommandError("Subcommands must have a parent command");
         }
 
@@ -135,7 +135,7 @@ class Command {
         }
 
         const entries = Array.from(subMap.entries()),
-            uniqueSubcmds = entries.filter(x => x[0] === x[1].name);
+            uniqueSubcmds = entries.filter(([name, cmd]) => name === cmd.name);
 
         return new Map(uniqueSubcmds);
     }
@@ -144,16 +144,16 @@ class Command {
         const subcmds = this.getSubcmdMap(includeAliases);
 
         if (Util.empty(subcmds)) {
-            return;
+            return null;
         }
 
-        return subcmds.get(name);
+        return subcmds.get(name) ?? null;
     }
 
     getSubcmds(perm) {
         const subList = Array.from(this.getSubcmdMap(false).values());
 
-        if (perm === null || typeof perm === "undefined") {
+        if (perm == null) {
             return subList;
         }
 
@@ -161,21 +161,26 @@ class Command {
         return allowedSubcmds;
     }
 
-    getSubcmdList(perm, sep = "|") {
+    getSubcmdList(perm, includeAliases = true, sep = "|") {
         if (this.isSubcmd) {
             return "";
         }
 
         let subNames;
 
-        if (perm === null || typeof perm === "undefined") {
-            subNames = this.getSubcmdNames();
+        if (perm == null) {
+            subNames = this.getSubcmdNames(includeAliases);
         } else {
             const subcmds = this.getSubcmds(perm);
-            subNames = subcmds.map(command => command.name);
+
+            if (includeAliases) {
+                subNames = subcmds.flatMap(command => [command.name, ...command.aliases]);
+            } else {
+                subNames = subcmds.map(cmd => cmd.name);
+            }
         }
 
-        subNames.sort();
+        Util.sort(subNames);
         return subNames.join(sep);
     }
 
@@ -216,18 +221,16 @@ class Command {
     }
 
     getArgsHelp(args, discord = true) {
-        const hasArgs = typeof args === "string" && !Util.empty(args);
-
         const prefix = this.prefix + (this.isSubcmd ? this.parent + " " : "");
 
         const formattedName = this.isSubcmd && discord ? bold(this.name) : this.name,
-            formattedArgs = hasArgs ? " " + (discord ? inlineCode(args) : args) : "";
+            formattedArgs = Util.empty(args) ? "" : " " + (discord ? inlineCode(args) : args);
 
         return `${prefix}${formattedName}${formattedArgs}`;
     }
 
     getSubcmdHelp(perm, discord = true) {
-        const subcmds = this.getSubcmdList(perm),
+        const subcmds = this.getSubcmdList(perm, false),
             formatted = discord ? inlineCode(subcmds) : subcmds;
 
         return `${this.prefix}${this.name} ${formatted}`;
@@ -277,15 +280,15 @@ class Command {
         this.bound = true;
     }
 
-    async execute(args, options = {}) {
-        const { msg, asUser, asLevel } = options;
+    async execute(args, context = {}) {
+        const { msg, asUser, asLevel } = context;
 
         if (!this.isSubcmd) {
             const [subName, subArgs] = Util.splitArgs(args),
                 subCmd = this.getSubcmd(subName);
 
-            if (typeof subCmd !== "undefined") {
-                return await subCmd.execute(subArgs, options);
+            if (subCmd !== null) {
+                return await subCmd.execute(subArgs, context);
             }
         }
 

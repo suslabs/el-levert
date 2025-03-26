@@ -6,13 +6,9 @@ class FakeMsg {
     static messageCount = 50;
 
     constructor(msg) {
-        if (msg === null) {
-            msg = undefined;
-        }
+        this.msg = msg ?? undefined;
 
-        this.msg = msg;
-
-        if (typeof msg === "undefined") {
+        if (msg == null) {
             this.fixedMsg = {};
             return this;
         }

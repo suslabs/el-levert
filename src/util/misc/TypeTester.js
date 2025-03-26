@@ -1,11 +1,6 @@
-function tagTester(name) {
-    const tag = `[object ${name}]`;
-
-    return obj => Object.prototype.toString.call(obj) === tag;
+function isObject(obj) {
+    return obj !== null && typeof obj === "object";
 }
-
-const isObject = tagTester("Object"),
-    isFunction = tagTester("Function");
 
 function isClass(obj) {
     if (typeof obj !== "function") {
@@ -20,11 +15,7 @@ function isClass(obj) {
 }
 
 function isPromise(obj) {
-    if (typeof obj === "undefined") {
-        return false;
-    }
-
-    return isFunction(obj.then);
+    return typeof obj?.then === "function";
 }
 
-export { isFunction, isObject, isClass, isPromise };
+export { isObject, isClass, isPromise };

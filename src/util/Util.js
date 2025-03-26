@@ -23,6 +23,9 @@ const Util = {
         milli: 1 / 1000
     },
 
+    numbers: "0123456789",
+    alphabet: "abcdefghijklmnopqrstuvwxyz",
+
     parseInt: (str, radix = 10, defaultValue) => {
         if (typeof str !== "string" || typeof radix !== "number") {
             return defaultValue ?? NaN;
@@ -32,16 +35,53 @@ const Util = {
             return defaultValue ?? NaN;
         }
 
-        const validChars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ".slice(0, radix),
-            exp = new RegExp(`^[+-]?[${validChars}]+$`, "i");
+        const validChars = Util.alphabetUpper.slice(0, radix),
+            exp = new RegExp(`^[+-]?[${validChars}]+(,[${validChars}]+)*$`, "i");
 
         str = str.trim();
-
         if (!exp.test(str)) {
             return defaultValue ?? NaN;
         }
 
+        str = str.replaceAll(",", "");
         return Number.parseInt(str, radix);
+    },
+
+    truthyStrings: new Set(["true", "yes", "y", "t"]),
+    falsyStrings: new Set(["false", "no", "n", "f"]),
+
+    parseBool: (str, defaultValue) => {
+        if (typeof str !== "string") {
+            return defaultValue ?? null;
+        }
+
+        str = str.trim().toLowerCase();
+
+        if (Util.truthyStrings.has(str)) {
+            return true;
+        } else if (Util.falsyStrings.has(str)) {
+            return false;
+        } else {
+            return defaultValue ?? null;
+        }
+    },
+
+    formatNumber: (num, digits) => {
+        const options = {
+            maximumFractionDigits: digits
+        };
+
+        if ((num !== 0 && Math.abs(num) < 1e-6) || Math.abs(num) >= 1e21) {
+            const str = num.toLocaleString("en-US", {
+                notation: "scientific",
+                useGrouping: false,
+                ...options
+            });
+
+            return str.toLowerCase();
+        }
+
+        return num.toLocaleString("en-US", options);
     },
 
     zip: (arr_1, arr_2) => {
@@ -103,7 +143,7 @@ const Util = {
         for (const key of Object.keys(defaults)) {
             const sourceVal = source ? source[key] : undefined;
 
-            if (sourceVal === null || typeof sourceVal === "undefined") {
+            if (sourceVal == null) {
                 let defaultValue = defaults[key];
 
                 switch (typeof defaultValue) {
@@ -134,7 +174,7 @@ const Util = {
             let _timeout, _interval;
 
             function clearTimers() {
-                if (typeof _timeout !== "undefined") {
+                if (_timeout) {
                     clearTimeout(_timeout);
                 }
 
@@ -145,7 +185,7 @@ const Util = {
             }
 
             if (timeout > 0) {
-                if (typeof timeoutError === "undefined") {
+                if (!(timeoutError instanceof Error)) {
                     timeoutError = new UtilError("Condition timed out");
                 }
 
@@ -177,8 +217,28 @@ const Util = {
         });
     },
 
+    sort: (arr, cb) => {
+        const use_cb = typeof cb === "function";
+
+        return arr.sort((a, b) => {
+            const a_val = use_cb ? cb(a) : a,
+                b_val = use_cb ? cb(b) : b;
+
+            return a_val.localeCompare(b_val, "en", {
+                numeric: true,
+                sensitivity: "base"
+            });
+        });
+    },
+
     removeItem: (arr, item, cb) => {
-        const ind = arr.indexOf(item);
+        let ind;
+
+        if (typeof item === "function") {
+            ind = arr.findIndex(item);
+        } else {
+            ind = arr.indexOf(item);
+        }
 
         if (ind === -1) {
             return false;
@@ -191,7 +251,7 @@ const Util = {
             return true;
         }
 
-        const ret = cb(item);
+        const ret = cb(ind, arr);
 
         if (isPromise(ret)) {
             return ret.then(_ => true);
@@ -359,11 +419,13 @@ const Util = {
         }
     },
 
+    _leadingSpacesRegex: /^\s*/,
+    _trailingSpacesRegex: /\s*$/,
     capitalize: str => {
-        str = String(str).toLowerCase();
+        str = String(str);
 
-        const leading = str.match(/^\s*/)[0],
-            trailing = str.match(/\s*$/)[0];
+        const leading = str.match(Util._leadingSpacesRegex)[0],
+            trailing = str.match(Util._trailingSpacesRegex)[0];
 
         const content = str.slice(leading.length, str.length - trailing.length);
 
@@ -419,7 +481,7 @@ const Util = {
     },
 
     stringLength: obj => {
-        if (obj === null || typeof obj === "undefined") {
+        if (obj == null) {
             return 0;
         } else {
             return String(obj).length;
@@ -534,7 +596,7 @@ const Util = {
                 }
             }
         } else {
-            const escaped = sep.map(x => Util.escapeRegex(x)),
+            const escaped = sep.map(item => Util.escapeRegex(item)),
                 exp = new RegExp(escaped.join("|"), "g");
 
             if (n <= 1) {
@@ -583,7 +645,7 @@ const Util = {
     codeblockRegex: /(?<!\\)(?:`{3}([\S]+\n)?([\s\S]*?)`{3}|`([^`\n]+)`)/g,
 
     parseScript: script => {
-        const match = script.match(Util._parseScriptRegex);
+        const match = script.match(Util.parseScriptRegex);
 
         if (!match) {
             return [false, script, ""];
@@ -645,7 +707,7 @@ const Util = {
     },
 
     overSizeLimits: (obj, charLimit, lineLimit) => {
-        if (obj === null || typeof obj === "undefined") {
+        if (obj == null) {
             return false;
         }
 
@@ -813,7 +875,7 @@ const Util = {
             embed = embed.data;
         }
 
-        if (embed === null || typeof embed === "undefined") {
+        if (embed == null) {
             return 0;
         }
 
@@ -988,7 +1050,7 @@ const Util = {
         const _format = Object.entries(durations).map(entry => {
             const [name, duration] = entry;
 
-            const durStr = duration.toLocaleString(),
+            const durStr = Util.formatNumber(duration),
                 s = duration !== 1 ? "s" : "";
 
             return `${durStr} ${name}${s}`;
@@ -1021,7 +1083,25 @@ const Util = {
             return check(getProp(obj));
         }
 
-        return args.find(obj => isOutOfRange(getProp(obj)));
+        return args.find(obj => check(getProp(obj)));
+    },
+
+    unique: (arr, propName) => {
+        const hasPropName = typeof propName === "string",
+            getProp = hasPropName ? obj => obj[propName] : obj => obj;
+
+        const seen = new Set();
+
+        return arr.filter(item => {
+            const val = getProp(item);
+
+            if (seen.has(val)) {
+                return false;
+            }
+
+            seen.add(val);
+            return true;
+        });
     },
 
     bindArgs: (fn, ...boundArgs) => {
@@ -1062,8 +1142,24 @@ const Util = {
         }
 
         return { obj, parent };
+    },
+
+    className: obj => {
+        if (obj == null) {
+            return "";
+        }
+
+        if (typeof obj === "function") {
+            obj = obj.prototype;
+        }
+
+        return obj.constructor.name;
     }
 };
+
+Util.alphabetUpper = Util.alphabet.toUpperCase();
+Util.alphanumericUpper = Util.numbers + Util.alphabetUpper;
+Util.alphanumeric = Util.numbers + Util.alphabet + Util.alphabetUpper;
 
 Util.validUrlRegex = new RegExp(`^${Util.urlRegex.source}$`);
 Util.parseScriptRegex = new RegExp(`^${Util.codeblockRegex.source}$`);

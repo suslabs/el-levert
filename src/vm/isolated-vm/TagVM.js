@@ -6,6 +6,7 @@ import InspectorServer from "./inspector/InspectorServer.js";
 import { getClient, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import { isObject } from "../../util/misc/TypeTester.js";
 import VMUtil from "../../util/vm/VMUtil.js";
 
 import VMErrors from "./VMErrors.js";
@@ -16,7 +17,7 @@ function logUsage(code) {
 
 function logTime(t1) {
     const t2 = performance.now();
-    getLogger().debug(`Running script took ${Util.timeDelta(t2, t1).toLocaleString()}ms.`);
+    getLogger().debug(`Running script took ${Util.formatNumber(Util.timeDelta(t2, t1))}ms.`);
 }
 
 function logFinished(info) {
@@ -146,20 +147,17 @@ class TagVM extends VM {
     }
 
     _processReply(msg) {
-        let out = JSON.parse(msg);
+        const out = JSON.parse(msg);
 
-        if (typeof out.file !== "undefined") {
+        if (out.file != null) {
             let { data, name } = out.file;
             delete out.file;
 
-            if (typeof data === "object") {
+            if (isObject(data)) {
                 data = Object.values(data);
             }
 
-            out = {
-                ...out,
-                ...Util.getFileAttach(data, name).files
-            };
+            Object.assign(out, Util.getFileAttach(data, name));
         }
 
         return out;

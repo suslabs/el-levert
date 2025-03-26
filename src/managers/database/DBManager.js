@@ -82,6 +82,7 @@ class DBManager extends Manager {
     async _closeDatabase() {
         await this[this.fieldName].close();
         delete this[this.fieldName];
+        getLogger().info(`Successfully closed ${this.dbName} database.`);
     }
 }
 

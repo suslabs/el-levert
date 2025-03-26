@@ -26,8 +26,8 @@ const CleanroomUtil = {
         const shell = l * w * h - roof * h_inner;
 
         const frame = shell - 2 * (roof + l_wall + w_wall),
-            walls = shell - frame,
-            filters = roof - 1;
+            filters = roof - 1,
+            walls = shell - frame - filters;
 
         return { frame, walls, filters };
     }

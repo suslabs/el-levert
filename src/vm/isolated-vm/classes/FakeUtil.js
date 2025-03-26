@@ -24,13 +24,16 @@ const FakeUtil = {
     fetchTag: async name => {
         let tag = await getClient().tagManager.fetch(name);
 
-        if (!tag) {
-            return undefined;
+        if (tag === null) {
+            return null;
         }
 
         if (tag.isAlias) {
+            const owner = tag.owner;
             tag = await getClient().tagManager.fetchAlias(tag);
+
             tag.setName(name);
+            tag.setOwner(owner);
         }
 
         const data = tag.getData();
@@ -53,7 +56,7 @@ const FakeUtil = {
     },
 
     fetchMessage: async (user_id, default_id, ch_id, msg_id) => {
-        if (ch_id === null || typeof ch_id === "undefined") {
+        if (ch_id == null) {
             ch_id = default_id;
         }
 
@@ -62,8 +65,8 @@ const FakeUtil = {
             checkAccess: true
         });
 
-        if (!msg) {
-            return undefined;
+        if (msg === null) {
+            return null;
         }
 
         msg = new FakeMsg(msg).fixedMsg;
@@ -71,7 +74,7 @@ const FakeUtil = {
     },
 
     fetchMessages: async (user_id, default_id, ch_id, fetchOptions) => {
-        if (ch_id === null || typeof ch_id === "undefined") {
+        if (ch_id == null) {
             ch_id = default_id;
         }
 
@@ -84,15 +87,15 @@ const FakeUtil = {
             fetchOptions
         );
 
-        if (!msgs) {
+        if (msgs === null) {
             const msg_id = ch_id,
                 msg = await getClient().fetchMessage(default_id, msg_id, {
                     user_id,
                     checkAccess: true
                 });
 
-            if (!msg) {
-                return undefined;
+            if (msg === null) {
+                return null;
             }
 
             msgs = [msg];

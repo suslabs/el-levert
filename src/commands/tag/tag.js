@@ -11,14 +11,16 @@ const dummyMsg = {
 async function parseBase(t_args, msg) {
     const [t_type, t_body] = Util.splitArgs(t_args, true);
 
-    if (typeof msg === "undefined") {
+    if (msg == null) {
         msg = dummyMsg;
     }
 
     const hasAttachments = !Util.empty(msg.attachments);
 
-    if (typeof t_args === "undefined" || (Util.empty(t_args) && !hasAttachments)) {
+    if (Util.empty(t_args) && !hasAttachments) {
         return {
+            body: null,
+            type: null,
             err: ":warning: Tag body is empty."
         };
     }
@@ -27,17 +29,21 @@ async function parseBase(t_args, msg) {
 
     if (hasAttachments) {
         try {
-            [body, isScript] = await getClient().tagManager.downloadBody(msg);
+            [body, isScript] = await getClient().tagManager.downloadBody(t_args, msg);
         } catch (err) {
             getLogger().error(err);
 
             if (err.name === "TagError") {
                 return {
+                    body: null,
+                    type: null,
                     err: `:warning: ${err.message}.`
                 };
             }
 
             return {
+                body: null,
+                type: null,
                 err: {
                     content: ":no_entry_sign: Downloading attachment failed:",
                     ...Util.getFileAttach(err.stack, "error.js")
@@ -63,10 +69,10 @@ async function parseBase(t_args, msg) {
             type = TagTypes.defaultScriptType;
         }
     } else {
-        type = TagTypes.defaultType;
+        type = TagTypes.textType;
     }
 
-    return { body, type };
+    return { body, type, err: null };
 }
 
 async function getPreview(out, msg) {
@@ -78,7 +84,7 @@ async function getPreview(out, msg) {
         getLogger().error("Preview gen failed:", err);
     }
 
-    if (!preview) {
+    if (typeof preview === "undefined") {
         return out;
     }
 
@@ -135,7 +141,7 @@ export default {
 
         let tag = await getClient().tagManager.fetch(t_name);
 
-        if (!tag) {
+        if (tag === null) {
             let out = `:warning: Tag **${t_name}** doesn't exist.`,
                 find = await getClient().tagManager.search(t_name, 5);
 

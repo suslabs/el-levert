@@ -1,17 +1,17 @@
-import SqliteDatabase from "./SqlDatabase.js";
+import SqlDatabase from "./SqlDatabase.js";
 
 import Reminder from "../structures/Reminder.js";
 
 import Util from "../util/Util.js";
 
-class ReminderDatabase extends SqliteDatabase {
+class ReminderDatabase extends SqlDatabase {
     async fetch(user) {
         const rows = await this.queries.fetch.all({
             $user: user
         });
 
         if (typeof rows._data === "undefined" || Util.empty(rows)) {
-            return false;
+            return null;
         }
 
         const reminders = rows.map(x => new Reminder(x));

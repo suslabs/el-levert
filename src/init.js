@@ -16,7 +16,7 @@ async function init() {
 
     const configs = await loadConfig(logger);
 
-    if (typeof configs === "undefined") {
+    if (configs === null) {
         return;
     }
 

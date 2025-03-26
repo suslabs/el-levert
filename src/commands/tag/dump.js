@@ -13,28 +13,30 @@ export default {
             full = d_type === "full",
             inline = d_type === "inline";
 
-        const tags = await getClient().tagManager.dump(full);
+        let tags = await getClient().tagManager.dump(full);
 
         if (Util.empty(tags)) {
             return ":information_source: There are no tags registered.";
         }
 
-        let format;
-
         if (full) {
-            let space;
+            let spaces;
 
             if (!Util.empty(s_str)) {
-                space = Util.parseInt(s_str);
+                spaces = Util.parseInt(s_str);
 
-                if (Number.isNaN(space) || space < 0) {
+                if (Number.isNaN(spaces) || spaces < 0) {
                     return ":warning: Invalid indentation: " + s_str;
                 }
             }
 
-            format = JSON.stringify(tags, undefined, space);
+            const tagData = tags.map(tag => tag.getData()),
+                format = JSON.stringify(tagData, undefined, spaces);
+
             return Util.getFileAttach(format, "tags.json");
         }
+
+        let format;
 
         if (inline) {
             format = tags.join(",");

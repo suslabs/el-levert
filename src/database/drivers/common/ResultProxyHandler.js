@@ -29,7 +29,7 @@ const ResultProxyHandler = {
                     return target.info[prop];
                 }
             default:
-                if (target.data === null || typeof target.data === "undefined") {
+                if (target.data == null) {
                     return;
                 }
 
@@ -80,7 +80,7 @@ const ResultProxyHandler = {
     },
 
     ownKeys: target => {
-        if (target.data === null || typeof target.data === "undefined") {
+        if (target.data == null) {
             return [];
         }
 

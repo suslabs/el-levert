@@ -16,8 +16,6 @@ class CommandManager extends BaseCommandManager {
         super(true, commandsDir, commandPrefix, {
             excludeDirs: [excludeDir]
         });
-
-        this._setBridgeBotConfig();
     }
 
     isCommand(str, msg) {
@@ -28,6 +26,11 @@ class CommandManager extends BaseCommandManager {
         } else {
             return super.isCommand(str);
         }
+    }
+
+    async load() {
+        await super.load();
+        this._setBridgeBotConfig();
     }
 
     _getCommandContent(str, msg) {

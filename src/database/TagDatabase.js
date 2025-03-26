@@ -1,4 +1,4 @@
-import SqliteDatabase from "./SqlDatabase.js";
+import SqlDatabase from "./SqlDatabase.js";
 
 import Tag from "../structures/tag/Tag.js";
 
@@ -6,28 +6,17 @@ import Util from "../util/Util.js";
 
 function sortTags(tags) {
     const objs = typeof Util.first(tags) !== "string";
-
-    tags.sort((a, b) => {
-        if (objs) {
-            a = a.name;
-            b = b.name;
-        }
-
-        return a.localeCompare(b, "en", {
-            numeric: true,
-            sensitivity: "base"
-        });
-    });
+    Util.sort(tags, objs ? tag => tag.name : null);
 }
 
-class TagDatabase extends SqliteDatabase {
+class TagDatabase extends SqlDatabase {
     async fetch(name) {
         const row = await this.tagQueries.fetch.get({
             $name: name
         });
 
         if (typeof row._data === "undefined") {
-            return false;
+            return null;
         }
 
         return new Tag(row);
@@ -145,10 +134,11 @@ class TagDatabase extends SqliteDatabase {
         return tags;
     }
 
-    async count(countAll, user) {
+    async count(countAll, user, flag) {
         const res = await this.tagQueries.count.get({
             $countAll: countAll,
-            $user: user ?? ""
+            $user: user ?? "",
+            $flag: flag ?? null
         });
 
         return res.count;
@@ -168,7 +158,7 @@ class TagDatabase extends SqliteDatabase {
         });
 
         if (typeof quota._data === "undefined") {
-            return false;
+            return null;
         }
 
         return quota.quota;

@@ -23,7 +23,7 @@ class User {
     }
 
     setUsername(username) {
-        if (typeof username === "undefined") {
+        if (username == null) {
             username = "NOT FOUND";
         }
 

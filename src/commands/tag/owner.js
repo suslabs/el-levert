@@ -26,15 +26,15 @@ export default {
 
         const tag = await getClient().tagManager.fetch(t_name);
 
-        if (!tag) {
+        if (tag === null) {
             return `:warning: Tag **${t_name}** doesn't exist.`;
         }
 
-        let owner = (
+        let owner = Util.first(
             await getClient().findUsers(tag.owner, {
                 onlyMembers: true
             })
-        )[0];
+        );
 
         if (typeof owner === "undefined") {
             owner = await getClient().findUserById(tag.owner);

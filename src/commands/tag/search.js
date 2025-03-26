@@ -43,7 +43,8 @@ export default {
         }
 
         const s = Util.multiple(find) ? "s" : "",
-            header = `:information_source: Found **${find.length}** similar tag${s}:`;
+            count = Util.formatNumber(find.length),
+            header = `:information_source: Found **${count}** similar tag${s}:`;
 
         if (maxResults > defaultResultLimit * 2) {
             const names = find.join(", ");

@@ -2,7 +2,7 @@ import ManagerError from "../errors/ManagerError.js";
 
 class Manager {
     constructor(enabled = true, options = {}) {
-        if (typeof this.constructor.$name === "undefined") {
+        if (typeof this.constructor.$name !== "string") {
             throw new ManagerError("Manager must have a name");
         }
 

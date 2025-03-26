@@ -16,7 +16,7 @@ class VMFunction {
     };
 
     constructor(options, propertyMap) {
-        if (typeof options.name === "undefined") {
+        if (typeof options.name !== "string") {
             throw new VMError("VM function must have a name");
         }
 
@@ -91,8 +91,7 @@ class VMFunction {
 
         if (this.exits) {
             errorOptions = {
-                class: this.errorClass,
-                accessible: false
+                class: this.errorClass
             };
         }
 

@@ -37,9 +37,7 @@ class TextFileLoader extends FileLoader {
             return this.failure(err, `Error occured while loading ${this.getName()}:`);
         }
 
-        text = text.trim();
-        this.data = text;
-
+        this.data = text.trim();
         return LoadStatus.successful;
     }
 

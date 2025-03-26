@@ -37,10 +37,9 @@ const OCUtil = {
 
     formatDuration: time => {
         if (time >= 20) {
-            time = Util.round(time / 20, 2);
-            return time.toLocaleString() + "s";
+            return Util.formatNumber(time / 20, 2) + "s";
         } else {
-            return time.toLocaleString() + "t";
+            return time + "t";
         }
     },
 
@@ -218,6 +217,10 @@ const OCUtil = {
         const baseTier = OCUtil.getEuTier(recipe.base_eu),
             outputs = [];
 
+        if (baseTier === null) {
+            return outputs;
+        }
+
         let calcFunc;
 
         switch (recipe.oc_type) {
@@ -235,7 +238,7 @@ const OCUtil = {
 
         let last;
 
-        for (let voltage = baseTier; voltage < OCUtil.tierCount; voltage++) {
+        for (let voltage = baseTier; voltage <= OCUtil.tierCount; voltage++) {
             const res = calcFunc(recipe, voltage);
 
             if (res.time === last?.time && res.chance === last?.chance) {

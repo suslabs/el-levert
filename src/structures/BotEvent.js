@@ -8,12 +8,12 @@ class BotEvent {
     };
 
     constructor(options) {
-        if (typeof options.name === "undefined") {
+        if (typeof options.name !== "string") {
             throw new EventError("Event must have a name");
         }
 
-        if (typeof options.listener === "undefined") {
-            throw new EventError("Event must have a listener");
+        if (typeof options.listener !== "function") {
+            throw new EventError("Event must have a listener function");
         }
 
         Util.setValuesWithDefaults(this, options, this.constructor.defaultValues);

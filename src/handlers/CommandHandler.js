@@ -5,6 +5,7 @@ import Handler from "./Handler.js";
 import { getClient, getLogger } from "../LevertClient.js";
 
 import Util from "../util/Util.js";
+import { isObject } from "../util/misc/TypeTester.js";
 import VMUtil from "../util/vm/VMUtil.js";
 
 function logUsage(msg, name, args) {
@@ -16,7 +17,7 @@ function logUsage(msg, name, args) {
 }
 
 function logTime(time) {
-    getLogger().info(`Command execution took ${time.toLocaleString()}ms.`);
+    getLogger().info(`Command execution took ${Util.formatNumber(time)}ms.`);
 }
 
 function logOutput(cmd, out) {
@@ -44,15 +45,13 @@ class CommandHandler extends Handler {
         }
 
         if (this.userTracker.findUser(msg.author.id)) {
-            const reply = await msg.reply(":warning: Please wait for the previous command to finish.");
-            this.messageTracker.addMsg(reply, msg.id);
-
+            await this.reply(msg, ":warning: Please wait for the previous command to finish.");
             return false;
         }
 
         const [cmd, args] = getClient().commandManager.getCommand(msg.content, msg);
 
-        if (typeof cmd === "undefined") {
+        if (cmd === null) {
             return false;
         }
 
@@ -88,8 +87,7 @@ class CommandHandler extends Handler {
         logOutput(cmd, out);
 
         try {
-            const reply = await msg.reply(out);
-            this.messageTracker.addMsg(reply, msg.id);
+            await this.reply(msg, out);
         } catch (err) {
             await this._handleReplyError(err, msg);
             return;
@@ -111,7 +109,7 @@ class CommandHandler extends Handler {
     }
 
     _processResult(res) {
-        const msgRes = res !== null && typeof res === "object",
+        const msgRes = isObject(res),
             str = VMUtil.formatOutput(msgRes ? res.content : res)?.trim();
 
         let out = msgRes ? res : {};
@@ -127,7 +125,7 @@ class CommandHandler extends Handler {
             return out;
         }
 
-        out.embeds = out.embeds.filter(embed => embed !== null && typeof embed !== "undefined");
+        out.embeds = out.embeds.filter(embed => embed != null);
 
         if (Util.empty(out.embeds)) {
             return out;
@@ -188,11 +186,11 @@ class CommandHandler extends Handler {
             embed.title = this._escapeMentions(embed.title);
             embed.description = this._escapeMentions(embed.description);
 
-            if (typeof embed.footer !== "undefined") {
+            if (embed.footer != null) {
                 embed.footer.text = this._escapeMentions(embed.footer.text);
             }
 
-            if (typeof embed.author !== "undefined") {
+            if (embed.author != null) {
                 embed.author.name = this._escapeMentions(embed.author.name);
             }
 
@@ -221,12 +219,10 @@ class CommandHandler extends Handler {
         getLogger().error("Command execution failed:", err);
 
         try {
-            const reply = await msg.reply({
+            await this.reply(msg, {
                 content: `:no_entry_sign: Encountered exception while executing command ${bold(cmd.name)}:`,
                 ...Util.getFileAttach(err.stack ?? err.toString(), "error.js")
             });
-
-            this.messageTracker.addMsg(reply, msg.id);
         } catch (err) {
             getLogger().error("Reporting error failed:", err);
         }
@@ -234,21 +230,16 @@ class CommandHandler extends Handler {
 
     async _handleReplyError(err, msg) {
         if (err.message === "Cannot send an empty message") {
-            const reply = await msg.reply(`:no_entry_sign: ${err.message}.`);
-            this.messageTracker.addMsg(reply, msg.id);
-
-            return;
+            return await this.reply(msg, `:no_entry_sign: ${err.message}.`);
         }
 
         getLogger().error("Reply failed:", err);
 
         try {
-            const reply = await msg.reply({
+            await this.reply(msg, {
                 content: ":no_entry_sign: Encountered exception while sending reply:",
                 ...Util.getFileAttach(err.stack, "error.js")
             });
-
-            this.messageTracker.addMsg(reply, msg.id);
         } catch (err) {
             getLogger().error("Reporting error failed:", err);
         }

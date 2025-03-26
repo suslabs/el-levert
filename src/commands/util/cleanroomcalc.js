@@ -11,7 +11,8 @@ export default {
         const dims = args.split("x");
 
         if (dims.length !== 3) {
-            return ":warning: Must specify all dimensions in `LxWxH` format.";
+            return `:warning: Invalid arguments specified.
+All dimensions must be given in \`LxWxH\` format.`;
         }
 
         const l = Util.parseInt(dims[0]),
@@ -44,19 +45,22 @@ export default {
                 },
                 {
                     name: "Plascrete frame:",
-                    value: "- " + frame.toLocaleString()
+                    value: "- " + Util.formatNumber(frame),
+                    inline: true
                 },
                 {
                     name: "Plascrete or glass walls:",
-                    value: "- " + walls.toLocaleString()
+                    value: "- " + Util.formatNumber(walls),
+                    inline: true
                 },
                 {
                     name: "Filter casings:",
-                    value: "- " + filters.toLocaleString()
+                    value: "- " + Util.formatNumber(filters),
+                    inline: true
                 }
             )
             .setFooter({
-                text: "Subtract any hatches you want in the walls from the Frame or Wall amount."
+                text: "Subtract any hatches you want in the walls from the frame or wall amount."
             });
 
         const out = {

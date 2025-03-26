@@ -23,6 +23,7 @@
         "curly": ["error", "all"]
     },
     "globals": {
-        "projRoot": "readonly"
+        "projRoot": "readonly",
+        "projRootUrl": "readonly"
     }
 }

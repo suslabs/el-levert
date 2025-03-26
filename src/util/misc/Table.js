@@ -117,7 +117,7 @@ const charsets = {
 
 const TableUtil = {
     columnWidth: (heading, rows, minWidth = 0, maxWidth = Infinity) => {
-        if (typeof rows === "undefined") {
+        if (rows == null) {
             rows = [];
         }
 
@@ -202,7 +202,7 @@ class Table {
 
     get charset() {
         if (this.style === "custom") {
-            if (this.customChars === null || typeof this.customChars === "undefined") {
+            if (this.customChars == null) {
                 throw new UtilError("No custom charset object provided");
             }
 
@@ -231,7 +231,7 @@ class Table {
     columnWidths() {
         const colIds = this.columnIds;
 
-        if (!colIds) {
+        if (colIds === null) {
             return [0];
         }
 
@@ -253,7 +253,7 @@ class Table {
     maxRowHeight() {
         const colIds = this.columnIds;
 
-        if (!colIds) {
+        if (colIds === null) {
             return 0;
         }
 

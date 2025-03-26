@@ -46,18 +46,19 @@
 
 # TODO
 
-- [x] Fix oc (soon)
 - [ ] Extract responses into a lang file
 - [ ] Rewrite vm2 runner
 - [ ] Finish CLI commands
-- [ ] Add cabal
+- [ ] Add cabal (banning)
 - [ ] Add the option to save tag attachments locally
 - [ ] Add support for slash commands (perhaps)
-- [x] Add the option to log to a channel
-- [ ] Loading extensions
 - [ ] Rewrite importer & add db check script
 - [ ] Add support for other databases
 - [ ] Add support for reading the token from environment variables
+- [ ] Add tag usage stats (and more tag counts)
+- [ ] Add caching
+- [ ] Add websocket API
+- [ ] Add different behaviour when replying to messages
 
 # Commands
 
@@ -80,7 +81,7 @@ Subcommands:
 - chown `(name) (new_owner)` - Transfers the tag to another user, specified either as a username, tag, mention or id.
 - count `[all/me/user]` - Sends the number of tags that have been registered in total or by the specified user.
 - delete `(name)` - Deletes tag `(name)` if it's owned by you or if you are a moderator.
-- dump `[inline/full] [space]` - Sends a list of all tags.
+- dump `[inline/full] [spaces]` - Sends a list of all tags.
 - edit `(name) [type] (new_body)` - Edits tag `(name)` with a new body, same ownership and attachment rules as `add`.
 - info `(name) [raw]` - Sends the properties of tag `(name)`. Moderator only.
 - leaderboard `(count/size) [limit=20 < 100]` - Sends the tag leaderboard up to the specified limit.

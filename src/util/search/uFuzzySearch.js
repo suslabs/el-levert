@@ -14,7 +14,7 @@ function search(haystack, needle, options = {}) {
 
     let searchHaystack;
 
-    if (typeof searchKey === "undefined") {
+    if (searchKey == null) {
         searchHaystack = haystack;
     } else {
         searchHaystack = haystack.map(x => x[searchKey]);

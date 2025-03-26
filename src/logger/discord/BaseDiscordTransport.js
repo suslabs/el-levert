@@ -14,7 +14,7 @@ class BaseDiscordTransport extends Transport {
     constructor(opts) {
         super(opts);
 
-        if (typeof this.constructor.$name === "undefined") {
+        if (typeof this.constructor.$name !== "string") {
             throw new LoggerError("Discord transport must have a default name");
         }
 
@@ -29,7 +29,7 @@ class BaseDiscordTransport extends Transport {
         this.sendInterval = opts.sendInterval ?? 0;
 
         this.client = opts.client;
-        this._hasClient = opts.client === null && typeof opts.client === "undefined";
+        this._hasClient = opts.client != null;
 
         this.initialized = false;
 
@@ -91,7 +91,7 @@ class BaseDiscordTransport extends Transport {
         embed.setTitle(Util.capitalize(info.level));
         embed.setColor(BaseDiscordTransport._getEmbedColor(info.level));
 
-        if (typeof info.stack !== "undefined") {
+        if (info.stack != null) {
             if (info.stack.length < BaseDiscordTransport.msgCharLimit) {
                 const formattedStack = codeBlock("js", info.stack);
                 content += formattedStack;
@@ -100,7 +100,7 @@ class BaseDiscordTransport extends Transport {
             }
         }
 
-        if (typeof info.meta !== "undefined") {
+        if (info.meta != null) {
             for (const [key, value] of Object.entries(info.meta)) {
                 embed.addFields({
                     name: key,
@@ -109,14 +109,14 @@ class BaseDiscordTransport extends Transport {
             }
         }
 
-        if (typeof info.service !== "undefined") {
+        if (info.service != null) {
             embed.addFields({
                 name: "service",
                 value: info.service
             });
         }
 
-        if (typeof info.timestamp !== "undefined") {
+        if (info.timestamp != null) {
             const date = new Date(info.timestamp),
                 timestamp = Math.floor(date.getTime() * Util.durationSeconds.milli),
                 formattedTimestamp = time(timestamp, TimestampStyles.RelativeTime);
@@ -125,7 +125,7 @@ class BaseDiscordTransport extends Transport {
             embed.setTitle(`${embed.data.title} | ${formattedTimestamp}`);
         }
 
-        if (typeof this.client !== "undefined") {
+        if (this._hasClient) {
             const username = this.client.user.displayName,
                 avatar = this.client.user.displayAvatarURL();
 
@@ -144,16 +144,13 @@ class BaseDiscordTransport extends Transport {
             fileContent += `--- Log message:\n${info.message}`;
         }
 
-        let out = {
+        const out = {
             content,
             embeds: [embed]
         };
 
         if (!Util.empty(fileContent)) {
-            out = {
-                ...out,
-                ...Util.getFileAttach(fileContent, "log.txt")
-            };
+            Object.assign(out, Util.getFileAttach(fileContent, "log.txt"));
         }
 
         return out;

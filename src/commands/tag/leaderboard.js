@@ -16,13 +16,11 @@ function formatLeaderboard(leaderboard, type) {
         switch (type) {
             case "count":
                 const s = entry.count > 1 ? "s" : "";
-                str += `${entry.count} tag${s}`;
+                str += `**${Util.formatNumber(entry.count)}** tag${s}`;
 
                 break;
             case "size":
-                const quota = Util.round(entry.quota, 3);
-                str += `${quota}kb`;
-
+                str += `**${Util.formatNumber(entry.quota, 2)}** kb`;
                 break;
         }
 

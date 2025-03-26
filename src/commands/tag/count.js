@@ -11,16 +11,19 @@ export default {
         let user;
 
         let all = false,
+            newTags = false,
+            scriptTags = false,
             own = false;
 
         findUser: if (!Util.empty(args)) {
-            const [u_name] = Util.splitArgs(args),
-                lowercaseName = u_name.toLowerCase();
+            const [u_name] = Util.splitArgs(args, true);
 
-            all = lowercaseName === "all";
-            own = lowercaseName === "me";
+            all = u_name === "all";
+            newTags = u_name === "new";
+            scriptTags = u_name === "script";
+            own = u_name === "me";
 
-            if (all) {
+            if (all || newTags || scriptTags) {
                 break findUser;
             } else if (own) {
                 user = msg.author;
@@ -35,15 +38,23 @@ export default {
             }
         }
 
-        const count = await getClient().tagManager.count(user?.id),
-            registered = count > 0 ? count.toLocaleString() : "no";
+        const flags = [newTags ? "new" : null, scriptTags ? "script" : null],
+            count = await getClient().tagManager.count(user?.id, flags);
+
+        const registered = count > 0 ? Util.formatNumber(count) : "no",
+            tags = "tag" + (count > 1 ? "s" : "");
 
         if (own) {
-            return `:information_source: You have **${registered}** tags.`;
+            return `:information_source: You have **${registered}** ${tags}.`;
         } else if (typeof user !== "undefined") {
-            return `:information_source: User \`${user.username}\` has **${registered}** tags.`;
+            return `:information_source: User \`${user.username}\` has **${registered}** ${tags}.`;
         } else {
-            return `:information_source: There are **${registered}** tags registered.`;
+            const are = count === 1 ? "is" : "are";
+
+            const flagName = Util.first(flags.filter(name => name !== null)),
+                areType = flagName ? flagName + " " : "";
+
+            return `:information_source: There ${are} **${registered}** ${areType}${tags} registered.`;
         }
     }
 };

@@ -26,10 +26,10 @@ async function loadConfig(logger) {
         configs = {};
 
     for (const loader of loaders) {
-        let [config, loadStatus] = await loader.load();
+        const [config, loadStatus] = await loader.load();
 
         if (loadStatus === LoadStatus.failed) {
-            return undefined;
+            return null;
         }
 
         configs[loader.name] = config;

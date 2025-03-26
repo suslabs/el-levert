@@ -112,7 +112,7 @@ class PermissionManager extends DBManager {
     async maxLevel(id) {
         const groups = await this.fetch(id);
 
-        if (!groups) {
+        if (groups === null) {
             return this.defaultLevel;
         }
 
@@ -121,7 +121,7 @@ class PermissionManager extends DBManager {
         if (Util.single(groups)) {
             maxLevel = Util.first(groups).level;
         } else {
-            const levels = groups.map(x => x.level);
+            const levels = groups.map(group => group.level);
             maxLevel = Math.max(...levels);
         }
 
@@ -143,7 +143,7 @@ class PermissionManager extends DBManager {
     }
 
     async add(group, id) {
-        if (!group) {
+        if (group === null) {
             throw new PermissionError("Group doesn't exist");
         }
 
@@ -160,7 +160,7 @@ class PermissionManager extends DBManager {
     }
 
     async remove(group, id) {
-        if (!group) {
+        if (group === null) {
             throw new PermissionError("Group doesn't exist");
         }
 
@@ -212,7 +212,7 @@ class PermissionManager extends DBManager {
     }
 
     async removeGroup(group) {
-        if (!group) {
+        if (group === null) {
             throw new PermissionError("Group doesn't exist");
         }
 
@@ -228,7 +228,7 @@ class PermissionManager extends DBManager {
     }
 
     async updateGroup(group, newName, newLevel) {
-        if (!group) {
+        if (group === null) {
             throw new PermissionError("Group doesn't exist");
         }
 
@@ -242,7 +242,7 @@ class PermissionManager extends DBManager {
 
         let newGroup = new Group(group);
 
-        if (typeof newName !== "undefined") {
+        if (newName != null) {
             const existingGroup = await this.fetchGroup(newName);
 
             if (existingGroup) {
@@ -252,7 +252,7 @@ class PermissionManager extends DBManager {
             newGroup.name = newName;
         }
 
-        if (typeof newLevel !== "undefined") {
+        if (newLevel != null) {
             this.checkLevel(newLevel);
 
             newGroup.level = newLevel;
@@ -308,7 +308,7 @@ class PermissionManager extends DBManager {
         groups = groups.concat(groupList);
 
         if (Util.empty(groups)) {
-            return false;
+            return null;
         }
 
         const users = await this.listUsers(fetchUsernames);

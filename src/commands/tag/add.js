@@ -28,7 +28,7 @@ export default {
         const parsed = await this.parentCmd.parseBase(t_args, msg),
             { body, type } = parsed;
 
-        if (typeof parsed.err !== "undefined") {
+        if (parsed.err !== null) {
             return parsed.err;
         }
 
@@ -42,7 +42,7 @@ export default {
                             owner = await getClient().findUserById(tag.owner),
                             out = `:warning: Tag **${t_name}** already exists,`;
 
-                        if (!owner) {
+                        if (owner === null) {
                             return out + " tag owner not found.";
                         }
 

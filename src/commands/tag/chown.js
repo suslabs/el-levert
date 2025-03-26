@@ -37,7 +37,7 @@ export default {
 
         const tag = await getClient().tagManager.fetch(t_name);
 
-        if (!tag) {
+        if (tag === null) {
             return `:warning: Tag **${t_name}** doesn't exist.`;
         }
 
@@ -45,7 +45,7 @@ export default {
             const owner = await getClient().findUserById(tag.owner),
                 out = ":warning: You can only edit your own tags.";
 
-            if (!owner) {
+            if (owner === null) {
                 return out + " Tag owner not found.";
             }
 

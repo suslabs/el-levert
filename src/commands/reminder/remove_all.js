@@ -7,9 +7,9 @@ export default {
     subcommand: true,
 
     handler: async (_, msg) => {
-        const res = await getClient().reminderManager.removeAll(msg.author.id);
+        const removed = await getClient().reminderManager.removeAll(msg.author.id);
 
-        if (!res) {
+        if (!removed) {
             return ":information_source: You don't have any reminders.";
         }
 

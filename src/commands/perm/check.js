@@ -39,7 +39,7 @@ export default {
 
         const groups = await getClient().permManager.fetch(user.id);
 
-        if (!groups) {
+        if (groups === null) {
             if (user === msg.author) {
                 return `:information_source: You have no permissions.`;
             } else {

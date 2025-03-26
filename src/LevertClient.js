@@ -21,6 +21,7 @@ import { registerGlobalErrorHandler, removeGlobalErrorHandler } from "./client/G
 import MessageProcessor from "./client/MessageProcessor.js";
 
 import Util from "./util/Util.js";
+import { isObject } from "./util/misc/TypeTester.js";
 import ExportUtil from "./util/misc/ExportUtil.js";
 
 import ClientError from "./errors/ClientError.js";
@@ -36,10 +37,10 @@ class LevertClient extends DiscordClient {
     constructor(configs) {
         super();
 
-        if (client) {
-            throw new ClientError("The client can only be constructed once");
-        } else {
+        if (typeof client === "undefined") {
             client = this;
+        } else {
+            throw new ClientError("The client can only be constructed once");
         }
 
         this.version = version;
@@ -50,8 +51,6 @@ class LevertClient extends DiscordClient {
 
         this.logger = null;
         this._setupLogger();
-
-        this._setOtherConfigs();
     }
 
     get uptime() {
@@ -63,7 +62,11 @@ class LevertClient extends DiscordClient {
     }
 
     isBridgeBot(id) {
-        if (!this.useBridgeBot || typeof id === "undefined" || id === null) {
+        if (typeof id === "object") {
+            id = id?.id;
+        }
+
+        if (!this.useBridgeBot || id == null) {
             return false;
         }
 
@@ -71,11 +74,13 @@ class LevertClient extends DiscordClient {
     }
 
     setConfigs(configs) {
-        if (typeof configs === "undefined") {
+        if (configs == null) {
             throw new ClientError("Config cannot be undefined");
         }
 
-        const { config, reactions, auth } = configs;
+        const config = configs.config ?? {},
+            reactions = configs.reactions ?? {},
+            auth = configs.auth ?? {};
 
         this.config = config;
         this.reactions = reactions;
@@ -328,6 +333,8 @@ class LevertClient extends DiscordClient {
 
         this.logger.info("Starting bot...");
 
+        this._setOtherConfigs();
+
         await this._loadManagers();
         this._loadHandlers();
 
@@ -426,6 +433,9 @@ class LevertClient extends DiscordClient {
     }
 
     _setOtherConfigs() {
+        delete this.bridgeBotExp;
+        delete this.bridgeBotExps;
+
         this._setBridgeBotConfig();
     }
 
@@ -466,7 +476,7 @@ class LevertClient extends DiscordClient {
             return;
         }
 
-        const individual = typeof messageFormats === "object" && !Array.isArray(messageFormats);
+        const individual = isObject(messageFormats) && !Array.isArray(messageFormats);
         this.individualBridgeBotFormats = individual;
 
         if (individual) {

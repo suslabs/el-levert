@@ -29,7 +29,7 @@ export default {
 
         const tag = await getClient().tagManager.fetch(t_name);
 
-        if (!tag) {
+        if (tag === null) {
             return `:warning: Tag **${t_name}** doesn't exist.`;
         }
 
@@ -45,7 +45,7 @@ export default {
             };
         } else {
             return `${header}
-\`\`\`js
+\`\`\`json
 ${infoJson}
 \`\`\``;
         }

@@ -9,7 +9,7 @@ function addId(msg_id) {
 }
 
 function removeId(msg_id) {
-    inProcessIds = inProcessIds.filter(x => x !== msg_id);
+    inProcessIds = inProcessIds.filter(id => id !== msg_id);
 }
 
 async function executeAllHandlers(client, funcName, msg, ...args) {

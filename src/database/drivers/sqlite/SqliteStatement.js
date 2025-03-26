@@ -15,10 +15,11 @@ class SqliteStatement {
     finalize(removeEntry = true) {
         return new Promise((resolve, reject) => {
             if (
-                this._checkFinalizedAsync(
+                !this._checkFinalizedAsync(
                     resolve,
                     reject,
-                    "Cannot finalize statement. The statement is already finalized"
+                    false,
+                    `Cannot finalize statement. ${SqliteStatement._stFinalizedMsg}`
                 )
             ) {
                 return;
@@ -54,7 +55,7 @@ class SqliteStatement {
 
     reset() {
         return new Promise((resolve, reject) => {
-            if (this._checkFinalizedAsync(resolve, reject)) {
+            if (!this._checkFinalizedAsync(resolve, reject)) {
                 return;
             }
 
@@ -66,7 +67,7 @@ class SqliteStatement {
 
     run(...param) {
         return new Promise((resolve, reject) => {
-            if (this._checkFinalizedAsync(resolve, reject)) {
+            if (!this._checkFinalizedAsync(resolve, reject)) {
                 return;
             }
 
@@ -82,7 +83,7 @@ class SqliteStatement {
 
     get(...param) {
         return new Promise((resolve, reject) => {
-            if (this._checkFinalizedAsync(resolve, reject)) {
+            if (!this._checkFinalizedAsync(resolve, reject)) {
                 return;
             }
 
@@ -98,7 +99,7 @@ class SqliteStatement {
 
     all(...param) {
         return new Promise((resolve, reject) => {
-            if (this._checkFinalizedAsync(resolve, reject)) {
+            if (!this._checkFinalizedAsync(resolve, reject)) {
                 return;
             }
 
@@ -114,7 +115,7 @@ class SqliteStatement {
 
     each(...param) {
         return new Promise((resolve, reject) => {
-            if (this._checkFinalizedAsync(resolve, reject)) {
+            if (!this._checkFinalizedAsync(resolve, reject)) {
                 return;
             }
 
@@ -128,29 +129,61 @@ class SqliteStatement {
         });
     }
 
-    _checkFinalizedAsync(resolve, reject, msg) {
-        if (!this.finalized) {
-            return false;
+    static _stFinalizedMsg = "The statement is finalized";
+    static _stNotFinalizedMsg = "The statement is not finalized";
+
+    _checkFinalized(expected = false, msg) {
+        if (this.finalized === expected) {
+            return true;
         }
 
-        const err = new DatabaseError(msg ?? "The statement is finalized");
-        this._db.emit(DatabaseEvents.promiseError, err);
+        if (expected) {
+            return new DatabaseError(msg ?? SqliteStatement._stNotFinalizedMsg);
+        } else {
+            return new DatabaseError(msg ?? SqliteStatement._stFinalizedMsg);
+        }
+    }
 
-        if (this._db.throwErrors) {
-            reject(err);
+    _checkFinalizedSync(expected, msg) {
+        const res = this._checkFinalized(expected, msg);
+
+        if (typeof res === "boolean") {
+            return res;
+        }
+
+        this._db.emit(DatabaseEvents.promiseError, res);
+
+        if (this.throwErrors) {
+            throw res;
+        }
+
+        return false;
+    }
+
+    _checkFinalizedAsync(resolve, reject, expected, msg) {
+        const res = this._checkFinalized(expected, msg);
+
+        if (typeof res === "boolean") {
+            return res;
+        }
+
+        this._db.emit(DatabaseEvents.promiseError, res);
+
+        if (this.throwErrors) {
+            reject(res);
         } else {
             resolve();
         }
 
-        return true;
+        return false;
     }
 
-    _throwErrorAsync(resolve, reject, err) {
-        return this._db._throwErrorAsync(resolve, reject, err);
+    _throwErrorAsync(...args) {
+        return this._db._throwErrorAsync(...args);
     }
 
-    _errorRollbackAsync(resolve, reject, err) {
-        return this._db._errorRollbackAsync(resolve, reject, err);
+    _errorRollbackAsync(...args) {
+        return this._db._errorRollbackAsync(...args);
     }
 }
 

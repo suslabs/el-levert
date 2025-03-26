@@ -36,9 +36,9 @@ export default function (base) {
         }
 
         async finalizeAll() {
-            for (const st of this.statements) {
+            return await Util.wipeArray(this.statements, async st => {
                 if (st.finalized) {
-                    continue;
+                    return;
                 }
 
                 try {
@@ -48,9 +48,7 @@ export default function (base) {
                         throw err;
                     }
                 }
-            }
-
-            this.statements = [];
+            });
         }
     }
 

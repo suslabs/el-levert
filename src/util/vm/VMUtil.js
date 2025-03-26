@@ -1,9 +1,11 @@
+import { isObject } from "../misc/TypeTester.js";
+
 const VMUtil = {
     removeCircRef: obj => {
         const pathMap = new Map();
 
         function recRemove(val, path) {
-            if (val === null || typeof val !== "object") {
+            if (!isObject(val)) {
                 return val;
             }
 
@@ -36,8 +38,8 @@ const VMUtil = {
     },
 
     formatOutput: out => {
-        if (out === null) {
-            return undefined;
+        if (out == null) {
+            return out;
         }
 
         if (Array.isArray(out)) {
@@ -49,6 +51,8 @@ const VMUtil = {
             case "boolean":
             case "number":
                 return out.toString(10);
+            case "string":
+                return out;
             case "function":
             case "symbol":
                 return undefined;
@@ -58,8 +62,6 @@ const VMUtil = {
                 } catch (err) {
                     return undefined;
                 }
-            default:
-                return out;
         }
     },
 
@@ -71,20 +73,22 @@ const VMUtil = {
         "footer",
         "hexColor",
         "image",
+        "thumbnail",
         "timestamp",
         "title",
         "url"
     ],
+
     formatReply: (text, msg) => {
         let out = {};
 
-        if (typeof text === "object") {
+        if (isObject(text)) {
             msg = text;
         } else {
             out.content = VMUtil.formatOutput(text) ?? "";
         }
 
-        if (msg === null || typeof msg === "undefined") {
+        if (msg == null) {
             return out;
         }
 
@@ -92,7 +96,7 @@ const VMUtil = {
             out.content = VMUtil.formatOutput(msg.content);
         }
 
-        if (msg.embed !== null && typeof msg.embed === "object") {
+        if (isObject(msg.embed)) {
             const embed = {};
 
             for (const prop of VMUtil._allowedEmbedProps) {
@@ -105,7 +109,7 @@ const VMUtil = {
             out.embeds = [embed];
         }
 
-        if (msg.file !== null && typeof msg.file === "object") {
+        if (isObject(msg.file)) {
             out.file = msg.file;
         }
 

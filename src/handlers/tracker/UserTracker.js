@@ -17,31 +17,43 @@ class UserTracker {
     }
 
     findUser(id) {
-        return this.trackedUsers.find(x => x.id === id);
+        return this.trackedUsers.find(user => user.id === id);
     }
 
     addUser(id) {
+        if (typeof id === "object") {
+            id = id.id;
+        }
+
         const user = new TrackedUser(id, Date.now());
         this.trackedUsers.push(user);
     }
 
     removeUser(id) {
-        this.trackedUsers = this.trackedUsers.filter(x => x.id !== id);
-    }
-
-    clearUsers() {
-        while (!Util.empty(this.trackedUsers)) {
-            this.trackedUsers.pop();
+        if (typeof id === "object") {
+            Util.removeItem(this.trackedUsers, id);
+        } else {
+            Util.removeItem(this.trackedUsers, user => user.id === id);
         }
     }
 
-    _sweepUsers() {
-        for (const user of this.trackedUsers) {
-            const timeDiff = Date.now() - user.time;
+    clearUsers() {
+        Util.wipeArray(this.trackedUsers);
+    }
 
-            if (timeDiff > this.sweepInterval) {
-                this.removeUser(user.id);
+    _sweepUsers() {
+        const removed = [];
+
+        for (const user of this.trackedUsers) {
+            const dt = Util.timeDelta(Date.now(), user.time);
+
+            if (dt > this.sweepInterval) {
+                removed.push(user);
             }
+        }
+
+        for (const user of removed) {
+            this.removeUser(user);
         }
     }
 

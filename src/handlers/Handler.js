@@ -7,7 +7,7 @@ import HandlerError from "../errors/HandlerError.js";
 
 class Handler {
     constructor(enabled = true, hasMessageTracker = true, hasUserTracker = false, options = {}) {
-        if (typeof this.constructor.$name === "undefined") {
+        if (typeof this.constructor.$name !== "string") {
             throw new HandlerError("Handler must have a name");
         }
 
@@ -33,8 +33,9 @@ class Handler {
         this.resubmit = this._resubmit;
     }
 
-    _defaultDelete() {
-        return false;
+    async reply(msg, data) {
+        const reply = await msg.reply(data);
+        this.messageTracker.addMsg(reply, msg.id);
     }
 
     load() {
@@ -61,6 +62,10 @@ class Handler {
             this.userTracker.clearUsers();
             this.userTracker._clearSweepInterval();
         }
+    }
+
+    _defaultDelete() {
+        return false;
     }
 
     async _msgTrackerDelete(msg) {

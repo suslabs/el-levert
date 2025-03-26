@@ -22,7 +22,7 @@ function logWordsUsage(msg, words) {
 
 function logReactTime(t1) {
     const t2 = performance.now();
-    getLogger().debug(`Reacting took ${Util.timeDelta(t2, t1).toLocaleString()}ms.`);
+    getLogger().debug(`Reacting took ${Util.formatNumber(Util.timeDelta(t2, t1))}ms.`);
 }
 
 function logRemove(msg, count) {
@@ -33,7 +33,7 @@ function logRemove(msg, count) {
 
 function logRemoveTime(t1) {
     const t2 = performance.now();
-    getLogger().debug(`Removing reactions took ${Util.timeDelta(t2, t1).toLocaleString()}ms.`);
+    getLogger().debug(`Removing reactions took ${Util.formatNumber(Util.timeDelta(t2, t1))}ms.`);
 }
 
 class ReactionHandler extends Handler {
@@ -46,9 +46,6 @@ class ReactionHandler extends Handler {
         super(enabled, false);
 
         this.multipleReacts = getClient().reactions.multipleReacts ?? false;
-
-        this._setWords();
-        this._setParans();
     }
 
     async execute(msg) {
@@ -95,31 +92,15 @@ class ReactionHandler extends Handler {
         await this.execute(msg);
     }
 
+    load() {
+        this._setWords();
+        this._setParans();
+    }
+
     static _emojiExpRight = new RegExp(`[${Util.escapeCharClass(this.emojiChars)}][()]+`, "g");
     static _emojiExpLeft = new RegExp(`[()]+[${Util.escapeCharClass(this.emojiChars)}]`, "g");
 
-    static _getReact(list) {
-        if (Util.single(list)) {
-            return Util.first(list);
-        }
-
-        return Util.randomElement(list);
-    }
-
-    _setWords() {
-        this.funnyWords = getClient().reactions.funnyWords;
-
-        this._wordList = this._getWordList(this.funnyWords);
-        this._reactMap = this._getReactMap(this.funnyWords);
-    }
-
-    _setParans() {
-        this.parans = getClient().reactions.parans;
-
-        this.enableParans = typeof this.parans.left !== "undefined" && typeof this.parans.right !== "undefined";
-    }
-
-    _getWordList(funnyWords) {
+    static _getWordList(funnyWords) {
         let wordList = [];
 
         for (const elem of funnyWords) {
@@ -136,7 +117,7 @@ class ReactionHandler extends Handler {
         return wordList;
     }
 
-    _getReactMap(funnyWords) {
+    static _getReactMap(funnyWords) {
         const reactMap = new Map();
 
         for (const elem of funnyWords) {
@@ -157,24 +138,47 @@ class ReactionHandler extends Handler {
         return reactMap;
     }
 
-    _countUnmatchedParans(str) {
-        if (!str.includes("(") && !str.includes(")")) {
-            return;
+    static _getReact(list) {
+        if (Util.single(list)) {
+            return Util.first(list);
         }
 
-        let open = 0;
+        return Util.randomElement(list);
+    }
 
+    _setWords() {
+        this.funnyWords = getClient().reactions.funnyWords;
+
+        this._wordList = ReactionHandler._getWordList(this.funnyWords);
+        this._reactMap = ReactionHandler._getReactMap(this.funnyWords);
+    }
+
+    _setParans() {
+        const parans = getClient().reactions.parans;
+
+        this.enableParans = parans.left != null && parans.right != null;
+        this.parans = parans;
+    }
+
+    _countUnmatchedParans(str) {
         const parans = {
             left: 0,
             right: 0,
             total: 0
         };
 
-        let cleaned = str.replace(ReactionHandler._emojiExpRight, match => " ".repeat(match.length));
-        cleaned = cleaned.replace(ReactionHandler._emojiExpLeft, match => " ".repeat(match.length));
+        if (!str.includes("(") && !str.includes(")")) {
+            return parans;
+        }
 
-        for (let i = 0; i < cleaned.length; i++) {
-            const char = cleaned[i];
+        let clean = str.replace(ReactionHandler._emojiExpRight, match => " ".repeat(match.length));
+        clean = clean.replace(ReactionHandler._emojiExpLeft, match => " ".repeat(match.length));
+
+        let open = 0,
+            closed = 0;
+
+        for (let i = 0; i < clean.length; i++) {
+            const char = clean[i];
 
             switch (char) {
                 case "(":
@@ -184,7 +188,7 @@ class ReactionHandler extends Handler {
                     if (open > 0) {
                         open--;
                     } else {
-                        parans.right++;
+                        closed++;
                     }
 
                     break;
@@ -192,8 +196,7 @@ class ReactionHandler extends Handler {
         }
 
         parans.left = Util.clamp(open, 0, this.parans.right.length);
-        parans.right = Util.clamp(parans.right, 0, this.parans.left.length);
-
+        parans.right = Util.clamp(closed, 0, this.parans.left.length);
         parans.total = parans.left + parans.right;
 
         return parans;
@@ -204,7 +207,7 @@ class ReactionHandler extends Handler {
 
         const parans = this._countUnmatchedParans(msg.content);
 
-        if (typeof parans === "undefined" || parans.total < 1) {
+        if (parans.total < 1) {
             return false;
         }
 
@@ -235,13 +238,11 @@ class ReactionHandler extends Handler {
     }
 
     _getWordCounts(str) {
-        let normStr = str.toLowerCase();
-        normStr = normStr.normalize("NFKD");
-
-        const foundWords = this._wordList.map(word => [word, normStr.indexOf(word)]).filter(x => x[1] >= 0);
+        str = str.toLowerCase().normalize("NFKD");
+        const foundWords = this._wordList.map(word => [word, str.indexOf(word)]).filter(x => x[1] >= 0);
 
         if (Util.empty(foundWords)) {
-            return;
+            return null;
         }
 
         const counts = foundWords.reduce(
@@ -256,8 +257,8 @@ class ReactionHandler extends Handler {
 
         for (let [word, index] of foundWords) {
             while (index !== -1) {
-                const startValid = index === 0 || normStr[index - 1] === " ",
-                    endValid = index + word.length === normStr.length || normStr[index + word.length] === " ";
+                const startValid = index === 0 || str[index - 1] === " ",
+                    endValid = index + word.length === str.length || str[index + word.length] === " ";
 
                 if (startValid && endValid) {
                     counts[word]++;
@@ -268,12 +269,12 @@ class ReactionHandler extends Handler {
                     }
                 }
 
-                index = normStr.indexOf(word, index + 1);
+                index = str.indexOf(word, index + 1);
             }
         }
 
         if (!foundOne) {
-            return;
+            return null;
         }
 
         Util.wipeObject(counts, (_, count) => count === 0);
@@ -300,7 +301,7 @@ class ReactionHandler extends Handler {
             const reactList = this._reactMap.get(word);
 
             for (let i = 0; i < count; i++) {
-                const react = this.getReact(reactList);
+                const react = ReactionHandler._getReact(reactList);
 
                 if (typeof react !== "undefined") {
                     reacts.add(react);
@@ -318,7 +319,7 @@ class ReactionHandler extends Handler {
 
         const words = this._getWordCounts(msg.content);
 
-        if (typeof words === "undefined") {
+        if (words === null) {
             return false;
         }
 

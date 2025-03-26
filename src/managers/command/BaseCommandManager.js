@@ -46,7 +46,7 @@ class BaseCommandManager extends Manager {
     getCommands(perm) {
         const commands = this.commands.filter(command => !command.isSubcmd);
 
-        if (perm === null || typeof perm === "undefined") {
+        if (perm == null) {
             return commands;
         }
 
@@ -55,8 +55,10 @@ class BaseCommandManager extends Manager {
     }
 
     searchCommands(name) {
-        const commands = this.getCommands();
-        return commands.find(command => command.matches(name));
+        const commands = this.getCommands(),
+            command = commands.find(command => command.matches(name));
+
+        return command ?? null;
     }
 
     getHelp(perm, discord = true, indentation = 4) {
@@ -157,14 +159,13 @@ class BaseCommandManager extends Manager {
         }
 
         parent = subcmd.parentCmd ?? parent;
-        const hasParent = parent !== null && typeof parent !== "undefined";
+        const hasParent = parent != null;
 
         const deleted = Util.removeItem(this.commands, subcmd);
 
         if (errorIfNotFound && !deleted) {
-            throw new CommandError(
-                `Couldn't delete subcommand ${subcmd.name}` + hasParent ? ` of command ${parent.name}` : ""
-            );
+            const name = subcmd.name + hasParent ? ` of command ${parent.name}` : "";
+            throw new CommandError(`Couldn't delete subcommand ${name}.`);
         }
 
         if (!hasParent) {
@@ -250,12 +251,12 @@ class BaseCommandManager extends Manager {
         }
 
         const headers = Array(categories.size),
-            categoryNames = categories.keys();
+            categoryKeys = categories.keys();
 
         let i = 0,
             num = 1;
 
-        for (const name of categoryNames) {
+        for (const name of categoryKeys) {
             let formattedName = categoryNames[name],
                 header;
 

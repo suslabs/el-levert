@@ -7,12 +7,12 @@ import LoadStatus from "./LoadStatus.js";
 import LoaderError from "../errors/LoaderError.js";
 
 class Loader {
-    constructor(name = "", logger, options = {}) {
+    constructor(name, logger, options = {}) {
         if (typeof this.load !== "function") {
             throw new LoaderError("Child class must have a load function");
         }
 
-        this.name = name;
+        this.name = name ?? "";
         this.logger = logger;
 
         this.options = options;
@@ -37,14 +37,15 @@ class Loader {
     }
 
     getName(capitalized = false) {
-        let name = this.name;
+        let type = this.type.replaceAll("_", " "),
+            name = this.name;
 
-        if (!Util.empty(this.type)) {
+        if (!Util.empty(type)) {
             if (!Util.empty(name)) {
                 name += " ";
             }
 
-            name += this.type;
+            name += type;
         }
 
         if (capitalized) {
@@ -79,10 +80,10 @@ class Loader {
             throw err;
         }
 
-        if (typeof loggerMsg !== "undefined") {
-            this.logger?.log(logLevel, loggerMsg, err);
-        } else {
+        if (typeof loggerMsg === "undefined") {
             this.logger?.log(logLevel, err);
+        } else {
+            this.logger?.log(logLevel, loggerMsg, err);
         }
 
         return LoadStatus.failed;
