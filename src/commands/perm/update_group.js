@@ -9,7 +9,7 @@ export default {
     subcommand: true,
     allowed: getClient().permManager.adminLevel,
 
-    handler: async function (args, msg) {
+    handler: async function (args, msg, perm) {
         let [g_name, g_data] = Util.splitArgs(args),
             [newName, newLevel] = Util.splitArgs(g_data);
 
@@ -39,10 +39,8 @@ export default {
             return `:warning: Group **${g_name}** doesn't exist.`;
         }
 
-        const maxLevel = await getClient().permManager.maxLevel(msg.author.id);
-
-        if (maxLevel < newLevel) {
-            return `:warning: Can't update a group to have a level that is higher than your own. (${maxLevel} < ${newLevel})`;
+        if (perm < newLevel) {
+            return `:warning: Can't update a group to have a level that is higher than your own. (**${perm}** < **${newLevel}**)`;
         }
 
         try {

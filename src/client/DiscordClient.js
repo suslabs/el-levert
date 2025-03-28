@@ -36,7 +36,14 @@ class DiscordClient {
         GatewayIntentBits.GuildInvites,
         GatewayIntentBits.DirectMessages
     ];
+
     static defaultPartials = [Partials.Channel];
+
+    static defaultDiscordOptions = {
+        failIfNotExists: false
+    };
+
+    static clientOptions = ["wrapEvents", "eventsDir", "loginTimeout", "mentionUsers", "pingReply"];
 
     static defaultGuildOptions = {
         cache: true
@@ -59,6 +66,7 @@ class DiscordClient {
     static defaultMessagesOptions = {
         checkAccess: false
     };
+
     static defaultMessagesFetchOptions = {
         limit: 100
     };
@@ -73,11 +81,10 @@ class DiscordClient {
         searchMinDist: 0,
         limit: 10
     };
+
     static defaultUsersFetchOptions = {
         limit: 100
     };
-
-    static clientOptions = ["wrapEvents", "eventsDir", "loginTimeout", "mentionUsers", "pingReply"];
 
     constructor(intents, partials) {
         this.intents = intents ?? DiscordClient.defaultIntents;
@@ -105,10 +112,11 @@ class DiscordClient {
             intents: this.intents,
             partials: this.partials,
 
-            rest: {
-                timeout: this.timeout + 1
-            }
+            rest: {},
+            ...this.constructor.defaultDiscordOptions
         };
+
+        options.rest.timeout = this.timeout + 1;
 
         const client = new Client(options);
 
@@ -120,7 +128,7 @@ class DiscordClient {
 
     setOptions(options) {
         this.options = {};
-        const optionsList = isObject(options) ? DiscordClient.clientOptions : [];
+        const optionsList = isObject(options) ? this.constructor.clientOptions : [];
 
         for (const key of optionsList) {
             if (!(key in options)) {
@@ -243,7 +251,7 @@ class DiscordClient {
             throw new ClientError("Invalid options provided");
         }
 
-        Util.setValuesWithDefaults(options, options, DiscordClient.defaultGuildOptions);
+        Util.setValuesWithDefaults(options, options, this.constructor.defaultGuildOptions);
 
         let guild;
 
@@ -312,7 +320,7 @@ class DiscordClient {
                 throw new ClientError("Invalid user or user ID provided");
         }
 
-        Util.setValuesWithDefaults(options, options, DiscordClient.defaultMemberOptions);
+        Util.setValuesWithDefaults(options, options, this.constructor.defaultMemberOptions);
 
         let member;
 
@@ -336,7 +344,7 @@ class DiscordClient {
             throw new ClientError("No channel ID provided");
         }
 
-        if (!isObject(isObject)) {
+        if (!isObject(options)) {
             throw new ClientError("Invalid options provided");
         }
 
@@ -351,7 +359,7 @@ class DiscordClient {
                 throw new ClientError("Invalid channel ID provided");
         }
 
-        Util.setValuesWithDefaults(options, options, DiscordClient.defaultChannelOptions);
+        Util.setValuesWithDefaults(options, options, this.constructor.defaultChannelOptions);
 
         let channel;
 
@@ -479,7 +487,7 @@ class DiscordClient {
                 throw new ClientError("Invalid channel or channel ID provided");
         }
 
-        Util.setValuesWithDefaults(options, options, DiscordClient.defaultMessageOptions);
+        Util.setValuesWithDefaults(options, options, this.constructor.defaultMessageOptions);
 
         try {
             return await channel.messages.fetch(msg_id, {
@@ -503,7 +511,7 @@ class DiscordClient {
             throw new ClientError("Invalid options provided");
         }
 
-        Util.setValuesWithDefaults(options, options, DiscordClient.defaultMessagesOptions);
+        Util.setValuesWithDefaults(options, options, this.constructor.defaultMessagesOptions);
 
         let channel;
 
@@ -528,7 +536,7 @@ class DiscordClient {
                 throw new ClientError("Invalid channel or channel ID");
         }
 
-        Util.setValuesWithDefaults(fetchOptions, fetchOptions, DiscordClient.defaultMessagesFetchOptions);
+        Util.setValuesWithDefaults(fetchOptions, fetchOptions, this.constructor.defaultMessagesFetchOptions);
         fetchOptions.force = !options.cache;
 
         let messages;
@@ -555,7 +563,7 @@ class DiscordClient {
             throw new ClientError("Invalid options provided");
         }
 
-        Util.setValuesWithDefaults(options, options, DiscordClient.defaultUserOptions);
+        Util.setValuesWithDefaults(options, options, this.constructor.defaultUserOptions);
 
         let user;
 
@@ -584,7 +592,7 @@ class DiscordClient {
             throw new ClientError("Invalid options provided");
         }
 
-        Util.setValuesWithDefaults(options, options, DiscordClient.defaultUsersOptions);
+        Util.setValuesWithDefaults(options, options, this.constructor.defaultUsersOptions);
 
         const guilds = Array.from(this.client.guilds.cache.values());
 
@@ -620,7 +628,7 @@ class DiscordClient {
             return [];
         }
 
-        Util.setValuesWithDefaults(fetchOptions, fetchOptions, DiscordClient.defaultUsersFetchOptions);
+        Util.setValuesWithDefaults(fetchOptions, fetchOptions, this.constructor.defaultUsersFetchOptions);
 
         let members = [],
             foundIds = new Set();

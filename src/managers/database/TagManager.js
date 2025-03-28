@@ -86,7 +86,7 @@ class TagManager extends DBManager {
         }
 
         const args = argsList.join(" ");
-        lastTag.setAliasProps(hops, args);
+        lastTag._setAliasProps(hops, args);
 
         return lastTag;
     }
@@ -152,7 +152,6 @@ class TagManager extends DBManager {
 
         const newTag = new Tag({
             ...tag,
-            name: tag.name,
             body,
             type
         });
@@ -232,16 +231,15 @@ class TagManager extends DBManager {
             create = true;
         }
 
-        const name = tag.name ?? createOptions.name,
-            owner = tag.owner ?? createOptions.owner,
-            hops = [name].concat(aliasTag.hops);
+        const name = tag?.name ?? createOptions.name,
+            owner = tag?.owner ?? createOptions.owner;
 
         const newTag = new Tag({
-            hops,
             name,
-            owner,
-            args: args?.trim()
+            owner
         });
+
+        newTag.aliasTo(aliasTag, args?.trim());
 
         let newTagSize = newTag.getSize(),
             sizeDiff = newTagSize;
@@ -255,13 +253,8 @@ class TagManager extends DBManager {
             sizeDiff -= oldTagSize;
         }
 
-        await this._updateQuota(tag.owner, sizeDiff);
-
-        if (create) {
-            await this.tag_db.add(newTag);
-        } else {
-            await this.tag_db.edit(newTag);
-        }
+        await this._updateQuota(owner, sizeDiff);
+        await this.tag_db[create ? "add" : "edit"](newTag);
 
         getLogger().info(`Aliased tag: "${name}" to: "${aliasTag.name}".`);
         return [newTag, create];

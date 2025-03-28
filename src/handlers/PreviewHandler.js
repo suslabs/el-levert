@@ -15,7 +15,7 @@ function logUsage(msg, str) {
 }
 
 function logCancelled(reason) {
-    getLogger().info(`Generationg preview cancelled: ${reason}.`);
+    getLogger().info(`Generating preview cancelled: ${reason}.`);
 }
 
 function logSending(preview) {

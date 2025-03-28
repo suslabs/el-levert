@@ -25,6 +25,8 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         disableWAL: "journal_mode=DELETE"
     };
 
+    static vacuumSql = "VACUUM;";
+
     constructor(filename, mode, config = {}) {
         super();
 
@@ -320,6 +322,10 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         } catch (err) {
             return this._throwErrorSync(err);
         }
+    }
+
+    async vacuum() {
+        await this.run(SqliteDatabase.vacuumSql);
     }
 
     static _dbOpenMsg = "The database is open";

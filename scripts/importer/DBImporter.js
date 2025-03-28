@@ -5,6 +5,8 @@ import { TagTypes } from "../../src/structures/tag/TagTypes.js";
 
 import Util from "../../src/util/Util.js";
 
+import TagCommand from "../../src/commands/tag/tag.js";
+
 class DBImporter {
     constructor(tagManager, logger) {
         this.logger = logger;
@@ -77,7 +79,7 @@ class DBImporter {
 
         await this._fixQuotas();
 
-        await this.tagManager.tag_db.db.run("VACUUM;");
+        await this.tagManager.tag_db.db.vacuum();
     }
 
     async purgeOld() {
@@ -104,15 +106,18 @@ class DBImporter {
         return true;
     }
 
-    static _parseTag(data) {
-        const name = Util.first(data.hops);
+    static _requiredTagProps = {
+        hops: Array,
+        name: "string",
+        body: "string"
+    };
 
+    static _parseTag(data) {
         const [isScript, body] = Util.parseScript(data.body),
             type = isScript ? TagTypes.defaultScriptType : TagTypes.textType;
 
         const tag = new Tag({
             ...data,
-            name,
             body,
             type
         });
@@ -141,21 +146,43 @@ class DBImporter {
         return new Map(tags.map(tag => [tag.name, tag]));
     }
 
+    _validTag(data) {
+        if (!Util.validateProps(data, DBImporter._requiredTagProps)) {
+            return false;
+        }
+
+        const alias = Util.multiple(data.hops);
+
+        if (!alias && Util.empty(data.body)) {
+            return false;
+        }
+
+        const name = alias ? Util.first(data.hops) : data.name,
+            err = this.tagManager.checkName(name);
+
+        if (err !== false) {
+            return false;
+        }
+
+        if (TagCommand.subcommands.includes(name)) {
+            return false;
+        }
+
+        data.name = name;
+        return true;
+    }
+
     async _loadTags(path) {
         const loader = new JsonLoader("tags", path, this.logger);
 
         let [data] = await loader.load();
-        data = data.filter(
-            tag => [tag.name, tag.body].every(prop => typeof prop === "string") && Array.isArray(tag.hops)
-        );
-        data = data.filter(tag => !this.tagManager.checkName(Util.first(tag.hops)));
+        data = data.filter(data => this._validTag(data));
+        data = Util.unique(data, "name");
 
         const oldDefault = TagTypes.defaultVersion;
         TagTypes.defaultVersion = TagTypes.versionTypes[0];
 
-        let tags = data.map(tag => DBImporter._parseTag(tag));
-        tags = tags.filter(tag => tag.isAlias || !Util.empty(tag.body));
-        tags = Util.unique(tags, "name");
+        const tags = data.map(tag => DBImporter._parseTag(tag));
 
         TagTypes.defaultVersion = oldDefault;
 

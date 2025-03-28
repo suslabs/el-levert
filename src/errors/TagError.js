@@ -1,5 +1,5 @@
-import RefError from "./RefError.js";
+import ReferenceError from "./ReferenceError.js";
 
-class TagError extends RefError {}
+class TagError extends ReferenceError {}
 
 export default TagError;

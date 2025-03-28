@@ -1,5 +1,6 @@
 import Util from "../../util/Util.js";
 import getRegisterCode from "../../util/vm/getRegisterCode.js";
+import VMUtil from "../../util/vm/VMUtil.js";
 
 import FuncTypes from "./FuncTypes.js";
 
@@ -13,6 +14,12 @@ class VMFunction {
         exits: false,
         errorClass: ExitError,
         binds: []
+    };
+
+    static funcOptions = {
+        arguments: {
+            reference: true
+        }
     };
 
     constructor(options, propertyMap) {
@@ -40,11 +47,7 @@ class VMFunction {
         this.context = context;
 
         const code = this._getRegisterCode(),
-            res = await context.evalClosure(code, [this.ref], {
-                arguments: {
-                    reference: true
-                }
-            });
+            res = await context.evalClosure(code, [this.ref], VMFunction.funcOptions);
 
         this.registered = true;
         return res;
@@ -56,7 +59,7 @@ class VMFunction {
         }
 
         const path = this.ref,
-            { obj: refFunc, parent } = Util.resolveObj(path, propertyMap);
+            { obj: refFunc, parent } = VMUtil.resolveObject(path, propertyMap);
 
         if (typeof refFunc === "undefined") {
             throw new VMError("Couldn't resolve reference function");
@@ -73,7 +76,7 @@ class VMFunction {
         const argList = [];
 
         for (const path of this.binds) {
-            const obj = Util.resolveObj(path, propertyMap).obj;
+            const { obj } = VMUtil.resolveObject(path, propertyMap);
             argList.push(obj);
         }
 

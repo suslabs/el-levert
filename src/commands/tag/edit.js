@@ -31,14 +31,14 @@ export default {
         }
 
         if (perm < getClient().permManager.modLevel && tag.owner !== msg.author.id) {
-            const owner = await getClient().findUserById(tag.owner),
-                out = `:warning: You can only edit your own tags.`;
+            const out = `:warning: You can only edit your own tags.`,
+                owner = await tag.getOwner();
 
-            if (owner === null) {
+            if (owner === "not found") {
                 return out + " Tag owner not found.";
             }
 
-            return out + ` The tag is owned by \`${owner.username}\`.`;
+            return out + ` The tag is owned by \`${owner}\`.`;
         }
 
         const parsed = await this.parentCmd.parseBase(t_args, msg),

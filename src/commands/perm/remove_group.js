@@ -9,7 +9,7 @@ export default {
     subcommand: true,
     allowed: getClient().permManager.adminLevel,
 
-    handler: async function (args, msg) {
+    handler: async function (args, msg, perm) {
         if (Util.empty(args)) {
             return `:information_source: ${this.getArgsHelp("group_name")}`;
         }
@@ -28,10 +28,8 @@ export default {
             return `:warning: Group **${g_name}** doesn't exist.`;
         }
 
-        const maxLevel = await getClient().permManager.maxLevel(msg.author.id);
-
-        if (maxLevel < group.level) {
-            return `:warning: Can't remove a group with a level that is higher than yours. (${maxLevel} < ${group.level})`;
+        if (perm < group.level) {
+            return `:warning: Can't remove a group with a level that is higher than yours. (**${perm}** < **${group.level}**)`;
         }
 
         try {

@@ -17,7 +17,7 @@ export default {
         const reminders = await getClient().reminderManager.list(msg.author.id);
 
         if (!reminders) {
-            return ":information_source: You have no reminders.";
+            return ":information_source: You have **no** reminders.";
         }
 
         const format = formatReminders(reminders),

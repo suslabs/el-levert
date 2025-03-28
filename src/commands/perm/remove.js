@@ -8,7 +8,7 @@ export default {
     subcommand: true,
     allowed: getClient().permManager.adminLevel,
 
-    handler: async function (args, msg) {
+    handler: async function (args, msg, perm) {
         const [g_name, u_name] = Util.splitArgs(args);
 
         if (Util.empty(args) || Util.empty(g_name) || Util.empty(u_name)) {
@@ -27,10 +27,8 @@ export default {
             return `:warning: Group **${g_name}** doesn't exist.`;
         }
 
-        const maxLevel = await getClient().permManager.maxLevel(msg.author.id);
-
-        if (maxLevel < group.level) {
-            return `:warning: Can't remove a user from a group with a higher level your own. (${maxLevel} < ${group.level})`;
+        if (perm < group.level) {
+            return `:warning: Can't remove a user (\`${find.user.username}\` \`${find.user.id}\`) from a group with a higher level your own. (**${perm}** < **${group.level}**)`;
         }
 
         const find = Util.first(await getClient().findUsers(u_name));
@@ -52,9 +50,9 @@ export default {
         }
 
         if (!removed) {
-            return `:warning: User \`${find.user.username}\` (${find.user.id}) is not in group **${g_name}**.`;
+            return `:warning: User \`${find.user.username}\` (\`${find.user.id}\`) is not in group **${g_name}**.`;
         }
 
-        return `:white_check_mark: Removed user \`${find.user.username}\` (${find.user.id}) from group **${g_name}**.`;
+        return `:white_check_mark: Removed user \`${find.user.username}\` (\`${find.user.id}\`) from group **${g_name}**.`;
     }
 };

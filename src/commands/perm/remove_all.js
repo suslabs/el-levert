@@ -9,7 +9,7 @@ export default {
     subcommand: true,
     allowed: getClient().permManager.adminLevel,
 
-    handler: async function (args, msg) {
+    handler: async function (args, msg, perm) {
         const [u_name] = Util.splitArgs(args);
 
         if (Util.empty(args) || Util.empty(u_name)) {
@@ -33,17 +33,16 @@ export default {
             }
         }
 
-        const yourLevel = await getClient().permManager.maxLevel(msg.author.id),
-            theirLevel = await getClient().permManager.maxLevel(find.user.id);
+        const theirLevel = await getClient().permManager.maxLevel(find.user.id);
 
-        if (yourLevel < theirLevel) {
-            return `:warning: Can't remove permissions of a user with a level higher than your own. (${yourLevel} < ${theirLevel})`;
+        if (perm < theirLevel) {
+            return `:warning: Can't remove permissions of a user (\`${find.user.username}\` \`${find.user.id}\`) with a level higher than your own. (**${perm}** < **${theirLevel}**)`;
         }
 
         const removed = await getClient().permManager.removeAll(find.user.id);
 
         if (!removed) {
-            const out = `:information_source: User \`${find.user.username}\` doesn't have any permissions`;
+            const out = `:information_source: User \`${find.user.username}\` (\`${find.user.id}\`) doesn't have any permissions`;
 
             if (getClient().permManager.isOwner(find.user.id)) {
                 return out + " other than being the bot owner.";
@@ -52,6 +51,6 @@ export default {
             return out + ".";
         }
 
-        return `:white_check_mark: Removed \`${find.user.username}\`'s permissions.`;
+        return `:white_check_mark: Removed \`${find.user.username}\`'s (\`${find.user.id}\`) permissions.`;
     }
 };

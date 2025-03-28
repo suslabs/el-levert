@@ -137,7 +137,7 @@ class TagDatabase extends SqlDatabase {
     async count(countAll, user, flag) {
         const res = await this.tagQueries.count.get({
             $countAll: countAll,
-            $user: user ?? "",
+            $user: user ?? null,
             $flag: flag ?? null
         });
 

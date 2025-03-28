@@ -32,14 +32,14 @@ export default {
         }
 
         if (perm < getClient().permManager.modLevel && tag.owner !== msg.author.id) {
-            const owner = await getClient().findUserById(tag.owner),
-                out = ":warning: You can only delete your own tags.";
+            const out = ":warning: You can only delete your own tags.",
+                owner = await tag.getOwner();
 
-            if (owner === null) {
+            if (owner === "not found") {
                 return out + " Tag owner not found.";
             }
 
-            return out + ` Tag is owned by \`${owner.username}\`.`;
+            return out + ` Tag is owned by \`${owner}\`.`;
         }
 
         try {

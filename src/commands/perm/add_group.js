@@ -9,7 +9,7 @@ export default {
     subcommand: true,
     allowed: getClient().permManager.adminLevel,
 
-    handler: async function (args, msg) {
+    handler: async function (args, msg, perm) {
         let [g_name, level] = Util.splitArgs(args);
 
         if (Util.empty(args) || Util.empty(g_name) || Util.empty(level)) {
@@ -23,10 +23,9 @@ export default {
         }
 
         level = Util.parseInt(level);
-        const maxLevel = await getClient().permManager.maxLevel(msg.author.id);
 
-        if (maxLevel < level) {
-            return `:warning: Can't create a group with a level that is higher than your own. (${level} > ${maxLevel})`;
+        if (perm < level) {
+            return `:warning: Can't create a group with a level that is higher than your own. (**${level}** > **${perm}**)`;
         }
 
         try {
@@ -46,6 +45,6 @@ export default {
             throw err;
         }
 
-        return `:white_check_mark: Added group **${g_name}**.`;
+        return `:white_check_mark: Added group **${g_name}** with level **${level}**.`;
     }
 };

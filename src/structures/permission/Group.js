@@ -26,7 +26,7 @@ class Group {
         const s = Util.multiple(this.users) ? "s" : "",
             title = `Group ${formattedName} - Level ${formattedLevel} - User${s}:`;
 
-        const spaces = Group._getSpaces(discord);
+        const spaces = discord ? "" : this._spaces;
 
         let userFormat;
 
@@ -50,10 +50,7 @@ class Group {
     }
 
     static _indentation = 4;
-
-    static _getSpaces(discord) {
-        return discord ? "" : " ".repeat(Group._indentation);
-    }
+    static _spaces = " ".repeat(this._indentation);
 }
 
 export default Group;

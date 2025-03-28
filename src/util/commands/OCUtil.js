@@ -253,12 +253,14 @@ const OCUtil = {
     }
 };
 
-OCUtil.tiers = OCUtil.voltageNames.map((name, index) => {
-    return {
-        tier: index + 1,
-        name: name,
-        eu_threshold: OCUtil.BASE_EU * Math.pow(OCUtil.EU_MULT, index)
-    };
-});
+{
+    OCUtil.tiers = OCUtil.voltageNames.map((name, index) => {
+        return {
+            tier: index + 1,
+            name: name,
+            eu_threshold: OCUtil.BASE_EU * Math.pow(OCUtil.EU_MULT, index)
+        };
+    });
+}
 
 export default OCUtil;

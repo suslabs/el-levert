@@ -3,11 +3,11 @@ import { isPromise } from "node:util/types";
 import { Buffer } from "node:buffer";
 import { ChannelType, AttachmentBuilder } from "discord.js";
 
-import syncFs from "node:fs";
 import fs from "node:fs/promises";
-
 import path from "node:path";
 import URL from "node:url";
+
+import { isObject } from "./misc/TypeTester.js";
 
 import UtilError from "../errors/UtilError.js";
 
@@ -35,10 +35,9 @@ const Util = {
             return defaultValue ?? NaN;
         }
 
-        const validChars = Util.alphabetUpper.slice(0, radix),
-            exp = new RegExp(`^[+-]?[${validChars}]+(,[${validChars}]+)*$`, "i");
-
         str = str.trim();
+        const exp = Util._validNumberRegexes.get(radix);
+
         if (!exp.test(str)) {
             return defaultValue ?? NaN;
         }
@@ -97,26 +96,6 @@ const Util = {
         }
 
         return (await import(fileURL)).default;
-    },
-
-    getFilesRecSync: dir_path => {
-        const files = [];
-
-        function recursiveFunc(dir_path, arr) {
-            syncFs.readdirSync(dir_path).forEach(itm => {
-                const itmPath = path.join(dir_path, itm);
-
-                if (syncFs.statSync(itmPath).isDirectory()) {
-                    recursiveFunc(itmPath, arr);
-                } else {
-                    arr.push(itmPath);
-                }
-            });
-        }
-
-        recursiveFunc(dir_path, files);
-
-        return files;
     },
 
     directoryExists: async path => {
@@ -217,12 +196,12 @@ const Util = {
         });
     },
 
-    sort: (arr, cb) => {
-        const use_cb = typeof cb === "function";
+    sort: (array, callback) => {
+        const useCallback = typeof callback === "function";
 
-        return arr.sort((a, b) => {
-            const a_val = use_cb ? cb(a) : a,
-                b_val = use_cb ? cb(b) : b;
+        return array.sort((a, b) => {
+            const a_val = useCallback ? callback(a) : a,
+                b_val = useCallback ? callback(b) : b;
 
             return a_val.localeCompare(b_val, "en", {
                 numeric: true,
@@ -231,48 +210,48 @@ const Util = {
         });
     },
 
-    removeItem: (arr, item, cb) => {
+    removeItem: (array, item, callbacl) => {
         let ind;
 
         if (typeof item === "function") {
-            ind = arr.findIndex(item);
+            ind = array.findIndex(item);
         } else {
-            ind = arr.indexOf(item);
+            ind = array.indexOf(item);
         }
 
         if (ind === -1) {
             return false;
         }
 
-        if (typeof cb === "undefined") {
-            delete arr[ind];
-            arr.splice(ind, 1);
+        if (typeof callbacl === "undefined") {
+            delete array[ind];
+            array.splice(ind, 1);
 
             return true;
         }
 
-        const ret = cb(ind, arr);
+        const ret = callbacl(ind, array);
 
         if (isPromise(ret)) {
             return ret.then(_ => true);
         } else {
-            delete arr[ind];
-            arr.splice(ind, 1);
+            delete array[ind];
+            array.splice(ind, 1);
 
             return true;
         }
     },
 
-    maybeAsyncForEach: (arr, cb) => {
-        let length = arr.length,
+    maybeAsyncForEach: (array, callback) => {
+        let length = array.length,
             i = 0;
 
         let ret,
             loopPromise = false;
 
         for (; i < length; i++) {
-            const item = arr[i];
-            ret = cb(item, i);
+            const item = array[i];
+            ret = callback(item, i);
 
             if (isPromise(ret)) {
                 loopPromise = true;
@@ -287,23 +266,23 @@ const Util = {
                 ret = await ret;
 
                 for (; i < length; i++) {
-                    const item = arr[i];
-                    await cb(item, i);
+                    const item = array[i];
+                    await callback(item, i);
                 }
             })();
         }
     },
 
-    wipeArray: (arr, cb) => {
-        let length = arr.length,
+    wipeArray: (array, callback) => {
+        let length = array.length,
             i = 0;
 
-        if (typeof cb === "undefined") {
+        if (typeof callback === "undefined") {
             for (let i = 0; i < length; i++) {
-                delete arr[i];
+                delete array[i];
             }
 
-            arr.length = 0;
+            array.length = 0;
             return length;
         }
 
@@ -313,8 +292,8 @@ const Util = {
             loopPromise = false;
 
         for (; i < length; i++) {
-            const item = arr[i];
-            ret = cb(item, i);
+            const item = array[i];
+            ret = callback(item, i);
 
             if (isPromise(ret)) {
                 loopPromise = true;
@@ -326,7 +305,7 @@ const Util = {
             const shouldDelete = ret ?? true;
 
             if (shouldDelete) {
-                delete arr[i];
+                delete array[i];
                 n++;
             }
         }
@@ -336,28 +315,28 @@ const Util = {
                 ret = await ret;
 
                 for (; i < length; i++) {
-                    const item = arr[i];
-                    await cb(item, i);
+                    const item = array[i];
+                    await callback(item, i);
 
                     const shouldDelete = ret ?? true;
 
                     if (shouldDelete) {
-                        delete arr[i];
+                        delete array[i];
                         n++;
                     }
                 }
 
-                arr.length = 0;
+                array.length = 0;
                 return n;
             })();
         } else {
-            arr.length = 0;
+            array.length = 0;
             return n;
         }
     },
 
-    wipeObject: (obj, cb) => {
-        if (typeof cb === "undefined") {
+    wipeObject: (obj, callback) => {
+        if (typeof callback === "undefined") {
             const keys = Object.keys(obj);
 
             for (let i = 0; i < keys.length; i++) {
@@ -379,7 +358,7 @@ const Util = {
 
         for (; i < length; i++) {
             const [key, item] = entries[i];
-            ret = cb(key, item, i);
+            ret = callback(key, item, i);
 
             if (isPromise(ret)) {
                 loopPromise = true;
@@ -402,7 +381,7 @@ const Util = {
 
                 for (; i < length; i++) {
                     const [key, item] = entries[i];
-                    await cb(key, item, i);
+                    await callback(key, item, i);
 
                     const shouldDelete = ret ?? true;
 
@@ -500,20 +479,20 @@ const Util = {
         return Util.length(obj) > 1;
     },
 
-    first: (arr, start = 0) => {
-        return arr[start];
+    first: (array, start = 0) => {
+        return array[start];
     },
 
-    last: (arr, start = 0) => {
-        return arr[arr.length + start - 1];
+    last: (array, start = 0) => {
+        return array[array.length + start - 1];
     },
 
-    after: (arr, start = 0) => {
-        return arr.slice(start + 1);
+    after: (array, start = 0) => {
+        return array.slice(start + 1);
     },
 
-    randomElement: (arr, a = 0, b = arr.length) => {
-        return arr[a + ~~(Math.random() * (b - a))];
+    randomElement: (array, a = 0, b = array.length) => {
+        return array[a + ~~(Math.random() * (b - a))];
     },
 
     _regexEscapeRegex: /[.*+?^${}()|[\]\\]/g,
@@ -1086,13 +1065,13 @@ const Util = {
         return args.find(obj => check(getProp(obj)));
     },
 
-    unique: (arr, propName) => {
+    unique: (array, propName) => {
         const hasPropName = typeof propName === "string",
             getProp = hasPropName ? obj => obj[propName] : obj => obj;
 
         const seen = new Set();
 
-        return arr.filter(item => {
+        return array.filter(item => {
             const val = getProp(item);
 
             if (seen.has(val)) {
@@ -1110,40 +1089,6 @@ const Util = {
         };
     },
 
-    resolveObj(path, propertyMap) {
-        if (typeof path !== "string") {
-            throw new UtilError("Invalid path provided");
-        }
-
-        if (typeof propertyMap === "undefined") {
-            throw new UtilError("Can't resolve object, no property map provided");
-        }
-
-        const split = path.split(".");
-
-        let parent, obj;
-
-        while (split.length > 0) {
-            parent = obj;
-
-            const propertyName = Util.first(split);
-
-            if (typeof obj === "undefined") {
-                obj = propertyMap[propertyName];
-            } else {
-                obj = obj[propertyName];
-            }
-
-            if (typeof obj === "undefined") {
-                throw new UtilError("Property not found: " + propertyName);
-            }
-
-            split.shift();
-        }
-
-        return { obj, parent };
-    },
-
     className: obj => {
         if (obj == null) {
             return "";
@@ -1154,14 +1099,60 @@ const Util = {
         }
 
         return obj.constructor.name;
+    },
+
+    _validProp: (obj, expected) => {
+        if (typeof expected === "string") {
+            if (expected === "object") {
+                return isObject(obj);
+            } else {
+                return typeof obj === expected;
+            }
+        }
+
+        if (typeof expected === "function") {
+            return obj instanceof expected;
+        }
+
+        if (isObject(expected)) {
+            if (isObject(obj)) {
+                return Util.validateProps(obj, expected);
+            } else {
+                return false;
+            }
+        }
+
+        throw new UtilError("Invalid expected type");
+    },
+    validateProps: (obj, requiredProps) => {
+        for (const [name, expected] of Object.entries(requiredProps)) {
+            const prop = obj[name];
+
+            if (!Util._validProp(prop, expected)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 };
 
-Util.alphabetUpper = Util.alphabet.toUpperCase();
-Util.alphanumericUpper = Util.numbers + Util.alphabetUpper;
-Util.alphanumeric = Util.numbers + Util.alphabet + Util.alphabetUpper;
+{
+    Util.alphabetUpper = Util.alphabet.toUpperCase();
+    Util.alphanumericUpper = Util.numbers + Util.alphabetUpper;
+    Util.alphanumeric = Util.numbers + Util.alphabet + Util.alphabetUpper;
 
-Util.validUrlRegex = new RegExp(`^${Util.urlRegex.source}$`);
-Util.parseScriptRegex = new RegExp(`^${Util.codeblockRegex.source}$`);
+    Util._validNumberRegexes = new Map();
+
+    for (let radix = 2; radix <= 36; radix++) {
+        const validChars = Util.alphanumericUpper.slice(0, radix),
+            exp = new RegExp(`^[+-]?[${validChars}]+(,[${validChars}]+)*$`, "i");
+
+        Util._validNumberRegexes.set(radix, exp);
+    }
+
+    Util.validUrlRegex = new RegExp(`^${Util.urlRegex.source}$`);
+    Util.parseScriptRegex = new RegExp(`^${Util.codeblockRegex.source}$`);
+}
 
 export default Util;

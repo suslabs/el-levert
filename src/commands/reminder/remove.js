@@ -11,7 +11,7 @@ export default {
     handler: async function (args, msg) {
         const index = Util.parseInt(args);
 
-        if (args.length <= 0 || Number.isNaN(index)) {
+        if (Util.empty(args) || Number.isNaN(index)) {
             return `:information_source: ${this.getArgsHelp("index")}`;
         }
 

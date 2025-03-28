@@ -15,7 +15,7 @@ function getErrorEmbed(cmd) {
 Use \`-\` to skip arguments
 
 For EBF calculations, use:
-\`${cmd.getArgsHelp()} ebf <EU> <duration> <eecipe heat> <coil heat> {parallel} {amperage}\``);
+\`${cmd.getArgsHelp()} ebf <EU> <duration> <recipe heat> <coil heat> {parallel} {amperage}\``);
 }
 
 const bounds = {

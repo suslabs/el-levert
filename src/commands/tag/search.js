@@ -46,7 +46,7 @@ export default {
             count = Util.formatNumber(find.length),
             header = `:information_source: Found **${count}** similar tag${s}:`;
 
-        if (maxResults > defaultResultLimit * 2) {
+        if (count > defaultResultLimit * 2) {
             const names = find.join(", ");
 
             return {

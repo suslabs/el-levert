@@ -35,15 +35,19 @@ class ReminderManager extends DBManager {
     }
 
     checkMessage(msg) {
-        if (msg.length > this.maxMsgLength) {
-            return `Reminder messages can be at most ${this.maxMsgLength} characters long.`;
+        const oversized = Util.overSizeLimits(msg, this.maxMsgLength, 1);
+
+        if (!oversized) {
+            return false;
         }
 
-        if (msg.indexOf("\n") !== -1) {
+        const [chars, lines] = oversized;
+
+        if (chars !== null) {
+            return `Reminder messages can be at most ${this.maxMsgLength} characters long.`;
+        } else if (lines !== null) {
             return "Reminder messages can only contain a single line.";
         }
-
-        return false;
     }
 
     async list(user) {
@@ -135,7 +139,8 @@ class ReminderManager extends DBManager {
         getLogger().info("Started reminder loop.");
     }
 
-    unload() {
+    async unload() {
+        await super.unload();
         this._stopSendLoop();
     }
 

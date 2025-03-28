@@ -31,7 +31,7 @@ const FakeUtil = {
             return null;
         }
 
-        if (tag.hops.length > 1) {
+        if (tag.isAlias) {
             tag = await getClient().tagManager.fetchAlias(tag);
         }
 

@@ -14,14 +14,14 @@ export default {
 
     handler: async function (args, msg) {
         const match = args.match(messageRegex),
-            date = match[1] ?? "";
-
-        let quote = match[2],
-            message = match[3] ?? "";
+            date = match?.[1];
 
         if (Util.empty(args) || Util.empty(date)) {
             return `:information_source: ${this.getArgsHelp('date "message"')}`;
         }
+
+        let quote = match[2],
+            message = match[3];
 
         if (!Util.empty(message)) {
             message = message.replaceAll("\\" + quote, quote);

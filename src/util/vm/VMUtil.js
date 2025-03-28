@@ -1,7 +1,41 @@
 import { isObject } from "../misc/TypeTester.js";
 
 const VMUtil = {
-    removeCircRef: obj => {
+    resolveObject(path, propertyMap) {
+        if (typeof path !== "string") {
+            throw new UtilError("Invalid path provided");
+        }
+
+        if (typeof propertyMap === "undefined") {
+            throw new UtilError("Can't resolve object, no property map provided");
+        }
+
+        const split = path.split(".");
+
+        let parent, obj;
+
+        while (split.length > 0) {
+            parent = obj;
+
+            const propertyName = Util.first(split);
+
+            if (typeof obj === "undefined") {
+                obj = propertyMap[propertyName];
+            } else {
+                obj = obj[propertyName];
+            }
+
+            if (typeof obj === "undefined") {
+                throw new UtilError("Property not found: " + propertyName);
+            }
+
+            split.shift();
+        }
+
+        return { obj, parent };
+    },
+
+    removeCircularReferences: obj => {
         const pathMap = new Map();
 
         function recRemove(val, path) {
@@ -30,7 +64,6 @@ const VMUtil = {
             }
 
             pathMap.delete(val);
-
             return newVal;
         }
 

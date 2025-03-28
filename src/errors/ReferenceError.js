@@ -1,10 +1,10 @@
 import CustomError from "./CustomError.js";
 
-class RefError extends CustomError {
+class ReferenceError extends CustomError {
     constructor(message = "", ref, ...args) {
         super(message, ...args);
         this.ref = ref;
     }
 }
 
-export default RefError;
+export default ReferenceError;

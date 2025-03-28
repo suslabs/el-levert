@@ -3,8 +3,7 @@ import { getClient } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 
 async function evalBase(args, msg) {
-    let body = args,
-        _;
+    let body = args;
 
     if (!Util.empty(msg.attachments)) {
         try {
@@ -12,11 +11,13 @@ async function evalBase(args, msg) {
         } catch (err) {
             if (err.name === "TagError") {
                 return {
+                    body: null,
                     err: `:warning: ${err.message}.`
                 };
             }
 
             return {
+                body: null,
                 err: {
                     content: ":no_entry_sign: Downloading attachment failed:",
                     ...Util.getFileAttach(err.stack, "error.js")

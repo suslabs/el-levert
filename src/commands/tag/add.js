@@ -38,15 +38,16 @@ export default {
             if (err.name === "TagError") {
                 switch (err.message) {
                     case "Tag already exists":
-                        const tag = err.ref,
-                            owner = await getClient().findUserById(tag.owner),
-                            out = `:warning: Tag **${t_name}** already exists,`;
+                        const out = `:warning: Tag **${t_name}** already exists,`;
 
-                        if (owner === null) {
+                        const tag = err.ref,
+                            owner = await tag.getOwner();
+
+                        if (owner === "not found") {
                             return out + " tag owner not found.";
                         }
 
-                        return out + ` and is owned by \`${owner.username}\``;
+                        return out + ` and is owned by \`${owner}\``;
                     default:
                         return `:warning: ${err.message}.`;
                 }

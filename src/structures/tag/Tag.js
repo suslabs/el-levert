@@ -24,27 +24,34 @@ class Tag {
             names = [names];
         }
 
-        return names.reduce((flag, name) => flag | Tag._getFlag(name, false), 0);
+        return names.reduce((flag, name) => flag | this._getFlag(name, false), 0);
     }
 
     constructor(data) {
         if (typeof data?.hops === "string") {
-            data.hops = data.hops.split(Tag._hopsSeparator);
+            data.hops = data.hops.split(this.constructor._hopsSeparator);
         }
 
-        Util.setValuesWithDefaults(this, data, Tag.defaultValues);
+        Util.setValuesWithDefaults(this, data, this.constructor.defaultValues);
+
+        let type = this.type,
+            userType = typeof type === "string";
 
         if (Util.empty(this.hops)) {
             this.hops.push(this.name);
         } else if (this.isAlias) {
-            this.body = Tag.defaultValues.body;
-        }
+            this.body = this.constructor.defaultValues.body;
 
-        if (typeof this.type === "string") {
-            this.setType(this.type);
+            if (userType) {
+                type = TagTypes.textType;
+            }
         }
 
         this._fetched = false;
+
+        if (userType) {
+            this.setType(type);
+        }
     }
 
     get isAlias() {
@@ -60,33 +67,41 @@ class Tag {
     }
 
     getHopsString() {
-        return this.hops.join(Tag._hopsSeparator);
+        return this.hops.join(this.constructor._hopsSeparator);
     }
 
     setName(name) {
-        name ??= Tag.defaultValues.name;
+        name ??= this.constructor.defaultValues.name;
 
         this.name = name;
         this.hops[0] = name;
     }
 
     setOwner(owner) {
-        this.owner = owner ?? Tag.defaultValues.owner;
+        this.owner = owner ?? this.constructor.defaultValues.owner;
     }
 
     setBody(body, type) {
-        this.body = body ?? Tag.defaultValues.body;
+        this.body = body ?? this.constructor.defaultValues.body;
 
         if (type != null) {
             this.setType(type);
         }
     }
 
-    setAliasProps(hops, args) {
-        this.hops = hops ?? Tag.defaultValues.hops;
-        this.args = args ?? Tag.defaultValues.args;
+    aliasTo(target, args) {
+        if (target == null) {
+            throw new TagError("No target tag provided");
+        }
 
-        this._fetched = true;
+        this.hops.push(...target.hops);
+        this.args = args ?? this.constructor.defaultValues.args;
+
+        this.body = this.constructor.defaultValues.body;
+
+        if (this.isScript) {
+            this.setType(TagTypes.textType);
+        }
     }
 
     hasFlag(name) {
@@ -200,6 +215,36 @@ class Tag {
         return totalSize / 1024;
     }
 
+    async getOwner(username = true, onlyMembers = false) {
+        if (this.owner === this.constructor.defaultValues.owner) {
+            return username ? "invalid" : null;
+        }
+
+        let owner;
+
+        if (onlyMembers) {
+            owner = Util.first(await getClient().findUsers(this.owner, { onlyMembers }));
+        } else {
+            owner = await getClient().findUserById(this.owner);
+        }
+
+        if (owner == null) {
+            return username ? "not found" : null;
+        }
+
+        if (!username) {
+            return owner;
+        }
+
+        let u_name = owner.user.username;
+
+        if (owner.nickname) {
+            u_name += `(${owner.nickname})`;
+        }
+
+        return u_name;
+    }
+
     format() {
         let format = this.name;
 
@@ -296,6 +341,24 @@ class Tag {
         return body;
     }
 
+    getTimeInfo(raw = false) {
+        return Object.fromEntries(
+            this.constructor._timeProps.map(prop => {
+                const value = this[prop];
+
+                if (raw) {
+                    const timestampName = `${prop}Timestamp`;
+                    return [timestampName, value];
+                } else {
+                    const defaultValue = this.constructor.defaultValues[prop],
+                        time = value === defaultValue ? "not set" : new Date(value).toUTCString();
+
+                    return [prop, time];
+                }
+            })
+        );
+    }
+
     async getInfo(raw = false, bodyLimit = 300) {
         if (raw) {
             return this.getData();
@@ -305,38 +368,6 @@ class Tag {
             body = Util.empty(this.body) ? "empty" : Util.trimString(this.body, bodyLimit, null, true),
             args = Util.empty(this.args) ? "none" : Util.trimString(this.args, bodyLimit, null, true);
 
-        let owner;
-
-        if (this.owner === Tag.defaultValues.owner) {
-            owner = "invalid";
-        } else {
-            const find = await getClient().findUserById(this.owner);
-
-            if (find) {
-                owner = find.username;
-            } else {
-                owner = "not found";
-            }
-        }
-
-        const timeInfo = Object.fromEntries(
-            Tag._timeProps.flatMap(prop => {
-                const value = this[prop],
-                    defaultValue = Tag.defaultValues[prop];
-
-                const time = value === defaultValue ? "not set" : new Date(value).toUTCString(),
-                    timestampName = `${prop}Timestamp`;
-
-                return [
-                    [prop, time],
-                    [timestampName, value]
-                ];
-            })
-        );
-
-        const type = this.getType(),
-            version = this.getVersion();
-
         const info = {
             hops: this.hops,
             isAlias: this.isAlias,
@@ -344,16 +375,24 @@ class Tag {
             aliasName,
             body,
             isScript: this.isScript,
-            owner,
+            owner: await this.getOwner(),
             ownerId: this.owner,
             args,
-            ...timeInfo,
-            type,
-            version,
+            ...this.getTimeInfo(false),
+            ...this.getTimeInfo(true),
+            type: this.getType(),
+            version: this.getVersion(),
             typeInt: this.type
         };
 
         return info;
+    }
+
+    _setAliasProps(hops, args) {
+        this.hops = hops;
+        this.args = args;
+
+        this._fetched = true;
     }
 
     _setVersion(version) {

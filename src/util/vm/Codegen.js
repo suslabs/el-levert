@@ -1,16 +1,19 @@
 import Util from "../Util.js";
 
 const Codegen = {
-    indentation: 4,
+    get indentation() {
+        return Codegen._indentation;
+    },
 
-    getSpaces: () => {
-        return " ".repeat(Codegen.indentation);
+    set indentation(val) {
+        Codegen._indentation = val;
+        Codegen.spaces = " ".repeat(Codegen._indentation);
     },
 
     indent: (code, times = 1) => {
         code = code?.toString().trim() ?? "";
 
-        const spaces = Codegen.getSpaces().repeat(times);
+        const spaces = Codegen.spaces.repeat(times);
 
         if (Util.empty(code)) {
             return spaces;
@@ -266,6 +269,9 @@ const Codegen = {
     _statementExp: /[\s\S]*[\w\d$_)\]]$/
 };
 
-Codegen._undef = Codegen.string("undefined");
+{
+    Codegen.indentation = 4;
+    Codegen._undef = Codegen.string("undefined");
+}
 
 export default Codegen;

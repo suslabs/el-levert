@@ -1,3 +1,4 @@
+import fs from "node:fs/promises";
 import path from "node:path";
 
 import Loader from "./Loader.js";
@@ -8,6 +9,37 @@ import Util from "../util/Util.js";
 import LoadStatus from "./LoadStatus.js";
 
 class DirectoryLoader extends Loader {
+    static async listFilesRecursive(dirPath, maxDepth = Infinity, callback) {
+        const files = [],
+            stack = [{ path: dirPath, depth: 1 }];
+
+        while (stack.length) {
+            const { path: currentDir, depth } = stack.pop(),
+                items = await fs.readdir(currentDir);
+
+            for (const item of items) {
+                const itemPath = path.join(currentDir, item),
+                    stat = await fs.stat(itemPath);
+
+                if (stat.isDirectory() && depth < maxDepth) {
+                    stack.push({
+                        path: itemPath,
+                        depth: depth + 1
+                    });
+                } else if (!stat.isDirectory()) {
+                    files.push(itemPath);
+                }
+
+                if (typeof callback === "function") {
+                    const type = stat.isDirectory() ? "directory" : "file";
+                    await callback(itemPath, type);
+                }
+            }
+        }
+
+        return files;
+    }
+
     constructor(name, dirPath, logger, options = {}) {
         super(name, logger, {
             type: "directory",
@@ -22,6 +54,7 @@ class DirectoryLoader extends Loader {
 
         this.logName = this.getLogName();
 
+        this.maxDepth = options.maxDepth ?? Infinity;
         this.excludeDirs = (options.excludeDirs ?? []).map(dir => path.resolve(projRoot, dir));
         this.fileExtension = options.fileExtension ?? "any";
 
@@ -230,7 +263,7 @@ class DirectoryLoader extends Loader {
         return this.name ?? "file";
     }
 
-    _loadFilePaths() {
+    async _loadFilePaths() {
         this.logger?.debug(`Reading ${this.getName()}...`);
 
         if (typeof this.dirPath !== "string") {
@@ -240,7 +273,7 @@ class DirectoryLoader extends Loader {
         let files;
 
         try {
-            files = Util.getFilesRecSync(this.dirPath);
+            files = await DirectoryLoader.listFilesRecursive(this.dirPath, this.maxDepth);
         } catch (err) {
             if (err.code === "ENOENT") {
                 return this.failure(`Couldn't find the ${this.getName()}`);
@@ -249,21 +282,10 @@ class DirectoryLoader extends Loader {
             }
         }
 
-        files = files.filter(file => {
-            for (const excludeDir of this.excludeDirs) {
-                if (file.startsWith(excludeDir)) {
-                    return false;
-                }
-            }
-
-            return true;
-        });
+        files = files.filter(file => !this.excludeDirs.some(excludeDir => file.startsWith(excludeDir)));
 
         if (this.fileExtension !== "any") {
-            files = files.filter(file => {
-                const extension = path.extname(file);
-                return extension === this.fileExtension;
-            });
+            files = files.filter(file => path.extname(file) === this.fileExtension);
         }
 
         this.files = files;

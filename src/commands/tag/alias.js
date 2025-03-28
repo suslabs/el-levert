@@ -35,14 +35,14 @@ If you want to de-alias the tag, \`edit\` it.`;
             out = "";
 
         if (tag && perm < getClient().permManager.modLevel && tag.owner !== msg.author.id) {
-            const owner = await getClient().findUserById(tag.owner),
-                out = `:warning: You can only edit your own tags.`;
+            const out = `:warning: You can only edit your own tags.`,
+                owner = await tag.getOwner();
 
-            if (owner === null) {
+            if (owner === "not found") {
                 return out + " Tag owner not found.";
             }
 
-            return out + ` The tag is owned by \`${owner.username}\`.`;
+            return out + ` The tag is owned by \`${owner}\`.`;
         }
 
         const a_tag = await getClient().tagManager.fetch(a_name);

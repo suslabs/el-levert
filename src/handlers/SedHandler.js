@@ -34,6 +34,7 @@ class SedHandler extends Handler {
 
     static sedUsage = "Usage: sed/regex/replace/flags (optional)";
     static sedRegex = /^sed\/(?<regex_str>.+?)\/(?<replace>[^/]*)\/?(?<flags_str>.{1,2})?/;
+    static defaultFlags = "i";
 
     constructor(enabled) {
         super(enabled, true);
@@ -141,7 +142,7 @@ class SedHandler extends Handler {
         }
 
         const { regex_str, replace, flags_str } = match.groups,
-            flags = flags_str ?? "" + "i";
+            flags = flags_str ?? "" + SedHandler.defaultFlags;
 
         if (match.length < 3) {
             throw new HandlerError("Invalid regex args");
