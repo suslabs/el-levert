@@ -1,16 +1,14 @@
 class FakeVM {
     constructor(isolate) {
-        this.isolate = isolate;
-
         this.vmProps = {};
     }
 
-    getCpuTime() {
-        return this.isolate.cpuTime;
+    static getCpuTime(context) {
+        return context.isolate.cpuTime;
     }
 
-    getWallTime() {
-        return this.isolate.wallTime;
+    static getWallTime(context) {
+        return context.isolate.wallTime;
     }
 }
 

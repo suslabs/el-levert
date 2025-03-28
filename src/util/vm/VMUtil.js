@@ -1,5 +1,7 @@
 import { isObject } from "../misc/TypeTester.js";
 
+import UtilError from "../../errors/UtilError.js";
+
 const VMUtil = {
     resolveObject(path, propertyMap) {
         if (typeof path !== "string") {
@@ -16,11 +18,10 @@ const VMUtil = {
 
         while (split.length > 0) {
             parent = obj;
-
-            const propertyName = Util.first(split);
+            const propertyName = split[0];
 
             if (typeof obj === "undefined") {
-                obj = propertyMap[propertyName];
+                obj = propertyMap.get(propertyName);
             } else {
                 obj = obj[propertyName];
             }

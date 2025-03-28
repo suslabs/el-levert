@@ -505,7 +505,7 @@ const Util = {
         return str.replace(Util._charClassExcapeRegex, "\\$&");
     },
 
-    getFirstGroup: (match, name) => {
+    firstGroup: (match, name) => {
         if (!match) {
             return;
         }
@@ -640,7 +640,7 @@ const Util = {
         return [true, body, lang];
     },
 
-    getUtf8ByteLength: str => {
+    utf8ByteLength: str => {
         let i = 0,
             len = Util.countChars(str);
 
@@ -1083,7 +1083,11 @@ const Util = {
         });
     },
 
-    bindArgs: (fn, ...boundArgs) => {
+    bindArgs: (fn, boundArgs) => {
+        if (!Array.isArray(boundArgs)) {
+            boundArgs = [boundArgs];
+        }
+
         return function (...args) {
             return fn.apply(this, boundArgs.concat(args));
         };
@@ -1099,6 +1103,19 @@ const Util = {
         }
 
         return obj.constructor.name;
+    },
+
+    _funcArgsRegex: /(?:\()(.+)+(?:\))/,
+    functionArgumentNames: func => {
+        const str = func.toString(),
+            match = str.match(Util._funcArgsRegex);
+
+        if (!match) {
+            return [];
+        }
+
+        const args = match[1];
+        return args.split(", ").map(arg => arg.trim());
     },
 
     _validProp: (obj, expected) => {

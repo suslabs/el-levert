@@ -45,7 +45,7 @@ const FakeUtil = {
         return new ExternalCopy(tags).copyInto();
     },
 
-    dumpTags: async full => {
+    dumpTags: async (full = false) => {
         let tags = await getClient().tagManager.dump(full);
 
         if (full) {

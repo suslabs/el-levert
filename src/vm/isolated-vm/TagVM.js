@@ -60,7 +60,6 @@ class TagVM extends VM {
             logTime(t1);
 
             getLogger().debug(`Returning script output:${Util.formatLog(out)}`);
-
             return VMUtil.formatOutput(out);
         } catch (err) {
             logFinished(this.enableInspector);
@@ -72,6 +71,7 @@ class TagVM extends VM {
     }
 
     load() {
+        EvalContext.initFunctions();
         this._setupInspectorServer();
     }
 

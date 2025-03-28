@@ -26,6 +26,13 @@ class EvalContext {
 
     static allowPromiseReturn = true;
 
+    static initFunctions() {
+        this.functions = this._constructFuncs(Functions, {
+            global: globalNames,
+            func: funcNames
+        });
+    }
+
     constructor(options, inspectorOptions = {}) {
         this.memLimit = options.memLimit;
         this.timeLimit = options.timeLimit;
@@ -37,12 +44,12 @@ class EvalContext {
     }
 
     async getIsolate(options) {
-        if (typeof this._isolate === "undefined") {
+        if (typeof this.isolate === "undefined") {
             const { msg, tag, args } = options;
             await this._setupIsolate(msg, tag, args);
         }
 
-        return this._isolate;
+        return this.isolate;
     }
 
     async setVMObject(name, _class, params, targetProp = "this") {
@@ -72,7 +79,7 @@ class EvalContext {
     async compileScript(code, setField = true) {
         code = this.inspector.getDebuggerCode(code);
 
-        const script = await this._isolate.compileScript(code, {
+        const script = await this.isolate.compileScript(code, {
             filename: this.scriptName
         });
 
@@ -99,7 +106,7 @@ class EvalContext {
         await this.inspector.waitForConnection();
 
         try {
-            return await script.run(this._context, {
+            return await script.run(this.context, {
                 timeout: this.timeLimit,
                 promise: EvalContext.allowPromiseReturn,
                 copy: true
@@ -147,7 +154,7 @@ class EvalContext {
     }
 
     async _setGlobal() {
-        const global = this._context.global;
+        const global = this.context.global;
 
         this._global = global;
         await global.set("global", global.derefInto());
@@ -168,58 +175,25 @@ class EvalContext {
     }
 
     async _setVM() {
-        await this.setVMObject("vm", FakeVM, [this._isolate], "vmProps");
+        await this.setVMObject("vm", FakeVM, [this.isolate], "vmProps");
     }
 
-    _constructFuncs(objMap, names) {
-        let funcs = [];
+    _setPropertyMap() {
+        const propertyMap = new Map();
 
-        for (const [objKey, funcMap] of Object.entries(objMap)) {
-            if (!funcMap) {
-                throw new VMError("Invalid object map");
-            }
+        propertyMap.set("msg", this.msg);
 
-            const objName = names.global[objKey],
-                funcNames = names.func[objKey];
-
-            if (typeof objName === "undefined") {
-                throw new VMError(`Object ${objKey} not found`);
-            }
-
-            for (let [funcKey, funcProperties] of Object.entries(funcMap)) {
-                const funcName = funcNames[funcKey];
-
-                if (typeof funcName === "undefined") {
-                    throw new VMError(`Function ${funcKey} not found`);
-                }
-
-                funcProperties = {
-                    ...funcProperties,
-                    parent: objName,
-                    name: funcName
-                };
-
-                const func = new VMFunction(funcProperties, this._propertyMap);
-                funcs.push(func);
-            }
-        }
-
-        return funcs;
+        this._propertyMap = propertyMap;
     }
 
     async _registerFuncs() {
-        this._funcs = this._constructFuncs(Functions, {
-            global: globalNames,
-            func: funcNames
-        });
-
-        for (const func of this._funcs) {
-            await func.register(this._context);
+        for (const func of EvalContext.functions) {
+            await func.register(this, this._propertyMap);
         }
     }
 
     async _setupContext(msg, tag, args) {
-        this._context = await this._isolate.createContext({
+        this.context = await this.isolate.createContext({
             inspector: this.enableInspector
         });
 
@@ -230,23 +204,18 @@ class EvalContext {
         await this._setTag(tag, args);
         await this._setVM();
 
-        this._propertyMap = {
-            msg: this.msg,
-            vm: this.vm
-        };
-
+        this._setPropertyMap();
         await this._registerFuncs();
     }
 
     async _setupIsolate(msg, tag, args) {
-        this._isolate = new Isolate({
+        this.isolate = new Isolate({
             memoryLimit: this.memLimit,
             inspector: this.enableInspector
         });
 
         await this._setupContext(msg, tag, args);
-
-        this.inspector.create(this._isolate);
+        this.inspector.create(this.isolate);
     }
 
     _disposeInspector() {
@@ -273,22 +242,64 @@ class EvalContext {
     }
 
     _disposeContext() {
-        this._context?.release();
-        delete this._context;
+        this.context?.release();
+        delete this.context;
 
         delete this._propertyMap;
     }
 
     _disposeIsolate() {
-        if (typeof this._isolate === "undefined") {
+        if (typeof this.isolate === "undefined") {
             return;
         }
 
-        if (!this._isolate.isDisposed) {
-            this._isolate.dispose();
+        if (!this.isolate.isDisposed) {
+            this.isolate.dispose();
         }
 
-        delete this._isolate;
+        delete this.isolate;
+    }
+
+    static _constructFunc(objName, funcName, properties) {
+        const funcProperties = {
+            singleContext: false,
+            parent: objName,
+            name: funcName
+        };
+
+        return new VMFunction({
+            ...funcProperties,
+            ...properties
+        });
+    }
+
+    static _constructFuncs(objMap, names) {
+        const funcs = [];
+
+        for (const [objKey, funcMap] of Object.entries(objMap)) {
+            if (funcMap == null) {
+                throw new VMError("Invalid object map");
+            }
+
+            const objName = names.global[objKey],
+                funcNames = names.func[objKey];
+
+            if (typeof objName === "undefined") {
+                throw new VMError(`Object ${objKey} not found`);
+            }
+
+            for (const [funcKey, funcProperties] of Object.entries(funcMap)) {
+                const funcName = funcNames[funcKey];
+
+                if (typeof funcName === "undefined") {
+                    throw new VMError(`Function ${funcKey} not found`);
+                }
+
+                funcs.push(this._constructFunc(objName, funcName, funcProperties));
+            }
+        }
+
+        return funcs;
     }
 }
 

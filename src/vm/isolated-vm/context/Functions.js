@@ -3,6 +3,7 @@ import FuncTypes from "../../../structures/vm/FuncTypes.js";
 import FakeMsg from "../classes/FakeMsg.js";
 import FakeUtil from "../classes/FakeUtil.js";
 import FakeAxios from "../classes/FakeAxios.js";
+import FakeVM from "../classes/FakeVM.js";
 
 import ManevraError from "../functionErrors/ManevraError.js";
 
@@ -19,11 +20,11 @@ const Functions = {
     vm: {
         getCpuTime: {
             type: FuncTypes.regular,
-            ref: "vm.getCpuTime"
+            ref: FakeVM.getCpuTime
         },
         getWallTime: {
             type: FuncTypes.regular,
-            ref: "vm.getWallTime"
+            ref: FakeVM.getWallTime
         }
     },
 

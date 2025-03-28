@@ -208,8 +208,8 @@ class Tag {
     }
 
     getSize() {
-        const bodySize = Util.getUtf8ByteLength(this.body),
-            argsSize = Util.getUtf8ByteLength(this.args);
+        const bodySize = Util.utf8ByteLength(this.body),
+            argsSize = Util.utf8ByteLength(this.args);
 
         const totalSize = bodySize + argsSize;
         return totalSize / 1024;
@@ -472,7 +472,7 @@ class Tag {
 
         const setFunc = (prefix, val) => {
             const funcName = `${prefix}set${Util.capitalize(name)}`,
-                func = Util.bindArgs(Tag.prototype.setFlag, flagName, val);
+                func = Util.bindArgs(Tag.prototype.setFlag, [flagName, val]);
 
             return {
                 funcName,

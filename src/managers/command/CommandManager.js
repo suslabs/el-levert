@@ -38,7 +38,7 @@ class CommandManager extends BaseCommandManager {
 
         if (getClient().isBridgeBot(author)) {
             const match = str.match(this._getBridgeBotExp(author));
-            return Util.getFirstGroup(match, "content");
+            return Util.firstGroup(match, "content");
         } else {
             return super._getCommandContent(str);
         }

@@ -26,6 +26,7 @@ class BotEvent {
             throw new EventError("Event has already been registered");
         }
 
+        client = this.client ?? client;
         this.client = client;
 
         if (this.once) {
