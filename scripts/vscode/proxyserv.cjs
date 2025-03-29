@@ -6,13 +6,16 @@ const targetPort = 8080,
     proxyPort = 9229;
 
 const targetWsUrl = `ws://127.0.0.1:${targetPort}`,
-    proxyWsUrl = `ws://localhost:${targetPort}`;
+    proxyWsUrl = `ws://localhost:${proxyPort}`;
 
 let connectionCount = 0;
 
-const server = http.createServer((req, res) => {
+let httpServer = null,
+    wsServer = null;
+
+function httpReqHandler(req, res) {
     switch (req.url) {
-        case "/json/version": {
+        case "/json/version":
             const versionInfo = {
                 Browser: `node.js/${process.version}`,
                 "Protocol-Version": "1.1"
@@ -22,8 +25,8 @@ const server = http.createServer((req, res) => {
             res.end(JSON.stringify(versionInfo));
 
             break;
-        }
-        case "/json/list": {
+
+        case "/json/list":
             const listInfo = [
                 {
                     id: "1",
@@ -36,36 +39,39 @@ const server = http.createServer((req, res) => {
             res.end(JSON.stringify(listInfo));
 
             break;
-        }
+
         default:
             res.writeHead(404, { "Content-Type": "text/plain" });
             res.end("404 Not Found");
+
             break;
     }
-});
+}
 
-server.on("upgrade", (req, socket, head) => {
-    connectionCount++;
-    const currConnection = connectionCount;
+function httpUpgradeHandler(req, socket, head) {
+    const currConnection = ++connectionCount;
 
     console.log(`${currConnection}: Recieved connection.`);
     const proxyWs = new WebSocket(targetWsUrl);
 
     proxyWs.on("open", () => {
-        websocketServer.handleUpgrade(req, socket, head, ws => {
-            websocketServer.emit("connection", ws, proxyWs, currConnection);
+        wsServer.handleUpgrade(req, socket, head, ws => {
+            wsServer.emit("connection", ws, proxyWs, currConnection);
         });
     });
 
     proxyWs.on("error", err => {
-        console.error("Error occured with proxy WebSocket connection:\n", err, "\n");
+        if (err.code === "ECONNREFUSED") {
+            console.error("Inspector connection refused. Make sure that the bot is started.");
+        } else {
+            console.error("Error occured with proxy WebSocket connection:", err.message);
+        }
+
         proxyWs.close();
     });
-});
+}
 
-const websocketServer = new WebSocket.Server({ noServer: true });
-
-websocketServer.on("connection", (ws, proxyWs, currConnection) => {
+function wsConenctionHandler(ws, proxyWs, currConnection) {
     console.log(`${currConnection}: WebSocket connected.`);
 
     ws.on("message", message => {
@@ -88,12 +94,26 @@ websocketServer.on("connection", (ws, proxyWs, currConnection) => {
     proxyWs.on("close", () => {
         ws.close();
     });
-});
+}
 
-websocketServer.on("error", err => {
-    console.error("Error occured with proxy WebSocket connection:", err);
-});
+function startServer() {
+    httpServer = http.createServer(httpReqHandler);
 
-server.listen(proxyPort, () => {
-    console.log(`WebSocket proxy server is listening on ${proxyWsUrl}\n`);
-});
+    wsServer = new WebSocket.Server({
+        noServer: true
+    });
+
+    httpServer.on("upgrade", httpUpgradeHandler);
+
+    wsServer.on("connection", wsConenctionHandler);
+
+    wsServer.on("error", err => {
+        console.error("Error occured with proxy WebSocket connection:", err.message);
+    });
+
+    httpServer.listen(proxyPort, () => {
+        console.log(`WebSocket proxy server is listening on: ${proxyWsUrl}\n`);
+    });
+}
+
+startServer();
