@@ -14,7 +14,8 @@ class CommandLoader extends DirectoryLoader {
             fileLoaderClass: CommandObjectLoader
         });
 
-        this.prefix = options.prefix;
+        this.commandClass = options.commandClass;
+        this.extraOptions = options.extraOptions;
     }
 
     async load() {

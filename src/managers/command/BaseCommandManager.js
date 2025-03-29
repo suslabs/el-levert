@@ -1,6 +1,6 @@
 import Manager from "../Manager.js";
 
-import Command from "../../structures/Command.js";
+import BaseCommand from "../../structures/command/Command.js";
 import CommandLoader from "../../loaders/command/CommandLoader.js";
 
 import { getClient, getLogger } from "../../LevertClient.js";
@@ -8,11 +8,12 @@ import { getClient, getLogger } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 
 import LoadStatus from "../../loaders/LoadStatus.js";
-import categoryNames from "./categoryNames.json" assert { type: "json" };
 
 import CommandError from "../../errors/CommandError.js";
 
 class BaseCommandManager extends Manager {
+    static commandClass = BaseCommand;
+
     constructor(enabled, commandsDir, commandPrefix, options = {}) {
         super(enabled, options);
 
@@ -26,32 +27,8 @@ class BaseCommandManager extends Manager {
         this.commands = [];
     }
 
-    getCommand(str, ...etc) {
-        const content = this._getCommandContent(str, ...etc);
-
-        const [name, args] = Util.splitArgs(content),
-            cmd = this.searchCommands(name);
-
-        return [cmd, args];
-    }
-
-    isCommand(str, ...etc) {
-        if (str.length <= this.commandPrefix.length) {
-            return false;
-        }
-
-        return str.startsWith(this.commandPrefix);
-    }
-
-    getCommands(perm) {
-        const commands = this.commands.filter(command => !command.isSubcmd);
-
-        if (perm == null) {
-            return commands;
-        }
-
-        const allowedCmds = commands.filter(command => command.canExecute(perm));
-        return allowedCmds;
+    getCommands() {
+        return this.commands.filter(command => !command.isSubcmd);
     }
 
     searchCommands(name) {
@@ -59,22 +36,6 @@ class BaseCommandManager extends Manager {
             command = commands.find(command => command.matches(name));
 
         return command ?? null;
-    }
-
-    getHelp(perm, discord = true, indentation = 4) {
-        const categories = this._categorizeCommands(perm, true);
-
-        const headers = this._getCategoryHeaders(categories, discord),
-            names = this._getCategoryCmdNames(categories, discord, indentation);
-
-        const format = Array.from(
-            {
-                length: categories.size
-            },
-            (_, i) => headers[i] + names[i]
-        );
-
-        return format.join("\n\n");
     }
 
     bindSubcommand(command, subName) {
@@ -191,130 +152,8 @@ class BaseCommandManager extends Manager {
         this.deleteCommands();
     }
 
-    _getCommandContent(str) {
-        return str.slice(this.commandPrefix.length);
-    }
-
-    _categorizeCommands(perm, sort = false) {
-        const allowedCmds = this.getCommands(perm),
-            categories = new Map();
-
-        for (const command of allowedCmds) {
-            if (!categories.has(command.category)) {
-                categories.set(command.category, []);
-            }
-
-            const category = categories.get(command.category);
-            category.push(command);
-        }
-
-        if (!sort) {
-            return categories;
-        }
-
-        let entries = Array.from(categories.entries());
-
-        entries.sort((a, b) => {
-            const aName = a[0],
-                bName = b[0];
-
-            if (aName === Command.defaultValues.category) {
-                return -1;
-            }
-
-            if (bName === Command.defaultValues.category) {
-                return 1;
-            }
-
-            return aName.localeCompare(bName);
-        });
-
-        for (const [, cmds] of entries) {
-            cmds.sort((a, b) => {
-                const aName = a.name,
-                    bName = b.name;
-
-                return aName.localeCompare(bName, undefined, {
-                    numeric: true,
-                    sensitivity: "base"
-                });
-            });
-        }
-
-        return new Map(entries);
-    }
-
-    _getCategoryHeaders(categories, discord = false) {
-        if (!(categories instanceof Map)) {
-            const perm = categories;
-            categories = this._categorizeCommands(perm, true);
-        }
-
-        const headers = Array(categories.size),
-            categoryKeys = categories.keys();
-
-        let i = 0,
-            num = 1;
-
-        for (const name of categoryKeys) {
-            let formattedName = categoryNames[name],
-                header;
-
-            if (typeof formattedName === "undefined") {
-                formattedName = Util.capitalize(name).replaceAll(/[_-]/g, " ");
-            } else {
-                formattedName = Util.capitalize(formattedName);
-            }
-
-            if (name === Command.defaultValues.category) {
-                header = "";
-            } else {
-                header = `${num}${discord ? "\\" : ""}. ${formattedName} commands:`;
-                num++;
-            }
-
-            headers[i] = header;
-            i++;
-        }
-
-        return headers;
-    }
-
-    _getCategoryCmdNames(categories, discord = false, indentation = 0) {
-        if (!(categories instanceof Map)) {
-            const perm = categories;
-            categories = this._categorizeCommands(perm, true);
-        }
-
-        const namesFormat = Array(categories.size),
-            categoryEntries = categories.entries();
-
-        const spaces = " ".repeat(indentation);
-
-        let i = 0;
-
-        for (const [name, cmds] of categoryEntries) {
-            const cmdNames = cmds.map(cmd => cmd.getName());
-
-            let categoryFormat = "";
-
-            if (name !== Command.defaultValues.category) {
-                categoryFormat = `\n${spaces}`;
-            }
-
-            if (discord) {
-                const names = `\`${cmdNames.join("`, `")}\``;
-                categoryFormat += `\\- ${names}`;
-            } else {
-                const names = cmdNames.join(", ");
-                categoryFormat += `- ${names}`;
-            }
-
-            namesFormat[i] = categoryFormat;
-            i++;
-        }
-
-        return namesFormat;
+    get _commandDefaults() {
+        return this.constructor.commandClass.defaultValues;
     }
 
     _bindSubcommands() {
@@ -400,7 +239,11 @@ class BaseCommandManager extends Manager {
         const commandLoader = new CommandLoader(this.commandsDir, getLogger(), {
             excludeDirs: this.excludeDirs,
             fileExtension: this.cmdFileExtension,
-            prefix: this.commandPrefix
+
+            commandClass: this.constructor.commandClass,
+            extraOptions: {
+                prefix: this.commandPrefix
+            }
         });
 
         this._commandLoader = commandLoader;

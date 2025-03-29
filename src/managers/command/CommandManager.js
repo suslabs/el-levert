@@ -1,12 +1,16 @@
-import BaseCommandManager from "./BaseCommandManager.js";
+import TextCommandManager from "./TextCommandManager.js";
+
+import Command from "../../structures/command/Command.js";
 
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 
-class CommandManager extends BaseCommandManager {
+class CommandManager extends TextCommandManager {
     static $name = "commandManager";
     static loadPriority = 2;
+
+    static commandClass = Command;
 
     constructor() {
         const commandsDir = getClient().config.commandsPath,
@@ -26,6 +30,27 @@ class CommandManager extends BaseCommandManager {
         } else {
             return super.isCommand(str);
         }
+    }
+
+    getCommands(perm) {
+        const commands = super.getCommands();
+
+        if (perm == null) {
+            return commands;
+        } else {
+            return commands.filter(command => command.canExecute(perm));
+        }
+    }
+
+    searchCommands(name) {
+        const commands = this.getCommands(),
+            command = commands.find(command => command.matches(name));
+
+        return command ?? null;
+    }
+
+    getHelp(perm) {
+        return super.getHelp(true, undefined, perm);
     }
 
     async load() {

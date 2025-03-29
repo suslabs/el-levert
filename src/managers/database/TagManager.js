@@ -212,7 +212,7 @@ class TagManager extends DBManager {
 
         await this.tag_db.updateProps(name, tag);
 
-        getLogger().info(`Updated tag: "${oldTag.name}" with data:${Util.formatLog(tag)}`);
+        getLogger().info(`Updated tag: "${oldTag.name}" with data:${Util.formatLog(tag.getData())}`);
         return tag;
     }
 

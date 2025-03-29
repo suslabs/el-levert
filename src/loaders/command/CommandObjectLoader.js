@@ -1,7 +1,5 @@
 import ObjectLoader from "../ObjectLoader.js";
 
-import Command from "../../structures/Command.js";
-
 import LoadStatus from "../LoadStatus.js";
 
 class CommandObjectLoader extends ObjectLoader {
@@ -20,9 +18,9 @@ class CommandObjectLoader extends ObjectLoader {
             return status;
         }
 
-        const command = new Command({
+        const command = new this.parentLoader.commandClass({
             ...this.data,
-            prefix: this.parentLoader.prefix
+            ...this.parentLoader.extraOptions
         });
 
         this.data = command;

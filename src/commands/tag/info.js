@@ -17,7 +17,7 @@ export default {
         const [t_name, i_type] = Util.splitArgs(args, [true, true]),
             raw = i_type === "raw";
 
-        if (this.isSubcmdName(t_name)) {
+        if (this.matchesSubcmd(t_name)) {
             return `:police_car: **${t_name}** is a __command__, not a __tag__. You can't manipulate commands.`;
         }
 

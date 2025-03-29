@@ -1,8 +1,8 @@
-import BaseCommandManager from "./BaseCommandManager.js";
+import TextCommandManager from "./TextCommandManager.js";
 
 import { getClient } from "../../LevertClient.js";
 
-class CLICommandManager extends BaseCommandManager {
+class CLICommandManager extends TextCommandManager {
     static $name = "cliCommandManager";
 
     constructor(enabled) {
