@@ -108,10 +108,7 @@ class ReminderManager extends DBManager {
         const reminders = await this.listAll(),
             past = reminders.filter(reminder => reminder.isPast(date));
 
-        for (const reminder of past) {
-            await this.remind_db.remove(reminder);
-        }
-
+        await Promise.all(past.map(reminder => this.remind_db.remove(reminder)));
         return past;
     }
 
@@ -157,10 +154,7 @@ class ReminderManager extends DBManager {
         }
 
         getLogger().info(`Sending ${reminders.length} reminder(s)...`);
-
-        for (const reminder of reminders) {
-            await this.sendReminder(reminder);
-        }
+        await Promise.all(reminders.map(reminder => this.sendReminder(reminder)));
 
         logTime(t1);
     }

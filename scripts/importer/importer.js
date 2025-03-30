@@ -25,11 +25,11 @@ const argsOptions = {
     },
     "json-path": {
         type: "string",
-        short: "t"
+        short: "i"
     },
     fix: {
         type: "boolean",
-        short: "f"
+        short: "x"
     },
     "purge-old": {
         type: "boolean",
@@ -102,16 +102,21 @@ function getInputValues(args) {
 const loggerName = "Importer",
     logLevel = "info";
 
-function setupLogger() {
-    const config = getDefaultLoggerConfig(loggerName, false, true, null, logLevel);
-    return createLogger(config);
+function setupLogger(name, logFile) {
+    const loggerConfig = getDefaultLoggerConfig(name, logFile, true, logLevel);
+    return createLogger(loggerConfig);
 }
 
-async function loadConfig(logger) {
-    const configLoader = new ConfigLoader(logger),
-        [config] = await configLoader.load();
+async function loadConfig() {
+    const configLogger = setupLogger("Init"),
+        configLoader = new ConfigLoader(configLogger);
 
-    return config;
+    try {
+        const [config] = await configLoader.load();
+        return config;
+    } finally {
+        configLogger.close();
+    }
 }
 
 async function loadClient(config, logger) {
@@ -138,8 +143,8 @@ async function loadTagManager() {
         process.exit(1);
     }
 
-    const logger = setupLogger(),
-        config = await loadConfig(logger);
+    const config = await loadConfig(),
+        logger = setupLogger(loggerName, config.importLogFile);
 
     const client = loadClient(config, logger),
         tagManager = await loadTagManager();

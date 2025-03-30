@@ -215,7 +215,7 @@ class Tag {
         return totalSize / 1024;
     }
 
-    async getOwner(username = true, onlyMembers = false) {
+    async getOwner(username = true, onlyMembers = false, sv_id) {
         if (this.owner === this.constructor.defaultValues.owner) {
             return username ? "invalid" : null;
         }
@@ -223,7 +223,12 @@ class Tag {
         let owner;
 
         if (onlyMembers) {
-            owner = Util.first(await getClient().findUsers(this.owner, { onlyMembers }));
+            owner = Util.first(
+                await getClient().findUsers(this.owner, {
+                    onlyMembers,
+                    sv_id
+                })
+            );
         } else {
             owner = await getClient().findUserById(this.owner);
         }

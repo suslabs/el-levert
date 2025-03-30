@@ -8,8 +8,8 @@ class ReactionsLoader extends BaseConfigLoader {
     }
 
     modify(config) {
-        if (!isObject(config.parans)) {
-            config.parans = {};
+        if (!isObject(config.parens)) {
+            config.parens = {};
         }
 
         if (!isObject(config.funnyWords)) {

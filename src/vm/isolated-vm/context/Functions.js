@@ -29,9 +29,9 @@ const Functions = {
     },
 
     util: {
-        findUsers: {
+        delay: {
             type: FuncTypes.syncPromise,
-            ref: FakeUtil.findUsers
+            ref: FakeUtil.delay
         },
         fetchTag: {
             type: FuncTypes.syncPromise,
@@ -54,6 +54,14 @@ const Functions = {
             type: FuncTypes.syncPromise,
             ref: FakeUtil.fetchMessages,
             binds: ["msg.msg.author.id", "msg.msg.channelId"]
+        },
+        findUserById: {
+            type: FuncTypes.syncPromise,
+            ref: FakeUtil.findUserById
+        },
+        findUsers: {
+            type: FuncTypes.syncPromise,
+            ref: FakeUtil.findUsers
         }
     },
 

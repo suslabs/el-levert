@@ -594,7 +594,13 @@ class DiscordClient {
 
         Util.setValuesWithDefaults(options, options, this.constructor.defaultUsersOptions);
 
-        const guilds = Array.from(this.client.guilds.cache.values());
+        let guilds;
+
+        if (typeof options.sv_id === "string") {
+            guilds = [await this.fetchGuild(options.sv_id)];
+        } else {
+            guilds = Array.from(this.client.guilds.cache.values());
+        }
 
         const foundId = Util.first(Util.findUserIds(query)),
             foundMention = Util.first(Util.findMentions(query)),
@@ -630,30 +636,26 @@ class DiscordClient {
 
         Util.setValuesWithDefaults(fetchOptions, fetchOptions, this.constructor.defaultUsersFetchOptions);
 
-        let members = [],
-            foundIds = new Set();
+        const allMembers = (
+            await Promise.all(
+                guilds.map(guild =>
+                    guild.members
+                        .fetch({
+                            query,
+                            limit: fetchOptions.fetchLimit
+                        })
+                        .then(member => Array.from(member.values()))
+                )
+            )
+        ).flat();
 
-        for (const guild of guilds) {
-            const guildMembers = await guild.members.fetch({
-                query,
-                limit: fetchOptions.fetchLimit
-            });
+        const uniqueMembers = Array.from(new Map(allMembers.map(member => [member.id, member])).values());
 
-            for (const member of guildMembers.values()) {
-                if (!foundIds.has(member.id)) {
-                    foundIds.add(member.id);
-                    members.push(member);
-                }
-            }
-        }
-
-        members = search(members, query, {
+        return search(uniqueMembers, query, {
             maxResults: options.limit,
             minDist: options.searchMinDist,
             searchKey: "username"
         });
-
-        return members;
     }
 
     killProcess() {

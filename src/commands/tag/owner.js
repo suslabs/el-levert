@@ -7,7 +7,7 @@ export default {
     parent: "tag",
     subcommand: true,
 
-    handler: async function (args) {
+    handler: async function (args, msg) {
         if (Util.empty(args)) {
             return `:information_source: ${this.getArgsHelp("name")}`;
         }
@@ -30,7 +30,7 @@ export default {
             return `:warning: Tag **${t_name}** doesn't exist.`;
         }
 
-        let owner = await tag.getOwner(false, true);
+        let owner = await tag.getOwner(false, true, msg.guild.id);
 
         if (owner === null) {
             owner = await tag.getOwner(false);

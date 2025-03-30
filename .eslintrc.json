@@ -20,7 +20,8 @@
         "no-case-declarations": "off",
         "no-empty": "off",
         "eqeqeq": ["error", "always", { "null": "ignore" }],
-        "curly": ["error", "all"]
+        "curly": ["error", "all"],
+        "no-template-curly-in-string": "warn"
     },
     "globals": {
         "projRoot": "readonly",

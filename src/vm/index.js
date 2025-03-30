@@ -1,5 +1,5 @@
 import * as VMs from "./VMs.js";
 
-import ExportUtil from "../util/misc/ExportUtil.js";
+import ModuleUtil from "../util/misc/ModuleUtil.js";
 
-export default ExportUtil.compileExports(VMs);
+export default ModuleUtil.compileExports(VMs);

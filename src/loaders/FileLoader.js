@@ -9,29 +9,45 @@ class FileLoader extends Loader {
             ...options
         });
 
-        if (typeof filePath === "string") {
-            this.path = path.resolve(projRoot, filePath);
+        this.path = filePath;
+    }
+
+    set path(val) {
+        if (typeof val === "string") {
+            this._path = path.resolve(projRoot, val);
         } else {
-            this.path = filePath;
+            this._path = val;
         }
     }
 
+    get path() {
+        return this._path;
+    }
+
     load() {
-        return this.failure("Not implemeted: base class");
+        const err = this._checkPath();
+
+        if (err !== null) {
+            return err;
+        }
     }
 
     write() {
-        return this.failure("Not implemeted: base class");
+        const err = this._checkPath();
+
+        if (err !== null) {
+            return err;
+        }
     }
 
     _checkPath() {
-        switch (typeof this.path) {
+        switch (typeof this._path) {
             case "string":
-                break;
+                return null;
             case "undefined":
-                return this.failure("No file path provided.");
+                return this.failure("No file path provided");
             default:
-                return this.failure("Invalid file path.");
+                return this.failure("Invalid file path");
         }
     }
 }

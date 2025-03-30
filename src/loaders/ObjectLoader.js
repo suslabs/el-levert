@@ -15,13 +15,9 @@ class ObjectLoader extends FileLoader {
     }
 
     async load() {
-        const err = this._checkPath();
+        super.load();
 
-        if (err) {
-            return err;
-        }
-
-        const object = await Util.import(this.path, this.cache);
+        const object = await Util.import(this._path, this.cache);
 
         if (typeof object === "undefined") {
             return LoadStatus.failed;
@@ -32,15 +28,15 @@ class ObjectLoader extends FileLoader {
     }
 
     write() {
-        return this.failure("Can't write an object file.");
+        return this.failure("Can't write an object file");
     }
 
     getLoadingMessage() {
-        return `Loading ${this.getName()}: ${this.path}`;
+        return `Loading ${this.getName()}: ${this._path}`;
     }
 
     getWritingMessage() {
-        return "";
+        return null;
     }
 }
 

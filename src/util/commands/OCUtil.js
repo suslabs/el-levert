@@ -160,7 +160,7 @@ const OCUtil = {
         const baseChance = recipe.base_chance ?? 0,
             baseChanceBonus = recipe.base_chance_bonus ?? 0;
 
-        const output = {
+        const out = {
             parallel: null
         };
 
@@ -168,17 +168,17 @@ const OCUtil = {
             let parallel;
             [parallel, baseEu] = OCUtil.calcParallel(baseEu, voltage, recipe.amperage, recipe.base_parallel);
 
-            output.parallel = parallel;
+            out.parallel = parallel;
         }
 
-        output.tier = voltage;
-        output.eu = OCUtil.calcOverclockEu(baseEu, ocTiers);
-        output.time = OCUtil.calcOverclockTime(recipe.base_duration, ocTiers);
+        out.tier = voltage;
+        out.eu = OCUtil.calcOverclockEu(baseEu, ocTiers);
+        out.time = OCUtil.calcOverclockTime(recipe.base_duration, ocTiers);
 
-        output.chance = OCUtil.calcOverclockChance(baseChance, baseChanceBonus, ocTiers);
-        output.chance_bonus = baseChanceBonus;
+        out.chance = OCUtil.calcOverclockChance(baseChance, baseChanceBonus, ocTiers);
+        out.chance_bonus = baseChanceBonus;
 
-        return output;
+        return out;
     },
 
     calculateEbfOverclock: (recipe, voltage) => {
@@ -186,7 +186,7 @@ const OCUtil = {
 
         let baseEu = recipe.base_eu;
 
-        const output = {
+        const out = {
             parallel: null,
             chance: null,
             chance_bonus: null
@@ -196,7 +196,7 @@ const OCUtil = {
             let parallel;
             [parallel, baseEu] = OCUtil.calcParallel(baseEu, voltage, recipe.amperage, recipe.base_parallel);
 
-            output.parallel = parallel;
+            out.parallel = parallel;
         }
 
         const newTier = OCUtil.calcEbfTier(baseEu, recipe.base_coil_heat, recipe.base_recipe_heat),
@@ -206,11 +206,11 @@ const OCUtil = {
         const heat = OCUtil.calcEbfHeat(recipe.base_coil_heat, voltage),
             perfectOverclocks = OCUtil.calcEbfPerfectOverclocks(heat, recipe.base_recipe_heat);
 
-        output.eu = OCUtil.calcEbfOverclockEu(baseEu, overclockTiers, heat, recipe.base_recipe_heat);
-        output.time = OCUtil.calcPerfectOverclockTime(recipe.base_duration, overclockTiers, perfectOverclocks);
-        output.tier = voltage;
+        out.eu = OCUtil.calcEbfOverclockEu(baseEu, overclockTiers, heat, recipe.base_recipe_heat);
+        out.time = OCUtil.calcPerfectOverclockTime(recipe.base_duration, overclockTiers, perfectOverclocks);
+        out.tier = voltage;
 
-        return output;
+        return out;
     },
 
     overclock: recipe => {

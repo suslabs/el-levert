@@ -64,49 +64,6 @@ class Handler {
         }
     }
 
-    _defaultDelete() {
-        return false;
-    }
-
-    async _msgTrackerDelete(msg) {
-        if (!this.hasMessageTracker) {
-            return false;
-        }
-
-        const sentMsg = this.messageTracker.deleteMsg(msg.id);
-
-        if (typeof sentMsg === "undefined") {
-            return false;
-        }
-
-        if (Array.isArray(sentMsg)) {
-            for (const sent of sentMsg) {
-                try {
-                    await sent.delete();
-                } catch (err) {
-                    getLogger().error("Could not delete message:", err);
-                }
-            }
-        } else {
-            try {
-                await sentMsg.delete();
-            } catch (err) {
-                getLogger().error("Could not delete message:", err);
-            }
-        }
-
-        return true;
-    }
-
-    async _defaultResubmit(msg) {
-        if (!this.enabled) {
-            return false;
-        }
-
-        await this.delete(msg);
-        return await this.execute(msg);
-    }
-
     _execute(msg) {
         if (!this.enabled) {
             return false;
@@ -134,6 +91,40 @@ class Handler {
         return deleteFunc(msg);
     }
 
+    _defaultDelete() {
+        return false;
+    }
+
+    async _msgTrackerDelete(msg) {
+        if (!this.hasMessageTracker) {
+            return false;
+        }
+
+        let sent = this.messageTracker.deleteMsg(msg.id);
+
+        if (typeof sent === "undefined") {
+            return false;
+        }
+
+        if (Array.isArray(sent)) {
+            await Promise.all(
+                sent.map(msg =>
+                    msg.delete().catch(err => {
+                        getLogger().error(`Could not delete message ${msg.id}:`, err);
+                    })
+                )
+            );
+        } else {
+            try {
+                await sent.delete();
+            } catch (err) {
+                getLogger().error(`Could not delete message: ${sent.id}`, err);
+            }
+        }
+
+        return true;
+    }
+
     _resubmit(msg) {
         if (!this.enabled) {
             return false;
@@ -149,6 +140,15 @@ class Handler {
 
         resubmitFunc = resubmitFunc.bind(this);
         return resubmitFunc(msg);
+    }
+
+    async _defaultResubmit(msg) {
+        if (!this.enabled) {
+            return false;
+        }
+
+        await this.delete(msg);
+        return await this.execute(msg);
     }
 }
 

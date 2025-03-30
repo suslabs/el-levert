@@ -22,7 +22,7 @@ import MessageProcessor from "./client/MessageProcessor.js";
 
 import Util from "./util/Util.js";
 import { isObject } from "./util/misc/TypeTester.js";
-import ExportUtil from "./util/misc/ExportUtil.js";
+import ModuleUtil from "./util/misc/ModuleUtil.js";
 
 import ClientError from "./errors/ClientError.js";
 
@@ -340,7 +340,7 @@ class LevertClient extends DiscordClient {
 
         await this._loadEvents();
 
-        await ExportUtil.resolveBarrel(VMs);
+        await ModuleUtil.resolveBarrel(VMs);
         this._loadVMs();
 
         await this.login(token, true);
@@ -409,7 +409,7 @@ class LevertClient extends DiscordClient {
     }
 
     silenceDiscordTransports(silent = true) {
-        const [channelTransport, webhookTransport] = this._getDiscordTransports();
+        const { channelTransport, webhookTransport } = this._getDiscordTransports();
 
         if (typeof channelTransport !== "undefined") {
             channelTransport.silent = silent;
@@ -520,7 +520,7 @@ class LevertClient extends DiscordClient {
             this._deleteLogger();
         }
 
-        const configOpts = [LevertClient.loggerName, true, true, this.config.logFile, this.config.logLevel],
+        const configOpts = [LevertClient.loggerName, this.config.logFile, true, this.config.logLevel],
             config = getDefaultLoggerConfig(...configOpts);
 
         this.logger = createLogger(config);
@@ -661,11 +661,11 @@ class LevertClient extends DiscordClient {
         const channelTransport = this.logger.transports.find(x => x.name === ChannelTransport.$name),
             webhookTransport = this.logger.transports.find(x => x.name === WebhookTransport.$name);
 
-        return [channelTransport, webhookTransport];
+        return { channelTransport, webhookTransport };
     }
 
     _removeDiscordTransports() {
-        const [channelTransport, webhookTransport] = this._getDiscordTransports();
+        const { channelTransport, webhookTransport } = this._getDiscordTransports();
 
         if (typeof channelTransport !== "undefined") {
             this.logger.remove(channelTransport);

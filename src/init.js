@@ -7,7 +7,7 @@ import { LevertClient } from "./LevertClient.js";
 const loggerName = "init";
 
 function setupLogger() {
-    const config = getDefaultLoggerConfig(loggerName, false, true);
+    const config = getDefaultLoggerConfig(loggerName, null, true);
     return createLogger(config);
 }
 

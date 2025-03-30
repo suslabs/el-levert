@@ -9,21 +9,21 @@
     "cmdPrefix": "%",
     "enableCliCommands": true,
     "cliCmdPrefix": ".",
-    "memLimit": 1500,
-    "timeLimit": 60,
+    "memLimit": 250,
+    "timeLimit": 15,
     "otherMemLimit": 50,
     "otherTimeLimit": 15,
-    "minResponseTime": 1,
     "enableInspector": false,
     "inspectorPort": 8080,
     "outCharLimit": 2000,
-    "outLineLimit": 30,
+    "outLineLimit": 32,
+    "minResponseTime": 0.1,
     "reminderMsgLimit": 512,
-    "reminderSendInterval": 10000,
+    "reminderSendInterval": 10,
     "tagNameRegex": "^[A-Za-z0-9\\-_]+$",
     "maxTagNameLength": 32,
-    "maxTagSize": 1000000,
-    "maxQuota": 10240000,
+    "maxTagSize": 100,
+    "maxQuota": 1024,
     "maxGroupNameLength": 16,
     "tagModeratorLevel": 1,
     "permissionAdminLevel": 2,
@@ -41,17 +41,12 @@
         "type": "watching",
         "text": "example"
     },
-    "mentionUsers": true,
+    "mentionUsers": false,
     "pingReply": true,
-    "logToDiscord": true,
+    "logToDiscord": false,
     "discordLogLevel": "info",
-    "logChannelId": "1237134719276286072",
+    "logChannelId": "",
     "logWebhook": "",
     "bridgeBotIds": [],
-    "bridgeBotMessageFormats": {
-        "561157948924100634": [
-            "\\*{2}.+?:\\*{2}\\s(?<content>)",
-            "\\*\\*(.+?)\\*\\*\\swas\\s(.+?)\\sby\\s(.+?)\\susing\\s\\[(?<content>)\\]!"
-        ]
-    }
+    "bridgeBotMessageFormat": "\\*{2}.+?:\\*{2}\\s"
 }

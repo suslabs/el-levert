@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { isPromise } from "node:util/types";
 
-const ExportUtil = {
+const ModuleUtil = {
     compileExports: (barrel, nameField = "$name") => {
         let obj = {},
             i = 1;
@@ -12,11 +12,11 @@ const ExportUtil = {
 
             if (isPromise(_class)) {
                 const name = `dummy${i}`;
-                obj[name] = ExportUtil._resolveFunc.bind(obj, name, _class, info);
+                obj[name] = ModuleUtil._resolveFunc.bind(obj, name, _class, info);
 
                 i++;
             } else {
-                const name = ExportUtil._checkClass(_class, info);
+                const name = ModuleUtil._checkClass(_class, info);
 
                 if (name !== null) {
                     obj[name] = _class;
@@ -69,7 +69,7 @@ const ExportUtil = {
         delete this[name];
         const new_class = await _class;
 
-        const newName = ExportUtil._checkClass(new_class, info);
+        const newName = ModuleUtil._checkClass(new_class, info);
 
         if (newName !== null) {
             this[newName] = new_class;
@@ -77,4 +77,4 @@ const ExportUtil = {
     }
 };
 
-export default ExportUtil;
+export default ModuleUtil;

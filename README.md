@@ -76,20 +76,20 @@ Execute tag `(name)`, receiving `tag.args` = `args`.
 Subcommands:
 
 - add `(name) [type] (body)` - Adds the tag `(name)`. If `body` contains a code block, it will be treated as a script tag. If an image file is attached, it will be added as a url. If a text file is attached, it will be added as a script. If the first argument is `vm2` the tag will be added as a vm2 script.
-- alias `(name) (alias_name) args` - If tag `(name)` doesn't exist, it will be created and aliased to `(alias_name)` with `args` being appended to `tag.args`. If `(name)` already exists and is owned by you, it will be updated to be an alias. Moderators can bypass ownership checks.
-- chown `(name) (new_owner)` - Transfers the tag to another user, specified either as a username, tag, mention or id.
-- count `[all/me/user]` - Sends the number of tags that have been registered in total or by the specified user.
+- alias `(name) (alias_name) args` - If tag `(name)` doesn't already exist, it will be created and aliased to `(alias_name)` with `args` being appended to `tag.args`. If `(name)` already exists and is owned by you, it will be updated to be an alias. Moderators can bypass ownership checks.
+- chown `(name) (new_owner)` - Transfers the tag to another user, specified either as a username, tag, mention or ID.
+- count `[all/new/script/me/user]` - Sends the number of tags that have been registered in total, by type or by the specified user.
 - delete `(name)` - Deletes tag `(name)` if it's owned by you or if you are a moderator.
 - dump `[inline/full] [spaces]` - Sends a list of all tags.
 - edit `(name) [type] (new_body)` - Edits tag `(name)` with a new body, same ownership and attachment rules as `add`.
 - info `(name) [raw]` - Sends the properties of tag `(name)`. Moderator only.
-- leaderboard `(count/size) [limit=20 < 100]` - Sends the tag leaderboard up to the specified limit.
+- leaderboard `(count/size) [limit=20 <= 50]` - Sends the tag leaderboard up to the specified limit.
 - list `(user)` - Lists all of your tags. If `user` is specified, their tags will be listed instead.
 - owner `(name)` - Sends the owner of tag `(name)`.
 - quota - Sends your quota, affected by `add`, `alias`, `chown`, `delete` and `edit`. If your quota reaches the limit, you will not be able to add any more tags until you free up some space.
 - raw `(name)` - Sends the text or source code of tag `(name)`.
 - rename `(name) (new_name)` - Renames tag `(name)` to `(new_name)` if it's owned by you or if you are a moderator.
-- search `(query) [max_results=20/all]` - Searches the tags list for `(query)`. Matches are approximated, suspicious results are to be expected.
+- search `(query) [max_results=20 / all]` - Searches the tags list for `(query)`. Matches are approximated, suspicious results are to be expected.
 - set_type `(name) (type)/[version]` - Sets the type or version properties of tag `(name)`. Moderator only.
 
 ### 4. eval `(script)`
@@ -117,8 +117,6 @@ Subcommands:
 - remove_all `(user)` - Remove all of `(user)`'s permissions.
 - list - Sends registered permissions. Can be executed by anyone.
 - add_group `(group_name) (level)` - Adds `(group_name)` with the specified level.
-  Level 1 = Moderator
-  Level 2 = Admin
 - remove_group `(group_name)` - Removes `(group_name)` from the group list and from the permission list of everyone added to it.
 - update_group `(group_name) [new_name/unchanged] [new_level/unchanged]` - Updates `(group_name)` with a new name and level.
 - check `(user)` - Sends permission details for `(user)`. Can be executed by anyone.
@@ -137,12 +135,6 @@ These levels can be adjusted in the config file and commands can be locked to di
 ### 6. oc `-version (EU/t) (duration)`
 
 Calculates overclock EU, duration, and tier for the specified parameters.
-
-If `-version` is not specified, the calculator defaults to `ceu`. Allowed versions are:
-
-- ceu
-- nomi
-- tj
 
 ### 7. reminder
 
@@ -196,7 +188,7 @@ Example:
 ### 3. Reactions
 
 The bot will react to certain words in a message with configured emojis.
-It will also react to mismatched brackets if the emoji ids are set.
+It will also react to mismatched brackets if the emoji IDs are set.
 
 Needs to be enabled and configured in `config/reactions.json`.
 
@@ -217,6 +209,7 @@ Main differences:
 - `util.executeTag` isn't implemented
 - `util.fetchMessage(ch_id | null, msg_id)` allows fetching a single message
 - `util.fetchMessages` accepts message fetch options
+- `util.findUserById` allows fetching a user that isn't necessarily in the same server as the bot
 
 If the output is an object or an array, it will be automatically formatted into a string.
 If it is empty, `Cannot send an empty message.` will be sent instead.
@@ -271,14 +264,14 @@ Tags can use VM2 scripts by doing `%t add (name) vm2 (script)`
 
     {
         "enableReacts": true,
-        "parans": {
-            "left": [left paranthesis emoji ids],
-            "right": [right paranthesis emoji ids]
+        "parens": {
+            "left": [left parenthesis emoji ids],
+            "right": [right parenthesis emoji ids]
         },
         "funnyWords": [
             {
-                "words": "word" or ["word1", "word2"],
-                "react": "emoji" or ["emoji1", "emoji2"]
+                "word(s)": "word" or ["word1", "word2"],
+                "react(s)": "emoji" or ["emoji1", "emoji2"]
             },
             ...
         ]
@@ -291,9 +284,10 @@ To start the bot, navigate to the root directory and run `npm start`. Logs will 
 
 # Importing
 
-To download the tag database from the original bot, run `%t fulldump` or `%eval JSON.stringify(util.dumpTags().map(x => util.fetchTag(x)))` and download the resulting file. To import these tags, navigate to the root directory and run `node ./scripts/importer/importer.js -i path-to-tags`.
+To download the tag database from the original bot, run `%t fulldump` or `%eval JSON.stringify(util.dumpTags().map(x => util.fetchTag(x)))` and download the resulting file. To import these tags, navigate to the root directory and run `npm run importer -- -i "path-to-tags"`.
 
-To delete all imported tags, run `node ./scripts/importer/importer.js --p1`.
+To check and fix the database, run `npm run importer -- -x`.
+To delete all imported tags, run `npm run importer -- -1`.
 
 # Amogus
 

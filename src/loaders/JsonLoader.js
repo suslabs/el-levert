@@ -23,7 +23,6 @@ class JsonLoader extends TextFileLoader {
         this.forceSchemaValidation = options.forceSchemaValidation ?? true;
 
         this.schema = options.schema;
-        this._schemaPath = this._getSchemaPath(options);
 
         this.customStringify = options.stringify;
         this.replacer = options.replacer;
@@ -31,6 +30,11 @@ class JsonLoader extends TextFileLoader {
 
         this._childValidate = this.validate;
         this.validate = this._validate;
+    }
+
+    set path(val) {
+        super.path = val;
+        this._schemaPath = JsonLoader._getSchemaPath(val, this.options);
     }
 
     async load() {
@@ -125,6 +129,21 @@ class JsonLoader extends TextFileLoader {
         return errMessage.join("\n");
     }
 
+    static _getSchemaPath(filePath, options) {
+        if (typeof options.schemaPath === "string") {
+            return options.schemaPath;
+        }
+
+        if (typeof filePath !== "string" || typeof options.schemaDir !== "string") {
+            return null;
+        }
+
+        const parsed = path.parse(filePath),
+            schemaPath = path.resolve(projRoot, options.schemaDir, `${parsed.name}.schema.json`);
+
+        return schemaPath;
+    }
+
     async _read() {
         const status = await super.load();
 
@@ -149,21 +168,6 @@ class JsonLoader extends TextFileLoader {
 
         this.data = obj;
         return LoadStatus.successful;
-    }
-
-    _getSchemaPath(options) {
-        if (typeof options.schemaPath === "string") {
-            return options.schemaPath;
-        }
-
-        if (typeof this.path !== "string" || typeof options.schemaDir !== "string") {
-            return;
-        }
-
-        const parsed = path.parse(this.path),
-            schemaPath = path.join(options.schemaDir, `${parsed.name}.schema.json`);
-
-        return schemaPath;
     }
 
     async _loadSchemaFile() {

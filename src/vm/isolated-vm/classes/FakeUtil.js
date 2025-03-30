@@ -21,6 +21,8 @@ const FakeUtil = {
         outLineLimit: getClient().tagVM.outLineLimit
     }),
 
+    delay: Util.delay,
+
     fetchTag: async name => {
         let tag = await getClient().tagManager.fetch(name);
 
@@ -105,13 +107,20 @@ const FakeUtil = {
         return new ExternalCopy(msgs).copyInto();
     },
 
+    findUserById: async user_id => {
+        let user = await getClient().findUserById(user_id);
+
+        user = new FakeUser(user).fixedUser;
+        return new ExternalCopy(user).copyInto();
+    },
+
     findUsers: async query => {
-        let data = await getClient().findUsers(query, {
+        let users = await getClient().findUsers(query, {
             onlyMembers: true
         });
 
-        data = data.map(user => new FakeUser(user).fixedUser);
-        return new ExternalCopy(data).copyInto();
+        users = users.map(user => new FakeUser(user).fixedUser);
+        return new ExternalCopy(users).copyInto();
     }
 };
 

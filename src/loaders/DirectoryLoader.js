@@ -46,13 +46,8 @@ class DirectoryLoader extends Loader {
             ...options
         });
 
-        if (typeof dirPath === "string") {
-            this.dirPath = path.resolve(projRoot, dirPath);
-        } else {
-            this.dirPath = dirPath;
-        }
-
-        this.logName = this.getLogName();
+        this.dirPath = dirPath;
+        this._logName = this.name ?? "file";
 
         this.maxDepth = options.maxDepth ?? Infinity;
         this.excludeDirs = (options.excludeDirs ?? []).map(dir => path.resolve(projRoot, dir));
@@ -61,7 +56,25 @@ class DirectoryLoader extends Loader {
         this.fileLoaderClass = options.fileLoaderClass ?? FileLoader;
     }
 
+    set dirPath(val) {
+        if (typeof val === "string") {
+            this._dirPath = path.resolve(projRoot, val);
+        } else {
+            this._dirPath = val;
+        }
+    }
+
+    get dirPath() {
+        return this._dirPath;
+    }
+
     async load(options = {}) {
+        const err = this._checkPath();
+
+        if (err !== null) {
+            return err;
+        }
+
         let status = await this._loadFilePaths();
 
         if (status === LoadStatus.failed) {
@@ -69,7 +82,7 @@ class DirectoryLoader extends Loader {
         }
 
         if (Util.empty(this.files)) {
-            return this.failure(`Couldn't find any ${this.logName}s.`);
+            return this.failure(`Couldn't find any ${this._logName}s.`);
         }
 
         this.deleteAllData();
@@ -86,7 +99,7 @@ class DirectoryLoader extends Loader {
             try {
                 [data, status] = await loader.load();
             } catch (err) {
-                this.failure(err, `Error occured while loading ${this.logName}: ` + file);
+                this.failure(err, `Error occured while loading ${this._logName}: ` + file);
 
                 bad++;
                 continue;
@@ -108,9 +121,9 @@ class DirectoryLoader extends Loader {
         const total = ok + bad;
 
         if (total === 0) {
-            return this.failure(`Couldn't load any ${this.logName}s.`);
+            return this.failure(`Couldn't load any ${this._logName}s.`);
         } else {
-            this.logger?.info(`Loaded ${total} ${this.logName}(s). ${ok} successful, ${bad} failed.`);
+            this.logger?.info(`Loaded ${total} ${this._logName}(s). ${ok} successful, ${bad} failed.`);
         }
 
         this.result = {
@@ -124,7 +137,7 @@ class DirectoryLoader extends Loader {
 
     async write(data) {
         if (!this.loaded) {
-            return this.failure("The directory needs to be loaded before files can be written.");
+            return this.failure("The directory needs to be loaded before files can be written");
         }
 
         let ok = 0,
@@ -135,7 +148,7 @@ class DirectoryLoader extends Loader {
                 fileData = data[filename];
 
             if (typeof loader === "undefined") {
-                this.logger?.warn(`Can't write ${filename}: ${this.logName} isn't loaded.`);
+                this.logger?.warn(`Can't write ${filename}: ${this._logName} isn't loaded.`);
             }
 
             let status;
@@ -143,7 +156,7 @@ class DirectoryLoader extends Loader {
             try {
                 status = await loader[filename].write(fileData);
             } catch (err) {
-                this.failure(err, `Error occured while writing ${this.logName}: ` + filename);
+                this.failure(err, `Error occured while writing ${this._logName}: ` + filename);
 
                 bad++;
                 continue;
@@ -162,9 +175,9 @@ class DirectoryLoader extends Loader {
         const total = ok + bad;
 
         if (total === 0) {
-            return this.failure(`Couldn't write any ${this.logName}s.`);
+            return this.failure(`Couldn't write any ${this._logName}s.`);
         } else {
-            this.logger?.info(`Wrote ${total} ${this.logName}(s). ${ok} successful, ${bad} failed.`);
+            this.logger?.info(`Wrote ${total} ${this._logName}(s). ${ok} successful, ${bad} failed.`);
         }
 
         this.result = {
@@ -201,7 +214,7 @@ class DirectoryLoader extends Loader {
 
         let dataPath;
 
-        for (const [path, value] of this.data.entries()) {
+        for (const [path, value] of this.data) {
             if (value === data) {
                 dataPath = path;
                 break;
@@ -259,21 +272,28 @@ class DirectoryLoader extends Loader {
         }
     }
 
-    getLogName() {
-        return this.name ?? "file";
+    _checkPath() {
+        switch (typeof this._dirPath) {
+            case "string":
+                return null;
+            case "undefined":
+                return this.failure("No directory path provided");
+            default:
+                return this.failure("Invalid directory path provided");
+        }
     }
 
     async _loadFilePaths() {
         this.logger?.debug(`Reading ${this.getName()}...`);
 
-        if (typeof this.dirPath !== "string") {
+        if (typeof this._dirPath !== "string") {
             return this.failure(`Invalid ${this.getName()}`);
         }
 
         let files;
 
         try {
-            files = await DirectoryLoader.listFilesRecursive(this.dirPath, this.maxDepth);
+            files = await DirectoryLoader.listFilesRecursive(this._dirPath, this.maxDepth);
         } catch (err) {
             if (err.code === "ENOENT") {
                 return this.failure(`Couldn't find the ${this.getName()}`);

@@ -37,7 +37,7 @@ export default {
 
     handler: async function (args) {
         if (Util.empty(args)) {
-            return `:information_source: ${this.getArgsHelp("(count/size) [limit < 100]")}`;
+            return `:information_source: ${this.getArgsHelp(`(count/size) [limit <= ${maxLimit}]`)}`;
         }
 
         const [l_type, l_str] = Util.splitArgs(args, true);

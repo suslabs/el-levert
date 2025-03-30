@@ -61,12 +61,11 @@ const consoleFormat = [
     }
 ];
 
-function getDefaultLoggerConfig(name, fileOutput, consoleOutput, filename, level) {
+function getDefaultLoggerConfig(name, filename, consoleOutput, level) {
     const config = {
         name,
-        fileOutput,
-        consoleOutput,
         filename,
+        consoleOutput,
         level,
         fileFormat,
         consoleFormat

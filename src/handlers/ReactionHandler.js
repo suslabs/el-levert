@@ -6,11 +6,11 @@ import { getClient, getLogger } from "../LevertClient.js";
 
 import Util from "../util/Util.js";
 
-function logParansUsage(msg, parans) {
-    const s = parans.total > 1 ? "e" : "i";
+function logParensUsage(msg, parens) {
+    const s = parens.total > 1 ? "e" : "i";
 
     getLogger().info(
-        `Reacting with ${parans.total} parenthes${s}s to message sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${Util.formatChannelName(msg.channel)}).`
+        `Reacting with ${parens.total} parenthes${s}s to message sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${Util.formatChannelName(msg.channel)}).`
     );
 }
 
@@ -59,27 +59,26 @@ class ReactionHandler extends Handler {
             return;
         }
 
-        if (this.enableParans) {
-            await this._paransReact(msg);
+        if (this.enableParens) {
+            await this._parensReact(msg);
         }
     }
 
     async removeReacts(msg) {
         const t1 = performance.now();
 
-        const botId = getClient().client.user.id,
+        let botId = getClient().client.user.id,
             botReacts = msg.reactions.cache.filter(react => react.users.cache.has(botId));
 
         if (Util.empty(botReacts)) {
             return;
         }
 
-        logRemove(msg, botReacts.size);
+        botReacts = Array.from(botReacts.values());
+        logRemove(msg, botReacts.length);
 
         try {
-            for (const react of botReacts.values()) {
-                await react.users.remove(botId);
-            }
+            await Promise.all(botReacts.map(react => react.users.remove(botId)));
         } catch (err) {
             getLogger().error("Failed to remove reactions from message:", err);
         }
@@ -94,7 +93,7 @@ class ReactionHandler extends Handler {
 
     load() {
         this._setWords();
-        this._setParans();
+        this._setParens();
     }
 
     static _emojiExpRight = new RegExp(`[${Util.escapeCharClass(this.emojiChars)}][()]+`, "g");
@@ -153,22 +152,22 @@ class ReactionHandler extends Handler {
         this._reactMap = ReactionHandler._getReactMap(this.funnyWords);
     }
 
-    _setParans() {
-        const parans = getClient().reactions.parans;
+    _setParens() {
+        const parens = getClient().reactions.parens;
 
-        this.enableParans = parans.left != null && parans.right != null;
-        this.parans = parans;
+        this.enableParens = parens.left != null && parens.right != null;
+        this.parens = parens;
     }
 
-    _countUnmatchedParans(str) {
-        const parans = {
+    _countUnmatchedParens(str) {
+        const parens = {
             left: 0,
             right: 0,
             total: 0
         };
 
         if (!str.includes("(") && !str.includes(")")) {
-            return parans;
+            return parens;
         }
 
         let clean = str.replace(ReactionHandler._emojiExpRight, match => " ".repeat(match.length));
@@ -195,38 +194,38 @@ class ReactionHandler extends Handler {
             }
         }
 
-        parans.left = Util.clamp(open, 0, this.parans.right.length);
-        parans.right = Util.clamp(closed, 0, this.parans.left.length);
-        parans.total = parans.left + parans.right;
+        parens.left = Util.clamp(open, 0, this.parens.right.length);
+        parens.right = Util.clamp(closed, 0, this.parens.left.length);
+        parens.total = parens.left + parens.right;
 
-        return parans;
+        return parens;
     }
 
-    async _paransReact(msg) {
+    async _parensReact(msg) {
         const t1 = performance.now();
 
-        const parans = this._countUnmatchedParans(msg.content);
+        const parens = this._countUnmatchedParens(msg.content);
 
-        if (parans.total < 1) {
+        if (parens.total < 1) {
             return false;
         }
 
-        logParansUsage(msg, parans);
+        logParensUsage(msg, parens);
 
-        if (parans.right > 0) {
+        if (parens.right > 0) {
             try {
-                for (let i = 0; i < parans.right; i++) {
-                    await msg.react(this.parans.left[i]);
+                for (let i = 0; i < parens.right; i++) {
+                    await msg.react(this.parens.left[i]);
                 }
             } catch (err) {
                 getLogger().error("Failed to react to message:", err);
             }
         }
 
-        if (parans.left > 0) {
+        if (parens.left > 0) {
             try {
-                for (let i = 0; i < parans.left; i++) {
-                    await msg.react(this.parans.right[i]);
+                for (let i = 0; i < parens.left; i++) {
+                    await msg.react(this.parens.right[i]);
                 }
             } catch (err) {
                 getLogger().error("Failed to react to message:", err);

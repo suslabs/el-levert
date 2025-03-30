@@ -10,13 +10,13 @@
         "multipleReacts": {
             "type": "boolean"
         },
-        "parans": {
+        "parens": {
             "type": "object",
             "properties": {
-                "leftParans": {
+                "leftParens": {
                     "type": "array"
                 },
-                "rightParans": {
+                "rightParens": {
                     "type": "array"
                 }
             }

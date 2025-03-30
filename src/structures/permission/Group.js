@@ -23,7 +23,7 @@ class Group {
         const formattedName = discord ? bold(this.name) : this.name,
             formattedLevel = discord ? bold(this.level) : this.level;
 
-        const s = Util.multiple(this.users) ? "s" : "",
+        const s = Util.single(this.users) ? "" : "s",
             title = `Group ${formattedName} - Level ${formattedLevel} - User${s}:`;
 
         const spaces = discord ? "" : this._spaces;
@@ -38,7 +38,7 @@ class Group {
                 })
                 .join("\n");
         } else {
-            userFormat = `${spaces}None`;
+            userFormat = `${spaces}${discord ? "- " : ""}None`;
         }
 
         const format = `${title}\n${userFormat}`;

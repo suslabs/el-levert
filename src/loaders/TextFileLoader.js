@@ -14,24 +14,23 @@ class TextFileLoader extends FileLoader {
         });
 
         this.encoding = options.encoding ?? "utf-8";
+    }
 
-        this._tempPath = this._getTempPath();
+    set path(val) {
+        super.path = val;
+        this._tempPath = TextFileLoader._getTempPath(val);
     }
 
     async load() {
-        const err = this._checkPath();
-
-        if (err) {
-            return err;
-        }
+        super.load();
 
         let text;
 
         try {
-            text = await fs.readFile(this.path, this._fsConfig);
+            text = await fs.readFile(this._path, this._fsConfig);
         } catch (err) {
             if (err.code === "ENOENT") {
-                return this.failure(`${this.getName(true)} not found at path: ${this.path}`);
+                return this.failure(`${this.getName(true)} not found at path: ${this._path}`);
             }
 
             return this.failure(err, `Error occured while loading ${this.getName()}:`);
@@ -47,11 +46,7 @@ class TextFileLoader extends FileLoader {
                 return await this.append(data);
         }
 
-        const err = this._checkPath();
-
-        if (err) {
-            return err;
-        }
+        super.write();
 
         try {
             await fs.writeFile(this._tempPath, data, this._fsConfig);
@@ -61,7 +56,7 @@ class TextFileLoader extends FileLoader {
         }
 
         try {
-            await fs.rename(this._tempPath, this.path);
+            await fs.rename(this._tempPath, this._path);
         } catch (err) {
             await this._deleteTemp();
             return this.failure(err, `Error occured while writing ${this.getName()}:`);
@@ -82,28 +77,28 @@ class TextFileLoader extends FileLoader {
     }
 
     getLoadingMessage() {
-        return `Loading ${this.getName()}: ${this.path}`;
+        return `Loading ${this.getName()}: ${this._path}`;
     }
 
     getWritingMessage() {
-        return `Writing ${this.getName()}: ${this.path}`;
+        return `Writing ${this.getName()}: ${this._path}`;
+    }
+
+    static _getTempPath(filePath) {
+        if (typeof filePath !== "string") {
+            return null;
+        }
+
+        const parsed = path.parse(filePath),
+            tempPath = path.resolve(projRoot, parsed.dir, `${parsed.name}.tmp`);
+
+        return tempPath;
     }
 
     get _fsConfig() {
         return {
             encoding: this.encoding
         };
-    }
-
-    _getTempPath() {
-        if (typeof this.path !== "string") {
-            return;
-        }
-
-        const parsed = path.parse(this.path),
-            tempPath = path.join(parsed.dir, `${parsed.name}.tmp`);
-
-        return tempPath;
     }
 
     async _deleteTemp() {

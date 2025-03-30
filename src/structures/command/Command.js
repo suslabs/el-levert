@@ -76,8 +76,9 @@ class Command extends TextCommand {
         return super.getArgsHelp(args, true);
     }
 
-    getSubcmdHelp() {
-        return super.getSubcmdHelp(true);
+    getSubcmdHelp(perm) {
+        const subcmds = this.getSubcmdList(perm, false);
+        return this._formatSubcmdHelp(subcmds, true);
     }
 
     async execute(args, context = {}, options = {}) {

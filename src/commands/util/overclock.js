@@ -2,20 +2,20 @@ import { EmbedBuilder } from "discord.js";
 
 import Util from "../../util/Util.js";
 import OCUtil from "../../util/commands/OCUtil.js";
+
 import { drawTable } from "../../util/misc/Table.js";
 
-function getErrorEmbed(cmd) {
-    return new EmbedBuilder().setTitle(":warning: Could not calculate.")
-        .setDescription(`Invalid arguments specified, must be:
-\`${cmd.getArgsHelp()} <EU> <duration> [base chance] [chance bonus] {parallel} {amperage}\`
+function getErrorText(cmd) {
+    return `:warning: Invalid arguments specified. Must be:
+${cmd.getArgsHelp("<EU> <duration> [base chance] [chance bonus] {parallel} {amperage}")}
 
-\`<>\` Required for basic overclocking
-\`[]\` Required for chance calculations
-\`{}\` Required for parallel calculations
-Use \`-\` to skip arguments
+- \`<>\` Required for basic overclocking
+- \`[]\` Required for chance calculations
+- \`{}\` Required for parallel calculations
+- Use \`-\` to skip arguments
 
 For EBF calculations, use:
-\`${cmd.getArgsHelp()} ebf <EU> <duration> <recipe heat> <coil heat> {parallel} {amperage}\``);
+${cmd.getArgsHelp("ebf <EU> <duration> <recipe heat> <coil heat> {parallel} {amperage}")}`;
 }
 
 const bounds = {
@@ -78,24 +78,23 @@ function codeblock(str) {
 }
 
 export default {
-    name: "oc",
+    name: "overclock",
+    aliases: ["oc"],
     category: "util",
 
     handler: function (args) {
         if (Util.empty(args)) {
-            return {
-                embeds: [getErrorEmbed(this)]
-            };
+            return getErrorText(this);
         }
 
         const split = args.split(" "),
             recipe = parseInput(split);
 
         if (recipe === null) {
-            return {
-                embeds: [getErrorEmbed(this)]
-            };
+            return getErrorText(this);
         }
+
+        const header = `:information_source: Input: **${recipe.base_eu} EU/t** for **${OCUtil.formatDuration(recipe.base_duration)}**.`;
 
         let footer = `Applicable for NFu, tiers adjusted for actual machine tier,
 for all options and syntax see ${this.getArgsHelp()}.`;
@@ -108,17 +107,15 @@ Manually specify the amperage if it differs.`;
         const outputs = OCUtil.overclock(recipe);
 
         if (Util.empty(outputs)) {
-            return ":warning: Could not calculate.";
+            return ":warning: Could not calculate. No voltage matches the input EU.";
         }
 
         const hasChance = outputs.findIndex(row => Boolean(row.chance)) !== -1,
             hasParallel = Boolean(Util.first(outputs).parallel);
 
-        const embed = new EmbedBuilder()
-            .setTitle(`:information_source: ${recipe.base_eu} EU/t for ${OCUtil.formatDuration(recipe.base_duration)}`)
-            .setFooter({
-                text: footer
-            });
+        const embed = new EmbedBuilder().setFooter({
+            text: footer
+        });
 
         const columns = {
             eu: "EU/t",
@@ -142,13 +139,14 @@ Manually specify the amperage if it differs.`;
             rows.parallel = outputs.map(row => row.parallel + "x");
         }
 
-        const table = drawTable(columns, rows, undefined, {
+        const table = drawTable(columns, rows, "light", {
             sideLines: false
         });
 
         embed.setDescription(codeblock(table));
 
         return {
+            content: header,
             embeds: [embed]
         };
     }

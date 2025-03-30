@@ -7,12 +7,14 @@
         "getWallTime": "getWallTime"
     },
     "util": {
-        "findUsers": "findUsers",
+        "delay": "delay",
         "fetchTag": "fetchTag",
         "findTags": "findTags",
         "dumpTags": "dumpTags",
         "fetchMessage": "fetchMessage",
-        "fetchMessages": "fetchMessages"
+        "fetchMessages": "fetchMessages",
+        "findUserById": "findUserById",
+        "findUsers": "findUsers"
     },
     "http": {
         "request": "request"

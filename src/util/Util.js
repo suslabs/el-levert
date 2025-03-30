@@ -455,16 +455,38 @@ const Util = {
         return Util.round(num, digits);
     },
 
+    countDigits: (num, base = 10) => {
+        if (num === 0) {
+            return 1;
+        }
+
+        const log = Math.log(Math.abs(num)) / Math.log(base);
+        return Math.floor(log) + 1;
+    },
+
     length: obj => {
         return obj?.length ?? obj?.size ?? 0;
     },
 
     stringLength: obj => {
-        if (obj == null) {
-            return 0;
-        } else {
-            return String(obj).length;
+        return obj == null ? 0 : String(obj).length;
+    },
+
+    maxLength: (arr, length = "string") => {
+        let lengthFunc;
+
+        switch (length) {
+            case "array":
+                lengthFunc = Util.length;
+                break;
+            case "string":
+                lengthFunc = Util.stringLength;
+                break;
+            default:
+                throw new UtilError("Invalid length function: " + length);
         }
+
+        return Math.max(...arr.map(x => lengthFunc(x)));
     },
 
     empty: obj => {
@@ -539,9 +561,8 @@ const Util = {
         const lowercaseFirst = multipleLowercase ? (lowercase[0] ?? false) : lowercase,
             lowercaseSecond = multipleLowercase ? (lowercase[1] ?? false) : false;
 
-        let { sep, n } = options;
-        sep = sep ?? [" ", "\n"];
-        n = n ?? 1;
+        let sep = options.sep ?? [" ", "\n"],
+            n = options.n ?? 1;
 
         if (sep.length === 0) {
             if (lowercaseFirst) {
@@ -555,7 +576,8 @@ const Util = {
             sep = [sep];
         }
 
-        let name, args;
+        let first, second;
+
         let ind = -1,
             sepLength;
 
@@ -603,22 +625,22 @@ const Util = {
         }
 
         if (ind === -1) {
-            name = str;
-            args = "";
+            first = str;
+            second = "";
         } else {
-            name = str.slice(0, ind);
-            args = str.slice(ind + sepLength);
+            first = str.slice(0, ind);
+            second = str.slice(ind + sepLength);
         }
 
         if (lowercaseFirst) {
-            name = name.toLowerCase();
+            first = first.toLowerCase();
         }
 
         if (lowercaseSecond) {
-            args = args.toLowerCase();
+            second = second.toLowerCase();
         }
 
-        return [name, args];
+        return [first, second];
     },
 
     codeblockRegex: /(?<!\\)(?:`{3}([\S]+\n)?([\s\S]*?)`{3}|`([^`\n]+)`)/g,
@@ -638,6 +660,26 @@ const Util = {
 
         const lang = match[1]?.trim() ?? "";
         return [true, body, lang];
+    },
+
+    checkCharType: char => {
+        if (char?.length !== 1) {
+            return "invalid";
+        }
+
+        const code = char.charCodeAt(0);
+
+        if (code === 32) {
+            return "space";
+        } else if (code >= 48 && code <= 57) {
+            return "number";
+        } else if (code >= 65 && code <= 90) {
+            return "uppercase";
+        } else if (code >= 97 && code <= 122) {
+            return "lowercase";
+        } else {
+            return "other";
+        }
     },
 
     utf8ByteLength: str => {

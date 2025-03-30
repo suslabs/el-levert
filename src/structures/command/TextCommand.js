@@ -141,10 +141,8 @@ class TextCommand extends BaseCommand {
     }
 
     getSubcmdHelp(discord = false) {
-        const subcmds = this.getSubcmdList(false),
-            formatted = discord ? inlineCode(subcmds) : subcmds;
-
-        return `${this.prefix}${this.name} ${formatted}`;
+        const subcmds = this.getSubcmdList(false);
+        return this._formatSubcmdHelp(subcmds, discord);
     }
 
     async execute(args, ...extra) {
@@ -162,6 +160,11 @@ class TextCommand extends BaseCommand {
         }
 
         return await super.execute(args, ...extra);
+    }
+
+    _formatSubcmdHelp(subcmds, discord) {
+        const formatted = discord ? inlineCode(subcmds) : subcmds;
+        return `${this.prefix}${this.name} ${formatted}`;
     }
 }
 
