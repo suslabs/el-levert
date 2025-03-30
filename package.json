@@ -21,7 +21,8 @@
     },
     "optionalDependencies": {
         "generic-pool": "^3.9.0",
-        "vm2": "^3.9.19"
+        "vm2": "^3.9.19",
+        "denque": "^2.1.0"
     },
     "devDependencies": {
         "@babel/eslint-parser": "^7.25.9",

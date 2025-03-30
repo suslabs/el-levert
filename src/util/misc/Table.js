@@ -121,24 +121,32 @@ const TableUtil = {
             rows = [];
         }
 
-        const lineLengths = rows.map(Util.stringLength),
-            lineMax = Math.max(...lineLengths);
+        const lineMax = Util.maxLength(rows),
+            width = Math.max(Util.stringLength(heading), lineMax);
 
-        const width = Math.max(Util.stringLength(heading), lineMax);
         return Util.clamp(width, minWidth, maxWidth);
     },
 
-    padLine: (line, widths, extraSpaces) => {
-        const padded = line.map((x, i) => {
-            const str = x?.toString() ?? "";
+    padLine: (line, widths, extraSpaces, centerText) => {
+        return line.map((x, i) => {
+            const str = x?.toString() ?? "",
+                endPad = widths[i] ?? 0;
 
-            const endPad = widths[i] ?? 0,
-                startPad = str.length + extraSpaces;
+            if (centerText) {
+                const sides = endPad - str.length;
 
-            return str.padStart(startPad).padEnd(endPad);
+                if (sides <= 0) {
+                    return str;
+                }
+
+                const left = Math.floor(sides / 2),
+                    right = sides - left;
+
+                return " ".repeat(left) + str + " ".repeat(right);
+            } else {
+                return " ".repeat(extraSpaces) + str.padEnd(endPad);
+            }
         });
-
-        return padded;
     }
 };
 
@@ -197,6 +205,7 @@ class Table {
 
         this.customChars = options.customCharset;
         this.extraSpaces = options.extraSpaces ?? 0;
+        this.centerText = options.center ?? false;
         this.sideLines = options.sideLines ?? true;
     }
 
@@ -257,8 +266,8 @@ class Table {
             return 0;
         }
 
-        const rowHeights = colIds.map(id => Util.length(this.rows[id])),
-            maxHeight = Math.max(...rowHeights);
+        const allRows = colIds.map(id => this.rows[id]),
+            maxHeight = Util.maxLength(allRows, "array");
 
         this.height = maxHeight;
         return maxHeight;
@@ -318,10 +327,10 @@ class Table {
         const widths = this.columnWidths();
 
         const lines = this.getLines(),
-            paddedLines = lines.map(line => TableUtil.padLine(line, widths, this.extraSpaces, this.sideLines));
+            paddedLines = lines.map(line => TableUtil.padLine(line, widths, this.extraSpaces, this.centerText));
 
         const separate = Lines.insertSeparator(this.charset, this.sideLines),
-            separatedLines = paddedLines.map(line => separate(line).trim());
+            separatedLines = paddedLines.map(line => separate(line));
 
         return separatedLines;
     }
