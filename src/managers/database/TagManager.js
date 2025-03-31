@@ -18,8 +18,8 @@ class TagManager extends DBManager {
     static $name = "tagManager";
     static loadPriority = 0;
 
-    constructor() {
-        super(true, "tag", "tag_db", TagDatabase);
+    constructor(enabled) {
+        super(enabled, "tag", "tag_db", TagDatabase);
 
         this.maxQuota = getClient().config.maxQuota;
         this.maxTagSize = getClient().config.maxTagSize;

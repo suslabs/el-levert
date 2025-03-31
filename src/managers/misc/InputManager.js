@@ -16,10 +16,10 @@ class InputManager extends Manager {
 
         this.prompt = inputPrompt;
 
+        this.handleInput = options.handleInput;
         this.exitCommand = typeof options.exitCmd === "undefined" ? "exit" : options.exitCmd;
-        this.onExit = options.onExit?.bind(this);
+        this.onExit = options.onExit;
 
-        this._customHandleInput = null;
         this._aborter = null;
         this.rl = null;
 
@@ -45,14 +45,6 @@ class InputManager extends Manager {
         }
     }
 
-    get handleInput() {
-        return this._customHandleInput;
-    }
-
-    set handleInput(func) {
-        this._customHandleInput = func?.bind(this);
-    }
-
     load() {
         if (this.loopRunning || !this._active) {
             return;
@@ -62,12 +54,12 @@ class InputManager extends Manager {
         this._startInputLoop();
     }
 
-    unload() {
+    async unload() {
         if (!this.loopRunning) {
             return;
         }
 
-        this._stopInputLoop();
+        await this._stopInputLoop();
     }
 
     static _cleanInput(input) {
@@ -89,7 +81,7 @@ class InputManager extends Manager {
         this._loopPromise = this._runInputLoop();
     }
 
-    _stopInputLoop() {
+    async _stopInputLoop() {
         if (typeof this.onExit === "function") {
             this.onExit();
         }
@@ -108,9 +100,11 @@ class InputManager extends Manager {
     async _runInputLoop() {
         while (this.loopRunning) {
             const prompt = this.prompt + " ",
-                input = await this.rl.question(prompt, {
-                    signal: this._aborter.signal
-                });
+                input = await this.rl
+                    .question(prompt, {
+                        signal: this._aborter.signal
+                    })
+                    .catch(err => {});
 
             await this._handleInput(input);
         }
@@ -127,12 +121,12 @@ class InputManager extends Manager {
             return;
         } else if (input === this.exitCommand) {
             return this.unload();
-        } else if (typeof this._customHandleInput !== "function") {
+        } else if (typeof this.handleInput !== "function") {
             return;
         }
 
         try {
-            await this._customHandleInput(input);
+            await this.handleInput(input);
         } catch (err) {
             getLogger().error("Error occured while processing input:", err);
         }

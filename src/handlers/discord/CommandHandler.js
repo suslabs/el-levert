@@ -28,8 +28,8 @@ class CommandHandler extends MessageHandler {
     static $name = "commandHandler";
     priority = 1;
 
-    constructor() {
-        super(true, true, true, {
+    constructor(enabled) {
+        super(enabled, true, true, {
             userSweepInterval: 10 / Util.durationSeconds.milli
         });
 
@@ -49,7 +49,7 @@ class CommandHandler extends MessageHandler {
             return false;
         }
 
-        const [cmd, args] = getClient().commandManager.getCommand(msg.content, msg);
+        const [cmd, _, args] = getClient().commandManager.getCommand(msg.content, msg);
 
         if (cmd === null) {
             return false;

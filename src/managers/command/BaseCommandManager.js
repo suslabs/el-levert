@@ -157,7 +157,7 @@ class BaseCommandManager extends Manager {
     }
 
     _bindSubcommands() {
-        getLogger().debug("Loading subcommands...");
+        getLogger().info("Loading subcommands...");
 
         let total = 0,
             bound = 0;
@@ -178,8 +178,12 @@ class BaseCommandManager extends Manager {
             }
         }
 
-        if (bound > 0) {
+        if (total < 1) {
+            getLogger().info("No subcommands were found.");
+        } else if (bound > 0) {
             getLogger().info(`Loaded ${bound} subcommand(s).`);
+        } else {
+            getLogger().info("No subcommands were loaded.");
         }
 
         const unbound = total - bound;

@@ -12,12 +12,12 @@ class CommandManager extends TextCommandManager {
 
     static commandClass = Command;
 
-    constructor() {
+    constructor(enabled) {
         const commandsDir = getClient().config.commandsPath,
             commandPrefix = getClient().config.cmdPrefix,
             excludeDir = getClient().config.cliCommandsPath;
 
-        super(true, commandsDir, commandPrefix, {
+        super(enabled, commandsDir, commandPrefix, {
             excludeDirs: [excludeDir]
         });
     }

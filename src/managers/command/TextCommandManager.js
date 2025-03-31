@@ -15,21 +15,21 @@ class TextCommandManager extends BaseCommandManager {
         this.commandPrefix = commandPrefix;
     }
 
-    getCommand(str, ...etc) {
-        const content = this._getCommandContent(str, ...etc);
-
-        const [name, args] = Util.splitArgs(content),
-            cmd = this.searchCommands(name);
-
-        return [cmd, args];
-    }
-
     isCommand(str, ...etc) {
         if (str.length <= this.commandPrefix.length) {
             return false;
         }
 
         return str.startsWith(this.commandPrefix);
+    }
+
+    getCommand(str, ...etc) {
+        const content = this._getCommandContent(str, ...etc);
+
+        const [name, args] = Util.splitArgs(content),
+            cmd = this.searchCommands(name);
+
+        return [cmd, name, args];
     }
 
     getHelp(discord = false, indentation = 4, ...etc) {

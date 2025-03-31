@@ -137,10 +137,26 @@ class LevertClient extends DiscordClient {
 
         components.sort(([, a], [, b]) => a.loadPriority - b.loadPriority);
 
-        const compInstances = components
-            .filter(([compName]) => ctorArgs[compName] !== false)
-            .map(([compName, compClass]) => {
-                const compArgs = ctorArgs[compName] ?? [];
+        for (const [compName, args] of Object.entries(ctorArgs)) {
+            const _args = {
+                enabled: true,
+                args: []
+            };
+
+            if (Array.isArray(args)) {
+                _args.args = args;
+            } else if (isObject(args)) {
+                Object.assign(_args, args);
+            } else {
+                _args.enabled = args;
+            }
+
+            ctorArgs[compName] = _args;
+        }
+
+        const enabledComps = components.filter(([compName]) => ctorArgs[compName].enabled),
+            compInstances = enabledComps.map(([compName, compClass]) => {
+                const compArgs = ctorArgs[compName].args;
 
                 if (!Array.isArray(compArgs)) {
                     throw new ClientError(`Invalid constructor args for component ${compName}`);
@@ -149,22 +165,18 @@ class LevertClient extends DiscordClient {
                 return [compName, new compClass(...compArgs)];
             });
 
-        compInstances.forEach(([compName, compInst]) => {
+        for (const [compName, compInst] of compInstances) {
             if (Util.outOfRange(LevertClient.minPriority, LevertClient.maxPriority, compInst.priority)) {
                 throw new ClientError(`Invalid handler priority ${compInst.priority} for component ${compName}`);
             } else {
                 compInst.priority ??= LevertClient.minPriority;
             }
-        });
+        }
 
         const compList = compInstances.map(([, compInst]) => compInst).sort((a, b) => b.priority - a.priority);
 
         for (const compName of Object.keys(ctorArgs)) {
-            if (ctorArgs[compName] === false) {
-                continue;
-            }
-
-            if (typeof barrel[compName] === "undefined") {
+            if (ctorArgs[compName].enabled && typeof barrel[compName] === "undefined") {
                 this.logger.warn(
                     `Component "${compName}" specified in constructor args was not found in the available components.`
                 );
@@ -355,15 +367,17 @@ class LevertClient extends DiscordClient {
         this._setStarted();
         this._addDiscordTransports();
 
-        this._setupInputManager();
-
         this.logger.info("Startup complete.");
+
+        this._setupInputManager();
     }
 
     async stop(kill = false) {
         if (!this.started) {
             throw new ClientError("The bot can't be stopped if it hasn't been started already");
         }
+
+        this.inputManager.active = false;
 
         this.logger.info("Stopping bot...");
         this._removeDiscordTransports();
@@ -562,8 +576,9 @@ class LevertClient extends DiscordClient {
             {
                 commandHandler: [],
                 previewHandler: [this.config.enablePreviews],
-                reactionHandler: [this.reactions.enableReacts],
-                sedHandler: [this.config.enableSed]
+                reactionHandler: this.reactions.enableReacts,
+                sedHandler: this.config.enableSed,
+                cliCommandHandler: this.config.enableCliCommands
             },
 
             {
@@ -587,15 +602,18 @@ class LevertClient extends DiscordClient {
             tagManager: [],
             permManager: [this.config.enablePermissions],
             commandManager: [],
-            reminderManager: [this.config.enableReminders],
-            cliCommandManager: [this.config.enableCliCommands],
-            inputManager: [
-                this.config.enableCliCommands,
-                ">",
-                {
-                    exitCmd: null
-                }
-            ]
+            reminderManager: this.config.enableReminders,
+            cliCommandManager: this.config.enableCliCommands,
+            inputManager: {
+                enabled: this.config.enableCliCommands,
+                args: [
+                    undefined,
+                    ">",
+                    {
+                        exitCmd: null
+                    }
+                ]
+            }
         });
     }
 
@@ -706,7 +724,12 @@ class LevertClient extends DiscordClient {
     }
 
     _setupInputManager() {
+        if (!this.config.enableCliCommands) {
+            return;
+        }
+
         this.inputManager.active = true;
+        this.inputManager.handleInput = this.cliCommandHandler.execute;
     }
 
     _onKill() {

@@ -23,7 +23,7 @@ class Handler {
         this.unload = this._unload;
 
         this._childExecute = this.execute;
-        this.execute = this._execute;
+        this.execute = this._execute.bind(this);
     }
 
     reply(data) {}
