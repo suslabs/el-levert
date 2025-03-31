@@ -1,12 +1,12 @@
 import { ChannelType, MessageType, EmbedBuilder } from "discord.js";
 
-import Handler from "./Handler.js";
+import MessageHandler from "../MessageHandler.js";
 
-import { getClient, getLogger } from "../LevertClient.js";
+import { getClient, getLogger } from "../../LevertClient.js";
 
-import Util from "../util/Util.js";
+import Util from "../../util/Util.js";
 
-import HandlerError from "../errors/HandlerError.js";
+import HandlerError from "../../errors/HandlerError.js";
 
 function logUsage(msg) {
     getLogger().info(
@@ -29,7 +29,7 @@ function logSendTime(t1) {
     getLogger().info(`Sending replaced message took ${Util.formatNumber(Util.timeDelta(t2, t1))}ms.`);
 }
 
-class SedHandler extends Handler {
+class SedHandler extends MessageHandler {
     static $name = "sedHandler";
 
     static sedUsage = "Usage: sed/regex/replace/flags (optional)";

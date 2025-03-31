@@ -355,6 +355,8 @@ class LevertClient extends DiscordClient {
         this._setStarted();
         this._addDiscordTransports();
 
+        this._setupInputManager();
+
         this.logger.info("Startup complete.");
     }
 
@@ -538,6 +540,20 @@ class LevertClient extends DiscordClient {
         delete this._wrapEvent;
     }
 
+    _loadMessageProcessor() {
+        this._executeAllHandlers = executeAllHandlers.bind(undefined, this);
+        this.messageProcessor = new MessageProcessor(this);
+
+        this.logger.info("Loaded MessageProcessor.");
+    }
+
+    _unloadMessageProcessor() {
+        delete this._executeAllHandlers;
+        delete this.messageProcessor;
+
+        this.logger.info("Unloaded MessageProcessor.");
+    }
+
     _loadHandlers() {
         this.loadComponent(
             "handlers",
@@ -555,10 +571,7 @@ class LevertClient extends DiscordClient {
             }
         );
 
-        this._executeAllHandlers = executeAllHandlers.bind(undefined, this);
-        this.messageProcessor = new MessageProcessor(this);
-
-        this.logger.info("Loaded MessageProcessor.");
+        this._loadMessageProcessor();
     }
 
     _unloadHandlers() {
@@ -566,10 +579,7 @@ class LevertClient extends DiscordClient {
             showUnloadingMessages: false
         });
 
-        delete this._executeAllHandlers;
-        delete this.messageProcessor;
-
-        this.logger.info("Unloaded MessageProcessor.");
+        this._unloadMessageProcessor();
     }
 
     async _loadManagers() {
@@ -578,7 +588,14 @@ class LevertClient extends DiscordClient {
             permManager: [this.config.enablePermissions],
             commandManager: [],
             reminderManager: [this.config.enableReminders],
-            cliCommandManager: [this.config.enableCliCommands]
+            cliCommandManager: [this.config.enableCliCommands],
+            inputManager: [
+                this.config.enableCliCommands,
+                ">",
+                {
+                    exitCmd: null
+                }
+            ]
         });
     }
 
@@ -686,6 +703,10 @@ class LevertClient extends DiscordClient {
         } catch (err) {
             this.logger.error("Error occured while setting activity:", err);
         }
+    }
+
+    _setupInputManager() {
+        this.inputManager.active = true;
     }
 
     _onKill() {

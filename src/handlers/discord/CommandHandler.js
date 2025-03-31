@@ -1,12 +1,12 @@
 import { bold } from "discord.js";
 
-import Handler from "./Handler.js";
+import MessageHandler from "../MessageHandler.js";
 
-import { getClient, getLogger } from "../LevertClient.js";
+import { getClient, getLogger } from "../../LevertClient.js";
 
-import Util from "../util/Util.js";
-import { isObject } from "../util/misc/TypeTester.js";
-import VMUtil from "../util/vm/VMUtil.js";
+import Util from "../../util/Util.js";
+import { isObject } from "../../util/misc/TypeTester.js";
+import VMUtil from "../../util/vm/VMUtil.js";
 
 function logUsage(msg, name, args) {
     const cmdArgs = !Util.empty(args) ? ` with args:${Util.formatLog(args)}` : ".";
@@ -24,7 +24,7 @@ function logOutput(cmd, out) {
     getLogger().debug(`Command "${cmd.name}" returned:${Util.formatLog(out)}`);
 }
 
-class CommandHandler extends Handler {
+class CommandHandler extends MessageHandler {
     static $name = "commandHandler";
     priority = 1;
 

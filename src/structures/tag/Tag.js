@@ -59,11 +59,7 @@ class Tag {
     }
 
     get aliasName() {
-        if (!this.isAlias) {
-            return "";
-        }
-
-        return this.hops[1];
+        return this.isAlias ? this.hops[1] : "";
     }
 
     getHopsString() {
@@ -250,14 +246,14 @@ class Tag {
         return u_name;
     }
 
-    format() {
+    format(argsLimit = 100) {
         let format = this.name;
 
         if (this.isAlias) {
             format += ` (-> ${this.aliasName}`;
 
             if (!Util.empty(this.args)) {
-                format += `: ${this.args}`;
+                format += `: ${Util.trimString(this.args, argsLimit)}`;
             }
 
             format += ")";

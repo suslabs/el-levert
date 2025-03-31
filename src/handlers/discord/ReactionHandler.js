@@ -1,10 +1,10 @@
 import { ChannelType } from "discord.js";
 
-import Handler from "./Handler.js";
+import MessageHandler from "../MessageHandler.js";
 
-import { getClient, getLogger } from "../LevertClient.js";
+import { getClient, getLogger } from "../../LevertClient.js";
 
-import Util from "../util/Util.js";
+import Util from "../../util/Util.js";
 
 function logParensUsage(msg, parens) {
     const s = parens.total > 1 ? "e" : "i";
@@ -36,7 +36,7 @@ function logRemoveTime(t1) {
     getLogger().debug(`Removing reactions took ${Util.formatNumber(Util.timeDelta(t2, t1))}ms.`);
 }
 
-class ReactionHandler extends Handler {
+class ReactionHandler extends MessageHandler {
     static $name = "reactionHandler";
     priority = -1;
 

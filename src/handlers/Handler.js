@@ -1,12 +1,7 @@
-import MessageTracker from "./tracker/MessageTracker.js";
-import UserTracker from "./tracker/UserTracker.js";
-
-import { getLogger } from "../LevertClient.js";
-
 import HandlerError from "../errors/HandlerError.js";
 
 class Handler {
-    constructor(enabled = true, hasMessageTracker = true, hasUserTracker = false, options = {}) {
+    constructor(enabled = true, options = {}) {
         if (typeof this.constructor.$name !== "string") {
             throw new HandlerError("Handler must have a name");
         }
@@ -17,138 +12,52 @@ class Handler {
 
         this.enabled = enabled;
 
-        this.hasMessageTracker = hasMessageTracker;
-        this.hasUserTracker = hasUserTracker;
-
         this.options = options;
+
         this.priority ??= options.priority ?? 0;
+
+        this._childLoad = this.load;
+        this.load = this._load;
+
+        this._childUnload = this.unload;
+        this.unload = this._unload;
 
         this._childExecute = this.execute;
         this.execute = this._execute;
-
-        this._childDelete = this.delete;
-        this.delete = this._delete;
-
-        this._childResubmit = this.resubmit;
-        this.resubmit = this._resubmit;
     }
 
-    async reply(msg, data) {
-        const reply = await msg.reply(data);
-        this.messageTracker.addMsg(reply, msg.id);
+    reply(data) {}
+
+    _execute(...args) {
+        if (!this.enabled) {
+            return false;
+        }
+
+        return this._childExecute(...args) ?? false;
     }
 
-    load() {
+    _load(...args) {
         if (!this.enabled) {
             return;
         }
 
-        if (this.hasMessageTracker) {
-            this.messageTracker = new MessageTracker();
+        if (typeof this._childLoad !== "function") {
+            return;
         }
 
-        if (this.hasUserTracker) {
-            const userSweepInterval = this.options.userSweepInterval ?? 0;
-            this.userTracker = new UserTracker(userSweepInterval);
-        }
+        return this._childLoad(...args);
     }
 
-    unload() {
-        if (this.hasMessageTracker) {
-            this.messageTracker.clearMsgs();
-        }
-
-        if (this.hasUserTracker) {
-            this.userTracker.clearUsers();
-            this.userTracker._clearSweepInterval();
-        }
-    }
-
-    _execute(msg) {
+    _unload(...args) {
         if (!this.enabled) {
-            return false;
+            return;
         }
 
-        return this._childExecute(msg);
-    }
-
-    _delete(msg) {
-        if (!this.enabled) {
-            return false;
+        if (typeof this._childUnload !== "function") {
+            return;
         }
 
-        let deleteFunc;
-
-        if (typeof this._childDelete === "function") {
-            deleteFunc = this._childDelete;
-        } else if (this.hasMessageTracker) {
-            deleteFunc = this._msgTrackerDelete;
-        } else {
-            deleteFunc = this._defaultDelete;
-        }
-
-        deleteFunc = deleteFunc.bind(this);
-        return deleteFunc(msg);
-    }
-
-    _defaultDelete() {
-        return false;
-    }
-
-    async _msgTrackerDelete(msg) {
-        if (!this.hasMessageTracker) {
-            return false;
-        }
-
-        let sent = this.messageTracker.deleteMsg(msg.id);
-
-        if (typeof sent === "undefined") {
-            return false;
-        }
-
-        if (Array.isArray(sent)) {
-            await Promise.all(
-                sent.map(msg =>
-                    msg.delete().catch(err => {
-                        getLogger().error(`Could not delete message ${msg.id}:`, err);
-                    })
-                )
-            );
-        } else {
-            try {
-                await sent.delete();
-            } catch (err) {
-                getLogger().error(`Could not delete message: ${sent.id}`, err);
-            }
-        }
-
-        return true;
-    }
-
-    _resubmit(msg) {
-        if (!this.enabled) {
-            return false;
-        }
-
-        let resubmitFunc;
-
-        if (typeof this._childResubmit === "function") {
-            resubmitFunc = this._childResubmit;
-        } else {
-            resubmitFunc = this._defaultResubmit;
-        }
-
-        resubmitFunc = resubmitFunc.bind(this);
-        return resubmitFunc(msg);
-    }
-
-    async _defaultResubmit(msg) {
-        if (!this.enabled) {
-            return false;
-        }
-
-        await this.delete(msg);
-        return await this.execute(msg);
+        return this._childUnload(...args);
     }
 }
 
