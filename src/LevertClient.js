@@ -607,7 +607,7 @@ class LevertClient extends DiscordClient {
             inputManager: {
                 enabled: this.config.enableCliCommands,
                 args: [
-                    undefined,
+                    true,
                     ">",
                     {
                         exitCmd: null
@@ -728,8 +728,10 @@ class LevertClient extends DiscordClient {
             return;
         }
 
-        this.inputManager.active = true;
+        Util.removeItem(this.handlerList, this.cliCommandHandler);
+
         this.inputManager.handleInput = this.cliCommandHandler.execute;
+        this.inputManager.active = true;
     }
 
     _onKill() {

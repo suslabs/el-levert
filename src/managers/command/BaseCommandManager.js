@@ -14,11 +14,10 @@ import CommandError from "../../errors/CommandError.js";
 class BaseCommandManager extends Manager {
     static commandClass = BaseCommand;
 
-    constructor(enabled, commandsDir, commandPrefix, options = {}) {
+    constructor(enabled, commandsDir, options = {}) {
         super(enabled, options);
 
         this.commandsDir = commandsDir;
-        this.commandPrefix = commandPrefix;
 
         this.wrapCommands = options.wrapCommands ?? getClient().config.wrapEvents;
         this.excludeDirs = options.excludeDirs;

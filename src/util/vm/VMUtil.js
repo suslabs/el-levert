@@ -162,27 +162,57 @@ const VMUtil = {
     },
 
     indentation: 4,
-    boundary: "(<isolated-vm boundary>)",
 
-    rewriteIVMStackTrace: err => {
+    rewriteStackTrace: (err, cb) => {
+        if (typeof err.stack !== "string") {
+            return;
+        }
+
         let stackFrames = err.stack.split("\n"),
             msgLine;
 
         [msgLine, ...stackFrames] = stackFrames;
         stackFrames = stackFrames.map(frame => frame.trim());
 
-        const boundaryLine = stackFrames.findIndex(frame => frame.startsWith("at " + VMUtil.boundary));
+        const res = cb(msgLine, stackFrames) ?? true;
 
-        if (boundaryLine === -1) {
-            return err.stack;
+        if (Array.isArray(res)) {
+            [msgLine, stackFrames] = res;
+        } else if (!res) {
+            return;
         }
 
-        stackFrames = stackFrames.slice(0, boundaryLine);
+        const formattedFrames = stackFrames.map(frame => VMUtil._spaces + frame),
+            newStack = msgLine + "\n" + formattedFrames.join("\n");
 
-        const spaces = " ".repeat(VMUtil.indentation),
-            formattedFrames = stackFrames.map(frame => spaces + frame);
+        delete err.stack;
+        err.stack = newStack;
+    },
 
-        return msgLine + "\n" + formattedFrames.join("\n");
+    _boundary: "(<isolated-vm boundary>)",
+    rewriteIVMStackTrace: err => {
+        return VMUtil.rewriteStackTrace(err, (msgLine, stackFrames) => {
+            const boundaryLine = stackFrames.findIndex(frame => frame.startsWith("at " + VMUtil._boundary));
+
+            if (boundaryLine === -1) {
+                return false;
+            }
+
+            return [msgLine, stackFrames.slice(0, boundaryLine + 1)];
+        });
+    },
+
+    _repl: "REPL",
+    rewriteReplStackTrace: err => {
+        return VMUtil.rewriteStackTrace(err, (msgLine, stackFrames) => {
+            const replLine = stackFrames.findIndex(frame => frame.startsWith("at " + VMUtil._repl));
+
+            if (replLine === -1) {
+                return false;
+            }
+
+            return [msgLine, stackFrames.slice(0, replLine + 1)];
+        });
     },
 
     sockWrite: (socket, packetType, obj) => {
@@ -190,5 +220,9 @@ const VMUtil = {
         socket.write(JSON.stringify(obj) + "\n");
     }
 };
+
+{
+    VMUtil._spaces = " ".repeat(VMUtil.indentation);
+}
 
 export default VMUtil;

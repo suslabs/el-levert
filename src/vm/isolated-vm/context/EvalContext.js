@@ -116,13 +116,7 @@ class EvalContext {
                 throw err;
             }
 
-            if (typeof err.stack === "string") {
-                const newStack = VMUtil.rewriteIVMStackTrace(err);
-
-                delete err.stack;
-                err.stack = newStack;
-            }
-
+            VMUtil.rewriteIVMStackTrace(err);
             throw err;
         } finally {
             if (compileNow) {

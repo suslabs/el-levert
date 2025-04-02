@@ -1,6 +1,7 @@
 import Handler from "../Handler.js";
 
 import { getClient, getLogger } from "../../LevertClient.js";
+
 import Util from "../../util/Util.js";
 
 class CLICommandHandler extends Handler {
@@ -36,14 +37,15 @@ Use ${getClient().cliCommandManager.commandPrefix}help to get all available comm
         try {
             out = await cmd.execute(args);
         } catch (err) {
-            getLogger().error(`Encountered exception while executing command "${cmd.name}":`, err);
+            getLogger().error(
+                `Encountered exception while executing command "${cmd.name}":\n${err.stack ?? err.message}`
+            );
+
             return;
         }
 
-        if (!Util.empty(out)) {
-            this.reply("log", out);
-            return;
-        }
+        this.reply("log", out);
+        return;
     }
 }
 
