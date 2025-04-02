@@ -68,7 +68,7 @@ class SqlDatabase {
     }
 
     async close() {
-        await this._unloadQueries();
+        this._unloadQueries();
         await this.db.close();
     }
 
@@ -160,7 +160,7 @@ class SqlDatabase {
         await this._bindQueries();
     }
 
-    async _unloadQueries() {
+    _unloadQueries() {
         Util.wipeArray(this.queryList);
         Util.wipeObject(this.queryStrings, category => delete this[category]);
     }

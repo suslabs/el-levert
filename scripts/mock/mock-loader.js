@@ -27,7 +27,7 @@ function extractModuleName(specifier) {
     }
 }
 
-export async function resolve(specifier, context, nextResolve) {
+export function resolve(specifier, context, nextResolve) {
     const externalModule = context.parentURL?.includes("node_modules") ?? true;
 
     if (externalModule || MockFiles.has(context.parentURL)) {

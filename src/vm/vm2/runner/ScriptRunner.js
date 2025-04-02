@@ -87,7 +87,7 @@ async function processPacket(socket, data) {
 function listener(socket) {
     let buf = "";
 
-    const recieve = async data => {
+    const recieve = data => {
         buf += String(data);
 
         if (buf.endsWith("\n")) {

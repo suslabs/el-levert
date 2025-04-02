@@ -210,7 +210,7 @@ const Util = {
         });
     },
 
-    removeItem: (array, item, callbacl) => {
+    removeItem: (array, item, callback) => {
         let ind;
 
         if (typeof item === "function") {
@@ -223,14 +223,14 @@ const Util = {
             return false;
         }
 
-        if (typeof callbacl === "undefined") {
+        if (typeof callback === "undefined") {
             delete array[ind];
             array.splice(ind, 1);
 
             return true;
         }
 
-        const ret = callbacl(ind, array);
+        const ret = callback(ind, array);
 
         if (isPromise(ret)) {
             return ret.then(_ => true);

@@ -119,7 +119,7 @@ async function loadConfig() {
     }
 }
 
-async function loadClient(config, logger) {
+function loadClient(config, logger) {
     return new LevertClient(config, logger);
 }
 

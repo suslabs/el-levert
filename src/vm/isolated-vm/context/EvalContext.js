@@ -163,7 +163,7 @@ class EvalContext {
     }
 
     async _setInfo() {
-        this.setVMObject("util", Object, [FakeUtil.getInfo()]);
+        await this.setVMObject("util", Object, [FakeUtil.getInfo()]);
     }
 
     async _setTag(tag, args) {
