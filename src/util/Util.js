@@ -952,14 +952,13 @@ const Util = {
         return size;
     },
 
+    _quotesExp: /^(["'`])[\s\S]*\1$/,
     formatLog(str, splitLength = 80, maxLength = 1000) {
-        if (str === null) {
+        if (str == null) {
             return " none";
         }
 
         switch (typeof str) {
-            case "undefined":
-                return " none";
             case "bigint":
             case "boolean":
             case "number":
@@ -981,16 +980,13 @@ const Util = {
         }
 
         str = str.replace(/\n|\r\n/g, "\\n");
-        str = str.replaceAll("`", "\\`");
         str = Util.trimString(str, maxLength, null, true);
 
         if (str.length > splitLength) {
             return `\n---\n${str}\n---`;
         }
 
-        const quotesExp = /^(["'])[\s\S]*\1$/;
-
-        if (quotesExp.test(str)) {
+        if (Util._quotesExp.test(str)) {
             return " " + str;
         }
 

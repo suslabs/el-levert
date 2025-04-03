@@ -87,6 +87,7 @@ Subcommands:
 - list `(user)` - Lists all of your tags. If `user` is specified, their tags will be listed instead.
 - owner `(name)` - Sends the owner of tag `(name)`.
 - quota - Sends your quota, affected by `add`, `alias`, `chown`, `delete` and `edit`. If your quota reaches the limit, you will not be able to add any more tags until you free up some space.
+- random `(prefix)` - Searches for all tags that either match the given text exactly or are followed by a number and picks one at random.
 - raw `(name)` - Sends the text or source code of tag `(name)`.
 - rename `(name) (new_name)` - Renames tag `(name)` to `(new_name)` if it's owned by you or if you are a moderator.
 - search `(query) [max_results=20 / all]` - Searches the tags list for `(query)`. Matches are approximated, suspicious results are to be expected.

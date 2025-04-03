@@ -89,12 +89,12 @@ const VMUtil = {
                 return out;
             case "function":
             case "symbol":
-                return undefined;
+                return null;
             case "object":
                 try {
                     return JSON.stringify(out);
                 } catch (err) {
-                    return undefined;
+                    return null;
                 }
         }
     },

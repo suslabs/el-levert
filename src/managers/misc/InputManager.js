@@ -65,10 +65,6 @@ class InputManager extends Manager {
         await this._stopInputLoop();
     }
 
-    static _cleanInput(input) {
-        return String(input).trim();
-    }
-
     _setupReadline() {
         this._aborter = new AbortController();
 
@@ -99,22 +95,23 @@ class InputManager extends Manager {
         this._aborter = null;
     }
 
-    _readLine(prompt) {
-        return this.rl
-            .question(prompt, {
+    async _readLine(prompt) {
+        try {
+            return await this.rl.question(prompt, {
                 signal: this._aborter.signal
-            })
-            .catch(() => {});
+            });
+        } catch {}
     }
 
     _processLine(line) {
-        const endsWithTrigger = line.endsWith(this.multilineTrigger);
+        let processed = line.trimEnd(),
+            endsWithTrigger = processed.endsWith(this.multilineTrigger);
 
-        while (line.endsWith(this.multilineTrigger)) {
-            line = line.slice(0, -this.multilineTrigger.length);
+        while (processed.endsWith(this.multilineTrigger)) {
+            processed = processed.slice(0, -this.multilineTrigger.length).trimEnd();
         }
 
-        return [line, endsWithTrigger];
+        return [processed, endsWithTrigger];
     }
 
     async _readMultilineInput(firstLine) {
@@ -132,7 +129,7 @@ class InputManager extends Manager {
             input.push(next);
         }
 
-        return input.join("\n");
+        return input.join("\n").trim();
     }
 
     async _runInputLoop() {
@@ -148,7 +145,7 @@ class InputManager extends Manager {
             if (endsWithTrigger) {
                 input = await this._readMultilineInput(processed);
             } else {
-                input = processed;
+                input = processed.trimStart();
             }
 
             await this._handleInput(input);
@@ -159,8 +156,6 @@ class InputManager extends Manager {
         if (!this._active) {
             return;
         }
-
-        input = InputManager._cleanInput(input);
 
         if (Util.empty(input)) {
             return;

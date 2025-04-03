@@ -116,6 +116,7 @@ export default {
         "list",
         "owner",
         "quota",
+        "random",
         "raw",
         "rename",
         "search",
@@ -126,7 +127,7 @@ export default {
         this.parseBase = parseBase.bind(this);
     },
 
-    handler: async function (args, msg, perm) {
+    handler: async function (args, msg) {
         if (Util.empty(args)) {
             return `:information_source: ${this.getSubcmdHelp()} **tag_name** \`[tag_args]\``;
         }

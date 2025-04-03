@@ -1,0 +1,1 @@
+SELECT name FROM Tags WHERE name LIKE $prefix;

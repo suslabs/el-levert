@@ -124,6 +124,16 @@ class TagDatabase extends SqlDatabase {
         return tags;
     }
 
+    async searchPrefix(prefix) {
+        const rows = await this.tagQueries.searchPrefix.all({
+                $prefix: `${prefix}%`
+            }),
+            tags = rows.map(row => row.name);
+
+        sortTags(tags);
+        return tags;
+    }
+
     async list(user) {
         const rows = await this.tagQueries.list.all({
                 $user: user

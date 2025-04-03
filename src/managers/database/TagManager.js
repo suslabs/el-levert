@@ -350,6 +350,21 @@ class TagManager extends DBManager {
         });
     }
 
+    async random(prefix) {
+        let tags;
+
+        if (Util.empty(prefix)) {
+            tags = await this.dump();
+        } else {
+            const exp = new RegExp(`^${Util.escapeRegex(prefix)}\\d+?$`);
+
+            tags = await this.tag_db.searchPrefix(prefix);
+            tags = tags.filter(tag => exp.test(tag));
+        }
+
+        return Util.randomElement(tags) ?? null;
+    }
+
     async leaderboard(type, limit = 20) {
         let leaderboard;
 
