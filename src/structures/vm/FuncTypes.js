@@ -1,7 +1,12 @@
-const FuncTypes = {
+const FuncTypes = Object.freeze({
     regular: "applySync",
     ignored: "applyIgnored",
     syncPromise: "applySyncPromise"
-};
+});
 
-export default FuncTypes;
+const ExecutionTypes = Object.freeze({
+    script: "script",
+    bot: "bot"
+});
+
+export { FuncTypes, ExecutionTypes };

@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 
-const DatabaseUtil = {
+const DatabaseUtil = Object.freeze({
     registerEvent: (source, target, event) => {
         source.on(event, (...args) => target.emit(event, ...args));
     },
@@ -41,6 +41,6 @@ const DatabaseUtil = {
     getEventId() {
         return crypto.randomBytes(4).toString("hex");
     }
-};
+});
 
 export default DatabaseUtil;

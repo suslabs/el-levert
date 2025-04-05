@@ -1,4 +1,4 @@
-import FuncTypes from "../../../structures/vm/FuncTypes.js";
+import { FuncTypes, ExecutionTypes } from "../../../structures/vm/FuncTypes.js";
 
 import FakeMsg from "../classes/FakeMsg.js";
 import FakeUtil from "../classes/FakeUtil.js";
@@ -7,7 +7,7 @@ import FakeVM from "../classes/FakeVM.js";
 
 import ManevraError from "../functionErrors/ManevraError.js";
 
-const Functions = {
+const Functions = Object.freeze({
     msg: {
         reply: {
             type: FuncTypes.regular,
@@ -62,6 +62,10 @@ const Functions = {
         findUsers: {
             type: FuncTypes.syncPromise,
             ref: FakeUtil.findUsers
+        },
+        executeTag: {
+            ref: FakeUtil.executeTag,
+            execution: ExecutionTypes.script
         }
     },
 
@@ -71,6 +75,6 @@ const Functions = {
             ref: FakeAxios.request
         }
     }
-};
+});
 
 export default Functions;

@@ -207,7 +207,6 @@ Main differences:
 
 - `util.dumpTags` can be called with `true` to recieve a full dump
 - `msg.reply` exits the script right away
-- `util.executeTag` isn't implemented
 - `util.fetchMessage(ch_id | null, msg_id)` allows fetching a single message
 - `util.fetchMessages` accepts message fetch options
 - `util.findUserById` allows fetching a user that isn't necessarily in the same server as the bot

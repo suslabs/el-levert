@@ -3,7 +3,7 @@ import { isObject } from "./TypeTester.js";
 
 import UtilError from "../../errors/UtilError.js";
 
-const CallstackUtil = {
+const CallstackUtil = Object.freeze({
     getCallstack: () => {
         const oldLimit = Error.stackTraceLimit;
         Error.stackTraceLimit = 1000;
@@ -54,6 +54,6 @@ const CallstackUtil = {
         const callInfo = `${siteFile}:${siteIndex} (${siteFunction})`;
         return callInfo;
     }
-};
+});
 
 export default CallstackUtil;

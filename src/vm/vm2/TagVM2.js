@@ -60,14 +60,16 @@ class TagVM2 extends VM {
         this.procPool.createPool();
     }
 
-    getContext(msg, args) {
+    getContext(values = {}) {
+        const { msg, args } = values;
+
         const vmObjects = {
             msg: msg
         };
 
         if (typeof args !== "undefined") {
             vmObjects.tag = {
-                args: args.length > 0 ? args : undefined
+                args: Util.empty(args) ? undefined : args
             };
         }
 
@@ -96,8 +98,8 @@ class TagVM2 extends VM {
         }
     }
 
-    async runScript(code, msg, args) {
-        const { vmObjects, vmFuncs, outputVars } = this.getContext(msg, args),
+    async runScript(code, values) {
+        const { vmObjects, vmFuncs, outputVars } = this.getContext(values),
             formattedCode = formatCode(code);
 
         let out;

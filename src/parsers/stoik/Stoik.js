@@ -8,7 +8,7 @@ import Util from "../../util/Util.js";
 
 import StoikError from "../../errors/StoikError.js";
 
-const Stoik = {
+const Stoik = Object.freeze({
     tokenize: equation => {
         const tokens = equation.split(""),
             res = new Denque();
@@ -266,7 +266,7 @@ const Stoik = {
             return Molecule.fromElement(evaluated[1]);
         }
 
-        throw new StoikError(`Unexpected result type: ${evaluated?.constructor.name}`);
+        throw new StoikError(`Unexpected result type: ${Util.className(evaluated)}`);
     },
 
     formatEquation(lhs, rhs) {
@@ -389,6 +389,6 @@ const Stoik = {
 
         opStack.push(left);
     }
-};
+});
 
 export default Stoik;

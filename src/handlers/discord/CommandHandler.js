@@ -206,6 +206,10 @@ class CommandHandler extends MessageHandler {
     }
 
     async _addDelay(t1) {
+        if (this.minResponseTime <= 0) {
+            return;
+        }
+
         const t2 = performance.now(),
             time = Util.timeDelta(t2, t1);
 

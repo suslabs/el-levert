@@ -3,7 +3,7 @@ import Util from "../Util.js";
 import UtilError from "../../errors/UtilError.js";
 
 // prettier-ignore
-const charsets = {
+const charsets = Object.freeze({
     "light": {
         corner: {
             topLeft: "┌",
@@ -113,9 +113,9 @@ const charsets = {
             cross: "╬"
         }
     }
-}
+});
 
-const TableUtil = {
+const TableUtil = Object.freeze({
     columnWidth: (heading, rows, minWidth = 0, maxWidth = Infinity) => {
         if (rows == null) {
             rows = [];
@@ -148,9 +148,9 @@ const TableUtil = {
             }
         });
     }
-};
+});
 
-const Lines = {
+const Lines = Object.freeze({
     line: (horizontalChar, leftChar, rightChar, crossChar) => widths => {
         const segment = widths.map(w => horizontalChar.repeat(w)).join(crossChar);
         return Util.concat(leftChar, segment, rightChar);
@@ -189,7 +189,7 @@ const Lines = {
             return line.join(separator);
         }
     }
-};
+});
 
 class Table {
     static defaultStyle = "light";

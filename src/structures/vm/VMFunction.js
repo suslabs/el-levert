@@ -2,7 +2,7 @@ import Util from "../../util/Util.js";
 import getRegisterCode from "../../util/vm/getRegisterCode.js";
 import VMUtil from "../../util/vm/VMUtil.js";
 
-import FuncTypes from "./FuncTypes.js";
+import { FuncTypes, ExecutionTypes } from "./FuncTypes.js";
 
 import VMError from "../../errors/VMError.js";
 import ExitError from "../../vm/isolated-vm/functionErrors/ExitError.js";
@@ -12,6 +12,7 @@ class VMFunction {
         singleContext: true,
         parent: "",
         type: FuncTypes.regular,
+        execution: ExecutionTypes.bot,
         exits: false,
         errorClass: ExitError,
         binds: []
@@ -33,6 +34,15 @@ class VMFunction {
         }
 
         Util.setValuesWithDefaults(this, options, this.constructor.defaultValues);
+
+        switch (this.execution) {
+            case ExecutionTypes.bot:
+                this._stringFunc = false;
+                break;
+            case ExecutionTypes.script:
+                this._stringFunc = true;
+                break;
+        }
 
         if (this.singleContext) {
             this.ref = this._getRefFunc(propertyMap);
@@ -64,14 +74,16 @@ class VMFunction {
             ref = Util.bindArgs(ref, evalContext);
         }
 
-        const res = await context.evalClosure(code, [ref], VMFunction.registerOptions);
+        if (this._stringFunc) {
+            await context.evalClosure(code);
+        } else {
+            await context.evalClosure(code, [ref], VMFunction.registerOptions);
+        }
 
         if (this.singleContext) {
             this.context = evalContext;
             this.registered = true;
         }
-
-        return res;
     }
 
     _resolveReference(propertyMap) {
@@ -142,13 +154,18 @@ class VMFunction {
             type: this.type
         };
 
+        const funcOptions = {
+            stringFunc: this._stringFunc,
+            func: this._stringFunc ? this.ref : undefined
+        };
+
         const errorOptions = {};
 
         if (this.exits) {
             errorOptions.class = this.errorClass;
         }
 
-        this._registerCode = getRegisterCode(options, errorOptions);
+        this._registerCode = getRegisterCode(options, funcOptions, errorOptions);
         return this._registerCode;
     }
 }

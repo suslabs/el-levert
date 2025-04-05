@@ -103,8 +103,7 @@ class PreviewHandler extends MessageHandler {
             msgUrl.protocol = "https";
             msgUrl.hostname = "discord.com";
 
-            content += "\n\n";
-            content += hyperlink("[Jump to Message]", msgUrl.href);
+            content += "\n\n" + hyperlink("[Jump to Message]", msgUrl.href);
         }
 
         let channel = Util.formatChannelName(prevMsg.channel);

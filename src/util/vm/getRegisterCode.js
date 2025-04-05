@@ -9,16 +9,6 @@ const funcOptions = {
 
 const optionsStr = JSON.stringify(funcOptions, undefined, 4);
 
-function funcBody(type, ret) {
-    const call = Codegen.call(`$0.${type}`, ["undefined", "args", optionsStr]);
-
-    if (ret) {
-        return Codegen.return(call);
-    } else {
-        return Codegen.declaration("res", call, true);
-    }
-}
-
 function objDeclaration(objName) {
     if (Util.empty(objName)) {
         return "";
@@ -26,20 +16,6 @@ function objDeclaration(objName) {
 
     const decl = Codegen.assignment(objName, "{}");
     return Codegen.if(Codegen.isUndefined(objName), decl);
-}
-
-function funcDeclaration(objName, funcName, body) {
-    let name = funcName;
-
-    if (!Util.empty(objName)) {
-        name = Codegen.access([objName, name]);
-    }
-
-    const func = Codegen.function(null, "...args", body, {
-        arrow: true
-    });
-
-    return Codegen.assignment(name, func);
 }
 
 function classDeclaration(_class, global) {
@@ -54,38 +30,100 @@ function classDeclaration(_class, global) {
     return classCode;
 }
 
-function getRegisterCode(options, errorOptions = {}) {
-    const { objName, funcName, type } = options;
+function resultBody(call, ret, errName) {
+    if (ret) {
+        return Codegen.return(call);
+    }
 
-    const errClass = errorOptions.class,
-        useError = typeof errClass !== "undefined",
-        errAccessible = errorOptions.accessible ?? false;
+    let body = Codegen.declaration("res", call, true);
 
-    let declCode = objDeclaration(objName),
-        body = funcBody(type, !useError);
-
-    if (useError) {
-        const errName = Util.className(errClass),
-            errDecl = classDeclaration(errClass, errAccessible);
-
-        if (errAccessible) {
-            if (!Util.empty(declCode)) {
-                declCode += "\n\n";
-            }
-
-            declCode += errDecl;
-        } else {
-            body = `${errDecl}\n\n${body}`;
-        }
-
+    if (errName) {
         body += "\n\n" + Codegen.throw(errName, "res");
     }
 
-    const code = `
-${declCode}
+    return body;
+}
 
-${funcDeclaration(objName, funcName, body)}`;
+function refFuncBody(type, ret, errName) {
+    const call = Codegen.call(Codegen.access(["$0", type]), ["undefined", "args", optionsStr]);
+    return resultBody(call, ret, errName);
+}
 
+function refFuncDeclaration(objName, funcName, ret, errName, type) {
+    let name = funcName;
+
+    if (!Util.empty(objName)) {
+        name = Codegen.access([objName, name]);
+    }
+
+    const body = refFuncBody(type, ret, errName),
+        decl = Codegen.function(null, "...args", body, {
+            arrow: true
+        });
+
+    return Codegen.assignment(name, decl);
+}
+
+function stringFuncBody(name, ret, errName) {
+    const call = Codegen.call(name, ["...args"]);
+    return resultBody(call, ret, errName);
+}
+
+function stringFuncDeclaration(objName, funcName, ret, errName, func) {
+    let name = funcName;
+
+    if (!Util.empty(objName)) {
+        name = Codegen.access([objName, name]);
+    }
+
+    const funcBody = func.toString(),
+        funcDecl = funcBody.startsWith("function") ? funcBody : Codegen.declaration(func.name, funcBody, true);
+
+    const wrapperBody = stringFuncBody(func.name, ret, errName),
+        wrapperDecl = Codegen.function(null, "...args", wrapperBody, {
+            arrow: true
+        });
+
+    return [funcDecl, Codegen.assignment(name, wrapperDecl)].join("\n\n");
+}
+
+function getRegisterCode(options, funcOptions = {}, errorOptions = {}) {
+    const { objName, funcName, type } = options;
+
+    const stringFunc = funcOptions.stringFunc ?? false,
+        func = funcOptions.func;
+
+    const errClass = errorOptions.class,
+        useError = typeof errClass !== "undefined",
+        errAccessible = errorOptions.accessible ?? false,
+        errName = useError ? Util.className(errClass) : undefined;
+
+    const commonArgs = [objName, funcName, !useError, errName];
+
+    let objDeclCode = objDeclaration(objName),
+        funcDeclCode = "";
+
+    if (useError) {
+        const errDecl = classDeclaration(errClass, errAccessible);
+
+        if (errAccessible) {
+            if (!Util.empty(objDeclCode)) {
+                objDeclCode += "\n\n";
+            }
+
+            objDeclCode += errDecl;
+        } else {
+            funcDeclCode = errDecl + "\n\n";
+        }
+    }
+
+    if (stringFunc) {
+        funcDeclCode += stringFuncDeclaration(...commonArgs, func);
+    } else {
+        funcDeclCode += refFuncDeclaration(...commonArgs, type);
+    }
+
+    const code = `${objDeclCode}\n\n${funcDeclCode}`;
     return Codegen.closure(code);
 }
 

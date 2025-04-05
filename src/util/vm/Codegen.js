@@ -61,11 +61,12 @@ const Codegen = {
         return Codegen.statement(`${type} ${name} = ${value}`);
     },
 
-    assignment: (name, value) => {
+    assignment: (name, value, statement = true) => {
         name = name.toString().trim();
         value = value.toString().trim();
 
-        return Codegen.statement(`${name} = ${value}`, true);
+        const body = `${name} = ${value}`;
+        return statement ? Codegen.statement(body, true) : body;
     },
 
     string: value => {
@@ -84,6 +85,13 @@ const Codegen = {
 
         return `${char}${escaped}${char}`;
     },
+
+    array: (arr, brackets = true) => {
+        const values = arr.map(val => val.toString().trim()).join(", ");
+        return brackets ? `[${values}]` : values;
+    },
+
+    object: obj => {},
 
     equals: (name, value, flag = true, strict = true) => {
         const check = flag ? "=" : "!",
@@ -138,8 +146,7 @@ const Codegen = {
         }
 
         if (Array.isArray(value)) {
-            const values = value.map(val => val.toString().trim()).join(", ");
-            return Codegen.statement(`${name} [${values}]`);
+            return Codegen.statement(`${name} ${Codegen.array(values)}`);
         }
 
         value = value.toString().trim();
@@ -160,7 +167,7 @@ const Codegen = {
         }
 
         if (Array.isArray(msg)) {
-            value = msg.map(val => val.toString().trim()).join(", ");
+            value = Codegen.array(msg, false);
         }
 
         if (!Util.empty(err)) {
@@ -226,7 +233,7 @@ const Codegen = {
             args = [args];
         }
 
-        const values = args.map(val => val.toString().trim()).join(", ");
+        const values = Codegen.array(args, false);
         return Codegen.statement(`${name}(${values})`);
     },
 
@@ -266,11 +273,16 @@ const Codegen = {
         return header + Codegen.block(body, false);
     },
 
+    getObject: code => {
+        return new Function(Codegen.return(code))();
+    },
+
     _statementExp: /[\s\S]*[\w\d$_)\]]$/
 };
 
 {
     Codegen.indentation = 4;
+
     Codegen._undef = Codegen.string("undefined");
 }
 

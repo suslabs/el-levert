@@ -9,7 +9,7 @@ import { getClient } from "../../../LevertClient.js";
 import Util from "../../../util/Util.js";
 import VMUtil from "../../../util/vm/VMUtil.js";
 
-const FakeUtil = {
+const FakeUtil = Object.freeze({
     getInfo: _ => ({
         version: getClient().version,
         env: `El Levert ${getClient().version}`,
@@ -24,6 +24,10 @@ const FakeUtil = {
     delay: Util.delay,
 
     fetchTag: async name => {
+        if (getClient().tagManager.checkName(name)) {
+            return null;
+        }
+
         let tag = await getClient().tagManager.fetch(name);
 
         if (tag === null) {
@@ -121,7 +125,35 @@ const FakeUtil = {
 
         users = users.map(user => new FakeUser(user).fixedUser);
         return new ExternalCopy(users).copyInto();
+    },
+
+    executeTag: (name, args) => {
+        // eslint-disable-next-line
+        const tag = util.fetchTag(name);
+
+        if (tag === null) {
+            throw new Error(`Tag ${name} doesn't exist`);
+        }
+
+        if ((tag.type & 2) === 0) {
+            return tag.body;
+        }
+
+        const evalArgs = (args ? String(args) + " " : "") + tag.args;
+
+        const oldTag = globalThis.tag,
+            newTag = {
+                name,
+                args: evalArgs.length < 1 ? undefined : evalArgs
+            };
+
+        try {
+            globalThis.tag = newTag;
+            return Function("code", "return eval(code);")(tag.body);
+        } finally {
+            globalThis.tag = oldTag;
+        }
     }
-};
+});
 
 export default FakeUtil;

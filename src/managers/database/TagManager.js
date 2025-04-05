@@ -91,7 +91,7 @@ class TagManager extends DBManager {
         return lastTag;
     }
 
-    async execute(tag, args, ...extra) {
+    async execute(tag, args, ...values) {
         if (tag.isAlias && !tag._fetched) {
             tag = await this.fetchAlias(tag);
         }
@@ -101,7 +101,7 @@ class TagManager extends DBManager {
         if (type === TagTypes.textType) {
             return tag.body;
         } else if (TagTypes.scriptTypes.includes(type)) {
-            return await this._runScriptTag(tag, type, args, ...extra);
+            return await this._runScriptTag(tag, type, args, ...values);
         } else {
             throw new TagError("Invalid tag type");
         }
@@ -442,7 +442,7 @@ class TagManager extends DBManager {
     }
 
     async _runScriptTag(tag, type, args, msg) {
-        const evalArgs = args + tag.args;
+        const evalArgs = (args ? String(args) + " " : "") + tag.args;
 
         switch (type) {
             case "ivm":
@@ -456,7 +456,7 @@ class TagManager extends DBManager {
                     throw new TagError("Can't execute script tag. isolated-vm isn't enabled");
                 }
 
-                return await ivm.runScript(tag.body, msg, tag, evalArgs);
+                return await ivm.runScript(tag.body, { msg, tag, args: evalArgs });
             case "vm2":
                 const vm2 = getClient().tagVM2;
 
@@ -468,7 +468,7 @@ class TagManager extends DBManager {
                     throw new TagError("Can't execute script tag. vm2 isn't enabled");
                 }
 
-                return await vm2.runScript(tag.body, msg, evalArgs);
+                return await vm2.runScript(tag.body, { msg, args: evalArgs });
         }
     }
 

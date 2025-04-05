@@ -1,4 +1,4 @@
-const DatabaseEvents = {
+const DatabaseEvents = Object.freeze({
     trace: "trace",
     profile: "profile",
     change: "change",
@@ -6,6 +6,6 @@ const DatabaseEvents = {
     open: "open",
     close: "close",
     promiseError: "promiseError"
-};
+});
 
 export default DatabaseEvents;

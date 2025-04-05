@@ -1,6 +1,6 @@
 import UtilError from "../../errors/UtilError.js";
 
-const CleanroomUtil = {
+const CleanroomUtil = Object.freeze({
     minSize: 3,
     maxSize: 15,
 
@@ -31,6 +31,6 @@ const CleanroomUtil = {
 
         return { frame, walls, filters };
     }
-};
+});
 
 export default CleanroomUtil;

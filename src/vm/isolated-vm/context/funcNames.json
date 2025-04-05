@@ -14,7 +14,8 @@
         "fetchMessage": "fetchMessage",
         "fetchMessages": "fetchMessages",
         "findUserById": "findUserById",
-        "findUsers": "findUsers"
+        "findUsers": "findUsers",
+        "executeTag": "executeTag"
     },
     "http": {
         "request": "request"

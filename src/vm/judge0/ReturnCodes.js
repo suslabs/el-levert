@@ -1,4 +1,4 @@
-const ReturnCodes = {
+const ReturnCodes = Object.freeze({
     1: "In Queue",
     2: "Processing",
     3: "Accepted",
@@ -13,6 +13,6 @@ const ReturnCodes = {
     12: "Runtime Error (Other)",
     13: "Internal Error",
     14: "Exec Format Error"
-};
+});
 
 export default ReturnCodes;

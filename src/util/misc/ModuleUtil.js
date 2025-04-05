@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { isPromise } from "node:util/types";
 
-const ModuleUtil = {
+const ModuleUtil = Object.freeze({
     compileExports: (barrel, nameField = "$name") => {
         let obj = {},
             i = 1;
@@ -75,6 +75,6 @@ const ModuleUtil = {
             this[newName] = new_class;
         }
     }
-};
+});
 
 export default ModuleUtil;

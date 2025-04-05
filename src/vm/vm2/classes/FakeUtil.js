@@ -3,7 +3,7 @@ import { getClient } from "../../../LevertClient.js";
 import Util from "../../../util/Util.js";
 import VMUtil from "../../../util/vm/VMUtil.js";
 
-const FakeUtil = {
+const FakeUtil = Object.freeze({
     reply: (reply, text, options) => {
         const format = VMUtil.formatReply(text, options);
 
@@ -37,6 +37,6 @@ const FakeUtil = {
 
         return tag;
     }
-};
+});
 
 export default FakeUtil;

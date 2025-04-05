@@ -42,7 +42,7 @@ class TagVM extends VM {
         this.enableInspector = getClient().config.enableInspector;
     }
 
-    async runScript(code, msg, tag, args) {
+    async runScript(code, values) {
         const t1 = performance.now();
         logUsage(code);
 
@@ -51,7 +51,7 @@ class TagVM extends VM {
             return ":no_entry_sign: Inspector is already connected.";
         }
 
-        const context = await this._getContext(msg, tag, args);
+        const context = await this._getContext(values);
 
         try {
             const out = await context.runScript(code);
@@ -103,7 +103,7 @@ class TagVM extends VM {
         this._inspectorServer = server;
     }
 
-    async _getContext(msg, tag, args) {
+    async _getContext(values) {
         const context = new EvalContext(
             {
                 memLimit: this.memLimit,
@@ -115,7 +115,7 @@ class TagVM extends VM {
             }
         );
 
-        await context.getIsolate({ msg, tag, args });
+        await context.getIsolate(values);
         this._inspectorServer?.setContext(context);
 
         return context;

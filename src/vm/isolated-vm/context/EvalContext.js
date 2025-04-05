@@ -43,10 +43,9 @@ class EvalContext {
         this._vmObjects = [];
     }
 
-    async getIsolate(options) {
+    async getIsolate(values = {}) {
         if (typeof this.isolate === "undefined") {
-            const { msg, tag, args } = options;
-            await this._setupIsolate(msg, tag, args);
+            await this._setupIsolate(values);
         }
 
         return this.isolate;
@@ -186,7 +185,9 @@ class EvalContext {
         }
     }
 
-    async _setupContext(msg, tag, args) {
+    async _setupContext(values) {
+        const { msg, tag, args } = values;
+
         this.context = await this.isolate.createContext({
             inspector: this.enableInspector
         });
@@ -202,13 +203,13 @@ class EvalContext {
         await this._registerFuncs();
     }
 
-    async _setupIsolate(msg, tag, args) {
+    async _setupIsolate(values) {
         this.isolate = new Isolate({
             memoryLimit: this.memLimit,
             inspector: this.enableInspector
         });
 
-        await this._setupContext(msg, tag, args);
+        await this._setupContext(values);
         this.inspector.create(this.isolate);
     }
 

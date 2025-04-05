@@ -1,4 +1,4 @@
-const TokenType = {
+const TokenType = Object.freeze({
     GroupLeft: "GroupLeft",
     GroupRight: "GroupRight",
     Number: "Number",
@@ -8,9 +8,9 @@ const TokenType = {
     Coefficient: "Coefficient",
     Subscript: "Subscript",
     Join: "Join"
-};
+});
 
-const TokenNames = {
+const TokenNames = Object.freeze({
     [TokenType.GroupLeft]: "left parenthesis",
     [TokenType.GroupRight]: "right parenthesis",
     [TokenType.Number]: "number",
@@ -20,9 +20,9 @@ const TokenNames = {
     [TokenType.Coefficient]: "coefficient",
     [TokenType.Subscript]: "subscript",
     [TokenType.Join]: "join"
-};
+});
 
-const TokenOps = {
+const TokenOps = Object.freeze({
     [TokenType.GroupLeft]: "(",
     [TokenType.GroupRight]: ")",
     [TokenType.Number]: "number",
@@ -32,14 +32,14 @@ const TokenOps = {
     [TokenType.Coefficient]: "^",
     [TokenType.Subscript]: "_",
     [TokenType.Join]: "j"
-};
+});
 
-const Precedence = {
+const Precedence = Object.freeze({
     [TokenType.Subscript]: 3,
     [TokenType.Add]: 2,
     [TokenType.Coefficient]: 1,
     [TokenType.Join]: 0,
     [TokenType.Subtract]: 0
-};
+});
 
 export { TokenType, TokenNames, TokenOps, Precedence };

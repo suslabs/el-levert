@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const FakeAxios = {
+const FakeAxios = Object.freeze({
     request: async (...args) => {
         const res = await axios.request.apply(this, args);
 
@@ -11,6 +11,6 @@ const FakeAxios = {
             headers: res.headers
         };
     }
-};
+});
 
 export default FakeAxios;

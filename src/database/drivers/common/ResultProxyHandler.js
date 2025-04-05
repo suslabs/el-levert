@@ -3,7 +3,7 @@ import { dataProps, infoProps, passthroughProps, targetProp } from "./ResultProp
 
 import Util from "../../../util/Util.js";
 
-const ResultProxyHandler = {
+const ResultProxyHandler = Object.freeze({
     get: (target, prop) => {
         if (passthroughProps.includes(prop)) {
             return target[prop];
@@ -93,6 +93,6 @@ const ResultProxyHandler = {
 
         return dataProp;
     }
-};
+});
 
 export default ResultProxyHandler;

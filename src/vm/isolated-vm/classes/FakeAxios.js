@@ -14,7 +14,7 @@ async function request(...args) {
     }
 }
 
-const FakeAxios = {
+const FakeAxios = Object.freeze({
     request: async config => {
         let res = await request.apply(this, [config]);
 
@@ -25,6 +25,6 @@ const FakeAxios = {
             headers: res.headers
         }).copyInto();
     }
-};
+});
 
 export default FakeAxios;

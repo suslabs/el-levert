@@ -433,6 +433,17 @@ const Util = {
         return str.slice(0, i) + replacement + str.slice(i + length);
     },
 
+    randomString: n => {
+        const alphabet = Util.alphanumeric,
+            result = Array(n);
+
+        for (let i = 0; i < n; i++) {
+            result[i] = alphabet[~~(Math.random() * alphabet.length)];
+        }
+
+        return result.join("");
+    },
+
     clamp: (x, a, b) => {
         a ??= -Infinity;
         b ??= Infinity;
@@ -1134,9 +1145,7 @@ const Util = {
     className: obj => {
         if (obj == null) {
             return "";
-        }
-
-        if (typeof obj === "function") {
+        } else if (typeof obj === "function") {
             obj = obj.prototype;
         }
 
