@@ -112,7 +112,7 @@ class CommandHandler extends MessageHandler {
         const msgRes = isObject(res),
             str = VMUtil.formatOutput(msgRes ? res.content : res)?.trim();
 
-        let out = msgRes ? res : {};
+        let out = msgRes ? (({ content, ...rest }) => rest)(res) : {};
 
         if (Util.overSizeLimits(str, this.outCharLimit, this.outLineLimit)) {
             const files = Util.getFileAttach(str).files;
@@ -160,9 +160,7 @@ class CommandHandler extends MessageHandler {
             return str;
         }
 
-        const codeblockRanges = Array.from(str.matchAll(Util.codeblockRegex)).map(match => {
-            return [match.index, match.index + match.length];
-        });
+        const codeblockRanges = Util.findCodeblocks(str);
 
         return str.replaceAll(CommandHandler._mentionRegex, (match, p1, offset) => {
             for (const [start, end] of codeblockRanges) {

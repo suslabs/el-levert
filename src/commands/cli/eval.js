@@ -13,11 +13,9 @@ export default {
             return "Can't eval an empty expression.";
         }
 
-        const out = await replEval(args, {
+        return await replEval(args, {
             getClient,
             Util
         });
-
-        return VMUtil.formatOutput(out);
     }
 };

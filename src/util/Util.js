@@ -425,12 +425,14 @@ const Util = {
         return concatenated.join("");
     },
 
-    removeRangeStr: (str, i, length = 1) => {
-        return str.slice(0, i) + str.slice(i + length);
+    removeRangeStr: (str, i, length = 1, end = false) => {
+        const last = end ? length : i + length;
+        return str.slice(0, i) + str.slice(last);
     },
 
-    replaceRangeStr: (str, replacement, i, length = 1) => {
-        return str.slice(0, i) + replacement + str.slice(i + length);
+    replaceRangeStr: (str, replacement, i, length = 1, end = false) => {
+        const last = end ? length : i + length;
+        return str.slice(0, i) + replacement + str.slice(last);
     },
 
     randomString: n => {
@@ -655,6 +657,11 @@ const Util = {
     },
 
     codeblockRegex: /(?<!\\)(?:`{3}([\S]+\n)?([\s\S]*?)`{3}|`([^`\n]+)`)/g,
+
+    findCodeblocks: str => {
+        const matches = str.matchAll(Util.codeblockRegex);
+        return Array.from(matches).map(match => [match.index, match.index + match[0].length]);
+    },
 
     parseScript: script => {
         const match = script.match(Util.parseScriptRegex);

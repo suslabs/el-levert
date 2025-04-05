@@ -5,6 +5,7 @@ import MessageHandler from "../MessageHandler.js";
 import { getClient, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import normalizeText from "../../util/misc/normalizeText.js";
 
 function logParensUsage(msg, parens) {
     const s = parens.total > 1 ? "e" : "i";
@@ -50,18 +51,26 @@ class ReactionHandler extends MessageHandler {
 
     async execute(msg) {
         if (msg.channel.type === ChannelType.DM) {
-            return;
+            return false;
         }
 
-        const reacted = await this._funnyReact(msg);
+        let content = msg.content;
+
+        const codeblockRanges = Util.findCodeblocks(content);
+
+        for (const range of codeblockRanges) {
+            content = Util.removeRangeStr(content, ...range, true);
+        }
+
+        let reacted = await this._funnyReact(content, msg);
 
         if (reacted && !this.multipleReacts) {
-            return;
+            return true;
+        } else if (this.enableParens) {
+            reacted ||= await this._parensReact(content, msg);
         }
 
-        if (this.enableParens) {
-            await this._parensReact(msg);
-        }
+        return reacted;
     }
 
     async removeReacts(msg) {
@@ -170,8 +179,8 @@ class ReactionHandler extends MessageHandler {
             return parens;
         }
 
-        let clean = str.replace(ReactionHandler._emojiExpRight, match => " ".repeat(match.length));
-        clean = clean.replace(ReactionHandler._emojiExpLeft, match => " ".repeat(match.length));
+        let clean = str.replace(ReactionHandler._emojiExpRight, " ");
+        clean = clean.replace(ReactionHandler._emojiExpLeft, " ");
 
         let open = 0,
             closed = 0;
@@ -201,10 +210,10 @@ class ReactionHandler extends MessageHandler {
         return parens;
     }
 
-    async _parensReact(msg) {
+    async _parensReact(content, msg) {
         const t1 = performance.now();
 
-        const parens = this._countUnmatchedParens(msg.content);
+        const parens = this._countUnmatchedParens(content);
 
         if (parens.total < 1) {
             return false;
@@ -237,7 +246,7 @@ class ReactionHandler extends MessageHandler {
     }
 
     _getWordCounts(str) {
-        str = str.toLowerCase().normalize("NFKD");
+        str = normalizeText(str);
         const foundWords = this._wordList.map(word => [word, str.indexOf(word)]).filter(x => x[1] >= 0);
 
         if (Util.empty(foundWords)) {
@@ -313,10 +322,9 @@ class ReactionHandler extends MessageHandler {
         }
     }
 
-    async _funnyReact(msg) {
-        const t1 = performance.now();
-
-        const words = this._getWordCounts(msg.content);
+    async _funnyReact(content, msg) {
+        const t1 = performance.now(),
+            words = this._getWordCounts(content);
 
         if (words === null) {
             return false;
