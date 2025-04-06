@@ -17,7 +17,7 @@ export default {
 
         const err = getClient().tagManager.checkName(prefix);
 
-        if (err ?? e2) {
+        if (err !== null) {
             return ":warning: " + err;
         }
 

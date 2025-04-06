@@ -69,18 +69,22 @@ class CommandHandler extends MessageHandler {
     async _executeAndReply(cmd, msg, args) {
         const t1 = performance.now();
 
-        let out;
+        let out,
+            execErr = null;
 
         try {
             const [res] = await this._executeCommand(cmd, msg, args);
+
             out = this._processResult(res);
             this._stripPings(out);
-
-            await this._addDelay(t1);
         } catch (err) {
-            await this._addDelay(t1);
+            execErr = err;
+        }
 
-            await this._handleExecutionError(err, msg, cmd);
+        await this._addDelay(t1);
+
+        if (execErr !== null) {
+            await this._handleExecutionError(execErr, msg, cmd);
             return;
         }
 

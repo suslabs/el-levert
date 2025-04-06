@@ -146,7 +146,7 @@ const Codegen = {
         }
 
         if (Array.isArray(value)) {
-            return Codegen.statement(`${name} ${Codegen.array(values)}`);
+            return Codegen.statement(`${name} ${Codegen.array(value)}`);
         }
 
         value = value.toString().trim();

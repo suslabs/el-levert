@@ -11,7 +11,7 @@ const emptyCommand = {
 
 const builtinCommands = ["help", "break", "clear", "editor", "help", "load", "save"];
 
-async function replEval(code, context = {}) {
+function replEval(code, context = {}) {
     code = code.replace(/^\s*\.(?=\w)/gm, "//.");
 
     const input = new PassThrough(),

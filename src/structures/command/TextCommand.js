@@ -145,7 +145,7 @@ class TextCommand extends BaseCommand {
         return this._formatSubcmdHelp(subcmds, discord);
     }
 
-    async execute(args, ...extra) {
+    async execute(args, ...etc) {
         if (this.isHelpCall(args)) {
             return this.getHelpText();
         }
@@ -155,11 +155,11 @@ class TextCommand extends BaseCommand {
                 subCmd = this.getSubcmd(subName);
 
             if (subCmd !== null) {
-                return await subCmd.execute(subArgs, ...extra);
+                return await subCmd.execute(subArgs, ...etc);
             }
         }
 
-        return await super.execute(args, ...extra);
+        return await super.execute(args, ...etc);
     }
 
     _formatSubcmdHelp(subcmds, discord) {
