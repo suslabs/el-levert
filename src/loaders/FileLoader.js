@@ -2,6 +2,8 @@ import path from "node:path";
 
 import Loader from "./Loader.js";
 
+import LoadStatus from "./LoadStatus.js";
+
 class FileLoader extends Loader {
     constructor(name, filePath, logger, options = {}) {
         super(name, logger, {
@@ -10,6 +12,7 @@ class FileLoader extends Loader {
         });
 
         this.path = filePath;
+        this.sync = this.options.sync ?? false;
     }
 
     set path(val) {
@@ -25,22 +28,14 @@ class FileLoader extends Loader {
     }
 
     load() {
-        const err = this._checkPath();
-
-        if (err !== null) {
-            return err;
-        }
+        return this._checkPath();
     }
 
     write() {
-        const err = this._checkPath();
-
-        if (err !== null) {
-            return err;
-        }
+        return this._checkPath();
     }
 
-    _checkPath() {
+    _pathError() {
         switch (typeof this._path) {
             case "string":
                 return null;
@@ -49,6 +44,13 @@ class FileLoader extends Loader {
             default:
                 return this.failure("Invalid file path");
         }
+    }
+
+    _checkPath() {
+        const err = this._pathError(),
+            status = err === null ? LoadStatus.successful : err;
+
+        return this.sync ? status : Promise.resolve(status);
     }
 }
 

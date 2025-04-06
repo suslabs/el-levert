@@ -236,9 +236,9 @@ class LevertClient extends DiscordClient {
                     await compRes;
                     compLoaded(compName, compInst);
                 })();
+            } else {
+                compLoaded(compName, compInst);
             }
-
-            compLoaded(compName, compInst);
         });
 
         if (isPromise(res)) {
@@ -246,9 +246,9 @@ class LevertClient extends DiscordClient {
                 await res;
                 loadFinished();
             })();
+        } else {
+            loadFinished();
         }
-
-        loadFinished();
     }
 
     unloadComponent(name, options = {}) {
@@ -323,9 +323,9 @@ class LevertClient extends DiscordClient {
                     await compRes;
                     compUnloaded(compName);
                 })();
+            } else {
+                compUnloaded(compName);
             }
-
-            compUnloaded(compName);
         });
 
         if (isPromise(res)) {
@@ -333,9 +333,9 @@ class LevertClient extends DiscordClient {
                 await res;
                 unloadFinished();
             })();
+        } else {
+            unloadFinished();
         }
-
-        unloadFinished();
     }
 
     async start() {

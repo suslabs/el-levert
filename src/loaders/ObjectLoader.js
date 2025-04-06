@@ -15,7 +15,15 @@ class ObjectLoader extends FileLoader {
     }
 
     async load() {
-        super.load();
+        if (this.sync) {
+            return this.failure("ObjectLoader doesn't support sync mode");
+        }
+
+        const status = super.load();
+
+        if (status === LoadStatus.failed) {
+            return status;
+        }
 
         const object = await Util.import(this._path, this.cache);
 

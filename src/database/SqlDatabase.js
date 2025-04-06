@@ -123,13 +123,13 @@ class SqlDatabase {
     async _readDirectory(dirPath) {
         const dirName = path.basename(dirPath);
 
-        await DirectoryLoader.listFilesRecursive(dirPath, Infinity, async itemPath => {
+        await DirectoryLoader.listFilesRecursiveAsync(dirPath, Infinity, async itemPath => {
             await this._readQuery(itemPath, dirName);
         });
     }
 
     async _readQueries() {
-        await DirectoryLoader.listFilesRecursive(this.queryPath, 1, async (itemPath, type) => {
+        await DirectoryLoader.listFilesRecursiveAsync(this.queryPath, 1, async (itemPath, type) => {
             if (type === "directory") {
                 await this._readDirectory(itemPath);
             } else {

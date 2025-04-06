@@ -1,14 +1,14 @@
 import path from "node:path";
 import Ajv from "ajv";
 
-import TextFileLoader from "./TextFileLoader.js";
+import TextLoader from "./TextLoader.js";
 
 import Util from "../util/Util.js";
 
 import LoadStatus from "./LoadStatus.js";
 import WriteMode from "./WriteMode.js";
 
-class JsonLoader extends TextFileLoader {
+class JsonLoader extends TextLoader {
     static ajvOptions = {
         allowUnionTypes: true
     };
@@ -19,6 +19,7 @@ class JsonLoader extends TextFileLoader {
             ...options
         });
 
+        this.sync = options.sync ?? false;
         this.validateWithSchema = options.validateWithSchema ?? false;
         this.forceSchemaValidation = options.forceSchemaValidation ?? true;
 
@@ -37,63 +38,6 @@ class JsonLoader extends TextFileLoader {
         this._schemaPath = JsonLoader._getSchemaPath(val, this.options);
     }
 
-    async load() {
-        let status;
-
-        status = await this._read();
-
-        if (status === LoadStatus.failed) {
-            return status;
-        }
-
-        status = this._parse();
-
-        if (status === LoadStatus.failed) {
-            return status;
-        }
-
-        if (this.validateWithSchema) {
-            await this._loadSchema();
-        }
-
-        status = this.validate(this.data);
-
-        if (status === LoadStatus.failed) {
-            return status;
-        } else {
-            this.logger?.debug(`Validated ${this.getName()}.`);
-        }
-
-        return status;
-    }
-
-    async write(data, options = {}, mode = WriteMode.replace) {
-        switch (mode) {
-            case WriteMode.append:
-                return await this.append(data, options);
-        }
-
-        let status = this.validate(data);
-
-        if (status === LoadStatus.failed) {
-            return status;
-        }
-
-        const jsonData = this.stringifyData(data, options);
-        return await super.write(jsonData);
-    }
-
-    async append(data, options = {}) {
-        let status = await this.load();
-
-        if (status === LoadStatus.failed) {
-            return status;
-        }
-
-        const newData = { ...this.data, ...data };
-        return await this.write(newData);
-    }
-
     stringifyData(data, options) {
         const stringify = options.stringify ?? this.customStringify,
             replacer = options.replacer ?? this.replacer,
@@ -108,6 +52,40 @@ class JsonLoader extends TextFileLoader {
         }
 
         return jsonData;
+    }
+
+    load() {
+        const res = super.load();
+
+        if (this.sync) {
+            if (res === LoadStatus.failed) {
+                return res;
+            }
+
+            return this._loadJson();
+        } else {
+            return res.then(status => {
+                if (status === LoadStatus.failed) {
+                    return status;
+                }
+
+                return this._loadJson();
+            });
+        }
+    }
+
+    write(data, options = {}, mode = WriteMode.replace) {
+        if (mode === WriteMode.append) {
+            return this.append(data, options);
+        }
+
+        const status = this.validate(data);
+
+        if (status === LoadStatus.failed) {
+            return this.sync ? status : Promise.resolve(status);
+        }
+
+        return this._writeJson(data, options);
     }
 
     static _ajv = new Ajv(JsonLoader.ajvOptions);
@@ -144,40 +122,40 @@ class JsonLoader extends TextFileLoader {
         return schemaPath;
     }
 
-    async _read() {
-        const status = await super.load();
+    _parse() {
+        try {
+            this.data = JSON.parse(this._jsonString);
+            return LoadStatus.successful;
+        } catch (err) {
+            return this.failure(err, `Error occured while parsing ${this.getName()}:`);
+        }
+    }
+
+    _loadJson() {
+        this._jsonString = this.data;
+        this.data = null;
+
+        const status = this._parse();
 
         if (status === LoadStatus.failed) {
             return status;
         }
 
-        this._jsonString = this.data;
-        this.data = null;
-
-        return LoadStatus.successful;
-    }
-
-    _parse() {
-        let obj;
-
-        try {
-            obj = JSON.parse(this._jsonString);
-        } catch (err) {
-            return this.failure(`Error occured while parsing ${this.getName()}: ${err.message}`);
+        if (!this.validateWithSchema) {
+            return this.validate(this.data);
         }
 
-        this.data = obj;
-        return LoadStatus.successful;
+        const res = this._loadSchema();
+
+        if (this.sync) {
+            return this.validate(this.data);
+        } else {
+            return res.then(() => this.validate(this.data));
+        }
     }
 
-    async _loadSchemaFile() {
-        const schemaOptions = {
-            type: "json_file",
-            throwOnFailure: this.throwOnFailure
-        };
-
-        const schemaLoader = new TextFileLoader("schema", this._schemaPath, this.logger, schemaOptions),
-            [schemaString, status] = await schemaLoader.load();
+    _handleSchemaLoad(res) {
+        const [schemaString, status] = res;
 
         if (status === LoadStatus.failed) {
             return status;
@@ -187,19 +165,45 @@ class JsonLoader extends TextFileLoader {
         return LoadStatus.successful;
     }
 
-    async _loadSchema() {
+    _loadSchemaFile() {
+        const schemaOptions = {
+            type: "json_file",
+
+            throwOnFailure: this.throwOnFailure,
+            sync: this.sync
+        };
+
+        const schemaLoader = new TextLoader("schema", this._schemaPath, this.logger, schemaOptions),
+            res = schemaLoader.load();
+
+        if (this.sync) {
+            return this._handleSchemaLoad(res);
+        } else {
+            return res.then(res => this._handleSchemaLoad(res));
+        }
+    }
+
+    _loadSchema() {
         if (typeof this._schemaPath === "string") {
-            this._schemaLoadStatus = await this._loadSchemaFile();
+            const res = this._loadSchemaFile();
+
+            if (this.sync) {
+                this._schemaLoadStatus = res;
+            } else {
+                return res.then(status => (this._schemaLoadStatus = status));
+            }
         } else if (typeof this.schema === "undefined") {
-            this._schemaLoadStatus = this.failure("No schema provided.");
+            this._schemaLoadStatus = this.failure("No schema provided");
         } else {
             this._schemaLoadStatus = LoadStatus.successful;
         }
+
+        return this.sync ? undefined : Promise.resolve();
     }
 
     _initValidator() {
         if (typeof this.schema === "undefined") {
-            return this.failure("Can't initialize validator, no schema provided.");
+            return this.failure("Can't initialize validator, no schema provided");
         }
 
         if (typeof this._ajvValidate !== "undefined") {
@@ -217,20 +221,15 @@ class JsonLoader extends TextFileLoader {
         return LoadStatus.successful;
     }
 
-    _removeValidator() {
-        if (typeof this.schema === "undefined") {
-            return;
-        }
-
-        JsonLoader._ajv.removeSchema(this.schema.$id);
-    }
-
     _schemaValidate(data) {
-        if (this._schemaLoadStatus === LoadStatus.failed || this._initValidator() === LoadStatus.failed) {
+        const schemaStatus = this._schemaLoadStatus,
+            status = schemaStatus === LoadStatus.failed ? schemaStatus : this._initValidator();
+
+        if (status === LoadStatus.failed) {
             if (this.forceSchemaValidation) {
                 return [false, undefined];
             } else {
-                this.logger?.warn("Schema validation skipped.");
+                this.logger?.warn("Schema validation skipped");
                 return [true, undefined];
             }
         }
@@ -238,11 +237,7 @@ class JsonLoader extends TextFileLoader {
         const valid = this._ajvValidate(data),
             errors = this._ajvValidate.errors;
 
-        if (valid) {
-            return [valid, undefined];
-        } else {
-            return [valid, errors];
-        }
+        return [valid, valid ? undefined : errors];
     }
 
     _validate(data) {
@@ -280,6 +275,18 @@ class JsonLoader extends TextFileLoader {
         }
 
         return LoadStatus.successful;
+    }
+
+    _writeJson(data, options) {
+        const jsonData = this.stringifyData(data, options);
+
+        return super.write(jsonData);
+    }
+
+    _handleAppend(data, options) {
+        const newData = { ...this.data, ...data };
+
+        return this.write(newData, options);
     }
 }
 

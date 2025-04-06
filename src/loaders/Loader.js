@@ -91,7 +91,7 @@ class Loader {
 
     _loadSync(status) {
         if (status === LoadStatus.failed) {
-            return [undefined, status];
+            return [null, status];
         }
 
         let ignored = status === LoadStatus.ignore,

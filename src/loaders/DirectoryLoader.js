@@ -1,4 +1,5 @@
-import fs from "node:fs/promises";
+import fs from "node:fs";
+import fsPromises from "node:fs/promises";
 import path from "node:path";
 
 import Loader from "./Loader.js";
@@ -9,17 +10,48 @@ import Util from "../util/Util.js";
 import LoadStatus from "./LoadStatus.js";
 
 class DirectoryLoader extends Loader {
-    static async listFilesRecursive(dirPath, maxDepth = Infinity, callback) {
+    static listFilesRecursiveSync(dirPath, maxDepth = Infinity, callback) {
         const files = [],
             stack = [{ path: dirPath, depth: 1 }];
 
         while (stack.length) {
             const { path: currentDir, depth } = stack.pop(),
-                items = await fs.readdir(currentDir);
+                items = fs.readdirSync(currentDir);
 
             for (const item of items) {
                 const itemPath = path.join(currentDir, item),
-                    stat = await fs.stat(itemPath);
+                    stat = fs.statSync(itemPath);
+
+                if (stat.isDirectory() && depth < maxDepth) {
+                    stack.push({
+                        path: itemPath,
+                        depth: depth + 1
+                    });
+                } else if (!stat.isDirectory()) {
+                    files.push(itemPath);
+                }
+
+                if (typeof callback === "function") {
+                    const type = stat.isDirectory() ? "directory" : "file";
+                    callback(itemPath, type);
+                }
+            }
+        }
+
+        return files;
+    }
+
+    static async listFilesRecursiveAsync(dirPath, maxDepth = Infinity, callback) {
+        const files = [],
+            stack = [{ path: dirPath, depth: 1 }];
+
+        while (stack.length) {
+            const { path: currentDir, depth } = stack.pop(),
+                items = await fsPromises.readdir(currentDir);
+
+            for (const item of items) {
+                const itemPath = path.join(currentDir, item),
+                    stat = await fsPromises.stat(itemPath);
 
                 if (stat.isDirectory() && depth < maxDepth) {
                     stack.push({
@@ -47,13 +79,14 @@ class DirectoryLoader extends Loader {
         });
 
         this.dirPath = dirPath;
-        this._logName = this.name ?? "file";
+        this._logName = this.name || "file";
 
         this.maxDepth = options.maxDepth ?? Infinity;
         this.excludeDirs = (options.excludeDirs ?? []).map(dir => path.resolve(projRoot, dir));
         this.fileExtension = options.fileExtension ?? "any";
 
         this.fileLoaderClass = options.fileLoaderClass ?? FileLoader;
+        this.sync = options.sync ?? false;
     }
 
     set dirPath(val) {
@@ -68,42 +101,12 @@ class DirectoryLoader extends Loader {
         return this._dirPath;
     }
 
-    async load(options = {}) {
-        const err = this._checkPath();
-
-        if (err !== null) {
-            return err;
-        }
-
-        let status = await this._loadFilePaths();
-
-        if (status === LoadStatus.failed) {
-            return status;
-        }
-
-        if (Util.empty(this.files)) {
-            return this.failure(`Couldn't find any ${this._logName}s.`);
-        }
-
-        this.deleteAllData();
-
+    load(options = {}) {
         let ok = 0,
             bad = 0;
 
-        for (const file of this.files) {
-            const loadArgs = this._getLoadArgs(file, options),
-                loader = new this.fileLoaderClass(...loadArgs);
-
-            let data;
-
-            try {
-                [data, status] = await loader.load();
-            } catch (err) {
-                this.failure(err, `Error occured while loading ${this._logName}: ` + file);
-
-                bad++;
-                continue;
-            }
+        const handleResult = (res, file, loader) => {
+            const [data, status] = res;
 
             switch (status) {
                 case LoadStatus.successful:
@@ -116,52 +119,88 @@ class DirectoryLoader extends Loader {
                     bad++;
                     break;
             }
-        }
-
-        const total = ok + bad;
-
-        if (total === 0) {
-            return this.failure(`Couldn't load any ${this._logName}s.`);
-        } else {
-            this.logger?.info(`Loaded ${total} ${this._logName}(s). ${ok} successful, ${bad} failed.`);
-        }
-
-        this.result = {
-            ok,
-            bad,
-            total
         };
 
-        return LoadStatus.successful;
+        const handleError = (err, file) => {
+            this.failure(err, `Error occurred while loading ${this._logName}: ${file}`);
+            bad++;
+        };
+
+        const processFile = file => {
+            const loadArgs = this._getLoadArgs(file, options),
+                loader = new this.fileLoaderClass(...loadArgs);
+
+            if (this.sync) {
+                try {
+                    const res = loader.load();
+                    handleResult(res, file, loader);
+                } catch (err) {
+                    handleError(err, file);
+                }
+            } else {
+                return loader
+                    .load()
+                    .then(res => handleResult(res, file, loader))
+                    .catch(err => handleError(err, file));
+            }
+        };
+
+        const doLoad = () => {
+            this.deleteAllData();
+
+            if (this.sync) {
+                for (const file of this.files) {
+                    processFile(file);
+                }
+            } else {
+                return this.files.reduce((promise, file) => promise.then(() => processFile(file)), Promise.resolve());
+            }
+        };
+
+        const finalize = this._finalizeResult.bind(this, "load", "loaded");
+
+        let res = this._checkPath();
+
+        if (this.sync) {
+            if (res === LoadStatus.failed) {
+                return res;
+            }
+
+            res = this._loadFilePaths();
+            if (res === LoadStatus.failed) {
+                return res;
+            }
+
+            doLoad();
+            return finalize(ok, bad);
+        } else {
+            return res.then(status => {
+                if (status === LoadStatus.failed) {
+                    return status;
+                }
+
+                res = this._loadFilePaths();
+                return res.then(status => {
+                    if (status === LoadStatus.failed) {
+                        return status;
+                    }
+
+                    return doLoad().then(() => finalize(ok, bad));
+                });
+            });
+        }
     }
 
-    async write(data) {
+    write(data) {
         if (!this.loaded) {
-            return this.failure("The directory needs to be loaded before files can be written");
+            const failure = this.failure("The directory needs to be loaded before files can be written");
+            return this.sync ? failure : Promise.resolve(failure);
         }
 
         let ok = 0,
             bad = 0;
 
-        for (const filename of Object.keys(data)) {
-            const loader = this.loaders[filename],
-                fileData = data[filename];
-
-            if (typeof loader === "undefined") {
-                this.logger?.warn(`Can't write ${filename}: ${this._logName} isn't loaded.`);
-            }
-
-            let status;
-
-            try {
-                status = await loader[filename].write(fileData);
-            } catch (err) {
-                this.failure(err, `Error occured while writing ${this._logName}: ` + filename);
-
-                bad++;
-                continue;
-            }
-
+        const handleResult = status => {
             switch (status) {
                 case LoadStatus.successful:
                     ok++;
@@ -170,29 +209,77 @@ class DirectoryLoader extends Loader {
                     bad++;
                     break;
             }
-        }
-
-        const total = ok + bad;
-
-        if (total === 0) {
-            return this.failure(`Couldn't write any ${this._logName}s.`);
-        } else {
-            this.logger?.info(`Wrote ${total} ${this._logName}(s). ${ok} successful, ${bad} failed.`);
-        }
-
-        this.result = {
-            ok,
-            bad,
-            total
         };
 
-        return LoadStatus.successful;
+        const handleError = (err, filename) => {
+            this.failure(err, `Error occurred while writing ${this._logName}: ${filename}`);
+            bad++;
+        };
+
+        const processFile = filename => {
+            const loader = this.loaders.get(filename),
+                fileData = data[filename];
+
+            if (typeof loader === "undefined") {
+                this.logger?.warn(`Can't write ${filename}: ${this._logName} isn't loaded.`);
+                return;
+            }
+
+            if (this.sync) {
+                try {
+                    handleResult(loader.write(fileData));
+                } catch (err) {
+                    handleError(err, filename);
+                }
+            } else {
+                return loader
+                    .write(fileData)
+                    .then(handleResult)
+                    .catch(err => handleError(err, filename));
+            }
+        };
+
+        const doWrite = () => {
+            const filenames = Object.keys(data);
+
+            if (this.sync) {
+                for (const filename of filenames) {
+                    processFile(filename);
+                }
+            } else {
+                return filenames.reduce(
+                    (promise, filename) => promise.then(() => processFile(filename)),
+                    Promise.resolve()
+                );
+            }
+        };
+
+        const finalize = this._finalizeResult.bind(this, "write", "wrote");
+
+        const res = this._checkPath();
+
+        if (this.sync) {
+            if (res === LoadStatus.failed) {
+                return res;
+            }
+
+            doWrite();
+            return finalize(ok, bad);
+        } else {
+            return res.then(status => {
+                if (status === LoadStatus.failed) {
+                    return status;
+                }
+
+                return doWrite().then(() => finalize(ok, bad));
+            });
+        }
     }
 
     getLoader(data, errorIfNotFound = false) {
         let dataLoader;
 
-        for (const loader of this.loaders.data()) {
+        for (const loader of this.loaders.values()) {
             if (loader.getData() === data) {
                 dataLoader = loader;
                 break;
@@ -245,9 +332,7 @@ class DirectoryLoader extends Loader {
 
         if (this.data instanceof Map) {
             dataDeleted = this.data.delete(path);
-        }
-
-        if (Array.isArray(this.data)) {
+        } else if (Array.isArray(this.data)) {
             dataDeleted = Util.removeItem(this.data, data);
         }
 
@@ -272,7 +357,7 @@ class DirectoryLoader extends Loader {
         }
     }
 
-    _checkPath() {
+    _pathError() {
         switch (typeof this._dirPath) {
             case "string":
                 return null;
@@ -283,32 +368,51 @@ class DirectoryLoader extends Loader {
         }
     }
 
-    async _loadFilePaths() {
+    _checkPath() {
+        const err = this._pathError(),
+            status = err === null ? LoadStatus.successful : err;
+
+        return this.sync ? status : Promise.resolve(status);
+    }
+
+    _loadFilePaths() {
         this.logger?.debug(`Reading ${this.getName()}...`);
 
         if (typeof this._dirPath !== "string") {
-            return this.failure(`Invalid ${this.getName()}`);
+            const failure = this.failure(`Invalid ${this.getName()}`);
+            return this.sync ? failure : Promise.resolve(failure);
         }
 
-        let files;
-
-        try {
-            files = await DirectoryLoader.listFilesRecursive(this._dirPath, this.maxDepth);
-        } catch (err) {
-            if (err.code === "ENOENT") {
-                return this.failure(`Couldn't find the ${this.getName()}`);
-            } else {
-                return this.failure(err, `Error occured while reading ${this.getName()}:`);
+        if (this.sync) {
+            try {
+                const files = DirectoryLoader.listFilesRecursiveSync(this._dirPath, this.maxDepth);
+                return this._handleListSuccess(files);
+            } catch (err) {
+                return this._handleListError(err);
             }
+        } else {
+            return DirectoryLoader.listFilesRecursiveAsync(this._dirPath, this.maxDepth)
+                .then(files => this._handleListSuccess(files))
+                .catch(err => this._handleListError(err));
         }
+    }
 
-        files = files.filter(file => !this.excludeDirs.some(excludeDir => file.startsWith(excludeDir)));
+    _handleListError(err) {
+        if (err.code === "ENOENT") {
+            return this.failure(`Couldn't find the ${this.getName()}`);
+        } else {
+            return this.failure(err, `Error occured while reading ${this.getName()}:`);
+        }
+    }
+
+    _handleListSuccess(files) {
+        let filtered = files.filter(file => !this.excludeDirs.some(excludeDir => file.startsWith(excludeDir)));
 
         if (this.fileExtension !== "any") {
-            files = files.filter(file => path.extname(file) === this.fileExtension);
+            filtered = filtered.filter(file => path.extname(file) === this.fileExtension);
         }
 
-        this.files = files;
+        this.files = filtered;
 
         this.logger?.debug(`Read ${this.getName()}.`);
         return LoadStatus.successful;
@@ -317,20 +421,43 @@ class DirectoryLoader extends Loader {
     _getLoadArgs(path, options) {
         const throwOnFailure = options.throwOnFailure ?? this.throwOnFailure;
 
-        let loadArgs = [path, this.logger];
+        const loadArgs = [path, this.logger];
 
         if (typeof options.loaderName !== "undefined") {
-            loadArgs = [options.loaderName].concat(loadArgs);
+            loadArgs.unshift(options.loaderName);
             delete options.loaderName;
         }
 
         loadArgs.push({
             ...options,
+
             throwOnFailure,
+            sync: this.sync,
+
             parent: this
         });
 
         return loadArgs;
+    }
+
+    _finalizeResult(name1, name2, ok, bad) {
+        const total = ok + bad;
+
+        if (total === 0) {
+            return this.failure(`Couldn't ${name1} any ${this._logName}s.`);
+        } else {
+            this.logger?.info(
+                `${Util.capitalize(name2)} ${total} ${this._logName}(s). ${ok} successful, ${bad} failed.`
+            );
+        }
+
+        this.result = {
+            ok,
+            bad,
+            total
+        };
+
+        return LoadStatus.successful;
     }
 }
 
