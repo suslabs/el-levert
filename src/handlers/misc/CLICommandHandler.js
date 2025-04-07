@@ -2,8 +2,6 @@ import Handler from "../Handler.js";
 
 import { getClient, getLogger } from "../../LevertClient.js";
 
-import Util from "../../util/Util.js";
-
 class CLICommandHandler extends Handler {
     static $name = "cliCommandHandler";
 

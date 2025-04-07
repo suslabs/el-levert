@@ -4,6 +4,7 @@ import path from "node:path";
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import ParserUtil from "../../util/commands/ParserUtil.js";
 
 export default {
     name: "massadd",
@@ -16,8 +17,8 @@ export default {
             return `:information_source: ${this.getArgsHelp("tag_prefix owner input_dir")}`;
         }
 
-        let [tagPrefix, split1] = Util.splitArgs(args),
-            [owner, inputDir] = Util.splitArgs(split1);
+        let [tagPrefix, split1] = ParserUtil.splitArgs(args),
+            [owner, inputDir] = ParserUtil.splitArgs(split1);
 
         inputDir = path.resolve(projRoot, inputDir);
         const files = fs.readdirSync(inputDir);

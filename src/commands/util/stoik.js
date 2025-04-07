@@ -1,7 +1,8 @@
-import { codeBlock, EmbedBuilder } from "discord.js";
+import { EmbedBuilder } from "discord.js";
 
-import Util from "../../util/Util.js";
 import ModuleUtil from "../../util/misc/ModuleUtil.js";
+import Util from "../../util/Util.js";
+import ParserUtil from "../../util/commands/ParserUtil.js";
 
 import { drawTable } from "../../util/misc/Table.js";
 
@@ -28,7 +29,7 @@ function formatError(err) {
     }
 
     const { idx, type, token, after, for: _for } = err.ref,
-        [word] = Util.splitArgs(err.message);
+        [word] = ParserUtil.splitArgs(err.message);
 
     let out = `${word} **${type}**`;
 
@@ -72,7 +73,7 @@ export default {
     enabled: Stoik !== null,
 
     handler: args => {
-        const [left, right] = Util.splitArgs(args, false, {
+        const [left, right] = ParserUtil.splitArgs(args, false, {
             sep: ["=", "->"]
         });
 

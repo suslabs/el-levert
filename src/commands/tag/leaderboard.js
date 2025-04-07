@@ -3,6 +3,7 @@ import { EmbedBuilder } from "discord.js";
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import ParserUtil from "../../util/commands/ParserUtil.js";
 
 const leaderboardTypes = ["count", "size"];
 
@@ -40,7 +41,7 @@ export default {
             return `:information_source: ${this.getArgsHelp(`(count/size) [limit <= ${maxLimit}]`)}`;
         }
 
-        const [l_type, l_str] = Util.splitArgs(args, true);
+        const [l_type, l_str] = ParserUtil.splitArgs(args, true);
 
         if (!leaderboardTypes.includes(l_type)) {
             return ":warning: Invalid leaderboard type.";

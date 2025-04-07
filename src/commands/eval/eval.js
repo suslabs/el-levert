@@ -1,13 +1,14 @@
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import DiscordUtil from "../../util/DiscordUtil.js";
 
 async function evalBase(args, msg) {
-    let body = args;
+    let body;
 
     if (!Util.empty(msg.attachments)) {
         try {
-            [body] = await getClient().tagManager.downloadBody(msg);
+            [body] = await getClient().tagManager.downloadBody(null, msg);
         } catch (err) {
             if (err.name === "TagError") {
                 return {
@@ -20,12 +21,12 @@ async function evalBase(args, msg) {
                 body: null,
                 err: {
                     content: ":no_entry_sign: Downloading attachment failed:",
-                    ...Util.getFileAttach(err.stack, "error.js")
+                    ...DiscordUtil.getFileAttach(err.stack, "error.js")
                 }
             };
         }
     } else {
-        [, body] = Util.parseScript(body);
+        [, body] = DiscordUtil.parseScript(args);
     }
 
     if (Util.empty(body)) {
@@ -76,7 +77,7 @@ async function altevalBase(args, msg, lang) {
         case 6:
             return {
                 content: ":no_entry_sign: Script compilation failed:",
-                ...Util.getFileAttach(evalOut.compileOutput, "compile_error.js")
+                ...DiscordUtil.getFileAttach(evalOut.compileOutput, "compile_error.js")
             };
         default:
             return `:no_entry_sign: ${getClient().externalVM.codes[resCode]}.`;

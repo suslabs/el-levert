@@ -1,5 +1,5 @@
 class FakeVM {
-    constructor(isolate) {
+    constructor() {
         this.vmProps = {};
     }
 

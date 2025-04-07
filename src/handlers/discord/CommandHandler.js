@@ -5,14 +5,16 @@ import MessageHandler from "../MessageHandler.js";
 import { getClient, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-import { isObject } from "../../util/misc/TypeTester.js";
+import TypeTester from "../../util/TypeTester.js";
+import DiscordUtil from "../../util/DiscordUtil.js";
 import VMUtil from "../../util/vm/VMUtil.js";
+import LoggerUtil from "../../util/LoggerUtil.js";
 
 function logUsage(msg, name, args) {
-    const cmdArgs = !Util.empty(args) ? ` with args:${Util.formatLog(args)}` : ".";
+    const cmdArgs = !Util.empty(args) ? ` with args:${LoggerUtil.formatLog(args)}` : ".";
 
     getLogger().info(
-        `User ${msg.author.id} (${msg.author.username}) used command "${name}" in channel ${msg.channel.id} (${Util.formatChannelName(msg.channel)})${cmdArgs}`
+        `User ${msg.author.id} (${msg.author.username}) used command "${name}" in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)})${cmdArgs}`
     );
 }
 
@@ -21,7 +23,7 @@ function logTime(time) {
 }
 
 function logOutput(cmd, out) {
-    getLogger().debug(`Command "${cmd.name}" returned:${Util.formatLog(out)}`);
+    getLogger().debug(`Command "${cmd.name}" returned:${LoggerUtil.formatLog(out)}`);
 }
 
 class CommandHandler extends MessageHandler {
@@ -113,13 +115,12 @@ class CommandHandler extends MessageHandler {
     }
 
     _processResult(res) {
-        const msgRes = isObject(res),
+        const msgRes = TypeTester.isObject(res),
             str = VMUtil.formatOutput(msgRes ? res.content : res)?.trim();
+        let out = msgRes ? (({ content: _, ...rest }) => rest)(res) : {};
 
-        let out = msgRes ? (({ content, ...rest }) => rest)(res) : {};
-
-        if (Util.overSizeLimits(str, this.outCharLimit, this.outLineLimit)) {
-            const files = Util.getFileAttach(str).files;
+        if (TypeTester.overSizeLimits(str, this.outCharLimit, this.outLineLimit)) {
+            const files = DiscordUtil.getFileAttach(str).files;
             out.files = out.files ? [...files, ...out.files] : files;
         } else {
             out.content = str;
@@ -136,7 +137,7 @@ class CommandHandler extends MessageHandler {
         }
 
         for (const [i, embed] of out.embeds.entries()) {
-            const oversized = Util.overSizeLimits(embed, this.outCharLimit, this.outLineLimit);
+            const oversized = TypeTester.overSizeLimits(embed, this.outCharLimit, this.outLineLimit);
 
             if (!oversized) {
                 continue;
@@ -164,7 +165,7 @@ class CommandHandler extends MessageHandler {
             return str;
         }
 
-        const codeblockRanges = Util.findCodeblocks(str);
+        const codeblockRanges = DiscordUtil.findCodeblocks(str);
 
         return str.replaceAll(CommandHandler._mentionRegex, (match, p1, offset) => {
             for (const [start, end] of codeblockRanges) {
@@ -227,7 +228,7 @@ class CommandHandler extends MessageHandler {
         try {
             await this.reply(msg, {
                 content: `:no_entry_sign: Encountered exception while executing command ${bold(cmd.name)}:`,
-                ...Util.getFileAttach(err.stack ?? err.toString(), "error.js")
+                ...DiscordUtil.getFileAttach(err.stack ?? err.toString(), "error.js")
             });
         } catch (err) {
             getLogger().error("Reporting error failed:", err);
@@ -244,7 +245,7 @@ class CommandHandler extends MessageHandler {
         try {
             await this.reply(msg, {
                 content: ":no_entry_sign: Encountered exception while sending reply:",
-                ...Util.getFileAttach(err.stack, "error.js")
+                ...DiscordUtil.getFileAttach(err.stack, "error.js")
             });
         } catch (err) {
             getLogger().error("Reporting error failed:", err);

@@ -1,6 +1,7 @@
 import { TimestampStyles, time, bold } from "discord.js";
 
 import Util from "../util/Util.js";
+import ObjectUtil from "../util/ObjectUtil.js";
 
 class Reminder {
     static defaultValues = {
@@ -11,7 +12,7 @@ class Reminder {
     };
 
     constructor(data) {
-        Util.setValuesWithDefaults(this, data, this.constructor.defaultValues);
+        ObjectUtil.setValuesWithDefaults(this, data, this.constructor.defaultValues);
     }
 
     get hasMessage() {

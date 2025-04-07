@@ -64,7 +64,7 @@ class TagVM2 extends VM {
         const { msg, args } = values;
 
         const vmObjects = {
-            msg: msg
+            msg
         };
 
         if (typeof args !== "undefined") {

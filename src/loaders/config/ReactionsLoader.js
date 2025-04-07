@@ -1,6 +1,6 @@
 import BaseConfigLoader from "./BaseConfigLoader.js";
 
-import { isObject } from "../../util/misc/TypeTester.js";
+import TypeTester from "../../util/TypeTester.js";
 
 class ReactionsLoader extends BaseConfigLoader {
     constructor(logger, options) {
@@ -8,11 +8,11 @@ class ReactionsLoader extends BaseConfigLoader {
     }
 
     modify(config) {
-        if (!isObject(config.parens)) {
+        if (!TypeTester.isObject(config.parens)) {
             config.parens = {};
         }
 
-        if (!isObject(config.funnyWords)) {
+        if (!TypeTester.isObject(config.funnyWords)) {
             config.funnyWords = {};
         }
     }

@@ -1,6 +1,5 @@
-import { getClient } from "../../LevertClient.js";
-
-import Util from "../../util/Util.js";
+import ArrayUtil from "../../util/ArrayUtil.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
 
 import CommandError from "../../errors/CommandError.js";
 
@@ -26,7 +25,7 @@ class BaseCommand {
         this.isSubcmd = options.subcommand ?? false;
         delete options.subcommand;
 
-        Util.setValuesWithDefaults(this, options, this.constructor.defaultValues);
+        ObjectUtil.setValuesWithDefaults(this, options, this.constructor.defaultValues);
 
         this.subcmds = new Map();
         this.bound = false;
@@ -85,7 +84,7 @@ class BaseCommand {
             throw new CommandError("Only parent commands can have subcommands");
         }
 
-        Util.wipeArray(this.subcommands);
+        ArrayUtil.wipeArray(this.subcommands);
         this.subcmds.clear();
     }
 

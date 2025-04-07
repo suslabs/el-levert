@@ -1,6 +1,7 @@
 import { inlineCode } from "discord.js";
 
 import Util from "../../util/Util.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
 
 class User {
     static defaultValues = {
@@ -11,7 +12,7 @@ class User {
     };
 
     constructor(data) {
-        Util.setValuesWithDefaults(this, data, this.constructor.defaultValues);
+        ObjectUtil.setValuesWithDefaults(this, data, this.constructor.defaultValues);
     }
 
     setUserId(id) {

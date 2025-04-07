@@ -1,6 +1,6 @@
 import { getClient } from "../../../LevertClient.js";
 
-import Util from "../../../util/Util.js";
+import DiscordUtil from "../../../util/DiscordUtil.js";
 import VMUtil from "../../../util/vm/VMUtil.js";
 
 const FakeUtil = Object.freeze({
@@ -8,7 +8,7 @@ const FakeUtil = Object.freeze({
         const format = VMUtil.formatReply(text, options);
 
         if (typeof format.file !== "undefined") {
-            Object.assign(format, Util.getFileAttach(format.file.data, format.file.name));
+            Object.assign(format, DiscordUtil.getFileAttach(format.file.data, format.file.name));
         }
 
         reply.reply = format;

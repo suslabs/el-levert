@@ -16,6 +16,7 @@ import globalNames from "./globalNames.json" assert { type: "json" };
 import funcNames from "./funcNames.json" assert { type: "json" };
 
 import Util from "../../../util/Util.js";
+import ArrayUtil from "../../../util/ArrayUtil.js";
 import VMUtil from "../../../util/vm/VMUtil.js";
 
 import VMError from "../../../errors/VMError.js";
@@ -219,7 +220,7 @@ class EvalContext {
     }
 
     _disposeVMObjects() {
-        Util.wipeArray(this._vmObjects, obj => {
+        ArrayUtil.wipeArray(this._vmObjects, obj => {
             if (typeof obj.name !== "undefined") {
                 delete this[obj.name];
             }

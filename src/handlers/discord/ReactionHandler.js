@@ -5,19 +5,22 @@ import MessageHandler from "../MessageHandler.js";
 import { getClient, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import RegexUtil from "../../util/misc/RegexUtil.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
+import DiscordUtil from "../../util/DiscordUtil.js";
 import normalizeText from "../../util/misc/normalizeText.js";
 
 function logParensUsage(msg, parens) {
     const s = parens.total > 1 ? "e" : "i";
 
     getLogger().info(
-        `Reacting with ${parens.total} parenthes${s}s to message sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${Util.formatChannelName(msg.channel)}).`
+        `Reacting with ${parens.total} parenthes${s}s to message sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)}).`
     );
 }
 
 function logWordsUsage(msg, words) {
     getLogger().info(
-        `Reacting to word(s): "${words.join('", "')}" sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${Util.formatChannelName(msg.channel)}).`
+        `Reacting to word(s): "${words.join('", "')}" sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)}).`
     );
 }
 
@@ -28,7 +31,7 @@ function logReactTime(t1) {
 
 function logRemove(msg, count) {
     getLogger().debug(
-        `Removing ${count} reactions from message ${msg.id} sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${Util.formatChannelName(msg.channel)}).`
+        `Removing ${count} reactions from message ${msg.id} sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)}).`
     );
 }
 
@@ -56,7 +59,7 @@ class ReactionHandler extends MessageHandler {
 
         let content = msg.content;
 
-        const codeblockRanges = Util.findCodeblocks(content);
+        const codeblockRanges = DiscordUtil.findCodeblocks(content);
 
         for (const range of codeblockRanges) {
             content = Util.removeRangeStr(content, ...range, true);
@@ -105,8 +108,8 @@ class ReactionHandler extends MessageHandler {
         this._setParens();
     }
 
-    static _emojiExpRight = new RegExp(`[${Util.escapeCharClass(this.emojiChars)}][()]+`, "g");
-    static _emojiExpLeft = new RegExp(`[()]+[${Util.escapeCharClass(this.emojiChars)}]`, "g");
+    static _emojiExpRight = new RegExp(`[${RegexUtil.escapeCharClass(this.emojiChars)}][()]+`, "g");
+    static _emojiExpLeft = new RegExp(`[()]+[${RegexUtil.escapeCharClass(this.emojiChars)}]`, "g");
 
     static _getWordList(funnyWords) {
         let wordList = [];
@@ -285,7 +288,7 @@ class ReactionHandler extends MessageHandler {
             return null;
         }
 
-        Util.wipeObject(counts, (_, count) => count === 0);
+        ObjectUtil.wipeObject(counts, (_, count) => count === 0);
         return counts;
     }
 

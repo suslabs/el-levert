@@ -1,6 +1,7 @@
 import { EmbedBuilder } from "discord.js";
 
 import Util from "../../util/Util.js";
+import TypeTester from "../../util/TypeTester.js";
 import OCUtil from "../../util/commands/OCUtil.js";
 
 import { drawTable } from "../../util/misc/Table.js";
@@ -65,7 +66,7 @@ function parseInput(split) {
     }
 
     for (const [name, bound] of Object.entries(bounds)) {
-        if (Util.outOfRange(name, ...bound, recipe)) {
+        if (TypeTester.outOfRange(name, ...bound, recipe)) {
             return null;
         }
     }

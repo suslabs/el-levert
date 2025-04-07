@@ -3,6 +3,7 @@ import BaseCommandManager from "./BaseCommandManager.js";
 import TextCommand from "../../structures/command/TextCommand.js";
 
 import Util from "../../util/Util.js";
+import ParserUtil from "../../util/commands/ParserUtil.js";
 
 import categoryNames from "./categoryNames.json" assert { type: "json" };
 
@@ -26,7 +27,7 @@ class TextCommandManager extends BaseCommandManager {
     getCommand(str, ...etc) {
         const content = this._getCommandContent(str, ...etc);
 
-        const [name, args] = Util.splitArgs(content),
+        const [name, args] = ParserUtil.splitArgs(content),
             cmd = this.searchCommands(name);
 
         return [cmd, name, args];

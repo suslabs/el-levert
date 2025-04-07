@@ -6,6 +6,7 @@ import Loader from "./Loader.js";
 import FileLoader from "./FileLoader.js";
 
 import Util from "../util/Util.js";
+import ArrayUtil from "../util/ArrayUtil.js";
 
 import LoadStatus from "./LoadStatus.js";
 
@@ -153,7 +154,7 @@ class DirectoryLoader extends Loader {
                     processFile(file);
                 }
             } else {
-                return this.files.reduce((promise, file) => promise.then(() => processFile(file)), Promise.resolve());
+                return this.files.reduce((promise, file) => promise.then(_ => processFile(file)), Promise.resolve());
             }
         };
 
@@ -185,7 +186,7 @@ class DirectoryLoader extends Loader {
                         return status;
                     }
 
-                    return doLoad().then(() => finalize(ok, bad));
+                    return doLoad().then(_ => finalize(ok, bad));
                 });
             });
         }
@@ -248,7 +249,7 @@ class DirectoryLoader extends Loader {
                 }
             } else {
                 return filenames.reduce(
-                    (promise, filename) => promise.then(() => processFile(filename)),
+                    (promise, filename) => promise.then(_ => processFile(filename)),
                     Promise.resolve()
                 );
             }
@@ -271,7 +272,7 @@ class DirectoryLoader extends Loader {
                     return status;
                 }
 
-                return doWrite().then(() => finalize(ok, bad));
+                return doWrite().then(_ => finalize(ok, bad));
             });
         }
     }
@@ -333,7 +334,7 @@ class DirectoryLoader extends Loader {
         if (this.data instanceof Map) {
             dataDeleted = this.data.delete(path);
         } else if (Array.isArray(this.data)) {
-            dataDeleted = Util.removeItem(this.data, data);
+            dataDeleted = ArrayUtil.removeItem(this.data, data);
         }
 
         if (errorIfNotFound && !dataDeleted) {
@@ -406,7 +407,7 @@ class DirectoryLoader extends Loader {
     }
 
     _handleListSuccess(files) {
-        let filtered = files.filter(file => !this.excludeDirs.some(excludeDir => file.startsWith(excludeDir)));
+        let filtered = files.filter(file => !Util.hasPrefix(this.excludeDirs, file));
 
         if (this.fileExtension !== "any") {
             filtered = filtered.filter(file => path.extname(file) === this.fileExtension);

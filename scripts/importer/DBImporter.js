@@ -4,6 +4,9 @@ import Tag from "./mock/FakeTag.js";
 import { TagTypes } from "../../src/structures/tag/TagTypes.js";
 
 import Util from "../../src/util/Util.js";
+import TypeTester from "../../src/util/TypeTester.js";
+import ArrayUtil from "../../src/util/ArrayUtil.js";
+import DiscordUtil from "../../src/util/DiscordUtil.js";
 
 import TagCommand from "../../src/commands/tag/tag.js";
 
@@ -113,7 +116,7 @@ class DBImporter {
     };
 
     static _parseTag(data) {
-        const [isScript, body] = Util.parseScript(data.body),
+        const [isScript, body] = DiscordUtil.parseScript(data.body),
             type = isScript ? TagTypes.defaultScriptType : TagTypes.textType;
 
         const tag = new Tag({
@@ -147,7 +150,7 @@ class DBImporter {
     }
 
     _validTag(data) {
-        if (!Util.validateProps(data, DBImporter._requiredTagProps)) {
+        if (!TypeTester.validateProps(data, DBImporter._requiredTagProps)) {
             return false;
         }
 
@@ -177,7 +180,7 @@ class DBImporter {
 
         let [data] = await loader.load();
         data = data.filter(data => this._validTag(data));
-        data = Util.unique(data, "name");
+        data = ArrayUtil.unique(data, "name");
 
         const oldDefault = TagTypes.defaultVersion;
         TagTypes.defaultVersion = TagTypes.versionTypes[0];

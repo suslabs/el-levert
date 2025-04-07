@@ -6,6 +6,8 @@ import Reminder from "../../structures/Reminder.js";
 import { getClient, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import TypeTester from "../../util/TypeTester.js";
+import LoggerUtil from "../../util/LoggerUtil.js";
 
 import ReminderError from "../../errors/ReminderError.js";
 
@@ -35,7 +37,7 @@ class ReminderManager extends DBManager {
     }
 
     checkMessage(msg) {
-        const oversized = Util.overSizeLimits(msg, this.maxMsgLength, 1);
+        const oversized = TypeTester.overSizeLimits(msg, this.maxMsgLength, 1);
 
         if (!oversized) {
             return false;
@@ -74,7 +76,7 @@ class ReminderManager extends DBManager {
 
         await this.remind_db.add(reminder);
 
-        getLogger().info(`Added reminder for user: ${user} until: ${end} with message:${Util.formatLog(msg)}`);
+        getLogger().info(`Added reminder for user: ${user} until: ${end} with message:${LoggerUtil.formatLog(msg)}`);
         return reminder;
     }
 

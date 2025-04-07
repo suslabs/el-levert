@@ -150,7 +150,7 @@ class JsonLoader extends TextLoader {
         if (this.sync) {
             return this.validate(this.data);
         } else {
-            return res.then(() => this.validate(this.data));
+            return res.then(_ => this.validate(this.data));
         }
     }
 

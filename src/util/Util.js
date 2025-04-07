@@ -1,17 +1,10 @@
-import { isPromise } from "node:util/types";
-
-import { Buffer } from "node:buffer";
-import { ChannelType, AttachmentBuilder } from "discord.js";
-
 import fs from "node:fs/promises";
-import path from "node:path";
-import URL from "node:url";
 
-import { isObject } from "./misc/TypeTester.js";
+import TypeTester from "./TypeTester.js";
 
 import UtilError from "../errors/UtilError.js";
 
-const Util = {
+let Util = {
     durationSeconds: {
         year: 31536000,
         month: 2592000,
@@ -83,21 +76,6 @@ const Util = {
         return num.toLocaleString("en-US", options);
     },
 
-    zip: (arr_1, arr_2) => {
-        const len = Math.min(arr_1.length, arr_2.length);
-        return Array.from({ length: len }, (_, i) => [arr_1[i], arr_2[i]]);
-    },
-
-    import: async (modulePath, cache = true) => {
-        let fileURL = URL.pathToFileURL(modulePath);
-
-        if (!cache) {
-            fileURL += `?update=${Date.now()}`;
-        }
-
-        return (await import(fileURL)).default;
-    },
-
     directoryExists: async path => {
         let stat;
 
@@ -116,34 +94,8 @@ const Util = {
         }
     },
 
-    setValuesWithDefaults: (target, source, defaults = {}) => {
-        const values = {};
-
-        for (const key of Object.keys(defaults)) {
-            const sourceVal = source ? source[key] : undefined;
-
-            if (sourceVal == null) {
-                let defaultValue = defaults[key];
-
-                switch (typeof defaultValue) {
-                    case "function":
-                        break;
-                    default:
-                        defaultValue = structuredClone(defaultValue);
-                }
-
-                values[key] = defaultValue;
-            }
-        }
-
-        return Object.assign(target, {
-            ...source,
-            ...values
-        });
-    },
-
     delay: ms => {
-        return new Promise(resolve => {
+        return new Promise((resolve, reject) => {
             setTimeout(resolve, ms);
         });
     },
@@ -196,208 +148,6 @@ const Util = {
         });
     },
 
-    sort: (array, callback) => {
-        const useCallback = typeof callback === "function";
-
-        return array.sort((a, b) => {
-            const a_val = useCallback ? callback(a) : a,
-                b_val = useCallback ? callback(b) : b;
-
-            return a_val.localeCompare(b_val, "en", {
-                numeric: true,
-                sensitivity: "base"
-            });
-        });
-    },
-
-    removeItem: (array, item, callback) => {
-        let ind;
-
-        if (typeof item === "function") {
-            ind = array.findIndex(item);
-        } else {
-            ind = array.indexOf(item);
-        }
-
-        if (ind === -1) {
-            return false;
-        }
-
-        if (typeof callback === "undefined") {
-            delete array[ind];
-            array.splice(ind, 1);
-
-            return true;
-        }
-
-        const ret = callback(ind, array);
-
-        if (isPromise(ret)) {
-            return ret.then(_ => true);
-        } else {
-            delete array[ind];
-            array.splice(ind, 1);
-
-            return true;
-        }
-    },
-
-    maybeAsyncForEach: (array, callback) => {
-        let length = array.length,
-            i = 0;
-
-        let ret,
-            loopPromise = false;
-
-        for (; i < length; i++) {
-            const item = array[i];
-            ret = callback(item, i);
-
-            if (isPromise(ret)) {
-                loopPromise = true;
-                i++;
-
-                break;
-            }
-        }
-
-        if (loopPromise) {
-            return (async () => {
-                ret = await ret;
-
-                for (; i < length; i++) {
-                    const item = array[i];
-                    await callback(item, i);
-                }
-            })();
-        }
-    },
-
-    wipeArray: (array, callback) => {
-        let length = array.length,
-            i = 0;
-
-        if (typeof callback === "undefined") {
-            for (let i = 0; i < length; i++) {
-                delete array[i];
-            }
-
-            array.length = 0;
-            return length;
-        }
-
-        let n = 0;
-
-        let ret,
-            loopPromise = false;
-
-        for (; i < length; i++) {
-            const item = array[i];
-            ret = callback(item, i);
-
-            if (isPromise(ret)) {
-                loopPromise = true;
-                i++;
-
-                break;
-            }
-
-            const shouldDelete = ret ?? true;
-
-            if (shouldDelete) {
-                delete array[i];
-                n++;
-            }
-        }
-
-        if (loopPromise) {
-            return (async () => {
-                ret = await ret;
-
-                for (; i < length; i++) {
-                    const item = array[i];
-                    await callback(item, i);
-
-                    const shouldDelete = ret ?? true;
-
-                    if (shouldDelete) {
-                        delete array[i];
-                        n++;
-                    }
-                }
-
-                array.length = 0;
-                return n;
-            })();
-        } else {
-            array.length = 0;
-            return n;
-        }
-    },
-
-    wipeObject: (obj, callback) => {
-        if (typeof callback === "undefined") {
-            const keys = Object.keys(obj);
-
-            for (let i = 0; i < keys.length; i++) {
-                const key = keys[i];
-                delete obj[key];
-            }
-
-            return keys.length;
-        }
-
-        const entries = Object.entries(obj);
-
-        let length = entries.length,
-            i = 0,
-            n = 0;
-
-        let ret,
-            loopPromise = false;
-
-        for (; i < length; i++) {
-            const [key, item] = entries[i];
-            ret = callback(key, item, i);
-
-            if (isPromise(ret)) {
-                loopPromise = true;
-                i++;
-
-                break;
-            }
-
-            const shouldDelete = ret ?? true;
-
-            if (shouldDelete) {
-                delete obj[key];
-                n++;
-            }
-        }
-
-        if (loopPromise) {
-            return (async () => {
-                ret = await ret;
-
-                for (; i < length; i++) {
-                    const [key, item] = entries[i];
-                    await callback(key, item, i);
-
-                    const shouldDelete = ret ?? true;
-
-                    if (shouldDelete) {
-                        delete obj[key];
-                        n++;
-                    }
-                }
-
-                return n;
-            })();
-        } else {
-            return n;
-        }
-    },
-
     _leadingSpacesRegex: /^\s*/,
     _trailingSpacesRegex: /\s*$/,
     capitalize: str => {
@@ -413,16 +163,6 @@ const Util = {
         } else {
             return leading + content[0].toUpperCase() + content.slice(1) + trailing;
         }
-    },
-
-    concat: (a, ...args) => {
-        const concatenated = [].concat(a, ...args);
-
-        if (Array.isArray(a)) {
-            return concatenated;
-        }
-
-        return concatenated.join("");
     },
 
     removeRangeStr: (str, i, length = 1, end = false) => {
@@ -530,154 +270,10 @@ const Util = {
         return array[a + ~~(Math.random() * (b - a))];
     },
 
-    _regexEscapeRegex: /[.*+?^${}()|[\]\\]/g,
-    escapeRegex: str => {
-        return str.replace(Util._regexEscapeRegex, "\\$&");
-    },
-
-    _charClassExcapeRegex: /[-\\\]^]/g,
-    escapeCharClass: str => {
-        return str.replace(Util._charClassExcapeRegex, "\\$&");
-    },
-
-    firstGroup: (match, name) => {
-        if (!match) {
-            return;
-        }
-
-        const groups = Object.keys(match.groups).filter(key => typeof match.groups[key] !== "undefined"),
-            foundName = groups.find(key => key => key.startsWith(name));
-
-        if (typeof foundName === "undefined") {
-            return;
-        }
-
-        return match.groups[foundName];
-    },
-
     urlRegex: /(\S*?):\/\/(?:([^/.]+)\.)?([^/.]+)\.([^/\s]+)\/?(\S*)?/,
 
     validUrl: url => {
         return Util.validUrlRegex.test(url);
-    },
-
-    splitArgs: (str, lowercase = false, options = {}) => {
-        let multipleLowercase = Array.isArray(lowercase);
-
-        if (!multipleLowercase && typeof lowercase === "object") {
-            options = lowercase;
-
-            lowercase = options.lowercase ?? false;
-            multipleLowercase = Array.isArray(lowercase);
-        }
-
-        const lowercaseFirst = multipleLowercase ? (lowercase[0] ?? false) : lowercase,
-            lowercaseSecond = multipleLowercase ? (lowercase[1] ?? false) : false;
-
-        let sep = options.sep ?? [" ", "\n"],
-            n = options.n ?? 1;
-
-        if (sep.length === 0) {
-            if (lowercaseFirst) {
-                return [str.toLowerCase(), ""];
-            }
-
-            return [str, ""];
-        }
-
-        if (!Array.isArray(sep)) {
-            sep = [sep];
-        }
-
-        let first, second;
-
-        let ind = -1,
-            sepLength;
-
-        if (sep.length === 1) {
-            sep = sep[0] ?? sep;
-
-            ind = str.indexOf(sep);
-            sepLength = sep.length;
-
-            if (n > 1) {
-                for (let i = 1; i < n; i++) {
-                    ind = str.indexOf(sep, ind + 1);
-
-                    if (ind === -1) {
-                        break;
-                    }
-                }
-            }
-        } else {
-            const escaped = sep.map(item => Util.escapeRegex(item)),
-                exp = new RegExp(escaped.join("|"), "g");
-
-            if (n <= 1) {
-                const match = exp.exec(str);
-
-                if (match) {
-                    ind = match.index;
-                    sepLength = match[0].length;
-                }
-            } else {
-                let match;
-
-                for (let i = 1; (match = exp.exec(str)) !== null; i++) {
-                    if (i === n) {
-                        ind = match.index;
-                        sepLength = match[0].length;
-
-                        break;
-                    } else if (i > n) {
-                        ind = -1;
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (ind === -1) {
-            first = str;
-            second = "";
-        } else {
-            first = str.slice(0, ind);
-            second = str.slice(ind + sepLength);
-        }
-
-        if (lowercaseFirst) {
-            first = first.toLowerCase();
-        }
-
-        if (lowercaseSecond) {
-            second = second.toLowerCase();
-        }
-
-        return [first, second];
-    },
-
-    codeblockRegex: /(?<!\\)(?:`{3}([\S]+\n)?([\s\S]*?)`{3}|`([^`\n]+)`)/g,
-
-    findCodeblocks: str => {
-        const matches = str.matchAll(Util.codeblockRegex);
-        return Array.from(matches).map(match => [match.index, match.index + match[0].length]);
-    },
-
-    parseScript: script => {
-        const match = script.match(Util.parseScriptRegex);
-
-        if (!match) {
-            return [false, script, ""];
-        }
-
-        const body = (match[2] ?? match[3])?.trim();
-
-        if (typeof body === "undefined") {
-            return [false, script, ""];
-        }
-
-        const lang = match[1]?.trim() ?? "";
-        return [true, body, lang];
     },
 
     checkCharType: char => {
@@ -707,7 +303,7 @@ const Util = {
         let codepoint,
             length = 0;
 
-        for (let i = 0; i < len; i++) {
+        for (; i < len; i++) {
             codepoint = str.codePointAt(i);
 
             if (codepoint <= 0x7f) {
@@ -745,42 +341,12 @@ const Util = {
         return count;
     },
 
-    overSizeLimits: (obj, charLimit, lineLimit) => {
-        if (obj == null) {
-            return false;
-        }
-
-        if (typeof charLimit === "number") {
-            const count =
-                typeof obj === "string"
-                    ? Util.countChars(obj)
-                    : Util.getEmbedSize(obj, {
-                          count: "chars"
-                      });
-
-            if (count > charLimit) {
-                return [count, null];
-            }
-        }
-
-        if (typeof lineLimit === "number") {
-            const count =
-                typeof obj === "string"
-                    ? Util.countLines(obj)
-                    : Util.getEmbedSize(obj, {
-                          count: "lines"
-                      });
-
-            if (count > lineLimit) {
-                return [null, count];
-            }
-        }
-
-        return false;
-    },
-
     trimString: (str, charLimit, lineLimit, showDiff = false) => {
-        const oversized = Util.overSizeLimits(str, charLimit, lineLimit);
+        if (typeof str !== "string") {
+            return str;
+        }
+
+        const oversized = TypeTester.overSizeLimits(str, charLimit, lineLimit);
 
         if (!oversized) {
             return str;
@@ -830,185 +396,12 @@ const Util = {
         return index;
     },
 
-    getFileAttach: (data, name = "message.txt") => {
-        const attachment = new AttachmentBuilder(Buffer.from(data), { name });
-
-        return {
-            files: [attachment]
-        };
-    },
-
-    userIdRegex: /\d{17,20}/g,
-
-    findUserIds: str => {
-        const matches = Array.from(str.matchAll(Util.userIdRegex));
-        return matches.map(match => match[0]);
-    },
-
-    mentionRegex: /<@(\d{17,20})>/g,
-
-    findMentions: str => {
-        const matches = Array.from(str.matchAll(Util.mentionRegex));
-        return matches.map(match => match[1]);
-    },
-
-    msgUrlRegex:
-        /(?:(https?:)\/\/)?(?:(www|ptb)\.)?discord\.com\/channels\/(?<sv_id>\d{18,19}|@me)\/(?<ch_id>\d{18,19})(?:\/(?<msg_id>\d{18,19}))/g,
-
-    findMessageUrls: str => {
-        const matches = Array.from(str.matchAll(Util.msgUrlRegex));
-
-        return matches.map(match => {
-            const groups = match.groups;
-
-            return {
-                raw: match[0],
-
-                protocol: match[1] ?? "",
-                subdomain: match[2] ?? "",
-
-                sv_id: groups.sv_id,
-                ch_id: groups.ch_id,
-                msg_id: groups.msg_id
-            };
-        });
-    },
-
-    discordEpoch: 1420070400000,
-
-    snowflakeFromDate: date => {
-        const timestamp = date.getTime() - Util.discordEpoch,
-            snowflakeBits = BigInt(timestamp) << 22n;
-
-        return snowflakeBits.toString(10);
-    },
-
-    dateFromSnowflake: snowflake => {
-        const snowflakeBits = BigInt.asUintN(64, snowflake),
-            timestamp = Number(snowflakeBits >> 22n);
-
-        return new Date(timestamp + Util.discordEpoch);
-    },
-
-    formatChannelName: channel => {
-        const inDms = channel.type === ChannelType.DM;
-
-        if (inDms) {
-            return "DMs";
+    hasPrefix: (prefixes, str) => {
+        if (!Array.isArray(prefixes)) {
+            prefixes = [prefixes];
         }
 
-        const inThread = [ChannelType.PublicThread, ChannelType.PrivateThread].includes(channel.type);
-
-        if (inThread) {
-            return `"${channel.name}" (thread of parent channel #${channel.parent.name})`;
-        }
-
-        return `#${channel.name}`;
-    },
-
-    getEmbedSize(embed, options = {}) {
-        const countType = options.count ?? "chars",
-            countURLs = options.countURLs ?? false;
-
-        if (typeof embed.data !== "undefined") {
-            embed = embed.data;
-        }
-
-        if (embed == null) {
-            return 0;
-        }
-
-        let size = 0,
-            count;
-
-        switch (countType) {
-            case "chars":
-                count = Util.countChars;
-                break;
-            case "lines":
-                count = Util.countLines;
-                break;
-            default:
-                throw new UtilError("Invalid count type: " + countType);
-        }
-
-        size += count(embed.title);
-        size += count(embed.description);
-
-        size += count(embed.author?.name);
-        size += count(embed.timestamp);
-        size += count(embed.footer?.text);
-
-        if (countType === "chars" && countURLs) {
-            size += count(embed.url);
-            size += count(embed.thumbnail?.url);
-            size += count(embed.image?.url);
-
-            size += count(embed.author?.icon_url);
-            size += count(embed.author?.url);
-
-            size += count(embed.footer?.icon_url);
-        }
-
-        size += (embed.fields ?? []).reduce((sum, field, i) => {
-            const { name, value, inline } = field;
-
-            if (countType === "lines" && i > 0 && inline) {
-                return sum;
-            }
-
-            let nameSize = count(name),
-                valueSize = count(value);
-
-            if (countType === "lines" && name) {
-                nameSize++;
-            }
-
-            return sum + nameSize + valueSize;
-        }, 0);
-
-        return size;
-    },
-
-    _quotesExp: /^(["'`])[\s\S]*\1$/,
-    formatLog(str, splitLength = 80, maxLength = 1000) {
-        if (str == null) {
-            return " none";
-        }
-
-        switch (typeof str) {
-            case "bigint":
-            case "boolean":
-            case "number":
-                str = str.toString(10);
-                break;
-            case "object":
-                try {
-                    str = JSON.stringify(str);
-                    break;
-                } catch (err) {
-                    return ` error: ${err.message}`;
-                }
-            case "string":
-                if (str.length < 1) {
-                    return " none";
-                }
-
-                break;
-        }
-
-        str = str.replace(/\n|\r\n/g, "\\n");
-        str = Util.trimString(str, maxLength, null, true);
-
-        if (str.length > splitLength) {
-            return `\n---\n${str}\n---`;
-        }
-
-        if (Util._quotesExp.test(str)) {
-            return " " + str;
-        }
-
-        return ` "${str}"`;
+        return prefixes.some(prefix => str.startsWith(prefix));
     },
 
     timeDelta: (d1, d2, div = 1) => {
@@ -1092,119 +485,6 @@ const Util = {
         });
 
         return _format.join(", ");
-    },
-
-    outOfRange(propName, min, max, ...args) {
-        const hasPropName = typeof propName === "string",
-            getProp = hasPropName ? obj => obj[propName] : obj => obj;
-
-        if (!hasPropName) {
-            args = [max].concat(args);
-
-            max = min;
-            min = propName;
-        }
-
-        const check = val => {
-            if (val === null) {
-                return false;
-            }
-
-            return Number.isNaN(val) || val < min || val > max;
-        };
-
-        if (args.length === 1) {
-            const obj = args[0];
-            return check(getProp(obj));
-        }
-
-        return args.find(obj => check(getProp(obj)));
-    },
-
-    unique: (array, propName) => {
-        const hasPropName = typeof propName === "string",
-            getProp = hasPropName ? obj => obj[propName] : obj => obj;
-
-        const seen = new Set();
-
-        return array.filter(item => {
-            const val = getProp(item);
-
-            if (seen.has(val)) {
-                return false;
-            }
-
-            seen.add(val);
-            return true;
-        });
-    },
-
-    bindArgs: (fn, boundArgs) => {
-        if (!Array.isArray(boundArgs)) {
-            boundArgs = [boundArgs];
-        }
-
-        return function (...args) {
-            return fn.apply(this, boundArgs.concat(args));
-        };
-    },
-
-    className: obj => {
-        if (obj == null) {
-            return "";
-        } else if (typeof obj === "function") {
-            obj = obj.prototype;
-        }
-
-        return obj.constructor.name;
-    },
-
-    _funcArgsRegex: /(?:\()(.+)+(?:\))/,
-    functionArgumentNames: func => {
-        const str = func.toString(),
-            match = str.match(Util._funcArgsRegex);
-
-        if (!match) {
-            return [];
-        }
-
-        const args = match[1];
-        return args.split(", ").map(arg => arg.trim());
-    },
-
-    _validProp: (obj, expected) => {
-        if (typeof expected === "string") {
-            if (expected === "object") {
-                return isObject(obj);
-            } else {
-                return typeof obj === expected;
-            }
-        }
-
-        if (typeof expected === "function") {
-            return obj instanceof expected;
-        }
-
-        if (isObject(expected)) {
-            if (isObject(obj)) {
-                return Util.validateProps(obj, expected);
-            } else {
-                return false;
-            }
-        }
-
-        throw new UtilError("Invalid expected type");
-    },
-    validateProps: (obj, requiredProps) => {
-        for (const [name, expected] of Object.entries(requiredProps)) {
-            const prop = obj[name];
-
-            if (!Util._validProp(prop, expected)) {
-                return false;
-            }
-        }
-
-        return true;
     }
 };
 
@@ -1223,7 +503,7 @@ const Util = {
     }
 
     Util.validUrlRegex = new RegExp(`^${Util.urlRegex.source}$`);
-    Util.parseScriptRegex = new RegExp(`^${Util.codeblockRegex.source}$`);
 }
 
+Util = Object.freeze(Util);
 export default Util;

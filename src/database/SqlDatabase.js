@@ -3,7 +3,8 @@ import path from "node:path";
 
 import SqliteDatabase from "./drivers/sqlite/SqliteDatabase.js";
 
-import Util from "../util/Util.js";
+import ArrayUtil from "../util/ArrayUtil.js";
+import ObjectUtil from "../util/ObjectUtil.js";
 
 import OpenModes from "./drivers/sqlite/OpenModes.js";
 import DirectoryLoader from "../loaders/DirectoryLoader.js";
@@ -161,8 +162,8 @@ class SqlDatabase {
     }
 
     _unloadQueries() {
-        Util.wipeArray(this.queryList);
-        Util.wipeObject(this.queryStrings, category => delete this[category]);
+        ArrayUtil.wipeArray(this.queryList);
+        ObjectUtil.wipeObject(this.queryStrings, category => delete this[category]);
     }
 }
 

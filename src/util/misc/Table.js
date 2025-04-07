@@ -1,4 +1,5 @@
 import Util from "../Util.js";
+import ArrayUtil from "../ArrayUtil.js";
 
 import UtilError from "../../errors/UtilError.js";
 
@@ -153,7 +154,7 @@ const TableUtil = Object.freeze({
 const Lines = Object.freeze({
     line: (horizontalChar, leftChar, rightChar, crossChar) => widths => {
         const segment = widths.map(w => horizontalChar.repeat(w)).join(crossChar);
-        return Util.concat(leftChar, segment, rightChar);
+        return ArrayUtil.concat(leftChar, segment, rightChar);
     },
 
     topSeparatorLine: charset =>

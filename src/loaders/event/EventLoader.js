@@ -1,7 +1,7 @@
 import DirectoryLoader from "../DirectoryLoader.js";
 import EventObjectLoader from "./EventObjectLoader.js";
 
-import Util from "../../util/Util.js";
+import ArrayUtil from "../../util/ArrayUtil.js";
 
 import LoadStatus from "../LoadStatus.js";
 
@@ -37,7 +37,7 @@ class EventLoader extends DirectoryLoader {
     removeListeners() {
         this.deleteAllData();
 
-        Util.wipeArray(this.events, event => event.unregister());
+        ArrayUtil.wipeArray(this.events, event => event.unregister());
         delete this.events;
 
         this.logger?.info("Removed all event listeners.");

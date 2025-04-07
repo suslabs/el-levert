@@ -3,7 +3,9 @@ import discord from "discord.js";
 import EventLoader from "../loaders/event/EventLoader.js";
 
 import Util from "../util/Util.js";
-import { isObject } from "../util/misc/TypeTester.js";
+import TypeTester from "../util/TypeTester.js";
+import ObjectUtil from "../util/ObjectUtil.js";
+import DiscordUtil from "../util/DiscordUtil.js";
 import search from "../util/search/diceSearch.js";
 
 import ClientError from "../errors/ClientError.js";
@@ -128,7 +130,7 @@ class DiscordClient {
 
     setOptions(options) {
         this.options = {};
-        const optionsList = isObject(options) ? this.constructor.clientOptions : [];
+        const optionsList = TypeTester.isObject(options) ? this.constructor.clientOptions : [];
 
         for (const key of optionsList) {
             if (!(key in options)) {
@@ -247,11 +249,11 @@ class DiscordClient {
             throw new ClientError("No guild ID provided");
         }
 
-        if (!isObject(options)) {
+        if (!TypeTester.isObject(options)) {
             throw new ClientError("Invalid options provided");
         }
 
-        Util.setValuesWithDefaults(options, options, this.constructor.defaultGuildOptions);
+        ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultGuildOptions);
 
         let guild;
 
@@ -279,7 +281,7 @@ class DiscordClient {
             throw new ClientError("No user or user ID provided");
         }
 
-        if (!isObject(options)) {
+        if (!TypeTester.isObject(options)) {
             throw new ClientError("Invalid options provided");
         }
 
@@ -320,7 +322,7 @@ class DiscordClient {
                 throw new ClientError("Invalid user or user ID provided");
         }
 
-        Util.setValuesWithDefaults(options, options, this.constructor.defaultMemberOptions);
+        ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultMemberOptions);
 
         let member;
 
@@ -344,7 +346,7 @@ class DiscordClient {
             throw new ClientError("No channel ID provided");
         }
 
-        if (!isObject(options)) {
+        if (!TypeTester.isObject(options)) {
             throw new ClientError("Invalid options provided");
         }
 
@@ -359,7 +361,7 @@ class DiscordClient {
                 throw new ClientError("Invalid channel ID provided");
         }
 
-        Util.setValuesWithDefaults(options, options, this.constructor.defaultChannelOptions);
+        ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultChannelOptions);
 
         let channel;
 
@@ -449,7 +451,7 @@ class DiscordClient {
             throw new ClientError("No channel or channel ID provided");
         }
 
-        if (!isObject(options)) {
+        if (!TypeTester.isObject(options)) {
             throw new ClientError("Invalid options provided");
         }
 
@@ -487,7 +489,7 @@ class DiscordClient {
                 throw new ClientError("Invalid channel or channel ID provided");
         }
 
-        Util.setValuesWithDefaults(options, options, this.constructor.defaultMessageOptions);
+        ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultMessageOptions);
 
         try {
             return await channel.messages.fetch(msg_id, {
@@ -507,11 +509,11 @@ class DiscordClient {
             throw new ClientError("No channel or channel ID provided");
         }
 
-        if (!isObject(options) || !isObject(fetchOptions)) {
+        if (!TypeTester.isObject(options) || !TypeTester.isObject(fetchOptions)) {
             throw new ClientError("Invalid options provided");
         }
 
-        Util.setValuesWithDefaults(options, options, this.constructor.defaultMessagesOptions);
+        ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultMessagesOptions);
 
         let channel;
 
@@ -536,7 +538,7 @@ class DiscordClient {
                 throw new ClientError("Invalid channel or channel ID");
         }
 
-        Util.setValuesWithDefaults(fetchOptions, fetchOptions, this.constructor.defaultMessagesFetchOptions);
+        ObjectUtil.setValuesWithDefaults(fetchOptions, fetchOptions, this.constructor.defaultMessagesFetchOptions);
         fetchOptions.force = !options.cache;
 
         let messages;
@@ -559,11 +561,11 @@ class DiscordClient {
             throw new ClientError("No user ID provided");
         }
 
-        if (!isObject(options)) {
+        if (!TypeTester.isObject(options)) {
             throw new ClientError("Invalid options provided");
         }
 
-        Util.setValuesWithDefaults(options, options, this.constructor.defaultUserOptions);
+        ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultUserOptions);
 
         let user;
 
@@ -588,11 +590,11 @@ class DiscordClient {
             throw new ClientError("No query provided");
         }
 
-        if (!isObject(options) || !isObject(fetchOptions)) {
+        if (!TypeTester.isObject(options) || !TypeTester.isObject(fetchOptions)) {
             throw new ClientError("Invalid options provided");
         }
 
-        Util.setValuesWithDefaults(options, options, this.constructor.defaultUsersOptions);
+        ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultUsersOptions);
 
         let guilds;
 
@@ -602,8 +604,8 @@ class DiscordClient {
             guilds = Array.from(this.client.guilds.cache.values());
         }
 
-        const foundId = Util.first(Util.findUserIds(query)),
-            foundMention = Util.first(Util.findMentions(query)),
+        const foundId = Util.first(DiscordUtil.findUserIds(query)),
+            foundMention = Util.first(DiscordUtil.findMentions(query)),
             user_id = foundId ?? foundMention;
 
         if (typeof user_id !== "undefined") {
@@ -634,7 +636,7 @@ class DiscordClient {
             return [];
         }
 
-        Util.setValuesWithDefaults(fetchOptions, fetchOptions, this.constructor.defaultUsersFetchOptions);
+        ObjectUtil.setValuesWithDefaults(fetchOptions, fetchOptions, this.constructor.defaultUsersFetchOptions);
 
         const allMembers = (
             await Promise.all(

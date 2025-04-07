@@ -1,6 +1,8 @@
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import ParserUtil from "../../util/commands/ParserUtil.js";
+import DiscordUtil from "../../util/DiscordUtil.js";
 
 const defaultResultLimit = 20;
 
@@ -15,7 +17,7 @@ export default {
             return `:information_source: ${this.getArgsHelp("query [all/max_results]")}`;
         }
 
-        const [t_name, m_str] = Util.splitArgs(args, [true, true]),
+        const [t_name, m_str] = ParserUtil.splitArgs(args, [true, true]),
             all = m_str === "all";
 
         const err = getClient().tagManager.checkName(t_name);
@@ -51,7 +53,7 @@ export default {
 
             return {
                 content: header,
-                ...Util.getFileAttach(names, "tags.txt")
+                ...DiscordUtil.getFileAttach(names, "tags.txt")
             };
         } else {
             const names = `**${find.join("**, **")}**`;

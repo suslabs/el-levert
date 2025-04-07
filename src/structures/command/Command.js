@@ -1,10 +1,8 @@
-import { inlineCode } from "discord.js";
-
 import { getClient } from "../../LevertClient.js";
 
 import TextCommand from "./TextCommand.js";
 
-import Util from "../../util/Util.js";
+import ArrayUtil from "../../util/ArrayUtil.js";
 
 class Command extends TextCommand {
     static defaultValues = {
@@ -64,7 +62,7 @@ class Command extends TextCommand {
             }
         }
 
-        Util.sort(subNames);
+        ArrayUtil.sort(subNames);
         return subNames.join(sep);
     }
 

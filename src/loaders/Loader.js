@@ -1,4 +1,4 @@
-import { isPromise } from "node:util/types";
+import TypeTester from "../util/TypeTester.js";
 
 import Util from "../util/Util.js";
 
@@ -167,7 +167,7 @@ class Loader {
         this.result = {};
         const res = this._childLoad(...args);
 
-        if (isPromise(res)) {
+        if (TypeTester.isPromise(res)) {
             return this._loadAsync(res);
         } else {
             return this._loadSync(res);
@@ -199,7 +199,7 @@ class Loader {
         this.result = {};
         const res = this._childWrite(data, ...args);
 
-        if (isPromise(res)) {
+        if (TypeTester.isPromise(res)) {
             return this._writeAsync(res, data);
         } else {
             return this._writeSync(res, data);

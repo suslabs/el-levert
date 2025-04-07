@@ -5,6 +5,7 @@ import { TokenType, TokenNames, TokenOps, Precedence } from "./Tokens.js";
 import { Molecule } from "./Molecule.js";
 
 import Util from "../../util/Util.js";
+import TypeTester from "../../util/TypeTester.js";
 
 import StoikError from "../../errors/StoikError.js";
 
@@ -266,7 +267,7 @@ const Stoik = Object.freeze({
             return Molecule.fromElement(evaluated[1]);
         }
 
-        throw new StoikError(`Unexpected result type: ${Util.className(evaluated)}`);
+        throw new StoikError(`Unexpected result type: ${TypeTester.className(evaluated)}`);
     },
 
     formatEquation(lhs, rhs) {

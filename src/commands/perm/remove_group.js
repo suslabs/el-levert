@@ -1,6 +1,7 @@
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import ParserUtil from "../../util/commands/ParserUtil.js";
 
 export default {
     name: "remove_group",
@@ -14,7 +15,7 @@ export default {
             return `:information_source: ${this.getArgsHelp("group_name")}`;
         }
 
-        const [g_name] = Util.splitArgs(args);
+        const [g_name] = ParserUtil.splitArgs(args);
 
         const err = getClient().permManager.checkName(g_name);
 

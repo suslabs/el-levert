@@ -5,12 +5,14 @@ import MessageHandler from "../MessageHandler.js";
 import { getClient, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import DiscordUtil from "../../util/DiscordUtil.js";
+import LoggerUtil from "../../util/LoggerUtil.js";
 
 import HandlerError from "../../errors/HandlerError.js";
 
 function logUsage(msg, str) {
     getLogger().info(
-        `Generating preview for "${str.match(Util.msgUrlRegex)[0]}", issued by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${Util.formatChannelName(msg.channel)}).`
+        `Generating preview for "${str.match(DiscordUtil.msgUrlRegex)[0]}", issued by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)}).`
     );
 }
 
@@ -20,7 +22,7 @@ function logCancelled(reason) {
 
 function logSending(preview) {
     const text = preview.data.description;
-    getLogger().debug(`Sending preview:${Util.formatLog(text)}`);
+    getLogger().debug(`Sending preview:${LoggerUtil.formatLog(text)}`);
 }
 
 function logGenTime(t1) {
@@ -48,18 +50,18 @@ class PreviewHandler extends MessageHandler {
             return false;
         }
 
-        return Util.msgUrlRegex.test(str);
+        return DiscordUtil.msgUrlRegex.test(str);
     }
 
     removeLink(str) {
-        return str.replace(Util.msgUrlRegex, "");
+        return str.replace(DiscordUtil.msgUrlRegex, "");
     }
 
     async genPreview(msg, str) {
         logUsage(msg, str);
         const t1 = performance.now();
 
-        const match = Util.first(Util.findMessageUrls(str));
+        const match = Util.first(DiscordUtil.findMessageUrls(str));
 
         if (typeof match === "undefined") {
             throw new HandlerError("Invalid input string");
@@ -106,7 +108,7 @@ class PreviewHandler extends MessageHandler {
             content += "\n\n" + hyperlink("[Jump to Message]", msgUrl.href);
         }
 
-        let channel = Util.formatChannelName(prevMsg.channel);
+        let channel = DiscordUtil.formatChannelName(prevMsg.channel);
 
         if (prevMsg.guild && sv_id !== prevMsg.guild.id) {
             channel += ` - ${prevMsg.guild.name}`;
@@ -151,7 +153,7 @@ class PreviewHandler extends MessageHandler {
 
             await this.reply(msg, {
                 content: ":no_entry_sign: Encountered exception while generating preview:",
-                ...Util.getFileAttach(err.stack, "error.js")
+                ...DiscordUtil.getFileAttach(err.stack, "error.js")
             });
 
             getLogger().error("Preview generation failed:", err);
@@ -168,7 +170,7 @@ class PreviewHandler extends MessageHandler {
         } catch (err) {
             await this.reply(msg, {
                 content: ":no_entry_sign: Encountered exception while sending preview:",
-                ...Util.getFileAttach(err.stack, "error.js")
+                ...DiscordUtil.getFileAttach(err.stack, "error.js")
             });
 
             getLogger().error("Reply failed:", err);

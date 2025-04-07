@@ -6,13 +6,15 @@ import InspectorServer from "./inspector/InspectorServer.js";
 import { getClient, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-import { isObject } from "../../util/misc/TypeTester.js";
+import TypeTester from "../../util/TypeTester.js";
+import DiscordUtil from "../../util/DiscordUtil.js";
 import VMUtil from "../../util/vm/VMUtil.js";
+import LoggerUtil from "../../util/LoggerUtil.js";
 
 import VMErrors from "./VMErrors.js";
 
 function logUsage(code) {
-    getLogger().debug(`Running script:${Util.formatLog(code)}`);
+    getLogger().debug(`Running script:${LoggerUtil.formatLog(code)}`);
 }
 
 function logTime(t1) {
@@ -33,7 +35,7 @@ class TagVM extends VM {
     constructor(enabled) {
         super(enabled);
 
-        const timeLimit = getClient().config.otherTimeLimit,
+        const timeLimit = getClient().config.timeLimit,
             limitMs = Math.floor(timeLimit / Util.durationSeconds.milli);
 
         this.memLimit = getClient().config.memLimit;
@@ -59,7 +61,7 @@ class TagVM extends VM {
             logFinished(this.enableInspector);
             logTime(t1);
 
-            getLogger().debug(`Returning script output:${Util.formatLog(out)}`);
+            getLogger().debug(`Returning script output:${LoggerUtil.formatLog(out)}`);
             return VMUtil.formatOutput(out);
         } catch (err) {
             logFinished(this.enableInspector);
@@ -127,10 +129,10 @@ class TagVM extends VM {
                 getLogger().debug(`VM error: ${err.message}`);
                 return `:no_entry_sign: ${err.message}.`;
             case VMErrors.custom[1]:
-                getLogger().debug(`Returning exit data:${Util.formatLog(err.exitData)}`);
+                getLogger().debug(`Returning exit data:${LoggerUtil.formatLog(err.exitData)}`);
                 return err.exitData;
             case VMErrors.custom[2]:
-                getLogger().debug(`Returning reply data:${Util.formatLog(err.message)}`);
+                getLogger().debug(`Returning reply data:${LoggerUtil.formatLog(err.message)}`);
                 return this._processReply(err.message);
         }
 
@@ -153,11 +155,11 @@ class TagVM extends VM {
             let { data, name } = out.file;
             delete out.file;
 
-            if (isObject(data)) {
+            if (TypeTester.isObject(data)) {
                 data = Object.values(data);
             }
 
-            Object.assign(out, Util.getFileAttach(data, name));
+            Object.assign(out, DiscordUtil.getFileAttach(data, name));
         }
 
         return out;

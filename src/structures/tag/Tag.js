@@ -3,7 +3,10 @@ import { bold } from "discord.js";
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-import { isObject } from "../../util/misc/TypeTester.js";
+import TypeTester from "../../util/TypeTester.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
+import FunctionUtil from "../../util/misc/FunctionUtil.js";
+import DiscordUtil from "../../util/DiscordUtil.js";
 
 import { TagFlags, TagTypes } from "./TagTypes.js";
 
@@ -32,7 +35,7 @@ class Tag {
             data.hops = data.hops.split(this.constructor._hopsSeparator);
         }
 
-        Util.setValuesWithDefaults(this, data, this.constructor.defaultValues);
+        ObjectUtil.setValuesWithDefaults(this, data, this.constructor.defaultValues);
 
         let type = this.type,
             userType = typeof type === "string";
@@ -292,12 +295,12 @@ class Tag {
 
         if (this.isScript) {
             const formattedType = discord ? bold(this.getType()) : this.getType(),
-                header = `Script type is ${formattedType}`;
+                header = `Script type is ${formattedType}.`;
 
             if (discord) {
                 return {
                     content: header,
-                    ...Util.getFileAttach(body, "script.js")
+                    ...DiscordUtil.getFileAttach(body, "script.js")
                 };
             }
 
@@ -319,7 +322,7 @@ class Tag {
 
                     return {
                         content: out,
-                        ...Util.getFileAttach(args, "args.txt")
+                        ...DiscordUtil.getFileAttach(args, "args.txt")
                     };
                 }
 
@@ -336,7 +339,7 @@ class Tag {
         }
 
         if (discord) {
-            return Util.getFileAttach(body, "tag.txt");
+            return DiscordUtil.getFileAttach(body, "tag.txt");
         }
 
         return body;
@@ -473,7 +476,7 @@ class Tag {
 
         const setFunc = (prefix, val) => {
             const funcName = `${prefix}set${Util.capitalize(name)}`,
-                func = Util.bindArgs(Tag.prototype.setFlag, [flagName, val]);
+                func = FunctionUtil.bindArgs(Tag.prototype.setFlag, [flagName, val]);
 
             return {
                 funcName,
@@ -490,11 +493,7 @@ class Tag {
     }
 
     static _registerFunc(factory, ...args) {
-        let res = factory(...args);
-
-        if (!Array.isArray(res)) {
-            res = [res];
-        }
+        const res = [].concat(factory(...args));
 
         for (const func of res) {
             const { funcName, desc } = func;
@@ -518,7 +517,7 @@ class Tag {
             } else if (type === "get" || type === "set") {
                 this._registerFunc(factoryFunc, name, true, flagName, value);
             }
-        } else if (isObject(config)) {
+        } else if (TypeTester.isObject(config)) {
             for (let [subType, subConfig] of Object.entries(config)) {
                 if (!Array.isArray(subConfig)) {
                     continue;
@@ -555,7 +554,7 @@ class Tag {
             if (Array.isArray(config)) {
                 this._processFlagConfig(flag, "get", config);
                 this._processFlagConfig(flag, "set", config);
-            } else if (isObject(config)) {
+            } else if (TypeTester.isObject(config)) {
                 for (const [type, subConfig] of Object.entries(config)) {
                     this._processFlagConfig(flag, type, subConfig);
                 }

@@ -1,4 +1,4 @@
-import Util from "../util/Util.js";
+import ObjectUtil from "../util/ObjectUtil.js";
 
 import EventError from "../errors/EventError.js";
 
@@ -16,7 +16,7 @@ class BotEvent {
             throw new EventError("Event must have a listener function");
         }
 
-        Util.setValuesWithDefaults(this, options, this.constructor.defaultValues);
+        ObjectUtil.setValuesWithDefaults(this, options, this.constructor.defaultValues);
 
         this.registered = false;
     }

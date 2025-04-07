@@ -1,6 +1,8 @@
 import { getClient, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import ParserUtil from "../../util/commands/ParserUtil.js";
+import DiscordUtil from "../../util/DiscordUtil.js";
 
 import { TagTypes } from "../../structures/tag/TagTypes.js";
 
@@ -9,7 +11,7 @@ const dummyMsg = {
 };
 
 async function parseBase(t_args, msg) {
-    const [t_type, t_body] = Util.splitArgs(t_args, true);
+    const [t_type, t_body] = ParserUtil.splitArgs(t_args, true);
 
     if (msg == null) {
         msg = dummyMsg;
@@ -46,7 +48,7 @@ async function parseBase(t_args, msg) {
                 type: null,
                 err: {
                     content: ":no_entry_sign: Downloading attachment failed:",
-                    ...Util.getFileAttach(err.stack, "error.js")
+                    ...DiscordUtil.getFileAttach(err.stack, "error.js")
                 }
             };
         }
@@ -57,7 +59,7 @@ async function parseBase(t_args, msg) {
             tagBody = t_body;
         }
 
-        [isScript, body] = Util.parseScript(tagBody);
+        [isScript, body] = DiscordUtil.parseScript(tagBody);
     }
 
     let type;
@@ -132,7 +134,7 @@ export default {
             return `:information_source: ${this.getSubcmdHelp()} **tag_name** \`[tag_args]\``;
         }
 
-        const [t_name, t_args] = Util.splitArgs(args, true);
+        const [t_name, t_args] = ParserUtil.splitArgs(args, true);
 
         const err = getClient().tagManager.checkName(t_name);
 

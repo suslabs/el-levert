@@ -91,7 +91,10 @@ const Codegen = {
         return brackets ? `[${values}]` : values;
     },
 
-    object: obj => {},
+    object: obj => {
+        const jsonStr = JSON.stringify(obj, null, 2);
+        return jsonStr.replace(/"([^"]+)":/g, "$1:");
+    },
 
     equals: (name, value, flag = true, strict = true) => {
         const check = flag ? "=" : "!",

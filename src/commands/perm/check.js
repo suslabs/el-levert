@@ -1,6 +1,7 @@
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import ParserUtil from "../../util/commands/ParserUtil.js";
 
 function formatGroups(groups) {
     let format;
@@ -24,7 +25,7 @@ export default {
         let user = msg.author;
 
         if (!Util.empty(args)) {
-            const [u_name] = Util.splitArgs(args),
+            const [u_name] = ParserUtil.splitArgs(args),
                 find = Util.first(await getClient().findUsers(u_name));
 
             if (typeof find === "undefined") {

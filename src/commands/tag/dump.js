@@ -1,6 +1,8 @@
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import ParserUtil from "../../util/commands/ParserUtil.js";
+import DiscordUtil from "../../util/DiscordUtil.js";
 
 export default {
     name: "dump",
@@ -9,7 +11,7 @@ export default {
     subcommand: true,
 
     handler: async args => {
-        const [d_type, s_str] = Util.splitArgs(args, true),
+        const [d_type, s_str] = ParserUtil.splitArgs(args, true),
             full = d_type === "full",
             inline = d_type === "inline";
 
@@ -33,7 +35,7 @@ export default {
             const tagData = tags.map(tag => tag.getData()),
                 format = JSON.stringify(tagData, undefined, spaces);
 
-            return Util.getFileAttach(format, "tags.json");
+            return DiscordUtil.getFileAttach(format, "tags.json");
         }
 
         let format;
@@ -44,6 +46,6 @@ export default {
             format = tags.join("\n");
         }
 
-        return Util.getFileAttach(format, "tags.txt");
+        return DiscordUtil.getFileAttach(format, "tags.txt");
     }
 };

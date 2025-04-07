@@ -1,6 +1,7 @@
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import ParserUtil from "../../util/commands/ParserUtil.js";
 
 export default {
     name: "alias",
@@ -12,8 +13,8 @@ export default {
             return `:information_source: ${this.getArgsHelp("name other_tag [args]")}`;
         }
 
-        const [t_name, t_args] = Util.splitArgs(args, true),
-            [a_name, a_args] = Util.splitArgs(t_args, true);
+        const [t_name, t_args] = ParserUtil.splitArgs(args, true),
+            [a_name, a_args] = ParserUtil.splitArgs(t_args, true);
 
         if (this.matchesSubcmd(t_name)) {
             return `:police_car: **${t_name}** is a __command__, not a __tag__. You can't manipulate commands.`;
@@ -51,8 +52,7 @@ If you want to de-alias the tag, \`edit\` it.`;
             return `:warning: Tag **${a_name}** doesn't exist.`;
         }
 
-        let newTag,
-            created = false;
+        let created = false;
 
         try {
             const createOptions = {
@@ -60,7 +60,7 @@ If you want to de-alias the tag, \`edit\` it.`;
                 owner: msg.author.id
             };
 
-            [newTag, created] = await getClient().tagManager.alias(tag, a_tag, a_args, createOptions);
+            [, created] = await getClient().tagManager.alias(tag, a_tag, a_args, createOptions);
         } catch (err) {
             if (err.name === "TagError") {
                 return `:warning: ${err.message}.`;

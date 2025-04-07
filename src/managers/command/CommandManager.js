@@ -4,7 +4,7 @@ import Command from "../../structures/command/Command.js";
 
 import { getClient } from "../../LevertClient.js";
 
-import Util from "../../util/Util.js";
+import RegexUtil from "../../util/misc/RegexUtil.js";
 
 class CommandManager extends TextCommandManager {
     static $name = "commandManager";
@@ -63,7 +63,7 @@ class CommandManager extends TextCommandManager {
 
         if (getClient().isBridgeBot(author)) {
             const match = str.match(this._getBridgeBotExp(author));
-            return Util.firstGroup(match, "content");
+            return RegexUtil.firstGroup(match, "content");
         } else {
             return super._getCommandContent(str);
         }

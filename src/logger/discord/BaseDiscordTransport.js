@@ -4,6 +4,7 @@ import { EmbedBuilder, TimestampStyles, codeBlock, time, DiscordAPIError } from 
 import { EmbedColors, defaultColor } from "./EmbedColors.js";
 
 import Util from "../../util/Util.js";
+import DiscordUtil from "../../util/DiscordUtil.js";
 
 import LoggerError from "../../errors/LoggerError.js";
 
@@ -135,7 +136,7 @@ class BaseDiscordTransport extends Transport {
             });
         }
 
-        const totalEmbedChars = Util.getEmbedSize(embed);
+        const totalEmbedChars = DiscordUtil.getEmbedSize(embed);
 
         if (info.message.length < this.charLimit - totalEmbedChars) {
             const formattedMessage = codeBlock(info.message);
@@ -150,7 +151,7 @@ class BaseDiscordTransport extends Transport {
         };
 
         if (!Util.empty(fileContent)) {
-            Object.assign(out, Util.getFileAttach(fileContent, "log.txt"));
+            Object.assign(out, DiscordUtil.getFileAttach(fileContent, "log.txt"));
         }
 
         return out;

@@ -1,4 +1,4 @@
-import Util from "../../../util/Util.js";
+import ArrayUtil from "../../../util/ArrayUtil.js";
 
 import DatabaseError from "../../../errors/DatabaseError.js";
 
@@ -15,7 +15,7 @@ export default function (base) {
         }
 
         removeStatement(statement) {
-            const removed = Util.removeItem(this.statements, statement);
+            const removed = ArrayUtil.removeItem(this.statements, statement);
 
             if (!removed) {
                 const err = new DatabaseError("Statement not found");
@@ -36,7 +36,7 @@ export default function (base) {
         }
 
         async finalizeAll() {
-            return await Util.wipeArray(this.statements, async st => {
+            return await ArrayUtil.wipeArray(this.statements, async st => {
                 if (st.finalized) {
                     return;
                 }

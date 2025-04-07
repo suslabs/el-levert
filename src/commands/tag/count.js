@@ -1,6 +1,7 @@
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import ParserUtil from "../../util/commands/ParserUtil.js";
 
 export default {
     name: "count",
@@ -16,7 +17,7 @@ export default {
             own = false;
 
         findUser: if (!Util.empty(args)) {
-            const [u_name] = Util.splitArgs(args, true);
+            const [u_name] = ParserUtil.splitArgs(args, true);
 
             all = u_name === "all";
             newTags = u_name === "new";

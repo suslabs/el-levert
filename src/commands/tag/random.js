@@ -1,6 +1,7 @@
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import ParserUtil from "../../util/commands/ParserUtil.js";
 
 export default {
     name: "random",
@@ -13,7 +14,7 @@ export default {
             return `:information_source: ${this.getArgsHelp("prefix")}`;
         }
 
-        const [prefix, t_args] = Util.splitArgs(args);
+        const [prefix, t_args] = ParserUtil.splitArgs(args);
 
         const err = getClient().tagManager.checkName(prefix);
 

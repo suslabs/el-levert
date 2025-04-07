@@ -158,11 +158,11 @@ class VM2ProcPool {
 
         VMUtil.sockWrite(socket, "script", {
             script: {
-                code: code,
-                scope: scope,
-                options: options,
+                code,
+                scope,
+                options,
                 funcs: Object.keys(funcs),
-                additionalPath: additionalPath
+                additionalPath
             }
         });
 

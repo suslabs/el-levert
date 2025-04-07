@@ -3,10 +3,11 @@ import SqlDatabase from "./SqlDatabase.js";
 import Tag from "../structures/tag/Tag.js";
 
 import Util from "../util/Util.js";
+import ArrayUtil from "../util/ArrayUtil.js";
 
 function sortTags(tags) {
     const objs = typeof Util.first(tags) !== "string";
-    Util.sort(tags, objs ? tag => tag.name : null);
+    ArrayUtil.sort(tags, objs ? tag => tag.name : null);
 }
 
 class TagDatabase extends SqlDatabase {

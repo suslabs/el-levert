@@ -6,6 +6,7 @@ import CommandLoader from "../../loaders/command/CommandLoader.js";
 import { getClient, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import ArrayUtil from "../../util/ArrayUtil.js";
 
 import LoadStatus from "../../loaders/LoadStatus.js";
 
@@ -68,7 +69,7 @@ class BaseCommandManager extends Manager {
             throw new CommandError("Can only delete parent commands");
         }
 
-        let deleted = Util.removeItem(this.commands, command);
+        let deleted = ArrayUtil.removeItem(this.commands, command);
 
         if (errorIfNotFound && !deleted) {
             throw new CommandError(`Couldn't delete command ${command.name}`);
@@ -100,7 +101,7 @@ class BaseCommandManager extends Manager {
         let deleted = true;
 
         for (const subcmd of command.getSubcmds()) {
-            deleted &= Util.removeItem(this.commands, subcmd);
+            deleted &= ArrayUtil.removeItem(this.commands, subcmd);
 
             if (errorIfNotFound && !deleted) {
                 throw new CommandError(`Couldn't delete subcommand ${subcmd.name} of command ${command.name}`);
@@ -121,7 +122,7 @@ class BaseCommandManager extends Manager {
         parent = subcmd.parentCmd ?? parent;
         const hasParent = parent != null;
 
-        const deleted = Util.removeItem(this.commands, subcmd);
+        const deleted = ArrayUtil.removeItem(this.commands, subcmd);
 
         if (errorIfNotFound && !deleted) {
             const name = subcmd.name + hasParent ? ` of command ${parent.name}` : "";
@@ -193,7 +194,7 @@ class BaseCommandManager extends Manager {
 
             getLogger().warn(`Found ${unbound} orphaned subcommand(s):\n${format}`);
 
-            Util.wipeArray(unboundCmds, command => {
+            ArrayUtil.wipeArray(unboundCmds, command => {
                 this.deleteSubcommand(command);
             });
         }
@@ -232,7 +233,7 @@ class BaseCommandManager extends Manager {
     _deleteDuplicateCommands() {
         const duplicates = this._findDuplicateCommands();
 
-        Util.wipeArray(duplicates, command => {
+        ArrayUtil.wipeArray(duplicates, command => {
             this.deleteCommand(command, false);
             getLogger().info(`Deleted duplicate of "${command.name}".`);
         });

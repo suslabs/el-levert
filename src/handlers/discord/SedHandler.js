@@ -1,22 +1,24 @@
-import { ChannelType, MessageType, EmbedBuilder } from "discord.js";
+import { MessageType, EmbedBuilder } from "discord.js";
 
 import MessageHandler from "../MessageHandler.js";
 
 import { getClient, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import DiscordUtil from "../../util/DiscordUtil.js";
+import LoggerUtil from "../../util/LoggerUtil.js";
 
 import HandlerError from "../../errors/HandlerError.js";
 
 function logUsage(msg) {
     getLogger().info(
-        `Generating sed for "${msg.content}", issued by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${Util.formatChannelName(msg.channel)}).`
+        `Generating sed for "${msg.content}", issued by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)}).`
     );
 }
 
 function logSending(sed) {
     const text = sed.data.description;
-    getLogger().debug(`Sending replaced message:${Util.formatLog(text)}`);
+    getLogger().debug(`Sending replaced message:${LoggerUtil.formatLog(text)}`);
 }
 
 function logGenTime(t1) {
@@ -71,7 +73,7 @@ class SedHandler extends MessageHandler {
 
             await this.reply(msg, {
                 content: ":no_entry_sign: Encountered exception while generating sed replace:",
-                ...Util.getFileAttach(err.stack, "error.js")
+                ...DiscordUtil.getFileAttach(err.stack, "error.js")
             });
 
             getLogger().error("Sed generation failed:", err);
@@ -87,7 +89,7 @@ class SedHandler extends MessageHandler {
         } catch (err) {
             await this.reply(msg, {
                 content: `:no_entry_sign: Encountered exception while sending sed replace:`,
-                ...Util.getFileAttach(err.stack, "error.js")
+                ...DiscordUtil.getFileAttach(err.stack, "error.js")
             });
 
             getLogger().error("Reply failed", err);
@@ -175,7 +177,7 @@ class SedHandler extends MessageHandler {
             avatar = sedMsg.author.displayAvatarURL(),
             timestamp = sedMsg.editedTimestamp ?? sedMsg.createdTimestamp,
             image = sedMsg.attachments.at(0)?.url,
-            channel = Util.formatChannelName(sedMsg.channel);
+            channel = DiscordUtil.formatChannelName(sedMsg.channel);
 
         const embed = new EmbedBuilder()
             .setAuthor({

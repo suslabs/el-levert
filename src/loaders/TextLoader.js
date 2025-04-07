@@ -78,8 +78,8 @@ class TextLoader extends FileLoader {
 
                 return fsPromises
                     .writeFile(this._tempPath, data, this._fsConfig)
-                    .then(() => fsPromises.rename(this._tempPath, this._path))
-                    .then(() => LoadStatus.successful)
+                    .then(_ => fsPromises.rename(this._tempPath, this._path))
+                    .then(_ => LoadStatus.successful)
                     .catch(err => this._handleWriteError(err));
             });
         }
@@ -149,7 +149,7 @@ class TextLoader extends FileLoader {
             this._deleteTempSync();
             return failure;
         } else {
-            return this._deleteTempAsync().then(() => failure);
+            return this._deleteTempAsync().then(_ => failure);
         }
     }
 

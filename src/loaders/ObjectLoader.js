@@ -1,6 +1,6 @@
 import FileLoader from "./FileLoader.js";
 
-import Util from "../util/Util.js";
+import ModuleUtil from "../util/misc/ModuleUtil.js";
 
 import LoadStatus from "./LoadStatus.js";
 
@@ -25,7 +25,7 @@ class ObjectLoader extends FileLoader {
             return status;
         }
 
-        const object = await Util.import(this._path, this.cache);
+        const object = await ModuleUtil.import(this._path, this.cache);
 
         if (typeof object === "undefined") {
             return LoadStatus.failed;

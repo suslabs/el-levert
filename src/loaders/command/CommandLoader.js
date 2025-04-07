@@ -1,7 +1,7 @@
 import DirectoryLoader from "../DirectoryLoader.js";
 import CommandObjectLoader from "./CommandObjectLoader.js";
 
-import Util from "../../util/Util.js";
+import ArrayUtil from "../../util/ArrayUtil.js";
 
 import LoadStatus from "../LoadStatus.js";
 
@@ -52,7 +52,7 @@ class CommandLoader extends DirectoryLoader {
 
         this.deleteAllData();
 
-        const n = Util.wipeArray(this.commands);
+        const n = ArrayUtil.wipeArray(this.commands);
         delete this.commands;
 
         this.logger?.debug(`Deleted ${n} commands.`);

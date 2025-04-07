@@ -1,4 +1,6 @@
 import Util from "../../util/Util.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
+import FunctionUtil from "../../util/misc/FunctionUtil.js";
 import getRegisterCode from "../../util/vm/getRegisterCode.js";
 import VMUtil from "../../util/vm/VMUtil.js";
 
@@ -33,7 +35,7 @@ class VMFunction {
             throw new VMError("VM function must have a reference function");
         }
 
-        Util.setValuesWithDefaults(this, options, this.constructor.defaultValues);
+        ObjectUtil.setValuesWithDefaults(this, options, this.constructor.defaultValues);
 
         switch (this.execution) {
             case ExecutionTypes.bot:
@@ -71,7 +73,7 @@ class VMFunction {
             takesContext = this._takesContext(ref);
 
         if (takesContext) {
-            ref = Util.bindArgs(ref, evalContext);
+            ref = FunctionUtil.bindArgs(ref, evalContext);
         }
 
         if (this._stringFunc) {
@@ -109,7 +111,7 @@ class VMFunction {
             args.push(obj);
         }
 
-        return Util.bindArgs(ref, args);
+        return FunctionUtil.bindArgs(ref, args);
     }
 
     _getRefFunc(propertyMap) {
@@ -139,7 +141,7 @@ class VMFunction {
             return;
         }
 
-        const argNames = Util.functionArgumentNames(func);
+        const argNames = FunctionUtil.functionArgumentNames(func);
         return Util.first(argNames) === "context";
     }
 

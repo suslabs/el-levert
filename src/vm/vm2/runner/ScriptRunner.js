@@ -24,9 +24,9 @@ function func_cb(socket, name, args) {
 
         VMUtil.sockWrite(socket, "funcCall", {
             funcCall: {
-                name: name,
-                uniqueName: uniqueName,
-                args: args
+                name,
+                uniqueName,
+                args
             }
         });
 

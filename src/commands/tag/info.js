@@ -1,6 +1,8 @@
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import ParserUtil from "../../util/commands/ParserUtil.js";
+import DiscordUtil from "../../util/DiscordUtil.js";
 
 export default {
     name: "info",
@@ -14,7 +16,7 @@ export default {
             return `:information_source: ${this.getArgsHelp("name")}`;
         }
 
-        const [t_name, i_type] = Util.splitArgs(args, [true, true]),
+        const [t_name, i_type] = ParserUtil.splitArgs(args, [true, true]),
             raw = i_type === "raw";
 
         if (this.matchesSubcmd(t_name)) {
@@ -41,7 +43,7 @@ export default {
         if (infoJson.length + 10 > getClient().commandHandler.outCharLimit) {
             return {
                 content: header,
-                ...Util.getFileAttach(infoJson, "info.json")
+                ...DiscordUtil.getFileAttach(infoJson, "info.json")
             };
         } else {
             return `${header}

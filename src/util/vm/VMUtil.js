@@ -1,4 +1,4 @@
-import { isObject } from "../misc/TypeTester.js";
+import TypeTester from "../TypeTester.js";
 
 import UtilError from "../../errors/UtilError.js";
 
@@ -40,7 +40,7 @@ const VMUtil = {
         const pathMap = new Map();
 
         function recRemove(val, path) {
-            if (!isObject(val)) {
+            if (!TypeTester.isObject(val)) {
                 return val;
             }
 
@@ -116,7 +116,7 @@ const VMUtil = {
     formatReply: (text, msg) => {
         let out = {};
 
-        if (isObject(text)) {
+        if (TypeTester.isObject(text)) {
             msg = text;
         } else {
             out.content = VMUtil.formatOutput(text) ?? "";
@@ -130,7 +130,7 @@ const VMUtil = {
             out.content = VMUtil.formatOutput(msg.content);
         }
 
-        if (isObject(msg.embed)) {
+        if (TypeTester.isObject(msg.embed)) {
             const embed = {};
 
             for (const prop of VMUtil._allowedEmbedProps) {
@@ -143,7 +143,7 @@ const VMUtil = {
             out.embeds = [embed];
         }
 
-        if (isObject(msg.file)) {
+        if (TypeTester.isObject(msg.file)) {
             out.file = msg.file;
         }
 

@@ -1,5 +1,5 @@
 import Util from "../Util.js";
-import { isObject } from "./TypeTester.js";
+import TypeTester from "../TypeTester.js";
 
 import UtilError from "../../errors/UtilError.js";
 
@@ -16,7 +16,7 @@ const CallstackUtil = Object.freeze({
 
         Error.stackTraceLimit = oldLimit;
 
-        if (!isObject(stack)) {
+        if (!TypeTester.isObject(stack)) {
             throw new UtilError("Invalid callstack");
         }
 

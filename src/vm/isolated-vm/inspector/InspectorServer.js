@@ -3,7 +3,7 @@ import WebSocket from "ws";
 
 import { getLogger } from "../../../LevertClient.js";
 
-import Util from "../../../util/Util.js";
+import LoggerUtil from "../../../util/LoggerUtil.js";
 
 class InspectorServer {
     static inspectorUrl = "devtools://devtools/bundled/inspector.html";
@@ -32,7 +32,7 @@ class InspectorServer {
         });
 
         socket.on("close", code => {
-            getLogger().debug(`Inspector websocket closed:${Util.formatLog(code)}`);
+            getLogger().debug(`Inspector websocket closed:${LoggerUtil.formatLog(code)}`);
             this._disconnectInspector();
         });
 

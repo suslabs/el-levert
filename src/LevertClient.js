@@ -1,5 +1,3 @@
-import { isPromise } from "node:util/types";
-
 import DiscordClient from "./client/DiscordClient.js";
 
 import version from "../version.js";
@@ -21,7 +19,9 @@ import { registerGlobalErrorHandler, removeGlobalErrorHandler } from "./client/G
 import MessageProcessor from "./client/MessageProcessor.js";
 
 import Util from "./util/Util.js";
-import { isObject } from "./util/misc/TypeTester.js";
+import TypeTester from "./util/TypeTester.js";
+import ArrayUtil from "./util/ArrayUtil.js";
+import ObjectUtil from "./util/ObjectUtil.js";
 import ModuleUtil from "./util/misc/ModuleUtil.js";
 
 import ClientError from "./errors/ClientError.js";
@@ -128,7 +128,7 @@ class LevertClient extends DiscordClient {
         const components = Object.entries(barrel);
 
         components.forEach(([compName, compClass]) => {
-            if (Util.outOfRange(LevertClient.minPriority, LevertClient.maxPriority, compClass.loadPriority)) {
+            if (TypeTester.outOfRange(LevertClient.minPriority, LevertClient.maxPriority, compClass.loadPriority)) {
                 throw new ClientError(`Invalid load priority ${compClass.loadPriority} for component ${compName}`);
             } else {
                 compClass.loadPriority ??= LevertClient.maxPriority;
@@ -145,7 +145,7 @@ class LevertClient extends DiscordClient {
 
             if (Array.isArray(args)) {
                 _args.args = args;
-            } else if (isObject(args)) {
+            } else if (TypeTester.isObject(args)) {
                 Object.assign(_args, args);
             } else {
                 _args.enabled = args;
@@ -166,7 +166,7 @@ class LevertClient extends DiscordClient {
             });
 
         for (const [compName, compInst] of compInstances) {
-            if (Util.outOfRange(LevertClient.minPriority, LevertClient.maxPriority, compInst.priority)) {
+            if (TypeTester.outOfRange(LevertClient.minPriority, LevertClient.maxPriority, compInst.priority)) {
                 throw new ClientError(`Invalid handler priority ${compInst.priority} for component ${compName}`);
             } else {
                 compInst.priority ??= LevertClient.minPriority;
@@ -227,11 +227,11 @@ class LevertClient extends DiscordClient {
             this.logger.info(`Loading ${pluralName}...`);
         }
 
-        const res = Util.maybeAsyncForEach(compInstances, ([compName, compInst]) => {
+        const res = ArrayUtil.maybeAsyncForEach(compInstances, ([compName, compInst]) => {
             compLoading(compName);
             const compRes = compInst.load();
 
-            if (isPromise(compRes)) {
+            if (TypeTester.isPromise(compRes)) {
                 return (async () => {
                     await compRes;
                     compLoaded(compName, compInst);
@@ -241,7 +241,7 @@ class LevertClient extends DiscordClient {
             }
         });
 
-        if (isPromise(res)) {
+        if (TypeTester.isPromise(res)) {
             return (async () => {
                 await res;
                 loadFinished();
@@ -292,7 +292,7 @@ class LevertClient extends DiscordClient {
         };
 
         const unloadFinished = () => {
-            Util.wipeArray(this[listName]);
+            ArrayUtil.wipeArray(this[listName]);
 
             delete this[pluralName];
             delete this[listName];
@@ -314,11 +314,11 @@ class LevertClient extends DiscordClient {
             this.logger.info(`Unloading ${pluralName}...`);
         }
 
-        const res = Util.wipeObject(this[pluralName], (compName, compInst) => {
+        const res = ObjectUtil.wipeObject(this[pluralName], (compName, compInst) => {
             compUnloading(compName);
             const compRes = compInst.unload();
 
-            if (isPromise(compRes)) {
+            if (TypeTester.isPromise(compRes)) {
                 return (async () => {
                     await compRes;
                     compUnloaded(compName);
@@ -328,7 +328,7 @@ class LevertClient extends DiscordClient {
             }
         });
 
-        if (isPromise(res)) {
+        if (TypeTester.isPromise(res)) {
             return (async () => {
                 await res;
                 unloadFinished();
@@ -492,7 +492,7 @@ class LevertClient extends DiscordClient {
             return;
         }
 
-        const individual = isObject(messageFormats) && !Array.isArray(messageFormats);
+        const individual = TypeTester.isObject(messageFormats) && !Array.isArray(messageFormats);
         this.individualBridgeBotFormats = individual;
 
         if (individual) {
@@ -728,7 +728,7 @@ class LevertClient extends DiscordClient {
             return;
         }
 
-        Util.removeItem(this.handlerList, this.cliCommandHandler);
+        ArrayUtil.removeItem(this.handlerList, this.cliCommandHandler);
 
         this.inputManager.handleInput = this.cliCommandHandler.execute;
         this.inputManager.active = true;

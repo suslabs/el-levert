@@ -146,6 +146,7 @@ async function loadTagManager() {
     const config = await loadConfig(),
         logger = setupLogger(loggerName, config.importLogFile);
 
+    // eslint-disable-next-line unused-imports/no-unused-vars
     const client = loadClient(config, logger),
         tagManager = await loadTagManager();
 

@@ -1,6 +1,7 @@
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import ParserUtil from "../../util/commands/ParserUtil.js";
 
 export default {
     name: "remove_all",
@@ -10,7 +11,7 @@ export default {
     allowed: getClient().permManager.adminLevel,
 
     handler: async function (args, msg, perm) {
-        const [u_name] = Util.splitArgs(args);
+        const [u_name] = ParserUtil.splitArgs(args);
 
         if (Util.empty(args) || Util.empty(u_name)) {
             return `:information_source: ${this.getArgsHelp("(ping/id/username)")}`;

@@ -6,8 +6,6 @@ import { getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 
-import ManagerError from "../../errors/ManagerError.js";
-
 class InputManager extends Manager {
     static $name = "inputManager";
 

@@ -3,6 +3,8 @@ import { bold, inlineCode, codeBlock } from "discord.js";
 import BaseCommand from "./BaseCommand.js";
 
 import Util from "../../util/Util.js";
+import ArrayUtil from "../../util/ArrayUtil.js";
+import ParserUtil from "../../util/commands/ParserUtil.js";
 
 class TextCommand extends BaseCommand {
     static defaultValues = {
@@ -69,7 +71,7 @@ class TextCommand extends BaseCommand {
         }
 
         let subNames = this.getSubcmdNames(includeAliases);
-        Util.sort(subNames);
+        ArrayUtil.sort(subNames);
 
         return subNames.join(sep);
     }
@@ -151,7 +153,7 @@ class TextCommand extends BaseCommand {
         }
 
         if (!this.isSubcmd) {
-            const [subName, subArgs] = Util.splitArgs(args),
+            const [subName, subArgs] = ParserUtil.splitArgs(args),
                 subCmd = this.getSubcmd(subName);
 
             if (subCmd !== null) {

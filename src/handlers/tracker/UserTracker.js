@@ -1,6 +1,7 @@
 import TrackedUser from "./TrackedUser.js";
 
 import Util from "../../util/Util.js";
+import ArrayUtil from "../../util/ArrayUtil.js";
 
 class UserTracker {
     constructor(sweepInterval = 0) {
@@ -31,14 +32,14 @@ class UserTracker {
 
     removeUser(id) {
         if (typeof id === "object") {
-            Util.removeItem(this.trackedUsers, id);
+            ArrayUtil.removeItem(this.trackedUsers, id);
         } else {
-            Util.removeItem(this.trackedUsers, user => user.id === id);
+            ArrayUtil.removeItem(this.trackedUsers, user => user.id === id);
         }
     }
 
     clearUsers() {
-        Util.wipeArray(this.trackedUsers);
+        ArrayUtil.wipeArray(this.trackedUsers);
     }
 
     _sweepUsers() {

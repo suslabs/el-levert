@@ -1,8 +1,19 @@
+import { pathToFileURL } from "node:url";
 import assert from "node:assert/strict";
 
-import { isPromise } from "node:util/types";
+import TypeTester from "../TypeTester.js";
 
 const ModuleUtil = Object.freeze({
+    import: async (modulePath, cache = true) => {
+        let fileURL = pathToFileURL(modulePath);
+
+        if (!cache) {
+            fileURL += `?update=${Date.now()}`;
+        }
+
+        return (await import(fileURL)).default;
+    },
+
     compileExports: (barrel, nameField = "$name") => {
         let obj = {},
             i = 1;
@@ -10,7 +21,7 @@ const ModuleUtil = Object.freeze({
         for (const [exportName, _class] of Object.entries(barrel)) {
             const info = [nameField, exportName];
 
-            if (isPromise(_class)) {
+            if (TypeTester.isPromise(_class)) {
                 const name = `dummy${i}`;
                 obj[name] = ModuleUtil._resolveFunc.bind(obj, name, _class, info);
 

@@ -1,6 +1,8 @@
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import ParserUtil from "../../util/commands/ParserUtil.js";
+import DiscordUtil from "../../util/DiscordUtil.js";
 
 function formatTagList(tags) {
     const format = tags.map((tag, i) => `${i + 1}. ${tag.format()}`);
@@ -16,7 +18,7 @@ export default {
         let user = msg.author;
 
         if (!Util.empty(args)) {
-            const [u_name] = Util.splitArgs(args),
+            const [u_name] = ParserUtil.splitArgs(args),
                 find = Util.first(await getClient().findUsers(u_name));
 
             if (typeof find === "undefined") {
@@ -51,7 +53,7 @@ export default {
         }
 
         const out = {
-            ...Util.getFileAttach(format)
+            ...DiscordUtil.getFileAttach(format)
         };
 
         if (user === msg.author) {

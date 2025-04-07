@@ -1,5 +1,3 @@
-import axios from "axios";
-
 import DBManager from "./DBManager.js";
 import TagDatabase from "../../database/TagDatabase.js";
 
@@ -9,8 +7,11 @@ import { TagTypes } from "../../structures/tag/TagTypes.js";
 import { getClient, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-import { isObject } from "../../util/misc/TypeTester.js";
+import TypeTester from "../../util/TypeTester.js";
+import RegexUtil from "../../util/misc/RegexUtil.js";
 import search from "../../util/search/uFuzzySearch.js";
+import DiscordUtil from "../../util/DiscordUtil.js";
+import LoggerUtil from "../../util/LoggerUtil.js";
 
 import TagError from "../../errors/TagError.js";
 
@@ -167,7 +168,7 @@ class TagManager extends DBManager {
         await this._updateQuota(tag.owner, sizeDiff);
         await this.tag_db.edit(newTag);
 
-        getLogger().info(`Edited tag: "${tag.name}" with type: ${type}, body:${Util.formatLog(body)}`);
+        getLogger().info(`Edited tag: "${tag.name}" with type: ${type}, body:${LoggerUtil.formatLog(body)}`);
         return newTag;
     }
 
@@ -212,7 +213,7 @@ class TagManager extends DBManager {
 
         await this.tag_db.updateProps(name, tag);
 
-        getLogger().info(`Updated tag: "${oldTag.name}" with data:${Util.formatLog(tag.getData())}`);
+        getLogger().info(`Updated tag: "${oldTag.name}" with data:${LoggerUtil.formatLog(tag.getData())}`);
         return tag;
     }
 
@@ -224,7 +225,7 @@ class TagManager extends DBManager {
         let create = false;
 
         if (tag === null) {
-            if (!isObject(createOptions)) {
+            if (!TypeTester.isObject(createOptions)) {
                 throw new TagError("No info for creating the tag provided");
             }
 
@@ -356,7 +357,7 @@ class TagManager extends DBManager {
         if (Util.empty(prefix)) {
             tags = await this.dump();
         } else {
-            const exp = new RegExp(`^${Util.escapeRegex(prefix)}\\d+?$`);
+            const exp = new RegExp(`^${RegexUtil.escapeRegex(prefix)}\\d+?$`);
 
             tags = await this.tag_db.searchPrefix(prefix);
             tags = tags.filter(tag => exp.test(tag));
@@ -400,26 +401,30 @@ class TagManager extends DBManager {
     }
 
     async downloadBody(t_args, msg) {
+        let isFile = true;
         let body,
             isScript = false;
 
-        const attach = msg.attachments.at(0),
-            isScriptFile = TagManager._scriptContentTypes.some(ct => attach.contentType.startsWith(ct));
-
-        if (isScriptFile) {
-            if (attach.size > this.maxTagSize * 1024) {
-                throw new TagError(`Scripts can take up at most ${this.maxTagSize}kb`);
-            }
-
-            const res = await axios.request({
-                url: attach.attachment,
-                responseType: "text"
+        try {
+            body = await DiscordUtil.fetchAttachment(msg, undefined, {
+                allowedContentTypes: TagManager._fileContentTypes,
+                maxSize: this.maxTagSize
             });
+        } catch (err) {
+            if (Util.hasPrefix(["Message doesn't have", "Invalid content type"], err.message)) {
+                isFile = false;
+            } else if (err.message.startsWith("The attachment can take up at most")) {
+                throw new TagError(`Scripts can take up at most ${this.maxTagSize} kb`);
+            } else {
+                throw err;
+            }
+        }
 
-            body = res.data;
-            isScript = true;
+        if (isFile) {
+            const attach = msg.attachments.at(0);
+            isScript = Util.hasPrefix(TagManager._scriptContentTypes, attach.contentType);
         } else {
-            body = t_args.trimEnd();
+            body = t_args?.trimEnd() ?? "";
 
             if (!Util.empty(body)) {
                 body += " ";
@@ -431,13 +436,16 @@ class TagManager extends DBManager {
         return [body, isScript];
     }
 
+    static _fileContentTypes = ["text/plain"];
+    static _scriptContentTypes = ["application/javascript"];
+
     async _add(tag) {
         const tagSize = tag.getSize();
 
         await this._updateQuota(tag.owner, tagSize);
         await this.tag_db.add(tag);
 
-        const bodyLogStr = Util.formatLog(Util.trimString(tag.body, 300, null, true));
+        const bodyLogStr = LoggerUtil.formatLog(Util.trimString(tag.body, 300, null, true));
         getLogger().info(`Added tag: "${tag.name}" with type: ${tag.type}, body:${bodyLogStr}`);
     }
 
@@ -487,14 +495,12 @@ class TagManager extends DBManager {
         const newQuota = currQuota + diff;
 
         if (newQuota > this.maxQuota) {
-            throw new TagError(`Maximum quota of ${this.maxQuota}kb has been exceeded`);
+            throw new TagError(`Maximum quota of ${this.maxQuota} kb has been exceeded`);
         }
 
         await this.tag_db.quotaSet(user, newQuota);
         getLogger().debug(`Updated quota for: ${user} diff: ${diff}`);
     }
-
-    static _scriptContentTypes = ["text/plain", "application/javascript"];
 }
 
 export default TagManager;

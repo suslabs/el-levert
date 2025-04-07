@@ -3,7 +3,6 @@ import replEval from "../../util/commands/replEval.js";
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-import VMUtil from "../../util/vm/VMUtil.js";
 
 export default {
     name: "eval",

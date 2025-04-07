@@ -1,6 +1,7 @@
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import ParserUtil from "../../util/commands/ParserUtil.js";
 
 export default {
     name: "add",
@@ -13,7 +14,7 @@ export default {
             return `:information_source: ${this.getArgsHelp("name body")}`;
         }
 
-        const [t_name, t_args] = Util.splitArgs(args, true);
+        const [t_name, t_args] = ParserUtil.splitArgs(args, true);
 
         if (this.matchesSubcmd(t_name)) {
             return `:police_car: **${t_name}** is a __command__, not a __tag__. You can't manipulate commands.`;

@@ -1,6 +1,7 @@
 import { bold } from "discord.js";
 
 import Util from "../../util/Util.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
 
 class Group {
     static defaultValues = {
@@ -10,7 +11,7 @@ class Group {
     };
 
     constructor(data) {
-        Util.setValuesWithDefaults(this, data, this.constructor.defaultValues);
+        ObjectUtil.setValuesWithDefaults(this, data, this.constructor.defaultValues);
     }
 
     setUsers(users) {

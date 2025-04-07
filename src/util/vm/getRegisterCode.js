@@ -1,5 +1,6 @@
 import Util from "../Util.js";
 import Codegen from "./Codegen.js";
+import TypeTester from "../TypeTester.js";
 
 const funcOptions = {
     arguments: {
@@ -7,7 +8,7 @@ const funcOptions = {
     }
 };
 
-const optionsStr = JSON.stringify(funcOptions, undefined, 4);
+const optionsStr = Codegen.object(funcOptions);
 
 function objDeclaration(objName) {
     if (Util.empty(objName)) {
@@ -19,7 +20,7 @@ function objDeclaration(objName) {
 }
 
 function classDeclaration(_class, global) {
-    const className = Util.className(_class),
+    const className = TypeTester.className(_class),
         classCode = _class.toString().trim();
 
     if (global) {
@@ -96,7 +97,7 @@ function getRegisterCode(options, funcOptions = {}, errorOptions = {}) {
     const errClass = errorOptions.class,
         useError = typeof errClass !== "undefined",
         errAccessible = errorOptions.accessible ?? false,
-        errName = useError ? Util.className(errClass) : undefined;
+        errName = useError ? TypeTester.className(errClass) : undefined;
 
     const commonArgs = [objName, funcName, !useError, errName];
 

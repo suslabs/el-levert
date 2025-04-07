@@ -1,6 +1,7 @@
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import ParserUtil from "../../util/commands/ParserUtil.js";
 
 export default {
     name: "add_group",
@@ -10,7 +11,7 @@ export default {
     allowed: getClient().permManager.adminLevel,
 
     handler: async function (args, msg, perm) {
-        let [g_name, level] = Util.splitArgs(args);
+        let [g_name, level] = ParserUtil.splitArgs(args);
 
         if (Util.empty(args) || Util.empty(g_name) || Util.empty(level)) {
             return `:information_source: ${this.getArgsHelp("group_name level")}`;
