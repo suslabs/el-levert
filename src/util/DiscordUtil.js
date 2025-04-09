@@ -10,6 +10,9 @@ import ArrayUtil from "./ArrayUtil.js";
 import UtilError from "../errors/UtilError.js";
 
 let DiscordUtil = {
+    msgCharLimit: 2000,
+    embedCharLimit: 4096,
+
     codeblockRegex: /(?<!\\)(?:`{3}([\S]+\n)?([\s\S]*?)`{3}|`([^`\n]+)`)/g,
 
     findCodeblocks: str => {

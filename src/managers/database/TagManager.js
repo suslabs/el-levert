@@ -24,8 +24,8 @@ class TagManager extends DBManager {
 
         this.maxQuota = getClient().config.maxQuota;
         this.maxTagSize = getClient().config.maxTagSize;
-        this.maxTagNameLength = getClient().config.maxTagNameLength;
 
+        this.maxTagNameLength = getClient().config.maxTagNameLength;
         this.tagNameRegex = new RegExp(getClient().config.tagNameRegex);
     }
 
@@ -450,7 +450,7 @@ class TagManager extends DBManager {
     }
 
     async _runScriptTag(tag, type, args, msg) {
-        const evalArgs = (args ? String(args) + " " : "") + tag.args;
+        const evalArgs = [args, tag.args].filter(str => !Util.empty(str)).join(" ");
 
         switch (type) {
             case "ivm":

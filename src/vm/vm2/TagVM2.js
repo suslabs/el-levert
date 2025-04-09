@@ -42,11 +42,8 @@ class TagVM2 extends VM {
 
         this.vmOptions = options.vmOptions ?? defaultVMOptions;
 
-        const timeLimit = getClient().config.otherTimeLimit,
-            limitMs = Math.floor(timeLimit / Util.durationSeconds.milli);
-
         this.memLimit = getClient().config.otherMemLimit;
-        this.timeLimit = limitMs;
+        this.timeLimit = getClient().config.otherTimeLimit;
     }
 
     createProcPool() {

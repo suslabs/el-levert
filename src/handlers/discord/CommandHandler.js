@@ -35,10 +35,13 @@ class CommandHandler extends MessageHandler {
             userSweepInterval: 10 / Util.durationSeconds.milli
         });
 
-        this.minResponseTime = getClient().config.minResponseTime / Util.durationSeconds.milli;
+        this.minResponseTime = getClient().config.minResponseTime;
 
-        this.outCharLimit = Util.clamp(getClient().config.outCharLimit, 0, 2000);
-        this.outLineLimit = Util.clamp(getClient().config.outLineLimit, 0, 2000);
+        this.outCharLimit = getClient().config.outCharLimit;
+        this.outLineLimit = getClient().config.outLineLimit;
+
+        this.embedCharLimit = getClient().config.embedCharLimit;
+        this.embedLineLimit = getClient().config.embedLineLimit;
     }
 
     async execute(msg) {
@@ -117,6 +120,7 @@ class CommandHandler extends MessageHandler {
     _processResult(res) {
         const msgRes = TypeTester.isObject(res),
             str = VMUtil.formatOutput(msgRes ? res.content : res)?.trim();
+
         let out = msgRes ? (({ content: _, ...rest }) => rest)(res) : {};
 
         if (TypeTester.overSizeLimits(str, this.outCharLimit, this.outLineLimit)) {
@@ -137,7 +141,7 @@ class CommandHandler extends MessageHandler {
         }
 
         for (const [i, embed] of out.embeds.entries()) {
-            const oversized = TypeTester.overSizeLimits(embed, this.outCharLimit, this.outLineLimit);
+            const oversized = TypeTester.overSizeLimits(embed, this.embedCharLimit, this.embedLineLimit);
 
             if (!oversized) {
                 continue;
@@ -148,11 +152,11 @@ class CommandHandler extends MessageHandler {
 
             if (chars !== null) {
                 return {
-                    content: `:warning: Embed${n} is too long. (${chars} / ${this.outCharLimit})`
+                    content: `:warning: Embed${n} is too long. (${chars} / ${this.embedCharLimit})`
                 };
             } else if (lines !== null) {
                 return {
-                    content: `:warning: Embed${n} has too many newlines. (${lines} / ${this.outLineLimit})`
+                    content: `:warning: Embed${n} has too many newlines. (${lines} / ${this.embedLineLimit})`
                 };
             }
         }

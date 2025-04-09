@@ -6,6 +6,7 @@ import Reminder from "../../structures/Reminder.js";
 import { getClient, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import DiscordUtil from "../../util/DiscordUtil.js";
 import TypeTester from "../../util/TypeTester.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
 
@@ -25,13 +26,8 @@ class ReminderManager extends DBManager {
     constructor(enabled) {
         super(enabled, "reminder", "remind_db", ReminderDatabase);
 
-        const sendInterval = getClient().config.reminderSendInterval,
-            intervalMs = Math.floor(sendInterval / Util.durationSeconds.milli);
-
-        this.intervalSeconds = sendInterval;
-        this.sendInterval = intervalMs;
-
-        this.maxMsgLength = Util.clamp(ReminderManager.maxMsgLength, 0, 1500);
+        this.sendInterval = getClient().config.reminderSendInterval;
+        this.maxMsgLength = Util.clamp(ReminderManager.maxMsgLength, 0, DiscordUtil.msgCharLimit - 500);
 
         this._sendTimer = null;
     }
@@ -144,7 +140,7 @@ class ReminderManager extends DBManager {
     }
 
     async _sendReminders() {
-        getLogger().debug(`Checking reminders... (${Util.round(this.intervalSeconds, 1)}s)`);
+        getLogger().debug(`Checking reminders... (${Util.round(this.sendInterval * Util.durationSeconds.milli, 1)}s)`);
         const t1 = performance.now();
 
         const reminders = await this.getPastReminders();

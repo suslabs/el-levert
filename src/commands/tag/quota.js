@@ -20,7 +20,7 @@ export default {
             return `:information_source: You aren't using any of the available storage.`;
         }
 
-        const maxQuota = getClient().config.maxQuota,
+        const maxQuota = getClient().tagManager.maxQuota,
             perc = Util.round((quota / maxQuota) * 100, 2),
             roundedQuota = Util.smallRound(quota, 2);
 

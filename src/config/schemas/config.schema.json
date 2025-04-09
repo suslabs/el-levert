@@ -34,6 +34,39 @@
         "cliCmdPrefix": {
             "type": "string"
         },
+        "outCharLimit": {
+            "type": "number"
+        },
+        "outLineLimit": {
+            "type": "number"
+        },
+        "embedCharLimit": {
+            "type": "number"
+        },
+        "embedLineLimit": {
+            "type": "number"
+        },
+        "minResponseTime": {
+            "type": "number"
+        },
+        "reminderMsgLimit": {
+            "type": "number"
+        },
+        "reminderSendInterval": {
+            "type": "number"
+        },
+        "maxTagNameLength": {
+            "type": "number"
+        },
+        "tagNameRegex": {
+            "type": "string"
+        },
+        "maxTagSize": {
+            "type": "number"
+        },
+        "maxQuota": {
+            "type": "number"
+        },
         "memLimit": {
             "type": "number"
         },
@@ -50,33 +83,6 @@
             "type": "boolean"
         },
         "inspectorPort": {
-            "type": "number"
-        },
-        "outCharLimit": {
-            "type": "number"
-        },
-        "outLineLimit": {
-            "type": "number"
-        },
-        "minResponseTime": {
-            "type": "number"
-        },
-        "reminderMsgLimit": {
-            "type": "number"
-        },
-        "reminderSendInterval": {
-            "type": "number"
-        },
-        "tagNameRegex": {
-            "type": "string"
-        },
-        "maxTagNameLength": {
-            "type": "number"
-        },
-        "maxTagSize": {
-            "type": "number"
-        },
-        "maxQuota": {
             "type": "number"
         },
         "maxGroupNameLength": {
@@ -176,21 +182,23 @@
         "cmdPrefix",
         "enableCliCommands",
         "cliCmdPrefix",
+        "outCharLimit",
+        "outLineLimit",
+        "embedCharLimit",
+        "embedLineLimit",
+        "minResponseTime",
+        "reminderMsgLimit",
+        "reminderSendInterval",
+        "maxTagNameLength",
+        "tagNameRegex",
+        "maxTagSize",
+        "maxQuota",
         "memLimit",
         "timeLimit",
         "otherMemLimit",
         "otherTimeLimit",
         "enableInspector",
         "inspectorPort",
-        "outCharLimit",
-        "outLineLimit",
-        "minResponseTime",
-        "reminderMsgLimit",
-        "reminderSendInterval",
-        "tagNameRegex",
-        "maxTagNameLength",
-        "maxTagSize",
-        "maxQuota",
         "maxGroupNameLength",
         "tagModeratorLevel",
         "permissionAdminLevel",

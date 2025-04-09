@@ -4,14 +4,12 @@ import { EmbedBuilder, TimestampStyles, codeBlock, time, DiscordAPIError } from 
 import { EmbedColors, defaultColor } from "./EmbedColors.js";
 
 import Util from "../../util/Util.js";
+import TypeTester from "../../util/TypeTester.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 
 import LoggerError from "../../errors/LoggerError.js";
 
 class BaseDiscordTransport extends Transport {
-    static msgCharLimit = 2000;
-    static embedCharLimit = 4096;
-
     constructor(opts) {
         super(opts);
 
@@ -23,8 +21,8 @@ class BaseDiscordTransport extends Transport {
             throw new LoggerError("Child class must have a sendLog function");
         }
 
-        const charLimit = opts.charLimit ?? BaseDiscordTransport.embedCharLimit;
-        this.charLimit = Util.clamp(charLimit, 0, BaseDiscordTransport.embedCharLimit);
+        const charLimit = opts.charLimit ?? DiscordUtil.embedCharLimit;
+        this.charLimit = Util.clamp(charLimit, 0, DiscordUtil.embedCharLimit);
 
         this.name = opts.name ?? this.constructor.$name;
         this.sendInterval = opts.sendInterval ?? 0;
@@ -93,7 +91,7 @@ class BaseDiscordTransport extends Transport {
         embed.setColor(BaseDiscordTransport._getEmbedColor(info.level));
 
         if (info.stack != null) {
-            if (info.stack.length < BaseDiscordTransport.msgCharLimit) {
+            if (TypeTester.overSizeLimits(info.stack, DiscordUtil.msgCharLimit)) {
                 const formattedStack = codeBlock("js", info.stack);
                 content += formattedStack;
             } else {

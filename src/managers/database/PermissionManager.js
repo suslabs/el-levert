@@ -43,10 +43,10 @@ class PermissionManager extends DBManager {
         this.disabledLevel = disabledLevel ?? this.disabledLevel;
         this.defaultLevel = defaultLevel ?? this.defaultLevel;
 
-        this.modLevel = modLevel ?? this.modLevel;
-        this.adminLevel = adminLevel ?? this.adminLevel;
-
         this.ownerLevel = ownerLevel ?? this.ownerLevel;
+
+        this.modLevel = Util.clamp(modLevel ?? this.modLevel, 0, this.ownerLevel);
+        this.adminLevel = Util.clamp(adminLevel ?? this.adminLevel, 0, this.ownerLevel);
     }
 
     isGroupName(name) {
