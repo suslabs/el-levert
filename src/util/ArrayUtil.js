@@ -1,4 +1,7 @@
+import Util from "./Util.js";
 import TypeTester from "./TypeTester.js";
+
+import UtilError from "../errors/UtilError.js";
 
 const ArrayUtil = Object.freeze({
     concat: (a, ...args) => {
@@ -61,6 +64,23 @@ const ArrayUtil = Object.freeze({
             seen.add(val);
             return true;
         });
+    },
+
+    maxLength: (arr, length = "string") => {
+        let lengthFunc;
+
+        switch (length) {
+            case "array":
+                lengthFunc = Util.length;
+                break;
+            case "string":
+                lengthFunc = Util.stringLength;
+                break;
+            default:
+                throw new UtilError("Invalid length function: " + length);
+        }
+
+        return Math.max(...arr.map(x => lengthFunc(x)));
     },
 
     removeItem: (array, item, callback) => {

@@ -1,3 +1,7 @@
+import ObjectUtil from "../ObjectUtil.js";
+
+const normalCharsExp = /^[a-z2689:.\-_+()*&^%><;"'}{~,]+$/i;
+
 // prettier-ignore
 const lookalikeChars = Object.freeze({
     0: ["0", "⓪", "₀", "⁰", "𝟢", "𝟘", "０", "𝟎", "𝟬", "𝟶"],
@@ -97,11 +101,7 @@ const lookalikeChars = Object.freeze({
     "?": ["？"]
 });
 
-const normalCharsExp = /^[a-z2689:.\-_+()*&^%><;"'}{~,]+$/i;
-
-const lookalikeCharsExps = Object.fromEntries(
-    Object.entries(lookalikeChars).map(([orig, chars]) => [orig, new RegExp(chars.join("|"), "gm")])
-);
+const lookalikeCharsExps = ObjectUtil.rewriteObject(lookalikeChars, null, chars => new RegExp(chars.join("|"), "gm"));
 
 /* eslint-disable */
 const symbolCombiningMarksExp =

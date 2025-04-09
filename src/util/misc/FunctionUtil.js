@@ -11,8 +11,8 @@ const FunctionUtil = Object.freeze({
 
     _funcArgsRegex: /(?:\()(.+)+(?:\))/,
     functionArgumentNames: func => {
-        const str = func.toString(),
-            match = str.match(FunctionUtil._funcArgsRegex);
+        const code = func.toString(),
+            match = code.match(FunctionUtil._funcArgsRegex);
 
         if (!match) {
             return [];

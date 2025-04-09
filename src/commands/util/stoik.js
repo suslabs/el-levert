@@ -2,6 +2,8 @@ import { EmbedBuilder } from "discord.js";
 
 import ModuleUtil from "../../util/misc/ModuleUtil.js";
 import Util from "../../util/Util.js";
+import TypeTester from "../../util/TypeTester.js";
+import ArrayUtil from "../../util/ArrayUtil.js";
 import ParserUtil from "../../util/commands/ParserUtil.js";
 
 import { drawTable } from "../../util/misc/Table.js";
@@ -49,7 +51,7 @@ function formatError(err) {
         out += ` at index: **${idx}**`;
     }
 
-    if (Util.checkCharType(Util.last(out)) !== "other") {
+    if (TypeTester.charType(Util.last(out)) !== "other") {
         out += ".";
     }
 
@@ -116,8 +118,8 @@ Example: \`3CuSO4 + 2Al(NO3)3 -> 3Cu(NO3)2 + Al2(SO4)3\``;
             }
         }
 
-        const maxLeft = Util.maxLength(res.map(val => val.reactantCount)),
-            maxRight = Util.maxLength(res.map(val => val.productCount));
+        const maxLeft = ArrayUtil.maxLength(res.map(val => val.reactantCount)),
+            maxRight = ArrayUtil.maxLength(res.map(val => val.productCount));
 
         const columns = {
             left: "Reactants",

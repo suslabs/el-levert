@@ -8,6 +8,10 @@ const TypeTester = Object.freeze({
         return obj !== null && typeof obj === "object";
     },
 
+    isArray: arr => {
+        return Array.isArray(arr) || ArrayBuffer.isView(arr);
+    },
+
     isClass: obj => {
         if (typeof obj !== "function") {
             return false;
@@ -32,6 +36,26 @@ const TypeTester = Object.freeze({
         }
 
         return obj.constructor.name;
+    },
+
+    charType: char => {
+        if (char?.length !== 1) {
+            return "invalid";
+        }
+
+        const code = char.charCodeAt(0);
+
+        if (code === 32) {
+            return "space";
+        } else if (code >= 48 && code <= 57) {
+            return "number";
+        } else if (code >= 65 && code <= 90) {
+            return "uppercase";
+        } else if (code >= 97 && code <= 122) {
+            return "lowercase";
+        } else {
+            return "other";
+        }
     },
 
     outOfRange(propName, min, max, ...args) {

@@ -4,7 +4,6 @@ import { TokenType, TokenNames, TokenOps, Precedence } from "./Tokens.js";
 
 import { Molecule } from "./Molecule.js";
 
-import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
 
 import StoikError from "../../errors/StoikError.js";
@@ -19,7 +18,7 @@ const Stoik = Object.freeze({
 
         while (idx < tokens.length) {
             const token = tokens[idx],
-                charType = Util.checkCharType(token);
+                charType = TypeTester.charType(token);
 
             if (charType === "number") {
                 const numChars = [token];
@@ -27,7 +26,7 @@ const Stoik = Object.freeze({
                 while (++idx < tokens.length) {
                     const nextToken = tokens[idx];
 
-                    if (Util.checkCharType(nextToken) !== "number") {
+                    if (TypeTester.charType(nextToken) !== "number") {
                         break;
                     }
 
@@ -77,7 +76,7 @@ const Stoik = Object.freeze({
 
                 const nextToken = tokens[idx + 1];
 
-                if (Util.checkCharType(nextToken) === "lowercase") {
+                if (TypeTester.charType(nextToken) === "lowercase") {
                     res.push([TokenType.Element, token + nextToken]);
                     idx++;
                 } else {

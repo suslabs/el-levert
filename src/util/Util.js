@@ -148,6 +148,10 @@ let Util = {
         });
     },
 
+    stripSpaces: str => {
+        return str.replace(/\s+/g, "");
+    },
+
     _leadingSpacesRegex: /^\s*/,
     _trailingSpacesRegex: /\s*$/,
     capitalize: str => {
@@ -184,116 +188,6 @@ let Util = {
         }
 
         return result.join("");
-    },
-
-    clamp: (x, a, b) => {
-        a ??= -Infinity;
-        b ??= Infinity;
-
-        return Math.max(Math.min(x, b), a);
-    },
-
-    round: (num, digits) => {
-        const exp = 10 ** digits;
-        return Math.round((num + Number.EPSILON) * exp) / exp;
-    },
-
-    smallRound: (num, digits) => {
-        const tresh = 1 / 10 ** digits;
-
-        if (Math.abs(num) <= tresh) {
-            digits = -Math.floor(Math.log10(Math.abs(num)));
-        }
-
-        return Util.round(num, digits);
-    },
-
-    countDigits: (num, base = 10) => {
-        if (num === 0) {
-            return 1;
-        }
-
-        const log = Math.log(Math.abs(num)) / Math.log(base);
-        return Math.floor(log) + 1;
-    },
-
-    length: obj => {
-        return obj?.length ?? obj?.size ?? 0;
-    },
-
-    stringLength: obj => {
-        return obj == null ? 0 : String(obj).length;
-    },
-
-    maxLength: (arr, length = "string") => {
-        let lengthFunc;
-
-        switch (length) {
-            case "array":
-                lengthFunc = Util.length;
-                break;
-            case "string":
-                lengthFunc = Util.stringLength;
-                break;
-            default:
-                throw new UtilError("Invalid length function: " + length);
-        }
-
-        return Math.max(...arr.map(x => lengthFunc(x)));
-    },
-
-    empty: obj => {
-        return Util.length(obj) === 0;
-    },
-
-    single: obj => {
-        return Util.length(obj) === 1;
-    },
-
-    multiple: obj => {
-        return Util.length(obj) > 1;
-    },
-
-    first: (array, start = 0) => {
-        return array[start];
-    },
-
-    last: (array, start = 0) => {
-        return array[array.length + start - 1];
-    },
-
-    after: (array, start = 0) => {
-        return array.slice(start + 1);
-    },
-
-    randomElement: (array, a = 0, b = array.length) => {
-        return array[a + ~~(Math.random() * (b - a))];
-    },
-
-    urlRegex: /(\S*?):\/\/(?:([^/.]+)\.)?([^/.]+)\.([^/\s]+)\/?(\S*)?/,
-
-    validUrl: url => {
-        return Util.validUrlRegex.test(url);
-    },
-
-    checkCharType: char => {
-        if (char?.length !== 1) {
-            return "invalid";
-        }
-
-        const code = char.charCodeAt(0);
-
-        if (code === 32) {
-            return "space";
-        } else if (code >= 48 && code <= 57) {
-            return "number";
-        } else if (code >= 65 && code <= 90) {
-            return "uppercase";
-        } else if (code >= 97 && code <= 122) {
-            return "lowercase";
-        } else {
-            return "other";
-        }
     },
 
     utf8ByteLength: str => {
@@ -402,6 +296,87 @@ let Util = {
         }
 
         return prefixes.some(prefix => str.startsWith(prefix));
+    },
+
+    length: obj => {
+        return obj?.length ?? obj?.size ?? 0;
+    },
+
+    stringLength: obj => {
+        return obj == null ? 0 : String(obj).length;
+    },
+
+    empty: obj => {
+        return Util.length(obj) === 0;
+    },
+
+    single: obj => {
+        return Util.length(obj) === 1;
+    },
+
+    multiple: obj => {
+        return Util.length(obj) > 1;
+    },
+
+    first: (array, start = 0) => {
+        return array[start];
+    },
+
+    last: (array, start = 0) => {
+        return array[array.length + start - 1];
+    },
+
+    after: (array, start = 0) => {
+        return array.slice(start + 1);
+    },
+
+    randomElement: (array, a = 0, b = array.length) => {
+        return array[a + ~~(Math.random() * (b - a))];
+    },
+
+    clamp: (x, a, b) => {
+        a ??= -Infinity;
+        b ??= Infinity;
+
+        return Math.max(Math.min(x, b), a);
+    },
+
+    round: (num, digits) => {
+        const exp = 10 ** digits;
+        return Math.round((num + Number.EPSILON) * exp) / exp;
+    },
+
+    smallRound: (num, digits) => {
+        const tresh = 1 / 10 ** digits;
+
+        if (Math.abs(num) <= tresh) {
+            digits = -Math.floor(Math.log10(Math.abs(num)));
+        }
+
+        return Util.round(num, digits);
+    },
+
+    approxEquals: (a, b, epsilon = Number.EPSILON) => {
+        return Math.abs(a - b) <= epsilon;
+    },
+
+    deviate: (x, y) => {
+        return x + (Math.random() * (2 * y) - y);
+    },
+
+    countDigits: (num, base = 10) => {
+        if (num === 0) {
+            return 1;
+        }
+
+        const log = Math.log(Math.abs(num)) / Math.log(base);
+        return Math.floor(log) + 1;
+    },
+
+    urlRegex: /(\S*?):\/\/(?:([^/.]+)\.)?([^/.]+)\.([^/\s]+)\/?(\S*)?/,
+
+    validUrl: url => {
+        return Util.validUrlRegex.test(url);
     },
 
     timeDelta: (d1, d2, div = 1) => {

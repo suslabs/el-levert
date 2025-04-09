@@ -122,7 +122,7 @@ const TableUtil = Object.freeze({
             rows = [];
         }
 
-        const lineMax = Util.maxLength(rows),
+        const lineMax = ArrayUtil.maxLength(rows),
             width = Math.max(Util.stringLength(heading), lineMax);
 
         return Util.clamp(width, minWidth, maxWidth);
@@ -268,7 +268,7 @@ class Table {
         }
 
         const allRows = colIds.map(id => this.rows[id]),
-            maxHeight = Util.maxLength(allRows, "array");
+            maxHeight = ArrayUtil.maxLength(allRows, "array");
 
         this.height = maxHeight;
         return maxHeight;

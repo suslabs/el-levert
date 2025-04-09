@@ -202,8 +202,7 @@ class Tag {
     }
 
     getData() {
-        const allowed = Object.entries(this).filter(([key]) => !key.startsWith("_"));
-        return Object.fromEntries(allowed);
+        return ObjectUtil.filterObject(this, key => !key.startsWith("_"));
     }
 
     getSize() {
