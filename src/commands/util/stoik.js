@@ -1,14 +1,13 @@
 import { EmbedBuilder } from "discord.js";
 
-import ModuleUtil from "../../util/misc/ModuleUtil.js";
+import Stoik from "../../parsers/stoik/Stoik.js";
+
 import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
 import ParserUtil from "../../util/commands/ParserUtil.js";
 
 import { drawTable } from "../../util/misc/Table.js";
-
-const Stoik = await ModuleUtil.loadOptionalModule("denque", import.meta.url, "../../parsers/stoik/Stoik.js");
 
 function evaluate(input, side) {
     try {
@@ -72,7 +71,6 @@ function codeblock(str) {
 export default {
     name: "stoik",
     category: "util",
-    enabled: Stoik !== null,
 
     handler: args => {
         const [left, right] = ParserUtil.splitArgs(args, false, {

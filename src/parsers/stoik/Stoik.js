@@ -1,17 +1,15 @@
-import Denque from "denque";
-
-import { TokenType, TokenNames, TokenOps, Precedence } from "./Tokens.js";
-
-import { Molecule } from "./Molecule.js";
+import Molecule from "./Molecule.js";
 
 import TypeTester from "../../util/TypeTester.js";
+
+import { TokenType, TokenNames, TokenOps, Precedence } from "./Tokens.js";
 
 import StoikError from "../../errors/StoikError.js";
 
 const Stoik = Object.freeze({
     tokenize: equation => {
         const tokens = equation.split(""),
-            res = new Denque();
+            res = [];
 
         let idx = 0,
             parens = 0;
@@ -34,7 +32,7 @@ const Stoik = Object.freeze({
                 }
 
                 const value = Number.parseInt(numChars.join("")),
-                    lastTuple = res.peekBack();
+                    lastTuple = res[res.length - 1];
 
                 if (lastTuple && lastTuple[0] === TokenType.Number) {
                     res.push([TokenType.Subscript]);
@@ -60,7 +58,7 @@ const Stoik = Object.freeze({
                     });
                 }
             } else if (charType === "uppercase") {
-                const lastTuple = res.peekBack();
+                const lastTuple = res[res.length - 1];
 
                 if (lastTuple) {
                     const [lastType] = lastTuple;
@@ -85,7 +83,7 @@ const Stoik = Object.freeze({
 
                 idx++;
             } else if (token === TokenOps[TokenType.GroupLeft]) {
-                const lastTuple = res.peekBack();
+                const lastTuple = res[res.length - 1];
 
                 if (lastTuple) {
                     const [lastType] = lastTuple;
@@ -146,13 +144,13 @@ const Stoik = Object.freeze({
         if (typeof input === "string") {
             input = Stoik.tokenize(input);
         } else {
-            input = new Denque(input.toArray());
+            input = [...input];
         }
 
-        const out = new Denque(),
-            opStack = new Denque();
+        const out = [],
+            opStack = [];
 
-        while (!input.isEmpty()) {
+        while (input.length > 0) {
             const token = input.shift(),
                 [type] = token;
 
@@ -167,7 +165,7 @@ const Stoik = Object.freeze({
                     break;
 
                 case TokenType.GroupRight:
-                    while (opStack.peekBack()?.[0] !== TokenType.GroupLeft) {
+                    while (opStack[opStack.length - 1]?.[0] !== TokenType.GroupLeft) {
                         out.push(opStack.pop());
                     }
 
@@ -178,7 +176,7 @@ const Stoik = Object.freeze({
                     let prec = Precedence[type],
                         top;
 
-                    while ((top = opStack.peekBack()) && prec <= Precedence[top[0]]) {
+                    while ((top = opStack[opStack.length - 1]) && prec <= Precedence[top[0]]) {
                         out.push(opStack.pop());
                     }
 
@@ -187,7 +185,7 @@ const Stoik = Object.freeze({
             }
         }
 
-        while (!opStack.isEmpty()) {
+        while (opStack.length > 0) {
             out.push(opStack.pop());
         }
 
@@ -198,16 +196,16 @@ const Stoik = Object.freeze({
         if (typeof input === "string") {
             input = Stoik.toRPN(Stoik.tokenize(input));
         } else {
-            input = new Denque(input.toArray());
+            input = [...input];
         }
 
-        if (input.isEmpty()) {
+        if (input.length < 1) {
             throw new StoikError("Empty input");
         }
 
-        const opStack = new Denque();
+        const opStack = [];
 
-        while (!input.isEmpty()) {
+        while (input.length > 0) {
             const token = input.shift();
 
             if (token instanceof Molecule) {
@@ -224,13 +222,13 @@ const Stoik = Object.freeze({
                     break;
 
                 default:
-                    if (opStack.isEmpty()) {
+                    if (opStack.length < 1) {
                         throw new StoikError("Unexpected end of input");
                     }
 
                     const right = opStack.pop();
 
-                    if (opStack.isEmpty()) {
+                    if (opStack.length < 1) {
                         throw new StoikError("Unexpected end of input");
                     }
 

@@ -4,9 +4,10 @@
     "type": "module",
     "private": true,
     "scripts": {
+        "test": "node --experimental-vm-modules --no-warnings=ExperimentalWarning ./node_modules/jest/bin/jest.js --config ./jest.config.js",
         "start": "node --no-warnings=ExperimentalWarning index.js",
-        "lint": "eslint . --config .eslintrc.json --ignore-path .gitignore --ext .js",
         "format": "prettier --config .prettierrc --ignore-path .prettierignore --write **/*.{js,cjs,json}",
+        "lint": "eslint . --config .eslintrc.json --ignore-path .gitignore --ext .js",
         "importer": "cross-env MOCK_MAP_PATH=\"./scripts/importer/mock/mock-map.json\" node --no-warnings=ExperimentalWarning --loader \"./scripts/mock/mock-loader.js\" ./scripts/importer/importer.js"
     },
     "dependencies": {
@@ -20,7 +21,6 @@
         "winston": "^3.17.0"
     },
     "optionalDependencies": {
-        "denque": "^2.1.0",
         "generic-pool": "^3.9.0",
         "vm2": "^3.9.19"
     },
@@ -30,6 +30,7 @@
         "cross-env": "^7.0.3",
         "eslint": "^8.57.1",
         "eslint-plugin-unused-imports": "^4.1.4",
+        "jest": "^29.7.0",
         "prettier": "^3.5.3"
     }
 }

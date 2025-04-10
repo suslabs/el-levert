@@ -1,7 +1,7 @@
 <div align="center"">
     <h1>EL LEVERT JR</h1>
     <br>
-    <img src="./assets/winter_rat.png" alt="EL LEVERT" style="width: 45%; height: 45%;">
+    <img src="./assets/big_rat.jpg" alt="EL LEVERT" style="width: 45%; height: 45%;">
 </div>
 
 <h4 align="center">Romanian version of Leveret by Neeve</h4>
@@ -69,7 +69,7 @@ Sends the list of base commands.
 
 Displays the bot version.
 
-### 3. t/tag `(name) args`
+### 3. tag/tag `(name) [args]`
 
 Execute tag `(name)`, receiving `tag.args` = `args`.
 
@@ -106,7 +106,7 @@ Subcommands:
 By default, only the default JS eval is enabled. The other eval contexts can be enabled in the config.
 VM2 eval only works under Linux/WSL and the external VM backend needs [judge0](https://judge0.com/) to be installed and configured.
 
-### 5. perm
+### 5. perm/p
 
 Root command for the permission manager. Can be executed by anyone.
 For this feature to work properly, set the `owner` field in `auth.json`.
@@ -133,7 +133,7 @@ Default permission levels:
 
 These levels can be adjusted in the config file and commands can be locked to different levels by adding the `allowed: level` property.
 
-### 6. oc `-version (EU/t) (duration)`
+### 6. oc `(EU/t) (duration)`
 
 Calculates overclock EU, duration, and tier for the specified parameters.
 

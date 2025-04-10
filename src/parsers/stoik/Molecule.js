@@ -138,4 +138,4 @@ class Molecule extends Map {
     }
 }
 
-export { Molecule };
+export default Molecule;

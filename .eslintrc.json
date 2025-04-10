@@ -5,7 +5,14 @@
         "es2023": true
     },
     "extends": "eslint:recommended",
-    "overrides": [],
+    "overrides": [
+        {
+            "files": ["./test/**/*.test.js"],
+            "env": {
+                "jest": true
+            }
+        }
+    ],
     "parserOptions": {
         "requireConfigFile": false,
         "babelOptions": {
