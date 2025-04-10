@@ -24,7 +24,7 @@ export default {
             embed = new EmbedBuilder().setDescription(format);
 
         return {
-            content: ":information_source: Your Reminders:",
+            content: ":information_source: Your reminders:",
             embeds: [embed]
         };
     }

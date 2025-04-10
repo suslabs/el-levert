@@ -301,15 +301,15 @@ class Tag {
                     content: header,
                     ...DiscordUtil.getFileAttach(body, "script.js")
                 };
+            } else {
+                return `${header}\n---\n${body}\n---`;
             }
-
-            return `${header}\n---\n${body}\n---`;
         }
 
         if (this.isAlias) {
             const formattedName = discord ? bold(this.name) : this.name,
                 formattedAliasName = discord ? bold(this.aliasName) : this.aliasName,
-                header = `${formattedName} is an alias of ${formattedAliasName}`;
+                header = `${formattedName} is an alias of ${formattedAliasName}.`;
 
             let out = header;
 
@@ -328,20 +328,10 @@ class Tag {
                 out += `${this.args})`;
             }
 
-            if (discord) {
-                return {
-                    content: out
-                };
-            }
-
-            return out;
+            return discord ? { content: out } : out;
         }
 
-        if (discord) {
-            return DiscordUtil.getFileAttach(body, "tag.txt");
-        }
-
-        return body;
+        return discord ? DiscordUtil.getFileAttach(body, "tag.txt") : body;
     }
 
     getTimeInfo(raw = false) {

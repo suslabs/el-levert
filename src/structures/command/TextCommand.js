@@ -24,13 +24,11 @@ class TextCommand extends BaseCommand {
     matches(name, checkAliases = true) {
         if (super.matches(name)) {
             return true;
-        }
-
-        if (checkAliases && !Util.empty(this.aliases)) {
+        } else if (checkAliases && !Util.empty(this.aliases)) {
             return this.aliases.includes(name);
+        } else {
+            return false;
         }
-
-        return false;
     }
 
     matchesSubcmd(name, checkAliases = true) {

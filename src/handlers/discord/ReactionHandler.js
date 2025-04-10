@@ -25,11 +25,19 @@ function logWordsUsage(msg, words) {
 }
 
 function logReactTime(t1) {
+    if (!getLogger().isDebugEnabled()) {
+        return;
+    }
+
     const t2 = performance.now();
     getLogger().debug(`Reacting took ${Util.formatNumber(Util.timeDelta(t2, t1))}ms.`);
 }
 
 function logRemove(msg, count) {
+    if (!getLogger().isDebugEnabled()) {
+        return;
+    }
+
     getLogger().debug(
         `Removing ${count} reactions from message ${msg.id} sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)}).`
     );

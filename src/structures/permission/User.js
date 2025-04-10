@@ -37,11 +37,7 @@ class User {
             return `${this.username} (${formattedUser})`;
         }
 
-        if (discord) {
-            return inlineCode(this.user);
-        }
-
-        return this.user;
+        return discord ? inlineCode(this.user) : this.user;
     }
 }
 

@@ -33,9 +33,9 @@ async function evalBase(args, msg) {
         return {
             err: ":no_entry_sign: Can't eval an empty script."
         };
+    } else {
+        return { body, err: null };
     }
-
-    return { body, err: null };
 }
 
 async function altevalBase(args, msg, lang) {

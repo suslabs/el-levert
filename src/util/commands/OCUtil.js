@@ -30,9 +30,9 @@ const OCUtil = {
     parseDuration: input => {
         if (input.endsWith("t")) {
             return Math.floor(Util.parseInt(input));
+        } else {
+            return Math.floor(Number.parseFloat(input) * 20);
         }
-
-        return Math.floor(Number.parseFloat(input) * 20);
     },
 
     formatDuration: time => {

@@ -18,8 +18,8 @@ export default {
 
         const err = getClient().tagManager.checkName(prefix);
 
-        if (err !== null) {
-            return ":warning: " + err;
+        if (err) {
+            return `:warning: ${err}.`;
         }
 
         const name = await getClient().tagManager.random(prefix);

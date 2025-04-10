@@ -12,7 +12,7 @@ const defaultScriptType = "ivm",
 
 const scriptTypes = [defaultScriptType].concat(specialScriptTypes);
 
-const TagTypes = Object.freeze({
+const TagTypes = {
     defaultType: textType,
     defaultVersion: versionTypes[1],
     defaultScriptType,
@@ -21,6 +21,6 @@ const TagTypes = Object.freeze({
     versionTypes,
     specialScriptTypes,
     scriptTypes
-});
+};
 
 export { TagFlags, TagTypes };

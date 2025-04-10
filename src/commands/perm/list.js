@@ -17,7 +17,7 @@ export default {
         const groups = await getClient().permManager.listGroups(true);
 
         if (groups === null) {
-            return ":information_source: No permissions are registered.";
+            return ":information_source: **No** permissions are registered.";
         }
 
         const format = formatGroups(groups),

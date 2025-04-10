@@ -11,7 +11,7 @@ export default {
         const tags = await getClient().tagManager.list(msg.author.id);
 
         if (tags.count === 0) {
-            return ":information_source: You have no tags.";
+            return ":information_source: You have **no** tags.";
         }
 
         const quota = await getClient().tagManager.getQuota(msg.author.id);
@@ -21,9 +21,11 @@ export default {
         }
 
         const maxQuota = getClient().tagManager.maxQuota,
-            perc = Util.round((quota / maxQuota) * 100, 2),
-            roundedQuota = Util.smallRound(quota, 2);
+            perc = Util.round((quota / maxQuota) * 100, 2);
 
-        return `:information_source: You're using **${roundedQuota}/${maxQuota} kb** of the available storage. (**${perc}%**)`;
+        const roundedMaxQuota = Util.smallRound(maxQuota, 2),
+            roundedOwnQuota = Util.smallRound(quota, 2);
+
+        return `:information_source: You're using **${roundedOwnQuota}/${roundedMaxQuota} kb** of the available storage. (**${perc}%**)`;
     }
 };

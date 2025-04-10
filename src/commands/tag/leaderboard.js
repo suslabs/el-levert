@@ -62,7 +62,7 @@ export default {
         const leaderboard = await getClient().tagManager.leaderboard(l_type, maxUsers);
 
         if (Util.empty(leaderboard)) {
-            return ":information_source: There are no tags registered.";
+            return ":information_source: There are **no** tags registered.";
         }
 
         const format = formatLeaderboard(leaderboard, l_type),

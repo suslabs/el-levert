@@ -9,9 +9,9 @@ const ArrayUtil = Object.freeze({
 
         if (Array.isArray(a)) {
             return concatenated;
+        } else {
+            return concatenated.join("");
         }
-
-        return concatenated.join("");
     },
 
     split: (arr, callback) => {

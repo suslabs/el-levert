@@ -22,7 +22,7 @@ export default {
         const err = getClient().tagManager.checkName(t_name);
 
         if (err) {
-            return ":warning: " + err;
+            return `:warning: ${err}.`;
         }
 
         let [type, version] = ParserUtil.splitArgs(t_args, [true, true]),

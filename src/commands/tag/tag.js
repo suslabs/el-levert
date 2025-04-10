@@ -139,7 +139,7 @@ export default {
         const err = getClient().tagManager.checkName(t_name);
 
         if (err) {
-            return ":warning: " + err;
+            return `:warning: ${err}.`;
         }
 
         let tag = await getClient().tagManager.fetch(t_name);

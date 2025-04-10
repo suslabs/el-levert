@@ -54,15 +54,15 @@ class PermissionManager extends DBManager {
     }
 
     checkName(name) {
-        if (name.length > this.maxGroupNameLength) {
-            return `The group name can be at most ${this.maxGroupNameLength} characters long.`;
+        if (Util.empty(name)) {
+            return "Invalid group name";
+        } else if (name.length > this.maxGroupNameLength) {
+            return `The group name can be at most ${this.maxGroupNameLength} characters long`;
+        } else if (!this.isGroupName(name)) {
+            return "The group name must consist of Latin characters, numbers, _ or -";
+        } else {
+            return false;
         }
-
-        if (!this.isGroupName(name)) {
-            return "The group name must consist of Latin characters, numbers, _ or -.";
-        }
-
-        return false;
     }
 
     checkLevel(level) {

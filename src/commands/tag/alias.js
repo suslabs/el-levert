@@ -24,7 +24,7 @@ export default {
             err2 = getClient().tagManager.checkName(a_name);
 
         if (err1 ?? err2) {
-            return ":warning: " + err1 ?? err2;
+            return `:warning: ${err1 ?? err2}.`;
         }
 
         if (Util.empty(a_name)) {
@@ -35,15 +35,15 @@ If you want to de-alias the tag, \`edit\` it.`;
         let tag = await getClient().tagManager.fetch(t_name),
             out = "";
 
-        if (tag && perm < getClient().permManager.modLevel && tag.owner !== msg.author.id) {
+        if (tag !== null && tag.owner !== msg.author.id && perm < getClient().permManager.modLevel) {
             const out = `:warning: You can only edit your own tags.`,
                 owner = await tag.getOwner();
 
             if (owner === "not found") {
                 return out + " Tag owner not found.";
+            } else {
+                return out + ` The tag is owned by \`${owner}\`.`;
             }
-
-            return out + ` The tag is owned by \`${owner}\`.`;
         }
 
         const a_tag = await getClient().tagManager.fetch(a_name);

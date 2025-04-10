@@ -30,7 +30,7 @@ export default {
         const err = getClient().reminderManager.checkMessage(message);
 
         if (err) {
-            return ":warning: " + err;
+            return `:warning: ${err}.`;
         }
 
         let parsedDate = parseDate(date);
@@ -61,6 +61,12 @@ export default {
             throw err;
         }
 
-        return ":information_source: You will be reminded on " + reminder.format();
+        let out = ":information_source: You will be reminded on " + reminder.format();
+
+        if (!out.endsWith('"')) {
+            out += ".";
+        }
+
+        return out;
     }
 };

@@ -23,7 +23,7 @@ export default {
         const err = getClient().tagManager.checkName(t_name);
 
         if (err) {
-            return ":warning: " + err;
+            return `:warning: ${err}.`;
         }
 
         if (Util.empty(t_args)) {
@@ -42,15 +42,15 @@ export default {
             return `:warning: Tag **${t_name}** doesn't exist.`;
         }
 
-        if (perm < getClient().permManager.modLevel && tag.owner !== msg.author.id) {
+        if (tag.owner !== msg.author.id && perm < getClient().permManager.modLevel) {
             const out = ":warning: You can only edit your own tags.",
                 owner = await tag.getOwner();
 
             if (owner === "not found") {
                 return out + " Tag owner not found.";
+            } else {
+                return out + ` The tag is owned by \`${owner}\`.`;
             }
-
-            return out + ` The tag is owned by \`${owner}\`.`;
         }
 
         try {

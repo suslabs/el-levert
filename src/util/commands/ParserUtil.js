@@ -20,9 +20,9 @@ const ParserUtil = Object.freeze({
         if (sep.length === 0) {
             if (lowercaseFirst) {
                 return [str.toLowerCase(), ""];
+            } else {
+                return [str, ""];
             }
-
-            return [str, ""];
         }
 
         if (!Array.isArray(sep)) {

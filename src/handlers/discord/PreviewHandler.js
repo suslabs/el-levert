@@ -21,11 +21,19 @@ function logCancelled(reason) {
 }
 
 function logSending(preview) {
+    if (!getLogger().isDebugEnabled()) {
+        return;
+    }
+
     const text = preview.data.description;
     getLogger().debug(`Sending preview:${LoggerUtil.formatLog(text)}`);
 }
 
 function logGenTime(t1) {
+    if (!getLogger().isDebugEnabled()) {
+        return;
+    }
+
     const t2 = performance.now();
     getLogger().debug(`Preview generation took ${Util.formatNumber(Util.timeDelta(t2, t1))}ms.`);
 }

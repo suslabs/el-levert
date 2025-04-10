@@ -143,9 +143,9 @@ let DiscordUtil = {
 
         if (inThread) {
             return `"${channel.name}" (thread of parent channel #${channel.parent.name})`;
+        } else {
+            return `#${channel.name}`;
         }
-
-        return `#${channel.name}`;
     },
 
     getEmbedSize(embed, options = {}) {

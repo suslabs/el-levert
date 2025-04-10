@@ -54,11 +54,7 @@ class LevertClient extends DiscordClient {
     }
 
     get uptime() {
-        if (!this.started) {
-            return 0;
-        }
-
-        return Util.timeDelta(this.startedAt, Date.now());
+        return this.started ? Util.timeDelta(this.startedAt, Date.now()) : 0;
     }
 
     isBridgeBot(id) {
@@ -68,9 +64,9 @@ class LevertClient extends DiscordClient {
 
         if (!this.useBridgeBot || id == null) {
             return false;
+        } else {
+            return this.config.bridgeBotIds.includes(id);
         }
-
-        return this.config.bridgeBotIds.includes(id);
     }
 
     setConfigs(configs) {

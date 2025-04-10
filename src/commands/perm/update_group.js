@@ -24,7 +24,7 @@ export default {
             const err = getClient().permManager.checkName(g_name);
 
             if (err) {
-                return ":warning: " + err;
+                return `:warning: ${err}.`;
             }
         }
 

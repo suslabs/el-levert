@@ -35,18 +35,14 @@ class TagManager extends DBManager {
 
     checkName(name) {
         if (Util.empty(name)) {
-            return "Invalid tag name.";
+            return "Invalid tag name";
+        } else if (name.length > this.maxTagNameLength) {
+            return `The tag name can be at most ${this.maxTagNameLength} characters long`;
+        } else if (!this.isTagName(name)) {
+            return "The tag name must consist of Latin characters, numbers, _ or -";
+        } else {
+            return false;
         }
-
-        if (name.length > this.maxTagNameLength) {
-            return `The tag name can be at most ${this.maxTagNameLength} characters long.`;
-        }
-
-        if (!this.isTagName(name)) {
-            return "The tag name must consist of Latin characters, numbers, _ or -.";
-        }
-
-        return false;
     }
 
     async fetch(name) {

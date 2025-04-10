@@ -33,13 +33,11 @@ const LoggerUtil = Object.freeze({
 
         if (str.length > splitLength) {
             return `\n---\n${str}\n---`;
-        }
-
-        if (LoggerUtil._quotesExp.test(str)) {
+        } else if (LoggerUtil._quotesExp.test(str)) {
             return " " + str;
+        } else {
+            return ` "${str}"`;
         }
-
-        return ` "${str}"`;
     }
 });
 

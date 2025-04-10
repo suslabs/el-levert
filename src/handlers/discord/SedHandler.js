@@ -17,11 +17,19 @@ function logUsage(msg) {
 }
 
 function logSending(sed) {
+    if (!getLogger().isDebugEnabled()) {
+        return;
+    }
+
     const text = sed.data.description;
     getLogger().debug(`Sending replaced message:${LoggerUtil.formatLog(text)}`);
 }
 
 function logGenTime(t1) {
+    if (!getLogger().isDebugEnabled()) {
+        return;
+    }
+
     const t2 = performance.now();
     getLogger().debug(`Sed generation took ${Util.formatNumber(Util.timeDelta(t2, t1))}ms.`);
 }
@@ -34,7 +42,7 @@ function logSendTime(t1) {
 class SedHandler extends MessageHandler {
     static $name = "sedHandler";
 
-    static sedUsage = "Usage: sed/regex/replace/flags (optional)";
+    static sedUsage = "**Usage:** `sed/regex/replace/flags (optional)`";
     static sedRegex = /^sed\/(?<regex_str>.+?)\/(?<replace>[^/]*)\/?(?<flags_str>.{1,2})?/;
     static defaultFlags = "i";
 

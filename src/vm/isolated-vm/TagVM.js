@@ -14,16 +14,34 @@ import LoggerUtil from "../../util/LoggerUtil.js";
 import VMErrors from "./VMErrors.js";
 
 function logUsage(code) {
+    if (!getLogger().isDebugEnabled()) {
+        return;
+    }
+
     getLogger().debug(`Running script:${LoggerUtil.formatLog(code)}`);
 }
 
-function logTime(t1) {
+function logOutput(t1, out) {
+    if (!getLogger().isDebugEnabled()) {
+        return;
+    }
+
     const t2 = performance.now();
     getLogger().debug(`Running script took ${Util.formatNumber(Util.timeDelta(t2, t1))}ms.`);
+
+    getLogger().debug(`Returning script output:${LoggerUtil.formatLog(out)}`);
 }
 
 function logFinished(info) {
     getLogger().log(info ? "info" : "debug", "Script execution finished.");
+}
+
+function logData(name, data) {
+    if (!getLogger().isDebugEnabled()) {
+        return;
+    }
+
+    getLogger().debug(`Returning ${name} data:${LoggerUtil.formatLog(data)}`);
 }
 
 class TagVM extends VM {
@@ -56,9 +74,8 @@ class TagVM extends VM {
             const out = await context.runScript(code);
 
             logFinished(this.enableInspector);
-            logTime(t1);
+            logOutput(t1, out);
 
-            getLogger().debug(`Returning script output:${LoggerUtil.formatLog(out)}`);
             return VMUtil.formatOutput(out);
         } catch (err) {
             logFinished(this.enableInspector);
@@ -126,10 +143,10 @@ class TagVM extends VM {
                 getLogger().debug(`VM error: ${err.message}`);
                 return `:no_entry_sign: ${err.message}.`;
             case VMErrors.custom[1]:
-                getLogger().debug(`Returning exit data:${LoggerUtil.formatLog(err.exitData)}`);
+                logData("exit", err.exitData);
                 return err.exitData;
             case VMErrors.custom[2]:
-                getLogger().debug(`Returning reply data:${LoggerUtil.formatLog(err.message)}`);
+                logData("reply", err.message);
                 return this._processReply(err.message);
         }
 

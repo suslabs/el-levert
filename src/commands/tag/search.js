@@ -23,7 +23,7 @@ export default {
         const err = getClient().tagManager.checkName(t_name);
 
         if (err) {
-            return ":warning: " + err;
+            return `:warning: ${err}.`;
         }
 
         let maxResults = defaultResultLimit;
@@ -44,7 +44,7 @@ export default {
             return ":information_source: Found no similar tags.";
         }
 
-        const s = Util.multiple(find) ? "s" : "",
+        const s = Util.single(find) ? "" : "s",
             count = Util.formatNumber(find.length),
             header = `:information_source: Found **${count}** similar tag${s}:`;
 

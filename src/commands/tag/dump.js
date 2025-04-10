@@ -18,7 +18,7 @@ export default {
         let tags = await getClient().tagManager.dump(full);
 
         if (Util.empty(tags)) {
-            return ":information_source: There are no tags registered.";
+            return ":information_source: There are **no** tags registered.";
         }
 
         if (full) {

@@ -7,6 +7,11 @@ export default {
     category: "info",
 
     handler: _ => {
+        const uptime = Util.duration(getClient().uptime, {
+            format: true,
+            largestN: 3
+        });
+
         const startedDate = new Date(getClient().startedAt).toLocaleString("en-GB", {
             weekday: "short",
             year: "numeric",
@@ -19,11 +24,6 @@ export default {
             timeZone: "UTC"
         });
 
-        const uptime = Util.duration(getClient().uptime, {
-            format: true,
-            largestN: 3
-        });
-
-        return `:information_source: The bot has been running for **${uptime}** (since **${startedDate}**).`;
+        return `:information_source: The bot has been running for **${uptime}**. (since **${startedDate}**)`;
     }
 };

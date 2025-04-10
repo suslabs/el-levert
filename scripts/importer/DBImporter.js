@@ -163,11 +163,7 @@ class DBImporter {
         const name = alias ? Util.first(data.hops) : data.name,
             err = this.tagManager.checkName(name);
 
-        if (err !== false) {
-            return false;
-        }
-
-        if (TagCommand.subcommands.includes(name)) {
+        if (err || TagCommand.subcommands.includes(name)) {
             return false;
         }
 

@@ -23,7 +23,7 @@ export default {
         const err = getClient().tagManager.checkName(t_name);
 
         if (err) {
-            return ":warning: " + err;
+            return `:warning: ${err}.`;
         }
 
         const parsed = await this.parentCmd.parseBase(t_args, msg),
@@ -46,9 +46,9 @@ export default {
 
                         if (owner === "not found") {
                             return out + " tag owner not found.";
+                        } else {
+                            return out + ` and is owned by \`${owner}\`.`;
                         }
-
-                        return out + ` and is owned by \`${owner}\``;
                     default:
                         return `:warning: ${err.message}.`;
                 }

@@ -20,7 +20,7 @@ export default {
         const err = getClient().permManager.checkName(g_name);
 
         if (err) {
-            return ":warning: " + err;
+            return `:warning: ${err}.`;
         }
 
         const group = await getClient().permManager.fetchGroup(g_name);
@@ -43,6 +43,6 @@ export default {
             throw err;
         }
 
-        return `:white_check_mark: Removed group **${g_name}** and all of it's users.`;
+        return `:white_check_mark: Removed group **${g_name}** and all of its users.`;
     }
 };

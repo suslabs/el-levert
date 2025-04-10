@@ -23,7 +23,7 @@ export default {
             err2 = getClient().tagManager.checkName(n_name);
 
         if (err1 ?? err2) {
-            return ":warning: " + err1 ?? err2;
+            return `:warning: ${err1 ?? err2}.`;
         }
 
         if (Util.empty(n_name)) {
@@ -36,15 +36,15 @@ export default {
             return `:warning: Tag **${t_name}** doesn't exist.`;
         }
 
-        if (perm < getClient().permManager.modLevel && tag.owner !== msg.author.id) {
+        if (tag.owner !== msg.author.id && perm < getClient().permManager.modLevel) {
             const out = ":warning: You can only rename your own tags.",
                 owner = await tag.getOwner();
 
             if (owner === null) {
                 return out + " Tag owner not found.";
+            } else {
+                return out + ` The tag is owned by \`${owner.username}\`.`;
             }
-
-            return out + ` Tag is owned by \`${owner.username}\`.`;
         }
 
         try {
@@ -53,16 +53,16 @@ export default {
             if (err.name === "TagError") {
                 switch (err.message) {
                     case "Tag already exists":
-                        const out = `:warning: Tag **${t_name}** already exists,`;
-
                         const tag = err.ref,
                             owner = await tag.getOwner();
 
+                        const out = `:warning: Tag **${tag.name}** already exists,`;
+
                         if (owner === "not found") {
                             return out + " tag owner not found.";
+                        } else {
+                            return out + ` and is owned by \`${owner}\`.`;
                         }
-
-                        return out + ` and is owned by \`${owner}\``;
                     default:
                         return `:warning: ${err.message}.`;
                 }

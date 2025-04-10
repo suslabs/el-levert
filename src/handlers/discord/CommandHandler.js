@@ -23,6 +23,10 @@ function logTime(time) {
 }
 
 function logOutput(cmd, out) {
+    if (!getLogger().isDebugEnabled()) {
+        return;
+    }
+
     getLogger().debug(`Command "${cmd.name}" returned:${LoggerUtil.formatLog(out)}`);
 }
 

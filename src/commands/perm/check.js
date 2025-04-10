@@ -42,9 +42,9 @@ export default {
 
         if (groups === null) {
             if (user === msg.author) {
-                return `:information_source: You have no permissions.`;
+                return `:information_source: You have **no** permissions.`;
             } else {
-                return `:information_source: User \`${user.username}\` has no permissions.`;
+                return `:information_source: User \`${user.username}\` has **no** permissions.`;
             }
         }
 
@@ -54,7 +54,8 @@ export default {
         let out = `\`\`\`
 ${format}
 \`\`\`
-Level: ${maxLevel}`;
+
+Level: **${maxLevel}**`;
 
         if (user === msg.author) {
             out = `:information_source: You have the following permissions:` + out;

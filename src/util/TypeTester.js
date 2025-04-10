@@ -15,13 +15,11 @@ const TypeTester = Object.freeze({
     isClass: obj => {
         if (typeof obj !== "function") {
             return false;
-        }
-
-        if (obj.toString().startsWith("class")) {
+        } else if (obj.toString().startsWith("class")) {
             return true;
+        } else {
+            return Object.getOwnPropertyNames(obj.prototype).length > 1;
         }
-
-        return Object.getOwnPropertyNames(obj.prototype).length > 1;
     },
 
     isPromise: obj => {

@@ -47,9 +47,9 @@ export default {
 
             if (getClient().permManager.isOwner(find.user.id)) {
                 return out + " other than being the bot owner.";
+            } else {
+                return out + ".";
             }
-
-            return out + ".";
         }
 
         return `:white_check_mark: Removed \`${find.user.username}\`'s (\`${find.user.id}\`) permissions.`;

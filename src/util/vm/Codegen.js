@@ -146,9 +146,7 @@ const Codegen = {
 
         if (Util.empty(value)) {
             return Codegen.statement(name);
-        }
-
-        if (Array.isArray(value)) {
+        } else if (Array.isArray(value)) {
             return Codegen.statement(`${name} ${Codegen.array(value)}`);
         }
 

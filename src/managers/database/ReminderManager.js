@@ -117,7 +117,11 @@ class ReminderManager extends DBManager {
             return;
         }
 
-        const out = "You set a reminder for " + reminder.format();
+        let out = "You set a reminder for " + reminder.format();
+
+        if (!out.endsWith('"')) {
+            out += ".";
+        }
 
         getLogger().info(`Sending reminder to ${user.id} (${user.username})...`);
         await user.send(out);
@@ -140,8 +144,13 @@ class ReminderManager extends DBManager {
     }
 
     async _sendReminders() {
-        getLogger().debug(`Checking reminders... (${Util.round(this.sendInterval * Util.durationSeconds.milli, 1)}s)`);
         const t1 = performance.now();
+
+        if (getLogger().isDebugEnabled()) {
+            getLogger().debug(
+                `Checking reminders... (${Util.round(this.sendInterval * Util.durationSeconds.milli, 1)}s)`
+            );
+        }
 
         const reminders = await this.getPastReminders();
 
