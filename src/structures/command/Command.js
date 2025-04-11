@@ -102,9 +102,9 @@ class Command extends TextCommand {
                 return ":warning: Access denied.\nOnly the bot owner can execute this command.";
             case false:
                 return `:warning: Access denied.\nOnly permission level ${this.allowed} and above can execute this command.`;
+            default:
+                return perm;
         }
-
-        return perm;
     }
 
     static async _getPermLevel(msg, options) {

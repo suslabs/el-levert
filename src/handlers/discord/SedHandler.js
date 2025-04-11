@@ -67,12 +67,10 @@ class SedHandler extends MessageHandler {
             if (err.name === "HandlerError") {
                 let emoji;
 
-                switch (err.message) {
-                    case "No matching message found":
-                        emoji = ":no_entry_sign:";
-                        break;
-                    default:
-                        emoji = ":warning:";
+                if (err.message === "No matching message found") {
+                    emoji = ":no_entry_sign:";
+                } else {
+                    emoji = ":warning:";
                 }
 
                 await this.reply(msg, `${emoji} ${err.message}.\n${SedHandler.sedUsage}`);
@@ -166,13 +164,10 @@ class SedHandler extends MessageHandler {
             throw new HandlerError("Invalid regex or flags");
         }
 
-        switch (msg.type) {
-            case MessageType.Reply:
-                sedMsg = await getClient().fetchMessage(msg.channel.id, msg.reference.messageId);
-                break;
-            default:
-                sedMsg = await this._fetchMatch(msg.channel.id, regex, msg.id);
-                break;
+        if (msg.type === MessageType.Reply) {
+            sedMsg = await getClient().fetchMessage(msg.channel.id, msg.reference.messageId);
+        } else {
+            sedMsg = await this._fetchMatch(msg.channel.id, regex, msg.id);
         }
 
         if (sedMsg === null) {

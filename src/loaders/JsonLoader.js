@@ -227,17 +227,17 @@ class JsonLoader extends TextLoader {
 
         if (status === LoadStatus.failed) {
             if (this.forceSchemaValidation) {
-                return [false, undefined];
+                return [false, null];
             } else {
                 this.logger?.warn("Schema validation skipped");
-                return [true, undefined];
+                return [true, null];
             }
         }
 
         const valid = this._ajvValidate(data),
             errors = this._ajvValidate.errors;
 
-        return [valid, valid ? undefined : errors];
+        return [valid, valid ? null : errors];
     }
 
     _validate(data) {

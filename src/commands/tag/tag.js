@@ -31,7 +31,7 @@ async function parseBase(t_args, msg) {
 
     if (hasAttachments) {
         try {
-            [body, isScript] = await getClient().tagManager.downloadBody(t_args, msg);
+            [body, isScript] = await getClient().tagManager.fetchTagBody(t_args, msg);
         } catch (err) {
             getLogger().error(err);
 
@@ -81,7 +81,7 @@ async function getPreview(out, msg) {
     let preview;
 
     try {
-        preview = await getClient().previewHandler.genPreview(msg, out);
+        preview = await getClient().previewHandler.generatePreview(msg, out);
     } catch (err) {
         getLogger().error("Preview gen failed:", err);
     }

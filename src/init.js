@@ -18,7 +18,7 @@ async function init() {
     const configs = await loadConfig(logger);
 
     if (configs === null) {
-        return;
+        process.exit(1);
     }
 
     const client = new LevertClient(configs);

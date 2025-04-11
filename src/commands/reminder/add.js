@@ -50,11 +50,10 @@ export default {
             reminder = await getClient().reminderManager.add(msg.author.id, end, message);
         } catch (err) {
             if (err.name === "ReminderError") {
-                switch (err.message) {
-                    case "Invalid end time":
-                        return ":warning: Can't add a reminder for a time in the past.";
-                    default:
-                        return `:warning: ${err.message}.`;
+                if (err.message === "Invalid end time") {
+                    return ":warning: Can't add a reminder for a time in the past.";
+                } else {
+                    return `:warning: ${err.message}.`;
                 }
             }
 

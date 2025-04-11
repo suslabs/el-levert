@@ -21,11 +21,10 @@ export default {
             res = await getClient().reminderManager.remove(msg.author.id, index - 1);
         } catch (err) {
             if (err.name === "ReminderError") {
-                switch (err.message) {
-                    case "Reminder doesn't exist":
-                        return `:warning: Reminder **${index}** doesn't exist.`;
-                    default:
-                        return `:warning: ${err.message}.`;
+                if (err.message === "Reminder doesn't exist") {
+                    return `:warning: Reminder **${index}** doesn't exist.`;
+                } else {
+                    return `:warning: ${err.message}.`;
                 }
             }
 

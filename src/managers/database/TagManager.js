@@ -396,7 +396,7 @@ class TagManager extends DBManager {
         return await this.tag_db.quotaFetch(user);
     }
 
-    async downloadBody(t_args, msg) {
+    async fetchTagBody(t_args, msg) {
         let isFile = true;
         let body,
             isScript = false;
@@ -410,7 +410,7 @@ class TagManager extends DBManager {
             if (Util.hasPrefix(["Message doesn't have", "Invalid content type"], err.message)) {
                 isFile = false;
             } else if (err.message.startsWith("The attachment can take up at most")) {
-                throw new TagError(`Scripts can take up at most ${this.maxTagSize} kb`);
+                throw new TagError(`Tags can take up at most ${this.maxTagSize} kb`);
             } else {
                 throw err;
             }
@@ -432,8 +432,8 @@ class TagManager extends DBManager {
         return [body, isScript];
     }
 
-    static _fileContentTypes = ["text/plain"];
     static _scriptContentTypes = ["application/javascript"];
+    static _fileContentTypes = this._scriptContentTypes.concat(["text/plain"]);
 
     async _add(tag) {
         const tagSize = tag.getSize();

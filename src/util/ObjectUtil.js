@@ -40,11 +40,8 @@ const ObjectUtil = Object.freeze({
             if (sourceVal == null) {
                 let defaultValue = defaults[key];
 
-                switch (typeof defaultValue) {
-                    case "function":
-                        break;
-                    default:
-                        defaultValue = structuredClone(defaultValue);
+                if (typeof defaultValue !== "function") {
+                    defaultValue = structuredClone(defaultValue);
                 }
 
                 values[key] = defaultValue;

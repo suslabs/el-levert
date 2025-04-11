@@ -37,20 +37,19 @@ export default {
             await getClient().tagManager.add(t_name, body, msg.author.id, type);
         } catch (err) {
             if (err.name === "TagError") {
-                switch (err.message) {
-                    case "Tag already exists":
-                        const out = `:warning: Tag **${t_name}** already exists,`;
+                if (err.message === "Tag already exists") {
+                    const out = `:warning: Tag **${t_name}** already exists,`;
 
-                        const tag = err.ref,
-                            owner = await tag.getOwner();
+                    const tag = err.ref,
+                        owner = await tag.getOwner();
 
-                        if (owner === "not found") {
-                            return out + " tag owner not found.";
-                        } else {
-                            return out + ` and is owned by \`${owner}\`.`;
-                        }
-                    default:
-                        return `:warning: ${err.message}.`;
+                    if (owner === "not found") {
+                        return out + " tag owner not found.";
+                    } else {
+                        return out + ` and is owned by \`${owner}\`.`;
+                    }
+                } else {
+                    return `:warning: ${err.message}.`;
                 }
             }
 

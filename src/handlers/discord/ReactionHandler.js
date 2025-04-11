@@ -334,8 +334,9 @@ class ReactionHandler extends MessageHandler {
     }
 
     async _funnyReact(content, msg) {
-        const t1 = performance.now(),
-            words = this._getWordCounts(content);
+        const t1 = performance.now();
+
+        const words = this._getWordCounts(content);
 
         if (words === null) {
             return false;

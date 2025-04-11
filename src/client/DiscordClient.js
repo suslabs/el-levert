@@ -350,15 +350,12 @@ class DiscordClient {
             throw new ClientError("Invalid options provided");
         }
 
-        switch (typeof ch_id) {
-            case "string":
-                if (Util.empty(ch_id)) {
-                    throw new ClientError("Invalid channel ID provided (length = 0)");
-                }
-
-                break;
-            default:
-                throw new ClientError("Invalid channel ID provided");
+        if (typeof ch_id === "string") {
+            if (Util.empty(ch_id)) {
+                throw new ClientError("Invalid channel ID provided (length = 0)");
+            }
+        } else {
+            throw new ClientError("Invalid channel ID provided");
         }
 
         ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultChannelOptions);
@@ -413,30 +410,25 @@ class DiscordClient {
                 throw new ClientError("Invalid user/member or user ID provided");
         }
 
-        switch (channel.type) {
-            case ChannelType.DM:
-                if (channel.recipientId !== user_id) {
+        if (channel.type === ChannelType.DM) {
+            if (channel.recipientId !== user_id) {
+                return null;
+            }
+        } else {
+            if (typeof member === "undefined") {
+                member = await this.fetchMember(channel.guild, user_id);
+
+                if (member === null) {
                     return null;
                 }
+            }
 
-                break;
-            default:
-                if (typeof member === "undefined") {
-                    member = await this.fetchMember(channel.guild, user_id);
+            const threadChannel = [ChannelType.PublicThread, ChannelType.PrivateThread].includes(channel.type),
+                perms = (threadChannel ? channel.parent : channel).memberPermissions(member, true);
 
-                    if (member === null) {
-                        return null;
-                    }
-                }
-
-                const threadChannel = [ChannelType.PublicThread, ChannelType.PrivateThread].includes(channel.type),
-                    perms = (threadChannel ? channel.parent : channel).memberPermissions(member, true);
-
-                if (perms === null || !perms.has(PermissionsBitField.Flags.ViewChannel)) {
-                    return null;
-                }
-
-                break;
+            if (perms === null || !perms.has(PermissionsBitField.Flags.ViewChannel)) {
+                return null;
+            }
         }
 
         return channel;
@@ -455,15 +447,12 @@ class DiscordClient {
             throw new ClientError("Invalid options provided");
         }
 
-        switch (typeof msg_id) {
-            case "string":
-                if (Util.empty(msg_id)) {
-                    throw new ClientError("Invalid message ID provided (length = 0)");
-                }
-
-                break;
-            default:
-                throw new ClientError("Invalid message ID provided");
+        if (typeof msg_id === "string") {
+            if (Util.empty(msg_id)) {
+                throw new ClientError("Invalid message ID provided (length = 0)");
+            }
+        } else {
+            throw new ClientError("Invalid message ID provided");
         }
 
         let channel;
