@@ -1,10 +1,11 @@
+import TypeTester from "../TypeTester.js";
 import RegexUtil from "../misc/RegexUtil.js";
 
 const ParserUtil = Object.freeze({
     splitArgs: (str, lowercase = false, options = {}) => {
         let multipleLowercase = Array.isArray(lowercase);
 
-        if (!multipleLowercase && typeof lowercase === "object") {
+        if (!multipleLowercase && TypeTester.isObject(lowercase)) {
             options = lowercase;
 
             lowercase = options.lowercase ?? false;

@@ -98,7 +98,7 @@ const ObjectUtil = Object.freeze({
             descriptors = allDescriptors.filter(([, desc]) => !desc.enumerable);
         }
 
-        if (typeof props === "object") {
+        if (TypeTester.isObject(props)) {
             descriptors = descriptors.map(([key, desc]) => [key, { ...desc, ...props }]);
         }
 

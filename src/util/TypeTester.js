@@ -1,5 +1,4 @@
 import Util from "./Util.js";
-import DiscordUtil from "./DiscordUtil.js";
 
 import UtilError from "../errors/UtilError.js";
 
@@ -83,18 +82,15 @@ const TypeTester = Object.freeze({
         return args.find(obj => check(getProp(obj)));
     },
 
-    overSizeLimits: (obj, charLimit, lineLimit) => {
-        if (obj == null) {
+    overSizeLimits: (str, charLimit, lineLimit) => {
+        if (typeof str !== "string") {
             return false;
         }
 
+        let count;
+
         if (typeof charLimit === "number") {
-            const count =
-                typeof obj === "string"
-                    ? Util.countChars(obj)
-                    : DiscordUtil.getEmbedSize(obj, {
-                          count: "chars"
-                      });
+            count = Util.countChars(str);
 
             if (count > charLimit) {
                 return [count, null];
@@ -102,12 +98,7 @@ const TypeTester = Object.freeze({
         }
 
         if (typeof lineLimit === "number") {
-            const count =
-                typeof obj === "string"
-                    ? Util.countLines(obj)
-                    : DiscordUtil.getEmbedSize(obj, {
-                          count: "lines"
-                      });
+            count = Util.countLines(str);
 
             if (count > lineLimit) {
                 return [null, count];

@@ -163,8 +163,10 @@ class TextCommand extends BaseCommand {
     }
 
     _formatSubcmdHelp(subcmds, discord) {
-        const formatted = discord ? inlineCode(subcmds) : subcmds;
-        return `${this.prefix}${this.name} ${formatted}`;
+        const formattedName = discord ? bold(this.name) : this.name,
+            formattedSubcmds = discord ? inlineCode(subcmds) : subcmds;
+
+        return `${this.prefix}${formattedName}${formattedSubcmds}`;
     }
 }
 

@@ -18,11 +18,17 @@ class UserTracker {
     }
 
     findUser(id) {
+        if (id == null) {
+            return;
+        }
+
         return this.trackedUsers.find(user => user.id === id);
     }
 
     addUser(id) {
-        if (typeof id === "object") {
+        if (id == null) {
+            return;
+        } else if (typeof id === "object") {
             id = id.id;
         }
 
@@ -31,7 +37,9 @@ class UserTracker {
     }
 
     removeUser(id) {
-        if (typeof id === "object") {
+        if (id == null) {
+            return;
+        } else if (typeof id === "object") {
             ArrayUtil.removeItem(this.trackedUsers, id);
         } else {
             ArrayUtil.removeItem(this.trackedUsers, user => user.id === id);

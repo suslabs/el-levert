@@ -235,18 +235,21 @@ let Util = {
         return count;
     },
 
-    trimString: (str, charLimit, lineLimit, showDiff = false) => {
+    trimString: (str, charLimit, lineLimit, showDiff, oversized) => {
         if (typeof str !== "string") {
             return str;
         }
 
-        const oversized = TypeTester.overSizeLimits(str, charLimit, lineLimit);
+        if (oversized == null) {
+            oversized = TypeTester.overSizeLimits(str, charLimit, lineLimit);
+        }
 
         if (!oversized) {
             return str;
         }
 
         const [chars, lines] = oversized;
+        showDiff ??= false;
 
         if (chars !== null) {
             const trimmed = str.slice(0, charLimit);

@@ -61,7 +61,7 @@ class BaseDiscordTransport extends Transport {
         if (this.sendDelayed) {
             this._buffer.push(info);
         } else {
-            this._logToDiscord(info).catch(err => this._discordErrorHandler(err));
+            this._logToDiscord(info).catch(err => this._handleDiscordError(err));
         }
 
         callback();
@@ -171,10 +171,10 @@ class BaseDiscordTransport extends Transport {
             return;
         }
 
-        this._logToDiscord(info).catch(err => this._discordErrorHandler(err));
+        this._logToDiscord(info).catch(err => this._handleDiscordError(err));
     }
 
-    _discordErrorHandler(err) {
+    _handleDiscordError(err) {
         console.error("Error occured while sending message to discord:", err);
 
         if (!(err instanceof DiscordAPIError)) {

@@ -1,5 +1,7 @@
 import winston from "winston";
 
+import TypeTester from "../util/TypeTester.js";
+
 import LoggerError from "../errors/LoggerError.js";
 
 const validFormats = Object.getOwnPropertyNames(winston.format).filter(name => !["length", "combine"].includes(name));
@@ -15,7 +17,7 @@ function getFormat(config) {
     const formats = config.map(format => {
         let name, opts;
 
-        if (typeof format === "object") {
+        if (TypeTester.isObject(format)) {
             ({ name, opts } = format);
         } else {
             name = format;

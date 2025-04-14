@@ -5,6 +5,7 @@ import axios from "axios";
 import { ChannelType, AttachmentBuilder } from "discord.js";
 
 import Util from "./Util.js";
+import TypeTester from "./TypeTester.js";
 import ArrayUtil from "./ArrayUtil.js";
 
 import UtilError from "../errors/UtilError.js";
@@ -148,13 +149,17 @@ let DiscordUtil = {
         }
     },
 
-    getEmbedSize(embed, options = {}) {
-        const countType = options.count ?? "chars",
-            countURLs = options.countURLs ?? false;
+    getEmbed: embed => {
+        return embed?.data ?? embed;
+    },
 
-        if (typeof embed.data !== "undefined") {
-            embed = embed.data;
-        }
+    _validAreas: ["body", "content", "details", "fields"],
+    getEmbedSize: (embed, options = {}) => {
+        let countType = options.count ?? "chars",
+            countAreas = options.areas ?? "all",
+            countURLs = options.urls ?? false;
+
+        embed = DiscordUtil.getEmbed(embed);
 
         if (embed == null) {
             return 0;
@@ -174,25 +179,45 @@ let DiscordUtil = {
                 throw new UtilError("Invalid count type: " + countType);
         }
 
-        size += count(embed.title);
-        size += count(embed.description);
+        if (countAreas === "all") {
+            countAreas = DiscordUtil._validAreas;
+        } else if (!Array.isArray(countAreas)) {
+            countAreas = [countAreas];
 
-        size += count(embed.author?.name);
-        size += count(embed.timestamp);
-        size += count(embed.footer?.text);
-
-        if (countType === "chars" && countURLs) {
-            size += count(embed.url);
-            size += count(embed.thumbnail?.url);
-            size += count(embed.image?.url);
-
-            size += count(embed.author?.icon_url);
-            size += count(embed.author?.url);
-
-            size += count(embed.footer?.icon_url);
+            if (!countAreas.every(area => DiscordUtil._validAreas.includes(area))) {
+                throw new UtilError("Invalid count areas");
+            }
         }
 
-        size += (embed.fields ?? []).reduce((sum, field, i) => {
+        if (countAreas.includes("content")) {
+            size += count(embed.title);
+            size += count(embed.description);
+        } else if (countAreas.includes("body")) {
+            size += count(embed.description);
+        }
+
+        if (countAreas.includes("details")) {
+            size += count(embed.author?.name);
+            size += count(embed.timestamp);
+            size += count(embed.footer?.text);
+
+            if (countType === "chars" && countURLs) {
+                size += count(embed.url);
+                size += count(embed.thumbnail?.url);
+                size += count(embed.image?.url);
+
+                size += count(embed.author?.icon_url);
+                size += count(embed.author?.url);
+
+                size += count(embed.footer?.icon_url);
+            }
+        }
+
+        if (!countAreas.includes("fields")) {
+            return size;
+        }
+
+        const fieldsSize = (embed.fields ?? []).reduce((sum, field, i) => {
             const { name, value, inline } = field;
 
             if (countType === "lines" && i > 0 && inline) {
@@ -209,7 +234,39 @@ let DiscordUtil = {
             return sum + nameSize + valueSize;
         }, 0);
 
-        return size;
+        return size + fieldsSize;
+    },
+
+    overSizeLimits: (embed, charLimit, lineLimit, options = {}) => {
+        if (!TypeTester.isObject(embed)) {
+            return false;
+        }
+
+        let count;
+
+        if (typeof charLimit === "number") {
+            count = DiscordUtil.getEmbedSize(embed, {
+                ...options,
+                count: "chars"
+            });
+
+            if (count > charLimit) {
+                return [count, null];
+            }
+        }
+
+        if (typeof lineLimit === "number") {
+            count = DiscordUtil.getEmbedSize(embed, {
+                ...options,
+                count: "lines"
+            });
+
+            if (count > lineLimit) {
+                return [null, count];
+            }
+        }
+
+        return false;
     },
 
     fetchAttachment: async (msg, responseType = "text", options = {}) => {
