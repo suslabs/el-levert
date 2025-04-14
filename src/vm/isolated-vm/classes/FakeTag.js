@@ -3,17 +3,11 @@ import Util from "../../../util/Util.js";
 class FakeTag {
     constructor(tag, args) {
         this.tag = tag ?? undefined;
-        args = args?.trim();
-
-        if (Util.empty(args)) {
-            this.args = undefined;
-        } else {
-            this.args = args;
-        }
+        this.args = args?.trim();
 
         const fixedTag = {};
 
-        if (args != null) {
+        if (!Util.empty(args)) {
             fixedTag.args = args;
         }
 
