@@ -32,12 +32,11 @@ const ObjectUtil = Object.freeze({
     },
 
     setValuesWithDefaults: (target, source, defaults = {}) => {
+        source = TypeTester.isObject(source) ? source : {};
         const values = {};
 
         for (const key of Object.keys(defaults)) {
-            const sourceVal = source ? source[key] : undefined;
-
-            if (sourceVal == null) {
+            if (source[key] == null) {
                 let defaultValue = defaults[key];
 
                 if (typeof defaultValue !== "function") {
@@ -48,10 +47,7 @@ const ObjectUtil = Object.freeze({
             }
         }
 
-        return Object.assign(target, {
-            ...source,
-            ...values
-        });
+        return Object.assign(target, source, values);
     },
 
     assign: (target, source, options, props) => {

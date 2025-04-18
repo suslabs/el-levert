@@ -269,6 +269,31 @@ let DiscordUtil = {
         return false;
     },
 
+    trimEmbed(embed, charLimit, lineLimit, showDiff = false, oversized) {
+        const orig = embed;
+        embed = DiscordUtil.getEmbed(embed);
+
+        if (oversized == null) {
+            oversized = DiscordUtil.overSizeLimits(embed, charLimit, lineLimit, {
+                areas: "body"
+            });
+        }
+
+        if (oversized) {
+            embed.description = Util.trimString(embed.description, charLimit, lineLimit, showDiff, oversized);
+        }
+
+        if (
+            DiscordUtil.overSizeLimits(embed, charLimit, lineLimit, {
+                areas: "fields"
+            })
+        ) {
+            delete embed.fields;
+        }
+
+        return orig;
+    },
+
     fetchAttachment: async (msg, responseType = "text", options = {}) => {
         const contentTypes = [].concat(options.allowedContentTypes ?? []),
             maxSize = (options.maxSize ?? Infinity) * 1024;

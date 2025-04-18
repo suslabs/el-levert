@@ -1,7 +1,5 @@
 import fs from "node:fs/promises";
 
-import TypeTester from "./TypeTester.js";
-
 import UtilError from "../errors/UtilError.js";
 
 let Util = {
@@ -235,13 +233,39 @@ let Util = {
         return count;
     },
 
-    trimString: (str, charLimit, lineLimit, showDiff, oversized) => {
+    overSizeLimits: (str, charLimit, lineLimit) => {
+        if (typeof str !== "string") {
+            return false;
+        }
+
+        let count;
+
+        if (typeof charLimit === "number") {
+            count = Util.countChars(str);
+
+            if (count > charLimit) {
+                return [count, null];
+            }
+        }
+
+        if (typeof lineLimit === "number") {
+            count = Util.countLines(str);
+
+            if (count > lineLimit) {
+                return [null, count];
+            }
+        }
+
+        return false;
+    },
+
+    trimString: (str, charLimit, lineLimit, showDiff = false, oversized) => {
         if (typeof str !== "string") {
             return str;
         }
 
         if (oversized == null) {
-            oversized = TypeTester.overSizeLimits(str, charLimit, lineLimit);
+            oversized = Util.overSizeLimits(str, charLimit, lineLimit);
         }
 
         if (!oversized) {
@@ -249,7 +273,6 @@ let Util = {
         }
 
         const [chars, lines] = oversized;
-        showDiff ??= false;
 
         if (chars !== null) {
             const trimmed = str.slice(0, charLimit);

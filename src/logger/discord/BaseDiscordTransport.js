@@ -91,7 +91,7 @@ class BaseDiscordTransport extends Transport {
         embed.setColor(BaseDiscordTransport._getEmbedColor(info.level));
 
         if (info.stack != null) {
-            if (TypeTester.overSizeLimits(info.stack, DiscordUtil.msgCharLimit)) {
+            if (Util.overSizeLimits(info.stack, DiscordUtil.msgCharLimit)) {
                 const formattedStack = codeBlock("js", info.stack);
                 content += formattedStack;
             } else {

@@ -7,7 +7,6 @@ import { getClient, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
-import TypeTester from "../../util/TypeTester.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
 
 import ReminderError from "../../errors/ReminderError.js";
@@ -33,7 +32,7 @@ class ReminderManager extends DBManager {
     }
 
     checkMessage(msg) {
-        const oversized = TypeTester.overSizeLimits(msg, this.maxMsgLength, 1);
+        const oversized = Util.overSizeLimits(msg, this.maxMsgLength, 1);
 
         if (!oversized) {
             return false;

@@ -659,7 +659,11 @@ class DiscordClient {
 
     onReady() {
         this.loggedIn = true;
-        this.logger?.info(`The bot is online. Logged in as "${this.client.user.username}".`);
+
+        this.botId = this.client.user.id;
+        this.botUsername = this.client.user.username;
+
+        this.logger?.info(`The bot is online. Logged in as "${this.botUsername}".`);
     }
 
     async _loadEvents() {

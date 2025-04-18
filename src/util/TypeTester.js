@@ -1,5 +1,3 @@
-import Util from "./Util.js";
-
 import UtilError from "../errors/UtilError.js";
 
 const TypeTester = Object.freeze({
@@ -80,32 +78,6 @@ const TypeTester = Object.freeze({
         }
 
         return args.find(obj => check(getProp(obj)));
-    },
-
-    overSizeLimits: (str, charLimit, lineLimit) => {
-        if (typeof str !== "string") {
-            return false;
-        }
-
-        let count;
-
-        if (typeof charLimit === "number") {
-            count = Util.countChars(str);
-
-            if (count > charLimit) {
-                return [count, null];
-            }
-        }
-
-        if (typeof lineLimit === "number") {
-            count = Util.countLines(str);
-
-            if (count > lineLimit) {
-                return [null, count];
-            }
-        }
-
-        return false;
     },
 
     _validProp: (obj, expected) => {
