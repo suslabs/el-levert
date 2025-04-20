@@ -47,7 +47,7 @@ function parseArgs() {
         });
     } catch (err) {
         if (err.code?.startsWith("ERR_PARSE")) {
-            console.error(`Error: ${err.message}.`);
+            console.error(`ERROR: ${err.message}.`);
             console.log(usage);
 
             return null;

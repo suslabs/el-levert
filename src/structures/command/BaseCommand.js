@@ -1,3 +1,4 @@
+import Util from "../../util/Util.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 
@@ -18,14 +19,14 @@ class BaseCommand {
             throw new CommandError("Command must have a handler function");
         }
 
-        if (options.subcommand && typeof options.parent !== "string") {
-            throw new CommandError("Subcommands must have a parent command");
-        }
-
         this.isSubcmd = options.subcommand ?? false;
         delete options.subcommand;
 
         ObjectUtil.setValuesWithDefaults(this, options, this.constructor.defaultValues);
+
+        if (this.isSubcmd && Util.empty(this.parent)) {
+            throw new CommandError("Subcommands must have a parent command");
+        }
 
         this.subcmds = new Map();
         this.bound = false;
@@ -39,8 +40,8 @@ class BaseCommand {
         return this.getSubcmdNames().includes(name);
     }
 
-    getName(parentSep = ":") {
-        return this._getName(this.name, parentSep);
+    getName(full, parentSep) {
+        return this._getName(this.name, full, parentSep);
     }
 
     getSubcmd(name) {
@@ -69,14 +70,17 @@ class BaseCommand {
             this.subcommands.push(subcmd.name);
         }
 
-        this.subcmds.set(subcmd.name, subcmd);
         subcmd.bind(this);
+        this.subcmds.set(subcmd.name, subcmd);
     }
 
-    removeSubcommand(command) {
+    removeSubcommand(subcmd) {
         if (this.isSubcmd) {
             throw new CommandError("Only parent commands can have subcommands");
         }
+
+        ArrayUtil.removeItem(this.subcommands, subcmd.name);
+        this.subcmds.delete(subcmd.name);
     }
 
     removeSubcommands() {
@@ -110,16 +114,39 @@ class BaseCommand {
         return await this.handler(args, ...contextArgs);
     }
 
+    subcmdOf(parent, subName) {
+        return this.isSubcmd && this.parent === parent.name && this.name === subName;
+    }
+
+    equivalent(cmd) {
+        return this.matches(cmd.name) && this._sameParent(cmd);
+    }
+
+    equals(cmd) {
+        return this.name === cmd.name && this._sameParent(cmd);
+    }
+
     get _cmd() {
         return this.isSubcmd ? this.parentCmd : this;
     }
 
-    _getName(name, parentSep) {
-        if (parentSep !== false && this.isSubcmd) {
-            name = `${this.parentCmd.name}${parentSep} ${name}`;
-        }
+    _getName(name, full = false, parentSep = ":") {
+        const includeParent = this.isSubcmd && parentSep !== false,
+            parentName = this.parentCmd?.name ?? this.parent;
 
-        return name;
+        if (full) {
+            const prefix = this.isSubcmd ? "sub" : "",
+                parentFormat = includeParent ? ` of parent command "${parentName}"` : "";
+
+            return `${prefix}command "${name}"${parentFormat}`;
+        } else {
+            const parentFormat = includeParent ? `${parentName}${parentSep}` : "";
+            return parentFormat + name;
+        }
+    }
+
+    _sameParent(cmd) {
+        return this.isSubcmd === cmd.isSubcmd && this.parent === cmd.parent;
     }
 }
 

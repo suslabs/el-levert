@@ -4,6 +4,48 @@ import TypeTester from "./TypeTester.js";
 import UtilError from "../errors/UtilError.js";
 
 const ArrayUtil = Object.freeze({
+    frequency: (array, callback) => {
+        const getValue = ArrayUtil._valueFunc(callback),
+            map = new Map();
+
+        for (const item of array) {
+            const val = getValue(item);
+            map.set(val, (map.get(val) || 0) + 1);
+        }
+
+        return map;
+    },
+
+    sameElements(arr1, arr2, strict = true, callback) {
+        if (arr1.length !== arr2.length) {
+            return false;
+        }
+
+        if (strict) {
+            const getValue = ArrayUtil._valueFunc(callback);
+
+            return arr1.every((a, i) => {
+                const b = arr2[i];
+                return getValue(a) === getValue(b);
+            });
+        }
+
+        const aFreq = ArrayUtil.frequency(arr1, callback),
+            bFreq = ArrayUtil.frequency(arr2, callback);
+
+        if (aFreq.size !== bFreq.size) {
+            return false;
+        }
+
+        for (const [val, count] of aFreq) {
+            if (bFreq.get(val) !== count) {
+                return false;
+            }
+        }
+
+        return true;
+    },
+
     concat: (a, ...args) => {
         const concatenated = [].concat(a, ...args);
 
@@ -14,8 +56,8 @@ const ArrayUtil = Object.freeze({
         }
     },
 
-    split: (arr, callback) => {
-        return arr.reduce(
+    split: (array, callback) => {
+        return array.reduce(
             (acc, item, i) => {
                 if (callback(item, i)) {
                     acc[0].push(item);
@@ -35,27 +77,29 @@ const ArrayUtil = Object.freeze({
     },
 
     sort: (array, callback) => {
-        const useCallback = typeof callback === "function";
+        const getValue = ArrayUtil._valueFunc(callback);
 
         return array.sort((a, b) => {
-            const a_val = useCallback ? callback(a) : a,
-                b_val = useCallback ? callback(b) : b;
+            const a_val = getValue(a),
+                b_val = getValue(b);
 
-            return a_val.localeCompare(b_val, "en", {
+            if (typeof a_val === "number" && typeof b_val === "number") {
+                return a_val - b_val;
+            }
+
+            return a_val.localeCompare(b_val, undefined, {
                 numeric: true,
                 sensitivity: "base"
             });
         });
     },
 
-    unique: (array, propName) => {
-        const hasPropName = typeof propName === "string",
-            getProp = hasPropName ? obj => obj[propName] : obj => obj;
-
-        const seen = new Set();
+    unique: (array, callback) => {
+        const getValue = ArrayUtil._valueFunc(callback),
+            seen = new Set();
 
         return array.filter(item => {
-            const val = getProp(item);
+            const val = getValue(item);
 
             if (seen.has(val)) {
                 return false;
@@ -96,22 +140,27 @@ const ArrayUtil = Object.freeze({
             return false;
         }
 
-        if (typeof callback === "undefined") {
-            delete array[ind];
+        if (typeof callback !== "function") {
             array.splice(ind, 1);
-
             return true;
         }
 
         const ret = callback(ind, array);
 
         if (TypeTester.isPromise(ret)) {
-            return ret.then(_ => true);
-        } else {
-            delete array[ind];
-            array.splice(ind, 1);
+            return ret.then(shouldDelete => {
+                if (ret) {
+                    array.splice(ind, 1);
+                }
 
-            return true;
+                return Boolean(ret);
+            });
+        } else {
+            if (ret) {
+                array.splice(ind, 1);
+            }
+
+            return Boolean(ret);
         }
     },
 
@@ -147,64 +196,84 @@ const ArrayUtil = Object.freeze({
     },
 
     wipeArray: (array, callback) => {
-        let length = array.length,
-            i = 0;
+        const length = array.length;
 
-        if (typeof callback === "undefined") {
-            for (let i = 0; i < length; i++) {
-                delete array[i];
-            }
-
+        if (typeof callback !== "function") {
             array.length = 0;
             return length;
         }
 
-        let n = 0;
-
-        let ret,
+        let keep = [],
             loopPromise = false;
 
+        let i = 0,
+            j,
+            n = 0;
+
+        let item, ret, shouldDelete;
+
         for (; i < length; i++) {
-            const item = array[i];
+            item = array[i];
             ret = callback(item, i);
 
             if (TypeTester.isPromise(ret)) {
                 loopPromise = true;
-                i++;
+                j = i;
 
                 break;
             }
 
-            const shouldDelete = ret ?? true;
+            shouldDelete = ret ?? true;
 
             if (shouldDelete) {
-                delete array[i];
                 n++;
+            } else {
+                keep.push(item);
             }
         }
 
         if (loopPromise) {
             return (async () => {
-                ret = await ret;
+                for (; j < length; j++) {
+                    item = array[j];
 
-                for (; i < length; i++) {
-                    const item = array[i];
-                    await callback(item, i);
+                    if (j === i) {
+                        ret = await ret;
+                    } else {
+                        ret = await callback(item, j);
+                    }
 
-                    const shouldDelete = ret ?? true;
+                    shouldDelete = ret ?? true;
 
                     if (shouldDelete) {
-                        delete array[i];
                         n++;
+                    } else {
+                        keep.push(item);
                     }
                 }
 
                 array.length = 0;
+                array.push(...keep);
+
                 return n;
             })();
         } else {
             array.length = 0;
+            array.push(...keep);
+
             return n;
+        }
+    },
+
+    _valueFunc: callback => {
+        switch (typeof callback) {
+            case "string":
+                const propName = callback;
+                return obj => obj[propName];
+            case "function":
+                return callback;
+            default:
+                return val => val;
         }
     }
 });

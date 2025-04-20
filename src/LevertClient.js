@@ -123,13 +123,13 @@ class LevertClient extends DiscordClient {
 
         const components = Object.entries(barrel);
 
-        components.forEach(([compName, compClass]) => {
+        for (const [compName, compClass] of components) {
             if (TypeTester.outOfRange(LevertClient.minPriority, LevertClient.maxPriority, compClass.loadPriority)) {
                 throw new ClientError(`Invalid load priority ${compClass.loadPriority} for component ${compName}`);
             } else {
                 compClass.loadPriority ??= LevertClient.maxPriority;
             }
-        });
+        }
 
         components.sort(([, a], [, b]) => a.loadPriority - b.loadPriority);
 

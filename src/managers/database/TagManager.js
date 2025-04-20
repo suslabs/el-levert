@@ -153,7 +153,7 @@ class TagManager extends DBManager {
             type
         });
 
-        if (tag.isEquivalent(newTag)) {
+        if (tag.equivalent(newTag)) {
             throw new TagError("Can't update tag with the same body");
         }
 
@@ -242,7 +242,7 @@ class TagManager extends DBManager {
             sizeDiff = newTagSize;
 
         if (!create) {
-            if (tag.isEqual(newTag)) {
+            if (tag.equals(newTag)) {
                 throw new TagError("Can't alias tag with the same target and args");
             }
 

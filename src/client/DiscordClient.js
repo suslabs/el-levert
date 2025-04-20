@@ -4,6 +4,7 @@ import EventLoader from "../loaders/event/EventLoader.js";
 
 import Util from "../util/Util.js";
 import TypeTester from "../util/TypeTester.js";
+import ArrayUtil from "../util/ArrayUtil.js";
 import ObjectUtil from "../util/ObjectUtil.js";
 import DiscordUtil from "../util/DiscordUtil.js";
 import search from "../util/search/diceSearch.js";
@@ -640,7 +641,7 @@ class DiscordClient {
             )
         ).flat();
 
-        const uniqueMembers = Array.from(new Map(allMembers.map(member => [member.id, member])).values());
+        const uniqueMembers = ArrayUtil.unique(allMembers, "id");
 
         return search(uniqueMembers, query, {
             maxResults: options.limit,

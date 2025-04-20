@@ -32,8 +32,8 @@ class CommandManager extends TextCommandManager {
         }
     }
 
-    getCommands(perm) {
-        const commands = super.getCommands();
+    getCommands(perm, includeSubcommands) {
+        const commands = super.getCommands(includeSubcommands);
 
         if (perm == null) {
             return commands;

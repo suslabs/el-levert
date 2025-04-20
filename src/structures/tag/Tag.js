@@ -4,6 +4,7 @@ import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
+import ArrayUtil from "../../util/ArrayUtil.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 import FunctionUtil from "../../util/misc/FunctionUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
@@ -272,20 +273,16 @@ class Tag {
         return this.type === tag.type && this.isAlias === tag.isAlias;
     }
 
-    sameHops(tag) {
-        if (this.hops.length !== tag.hops.length) {
-            return false;
-        }
-
-        return this.hops.every((hop, i) => tag.hops[i] === hop);
-    }
-
-    isEquivalent(tag) {
+    equivalent(tag) {
         return this.sameBody(tag) && this.sameType(tag);
     }
 
-    isEqual(tag) {
-        return this.isEquivalent(tag) && this.sameHops(tag);
+    sameHops(tag) {
+        return ArrayUtil.sameElements(this.hops, tag.hops);
+    }
+
+    equals(tag) {
+        return this.equivalent(tag) && this.sameHops(tag);
     }
 
     getRaw(discord = false) {

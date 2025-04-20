@@ -110,38 +110,36 @@ const ObjectUtil = Object.freeze({
     },
 
     wipeObject: (obj, callback) => {
-        if (typeof callback === "undefined") {
+        if (typeof callback !== "function") {
             const keys = Object.keys(obj);
-
-            for (let i = 0; i < keys.length; i++) {
-                const key = keys[i];
-                delete obj[key];
-            }
+            keys.forEach(key => delete obj[key]);
 
             return keys.length;
         }
 
-        const entries = Object.entries(obj);
+        const entries = Object.entries(obj),
+            length = entries.length;
 
-        let length = entries.length,
+        let loopPromise = false;
+
+        let n = 0,
             i = 0,
-            n = 0;
+            j;
 
-        let ret,
-            loopPromise = false;
+        let key, item, ret, shouldDelete;
 
         for (; i < length; i++) {
-            const [key, item] = entries[i];
+            [key, item] = entries[i];
             ret = callback(key, item, i);
 
             if (TypeTester.isPromise(ret)) {
                 loopPromise = true;
-                i++;
+                j = i;
 
                 break;
             }
 
-            const shouldDelete = ret ?? true;
+            shouldDelete = ret ?? true;
 
             if (shouldDelete) {
                 delete obj[key];
@@ -151,13 +149,16 @@ const ObjectUtil = Object.freeze({
 
         if (loopPromise) {
             return (async () => {
-                ret = await ret;
+                for (; j < length; j++) {
+                    [key, item] = entries[j];
 
-                for (; i < length; i++) {
-                    const [key, item] = entries[i];
-                    await callback(key, item, i);
+                    if (j === i) {
+                        ret = await ret;
+                    } else {
+                        ret = await callback(key, item, j);
+                    }
 
-                    const shouldDelete = ret ?? true;
+                    shouldDelete = ret ?? true;
 
                     if (shouldDelete) {
                         delete obj[key];

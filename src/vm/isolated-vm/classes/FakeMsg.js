@@ -17,7 +17,10 @@ class FakeMsg {
             channel = msg.channel,
             guild = channel?.guild;
 
-        const messageIds = channel?.messages?.cache.map(msg => msg.id).slice(1, FakeMsg.messageCount + 1);
+        const messageIds = channel?.messages?.cache
+            .last(FakeMsg.messageCount)
+            .map(msg => msg.id)
+            .reverse();
 
         this.fixedMsg = VMUtil.removeCircularReferences({
             channelId: msg.channelId,

@@ -9,7 +9,7 @@ class MessageTracker {
     }
 
     addMsg(msg, triggerId) {
-        if (!this.enableTracking) {
+        if (!this.enableTracking || triggerId == null) {
             return;
         }
 
@@ -22,7 +22,7 @@ class MessageTracker {
     }
 
     deleteMsg(triggerId) {
-        if (!this.enableTracking) {
+        if (!this.enableTracking || triggerId == null) {
             return;
         }
 

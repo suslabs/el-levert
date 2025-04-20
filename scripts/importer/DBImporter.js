@@ -33,7 +33,7 @@ class DBImporter {
             const currTag = currTags.get(name),
                 importTag = importTags.get(name);
 
-            if (!currTag.isEqual(importTag)) {
+            if (!currTag.equals(importTag)) {
                 try {
                     await this.tagManager.updateProps(currTag, importTag);
                     count++;

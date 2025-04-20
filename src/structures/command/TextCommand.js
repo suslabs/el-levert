@@ -35,7 +35,7 @@ class TextCommand extends BaseCommand {
         return this.getSubcmdNames(checkAliases).includes(name);
     }
 
-    getName(aliasSep = "/", parentSep) {
+    getName(full, parentSep, aliasSep = "/") {
         let name = this.name;
 
         if (aliasSep !== false && !Util.empty(this.aliases)) {
@@ -43,7 +43,7 @@ class TextCommand extends BaseCommand {
             name = names.join(aliasSep);
         }
 
-        return super._getName(name, parentSep);
+        return super._getName(name, full, parentSep);
     }
 
     getSubcmd(name, includeAliases = true) {
@@ -92,6 +92,14 @@ class TextCommand extends BaseCommand {
 
         for (const alias of subcmd.aliases) {
             this.subcmds.set(alias, subcmd);
+        }
+    }
+
+    removeSubcommand(subcmd) {
+        super.removeSubcommand(subcmd);
+
+        for (const alias of subcmd.aliases) {
+            this.subcmds.delete(alias);
         }
     }
 
@@ -160,6 +168,10 @@ class TextCommand extends BaseCommand {
         }
 
         return await super.execute(args, ...etc);
+    }
+
+    equals(cmd) {
+        return super.equals(cmd) && ArrayUtil.sameElements(this.aliases, cmd.aliases, false);
     }
 
     _formatSubcmdHelp(subcmds, discord) {
