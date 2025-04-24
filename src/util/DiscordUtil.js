@@ -153,7 +153,116 @@ let DiscordUtil = {
         return embed?.data ?? embed;
     },
 
-    _validAreas: ["body", "content", "details", "fields"],
+    stringifyEmbed: (embed, options = {}) => {
+        const useHeaders = options.headers ?? false,
+            includeURLs = options.urls ?? true;
+
+        embed = DiscordUtil.getEmbed(embed);
+
+        if (embed == null) {
+            return "";
+        }
+
+        let blocks = [];
+
+        const titleParts = [],
+            bodyParts = [],
+            fieldParts = [],
+            footerParts = [];
+
+        if (!Util.empty(embed.author?.name)) {
+            let icon = "";
+
+            if (includeURLs && !Util.empty(embed.author.icon_url)) {
+                icon = `(${embed.author.icon_url}) `;
+            }
+
+            titleParts.push(`${icon}${embed.author.name}`.trim());
+        }
+
+        if (!Util.empty(embed.title)) {
+            let url = "";
+
+            if (includeURLs && !Util.empty(embed.url)) {
+                url = ` (${embed.url})`;
+            }
+
+            titleParts.push(`${embed.title}${url}`);
+        }
+
+        if (useHeaders) {
+            titleParts.unshift("[Title]");
+            titleParts.push("---");
+        }
+
+        blocks.push(titleParts.join("\n"));
+
+        if (includeURLs && !Util.empty(embed.thumbnail?.url)) {
+            bodyParts.push(`(${embed.thumbnail.url})`);
+        }
+
+        if (!Util.empty(embed.description)) {
+            bodyParts.push(embed.description);
+        }
+
+        if (includeURLs && !Util.empty(embed.image?.url)) {
+            bodyParts.push(`(${embed.image.url})`);
+        }
+
+        if (useHeaders) {
+            bodyParts.unshift("[Body]");
+            bodyParts.push("---");
+        }
+
+        blocks.push(bodyParts.join("\n"));
+
+        if (!Util.empty(embed.fields)) {
+            embed.fields.forEach((field, i) => {
+                fieldParts.length = 0;
+
+                if (!Util.empty(field.name)) {
+                    fieldParts.push(field.name);
+                }
+
+                if (!Util.empty(field.value)) {
+                    fieldParts.push(field.value);
+                }
+
+                if (useHeaders) {
+                    fieldParts.unshift(`[Field ${i + 1}]`);
+                    fieldParts.push("---");
+                }
+
+                blocks.push(fieldParts.join("\n"));
+            });
+        }
+
+        if (!Util.empty(embed.footer?.text)) {
+            let icon = "";
+
+            if (includeURLs && !Util.empty(embed.footer.icon_url)) {
+                icon = `(${embed.footer.icon_url}) `;
+            }
+
+            footerParts.push(`${icon}${embed.footer.text}`.trim());
+        }
+
+        if (!Util.empty(embed.timestamp)) {
+            footerParts.push(`At ${embed.timestamp}`);
+        }
+
+        if (useHeaders) {
+            footerParts.unshift("[Footer]");
+            footerParts.push("---");
+        }
+
+        blocks.push(footerParts.join("\n"));
+
+        blocks = blocks.filter(part => !Util.empty(part));
+        return blocks.join("\n\n");
+    },
+
+    _countAreas: ["body", "content", "details", "fields"],
     getEmbedSize: (embed, options = {}) => {
         let countType = options.count ?? "chars",
             countAreas = options.areas ?? "all",
@@ -180,11 +289,11 @@ let DiscordUtil = {
         }
 
         if (countAreas === "all") {
-            countAreas = DiscordUtil._validAreas;
+            countAreas = DiscordUtil._countAreas;
         } else if (!Array.isArray(countAreas)) {
             countAreas = [countAreas];
 
-            if (!countAreas.every(area => DiscordUtil._validAreas.includes(area))) {
+            if (!countAreas.every(area => DiscordUtil._countAreas.includes(area))) {
                 throw new UtilError("Invalid count areas");
             }
         }
@@ -269,9 +378,13 @@ let DiscordUtil = {
         return false;
     },
 
-    trimEmbed(embed, charLimit, lineLimit, showDiff = false, oversized) {
+    markdownTrimString(str, charLimit, lineLimit, options = {}) {},
+
+    trimEmbed(embed, charLimit, lineLimit, options = {}) {
         const orig = embed;
         embed = DiscordUtil.getEmbed(embed);
+
+        let oversized = options.oversized;
 
         if (oversized == null) {
             oversized = DiscordUtil.overSizeLimits(embed, charLimit, lineLimit, {
@@ -280,7 +393,10 @@ let DiscordUtil = {
         }
 
         if (oversized) {
-            embed.description = Util.trimString(embed.description, charLimit, lineLimit, showDiff, oversized);
+            embed.description = Util.trimString(embed.description, charLimit, lineLimit, {
+                ...options,
+                oversized
+            });
         }
 
         if (

@@ -139,6 +139,14 @@ export default {
             return parsed.err;
         }
 
-        return await getClient().tagVM.runScript(body, { msg });
+        const out = await getClient().tagVM.runScript(body, { msg });
+
+        return [
+            out,
+            {
+                type: "options",
+                useConfigLimits: true
+            }
+        ];
     }
 };

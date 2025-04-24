@@ -1,6 +1,6 @@
 import { ChannelType } from "discord.js";
 
-import MessageHandler from "../MessageHandler.js";
+import MessageHandler from "./MessageHandler.js";
 
 import { getClient, getLogger } from "../../LevertClient.js";
 

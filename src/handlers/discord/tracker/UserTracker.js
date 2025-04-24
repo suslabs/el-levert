@@ -1,7 +1,7 @@
 import TrackedUser from "./TrackedUser.js";
 
-import Util from "../../util/Util.js";
-import ArrayUtil from "../../util/ArrayUtil.js";
+import Util from "../../../util/Util.js";
+import ArrayUtil from "../../../util/ArrayUtil.js";
 
 class UserTracker {
     constructor(sweepInterval = 0) {

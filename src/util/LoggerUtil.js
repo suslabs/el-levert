@@ -29,7 +29,9 @@ const LoggerUtil = Object.freeze({
         }
 
         str = str.replace(/\n|\r\n/g, "\\n");
-        str = Util.trimString(str, maxLength, null, true);
+        str = Util.trimString(str, maxLength, null, {
+            showDiff: true
+        });
 
         if (str.length > splitLength) {
             return `\n---\n${str}\n---`;

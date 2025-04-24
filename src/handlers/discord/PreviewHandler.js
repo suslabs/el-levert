@@ -1,6 +1,6 @@
 import { ChannelType, EmbedBuilder, hyperlink } from "discord.js";
 
-import MessageHandler from "../MessageHandler.js";
+import MessageHandler from "./MessageHandler.js";
 
 import { getClient, getLogger } from "../../LevertClient.js";
 
@@ -25,7 +25,7 @@ function logSending(preview) {
         return;
     }
 
-    const text = preview.data.description;
+    const text = DiscordUtil.getEmbed(preview).description;
     getLogger().debug(`Sending preview:${LoggerUtil.formatLog(text)}`);
 }
 
@@ -47,10 +47,9 @@ class PreviewHandler extends MessageHandler {
     static $name = "previewHandler";
 
     constructor(enabaled) {
-        super(enabaled, true);
-
-        this.outCharLimit = getClient().config.outCharLimit;
-        this.outLineLimit = getClient().config.outLineLimit;
+        super(enabaled, true, false, {
+            minResponseTime: getClient().config.minResponseTime + 0.5 / Util.durationSeconds.milli
+        });
     }
 
     canPreview(str) {
@@ -65,7 +64,7 @@ class PreviewHandler extends MessageHandler {
         return str.replace(DiscordUtil.msgUrlRegex, "");
     }
 
-    async genPreview(msg, str) {
+    async generatePreview(msg, str) {
         logUsage(msg, str);
         const t1 = performance.now();
 
@@ -86,10 +85,10 @@ class PreviewHandler extends MessageHandler {
             throw new HandlerError("Preview message not found");
         }
 
-        let content = prevMsg.content;
-        content = Util.trimString(content, this.outCharLimit, this.outLineLimit);
+        let content = prevMsg.content,
+            image;
 
-        let image;
+        content = Util.trimString(content, ...this._getLimits(true, true).outTrim);
 
         if (!Util.empty(prevMsg.attachments)) {
             const attach = prevMsg.attachments.first(),
@@ -152,37 +151,40 @@ class PreviewHandler extends MessageHandler {
         let preview;
 
         try {
-            preview = await this.genPreview(msg, msg.content);
+            preview = await this.generatePreview(msg, msg.content);
         } catch (err) {
             if (err.name === "HandlerError") {
                 logCancelled(err.message);
                 return false;
             }
 
+            getLogger().error("Preview generation failed:", err);
+
             await this.reply(msg, {
                 content: ":no_entry_sign: Encountered exception while generating preview:",
                 ...DiscordUtil.getFileAttach(err.stack, "error.js")
             });
 
-            getLogger().error("Preview generation failed:", err);
             return false;
         }
 
-        await msg.channel.sendTyping();
         logSending(preview);
 
-        try {
-            await this.reply(msg, {
-                embeds: [preview]
-            });
-        } catch (err) {
-            await this.reply(msg, {
-                content: ":no_entry_sign: Encountered exception while sending preview:",
-                ...DiscordUtil.getFileAttach(err.stack, "error.js")
-            });
+        this._sendTyping(msg);
+        await this._addDelay();
 
-            getLogger().error("Reply failed:", err);
-            return false;
+        try {
+            await this.reply(
+                msg,
+                {
+                    embeds: [preview]
+                },
+                {
+                    limitType: "none"
+                }
+            );
+        } catch (err) {
+            return true;
         }
 
         logSendTime(t1);

@@ -259,10 +259,15 @@ let Util = {
         return false;
     },
 
-    trimString: (str, charLimit, lineLimit, showDiff = false, oversized) => {
+    trimString: (str, charLimit, lineLimit, options = {}) => {
         if (typeof str !== "string") {
             return str;
         }
+
+        const tight = options.tight ?? false,
+            showDiff = options.showDiff ?? false;
+
+        let oversized = options.oversized;
 
         if (oversized == null) {
             oversized = Util.overSizeLimits(str, charLimit, lineLimit);
@@ -275,26 +280,70 @@ let Util = {
         const [chars, lines] = oversized;
 
         if (chars !== null) {
-            const trimmed = str.slice(0, charLimit);
-
-            const diff = chars - charLimit,
-                s = diff > 1 ? "s" : "";
-
             if (showDiff) {
-                return `${trimmed} ... (${diff} more character${s})`;
+                let suffix, trimmed;
+
+                const getSuffix = limit => {
+                    const diff = chars - limit,
+                        s = diff > 1 ? "s" : "";
+
+                    return ` ... (${diff} more character${s})`;
+                };
+
+                if (tight) {
+                    let newLimit = charLimit;
+
+                    do {
+                        newLimit--;
+
+                        trimmed = str.slice(0, newLimit);
+                        suffix = getSuffix(newLimit);
+                    } while (trimmed.length + suffix.length > charLimit && newLimit > 0);
+
+                    if (suffix.length > charLimit) {
+                        suffix = "...";
+                    }
+                } else {
+                    trimmed = str.slice(0, charLimit);
+                    suffix = getSuffix(charLimit);
+                }
+
+                return (trimmed + suffix).trim();
             } else {
+                const newLimit = tight ? Util.clamp(charLimit - 3, 0) : charLimit,
+                    trimmed = str.slice(0, newLimit);
+
                 return trimmed + "...";
             }
         } else if (lines !== null) {
-            const split = str.split("\n"),
-                trimmed = split.slice(0, lineLimit).join("\n");
-
-            const diff = lines - lineLimit,
-                s = diff > 1 ? "s" : "";
-
             if (showDiff) {
-                return `${trimmed} ... (${diff} more line${s})`;
+                let split = str.split("\n"),
+                    trimmed = split.slice(0, lineLimit).join("\n");
+
+                const diff = lines - lineLimit,
+                    s = diff > 1 ? "s" : "";
+
+                let suffix = ` ... (${diff} more line${s})`;
+
+                if (tight) {
+                    if (suffix.length > charLimit) {
+                        suffix = "...";
+                    }
+
+                    const newLimit = Util.clamp(charLimit - suffix.length, 0);
+                    trimmed = trimmed.slice(0, newLimit);
+                }
+
+                return (trimmed + suffix).trim();
             } else {
+                let split = str.split("\n"),
+                    trimmed = split.slice(0, lineLimit).join("\n");
+
+                if (tight) {
+                    const newLimit = Util.clamp(charLimit - 3, 0);
+                    trimmed = trimmed.slice(0, newLimit);
+                }
+
                 return trimmed + "...";
             }
         }

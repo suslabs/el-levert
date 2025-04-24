@@ -1,5 +1,7 @@
 import HandlerError from "../errors/HandlerError.js";
 
+import Util from "../util/Util.js";
+
 class Handler {
     constructor(enabled = true, options = {}) {
         if (typeof this.constructor.$name !== "string") {
@@ -15,6 +17,7 @@ class Handler {
         this.options = options;
 
         this.priority ??= options.priority ?? 0;
+        this.minResponseTime = options.minResponseTime ?? 0;
 
         this._childLoad = this.load;
         this.load = this._load;
@@ -58,6 +61,24 @@ class Handler {
         }
 
         return this._childUnload(...args);
+    }
+
+    async _addDelay(t1) {
+        if (this.minResponseTime <= 0) {
+            return;
+        }
+
+        if (typeof t1 !== "number" || t1 <= 0) {
+            return await Util.delay(this.minResponseTime);
+        }
+
+        const t2 = performance.now(),
+            time = Util.timeDelta(t2, t1);
+
+        if (time < this.minResponseTime) {
+            const delay = this.minResponseTime - time;
+            await Util.delay(delay);
+        }
     }
 }
 

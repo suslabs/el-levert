@@ -441,7 +441,12 @@ class TagManager extends DBManager {
         await this._updateQuota(tag.owner, tagSize);
         await this.tag_db.add(tag);
 
-        const bodyLogStr = LoggerUtil.formatLog(Util.trimString(tag.body, 300, null, true));
+        const bodyLogStr = LoggerUtil.formatLog(
+            Util.trimString(tag.body, 300, null, {
+                showDiff: true
+            })
+        );
+
         getLogger().info(`Added tag: "${tag.name}" with type: ${tag.type}, body:${bodyLogStr}`);
     }
 

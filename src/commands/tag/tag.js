@@ -186,9 +186,21 @@ export default {
         }
 
         if (getClient().previewHandler.canPreview(out)) {
-            return await getPreview(out, msg);
+            return [
+                await getPreview(out, msg),
+                {
+                    type: "options",
+                    limitType: "none"
+                }
+            ];
         } else {
-            return out;
+            return [
+                out,
+                {
+                    type: "options",
+                    useConfigLimits: true
+                }
+            ];
         }
     }
 };

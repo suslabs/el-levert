@@ -20,11 +20,18 @@ export default {
             return parsed.err;
         }
 
-        const out = await replEval(body, {
-            getClient,
-            Util
-        });
+        const res = await replEval(body, {
+                getClient,
+                Util
+            }),
+            out = VMUtil.formatOutput(res);
 
-        return VMUtil.formatOutput(out);
+        return [
+            out,
+            {
+                type: "options",
+                useConfigLimits: true
+            }
+        ];
     }
 };

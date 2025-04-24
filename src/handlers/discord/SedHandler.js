@@ -1,6 +1,6 @@
 import { MessageType, EmbedBuilder } from "discord.js";
 
-import MessageHandler from "../MessageHandler.js";
+import MessageHandler from "./MessageHandler.js";
 
 import { getClient, getLogger } from "../../LevertClient.js";
 
@@ -21,7 +21,7 @@ function logSending(sed) {
         return;
     }
 
-    const text = sed.data.description;
+    const text = DiscordUtil.getEmbed(sed).description;
     getLogger().debug(`Sending replaced message:${LoggerUtil.formatLog(text)}`);
 }
 
@@ -47,66 +47,10 @@ class SedHandler extends MessageHandler {
     static defaultFlags = "i";
 
     constructor(enabled) {
-        super(enabled, true);
+        super(enabled);
     }
 
-    async execute(msg) {
-        if (!this._canSed(msg.content)) {
-            return false;
-        }
-
-        const t1 = performance.now();
-
-        let sed;
-
-        await msg.channel.sendTyping();
-
-        try {
-            sed = await this._genSed(msg, msg.content);
-        } catch (err) {
-            if (err.name === "HandlerError") {
-                let emoji;
-
-                if (err.message === "No matching message found") {
-                    emoji = ":no_entry_sign:";
-                } else {
-                    emoji = ":warning:";
-                }
-
-                await this.reply(msg, `${emoji} ${err.message}.\n${SedHandler.sedUsage}`);
-                return true;
-            }
-
-            await this.reply(msg, {
-                content: ":no_entry_sign: Encountered exception while generating sed replace:",
-                ...DiscordUtil.getFileAttach(err.stack, "error.js")
-            });
-
-            getLogger().error("Sed generation failed:", err);
-            return false;
-        }
-
-        logSending(sed);
-
-        try {
-            await this.reply(msg, {
-                embeds: [sed]
-            });
-        } catch (err) {
-            await this.reply(msg, {
-                content: `:no_entry_sign: Encountered exception while sending sed replace:`,
-                ...DiscordUtil.getFileAttach(err.stack, "error.js")
-            });
-
-            getLogger().error("Reply failed", err);
-            return false;
-        }
-
-        logSendTime(t1);
-        return true;
-    }
-
-    _canSed(str) {
+    canSed(str) {
         if (!this.enabled || typeof str !== "string") {
             return false;
         }
@@ -114,36 +58,13 @@ class SedHandler extends MessageHandler {
         return SedHandler.sedRegex.test(str);
     }
 
-    async _fetchMatch(ch_id, regex, ignore_id, limit = 100) {
-        const msgs = await getClient().fetchMessages(ch_id, { limit });
-
-        if (msgs === null) {
-            return false;
-        }
-
-        const msg = msgs.find(msg => {
-            const isBot = msg.author.id === getClient().client.user.id;
-
-            if (isBot || msg.id === ignore_id) {
-                return false;
-            }
-
-            return regex.test(msg);
-        });
-
-        if (typeof msg === "undefined") {
-            return false;
-        }
-
-        return msg;
-    }
-
-    async _genSed(msg, str) {
+    async generateSed(msg, str) {
         logUsage(msg);
 
         const t1 = performance.now();
 
-        const match = str.match(SedHandler.sedRegex);
+        const isReply = msg.type === MessageType.Reply,
+            match = str.match(SedHandler.sedRegex);
 
         if (!match) {
             throw new HandlerError("Invalid input string");
@@ -156,25 +77,35 @@ class SedHandler extends MessageHandler {
             throw new HandlerError("Invalid regex args");
         }
 
-        let regex, sedMsg;
+        let regex, sedMsg, content;
 
         try {
             regex = new RegExp(regex_str, flags);
         } catch (err) {
-            throw new HandlerError("Invalid regex or flags");
+            if (err instanceof SyntaxError) {
+                throw new HandlerError("Invalid regex or flags");
+            }
+
+            throw err;
         }
 
-        if (msg.type === MessageType.Reply) {
+        if (isReply) {
             sedMsg = await getClient().fetchMessage(msg.channel.id, msg.reference.messageId);
+            content = sedMsg.content;
+
+            if (!regex.test(content)) {
+                throw new HandlerError("No matching text found");
+            }
         } else {
             sedMsg = await this._fetchMatch(msg.channel.id, regex, msg.id);
+            content = sedMsg?.content;
+
+            if (content == null) {
+                throw new HandlerError("No matching message found");
+            }
         }
 
-        if (sedMsg === null) {
-            throw new HandlerError("No matching message found");
-        }
-
-        const replacedContent = sedMsg.content.replace(regex, replace ?? "");
+        const replacedContent = content.replace(regex, replace ?? "");
 
         const username = sedMsg.author.displayName,
             avatar = sedMsg.author.displayAvatarURL(),
@@ -196,6 +127,84 @@ class SedHandler extends MessageHandler {
 
         logGenTime(t1);
         return embed;
+    }
+
+    async execute(msg) {
+        if (!this.canSed(msg.content)) {
+            return false;
+        }
+
+        const t1 = performance.now();
+        this._sendTyping(msg);
+
+        let sed;
+
+        try {
+            sed = await this.generateSed(msg, msg.content);
+        } catch (err) {
+            if (err.name === "HandlerError") {
+                let emoji;
+
+                if (err.message.startsWith("No")) {
+                    emoji = ":no_entry_sign:";
+                } else {
+                    emoji = ":warning:";
+                }
+
+                getLogger().info(err.message + ".");
+                await this.reply(msg, `${emoji} ${err.message}.\n${SedHandler.sedUsage}`);
+
+                return true;
+            }
+
+            getLogger().error("Sed generation failed:", err);
+
+            await this.reply(msg, {
+                content: ":no_entry_sign: Encountered exception while generating sed replace:",
+                ...DiscordUtil.getFileAttach(err.stack, "error.js")
+            });
+
+            return false;
+        }
+
+        logSending(sed);
+
+        try {
+            await this.reply(
+                msg,
+                {
+                    embeds: [sed]
+                },
+                {
+                    useConfigLimits: true,
+                    limitType: "trim"
+                }
+            );
+        } catch (err) {
+            return true;
+        }
+
+        logSendTime(t1);
+        return true;
+    }
+
+    async _fetchMatch(ch_id, regex, ignore_id, limit = 100) {
+        const msgs = await getClient().fetchMessages(ch_id, { limit }),
+            botId = getClient().botId;
+
+        if (msgs === null) {
+            return null;
+        }
+
+        const sedMsg = msgs.find(msg => {
+            if (msg.id === ignore_id || msg.author.id === botId || this.canSed(msg.content)) {
+                return false;
+            }
+
+            return regex.test(msg);
+        });
+
+        return sedMsg ?? null;
     }
 }
 

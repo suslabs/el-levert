@@ -10,7 +10,11 @@ class CLICommandHandler extends Handler {
     }
 
     reply(level, ...data) {
-        console[level](...data);
+        if (CLICommandHandler._validConsoleLevels.includes(level)) {
+            console[level](...data);
+        } else {
+            console.log(level, ...data);
+        }
     }
 
     async execute(str) {
@@ -45,6 +49,8 @@ Use ${getClient().cliCommandManager.commandPrefix}help to get all available comm
         this.reply("log", out);
         return;
     }
+
+    static _validConsoleLevels = ["debug", "info", "log", "warn", "error"];
 }
 
 export default CLICommandHandler;

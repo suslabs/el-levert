@@ -1,13 +1,12 @@
 import { bold } from "discord.js";
 
-import MessageHandler from "../MessageHandler.js";
+import MessageHandler from "./MessageHandler.js";
 
 import { getClient, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
-import VMUtil from "../../util/vm/VMUtil.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
 
 function logUsage(msg, name, args) {
@@ -36,16 +35,9 @@ class CommandHandler extends MessageHandler {
 
     constructor(enabled) {
         super(enabled, true, true, {
+            minResponseTime: getClient().config.minResponseTime,
             userSweepInterval: 10 / Util.durationSeconds.milli
         });
-
-        this.minResponseTime = getClient().config.minResponseTime;
-
-        this.outCharLimit = getClient().config.outCharLimit;
-        this.outLineLimit = getClient().config.outLineLimit;
-
-        this.embedCharLimit = getClient().config.embedCharLimit;
-        this.embedLineLimit = getClient().config.embedLineLimit;
     }
 
     async execute(msg) {
@@ -64,8 +56,8 @@ class CommandHandler extends MessageHandler {
             return false;
         }
 
-        await msg.channel.sendTyping();
         this.userTracker.addUser(msg.author.id);
+        this._sendTyping(msg);
 
         await this._executeAndReply(cmd, msg, args);
         this.userTracker.removeUser(msg.author.id);
@@ -73,19 +65,14 @@ class CommandHandler extends MessageHandler {
         return true;
     }
 
-    static _mentionRegex = /@(everyone|here)/g;
-
     async _executeAndReply(cmd, msg, args) {
         const t1 = performance.now();
 
-        let out,
+        let res,
             execErr = null;
 
         try {
-            const [res] = await this._executeCommand(cmd, msg, args);
-
-            out = this._processResult(res);
-            this._stripPings(out);
+            [res] = await this._executeCommand(cmd, msg, args);
         } catch (err) {
             execErr = err;
         }
@@ -97,14 +84,18 @@ class CommandHandler extends MessageHandler {
             return;
         }
 
-        logOutput(cmd, out);
+        let options;
 
-        try {
-            await this.reply(msg, out);
-        } catch (err) {
-            await this._handleReplyError(err, msg);
-            return;
+        if (Array.isArray(res) && !Util.empty(res)) {
+            const obj = Util.last(res);
+
+            if (TypeTester.isObject(obj) && obj.type === "options") {
+                options = res.pop();
+            }
         }
+
+        logOutput(cmd, res);
+        await this.reply(msg, res, options);
     }
 
     async _executeCommand(cmd, msg, args) {
@@ -121,142 +112,16 @@ class CommandHandler extends MessageHandler {
         return [res, time];
     }
 
-    _processResult(res) {
-        const msgRes = TypeTester.isObject(res),
-            str = VMUtil.formatOutput(msgRes ? res.content : res)?.trim();
-
-        let out = msgRes ? (({ content: _, ...rest }) => rest)(res) : {};
-
-        if (TypeTester.overSizeLimits(str, this.outCharLimit, this.outLineLimit)) {
-            const files = DiscordUtil.getFileAttach(str).files;
-            out.files = out.files ? [...files, ...out.files] : files;
-        } else {
-            out.content = str;
-        }
-
-        if (!Array.isArray(out.embeds)) {
-            return out;
-        }
-
-        out.embeds = out.embeds.filter(embed => embed != null);
-
-        if (Util.empty(out.embeds)) {
-            return out;
-        }
-
-        for (const [i, embed] of out.embeds.entries()) {
-            const oversized = TypeTester.overSizeLimits(embed, this.embedCharLimit, this.embedLineLimit);
-
-            if (!oversized) {
-                continue;
-            }
-
-            const [chars, lines] = oversized,
-                n = Util.single(out.embeds) ? "" : ` ${i + 1}`;
-
-            if (chars !== null) {
-                return {
-                    content: `:warning: Embed${n} is too long. (${chars} / ${this.embedCharLimit})`
-                };
-            } else if (lines !== null) {
-                return {
-                    content: `:warning: Embed${n} has too many newlines. (${lines} / ${this.embedLineLimit})`
-                };
-            }
-        }
-
-        return out;
-    }
-
-    _escapeMentions(str) {
-        if (typeof str !== "string") {
-            return str;
-        }
-
-        const codeblockRanges = DiscordUtil.findCodeblocks(str);
-
-        return str.replaceAll(CommandHandler._mentionRegex, (match, p1, offset) => {
-            for (const [start, end] of codeblockRanges) {
-                if (offset >= start && offset < end) {
-                    return match;
-                }
-            }
-
-            return `\\@${p1}`;
-        });
-    }
-
-    _stripPings(out) {
-        out.content = this._escapeMentions(out.content);
-
-        if (!Array.isArray(out.embeds)) {
-            return out;
-        }
-
-        for (const embed of out.embeds) {
-            embed.title = this._escapeMentions(embed.title);
-            embed.description = this._escapeMentions(embed.description);
-
-            if (embed.footer != null) {
-                embed.footer.text = this._escapeMentions(embed.footer.text);
-            }
-
-            if (embed.author != null) {
-                embed.author.name = this._escapeMentions(embed.author.name);
-            }
-
-            if (Array.isArray(embed.fields)) {
-                for (const field of embed.fields) {
-                    field.name = this._escapeMentions(field.name);
-                    field.value = this._escapeMentions(field.value);
-                }
-            }
-        }
-
-        return out;
-    }
-
-    async _addDelay(t1) {
-        if (this.minResponseTime <= 0) {
-            return;
-        }
-
-        const t2 = performance.now(),
-            time = Util.timeDelta(t2, t1);
-
-        if (time < this.minResponseTime) {
-            const delay = this.minResponseTime - time;
-            await Util.delay(delay);
-        }
-    }
-
     async _handleExecutionError(err, msg, cmd) {
         getLogger().error("Command execution failed:", err);
 
         try {
             await this.reply(msg, {
                 content: `:no_entry_sign: Encountered exception while executing command ${bold(cmd.name)}:`,
-                ...DiscordUtil.getFileAttach(err.stack ?? err.toString(), "error.js")
+                ...DiscordUtil.getFileAttach(err?.stack ?? err?.message ?? "No message", "error.js")
             });
         } catch (err) {
-            getLogger().error("Reporting error failed:", err);
-        }
-    }
-
-    async _handleReplyError(err, msg) {
-        if (err.message === "Cannot send an empty message") {
-            return await this.reply(msg, `:no_entry_sign: ${err.message}.`);
-        }
-
-        getLogger().error("Reply failed:", err);
-
-        try {
-            await this.reply(msg, {
-                content: ":no_entry_sign: Encountered exception while sending reply:",
-                ...DiscordUtil.getFileAttach(err.stack, "error.js")
-            });
-        } catch (err) {
-            getLogger().error("Reporting error failed:", err);
+            getLogger().error("Reporting command error failed:", err);
         }
     }
 }

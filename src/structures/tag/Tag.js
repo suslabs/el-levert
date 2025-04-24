@@ -355,8 +355,8 @@ class Tag {
         }
 
         const aliasName = this.isAlias ? this.aliasName : "none",
-            body = Util.empty(this.body) ? "empty" : Util.trimString(this.body, bodyLimit, null, true),
-            args = Util.empty(this.args) ? "none" : Util.trimString(this.args, bodyLimit, null, true);
+            body = Util.empty(this.body) ? "empty" : Util.trimString(this.body, bodyLimit, null, { showDiff: true }),
+            args = Util.empty(this.args) ? "none" : Util.trimString(this.args, bodyLimit, null, { showDiff: true });
 
         const info = {
             hops: this.hops,
