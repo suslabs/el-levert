@@ -5,7 +5,7 @@ import path from "node:path";
 import FileLoader from "./FileLoader.js";
 
 import LoadStatus from "./LoadStatus.js";
-import WriteMode from "./WriteMode.js";
+import WriteModes from "./WriteModes.js";
 
 class TextLoader extends FileLoader {
     constructor(name, filePath, logger, options = {}) {
@@ -50,8 +50,8 @@ class TextLoader extends FileLoader {
         }
     }
 
-    write(data, mode = WriteMode.replace) {
-        if (mode === WriteMode.append) {
+    write(data, mode = WriteModes.replace) {
+        if (mode === WriteModes.append) {
             return this.append(data);
         }
 

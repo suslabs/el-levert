@@ -6,7 +6,7 @@ import TextLoader from "./TextLoader.js";
 import Util from "../util/Util.js";
 
 import LoadStatus from "./LoadStatus.js";
-import WriteMode from "./WriteMode.js";
+import WriteModes from "./WriteModes.js";
 
 class JsonLoader extends TextLoader {
     static ajvOptions = {
@@ -74,8 +74,8 @@ class JsonLoader extends TextLoader {
         }
     }
 
-    write(data, options = {}, mode = WriteMode.replace) {
-        if (mode === WriteMode.append) {
+    write(data, options = {}, mode = WriteModes.replace) {
+        if (mode === WriteModes.append) {
             return this.append(data, options);
         }
 
