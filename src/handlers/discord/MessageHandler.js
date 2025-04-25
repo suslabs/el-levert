@@ -1,4 +1,4 @@
-import { RESTJSONErrorCodes } from "discord.js";
+import { EmbedBuilder, RESTJSONErrorCodes } from "discord.js";
 
 import Handler from "../Handler.js";
 
@@ -79,15 +79,18 @@ class MessageHandler extends Handler {
     static _mentionRegex = /@(everyone|here)/g;
     static _emptyMessage = "Cannot send an empty message";
 
-    static _formatOutput(res) {
-        const msgRes = TypeTester.isObject(res);
+    static _formatOutput(data) {
+        const msgData = TypeTester.isObject(data);
 
-        const content = VMUtil.formatOutput(msgRes ? res.content : res)?.trim(),
-            embeds = msgRes ? res.embeds?.filter(Boolean) : undefined;
+        const out = msgData ? (({ content: _1, embeds: _2, ...rest }) => rest)(data) : {};
 
-        const out = msgRes ? (({ content: _1, embeds: _2, ...rest }) => rest)(res) : {};
+        const rawContent = msgData ? data.content : data,
+            content = VMUtil.formatOutput(rawContent)?.trim();
 
-        return [content, embeds, out];
+        const rawEmbeds = msgData ? data.embeds : undefined,
+            embeds = rawEmbeds?.filter(Boolean).map(embed => (embed instanceof EmbedBuilder ? embed.toJSON() : embed));
+
+        return { out, content, embeds };
     }
 
     static _escapeMentions(str) {
@@ -168,10 +171,15 @@ class MessageHandler extends Handler {
             limitType = options.limitType ?? "trim",
             useTrim = limitType === "trim";
 
-        const [content, embeds, out] = MessageHandler._formatOutput(data);
+        const { out, content, embeds } = MessageHandler._formatOutput(data);
 
         if (limitType === "none") {
             out.content = content;
+
+            if (!Util.empty(embeds)) {
+                out.embeds = embeds;
+            }
+
             return out;
         }
 
@@ -279,7 +287,10 @@ class MessageHandler extends Handler {
             }
         }
 
-        out.embeds = newEmbeds;
+        if (!Util.empty(newEmbeds)) {
+            out.embeds = newEmbeds;
+        }
+
         return out;
     }
 

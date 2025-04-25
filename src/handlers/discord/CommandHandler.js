@@ -45,39 +45,32 @@ class CommandHandler extends MessageHandler {
             return false;
         }
 
-        if (this.userTracker.findUser(msg.author.id)) {
-            await this.reply(msg, ":warning: Please wait for the previous command to finish.");
+        try {
+            return await this.userTracker.withUser(msg.author.id, async () => {
+                const [cmd, _, args] = getClient().commandManager.getCommand(msg.content, msg);
+
+                if (!cmd) {
+                    return false;
+                }
+
+                this._sendTyping(msg);
+
+                await this._executeAndReply(cmd, msg, args);
+                return true;
+            });
+        } catch (err) {
+            if (err.name === "HandlerError") {
+                await this.reply(msg, ":warning: Please wait for the previous command to finish.");
+                return true;
+            }
+
             return false;
         }
-
-        const [cmd, _, args] = getClient().commandManager.getCommand(msg.content, msg);
-
-        if (cmd === null) {
-            return false;
-        }
-
-        this.userTracker.addUser(msg.author.id);
-        this._sendTyping(msg);
-
-        await this._executeAndReply(cmd, msg, args);
-        this.userTracker.removeUser(msg.author.id);
-
-        return true;
     }
 
     async _executeAndReply(cmd, msg, args) {
-        const t1 = performance.now();
-
-        let res,
-            execErr = null;
-
-        try {
-            [res] = await this._executeCommand(cmd, msg, args);
-        } catch (err) {
-            execErr = err;
-        }
-
-        await this._addDelay(t1);
+        const [res, execErr, time] = await this._executeCommand(cmd, msg, args);
+        await this._addDelay(time, true);
 
         if (execErr !== null) {
             await this._handleExecutionError(execErr, msg, cmd);
@@ -101,15 +94,22 @@ class CommandHandler extends MessageHandler {
     async _executeCommand(cmd, msg, args) {
         logUsage(msg, cmd.name, args);
 
+        let res,
+            err = null;
+
         const t1 = performance.now();
 
-        const res = await cmd.execute(args, { msg });
+        try {
+            res = await cmd.execute(args, { msg });
+        } catch (e) {
+            err = e;
+        }
 
         const t2 = performance.now(),
             time = Util.timeDelta(t2, t1);
 
         logTime(time);
-        return [res, time];
+        return [res, err, time];
     }
 
     async _handleExecutionError(err, msg, cmd) {

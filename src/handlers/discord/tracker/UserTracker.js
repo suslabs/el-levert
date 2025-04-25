@@ -1,7 +1,10 @@
 import TrackedUser from "./TrackedUser.js";
 
 import Util from "../../../util/Util.js";
+import TypeTester from "../../../util/TypeTester.js";
 import ArrayUtil from "../../../util/ArrayUtil.js";
+
+import HandlerError from "../../../errors/HandlerError.js";
 
 class UserTracker {
     constructor(sweepInterval = 0) {
@@ -18,31 +21,74 @@ class UserTracker {
     }
 
     findUser(id) {
-        if (id == null) {
-            return;
+        if (TypeTester.isObject(id)) {
+            id = id.id;
         }
 
-        return this.trackedUsers.find(user => user.id === id);
+        if (id == null) {
+            return null;
+        }
+
+        const user = this.trackedUsers.find(user => user.id === id);
+        return user ?? null;
+    }
+
+    hasUser(id) {
+        return this.findUser(id) !== null;
     }
 
     addUser(id) {
-        if (id == null) {
-            return;
-        } else if (typeof id === "object") {
+        if (TypeTester.isObject(id)) {
             id = id.id;
+        }
+
+        if (id == null) {
+            return false;
         }
 
         const user = new TrackedUser(id, Date.now());
         this.trackedUsers.push(user);
+
+        return true;
     }
 
     removeUser(id) {
+        if (TypeTester.isObject(id)) {
+            id = id.id;
+        }
+
         if (id == null) {
             return;
-        } else if (typeof id === "object") {
-            ArrayUtil.removeItem(this.trackedUsers, id);
-        } else {
-            ArrayUtil.removeItem(this.trackedUsers, user => user.id === id);
+        }
+
+        return ArrayUtil.removeItem(this.trackedUsers, user => user.id === id);
+    }
+
+    withUser(id, callback) {
+        if (typeof callback !== "function") {
+            throw new HandlerError("Callback function required");
+        }
+
+        if (this.hasUser(id)) {
+            throw new HandlerError("User already exists");
+        }
+
+        const added = this.addUser(id);
+
+        if (!added) {
+            return;
+        }
+
+        try {
+            const res = callback();
+
+            if (TypeTester.isPromise(res)) {
+                return res.finally(() => this.removeUser(id));
+            }
+
+            return res;
+        } finally {
+            this.removeUser(id);
         }
     }
 

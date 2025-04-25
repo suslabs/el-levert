@@ -146,9 +146,9 @@ class PreviewHandler extends MessageHandler {
             return false;
         }
 
-        const t1 = performance.now();
-
         let preview;
+
+        const t1 = performance.now();
 
         try {
             preview = await this.generatePreview(msg, msg.content);

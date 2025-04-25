@@ -58,8 +58,8 @@ class LevertClient extends DiscordClient {
     }
 
     isBridgeBot(id) {
-        if (typeof id === "object") {
-            id = id?.id;
+        if (TypeTester.isObject(id)) {
+            id = id.id;
         }
 
         if (!this.useBridgeBot || id == null) {

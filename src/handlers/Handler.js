@@ -63,17 +63,23 @@ class Handler {
         return this._childUnload(...args);
     }
 
-    async _addDelay(t1) {
+    async _addDelay(t1, delta = false) {
         if (this.minResponseTime <= 0) {
             return;
         }
 
-        if (typeof t1 !== "number" || t1 <= 0) {
+        if (isNaN(t1) || t1 <= 0) {
             return await Util.delay(this.minResponseTime);
         }
 
-        const t2 = performance.now(),
+        let time;
+
+        if (delta) {
+            time = t1;
+        } else {
+            const t2 = performance.now();
             time = Util.timeDelta(t2, t1);
+        }
 
         if (time < this.minResponseTime) {
             const delay = this.minResponseTime - time;
