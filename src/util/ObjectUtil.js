@@ -4,8 +4,8 @@ import UtilError from "../errors/UtilError.js";
 
 const ObjectUtil = Object.freeze({
     filterObject: (obj, f1, f2) => {
-        f1 ??= key => true;
-        f2 ??= value => true;
+        f1 ??= () => true;
+        f2 ??= () => true;
 
         const entries = Object.entries(obj),
             filtered = entries.filter(([key, value], i) => f1(key, i) && f2(value, i));
@@ -50,21 +50,31 @@ const ObjectUtil = Object.freeze({
         return Object.assign(target, source, values);
     },
 
+    _validPropOptions: ["both", "enum", "nonenum", "keys"],
     assign: (target, source, options, props) => {
-        switch (typeof options) {
-            case "undefined":
-                options = ["both"];
-                break;
-            case "string":
+        let enumerable, nonEnumerable, both, keys;
+
+        if (options == null) {
+            options = ObjectUtil._validPropOptions.slice(0, 1);
+            both = true;
+        } else {
+            if (!Array.isArray(options)) {
                 options = [options];
-                break;
+            }
+
+            if (!options.every(option => ObjectUtil._validPropOptions.includes(option))) {
+                throw new UtilError("Invalid property options");
+            }
+
+            both = options.includes("both");
+            keys = options.includes("keys");
         }
 
-        let enumerable,
-            nonEnumerable,
-            both = options.includes("both");
-
-        if (both) {
+        if (options.length < 1) {
+            throw new UtilError("Invalid property options");
+        } else if (keys) {
+            return Object.assign(target, source);
+        } else if (both) {
             enumerable = nonEnumerable = true;
         } else {
             enumerable = options.includes("enum");
@@ -73,17 +83,10 @@ const ObjectUtil = Object.freeze({
             both = enumerable && nonEnumerable;
         }
 
-        const keys = options.includes("keys");
+        const allDescriptors = (desc => Reflect.ownKeys(desc).map(key => [key, desc[key]]))(
+            Object.getOwnPropertyDescriptors(source)
+        );
 
-        if ((!enumerable && !nonEnumerable && !both && !keys) || (both && keys)) {
-            throw new UtilError("Invalid options: " + options.join(", "));
-        }
-
-        if (keys) {
-            Object.assign(target, source);
-        }
-
-        const allDescriptors = Object.entries(Object.getOwnPropertyDescriptors(source));
         let descriptors;
 
         if (both) {
@@ -126,7 +129,14 @@ const ObjectUtil = Object.freeze({
             i = 0,
             j;
 
-        let key, item, ret, shouldDelete;
+        let key, item, ret;
+
+        const deleteItem = () => {
+            if (ret ?? true) {
+                delete obj[key];
+                n++;
+            }
+        };
 
         for (; i < length; i++) {
             [key, item] = entries[i];
@@ -139,12 +149,7 @@ const ObjectUtil = Object.freeze({
                 break;
             }
 
-            shouldDelete = ret ?? true;
-
-            if (shouldDelete) {
-                delete obj[key];
-                n++;
-            }
+            deleteItem();
         }
 
         if (loopPromise) {
@@ -158,12 +163,7 @@ const ObjectUtil = Object.freeze({
                         ret = await callback(key, item, j);
                     }
 
-                    shouldDelete = ret ?? true;
-
-                    if (shouldDelete) {
-                        delete obj[key];
-                        n++;
-                    }
+                    deleteItem();
                 }
 
                 return n;

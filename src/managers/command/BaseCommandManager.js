@@ -71,7 +71,7 @@ class BaseCommandManager extends Manager {
             throw new CommandError("Can only delete parent commands");
         }
 
-        let deleted = ArrayUtil.removeItem(this.commands, command);
+        let [deleted] = ArrayUtil.removeItem(this.commands, command);
 
         if (errorIfNotFound && !deleted) {
             throw new CommandError(`Couldn't delete ${command.getName(true)}`);
@@ -103,7 +103,7 @@ class BaseCommandManager extends Manager {
         let deleted = true;
 
         for (const subcmd of command.getSubcmds()) {
-            deleted &= ArrayUtil.removeItem(this.commands, subcmd);
+            deleted &= ArrayUtil.removeItem(this.commands, subcmd)[0];
 
             if (errorIfNotFound && !deleted) {
                 throw new CommandError(`Couldn't delete ${subcmd.getName(true)}`);
@@ -122,7 +122,7 @@ class BaseCommandManager extends Manager {
         }
 
         parent ??= subcmd.parentCmd;
-        const deleted = ArrayUtil.removeItem(this.commands, subcmd);
+        const [deleted] = ArrayUtil.removeItem(this.commands, subcmd);
 
         if (errorIfNotFound && !deleted) {
             throw new CommandError(`Couldn't delete ${subcmd.getName(true)}`);

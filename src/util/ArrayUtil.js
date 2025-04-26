@@ -130,37 +130,37 @@ const ArrayUtil = Object.freeze({
     removeItem: (array, item, callback) => {
         let ind;
 
-        if (typeof item === "function") {
-            ind = array.findIndex(item);
-        } else {
-            ind = array.indexOf(item);
+        switch (typeof item) {
+            case "number":
+                ind = item;
+                break;
+            case "function":
+                const pred = item;
+                ind = array.findIndex(pred);
+                break;
+            default:
+                ind = array.indexOf(item);
+                break;
         }
 
-        if (ind === -1) {
-            return false;
+        if (ind < 0 || ind >= array.length) {
+            return [false, undefined];
         }
+
+        const getRemoved = () => array.splice(ind, 1)[0];
 
         if (typeof callback !== "function") {
-            array.splice(ind, 1);
-            return true;
+            return [true, getRemoved()];
         }
 
         const ret = callback(ind, array);
 
         if (TypeTester.isPromise(ret)) {
             return ret.then(shouldDelete => {
-                if (ret) {
-                    array.splice(ind, 1);
-                }
-
-                return Boolean(ret);
+                return shouldDelete ? [true, getRemoved()] : [false, undefined];
             });
         } else {
-            if (ret) {
-                array.splice(ind, 1);
-            }
-
-            return Boolean(ret);
+            return ret ? [true, getRemoved()] : [false, undefined];
         }
     },
 
@@ -203,14 +203,27 @@ const ArrayUtil = Object.freeze({
             return length;
         }
 
-        let keep = [],
-            loopPromise = false;
+        let loopPromise = false;
 
         let i = 0,
             j,
             n = 0;
 
-        let item, ret, shouldDelete;
+        const keep = [],
+            wipeAndPush = () => {
+                array.length = 0;
+                array.push(...keep);
+            };
+
+        let item, ret;
+
+        const deleteItem = () => {
+            if (ret ?? true) {
+                n++;
+            } else {
+                keep.push(item);
+            }
+        };
 
         for (; i < length; i++) {
             item = array[i];
@@ -223,13 +236,7 @@ const ArrayUtil = Object.freeze({
                 break;
             }
 
-            shouldDelete = ret ?? true;
-
-            if (shouldDelete) {
-                n++;
-            } else {
-                keep.push(item);
-            }
+            deleteItem();
         }
 
         if (loopPromise) {
@@ -243,24 +250,14 @@ const ArrayUtil = Object.freeze({
                         ret = await callback(item, j);
                     }
 
-                    shouldDelete = ret ?? true;
-
-                    if (shouldDelete) {
-                        n++;
-                    } else {
-                        keep.push(item);
-                    }
+                    deleteItem();
                 }
 
-                array.length = 0;
-                array.push(...keep);
-
+                wipeAndPush();
                 return n;
             })();
         } else {
-            array.length = 0;
-            array.push(...keep);
-
+            wipeAndPush();
             return n;
         }
     },

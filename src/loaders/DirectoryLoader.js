@@ -334,7 +334,7 @@ class DirectoryLoader extends Loader {
         if (this.data instanceof Map) {
             dataDeleted = this.data.delete(path);
         } else if (Array.isArray(this.data)) {
-            dataDeleted = ArrayUtil.removeItem(this.data, data);
+            [dataDeleted] = ArrayUtil.removeItem(this.data, data);
         }
 
         if (errorIfNotFound && !dataDeleted) {

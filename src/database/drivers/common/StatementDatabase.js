@@ -15,7 +15,7 @@ export default function (base) {
         }
 
         removeStatement(statement) {
-            const removed = ArrayUtil.removeItem(this.statements, statement);
+            const [removed] = ArrayUtil.removeItem(this.statements, statement);
 
             if (!removed) {
                 const err = new DatabaseError("Statement not found");

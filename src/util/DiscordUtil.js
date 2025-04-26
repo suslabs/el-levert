@@ -218,7 +218,7 @@ let DiscordUtil = {
 
         if (!Util.empty(embed.fields)) {
             embed.fields.forEach((field, i) => {
-                fieldParts.length = 0;
+                ArrayUtil.wipeArray(fieldParts);
 
                 if (!Util.empty(field.name)) {
                     fieldParts.push(field.name);
@@ -290,8 +290,10 @@ let DiscordUtil = {
 
         if (countAreas === "all") {
             countAreas = DiscordUtil._countAreas;
-        } else if (!Array.isArray(countAreas)) {
-            countAreas = [countAreas];
+        } else {
+            if (!Array.isArray(countAreas)) {
+                countAreas = [countAreas];
+            }
 
             if (!countAreas.every(area => DiscordUtil._countAreas.includes(area))) {
                 throw new UtilError("Invalid count areas");
