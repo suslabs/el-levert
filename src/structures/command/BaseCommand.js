@@ -5,6 +5,8 @@ import ObjectUtil from "../../util/ObjectUtil.js";
 import CommandError from "../../errors/CommandError.js";
 
 class BaseCommand {
+    static invalidValues = {};
+
     static defaultValues = {
         parent: "",
         subcommands: []

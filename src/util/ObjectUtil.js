@@ -1,3 +1,4 @@
+import Util from "./Util.js";
 import TypeTester from "./TypeTester.js";
 
 import UtilError from "../errors/UtilError.js";
@@ -110,6 +111,32 @@ const ObjectUtil = Object.freeze({
     shallowClone: (obj, options) => {
         const clone = Object.create(Object.getPrototypeOf(obj));
         return ObjectUtil.assign(clone, obj, options);
+    },
+
+    defineProperty(obj, factory, ...args) {
+        let props = [].concat(factory(...args));
+        props = props.filter(Boolean);
+
+        for (const prop of props) {
+            let { propName, desc } = prop;
+
+            if (typeof propName !== "string" || Util.empty(propName) || !TypeTester.isObject(desc)) {
+                throw new UtilError("Invalid property recieved from factory");
+            }
+
+            desc = { ...desc };
+
+            desc.enumerable ??= false;
+            desc.configurable ??= false;
+
+            if ([desc.get, desc.set].every(val => typeof val === "undefined")) {
+                desc.writable ??= false;
+            } else {
+                delete desc.writable;
+            }
+
+            Object.defineProperty(obj, propName, desc);
+        }
     },
 
     wipeObject: (obj, callback) => {

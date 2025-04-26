@@ -7,13 +7,18 @@ import ArrayUtil from "../../util/ArrayUtil.js";
 import ParserUtil from "../../util/commands/ParserUtil.js";
 
 class TextCommand extends BaseCommand {
+    static invalidValues = {
+        ...BaseCommand.invalidValues,
+        category: "none"
+    };
+
     static defaultValues = {
         ...BaseCommand.defaultValues,
         description: "",
         usage: "",
         aliases: [],
         helpArgs: ["help", "-help", "-h", "usage"],
-        category: "none",
+        category: this.invalidValues.category,
         prefix: ""
     };
 

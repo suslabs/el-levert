@@ -150,8 +150,12 @@ class BaseCommandManager extends Manager {
         this.deleteCommands();
     }
 
-    get _commandDefaults() {
+    get _commandDefaultValues() {
         return this.constructor.commandClass.defaultValues;
+    }
+
+    get _commandInvalidValues() {
+        return this.constructor.commandClass.invalidValues;
     }
 
     _bindSubcommands() {

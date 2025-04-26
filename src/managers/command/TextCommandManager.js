@@ -76,11 +76,11 @@ class TextCommandManager extends BaseCommandManager {
             const aName = a[0],
                 bName = b[0];
 
-            if (aName === this._commandDefaults.category) {
+            if (aName === this._commandInvalidValues.category) {
                 return -1;
             }
 
-            if (bName === this._commandDefaults.category) {
+            if (bName === this._commandInvalidValues.category) {
                 return 1;
             }
 
@@ -124,7 +124,7 @@ class TextCommandManager extends BaseCommandManager {
                 formattedName = Util.capitalize(formattedName);
             }
 
-            if (name === this._commandDefaults.category) {
+            if (name === this._commandInvalidValues.category) {
                 header = "";
             } else {
                 header = `${num}${discord ? "\\" : ""}. ${formattedName} commands:`;
@@ -156,7 +156,7 @@ class TextCommandManager extends BaseCommandManager {
 
             let categoryFormat = "";
 
-            if (name !== this._commandDefaults.category) {
+            if (name !== this._commandInvalidValues.category) {
                 categoryFormat = `\n${spaces}`;
             }
 

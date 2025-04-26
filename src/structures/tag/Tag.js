@@ -14,11 +14,15 @@ import { TagFlags, TagTypes } from "./TagTypes.js";
 import TagError from "../../errors/TagError.js";
 
 class Tag {
+    static invalidValues = {
+        owner: "0"
+    };
+
     static defaultValues = {
         hops: [],
         name: "",
         body: "",
-        owner: "0",
+        owner: this.invalidValues.owner,
         args: "",
         type: TagTypes.defaultType
     };
@@ -215,7 +219,7 @@ class Tag {
     }
 
     async getOwner(username = true, onlyMembers = false, sv_id) {
-        if (this.owner === this.constructor.defaultValues.owner) {
+        if (Util.empty(this.owner) || this.owner === Tag.invalidValues.owner) {
             return username ? "invalid" : null;
         }
 
@@ -340,8 +344,8 @@ class Tag {
                     const timestampName = `${prop}Timestamp`;
                     return [timestampName, value];
                 } else {
-                    const defaultValue = this.constructor.defaultValues[prop],
-                        time = value === defaultValue ? "not set" : new Date(value).toUTCString();
+                    const invalidValue = this.constructor.invalidValues[prop],
+                        time = value === invalidValue ? "not set" : new Date(value).toUTCString();
 
                     return [prop, time];
                 }
@@ -402,6 +406,15 @@ class Tag {
         new: [null, true]
     };
 
+    static _setupDefaultValues() {
+        const invalidTimes = Object.fromEntries(this._timeProps.map(prop => [prop, 0]));
+        Object.assign(this.invalidValues, invalidTimes);
+
+        for (const prop of this._timeProps) {
+            this.defaultValues[prop] ??= invalidTimes[prop];
+        }
+    }
+
     static _getFlag(name, strict = true) {
         if (typeof name !== "string" || Util.empty(name)) {
             if (strict) {
@@ -429,7 +442,7 @@ class Tag {
             };
 
         return {
-            funcName,
+            propName: funcName,
             desc: { value: func }
         };
     }
@@ -444,7 +457,7 @@ class Tag {
                 };
 
             return {
-                funcName,
+                propName: funcName,
                 desc: { get: func }
             };
         };
@@ -465,7 +478,7 @@ class Tag {
                 func = FunctionUtil.bindArgs(Tag.prototype.setFlag, [flagName, val]);
 
             return {
-                funcName,
+                propName: funcName,
                 desc: { value: func }
             };
         };
@@ -479,17 +492,7 @@ class Tag {
     }
 
     static _registerFunc(factory, ...args) {
-        const res = [].concat(factory(...args));
-
-        for (const func of res) {
-            const { funcName, desc } = func;
-
-            if ([desc.get, desc.set].every(val => typeof val === "undefined")) {
-                desc.writable = true;
-            }
-
-            Object.defineProperty(this.prototype, funcName, desc);
-        }
+        ObjectUtil.defineProperty(this.prototype, factory, ...args);
     }
 
     static _processFlagConfig(name, type, config) {
@@ -519,10 +522,7 @@ class Tag {
         }
     }
 
-    static {
-        const defaultTimes = Object.fromEntries(this._timeProps.map(prop => [prop, 0]));
-        Object.assign(this.defaultValues, defaultTimes);
-
+    static _registerFlagFuncs() {
         for (const prop of this._timeProps) {
             this._registerFunc(this._setTimeFunc, prop);
         }
@@ -546,6 +546,11 @@ class Tag {
                 }
             }
         }
+    }
+
+    static {
+        this._setupDefaultValues();
+        this._registerFlagFuncs();
     }
 }
 
