@@ -21,23 +21,6 @@ let DiscordUtil = {
         return Array.from(matches).map(match => [match.index, match.index + match[0].length]);
     },
 
-    parseScript: script => {
-        const match = script.match(DiscordUtil.parseScriptRegex);
-
-        if (!match) {
-            return [false, script, ""];
-        }
-
-        const body = (match[2] ?? match[3])?.trim();
-
-        if (typeof body === "undefined") {
-            return [false, script, ""];
-        }
-
-        const lang = match[1]?.trim() ?? "";
-        return [true, body, lang];
-    },
-
     getFileAttach: (data, name = "message.txt") => {
         const attachment = new AttachmentBuilder(Buffer.from(data), { name });
 

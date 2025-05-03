@@ -1,50 +1,55 @@
 import uFuzzy from "@leeoniya/ufuzzy";
 
 const uFuzzyOpts = {
-    intraMode: 1,
-    interIns: 3,
-    intraChars: /[a-z]/
+    alpha: "a-z"
 };
 
 const uf = new uFuzzy(uFuzzyOpts);
 
-function search(haystack, needle, options = {}) {
+const outputResult = (results, ranges, oversized, hasInfo) => ({
+    results,
+    ranges,
+
+    other: { oversized, hasInfo }
+});
+
+function uFuzzySearch(haystack, needle, options = {}) {
     const { maxResults, searchKey } = options,
         infoThresh = options.infoThresh ?? 1000;
 
-    let searchHaystack;
+    const searchHaystack = searchKey == null ? haystack : haystack.map(x => x[searchKey]),
+        inds = uf.filter(searchHaystack, needle);
 
-    if (searchKey == null) {
-        searchHaystack = haystack;
-    } else {
-        searchHaystack = haystack.map(x => x[searchKey]);
+    if (inds === null || inds.length === 0) {
+        return outputResult([], [], false);
     }
 
-    const idxs = uf.filter(searchHaystack, needle);
+    const oversized = typeof maxResults === "number" && inds.length > maxResults,
+        count = oversized ? maxResults : inds.length,
+        hasInfo = count <= infoThresh;
 
-    if (idxs == null || idxs.length === 0) {
-        return [];
-    }
+    const results = Array(count),
+        ranges = hasInfo ? Array(count) : [];
 
-    const count = typeof maxResults === "number" ? Math.min(maxResults, idxs.length) : idxs.length,
-        results = Array(count);
-
-    if (idxs.length <= infoThresh) {
-        const info = uf.info(idxs, searchHaystack, needle),
+    if (hasInfo) {
+        const info = uf.info(inds, searchHaystack, needle),
             order = uf.sort(info, searchHaystack, needle);
 
         for (let i = 0; i < count; i++) {
-            const idx = info.idx[order[i]];
-            results[i] = haystack[idx];
+            const infoInd = order[i],
+                haystackInd = info.idx[infoInd];
+
+            results[i] = haystack[haystackInd];
+            ranges[i] = info.ranges[infoInd];
         }
     } else {
         for (let i = 0; i < count; i++) {
-            const idx = idxs[i];
-            results[i] = haystack[idx];
+            const ind = inds[i];
+            results[i] = haystack[ind];
         }
     }
 
-    return results;
+    return outputResult(results, ranges, oversized, hasInfo);
 }
 
-export default search;
+export default uFuzzySearch;

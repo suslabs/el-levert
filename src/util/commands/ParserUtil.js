@@ -1,5 +1,6 @@
 import TypeTester from "../TypeTester.js";
 import RegexUtil from "../misc/RegexUtil.js";
+import DiscordUtil from "../DiscordUtil.js";
 
 const ParserUtil = Object.freeze({
     splitArgs: (str, lowercase = false, options = {}) => {
@@ -95,6 +96,25 @@ const ParserUtil = Object.freeze({
         }
 
         return [first, second];
+    },
+
+    _parseScirptResult: (body, isScript = false, lang = "") => ({ body, isScript, lang }),
+
+    parseScript: script => {
+        const match = script.match(DiscordUtil.parseScriptRegex);
+
+        if (!match) {
+            return ParserUtil._parseScirptResult(script);
+        }
+
+        const body = (match[2] ?? match[3])?.trim(),
+            lang = match[1]?.trim() ?? "";
+
+        if (typeof body === "undefined") {
+            return ParserUtil._parseScirptResult(script);
+        }
+
+        return ParserUtil._parseScirptResult(body, true, lang);
     }
 });
 

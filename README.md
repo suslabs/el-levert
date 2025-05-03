@@ -82,6 +82,7 @@ Subcommands:
 - delete `(name)` - Deletes tag `(name)` if it's owned by you or if you are a moderator.
 - dump `[inline/full] [spaces]` - Sends a list of all tags.
 - edit `(name) [type] (new_body)` - Edits tag `(name)` with a new body, same ownership and attachment rules as `add`.
+- fullsearch `(query) [max_results=20 / all]` - Searches tag bodies for `(query)`. Terms are separated by ",".
 - info `(name) [raw]` - Sends the properties of tag `(name)`. Moderator only.
 - leaderboard `(count/size) [limit=20 <= 50]` - Sends the tag leaderboard up to the specified limit.
 - list `(user)` - Lists all of your tags. If `user` is specified, their tags will be listed instead.
@@ -90,7 +91,7 @@ Subcommands:
 - random `(prefix)` - Searches for all tags that either match the given text exactly or are followed by a number and picks one at random.
 - raw `(name)` - Sends the text or source code of tag `(name)`.
 - rename `(name) (new_name)` - Renames tag `(name)` to `(new_name)` if it's owned by you or if you are a moderator.
-- search `(query) [max_results=20 / all]` - Searches the tags list for `(query)`. Matches are approximated, suspicious results are to be expected.
+- search `(name) [max_results=20 / all]` - Searches the tags list for tags matching `(name)`. Matches are approximated, suspicious results are to be expected.
 - set_type `(name) (type)/[version]` - Sets the type or version properties of tag `(name)`. Moderator only.
 
 ### 4. eval `(script)`

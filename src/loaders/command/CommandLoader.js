@@ -30,6 +30,18 @@ class CommandLoader extends DirectoryLoader {
         return LoadStatus.successful;
     }
 
+    deleteCommands() {
+        this.logger?.debug("Deleting commands...");
+
+        this.deleteAllData();
+
+        const n = ArrayUtil.wipeArray(this.commands);
+        delete this.commands;
+
+        this.logger?.debug(`Deleted ${n} commands.`);
+        return n;
+    }
+
     getLoadingMessage() {
         return `Loading ${this.name}s...`;
     }
@@ -45,17 +57,6 @@ class CommandLoader extends DirectoryLoader {
         }
 
         return this.commands;
-    }
-
-    _deleteCommands() {
-        this.logger?.debug("Deleting commands...");
-
-        this.deleteAllData();
-
-        const n = ArrayUtil.wipeArray(this.commands);
-        delete this.commands;
-
-        this.logger?.debug(`Deleted ${n} commands.`);
     }
 }
 

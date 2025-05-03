@@ -5,6 +5,7 @@ import ParserUtil from "../../util/commands/ParserUtil.js";
 
 export default {
     name: "owner",
+    aliases: ["author"],
     parent: "tag",
     subcommand: true,
 

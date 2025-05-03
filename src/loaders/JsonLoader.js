@@ -91,20 +91,18 @@ class JsonLoader extends TextLoader {
     static _ajv = new Ajv(JsonLoader.ajvOptions);
 
     static _formatValidationErrors(errors) {
-        let errMessage = [];
+        return errors
+            .map(err => {
+                const split = err.instancePath.split("/"),
+                    newPath = Util.after(split).join(".");
 
-        for (const err of errors) {
-            const split = err.instancePath.split("/"),
-                newPath = Util.after(split).join(".");
-
-            if (!Util.empty(newPath)) {
-                errMessage.push(`Property ${newPath} ${err.message}`);
-            } else {
-                errMessage.push(Util.capitalize(err.message));
-            }
-        }
-
-        return errMessage.join("\n");
+                if (Util.empty(newPath)) {
+                    return Util.capitalize(err.message);
+                } else {
+                    return `Property ${newPath} ${err.message}`;
+                }
+            })
+            .join("\n");
     }
 
     static _getSchemaPath(filePath, options) {

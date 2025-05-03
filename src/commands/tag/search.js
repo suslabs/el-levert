@@ -8,13 +8,13 @@ const defaultResultLimit = 20;
 
 export default {
     name: "search",
-    aliases: ["find", "query"],
+    aliases: ["find"],
     parent: "tag",
     subcommand: true,
 
     handler: async function (args) {
         if (Util.empty(args)) {
-            return `:information_source: ${this.getArgsHelp("query [all/max_results]")}`;
+            return `:information_source: ${this.getArgsHelp("name [all/max_results]")}`;
         }
 
         const [t_name, m_str] = ParserUtil.splitArgs(args, [true, true]),
@@ -26,7 +26,7 @@ export default {
             return `:warning: ${err}.`;
         }
 
-        let maxResults = defaultResultLimit;
+        let maxResults;
 
         if (all) {
             maxResults = Infinity;
@@ -36,20 +36,27 @@ export default {
             if (Number.isNaN(maxResults) || maxResults < 1) {
                 return ":warning: Invalid number: " + m_str;
             }
+        } else {
+            maxResults = defaultResultLimit;
         }
 
-        const find = await getClient().tagManager.search(t_name, maxResults);
+        const {
+            results: find,
+            other: { oversized }
+        } = await getClient().tagManager.search(t_name, maxResults, 0.6);
 
         if (Util.empty(find)) {
-            return ":information_source: Found no similar tags.";
+            return ":information_source: Found **no** similar tags.";
         }
 
-        const s = Util.single(find) ? "" : "s",
-            count = Util.formatNumber(find.length),
+        const plus = oversized ? "+" : "",
+            s = Util.single(find) ? "" : "s";
+
+        const count = Util.formatNumber(find.length) + plus,
             header = `:information_source: Found **${count}** similar tag${s}:`;
 
-        if (count > defaultResultLimit * 2) {
-            const names = find.join(", ");
+        if (find.length > 2 * defaultResultLimit) {
+            const names = find.join("\n");
 
             return {
                 content: header,

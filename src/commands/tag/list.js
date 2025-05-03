@@ -4,6 +4,8 @@ import Util from "../../util/Util.js";
 import ParserUtil from "../../util/commands/ParserUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 
+import TextCommand from "../../structures/command/TextCommand.js";
+
 function formatTagList(tags) {
     const format = tags.map((tag, i) => `${i + 1}. ${tag.format()}`);
     return format.join("\n");
@@ -14,7 +16,7 @@ export default {
     parent: "tag",
     subcommand: true,
 
-    handler: async (args, msg) => {
+    handler: async function (args, msg) {
         let user = msg.author;
 
         if (!Util.empty(args)) {
@@ -30,9 +32,10 @@ export default {
 
         const tags = await getClient().tagManager.list(user.id);
 
-        if (tags.count === 0) {
+        if (tags.count < 1) {
             if (user === msg.author) {
-                return `:information_source: You have **no** tags.`;
+                const dumpCmd = TextCommand.prototype.getArgsHelp.call(this.getSubcmd("dump"));
+                return `:information_source: You don't have any tags. If you want to see the list of all available tags, use \`${dumpCmd}\`.`;
             } else {
                 return `:information_source: User \`${user.username}\` has **no** tags.`;
             }

@@ -147,7 +147,7 @@ class TextCommand extends BaseCommand {
     getArgsHelp(args, discord = false) {
         const prefix = this.prefix + (this.isSubcmd ? this.parent + " " : "");
 
-        const formattedName = this.isSubcmd && discord ? bold(this.name) : this.name,
+        const formattedName = discord ? bold(this.name) : this.name,
             formattedArgs = Util.empty(args) ? "" : " " + (discord ? inlineCode(args) : args);
 
         return `${prefix}${formattedName}${formattedArgs}`;
@@ -183,7 +183,7 @@ class TextCommand extends BaseCommand {
         const formattedName = discord ? bold(this.name) : this.name,
             formattedSubcmds = discord ? inlineCode(subcmds) : subcmds;
 
-        return `${this.prefix}${formattedName}${formattedSubcmds}`;
+        return `${this.prefix}${formattedName} ${formattedSubcmds}`;
     }
 }
 

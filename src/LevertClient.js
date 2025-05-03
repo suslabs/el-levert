@@ -335,6 +335,8 @@ class LevertClient extends DiscordClient {
     }
 
     async start() {
+        this._t1 = performance.now();
+
         if (this.started) {
             throw new ClientError("The bot can only be started once");
         }
@@ -363,17 +365,20 @@ class LevertClient extends DiscordClient {
         this._setStarted();
         this._addDiscordTransports();
 
-        this.logger.info("Startup complete.");
-
+        const time = this._logStartedTime();
         this._setupInputManager();
+
+        return time;
     }
 
     async stop(kill = false) {
+        this._t1 = performance.now();
+
         if (!this.started) {
             throw new ClientError("The bot can't be stopped if it hasn't been started already");
         }
 
-        this.inputManager.active = false;
+        this._disableInputManager();
 
         this.logger.info("Stopping bot...");
         this._removeDiscordTransports();
@@ -392,10 +397,12 @@ class LevertClient extends DiscordClient {
         this.logout(kill);
         this._setStopped();
 
-        this.logger.info("Bot stopped.");
+        return this._logStoppedTime();
     }
 
     async restart(configs) {
+        this.__t1 = performance.now();
+
         if (!this.started) {
             throw new ClientError("The bot can't be restarted if it hasn't been started already");
         }
@@ -418,6 +425,12 @@ class LevertClient extends DiscordClient {
         }
 
         await this.start();
+
+        if (this.config.enableCliCommands) {
+            return this._getBenchmarkTime("__t1");
+        } else {
+            return this._logRestartedTime();
+        }
     }
 
     silenceDiscordTransports(silent = true) {
@@ -730,7 +743,42 @@ class LevertClient extends DiscordClient {
         this.inputManager.active = true;
     }
 
-    _onKill() {
+    _disableInputManager() {
+        if (!this.config.enableCliCommands) {
+            return;
+        }
+
+        this.inputManager.active = false;
+    }
+
+    _getBenchmarkTime(startName) {
+        const t2 = performance.now(),
+            time = Util.timeDelta(t2, this[startName]);
+
+        delete this[startName];
+        return time;
+    }
+
+    _logStartedTime() {
+        const time = this._getBenchmarkTime("_t1");
+        this.logger.info(`Startup complete in ${Util.formatNumber(time)} ms.`);
+        return time;
+    }
+
+    _logStoppedTime() {
+        const time = this._getBenchmarkTime("_t1");
+        this.logger.info(`Bot stopped in ${Util.formatNumber(time)} ms.`);
+        return time;
+    }
+
+    _logRestartedTime() {
+        const time = this._getBenchmarkTime("__t1");
+        this.logger.info(`Bot restarted in ${Util.formatNumber(time)} ms.`);
+        return time;
+    }
+
+    onKill() {
+        this._logStoppedTime();
         this._deleteLogger();
     }
 }

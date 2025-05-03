@@ -109,16 +109,20 @@ class TagDatabase extends SqlDatabase {
         });
     }
 
-    async dump() {
-        const rows = await this.tagQueries.dump.all(),
+    async dump(flag = null) {
+        const rows = await this.tagQueries.dump.all({
+                $flag: flag
+            }),
             tags = rows.map(row => row.name);
 
         sortTags(tags);
         return tags;
     }
 
-    async fullDump() {
-        const rows = await this.tagQueries.fullDump.all(),
+    async fullDump(flag = null) {
+        const rows = await this.tagQueries.fullDump.all({
+                $flag: flag
+            }),
             tags = rows.map(row => new Tag(row));
 
         sortTags(tags);
@@ -145,11 +149,10 @@ class TagDatabase extends SqlDatabase {
         return tags;
     }
 
-    async count(countAll, user, flag) {
+    async count(user = null, flag = null) {
         const res = await this.tagQueries.count.get({
-            $countAll: countAll,
-            $user: user ?? null,
-            $flag: flag ?? null
+            $user: user,
+            $flag: flag
         });
 
         return res.count;

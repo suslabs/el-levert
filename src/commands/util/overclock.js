@@ -75,7 +75,7 @@ function parseInput(split) {
 }
 
 function codeblock(str) {
-    return `\`\`\`lua\n${str}\`\`\``;
+    return `\`\`\`lua\\n${str}\`\`\``;
 }
 
 export default {
@@ -95,28 +95,16 @@ export default {
             return getErrorText(this);
         }
 
-        const header = `:information_source: Input: **${recipe.base_eu} EU/t** for **${OCUtil.formatDuration(recipe.base_duration)}**.`;
-
-        let footer = `Applicable for NFu, tiers adjusted for actual machine tier,
-for all options and syntax see ${this.getArgsHelp()}.`;
-
-        if (recipe.oc_type.includes("parallel")) {
-            footer += `\n\nFor parallelization, it is assumed that you are running 1A of the specified tier.
-Manually specify the amperage if it differs.`;
-        }
-
         const outputs = OCUtil.overclock(recipe);
 
         if (Util.empty(outputs)) {
             return ":warning: Could not calculate. No voltage matches the input EU.";
         }
 
-        const hasChance = outputs.findIndex(row => Boolean(row.chance)) !== -1,
-            hasParallel = Boolean(Util.first(outputs).parallel);
+        const hasParallel = recipe.oc_type.includes("parallel"),
+            hasChance = outputs.findIndex(row => Boolean(row.chance)) !== -1;
 
-        const embed = new EmbedBuilder().setFooter({
-            text: footer
-        });
+        const header = `:information_source: Input: **${recipe.base_eu} EU/t** for **${OCUtil.formatDuration(recipe.base_duration)}**`;
 
         const columns = {
             eu: "EU/t",
@@ -144,7 +132,15 @@ Manually specify the amperage if it differs.`;
             sideLines: false
         });
 
-        embed.setDescription(codeblock(table));
+        let footer = `Applicable for NFu, tiers adjusted for actual machine tier,
+for all options and syntax see ${this.getArgsHelp()}.`;
+
+        if (hasParallel) {
+            footer += `\n\nFor parallelization, it is assumed that you are running 1A of the specified tier.
+Manually specify the amperage if it differs.`;
+        }
+
+        const embed = new EmbedBuilder().setFooter({ text: footer }).setDescription(codeblock(table));
 
         return {
             content: header,

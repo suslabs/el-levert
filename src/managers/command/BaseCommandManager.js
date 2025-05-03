@@ -57,13 +57,16 @@ class BaseCommandManager extends Manager {
     }
 
     deleteCommands() {
+        let n = 0;
+
         if (this._commandLoader.loaded) {
-            this._commandLoader._deleteCommands();
+            n = this._commandLoader.deleteCommands();
         } else {
             getLogger().debug("No commands to delete.");
         }
 
         delete this._commandLoader;
+        return n;
     }
 
     deleteCommand(command, removeSubcommands = true, errorIfNotFound = false) {
@@ -139,15 +142,15 @@ class BaseCommandManager extends Manager {
         getLogger().info("Reloading commands...");
 
         this.deleteCommands();
-        await this._loadCommands();
+        return await this._loadCommands();
     }
 
     async load() {
-        await this._loadCommands();
+        return await this._loadCommands();
     }
 
     unload() {
-        this.deleteCommands();
+        return this.deleteCommands();
     }
 
     get _commandDefaultValues() {
@@ -258,6 +261,8 @@ class BaseCommandManager extends Manager {
 
         this._deleteDuplicateCommands();
         this._bindSubcommands();
+
+        return commandLoader.result;
     }
 }
 

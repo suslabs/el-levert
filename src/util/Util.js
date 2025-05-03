@@ -397,8 +397,8 @@ let Util = {
         return array[start];
     },
 
-    last: (array, start = 0) => {
-        return array[array.length + start - 1];
+    last: (array, end = 0) => {
+        return array[array.length - end - 1];
     },
 
     after: (array, start = 0) => {
@@ -407,6 +407,26 @@ let Util = {
 
     randomElement: (array, a = 0, b = array.length) => {
         return array[a + ~~(Math.random() * (b - a))];
+    },
+
+    setFirst(array, value, start = 0) {
+        array[start] = value;
+        return array;
+    },
+
+    setLast(array, value, end = 0) {
+        array[array.length - end - 1] = value;
+        return array;
+    },
+
+    setAfter(array, value, start = 0) {
+        array.splice(start + 1, value.length, ...value);
+        return array;
+    },
+
+    setRandomElement(array, value, a = 0, b = array.length) {
+        array[a + ~~(Math.random() * (b - a))] = value;
+        return array;
     },
 
     clamp: (x, a, b) => {

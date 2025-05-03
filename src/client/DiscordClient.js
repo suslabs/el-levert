@@ -7,7 +7,7 @@ import TypeTester from "../util/TypeTester.js";
 import ArrayUtil from "../util/ArrayUtil.js";
 import ObjectUtil from "../util/ObjectUtil.js";
 import DiscordUtil from "../util/DiscordUtil.js";
-import search from "../util/search/diceSearch.js";
+import diceSearch from "../util/search/diceSearch.js";
 
 import ClientError from "../errors/ClientError.js";
 
@@ -643,11 +643,11 @@ class DiscordClient {
 
         const uniqueMembers = ArrayUtil.unique(allMembers, "id");
 
-        return search(uniqueMembers, query, {
+        return diceSearch(uniqueMembers, query, {
             maxResults: options.limit,
             minDist: options.searchMinDist,
             searchKey: "username"
-        });
+        }).results;
     }
 
     killProcess() {

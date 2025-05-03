@@ -59,7 +59,7 @@ async function parseBase(t_args, msg) {
             tagBody = t_body;
         }
 
-        [isScript, body] = DiscordUtil.parseScript(tagBody);
+        ({ body, isScript } = ParserUtil.parseScript(tagBody));
     }
 
     let type;
@@ -113,6 +113,7 @@ export default {
         "delete",
         "dump",
         "edit",
+        "fullsearch",
         "info",
         "leaderboard",
         "list",
@@ -146,7 +147,7 @@ export default {
 
         if (tag === null) {
             let out = `:warning: Tag **${t_name}** doesn't exist.`,
-                find = await getClient().tagManager.search(t_name, 5);
+                { results: find } = await getClient().tagManager.search(t_name, 5, 0.3);
 
             if (!Util.empty(find)) {
                 const names = `**${find.join("**, **")}**`;

@@ -104,13 +104,7 @@ class VMFunction {
             return ref;
         }
 
-        const args = [];
-
-        for (const path of this.binds) {
-            const { obj } = VMUtil.resolveObject(path, propertyMap);
-            args.push(obj);
-        }
-
+        const args = this.binds.map(path => VMUtil.resolveObject(path, propertyMap).obj);
         return FunctionUtil.bindArgs(ref, args);
     }
 

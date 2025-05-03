@@ -14,26 +14,15 @@ const VMUtil = {
 
         const split = path.split(".");
 
-        let parent, obj;
+        return split.reduce(({ obj }, key) => {
+            const next = obj?.[key] ?? propertyMap.get(key);
 
-        while (split.length > 0) {
-            parent = obj;
-            const propertyName = split[0];
-
-            if (typeof obj === "undefined") {
-                obj = propertyMap.get(propertyName);
-            } else {
-                obj = obj[propertyName];
+            if (typeof next === "undefined") {
+                throw new UtilError(`Property not found: ${key}`);
             }
 
-            if (typeof obj === "undefined") {
-                throw new UtilError("Property not found: " + propertyName);
-            }
-
-            split.shift();
-        }
-
-        return { obj, parent };
+            return { parent: obj, obj: next };
+        }, {});
     },
 
     removeCircularReferences: obj => {

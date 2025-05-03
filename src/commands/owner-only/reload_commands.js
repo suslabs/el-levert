@@ -8,9 +8,19 @@ export default {
     handler: async _ => {
         getClient().silenceDiscordTransports(true);
 
-        await getClient().commandManager.reloadCommands();
+        const res = await getClient().commandManager.reloadCommands();
 
         getClient().silenceDiscordTransports(false);
-        return ":white_check_mark: Reloaded commands!";
+
+        if (typeof res === "undefined") {
+            return ":no_entry_sign: Reloading commands failed.";
+        } else if (res.total < 1) {
+            return ":information_source: No commands were reloaded.";
+        } else {
+            const { ok, bad, total } = res,
+                s = total > 1 ? "s" : "";
+
+            return `:white_check_mark: Reloaded **${total}** command${s}. **${ok}** successful, **${bad}** failed.`;
+        }
     }
 };

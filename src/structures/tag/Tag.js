@@ -27,12 +27,22 @@ class Tag {
         type: TagTypes.defaultType
     };
 
-    static getFlag(names = []) {
-        if (!Array.isArray(names)) {
+    static getFlag(names) {
+        let invert = false;
+
+        if (Array.isArray(names)) {
+            const flag = Util.first(names);
+
+            if (typeof flag === "boolean") {
+                invert = !flag;
+                ArrayUtil.removeItem(names, 0);
+            }
+        } else {
             names = [names];
         }
 
-        return names.reduce((flag, name) => flag | this._getFlag(name, false), 0);
+        const flag = names.reduce((flag, name) => flag | this._getFlag(name, false), 0);
+        return invert ? -flag : flag;
     }
 
     constructor(data) {
@@ -46,7 +56,7 @@ class Tag {
             userType = typeof type === "string";
 
         if (Util.empty(this.hops)) {
-            this.hops.push(this.name);
+            this.hops[0] = this.name;
         } else if (this.isAlias) {
             this.body = this.constructor.defaultValues.body;
 

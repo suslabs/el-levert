@@ -14,7 +14,7 @@ class ReminderDatabase extends SqlDatabase {
             return null;
         }
 
-        const reminders = rows.map(x => new Reminder(x));
+        const reminders = rows.map(row => new Reminder(row));
         reminders.sort((a, b) => a.end - b.end);
 
         return reminders;
@@ -42,7 +42,7 @@ class ReminderDatabase extends SqlDatabase {
 
     async list() {
         const rows = await this.queries.list.all(),
-            reminders = rows.map(x => new Reminder(x));
+            reminders = rows.map(row => new Reminder(row));
 
         reminders.sort((a, b) => a.end - b.end);
         return reminders;

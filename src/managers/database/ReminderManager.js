@@ -13,7 +13,7 @@ import ReminderError from "../../errors/ReminderError.js";
 
 function logTime(t1) {
     const t2 = performance.now();
-    getLogger().info(`Sending reminders took ${Util.formatNumber(Util.timeDelta(t2, t1))}ms.`);
+    getLogger().info(`Sending reminders took ${Util.formatNumber(Util.timeDelta(t2, t1))} ms.`);
 }
 
 class ReminderManager extends DBManager {
@@ -131,9 +131,7 @@ class ReminderManager extends DBManager {
             return;
         }
 
-        const sendFunc = this._sendReminders.bind(this);
-        this._sendTimer = setInterval(sendFunc, this.sendInterval);
-
+        this._sendTimer = setInterval(this._sendReminders, this.sendInterval);
         getLogger().info("Started reminder loop.");
     }
 
@@ -142,13 +140,12 @@ class ReminderManager extends DBManager {
         this._stopSendLoop();
     }
 
-    async _sendReminders() {
+    _sendReminders = async () => {
         const t1 = performance.now();
 
         if (getLogger().isDebugEnabled()) {
-            getLogger().debug(
-                `Checking reminders... (${Util.round(this.sendInterval * Util.durationSeconds.milli, 1)}s)`
-            );
+            const interval = Util.round(this.sendInterval * Util.durationSeconds.milli, 1);
+            getLogger().debug(`Checking reminders... (${interval}s)`);
         }
 
         const reminders = await this.getPastReminders();
@@ -162,7 +159,7 @@ class ReminderManager extends DBManager {
         await Promise.all(reminders.map(reminder => this.sendReminder(reminder)));
 
         logTime(t1);
-    }
+    };
 
     _stopSendLoop() {
         if (this._sendTimer === null) {

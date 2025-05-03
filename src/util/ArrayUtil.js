@@ -128,20 +128,7 @@ const ArrayUtil = Object.freeze({
     },
 
     removeItem: (array, item, callback) => {
-        let ind;
-
-        switch (typeof item) {
-            case "number":
-                ind = item;
-                break;
-            case "function":
-                const pred = item;
-                ind = array.findIndex(pred);
-                break;
-            default:
-                ind = array.indexOf(item);
-                break;
-        }
+        const ind = ArrayUtil._indexFunc(array, item);
 
         if (ind < 0 || ind >= array.length) {
             return [false, undefined];
@@ -271,6 +258,18 @@ const ArrayUtil = Object.freeze({
                 return callback;
             default:
                 return val => val;
+        }
+    },
+
+    _indexFunc: (array, item) => {
+        switch (typeof item) {
+            case "number":
+                return item;
+            case "function":
+                const pred = item;
+                return array.findIndex(pred);
+            default:
+                return array.indexOf(item);
         }
     }
 });

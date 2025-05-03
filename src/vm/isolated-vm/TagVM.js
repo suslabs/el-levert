@@ -27,7 +27,7 @@ function logOutput(t1, out) {
     }
 
     const t2 = performance.now();
-    getLogger().debug(`Running script took ${Util.formatNumber(Util.timeDelta(t2, t1))}ms.`);
+    getLogger().debug(`Running script took ${Util.formatNumber(Util.timeDelta(t2, t1))} ms.`);
 
     getLogger().debug(`Returning script output:${LoggerUtil.formatLog(out)}`);
 }

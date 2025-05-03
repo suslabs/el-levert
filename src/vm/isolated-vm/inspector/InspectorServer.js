@@ -21,8 +21,6 @@ class InspectorServer {
 
         this.logPackets = options.logPackets ?? false;
 
-        this.sendReply = this._sendReply.bind(this);
-
         this.running = false;
 
         this._inspectorContext = null;
@@ -76,6 +74,18 @@ class InspectorServer {
         this._inspectorContext = context;
     }
 
+    sendReply = msg => {
+        if (this._inspectorSocket === null) {
+            return;
+        }
+
+        if (this.logPackets) {
+            getLogger().debug(`Sending: ${msg}`);
+        }
+
+        this._inspectorSocket.send(msg);
+    };
+
     executionFinished() {
         if (!this.enabled) {
             return;
@@ -95,19 +105,7 @@ class InspectorServer {
         getLogger().info("Closed inspector server.");
     }
 
-    _sendReply(msg) {
-        if (this._inspectorSocket === null) {
-            return;
-        }
-
-        if (this.logPackets) {
-            getLogger().debug(`Sending: ${msg}`);
-        }
-
-        this._inspectorSocket.send(msg);
-    }
-
-    _listener(socket) {
+    _listener = socket => {
         getLogger().debug("Inspector server: Recieved connection.");
         this._inspectorSocket = socket;
 
@@ -142,11 +140,15 @@ class InspectorServer {
                 socket.close();
             }
         });
-    }
+    };
+
+    _socketClosed = () => {
+        getLogger().debug("Inspector websocket server closed.");
+    };
 
     _bindEvents() {
-        this.websocketServer.on("connection", this._listener.bind(this));
-        this.websocketServer.on("close", _ => this._socketClosed.bind(this));
+        this.websocketServer.on("connection", this._listener);
+        this.websocketServer.on("close", _ => this._socketClosed);
     }
 
     _connectInspector() {
@@ -175,10 +177,6 @@ class InspectorServer {
         }
 
         getLogger().debug("Closed inspector socket.");
-    }
-
-    _socketClosed() {
-        getLogger().debug("Inspector websocket server closed.");
     }
 
     _deleteReferences() {

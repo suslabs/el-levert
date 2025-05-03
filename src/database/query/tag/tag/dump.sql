@@ -1,1 +1,1 @@
-SELECT name FROM Tags;
+SELECT name FROM Tags WHERE $flag IS NULL OR ((type & $flag) = CASE WHEN $flag < 0 THEN 0 ELSE $flag END);

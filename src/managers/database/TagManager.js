@@ -9,9 +9,11 @@ import { getClient, getLogger } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
 import RegexUtil from "../../util/misc/RegexUtil.js";
-import search from "../../util/search/uFuzzySearch.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
+
+import diceSearch from "../../util/search/diceSearch.js";
+import uFuzzySearch from "../../util/search/uFuzzySearch.js";
 
 import TagError from "../../errors/TagError.js";
 
@@ -307,11 +309,13 @@ class TagManager extends DBManager {
         return tag;
     }
 
-    async dump(full = false) {
+    async dump(full = false, flags) {
+        const flag = Tag.getFlag(flags) || null;
+
         if (full) {
-            return await this.tag_db.fullDump();
+            return await this.tag_db.fullDump(flag);
         } else {
-            return await this.tag_db.dump();
+            return await this.tag_db.dump(flag);
         }
     }
 
@@ -328,23 +332,43 @@ class TagManager extends DBManager {
     }
 
     async count(user, flags) {
-        const countAll = user == null || Util.empty(user),
-            flag = Tag.getFlag(flags) || null;
-
-        if (countAll) {
-            return await this.tag_db.count(true, null, flag);
-        } else {
-            return await this.tag_db.count(false, user, flag);
+        if (Util.empty(user)) {
+            user = null;
         }
+
+        const flag = Tag.getFlag(flags) || null;
+
+        return await this.tag_db.count(user, flag);
     }
 
-    async search(query, maxResults = 20) {
-        query = query.toLowerCase();
+    async search(query, maxResults = 20, minDist) {
         const tags = await this.dump();
 
-        return search(tags, query, {
+        return diceSearch(tags, query, {
+            maxResults,
+            minDist
+        });
+    }
+
+    async fullSearch(query, maxResults = 20) {
+        let tags = await this.dump(true, [false, "script"]);
+        tags = tags
+            .filter(tag => !tag.isAlias)
+            .map(tag => ({
+                name: tag.name,
+                body: tag.body
+            }));
+
+        const res = uFuzzySearch(tags, query, {
+            searchKey: "body",
             maxResults
         });
+
+        if (!res.other.hasInfo) {
+            res.results.forEach(x => (x.body = ""));
+        }
+
+        return res;
     }
 
     async random(prefix) {
@@ -376,18 +400,14 @@ class TagManager extends DBManager {
                 throw new TagError("Invalid leaderboard type: " + type);
         }
 
-        for (const entry of leaderboard) {
-            const id = entry.user,
-                user = await getClient().findUserById(id);
-
-            if (user) {
-                entry.user = user;
-            } else {
-                entry.user = {
-                    username: "NOT FOUND"
-                };
-            }
-        }
+        await Promise.all(
+            leaderboard.map(entry =>
+                getClient()
+                    .findUserById(entry.user)
+                    .catch(_ => null)
+                    .then(user => (entry.user = user ?? { username: "NOT FOUND" }))
+            )
+        );
 
         return leaderboard;
     }

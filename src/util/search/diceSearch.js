@@ -1,10 +1,14 @@
 import diceDist from "./diceDist.js";
 
-function search(haystack, needle, options = {}) {
+const outputResult = (results, oversized) => ({
+    results,
+
+    other: { oversized }
+});
+
+function diceSearch(haystack, needle, options = {}) {
     let { maxResults, minDist, searchKey } = options;
     minDist ??= 0.5;
-
-    const limitResults = ![undefined, null, Infinity].includes(maxResults);
 
     let distances = haystack.map((elem, i) => {
         let val;
@@ -25,13 +29,16 @@ function search(haystack, needle, options = {}) {
         distances = distances.filter(x => x[1] >= minDist);
     }
 
-    let results = distances.map(x => haystack[x[0]]);
+    const oversized = typeof maxResults === "number" && distances.length > maxResults,
+        count = oversized ? maxResults : distances.length;
 
-    if (limitResults) {
-        results = results.slice(0, maxResults);
+    const results = Array(count);
+
+    for (let i = 0; i < count; i++) {
+        results[i] = haystack[distances[i][0]];
     }
 
-    return results;
+    return outputResult(results, oversized);
 }
 
-export default search;
+export default diceSearch;

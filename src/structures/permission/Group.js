@@ -20,16 +20,16 @@ class Group {
         this.users = groupUsers;
     }
 
-    formatUsers(discord = false) {
-        const formattedName = discord ? bold(this.name) : this.name,
-            formattedLevel = discord ? bold(this.level) : this.level;
-
-        const s = Util.single(this.users) ? "" : "s",
-            title = `Group ${formattedName} - Level ${formattedLevel} - User${s}:`;
-
+    formatUsers(full = false, discord = false) {
         const spaces = discord ? "" : this._spaces;
 
-        let userFormat;
+        let title = this.format(full, discord),
+            userFormat;
+
+        if (full) {
+            const s = Util.single(this.users) ? "" : "s";
+            title += ` - User${s}:`;
+        }
 
         if (!Util.empty(this.users)) {
             userFormat = this.users
@@ -46,8 +46,15 @@ class Group {
         return format;
     }
 
-    format() {
-        return `${this.name} - ${this.level}`;
+    format(full = false, discord = false) {
+        const formattedName = discord ? bold(this.name) : `"${this.name}"`,
+            formattedLevel = discord ? bold(this.level) : this.level;
+
+        if (full) {
+            return `Group ${formattedName} - Level ${formattedLevel}`;
+        } else {
+            return `${formattedName} - ${formattedLevel}`;
+        }
     }
 
     static _indentation = 4;

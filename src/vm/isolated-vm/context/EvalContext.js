@@ -270,9 +270,7 @@ class EvalContext {
     }
 
     static _constructFuncs(objMap, names) {
-        const funcs = [];
-
-        for (const [objKey, funcMap] of Object.entries(objMap)) {
+        return Object.entries(objMap).flatMap(([objKey, funcMap]) => {
             if (funcMap == null) {
                 throw new VMError("Invalid object map");
             }
@@ -284,18 +282,16 @@ class EvalContext {
                 throw new VMError(`Object ${objKey} not found`);
             }
 
-            for (const [funcKey, funcProperties] of Object.entries(funcMap)) {
+            return Object.entries(funcMap).map(([funcKey, props]) => {
                 const funcName = funcNames[funcKey];
 
                 if (typeof funcName === "undefined") {
                     throw new VMError(`Function ${funcKey} not found`);
                 }
 
-                funcs.push(this._constructFunc(objName, funcName, funcProperties));
-            }
-        }
-
-        return funcs;
+                return this._constructFunc(objName, funcName, props);
+            });
+        });
     }
 }
 

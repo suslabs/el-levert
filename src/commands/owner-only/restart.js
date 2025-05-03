@@ -1,6 +1,7 @@
 import { getClient, getLogger } from "../../LevertClient.js";
 
 import loadConfig from "../../config/loadConfig.js";
+import Util from "../../util/Util.js";
 
 function configReloader() {
     getLogger().info("Reloading configs...");
@@ -24,10 +25,9 @@ export default {
     category: "owner-only",
 
     handler: async (_, msg) => {
-        await getClient().restart(configReloader);
-
+        const time = await getClient().restart(configReloader);
         rebindMessage(msg, getClient().client);
 
-        return ":white_check_mark: Restarted bot!";
+        return `:white_check_mark: Restarted bot in **${Util.formatNumber(time)} ms**.`;
     }
 };

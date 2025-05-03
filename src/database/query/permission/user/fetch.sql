@@ -1,1 +1,1 @@
-SELECT * FROM Groups WHERE name = (SELECT "group" FROM Users WHERE user = $user);
+SELECT * FROM Groups WHERE name IN (SELECT "group" FROM Users WHERE user = $user);

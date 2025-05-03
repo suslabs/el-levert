@@ -58,12 +58,8 @@ class TextCommandManager extends BaseCommandManager {
             categories = new Map();
 
         for (const command of allowedCmds) {
-            if (!categories.has(command.category)) {
-                categories.set(command.category, []);
-            }
-
-            const category = categories.get(command.category);
-            category.push(command);
+            const list = categories.get(command.category) ?? [];
+            categories.set(command.category, list.concat(command));
         }
 
         if (!sort) {

@@ -6,51 +6,6 @@ import User from "../structures/permission/User.js";
 import Util from "../util/Util.js";
 
 class PermissionDatabase extends SqlDatabase {
-    async fetch(id) {
-        const rows = await this.userQueries.fetch.all({
-            $user: id
-        });
-
-        if (typeof rows._data === "undefined" || Util.empty(rows)) {
-            return null;
-        }
-
-        return rows.map(row => new Group(row));
-    }
-
-    async add(group, user) {
-        return await this.userQueries.add.run({
-            $user: user.user,
-            $group: group.name
-        });
-    }
-
-    async remove(group, user) {
-        return await this.userQueries.remove.run({
-            $user: user.user,
-            $group: group.name
-        });
-    }
-
-    async removeByGroup(group) {
-        return await this.userQueries.removeByGroup.run({
-            $name: group.name
-        });
-    }
-
-    async removeAll(user) {
-        return await this.userQueries.removeAll.run({
-            $user: user.user
-        });
-    }
-
-    async transferUsers(group, newGroup) {
-        return await this.userQueries.transfer.run({
-            $group: group.name,
-            $newGroup: newGroup.name
-        });
-    }
-
     async fetchGroup(name) {
         const row = await this.groupQueries.fetch.get({
             $name: name
@@ -104,9 +59,53 @@ class PermissionDatabase extends SqlDatabase {
         return groups;
     }
 
+    async fetch(id) {
+        const rows = await this.userQueries.fetch.all({
+            $user: id
+        });
+
+        if (typeof rows._data === "undefined" || Util.empty(rows)) {
+            return null;
+        }
+
+        return rows.map(row => new Group(row));
+    }
+
+    async add(group, user) {
+        return await this.userQueries.add.run({
+            $user: user.user,
+            $group: group.name
+        });
+    }
+
+    async remove(group, user) {
+        return await this.userQueries.remove.run({
+            $user: user.user,
+            $group: group.name
+        });
+    }
+
+    async removeByGroup(group) {
+        return await this.userQueries.removeByGroup.run({
+            $name: group.name
+        });
+    }
+
+    async removeAll(user) {
+        return await this.userQueries.removeAll.run({
+            $user: user.user
+        });
+    }
+
+    async transferUsers(group, newGroup) {
+        return await this.userQueries.transfer.run({
+            $group: group.name,
+            $newGroup: newGroup.name
+        });
+    }
+
     async listUsers() {
         const rows = await this.userQueries.list.all();
-
         return rows.map(row => new User(row));
     }
 }

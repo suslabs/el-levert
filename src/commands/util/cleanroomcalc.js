@@ -23,8 +23,6 @@ export default {
             return `:warning: Invalid dimensions: \`${dims[0]}x${dims[1]}x${dims[2]}\`.`;
         }
 
-        const header = `:information_source: Resources required for a \`${l}x${w}x${h}\` cleanroom:`;
-
         let info;
 
         try {
@@ -36,6 +34,8 @@ export default {
 
             throw err;
         }
+
+        const header = `:information_source: Resources required for a \`${l}x${w}x${h}\` cleanroom:`;
 
         const { frame, walls, filters } = info;
 

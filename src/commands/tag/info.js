@@ -4,6 +4,10 @@ import Util from "../../util/Util.js";
 import ParserUtil from "../../util/commands/ParserUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 
+function codeblock(str) {
+    return `\`\`\`json\n${str}\`\`\``;
+}
+
 export default {
     name: "info",
     aliases: ["data"],
@@ -46,10 +50,7 @@ export default {
                 ...DiscordUtil.getFileAttach(infoJson, "info.json")
             };
         } else {
-            return `${header}
-\`\`\`json
-${infoJson}
-\`\`\``;
+            return `${header}\n${codeblock(infoJson)}`;
         }
     }
 };

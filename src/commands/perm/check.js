@@ -1,19 +1,21 @@
+import { EmbedBuilder } from "discord.js";
+
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import ParserUtil from "../../util/commands/ParserUtil.js";
 
 function formatGroups(groups) {
-    let format;
-
     if (Util.multiple(groups)) {
-        format = groups.map((group, i) => `${i + 1}. ${group.format()}`);
-        format = format.join("\n");
+        const format = groups.map((group, i) => `${i + 1}. ${group.format(true)}`);
+        return format.join("\n");
     } else {
-        format = Util.first(groups).format();
+        return Util.first(groups).format();
     }
+}
 
-    return format;
+function codeblock(str) {
+    return `\`\`\`\n${str}\`\`\``;
 }
 
 export default {
@@ -48,21 +50,22 @@ export default {
             }
         }
 
+        let header;
+
+        if (user === msg.author) {
+            header = ":information_source: You have the following permissions:";
+        } else {
+            header = `:information_source: User \`${user.username}\` has the following permissions:`;
+        }
+
         const format = formatGroups(groups),
             maxLevel = await getClient().permManager.maxLevel(user.id);
 
-        let out = `\`\`\`
-${format}
-\`\`\`
+        const embed = new EmbedBuilder().setTitle(`Level: **${maxLevel}**`).setDescription(codeblock(format));
 
-Level: **${maxLevel}**`;
-
-        if (user === msg.author) {
-            out = `:information_source: You have the following permissions:` + out;
-        } else {
-            out = `:information_source: User \`${user.username}\` has the following permissions:` + out;
-        }
-
-        return out;
+        return {
+            content: header,
+            embeds: [embed]
+        };
     }
 };

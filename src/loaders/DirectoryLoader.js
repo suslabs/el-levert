@@ -452,12 +452,7 @@ class DirectoryLoader extends Loader {
             );
         }
 
-        this.result = {
-            ok,
-            bad,
-            total
-        };
-
+        this.result = { ok, bad, total };
         return LoadStatus.successful;
     }
 }

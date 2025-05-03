@@ -2,6 +2,7 @@ import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
+import ParserUtil from "../../util/commands/ParserUtil.js";
 
 async function evalBase(args, msg) {
     let body;
@@ -26,7 +27,7 @@ async function evalBase(args, msg) {
             };
         }
     } else {
-        [, body] = DiscordUtil.parseScript(args);
+        ({ body } = ParserUtil.parseScript(args));
     }
 
     if (Util.empty(body)) {

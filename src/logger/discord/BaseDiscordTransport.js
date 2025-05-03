@@ -4,7 +4,6 @@ import { EmbedBuilder, TimestampStyles, codeBlock, time, DiscordAPIError } from 
 import { EmbedColors, defaultColor } from "./EmbedColors.js";
 
 import Util from "../../util/Util.js";
-import TypeTester from "../../util/TypeTester.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 
 import LoggerError from "../../errors/LoggerError.js";
@@ -160,7 +159,7 @@ class BaseDiscordTransport extends Transport {
         await this.sendLog(out);
     }
 
-    _sendLogs() {
+    _sendLogs = () => {
         if (!this.initialized) {
             return;
         }
@@ -172,7 +171,7 @@ class BaseDiscordTransport extends Transport {
         }
 
         this._logToDiscord(info).catch(err => this._handleDiscordError(err));
-    }
+    };
 
     _handleDiscordError(err) {
         console.error("Error occured while sending message to discord:", err);
@@ -196,8 +195,7 @@ class BaseDiscordTransport extends Transport {
             return;
         }
 
-        const sendFunc = this._sendLogs.bind(this);
-        this._sendTimer = setInterval(sendFunc, this.sendInterval);
+        this._sendTimer = setInterval(this._sendLogs, this.sendInterval);
     }
 
     _stopSendLoop() {
