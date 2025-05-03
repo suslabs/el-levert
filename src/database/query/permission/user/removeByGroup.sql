@@ -1,1 +1,1 @@
-DELETE FROM Users WHERE "group" = $name;
+DELETE FROM Users WHERE 'group' = $name;
