@@ -174,7 +174,8 @@ class BaseDiscordTransport extends Transport {
     };
 
     _handleDiscordError(err) {
-        console.error("Error occured while sending message to discord:", err);
+        console.error("Error occured while sending message to discord:");
+        console.error(err);
 
         if (!(err instanceof DiscordAPIError)) {
             return;

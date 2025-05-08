@@ -1,6 +1,5 @@
 const http = require("http");
 const WebSocket = require("ws");
-const os = require("os");
 
 const targetPort = 8080,
     proxyPort = 9229;
@@ -62,9 +61,9 @@ function httpUpgradeHandler(req, socket, head) {
 
     proxyWs.on("error", err => {
         if (err.code === "ECONNREFUSED") {
-            console.error("Inspector connection refused. Make sure that the bot is started.");
+            console.error("ERROR: Inspector connection refused. Make sure that the bot is started.");
         } else {
-            console.error("Error occured with proxy WebSocket connection:", err.message);
+            console.error("ERROR: Occured with proxy WebSocket connection:", err.message);
         }
 
         proxyWs.close();
@@ -108,7 +107,7 @@ function startServer() {
     wsServer.on("connection", wsConenctionHandler);
 
     wsServer.on("error", err => {
-        console.error("Error occured with proxy WebSocket connection:", err.message);
+        console.error("ERROR: Occured with proxy WebSocket connection:", err.message);
     });
 
     httpServer.listen(proxyPort, () => {

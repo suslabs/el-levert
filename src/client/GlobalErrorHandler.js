@@ -4,8 +4,11 @@ function exceptionHandler(err1) {
     try {
         logger_.error("Uncaught exception:", err1);
     } catch (err2) {
-        console.error("Error occured while reporting uncaught error:", err2);
-        console.error("Uncaught error:", err1);
+        console.error("Error occured while reporting uncaught error:");
+        console.error(err2);
+
+        console.error("Uncaught error:");
+        console.error(err1);
     }
 }
 
