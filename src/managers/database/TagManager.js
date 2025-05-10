@@ -16,6 +16,7 @@ import diceSearch from "../../util/search/diceSearch.js";
 import uFuzzySearch from "../../util/search/uFuzzySearch.js";
 
 import TagError from "../../errors/TagError.js";
+import VMError from "../../errors/VMError.js";
 
 class TagManager extends DBManager {
     static $name = "tagManager";
@@ -470,6 +471,21 @@ class TagManager extends DBManager {
         getLogger().info(`Added tag: "${tag.name}" with type: ${tag.type}, body:${bodyLogStr}`);
     }
 
+    _throwScriptError(name, msg) {
+        const prefix = "Can't execute script tag.";
+
+        switch (msg) {
+            case 1:
+                msg = "isn't initialized";
+                break;
+            case 2:
+                msg = "isn't enabled";
+                break;
+        }
+
+        throw new VMError(`${prefix} ${name} ${msg}`);
+    }
+
     async _runScriptTag(tag, type, args, msg) {
         const evalArgs = [args, tag.args].filter(str => !Util.empty(str)).join(" ");
 
@@ -478,11 +494,9 @@ class TagManager extends DBManager {
                 const ivm = getClient().tagVM;
 
                 if (typeof ivm === "undefined") {
-                    throw new TagError("Can't execute script tag. isolated-vm isn't initialized");
-                }
-
-                if (!ivm.enabled) {
-                    throw new TagError("Can't execute script tag. isolated-vm isn't enabled");
+                    this._throwScriptError("isolated-vm", 1);
+                } else if (!ivm.enabled) {
+                    this._throwScriptError("isolated-vm", 2);
                 }
 
                 return await ivm.runScript(tag.body, { msg, tag, args: evalArgs });
@@ -490,11 +504,10 @@ class TagManager extends DBManager {
                 const vm2 = getClient().tagVM2;
 
                 if (typeof vm2 === "undefined") {
+                    this._throwScriptError("vm2", 1);
                     throw new TagError("Can't execute script tag. vm2 isn't initialized");
-                }
-
-                if (!vm2.enabled) {
-                    throw new TagError("Can't execute script tag. vm2 isn't enabled");
+                } else if (!vm2.enabled) {
+                    this._throwScriptError("vm2", 2);
                 }
 
                 return await vm2.runScript(tag.body, { msg, args: evalArgs });

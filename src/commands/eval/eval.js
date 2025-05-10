@@ -140,7 +140,17 @@ export default {
             return parsed.err;
         }
 
-        const out = await getClient().tagVM.runScript(body, { msg });
+        let out;
+
+        try {
+            out = await getClient().tagVM.runScript(body, { msg });
+        } catch (err) {
+            if (err.name === "VMError") {
+                out = `:no_entry_sign: ${err.message}.`;
+            } else {
+                throw err;
+            }
+        }
 
         return [
             out,

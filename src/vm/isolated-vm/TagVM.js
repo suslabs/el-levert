@@ -11,6 +11,7 @@ import DiscordUtil from "../../util/DiscordUtil.js";
 import VMUtil from "../../util/vm/VMUtil.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
 
+import VMError from "../../errors/VMError.js";
 import VMErrors from "./VMErrors.js";
 
 function logUsage(code) {
@@ -21,27 +22,24 @@ function logUsage(code) {
     getLogger().debug(`Running script:${LoggerUtil.formatLog(code)}`);
 }
 
-function logOutput(t1, out) {
+function logFinished(t1, info) {
+    if (!info && !getLogger().isDebugEnabled()) {
+        return;
+    }
+
+    const level = info ? "info" : "debug",
+        t2 = performance.now();
+
+    getLogger().log(level, `Script execution took ${Util.formatNumber(Util.timeDelta(t2, t1))} ms.`);
+}
+
+function logOutput(dataType, out) {
     if (!getLogger().isDebugEnabled()) {
         return;
     }
 
-    const t2 = performance.now();
-    getLogger().debug(`Running script took ${Util.formatNumber(Util.timeDelta(t2, t1))} ms.`);
-
-    getLogger().debug(`Returning script output:${LoggerUtil.formatLog(out)}`);
-}
-
-function logFinished(info) {
-    getLogger().log(info ? "info" : "debug", "Script execution finished.");
-}
-
-function logData(name, data) {
-    if (!getLogger().isDebugEnabled()) {
-        return;
-    }
-
-    getLogger().debug(`Returning ${name} data:${LoggerUtil.formatLog(data)}`);
+    const desc = dataType === "script" ? "output" : "data";
+    getLogger().debug(`Returning ${dataType} ${desc}:${LoggerUtil.formatLog(out)}`);
 }
 
 class TagVM extends VM {
@@ -65,25 +63,27 @@ class TagVM extends VM {
 
         if (this._inspectorServer?.inspectorConnected) {
             getLogger().info("Can't run script: inspector is already connected.");
-            return ":no_entry_sign: Inspector is already connected.";
+            throw new VMError("Inspector is already connected.");
         }
 
-        const context = await this._getContext(values);
+        const context = await this._getEvalContext(values);
+
+        let out, dataType;
 
         try {
-            const out = await context.runScript(code);
-
-            logFinished(this.enableInspector);
-            logOutput(t1, out);
-
-            return VMUtil.formatOutput(out);
+            out = await context.runScript(code);
+            [dataType, out] = this._handleScriptOuput(out);
         } catch (err) {
-            logFinished(this.enableInspector);
-            return this._handleError(err);
+            [dataType, out] = this._handleScriptError(err);
         } finally {
+            logFinished(t1, this.enableInspector);
+
             this._inspectorServer?.executionFinished();
             context.dispose();
         }
+
+        logOutput(dataType, out);
+        return out;
     }
 
     load() {
@@ -99,7 +99,7 @@ class TagVM extends VM {
     }
 
     getDisabledMessage() {
-        return "Eval is disabled.";
+        return "Eval is disabled";
     }
 
     _setupInspectorServer() {
@@ -119,7 +119,7 @@ class TagVM extends VM {
         this._inspectorServer = server;
     }
 
-    async _getContext(values) {
+    async _getEvalContext(values) {
         const context = new EvalContext(
             {
                 memLimit: this.memLimit,
@@ -137,29 +137,8 @@ class TagVM extends VM {
         return context;
     }
 
-    _handleError(err) {
-        switch (err.name) {
-            case VMErrors.custom[0]:
-                getLogger().debug(`VM error: ${err.message}`);
-                return `:no_entry_sign: ${err.message}.`;
-            case VMErrors.custom[1]:
-                logData("exit", err.exitData);
-                return err.exitData;
-            case VMErrors.custom[2]:
-                logData("reply", err.message);
-                return this._processReply(err.message);
-        }
-
-        switch (err.message) {
-            case VMErrors.timeout:
-                getLogger().debug("VM error: Script execution timed out.");
-                return ":no_entry_sign: Script execution timed out.";
-            case VMErrors.memLimit:
-                getLogger().debug("VM error: Memory limit reached.");
-                return ":no_entry_sign: Memory limit reached.";
-            default:
-                throw err;
-        }
+    _handleScriptOuput(out) {
+        return ["script", VMUtil.formatOutput(out)];
     }
 
     _processReply(msg) {
@@ -177,6 +156,32 @@ class TagVM extends VM {
         }
 
         return out;
+    }
+
+    _handleScriptError(err) {
+        switch (err.name) {
+            case "VMError":
+                getLogger().debug(`IVM error: ${err.message}`);
+                throw err;
+
+            case VMErrors.custom[0]:
+                return ["exit", err.exitData];
+            case VMErrors.custom[1]:
+                return ["reply", this._processReply(err.message)];
+        }
+
+        for (const [name, info] of Object.entries(VMErrors)) {
+            if (name === "custom") {
+                continue;
+            }
+
+            if (err.message === info.in) {
+                getLogger().debug(`IVM error: ${info.out}.`);
+                throw new VMError(info.out);
+            }
+        }
+
+        throw err;
     }
 }
 

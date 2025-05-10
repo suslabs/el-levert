@@ -50,11 +50,15 @@ class VM {
 
     _runScript(code, ...args) {
         if (!this.enabled) {
+            let msg;
+
             if (typeof this.getDisabledMessage === "function") {
-                return this.getDisabledMessage();
+                msg = this.getDisabledMessage();
+            } else {
+                msg = "VM is disabled";
             }
 
-            return;
+            throw new VMError(msg);
         }
 
         return this._childRunScript(code, ...args);

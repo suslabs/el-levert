@@ -179,11 +179,20 @@ export default {
         try {
             out = await getClient().tagManager.execute(tag, t_args, msg);
         } catch (err) {
-            if (err.name === "TagError") {
-                return `:warning: ${err.message}.`;
+            let emoji;
+
+            switch (err.name) {
+                case "TagError":
+                    emoji = ":warning:";
+                    break;
+                case "VMError":
+                    emoji = ":no_entry_sign:";
+                    break;
+                default:
+                    throw err;
             }
 
-            throw err;
+            return `${emoji} ${err.message}.`;
         }
 
         if (getClient().previewHandler.canPreview(out)) {

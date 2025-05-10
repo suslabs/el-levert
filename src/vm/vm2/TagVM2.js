@@ -142,7 +142,7 @@ class TagVM2 extends VM {
     }
 
     getDisabledMessage() {
-        return "VM2 is disabled.";
+        return "VM2 is disabled";
     }
 }
 
