@@ -29,7 +29,7 @@ function formatError(err) {
         return err.message + ".";
     }
 
-    const { ind, type, token, after, for: _for } = err.ref,
+    const { idx, type, token, after, for: _for } = err.ref,
         [word] = ParserUtil.splitArgs(err.message);
 
     let out = `${word} **${type}**`;
@@ -46,8 +46,8 @@ function formatError(err) {
         out += ` after: **${after}**`;
     }
 
-    if (typeof ind !== "undefined") {
-        out += ` at index: **${ind}**`;
+    if (typeof idx !== "undefined") {
+        out += ` at index: **${idx}**`;
     }
 
     if (TypeTester.charType(Util.last(out)) !== "other") {

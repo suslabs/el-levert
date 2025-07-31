@@ -35,12 +35,12 @@ function logGenTime(t1) {
     }
 
     const t2 = performance.now();
-    getLogger().debug(`Preview generation took ${Util.formatNumber(Util.timeDelta(t2, t1))}ms.`);
+    getLogger().debug(`Preview generation took ${Util.formatNumber(Util.timeDelta(t2, t1))} ms.`);
 }
 
 function logSendTime(t1) {
     const t2 = performance.now();
-    getLogger().info(`Sending preview took ${Util.formatNumber(Util.timeDelta(t2, t1))}ms.`);
+    getLogger().info(`Sending preview took ${Util.formatNumber(Util.timeDelta(t2, t1))} ms.`);
 }
 
 class PreviewHandler extends MessageHandler {
@@ -147,7 +147,6 @@ class PreviewHandler extends MessageHandler {
         }
 
         let preview;
-
         const t1 = performance.now();
 
         try {

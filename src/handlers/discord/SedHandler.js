@@ -6,6 +6,7 @@ import { getClient, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
+import ParserUtil from "../../util/commands/ParserUtil.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
 
 import HandlerError from "../../errors/HandlerError.js";
@@ -31,12 +32,12 @@ function logGenTime(t1) {
     }
 
     const t2 = performance.now();
-    getLogger().debug(`Sed generation took ${Util.formatNumber(Util.timeDelta(t2, t1))}ms.`);
+    getLogger().debug(`Sed generation took ${Util.formatNumber(Util.timeDelta(t2, t1))} ms.`);
 }
 
 function logSendTime(t1) {
     const t2 = performance.now();
-    getLogger().info(`Sending replaced message took ${Util.formatNumber(Util.timeDelta(t2, t1))}ms.`);
+    getLogger().info(`Sending replaced message took ${Util.formatNumber(Util.timeDelta(t2, t1))} ms.`);
 }
 
 class SedHandler extends MessageHandler {
@@ -60,7 +61,6 @@ class SedHandler extends MessageHandler {
 
     async generateSed(msg, str) {
         logUsage(msg);
-
         const t1 = performance.now();
 
         const isReply = msg.type === MessageType.Reply,
@@ -70,17 +70,18 @@ class SedHandler extends MessageHandler {
             throw new HandlerError("Invalid input string");
         }
 
-        const { regex_str, replace, flags_str } = match.groups,
-            flags = flags_str ?? "" + SedHandler.defaultFlags;
-
         if (match.length < 3) {
             throw new HandlerError("Invalid regex args");
         }
 
+        const { body: regex_str } = ParserUtil.parseScript(match.groups.regex_str ?? ""),
+            { body: replace } = ParserUtil.parseScript(match.groups.replace ?? ""),
+            { body: flags_str } = ParserUtil.parseScript(match.groups.flags_str ?? "");
+
         let regex, sedMsg, content;
 
         try {
-            regex = new RegExp(regex_str, flags);
+            regex = new RegExp(regex_str, flags_str);
         } catch (err) {
             if (err instanceof SyntaxError) {
                 throw new HandlerError("Invalid regex or flags");

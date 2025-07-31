@@ -11,18 +11,18 @@ const Stoik = Object.freeze({
         const tokens = equation.split(""),
             res = [];
 
-        let ind = 0,
+        let idx = 0,
             parens = 0;
 
-        while (ind < tokens.length) {
-            const token = tokens[ind],
+        while (idx < tokens.length) {
+            const token = tokens[idx],
                 charType = TypeTester.charType(token);
 
             if (charType === "number") {
                 const numChars = [token];
 
-                while (++ind < tokens.length) {
-                    const nextToken = tokens[ind];
+                while (++idx < tokens.length) {
+                    const nextToken = tokens[idx];
 
                     if (TypeTester.charType(nextToken) !== "number") {
                         break;
@@ -51,8 +51,8 @@ const Stoik = Object.freeze({
                 } else {
                     const tokenName = TokenNames[lastTuple[0]] ?? "unknown token";
 
-                    throw new StoikError(`Unexpected number after: ${tokenName} at index: ${ind}`, {
-                        ind,
+                    throw new StoikError(`Unexpected number after: ${tokenName} at index: ${idx}`, {
+                        idx,
                         type: "number",
                         after: tokenName
                     });
@@ -72,16 +72,16 @@ const Stoik = Object.freeze({
                     }
                 }
 
-                const nextToken = tokens[ind + 1];
+                const nextToken = tokens[idx + 1];
 
                 if (TypeTester.charType(nextToken) === "lowercase") {
                     res.push([TokenType.Element, token + nextToken]);
-                    ind++;
+                    idx++;
                 } else {
                     res.push([TokenType.Element, token]);
                 }
 
-                ind++;
+                idx++;
             } else if (token === TokenOps[TokenType.GroupLeft]) {
                 const lastTuple = res[res.length - 1];
 
@@ -99,31 +99,31 @@ const Stoik = Object.freeze({
 
                 res.push([TokenType.GroupLeft]);
 
-                ind++;
+                idx++;
                 parens++;
             } else if (token === TokenOps[TokenType.GroupRight]) {
                 if (parens === 0) {
-                    throw new StoikError(`Unmatched right bracket at index: ${ind}`, {
-                        ind,
+                    throw new StoikError(`Unmatched right bracket at index: ${idx}`, {
+                        idx,
                         type: "right bracket"
                     });
                 }
 
                 res.push([TokenType.GroupRight]);
 
-                ind++;
+                idx++;
                 parens--;
             } else if (token === TokenOps[TokenType.Add]) {
                 res.push([TokenType.Join]);
-                ind++;
+                idx++;
             } else if (token === TokenOps[TokenType.Subtract]) {
                 res.push([TokenType.Subtract]);
-                ind++;
+                idx++;
             } else if (charType === "space") {
-                ind++;
+                idx++;
             } else {
-                throw new StoikError(`Unexpected token: ${token} at index: ${ind}`, {
-                    ind,
+                throw new StoikError(`Unexpected token: ${token} at index: ${idx}`, {
+                    idx,
                     type: "token",
                     token
                 });
@@ -131,8 +131,8 @@ const Stoik = Object.freeze({
         }
 
         if (parens !== 0) {
-            throw new StoikError(`Unmatched left bracket at index: ${ind}`, {
-                ind,
+            throw new StoikError(`Unmatched left bracket at index: ${idx}`, {
+                idx,
                 type: "left bracket"
             });
         }

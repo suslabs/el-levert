@@ -18,7 +18,7 @@ function logUsage(msg, name, args) {
 }
 
 function logTime(time) {
-    getLogger().info(`Command execution took ${Util.formatNumber(time)}ms.`);
+    getLogger().info(`Command execution took ${Util.formatNumber(time)} ms.`);
 }
 
 function logOutput(cmd, out) {
@@ -47,7 +47,7 @@ class CommandHandler extends MessageHandler {
 
         try {
             return await this.userTracker.withUser(msg.author.id, async () => {
-                const [cmd, _, args] = getClient().commandManager.getCommand(msg.content, msg);
+                const [cmd, , args] = getClient().commandManager.getCommand(msg.content, msg);
 
                 if (!cmd) {
                     return false;

@@ -5,9 +5,10 @@ import MessageHandler from "./MessageHandler.js";
 import { getClient, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-import RegexUtil from "../../util/misc/RegexUtil.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
+import RegexUtil from "../../util/misc/RegexUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
+
 import normalizeText from "../../util/misc/normalizeText.js";
 
 function logParensUsage(msg, parens) {
@@ -30,7 +31,7 @@ function logReactTime(t1) {
     }
 
     const t2 = performance.now();
-    getLogger().debug(`Reacting took ${Util.formatNumber(Util.timeDelta(t2, t1))}ms.`);
+    getLogger().debug(`Reacting took ${Util.formatNumber(Util.timeDelta(t2, t1))} ms.`);
 }
 
 function logRemove(msg, count) {
@@ -45,7 +46,7 @@ function logRemove(msg, count) {
 
 function logRemoveTime(t1) {
     const t2 = performance.now();
-    getLogger().debug(`Removing reactions took ${Util.formatNumber(Util.timeDelta(t2, t1))}ms.`);
+    getLogger().debug(`Removing reactions took ${Util.formatNumber(Util.timeDelta(t2, t1))} ms.`);
 }
 
 class ReactionHandler extends MessageHandler {
@@ -120,49 +121,28 @@ class ReactionHandler extends MessageHandler {
     static _emojiExpLeft = new RegExp(`[()]+[${RegexUtil.escapeCharClass(this.emojiChars)}]`, "g");
 
     static _getWordList(funnyWords) {
-        let wordList = [];
-
-        for (const elem of funnyWords) {
-            const words = elem.word ?? elem.words;
-
-            if (Array.isArray(words)) {
-                wordList = wordList.concat(words);
-                continue;
-            } else if (typeof words === "string") {
-                wordList.push(words);
-            }
-        }
-
-        return wordList;
+        return funnyWords.flatMap(elem => [].concat(elem.word ?? elem.words));
     }
 
     static _getReactMap(funnyWords) {
         const reactMap = new Map();
 
         for (const elem of funnyWords) {
-            let words = elem.word ?? elem.words,
-                reacts = elem.react ?? elem.reacts;
+            const words = [].concat(elem.word ?? elem.words),
+                emojis = [].concat(elem.emoji ?? elem.emojis);
 
-            if (typeof reacts === "string") {
-                reacts = [reacts];
-            }
-
-            if (Array.isArray(words)) {
-                words.forEach(word => reactMap.set(word, reacts));
-            } else if (typeof words === "string") {
-                reactMap.set(words, reacts);
-            }
+            words.forEach(word => reactMap.set(word, emojis));
         }
 
         return reactMap;
     }
 
-    static _getReact(list) {
-        if (Util.single(list)) {
-            return Util.first(list);
+    static _getEmoji(reactList) {
+        if (Util.single(reactList)) {
+            return Util.first(reactList);
         }
 
-        return Util.randomElement(list);
+        return Util.randomElement(reactList);
     }
 
     _setWords() {
@@ -224,32 +204,21 @@ class ReactionHandler extends MessageHandler {
     async _parensReact(content, msg) {
         const t1 = performance.now();
 
-        const parens = this._countUnmatchedParens(content);
+        const parens = this._countUnmatchedParens(content),
+            { left, right, total } = parens;
 
-        if (parens.total < 1) {
+        if (total < 1) {
             return false;
         }
 
         logParensUsage(msg, parens);
 
-        if (parens.right > 0) {
-            try {
-                for (let i = 0; i < parens.right; i++) {
-                    await msg.react(this.parens.left[i]);
-                }
-            } catch (err) {
-                getLogger().error("Failed to react to message:", err);
-            }
-        }
+        const emojis = [...this.parens.left.slice(0, right), ...this.parens.right.slice(0, left)];
 
-        if (parens.left > 0) {
-            try {
-                for (let i = 0; i < parens.left; i++) {
-                    await msg.react(this.parens.right[i]);
-                }
-            } catch (err) {
-                getLogger().error("Failed to react to message:", err);
-            }
+        try {
+            await Promise.all(emojis.map(emoji => msg.react(emoji)));
+        } catch (err) {
+            getLogger().error("Failed to react to message:", err);
         }
 
         logReactTime(t1);
@@ -305,32 +274,25 @@ class ReactionHandler extends MessageHandler {
         const reactLists = new Set(words.map(w => this._reactMap.get(w)));
 
         for (const list of reactLists) {
-            const react = ReactionHandler._getReact(list);
+            const emoji = ReactionHandler._getEmoji(list);
 
-            if (typeof react !== "undefined") {
-                await msg.react(react);
+            if (typeof emoji !== "undefined") {
+                await msg.react(emoji);
             }
         }
     }
 
     async _multipleReact(msg, words) {
-        const reacts = new Set();
+        const emojis = new Set();
 
         for (const [word, count] of Object.entries(words)) {
-            const reactList = this._reactMap.get(word);
+            const reactList = this._reactMap.get(word),
+                samples = Array.from({ length: count }, () => ReactionHandler._getEmoji(reactList));
 
-            for (let i = 0; i < count; i++) {
-                const react = ReactionHandler._getReact(reactList);
-
-                if (typeof react !== "undefined") {
-                    reacts.add(react);
-                }
-            }
+            samples.forEach(emoji => typeof emoji !== "undefined" && emojis.add(emoji));
         }
 
-        for (const react of reacts) {
-            await msg.react(react);
-        }
+        await Promise.all(emojis.map(emoji => msg.react(emoji)));
     }
 
     async _funnyReact(content, msg) {
@@ -352,10 +314,8 @@ class ReactionHandler extends MessageHandler {
             reactFunc = this._singleReact;
         }
 
-        reactFunc = reactFunc.bind(this);
-
         try {
-            await reactFunc(msg, words);
+            await reactFunc.call(this, msg, words);
         } catch (err) {
             getLogger().error("Failed to react to message:", err);
         }

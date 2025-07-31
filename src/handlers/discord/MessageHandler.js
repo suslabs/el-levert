@@ -45,7 +45,7 @@ class MessageHandler extends Handler {
             msgReply = await this._reply(msg, out);
         }
 
-        this.messageTracker.addMsg(msgReply, msg.id);
+        this.messageTracker.addReply(msg.id, msgReply);
     }
 
     load() {
@@ -72,7 +72,7 @@ class MessageHandler extends Handler {
 
         if (this.hasUserTracker) {
             this.userTracker.clearUsers();
-            this.userTracker._clearSweepInterval();
+            this.userTracker._stopSweepLoop();
         }
     }
 
@@ -168,7 +168,7 @@ class MessageHandler extends Handler {
 
     _applyLimits(data, options) {
         const useConfig = options.useConfigLimits ?? this.useConfigLimits,
-            limitType = options.limitType ?? "trim",
+            limitType = options.limitType ?? "default",
             useTrim = limitType === "trim";
 
         const { out, content, embeds } = MessageHandler._formatOutput(data);
@@ -251,6 +251,7 @@ class MessageHandler extends Handler {
             });
 
             if (!useTrim && !embedOversize) {
+                newEmbeds.push(embed);
                 continue;
             }
 
@@ -317,13 +318,8 @@ class MessageHandler extends Handler {
             replyFunc = msg.reply.bind(msg);
         }
 
-        const msgData = TypeTester.isObject(data);
-
-        if (msgData) {
-            const dataKeys = msgData ? Object.keys(data) : null,
-                otherKeys = dataKeys.some(key => key !== "content");
-
-            if (!otherKeys && Util.empty(data.content)) {
+        if (TypeTester.isObject(data)) {
+            if (Util.empty(data.content) && Object.keys(data).every(key => key === "content")) {
                 return await this._handleEmptyMessage(replyFunc);
             }
         } else if (Util.empty(data)) {
@@ -370,47 +366,54 @@ class MessageHandler extends Handler {
         if (typeof this._childDelete === "function") {
             deleteFunc = this._childDelete;
         } else if (this.hasMessageTracker) {
-            deleteFunc = this._msgTrackerDelete;
+            deleteFunc = this._deleteReply;
         } else {
             deleteFunc = this._defaultDelete;
         }
 
-        deleteFunc = deleteFunc.bind(this);
-        return deleteFunc(msg);
+        return deleteFunc.call(this, msg);
     }
 
     _defaultDelete() {
         return false;
     }
 
-    async _msgTrackerDelete(msg) {
+    async _msgTrackerDelete(msg, itemName, deleteFunc) {
         if (!this.hasMessageTracker) {
             return false;
         }
 
-        const sent = this.messageTracker.deleteMsg(msg.id);
+        const funcName = `delete${Util.capitalize(itemName)}`;
 
-        if (typeof sent === "undefined") {
+        let sent = this.messageTracker[funcName](msg.id);
+
+        if (sent === null) {
             return false;
         }
 
-        if (Array.isArray(sent)) {
+        if (Util.single(sent)) {
+            sent = Util.first(sent);
+
+            try {
+                await deleteFunc(sent);
+            } catch (err) {
+                getLogger().error(`Could not delete message: ${sent.id}`, err);
+            }
+        } else {
             await Promise.all(
                 sent.map(msg =>
-                    msg.delete().catch(err => {
+                    Promise.resolve(deleteFunc(msg)).catch(err => {
                         getLogger().error(`Could not delete message ${msg.id}:`, err);
                     })
                 )
             );
-        } else {
-            try {
-                await sent.delete();
-            } catch (err) {
-                getLogger().error(`Could not delete message: ${sent.id}`, err);
-            }
         }
 
         return true;
+    }
+
+    async _deleteReply(msg) {
+        return await this._msgTrackerDelete(msg, "reply", msg => msg.delete());
     }
 
     _resubmit(msg) {
@@ -426,8 +429,7 @@ class MessageHandler extends Handler {
             resubmitFunc = this._defaultResubmit;
         }
 
-        resubmitFunc = resubmitFunc.bind(this);
-        return resubmitFunc(msg);
+        return resubmitFunc.call(this, msg);
     }
 
     async _defaultResubmit(msg) {
@@ -435,8 +437,10 @@ class MessageHandler extends Handler {
             return false;
         }
 
-        await this.delete(msg);
-        return await this.execute(msg);
+        let success = await this.delete(msg);
+        success ||= await this.execute(msg);
+
+        return success;
     }
 }
 

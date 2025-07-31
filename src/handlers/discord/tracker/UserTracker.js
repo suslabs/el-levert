@@ -1,5 +1,3 @@
-import TrackedUser from "./TrackedUser.js";
-
 import Util from "../../../util/Util.js";
 import TypeTester from "../../../util/TypeTester.js";
 import ArrayUtil from "../../../util/ArrayUtil.js";
@@ -16,14 +14,12 @@ class UserTracker {
         this._sweepTimer = null;
 
         if (this.enableChecks) {
-            this._setSweepInterval();
+            this._startSweepLoop();
         }
     }
 
     findUser(id) {
-        if (TypeTester.isObject(id)) {
-            id = id.id;
-        }
+        id = UserTracker._getUserId(id);
 
         if (id == null) {
             return null;
@@ -38,30 +34,27 @@ class UserTracker {
     }
 
     addUser(id) {
-        if (TypeTester.isObject(id)) {
-            id = id.id;
-        }
+        id = UserTracker._getUserId(id);
 
         if (id == null) {
             return false;
         }
 
-        const user = new TrackedUser(id, Date.now());
+        const user = UserTracker._createUser(id);
         this.trackedUsers.push(user);
 
         return true;
     }
 
     removeUser(id) {
-        if (TypeTester.isObject(id)) {
-            id = id.id;
-        }
+        id = UserTracker._getUserId(id);
 
         if (id == null) {
-            return;
+            return null;
         }
 
-        return ArrayUtil.removeItem(this.trackedUsers, user => user.id === id);
+        const [, user] = ArrayUtil.removeItem(this.trackedUsers, user => user.id === id);
+        return user ?? null;
     }
 
     withUser(id, callback) {
@@ -96,11 +89,22 @@ class UserTracker {
         ArrayUtil.wipeArray(this.trackedUsers);
     }
 
-    _sweepUsers() {
+    static _getUserId(id) {
+        return TypeTester.isObject(id) ? id.id : id;
+    }
+
+    static _createUser(id) {
+        return {
+            id,
+            timestamp: Date.now()
+        };
+    }
+
+    _sweepUsers = () => {
         const removed = [];
 
         for (const user of this.trackedUsers) {
-            const dt = Util.timeDelta(Date.now(), user.time);
+            const dt = Util.timeDelta(Date.now(), user.timestamp);
 
             if (dt > this.sweepInterval) {
                 removed.push(user);
@@ -110,18 +114,17 @@ class UserTracker {
         for (const user of removed) {
             this.removeUser(user);
         }
-    }
+    };
 
-    _setSweepInterval() {
+    _startSweepLoop() {
         if (this._sweepTimer !== null) {
-            this._clearSweepInterval();
+            this._stopSweepLoop();
         }
 
-        const sweepUsersFunc = this._sweepUsers.bind(this);
-        this._sweepTimer = setInterval(sweepUsersFunc, this.sweepInterval);
+        this._sweepTimer = setInterval(this._sweepUsers, this.sweepInterval);
     }
 
-    _clearSweepInterval() {
+    _stopSweepLoop() {
         if (this._sweepTimer === null) {
             return;
         }

@@ -5,19 +5,19 @@
     "funnyWords": [
         {
             "word": "example1",
-            "react": "🐀"
+            "emoji": "🐀"
         },
         {
             "words": ["example2", "example3"],
-            "react": "🇳🇴"
+            "emoji": "🇳🇴"
         },
         {
             "word": "example4",
-            "reacts": ["🐰", "🐇"]
+            "emojis": ["🐰", "🐇"]
         },
         {
             "words": ["example5", "example6"],
-            "reacts": ["🕥", "🕟", "⏳"]
+            "emojis": ["🕥", "🕟", "⏳"]
         }
     ]
 }

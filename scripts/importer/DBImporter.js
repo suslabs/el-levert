@@ -6,9 +6,11 @@ import { TagTypes } from "../../src/structures/tag/TagTypes.js";
 import Util from "../../src/util/Util.js";
 import TypeTester from "../../src/util/TypeTester.js";
 import ArrayUtil from "../../src/util/ArrayUtil.js";
-import DiscordUtil from "../../src/util/DiscordUtil.js";
+import ParserUtil from "../../src/util/commands/ParserUtil.js";
 
 import TagCommand from "../../src/commands/tag/tag.js";
+
+import ImporterError from "../../src/errors/ImporterError.js";
 
 class DBImporter {
     constructor(tagManager, logger) {
@@ -16,12 +18,12 @@ class DBImporter {
         this.tagManager = tagManager;
     }
 
-    async updateDatabase(path) {
+    async updateDatabase(path, mode = "overwrite") {
         let importTags = await this._loadTags(path),
             currTags = await this.tagManager.dump(true);
 
         let existingTags, newTags, deletedTags;
-        ({ existingTags, newTags, deletedTags, oldTags: currTags } = DBImporter._getDifference(importTags, currTags));
+        ({ existingTags, newTags, deletedTags, oldTags: currTags } = DBImporter._getDifference(currTags, importTags));
 
         importTags = DBImporter._getMap(importTags);
         currTags = DBImporter._getMap(currTags);
@@ -38,7 +40,7 @@ class DBImporter {
                     await this.tagManager.updateProps(currTag, importTag);
                     count++;
                 } catch (err) {
-                    this.logger.error(err);
+                    this.logger.error(`Error occured while updating "${name}":`, err);
                 }
             }
         }
@@ -52,7 +54,7 @@ class DBImporter {
                     await this.tagManager._add(importTag);
                     count++;
                 } catch (err) {
-                    this.logger.error(err);
+                    this.logger.error(`Error occured while adding "${name}":`.err);
                 }
             }
         }
@@ -64,7 +66,7 @@ class DBImporter {
                 await this.tagManager.delete(oldTag);
                 count++;
             } catch (err) {
-                this.logger.error(err);
+                this.logger.error(`Error occured while deleting "${name}":`, err);
             }
         }
 
@@ -101,7 +103,7 @@ class DBImporter {
                 await this.tagManager.delete(tag);
                 count++;
             } catch (err) {
-                this.logger.error(err);
+                this.logger.error(`Error occured while deleting "${tag.name}":`, err);
             }
         }
 
@@ -115,8 +117,10 @@ class DBImporter {
         body: "string"
     };
 
+    static _diffTypes = ["existing", "new", "deleted"];
+
     static _parseTag(data) {
-        const [isScript, body] = DiscordUtil.parseScript(data.body),
+        const { body, isScript } = ParserUtil.parseScript(data.body),
             type = isScript ? TagTypes.defaultScriptType : TagTypes.textType;
 
         const tag = new Tag({
@@ -128,7 +132,19 @@ class DBImporter {
         return tag;
     }
 
-    static _getDifference(importTags, currTags) {
+    static _getDifference(currTags, importTags, diffTypes = "all") {
+        if (diffTypes === "all") {
+            diffTypes = DBImporter._diffTypes;
+        } else {
+            if (!Array.isArray(diffTypes)) {
+                diffTypes = [diffTypes];
+            }
+
+            if (!diffTypes.every(type => DBImporter._diffTypes.includes(type))) {
+                throw new ImporterError("Invalid diff types");
+            }
+        }
+
         const importNames = importTags.map(tag => tag.name),
             importNamesSet = new Set(importNames);
 

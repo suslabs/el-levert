@@ -33,20 +33,20 @@ const ParserUtil = Object.freeze({
 
         let first, second;
 
-        let ind = -1,
+        let idx = -1,
             sepLength;
 
         if (sep.length === 1) {
             sep = sep[0] ?? sep;
 
-            ind = str.indexOf(sep);
+            idx = str.indexOf(sep);
             sepLength = sep.length;
 
             if (n > 1) {
                 for (let i = 1; i < n; i++) {
-                    ind = str.indexOf(sep, ind + 1);
+                    idx = str.indexOf(sep, idx + 1);
 
-                    if (ind === -1) {
+                    if (idx === -1) {
                         break;
                     }
                 }
@@ -59,7 +59,7 @@ const ParserUtil = Object.freeze({
                 const match = exp.exec(str);
 
                 if (match) {
-                    ind = match.index;
+                    idx = match.index;
                     sepLength = match[0].length;
                 }
             } else {
@@ -67,24 +67,24 @@ const ParserUtil = Object.freeze({
 
                 for (let i = 1; (match = exp.exec(str)) !== null; i++) {
                     if (i === n) {
-                        ind = match.index;
+                        idx = match.index;
                         sepLength = match[0].length;
 
                         break;
                     } else if (i > n) {
-                        ind = -1;
+                        idx = -1;
                         break;
                     }
                 }
             }
         }
 
-        if (ind === -1) {
+        if (idx === -1) {
             first = str;
             second = "";
         } else {
-            first = str.slice(0, ind);
-            second = str.slice(ind + sepLength);
+            first = str.slice(0, idx);
+            second = str.slice(idx + sepLength);
         }
 
         if (lowercaseFirst) {

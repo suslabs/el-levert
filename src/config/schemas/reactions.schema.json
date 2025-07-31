@@ -26,18 +26,24 @@
             "items": {
                 "type": "object",
                 "properties": {
-                    "words": {
-                        "type": ["string", "array"]
+                    "word": {
+                        "type": "string"
                     },
-                    "react": {
-                        "type": ["string", "array"]
+                    "words": {
+                        "type": "array"
+                    },
+                    "emoji": {
+                        "type": "string"
+                    },
+                    "emojis": {
+                        "type": "array"
                     }
                 },
                 "oneOf": [
-                    { "required": ["word", "react"] },
-                    { "required": ["words", "react"] },
-                    { "required": ["word", "reacts"] },
-                    { "required": ["words", "reacts"] }
+                    { "required": ["word", "emoji"] },
+                    { "required": ["words", "emoji"] },
+                    { "required": ["word", "emojis"] },
+                    { "required": ["words", "emojis"] }
                 ]
             }
         }

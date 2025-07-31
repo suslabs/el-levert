@@ -44,8 +44,8 @@ function uFuzzySearch(haystack, needle, options = {}) {
         }
     } else {
         for (let i = 0; i < count; i++) {
-            const ind = inds[i];
-            results[i] = haystack[ind];
+            const idx = inds[i];
+            results[i] = haystack[idx];
         }
     }
 

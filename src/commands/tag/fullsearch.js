@@ -85,7 +85,7 @@ function formatSnippet(words, inds, n, discord) {
 
 function formatSearchResults(results, ranges, n, discord) {
     const format = results.map((tag, i) => {
-        const ind = Util.single(results) ? "-" : (i + 1).toString() + ".";
+        const idx = Util.single(results) ? "-" : (i + 1).toString() + ".";
 
         let snippet;
 
@@ -98,9 +98,9 @@ function formatSearchResults(results, ranges, n, discord) {
 
         if (discord) {
             const cmd = `${this.prefix}${this.parentCmd.aliases[0]}`;
-            return `${ind} ${cmd} **${tag.name}**\n${snippet}`;
+            return `${idx} ${cmd} **${tag.name}**\n${snippet}`;
         } else {
-            return `${ind} ${tag.name} - ${snippet}`;
+            return `${idx} ${tag.name} - ${snippet}`;
         }
     });
 

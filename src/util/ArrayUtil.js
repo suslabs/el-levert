@@ -128,19 +128,19 @@ const ArrayUtil = Object.freeze({
     },
 
     removeItem: (array, item, callback) => {
-        const ind = ArrayUtil._indexFunc(array, item);
+        const idx = ArrayUtil._indexFunc(array, item);
 
-        if (ind < 0 || ind >= array.length) {
+        if (idx < 0 || idx >= array.length) {
             return [false, undefined];
         }
 
-        const getRemoved = () => array.splice(ind, 1)[0];
+        const getRemoved = () => array.splice(idx, 1)[0];
 
         if (typeof callback !== "function") {
             return [true, getRemoved()];
         }
 
-        const ret = callback(ind, array);
+        const ret = callback(idx, array);
 
         if (TypeTester.isPromise(ret)) {
             return ret.then(shouldDelete => {
