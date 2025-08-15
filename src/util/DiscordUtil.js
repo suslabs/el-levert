@@ -2,7 +2,7 @@ import { Buffer } from "node:buffer";
 
 import axios from "axios";
 
-import { ChannelType, AttachmentBuilder } from "discord.js";
+import { EmbedBuilder, ChannelType, AttachmentBuilder } from "discord.js";
 
 import Util from "./Util.js";
 import TypeTester from "./TypeTester.js";
@@ -132,17 +132,21 @@ let DiscordUtil = {
         }
     },
 
-    getEmbed: embed => {
+    getEmbedData: embed => {
         return embed?.data ?? embed;
+    },
+
+    getBuiltEmbed: embed => {
+        return embed instanceof EmbedBuilder ? embed.toJSON() : embed;
     },
 
     stringifyEmbed: (embed, options = {}) => {
         const useHeaders = options.headers ?? false,
             includeURLs = options.urls ?? true;
 
-        embed = DiscordUtil.getEmbed(embed);
+        const embedData = DiscordUtil.getEmbedData(embed);
 
-        if (embed == null) {
+        if (embedData == null) {
             return "";
         }
 
@@ -153,24 +157,24 @@ let DiscordUtil = {
             fieldParts = [],
             footerParts = [];
 
-        if (!Util.empty(embed.author?.name)) {
+        if (!Util.empty(embedData.author?.name)) {
             let icon = "";
 
-            if (includeURLs && !Util.empty(embed.author.icon_url)) {
-                icon = `(${embed.author.icon_url}) `;
+            if (includeURLs && !Util.empty(embedData.author.icon_url)) {
+                icon = `(${embedData.author.icon_url}) `;
             }
 
-            titleParts.push(`${icon}${embed.author.name}`.trim());
+            titleParts.push(`${icon}${embedData.author.name}`.trim());
         }
 
-        if (!Util.empty(embed.title)) {
+        if (!Util.empty(embedData.title)) {
             let url = "";
 
-            if (includeURLs && !Util.empty(embed.url)) {
-                url = ` (${embed.url})`;
+            if (includeURLs && !Util.empty(embedData.url)) {
+                url = ` (${embedData.url})`;
             }
 
-            titleParts.push(`${embed.title}${url}`);
+            titleParts.push(`${embedData.title}${url}`);
         }
 
         if (useHeaders) {
@@ -180,16 +184,16 @@ let DiscordUtil = {
 
         blocks.push(titleParts.join("\n"));
 
-        if (includeURLs && !Util.empty(embed.thumbnail?.url)) {
-            bodyParts.push(`(${embed.thumbnail.url})`);
+        if (includeURLs && !Util.empty(embedData.thumbnail?.url)) {
+            bodyParts.push(`(${embedData.thumbnail.url})`);
         }
 
-        if (!Util.empty(embed.description)) {
-            bodyParts.push(embed.description);
+        if (!Util.empty(embedData.description)) {
+            bodyParts.push(embedData.description);
         }
 
-        if (includeURLs && !Util.empty(embed.image?.url)) {
-            bodyParts.push(`(${embed.image.url})`);
+        if (includeURLs && !Util.empty(embedData.image?.url)) {
+            bodyParts.push(`(${embedData.image.url})`);
         }
 
         if (useHeaders) {
@@ -199,8 +203,8 @@ let DiscordUtil = {
 
         blocks.push(bodyParts.join("\n"));
 
-        if (!Util.empty(embed.fields)) {
-            embed.fields.forEach((field, i) => {
+        if (!Util.empty(embedData.fields)) {
+            embedData.fields.forEach((field, i) => {
                 ArrayUtil.wipeArray(fieldParts);
 
                 if (!Util.empty(field.name)) {
@@ -220,18 +224,18 @@ let DiscordUtil = {
             });
         }
 
-        if (!Util.empty(embed.footer?.text)) {
+        if (!Util.empty(embedData.footer?.text)) {
             let icon = "";
 
-            if (includeURLs && !Util.empty(embed.footer.icon_url)) {
-                icon = `(${embed.footer.icon_url}) `;
+            if (includeURLs && !Util.empty(embedData.footer.icon_url)) {
+                icon = `(${embedData.footer.icon_url}) `;
             }
 
-            footerParts.push(`${icon}${embed.footer.text}`.trim());
+            footerParts.push(`${icon}${embedData.footer.text}`.trim());
         }
 
-        if (!Util.empty(embed.timestamp)) {
-            footerParts.push(`At ${embed.timestamp}`);
+        if (!Util.empty(embedData.timestamp)) {
+            footerParts.push(`At ${embedData.timestamp}`);
         }
 
         if (useHeaders) {
@@ -251,9 +255,9 @@ let DiscordUtil = {
             countAreas = options.areas ?? "all",
             countURLs = options.urls ?? false;
 
-        embed = DiscordUtil.getEmbed(embed);
+        const embedData = DiscordUtil.getEmbedData(embed);
 
-        if (embed == null) {
+        if (embedData == null) {
             return 0;
         }
 
@@ -284,26 +288,26 @@ let DiscordUtil = {
         }
 
         if (countAreas.includes("content")) {
-            size += count(embed.title);
-            size += count(embed.description);
+            size += count(embedData.title);
+            size += count(embedData.description);
         } else if (countAreas.includes("body")) {
-            size += count(embed.description);
+            size += count(embedData.description);
         }
 
         if (countAreas.includes("details")) {
-            size += count(embed.author?.name);
-            size += count(embed.timestamp);
-            size += count(embed.footer?.text);
+            size += count(embedData.author?.name);
+            size += count(embedData.timestamp);
+            size += count(embedData.footer?.text);
 
             if (countType === "chars" && countURLs) {
-                size += count(embed.url);
-                size += count(embed.thumbnail?.url);
-                size += count(embed.image?.url);
+                size += count(embedData.url);
+                size += count(embedData.thumbnail?.url);
+                size += count(embedData.image?.url);
 
-                size += count(embed.author?.icon_url);
-                size += count(embed.author?.url);
+                size += count(embedData.author?.icon_url);
+                size += count(embedData.author?.url);
 
-                size += count(embed.footer?.icon_url);
+                size += count(embedData.footer?.icon_url);
             }
         }
 
@@ -311,7 +315,7 @@ let DiscordUtil = {
             return size;
         }
 
-        const fieldsSize = (embed.fields ?? []).reduce((sum, field, i) => {
+        const fieldsSize = (embedData.fields ?? []).reduce((sum, field, i) => {
             const { name, value, inline } = field;
 
             if (countType === "lines" && i > 0 && inline) {
@@ -363,36 +367,94 @@ let DiscordUtil = {
         return false;
     },
 
-    markdownTrimString(str, charLimit, lineLimit, options = {}) {},
+    mdDelimiters: [
+        { pattern: "```", length: 3 },
+        { pattern: "**", length: 2 },
+        { pattern: "__", length: 2 },
+        { pattern: "~~", length: 2 },
+        { pattern: "||", length: 2 },
+        { pattern: "*", length: 1 },
+        { pattern: "_", length: 1 },
+        { pattern: "`", length: 1 }
+    ],
+
+    markdownTrimString: (str, charLimit, lineLimit) => {
+        let stack = [],
+            contentCount = 0,
+            i = 0,
+            isEscaped = false;
+
+        while (i < str.length && contentCount < charLimit) {
+            if (str[i] === "\\" && !isEscaped) {
+                isEscaped = true;
+                i++;
+
+                continue;
+            }
+
+            let mdFound = false;
+
+            if (!isEscaped) {
+                for (const { pattern, length } of DiscordUtil.mdDelimiters) {
+                    const part = str.slice(i, length);
+
+                    if (part === pattern) {
+                        const hasContentAfter = part.trim().length > 0;
+
+                        if (hasContentAfter) {
+                            stack[stack.length - 1] === pattern ? stack.pop() : stack.push(pattern);
+                        }
+
+                        i += length;
+                        mdFound = true;
+
+                        break;
+                    }
+                }
+            }
+
+            if (!mdFound) {
+                if (!isEscaped) {
+                    contentCount++;
+                }
+
+                isEscaped = false;
+
+                i++;
+            }
+        }
+
+        const suffix = stack.reverse().join("");
+        return Util.trimString(str, charLimit + 2 * suffix.length, lineLimit + 1) + suffix;
+    },
 
     trimEmbed(embed, charLimit, lineLimit, options = {}) {
-        const orig = embed;
-        embed = DiscordUtil.getEmbed(embed);
+        const embedData = DiscordUtil.getEmbedData(embed);
 
         let oversized = options.oversized;
 
         if (oversized == null) {
-            oversized = DiscordUtil.overSizeLimits(embed, charLimit, lineLimit, {
+            oversized = DiscordUtil.overSizeLimits(embedData, charLimit, lineLimit, {
                 areas: "body"
             });
         }
 
         if (oversized) {
-            embed.description = Util.trimString(embed.description, charLimit, lineLimit, {
+            embedData.description = Util.trimString(embedData.description, charLimit, lineLimit, {
                 ...options,
                 oversized
             });
         }
 
         if (
-            DiscordUtil.overSizeLimits(embed, charLimit, lineLimit, {
+            DiscordUtil.overSizeLimits(embedData, charLimit, lineLimit, {
                 areas: "fields"
             })
         ) {
-            delete embed.fields;
+            delete embedData.fields;
         }
 
-        return orig;
+        return embedData;
     },
 
     fetchAttachment: async (msg, responseType = "text", options = {}) => {

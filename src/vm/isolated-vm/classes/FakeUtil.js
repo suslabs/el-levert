@@ -4,9 +4,9 @@ const { ExternalCopy } = ivm;
 import FakeMsg from "./FakeMsg.js";
 import FakeUser from "./FakeUser.js";
 
-import { getClient } from "../../../LevertClient.js";
+import VMErrors from "../VMErrors.js";
 
-import Util from "../../../util/Util.js";
+import { getClient } from "../../../LevertClient.js";
 
 const FakeUtil = Object.freeze({
     getInfo: _ => ({
@@ -20,7 +20,21 @@ const FakeUtil = Object.freeze({
         outLineLimit: getClient().tagVM.outLineLimit
     }),
 
-    delay: Util.delay,
+    delay: (context, ms) => {
+        return new Promise((resolve, reject) => {
+            let resolveTimer, rejectTimer;
+
+            resolveTimer = setTimeout(() => {
+                clearTimeout(rejectTimer);
+                resolve();
+            }, ms);
+
+            rejectTimer = setTimeout(() => {
+                clearTimeout(resolveTimer);
+                reject(new Error(VMErrors.timeout.out));
+            }, context.timeRemaining);
+        });
+    },
 
     fetchTag: async name => {
         if (getClient().tagManager.checkName(name)) {
@@ -126,19 +140,22 @@ const FakeUtil = Object.freeze({
         return new ExternalCopy(users).copyInto();
     },
 
+    /* eslint-disable */
     executeTag: (name, args) => {
-        // eslint-disable-next-line
-        const tag = util.fetchTag(name);
+        const tag = $0.applySyncPromise(undefined, [name]);
 
         if (tag === null) {
             throw new Error(`Tag ${name} doesn't exist`);
-        }
-
-        if ((tag.type & 2) === 0) {
+        } else if ((tag.type & 2) === 0) {
             return tag.body;
         }
 
-        const evalArgs = (args ? String(args) + " " : "") + tag.args;
+        let evalArgs = tag.args;
+
+        if (args != null) {
+            args = Array.isArray(args) ? args.join(" ") : String(args);
+            evalArgs = args + " " + evalArgs;
+        }
 
         const oldTag = globalThis.tag,
             newTag = {
@@ -153,6 +170,7 @@ const FakeUtil = Object.freeze({
             globalThis.tag = oldTag;
         }
     }
+    /* eslint-enable */
 });
 
 export default FakeUtil;

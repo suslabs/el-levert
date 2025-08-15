@@ -22,7 +22,7 @@ function logSending(sed) {
         return;
     }
 
-    const text = DiscordUtil.getEmbed(sed).description;
+    const text = DiscordUtil.getEmbedData(sed).description;
     getLogger().debug(`Sending replaced message:${LoggerUtil.formatLog(text)}`);
 }
 

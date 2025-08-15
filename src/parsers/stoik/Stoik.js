@@ -8,6 +8,10 @@ import StoikError from "../../errors/StoikError.js";
 
 const Stoik = Object.freeze({
     tokenize: equation => {
+        if (typeof equation !== "string") {
+            throw new StoikError("Invalid equation");
+        }
+
         const tokens = equation.split(""),
             res = [];
 
@@ -141,10 +145,12 @@ const Stoik = Object.freeze({
     },
 
     toRPN: input => {
-        if (typeof input === "string") {
+        if (Array.isArray(input)) {
+            input = [...input];
+        } else if (typeof input === "string") {
             input = Stoik.tokenize(input);
         } else {
-            input = [...input];
+            throw new StoikError("Invalid input");
         }
 
         const out = [],
@@ -193,10 +199,12 @@ const Stoik = Object.freeze({
     },
 
     evaluate: input => {
-        if (typeof input === "string") {
+        if (Array.isArray(input)) {
+            input = [...input];
+        } else if (typeof input === "string") {
             input = Stoik.toRPN(Stoik.tokenize(input));
         } else {
-            input = [...input];
+            throw new StoikError("Invalid input");
         }
 
         if (input.length < 1) {

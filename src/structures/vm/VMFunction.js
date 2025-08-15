@@ -17,12 +17,21 @@ class VMFunction {
         execution: ExecutionTypes.bot,
         exits: false,
         errorClass: ExitError,
-        binds: []
+        binds: [],
+        otherRefs: []
     };
+
+    static pathPrefix = "path:";
 
     static registerOptions = {
         arguments: {
             reference: true
+        }
+    };
+
+    static callOptions = {
+        arguments: {
+            copy: true
         }
     };
 
@@ -37,25 +46,37 @@ class VMFunction {
 
         ObjectUtil.setValuesWithDefaults(this, options, this.constructor.defaultValues);
 
+        if (!Object.values(FuncTypes).includes(this.type)) {
+            throw new VMError("Invalid function type provided");
+        }
+
         switch (this.execution) {
             case ExecutionTypes.bot:
                 this._stringFunc = false;
+
+                if (!Util.empty(this.otherRefs)) {
+                    throw new VMError("Other refs are only allowed for script functions");
+                }
+
                 break;
             case ExecutionTypes.script:
                 this._stringFunc = true;
                 break;
+            default:
+                throw new VMError("Invalid execution type provided");
         }
 
         if (this.singleContext) {
             this.ref = this._getRefFunc(propertyMap);
+            this.otherRefs = this._getOtherRefs(propertyMap);
             this._resolved = true;
+
+            this.takesContext = this._takesContext();
             this.registered = false;
         } else {
             this._getRegisterCode();
             this._resolved = false;
         }
-
-        this.takesContext = this._takesContext();
     }
 
     async register(evalContext, propertyMap) {
@@ -66,21 +87,18 @@ class VMFunction {
         evalContext = this.context ?? evalContext;
         propertyMap = this.propertyMap ?? propertyMap;
 
-        const context = evalContext.context,
-            code = this._getRegisterCode();
+        const code = this._getRegisterCode(),
+            vmContext = evalContext.context;
 
-        let ref = this._getRefFunc(propertyMap),
-            takesContext = this._takesContext(ref);
+        let ref = this._stringFunc ? null : this._getRefFunc(propertyMap),
+            otherRefs = this._getOtherRefs(propertyMap);
 
-        if (takesContext) {
+        if (this._takesContext(ref)) {
             ref = FunctionUtil.bindArgs(ref, evalContext);
         }
 
-        if (this._stringFunc) {
-            await context.evalClosure(code);
-        } else {
-            await context.evalClosure(code, [ref], VMFunction.registerOptions);
-        }
+        const evalRefs = [ref].concat(otherRefs).filter(Boolean);
+        await vmContext.evalClosure(code, evalRefs, VMFunction.registerOptions);
 
         if (this.singleContext) {
             this.context = evalContext;
@@ -88,9 +106,19 @@ class VMFunction {
         }
     }
 
-    _resolveReference(propertyMap) {
-        const path = this.ref,
-            { obj: ref, parent } = VMUtil.resolveObject(path, propertyMap);
+    static _resolveReference(ref, propertyMap) {
+        if (typeof ref === "function") {
+            return ref;
+        }
+
+        if (typeof ref !== "string" || !ref.startsWith(VMFunction.pathPrefix)) {
+            throw new VMError("Invalid reference function path");
+        }
+
+        let path = ref.slice(VMFunction.pathPrefix.length),
+            parent;
+
+        ({ obj: ref, parent } = VMUtil.resolveObject(path, propertyMap));
 
         if (typeof ref === "undefined") {
             throw new VMError("Couldn't resolve reference function");
@@ -99,13 +127,25 @@ class VMFunction {
         return ref.bind(parent);
     }
 
-    _resolveBinds(ref, propertyMap) {
-        if (Util.empty(this.binds)) {
-            return ref;
+    static _resolveBinds(func, binds, propertyMap) {
+        if (typeof func !== "function") {
+            throw new VMError("Can't bind unresolved ref function");
         }
 
-        const args = this.binds.map(path => VMUtil.resolveObject(path, propertyMap).obj);
-        return FunctionUtil.bindArgs(ref, args);
+        if (!Array.isArray(binds) || Util.empty(binds)) {
+            return func;
+        }
+
+        const args = binds.map(bind => {
+            if (typeof bind !== "string" || !bind.startsWith(VMFunction.pathPrefix)) {
+                return bind;
+            }
+
+            const path = bind.slice(VMFunction.pathPrefix.length);
+            return VMUtil.resolveObject(path, propertyMap).obj;
+        });
+
+        return FunctionUtil.bindArgs(func, args);
     }
 
     _getRefFunc(propertyMap) {
@@ -113,15 +153,10 @@ class VMFunction {
             return this.ref;
         }
 
-        let ref;
+        let func = VMFunction._resolveReference(this.ref, propertyMap);
+        func = VMFunction._resolveBinds(func, this.binds, propertyMap);
 
-        if (typeof this.ref === "function") {
-            ref = this.ref;
-        } else {
-            ref = this._resolveReference(propertyMap);
-        }
-
-        return this._resolveBinds(ref, propertyMap);
+        return func;
     }
 
     _takesContext(func) {
@@ -129,10 +164,10 @@ class VMFunction {
             return this.takesContext;
         }
 
-        func = this.ref ?? func;
+        func ??= this.ref;
 
         if (typeof func !== "function") {
-            return;
+            return false;
         }
 
         const argNames = FunctionUtil.functionArgumentNames(func);
@@ -155,14 +190,25 @@ class VMFunction {
             func: this._stringFunc ? this.ref : undefined
         };
 
-        const errorOptions = {};
-
-        if (this.exits) {
-            errorOptions.class = this.errorClass;
-        }
+        const errorOptions = {
+            class: this.exits ? this.errorClass : undefined
+        };
 
         this._registerCode = getRegisterCode(options, funcOptions, errorOptions);
         return this._registerCode;
+    }
+
+    _getOtherRefs(propertyMap) {
+        if (!this._stringFunc || this._resolved) {
+            return [];
+        }
+
+        return this.otherRefs.map(ref => {
+            let func = VMFunction._resolveReference(ref.ref, propertyMap);
+            func = VMFunction._resolveBinds(func, ref.binds ?? [], propertyMap);
+
+            return func;
+        });
     }
 }
 

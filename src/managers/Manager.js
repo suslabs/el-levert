@@ -26,7 +26,7 @@ class Manager {
             return;
         }
 
-        return this._childLoad(...args);
+        return this._childLoad.apply(this, args);
     }
 
     _unload(...args) {
@@ -38,7 +38,7 @@ class Manager {
             return;
         }
 
-        return this._childUnload(...args);
+        return this._childUnload.apply(this, args);
     }
 }
 

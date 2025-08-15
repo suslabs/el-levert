@@ -165,7 +165,7 @@ class Loader {
         }
 
         this.result = {};
-        const res = this._childLoad(...args);
+        const res = this._childLoad.apply(this, args);
 
         if (TypeTester.isPromise(res)) {
             return this._loadAsync(res);
@@ -197,7 +197,7 @@ class Loader {
         }
 
         this.result = {};
-        const res = this._childWrite(data, ...args);
+        const res = this._childWrite.apply(this, [data].concat(args));
 
         if (TypeTester.isPromise(res)) {
             return this._writeAsync(res, data);

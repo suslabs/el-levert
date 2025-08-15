@@ -1,6 +1,7 @@
 import { ChannelType } from "discord.js";
 
-import MessageHandler from "./MessageHandler.js";
+import Handler from "../Handler.js";
+import MessageTracker from "./tracker/MessageTracker.js";
 
 import { getClient, getLogger } from "../../LevertClient.js";
 
@@ -10,6 +11,16 @@ import RegexUtil from "../../util/misc/RegexUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 
 import normalizeText from "../../util/misc/normalizeText.js";
+
+class ReactionTracker extends MessageTracker {
+    static listNames = {
+        reaction: "reactions"
+    };
+
+    static {
+        this._init();
+    }
+}
 
 function logParensUsage(msg, parens) {
     const s = parens.total > 1 ? "e" : "i";
@@ -34,13 +45,13 @@ function logReactTime(t1) {
     getLogger().debug(`Reacting took ${Util.formatNumber(Util.timeDelta(t2, t1))} ms.`);
 }
 
-function logRemove(msg, count) {
+function logRemove(msg) {
     if (!getLogger().isDebugEnabled()) {
         return;
     }
 
     getLogger().debug(
-        `Removing ${count} reactions from message ${msg.id} sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)}).`
+        `Removing reactions from message ${msg.id} sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)}).`
     );
 }
 
@@ -49,16 +60,37 @@ function logRemoveTime(t1) {
     getLogger().debug(`Removing reactions took ${Util.formatNumber(Util.timeDelta(t2, t1))} ms.`);
 }
 
-class ReactionHandler extends MessageHandler {
+class ReactionHandler extends Handler {
     static $name = "reactionHandler";
     priority = -1;
 
     static emojiChars = ":;=-x+";
 
     constructor(enabled) {
-        super(enabled, false);
+        super(enabled);
 
         this.multipleReacts = getClient().reactions.multipleReacts ?? false;
+
+        this.reactionTracker = new ReactionTracker(20);
+    }
+
+    async react(msg, emoji) {
+        if (emoji == null) {
+            return;
+        }
+
+        const react = await msg.react(emoji);
+        this.reactionTracker.addReaction(msg, react);
+    }
+
+    async removeReacts(msg) {
+        logRemove(msg);
+        const t1 = performance.now();
+
+        let botId = getClient().client.user.id;
+        await this.reactionTracker.deleteWithCallback(msg, "reaction", react => react.users.remove(botId));
+
+        logRemoveTime(t1);
     }
 
     async execute(msg) {
@@ -79,32 +111,10 @@ class ReactionHandler extends MessageHandler {
         if (reacted && !this.multipleReacts) {
             return true;
         } else if (this.enableParens) {
-            reacted ||= await this._parensReact(content, msg);
+            reacted |= await this._parensReact(content, msg);
         }
 
         return reacted;
-    }
-
-    async removeReacts(msg) {
-        const t1 = performance.now();
-
-        let botId = getClient().client.user.id,
-            botReacts = msg.reactions.cache.filter(react => react.users.cache.has(botId));
-
-        if (Util.empty(botReacts)) {
-            return;
-        }
-
-        botReacts = Array.from(botReacts.values());
-        logRemove(msg, botReacts.length);
-
-        try {
-            await Promise.all(botReacts.map(react => react.users.remove(botId)));
-        } catch (err) {
-            getLogger().error("Failed to remove reactions from message:", err);
-        }
-
-        logRemoveTime(t1);
     }
 
     async resubmit(msg) {
@@ -138,11 +148,7 @@ class ReactionHandler extends MessageHandler {
     }
 
     static _getEmoji(reactList) {
-        if (Util.single(reactList)) {
-            return Util.first(reactList);
-        }
-
-        return Util.randomElement(reactList);
+        return Util.single(reactList) ? Util.first(reactList) : Util.randomElement(reactList);
     }
 
     _setWords() {
@@ -213,10 +219,10 @@ class ReactionHandler extends MessageHandler {
 
         logParensUsage(msg, parens);
 
-        const emojis = [...this.parens.left.slice(0, right), ...this.parens.right.slice(0, left)];
+        const emojis = this.parens.left.slice(0, right).concat(this.parens.right.slice(0, left));
 
         try {
-            await Promise.all(emojis.map(emoji => msg.react(emoji)));
+            await Promise.all(emojis.map(emoji => this.react(msg, emoji)));
         } catch (err) {
             getLogger().error("Failed to react to message:", err);
         }
@@ -243,12 +249,9 @@ class ReactionHandler extends MessageHandler {
 
         let foundOne = false;
 
-        for (let [word, index] of foundWords) {
-            while (index !== -1) {
-                const startValid = index === 0 || str[index - 1] === " ",
-                    endValid = index + word.length === str.length || str[index + word.length] === " ";
-
-                if (startValid && endValid) {
+        for (let [word, idx] of foundWords) {
+            while (idx !== -1) {
+                if (RegexUtil.wordStart(str, idx) && RegexUtil.wordEnd(str, idx + word.length - 1)) {
                     counts[word]++;
                     foundOne = true;
 
@@ -257,7 +260,7 @@ class ReactionHandler extends MessageHandler {
                     }
                 }
 
-                index = str.indexOf(word, index + 1);
+                idx = str.indexOf(word, idx + word.length);
             }
         }
 
@@ -275,10 +278,7 @@ class ReactionHandler extends MessageHandler {
 
         for (const list of reactLists) {
             const emoji = ReactionHandler._getEmoji(list);
-
-            if (typeof emoji !== "undefined") {
-                await msg.react(emoji);
-            }
+            await this.react(msg, emoji);
         }
     }
 
@@ -292,7 +292,7 @@ class ReactionHandler extends MessageHandler {
             samples.forEach(emoji => typeof emoji !== "undefined" && emojis.add(emoji));
         }
 
-        await Promise.all(emojis.map(emoji => msg.react(emoji)));
+        await Promise.all(emojis.map(emoji => this.react(msg, emoji)));
     }
 
     async _funnyReact(content, msg) {

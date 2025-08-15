@@ -1,4 +1,4 @@
-import { EmbedBuilder, RESTJSONErrorCodes } from "discord.js";
+import { RESTJSONErrorCodes } from "discord.js";
 
 import Handler from "../Handler.js";
 
@@ -12,20 +12,24 @@ import TypeTester from "../../util/TypeTester.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import VMUtil from "../../util/vm/VMUtil.js";
 
+class ReplyTracker extends MessageTracker {
+    static listNames = {
+        reply: "replies"
+    };
+
+    static {
+        this._init();
+    }
+}
+
 class MessageHandler extends Handler {
-    constructor(enabled, hasMessageTracker = true, hasUserTracker = false, options = {}) {
+    constructor(enabled, hasReplyTracker = true, hasUserTracker = false, options = {}) {
         super(enabled, options);
 
-        this.hasMessageTracker = hasMessageTracker;
+        this.hasReplyTracker = hasReplyTracker;
         this.hasUserTracker = hasUserTracker;
 
-        this.useConfigLimits ??= false;
-
-        this._childDelete = this.delete;
-        this.delete = this._delete;
-
-        this._childResubmit = this.resubmit;
-        this.resubmit = this._resubmit;
+        this.useConfigLimits = options.useConfigLimits ?? false;
     }
 
     async reply(msg, data, options = {}) {
@@ -45,18 +49,28 @@ class MessageHandler extends Handler {
             msgReply = await this._reply(msg, out);
         }
 
-        this.messageTracker.addReply(msg.id, msgReply);
+        if (this.hasReplyTracker) {
+            this.replyTracker.addReply(msg, msgReply);
+        }
+    }
+
+    async delete(msg) {
+        if (!this.hasReplyTracker) {
+            return this._defaultDelete();
+        }
+
+        return await this.replyTracker.deleteWithCallback(msg, "reply", msg => msg.delete());
     }
 
     load() {
-        if (this.hasMessageTracker) {
-            this.outCharLimit = getClient().config.outCharLimit;
-            this.outLineLimit = getClient().config.outLineLimit;
+        this.outCharLimit = getClient().config.outCharLimit;
+        this.outLineLimit = getClient().config.outLineLimit;
 
-            this.embedCharLimit = getClient().config.embedCharLimit;
-            this.embedLineLimit = getClient().config.embedLineLimit;
+        this.embedCharLimit = getClient().config.embedCharLimit;
+        this.embedLineLimit = getClient().config.embedLineLimit;
 
-            this.messageTracker = new MessageTracker();
+        if (this.hasReplyTracker) {
+            this.replyTracker = new ReplyTracker(100);
         }
 
         if (this.hasUserTracker) {
@@ -66,8 +80,8 @@ class MessageHandler extends Handler {
     }
 
     unload() {
-        if (this.hasMessageTracker) {
-            this.messageTracker.clearMsgs();
+        if (this.hasReplyTracker) {
+            this.replyTracker.clearTrackedMsgs();
         }
 
         if (this.hasUserTracker) {
@@ -88,7 +102,7 @@ class MessageHandler extends Handler {
             content = VMUtil.formatOutput(rawContent)?.trim();
 
         const rawEmbeds = msgData ? data.embeds : undefined,
-            embeds = rawEmbeds?.filter(Boolean).map(embed => (embed instanceof EmbedBuilder ? embed.toJSON() : embed));
+            embeds = rawEmbeds?.filter(Boolean).map(embed => DiscordUtil.getBuiltEmbed(embed));
 
         return { out, content, embeds };
     }
@@ -354,93 +368,6 @@ class MessageHandler extends Handler {
         } catch (err) {
             getLogger().error("Reporting reply error failed:", err);
         }
-    }
-
-    _delete(msg) {
-        if (!this.enabled) {
-            return false;
-        }
-
-        let deleteFunc;
-
-        if (typeof this._childDelete === "function") {
-            deleteFunc = this._childDelete;
-        } else if (this.hasMessageTracker) {
-            deleteFunc = this._deleteReply;
-        } else {
-            deleteFunc = this._defaultDelete;
-        }
-
-        return deleteFunc.call(this, msg);
-    }
-
-    _defaultDelete() {
-        return false;
-    }
-
-    async _msgTrackerDelete(msg, itemName, deleteFunc) {
-        if (!this.hasMessageTracker) {
-            return false;
-        }
-
-        const funcName = `delete${Util.capitalize(itemName)}`;
-
-        let sent = this.messageTracker[funcName](msg.id);
-
-        if (sent === null) {
-            return false;
-        }
-
-        if (Util.single(sent)) {
-            sent = Util.first(sent);
-
-            try {
-                await deleteFunc(sent);
-            } catch (err) {
-                getLogger().error(`Could not delete message: ${sent.id}`, err);
-            }
-        } else {
-            await Promise.all(
-                sent.map(msg =>
-                    Promise.resolve(deleteFunc(msg)).catch(err => {
-                        getLogger().error(`Could not delete message ${msg.id}:`, err);
-                    })
-                )
-            );
-        }
-
-        return true;
-    }
-
-    async _deleteReply(msg) {
-        return await this._msgTrackerDelete(msg, "reply", msg => msg.delete());
-    }
-
-    _resubmit(msg) {
-        if (!this.enabled) {
-            return false;
-        }
-
-        let resubmitFunc;
-
-        if (typeof this._childResubmit === "function") {
-            resubmitFunc = this._childResubmit;
-        } else {
-            resubmitFunc = this._defaultResubmit;
-        }
-
-        return resubmitFunc.call(this, msg);
-    }
-
-    async _defaultResubmit(msg) {
-        if (!this.enabled) {
-            return false;
-        }
-
-        let success = await this.delete(msg);
-        success ||= await this.execute(msg);
-
-        return success;
     }
 }
 

@@ -277,13 +277,11 @@ class JsonLoader extends TextLoader {
 
     _writeJson(data, options) {
         const jsonData = this.stringifyData(data, options);
-
         return super.write(jsonData);
     }
 
     _handleAppend(data, options) {
         const newData = { ...this.data, ...data };
-
         return this.write(newData, options);
     }
 }

@@ -96,8 +96,8 @@ const Codegen = {
         return jsonStr.replace(/"([^"]+)":/g, "$1:");
     },
 
-    equals: (name, value, flag = true, strict = true) => {
-        const check = flag ? "=" : "!",
+    equals: (name, value, is = true, strict = true) => {
+        const check = is ? "=" : "!",
             equals = "=" + (strict ? "=" : "");
 
         return `${name} ${check}${equals} ${value}`;

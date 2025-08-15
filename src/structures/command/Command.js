@@ -3,6 +3,7 @@ import { getClient } from "../../LevertClient.js";
 import TextCommand from "./TextCommand.js";
 
 import ArrayUtil from "../../util/ArrayUtil.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
 
 class Command extends TextCommand {
     static defaultValues = {
@@ -80,7 +81,7 @@ class Command extends TextCommand {
     }
 
     async execute(args, context = {}, options = {}) {
-        context = { ...context };
+        context = ObjectUtil.shallowClone(context);
 
         return await super.execute(args, context, async () => {
             const perm = await this._checkPermission(context.msg, options);

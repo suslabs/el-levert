@@ -1,5 +1,6 @@
 import FakeUser from "./FakeUser.js";
 
+import DiscordUtil from "../../../util/DiscordUtil.js";
 import VMUtil from "../../../util/vm/VMUtil.js";
 
 class FakeMsg {
@@ -17,10 +18,7 @@ class FakeMsg {
             channel = msg.channel,
             guild = channel?.guild;
 
-        const messageIds = channel?.messages?.cache
-            .last(FakeMsg.messageCount)
-            .map(msg => msg.id)
-            .reverse();
+        const messageIds = channel?.messages?.cache.last(FakeMsg.messageCount).map(msg => msg.id);
 
         this.fixedMsg = VMUtil.removeCircularReferences({
             channelId: msg.channelId,
@@ -34,7 +32,7 @@ class FakeMsg {
             pinned: msg.pinned,
             tts: msg.tts,
             nonce: msg.nonce,
-            embeds: msg.embeds,
+            embeds: msg.embeds.map(embed => DiscordUtil.getEmbedData(embed)),
             components: msg.components,
             attachments: msg.attachments && Array.from(msg.attachments.values()),
             stickers: msg.stickers && Array.from(msg.stickers.values()),

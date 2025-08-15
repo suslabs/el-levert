@@ -4,22 +4,22 @@ import TypeTester from "./TypeTester.js";
 import UtilError from "../errors/UtilError.js";
 
 const ObjectUtil = Object.freeze({
-    filterObject: (obj, f1, f2) => {
-        f1 ??= () => true;
-        f2 ??= () => true;
+    filterObject: (obj, keyFunc, valFunc) => {
+        keyFunc ??= () => true;
+        valFunc ??= () => true;
 
         const entries = Object.entries(obj),
-            filtered = entries.filter(([key, value], i) => f1(key, i) && f2(value, i));
+            filtered = entries.filter(([key, value], i) => keyFunc(key, i) && valFunc(value, i));
 
         return Object.fromEntries(filtered);
     },
 
-    rewriteObject: (obj, f1, f2) => {
-        f1 ??= key => key;
-        f2 ??= value => value;
+    rewriteObject: (obj, keyFunc, valFunc) => {
+        keyFunc ??= key => key;
+        valFunc ??= value => value;
 
         const entries = Object.entries(obj),
-            newEntries = entries.map(([key, value], i) => [f1(key, i), f2(value, i)]);
+            newEntries = entries.map(([key, value], i) => [keyFunc(key, i), valFunc(value, i)]);
 
         return Object.fromEntries(newEntries);
     },
@@ -37,15 +37,17 @@ const ObjectUtil = Object.freeze({
         const values = {};
 
         for (const key of Object.keys(defaults)) {
-            if (source[key] == null) {
-                let defaultValue = defaults[key];
-
-                if (typeof defaultValue !== "function") {
-                    defaultValue = structuredClone(defaultValue);
-                }
-
-                values[key] = defaultValue;
+            if (source[key] != null) {
+                continue;
             }
+
+            let defaultValue = defaults[key];
+
+            if (typeof defaultValue !== "function") {
+                defaultValue = structuredClone(defaultValue);
+            }
+
+            values[key] = defaultValue;
         }
 
         return Object.assign(target, source, values);
@@ -56,7 +58,7 @@ const ObjectUtil = Object.freeze({
         let enumerable, nonEnumerable, both, keys;
 
         if (options == null) {
-            options = ObjectUtil._validPropOptions.slice(0, 1);
+            options = ObjectUtil._validPropOptions[0];
             both = true;
         } else {
             if (!Array.isArray(options)) {
@@ -108,14 +110,13 @@ const ObjectUtil = Object.freeze({
         return target;
     },
 
-    shallowClone: (obj, options) => {
+    shallowClone: (obj, options = "keys") => {
         const clone = Object.create(Object.getPrototypeOf(obj));
         return ObjectUtil.assign(clone, obj, options);
     },
 
     defineProperty(obj, factory, ...args) {
-        let props = [].concat(factory(...args));
-        props = props.filter(Boolean);
+        const props = [].concat(factory(...args)).filter(Boolean);
 
         for (const prop of props) {
             let { propName, desc } = prop;
@@ -124,8 +125,7 @@ const ObjectUtil = Object.freeze({
                 throw new UtilError("Invalid property recieved from factory");
             }
 
-            desc = { ...desc };
-
+            desc = ObjectUtil.shallowClone(desc);
             desc.enumerable ??= false;
             desc.configurable ??= false;
 

@@ -3,8 +3,18 @@ import TypeTester from "../../../util/TypeTester.js";
 import ArrayUtil from "../../../util/ArrayUtil.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
 
+import { getLogger } from "../../../LevertClient.js";
+
+import HandlerError from "../../../errors/HandlerError.js";
+
 class MessageTracker {
-    constructor(trackLimit = 100) {
+    static listNames = {};
+
+    constructor(trackLimit = 50) {
+        if (!this.constructor._ready) {
+            throw new HandlerError("Tracker static initializer hasn't been run");
+        }
+
         this.trackLimit = trackLimit;
         this.enableTracking = trackLimit > 0;
 
@@ -13,15 +23,15 @@ class MessageTracker {
         }
     }
 
-    getData(triggerId) {
-        triggerId = MessageTracker._getTriggerId(triggerId);
+    getData(triggerMsg) {
+        const triggerId = MessageTracker._getTriggerId(triggerMsg);
 
         const data = this._getData(triggerId);
         return data ?? this.constructor._emptyData;
     }
 
-    deleteData(triggerId) {
-        triggerId = MessageTracker._getTriggerId(triggerId);
+    deleteData(triggerMsg) {
+        const triggerId = MessageTracker._getTriggerId(triggerMsg);
 
         if (!this.enableTracking || triggerId == null) {
             return false;
@@ -30,7 +40,39 @@ class MessageTracker {
         return this.trackedMsgs.delete(triggerId);
     }
 
-    clearMsgs() {
+    async deleteWithCallback(triggerMsg, itemName, callback) {
+        const funcName = `delete${Util.capitalize(itemName)}`,
+            items = this[funcName](triggerMsg);
+
+        if (items === null) {
+            return false;
+        }
+
+        const triggerId = MessageTracker._getTriggerId(triggerMsg);
+
+        if (Util.single(items)) {
+            const item = Util.first(items);
+
+            try {
+                await callback(item);
+            } catch (err) {
+                getLogger().error(`Could not delete ${itemName} for message: ${triggerId}`, err);
+            }
+        } else {
+            await Promise.all(
+                items.map(item =>
+                    Promise.resolve(callback(item)).catch(err => {
+                        const listName = this.constructor.listNames[itemName];
+                        getLogger().error(`Could not delete ${listName} for message: ${triggerId}`, err);
+                    })
+                )
+            );
+        }
+
+        return true;
+    }
+
+    clearTrackedMsgs() {
         if (!this.enableTracking) {
             return false;
         }
@@ -39,27 +81,21 @@ class MessageTracker {
         return true;
     }
 
-    static _listProps = ["replies"];
-
-    static _itemNames = {
-        replies: "reply"
-    };
+    static _ready = false;
 
     static _createData(triggerId) {
         return {
-            triggerId,
+            trigger: triggerId,
             ...Object.fromEntries(this._listProps.map(prop => [prop, []]))
         };
     }
-
-    static _emptyData = Object.freeze(this._createData(null));
 
     static _dataEmpty(data) {
         if (data == null) {
             return true;
         }
 
-        return data.triggerId === null || this._listProps.every(prop => Util.empty(data[prop]));
+        return data.trigger === null || this._listProps.every(prop => Util.empty(data[prop]));
     }
 
     _getData(triggerId) {
@@ -82,7 +118,7 @@ class MessageTracker {
             return data;
         }
 
-        data = MessageTracker._createData(triggerId);
+        data = this.constructor._createData(triggerId);
 
         this._pruneOldData();
         this.trackedMsgs.set(triggerId, data);
@@ -95,7 +131,8 @@ class MessageTracker {
             list = data[listName];
 
         if (Array.isArray(item)) {
-            list.push(...item);
+            const items = item;
+            list.push(...items);
         } else {
             list.push(item);
         }
@@ -110,10 +147,11 @@ class MessageTracker {
         }
 
         if (Array.isArray(newItem)) {
-            const oldList = list;
-            data[listName] = newItem;
+            const newItems = newItem,
+                oldItems = list;
 
-            return [oldList, data];
+            data[listName] = newItems;
+            return [oldItems, data];
         } else {
             const idx = ArrayUtil._indexFunc(list, oldItem);
 
@@ -147,14 +185,18 @@ class MessageTracker {
         }
     }
 
-    static _getTriggerId(triggerId) {
-        return TypeTester.isObject(triggerId) ? triggerId.id : triggerId;
+    static _getTriggerId(triggerMsg) {
+        if (TypeTester.isObject(triggerMsg)) {
+            return triggerMsg.id ?? triggerMsg;
+        } else {
+            return triggerMsg;
+        }
     }
 
     static _addItemFunc(listName, itemName) {
         const funcName = `add${Util.capitalize(itemName)}`,
-            func = function addItem(triggerId, item) {
-                triggerId = MessageTracker._getTriggerId(triggerId);
+            func = function addItem(triggerMsg, item) {
+                const triggerId = MessageTracker._getTriggerId(triggerMsg);
 
                 if (!this.enableTracking || triggerId == null) {
                     return false;
@@ -172,8 +214,8 @@ class MessageTracker {
 
     static _editItemFunc(listName, itemName) {
         const funcName = `edit${Util.capitalize(itemName)}`,
-            func = function editItem(triggerId, oldItem, newItem) {
-                triggerId = MessageTracker._getTriggerId(triggerId);
+            func = function editItem(triggerMsg, oldItem, newItem) {
+                const triggerId = MessageTracker._getTriggerId(triggerMsg);
 
                 if (!this.enableTracking || triggerId == null) {
                     return null;
@@ -189,7 +231,7 @@ class MessageTracker {
                     let data;
                     [oldItem, data] = res;
 
-                    if (MessageTracker._dataEmpty(data)) {
+                    if (this.constructor._dataEmpty(data)) {
                         this.trackedMsgs.delete(triggerId);
                     }
                 } else {
@@ -207,8 +249,8 @@ class MessageTracker {
 
     static _deleteItemFunc(listName, itemName) {
         const funcName = `delete${Util.capitalize(itemName)}`,
-            func = function deleteItem(triggerId, item) {
-                triggerId = MessageTracker._getTriggerId(triggerId);
+            func = function deleteItem(triggerMsg, item) {
+                const triggerId = MessageTracker._getTriggerId(triggerMsg);
 
                 if (!this.enableTracking || triggerId == null) {
                     return null;
@@ -223,7 +265,7 @@ class MessageTracker {
                 let data;
                 [item, data] = res;
 
-                if (MessageTracker._dataEmpty(data)) {
+                if (this.constructor._dataEmpty(data)) {
                     this.trackedMsgs.delete(triggerId);
                 }
 
@@ -241,17 +283,20 @@ class MessageTracker {
     }
 
     static _registerListFuncs() {
-        for (const listName of this._listProps) {
-            const itemName = this._itemNames[listName];
-
+        for (const [itemName, listName] of Object.entries(this.listNames)) {
             this._registerFunc(this._addItemFunc, listName, itemName);
             this._registerFunc(this._editItemFunc, listName, itemName);
             this._registerFunc(this._deleteItemFunc, listName, itemName);
         }
     }
 
-    static {
+    static _init() {
+        this._listProps = Object.values(this.listNames);
+        this._emptyData = Object.freeze(this._createData(null));
+
         this._registerListFuncs();
+
+        this._ready = true;
     }
 }
 

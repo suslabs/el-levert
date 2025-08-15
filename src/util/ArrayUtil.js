@@ -266,8 +266,8 @@ const ArrayUtil = Object.freeze({
             case "number":
                 return item;
             case "function":
-                const pred = item;
-                return array.findIndex(pred);
+                const callback = item;
+                return array.findIndex(callback);
             default:
                 return array.indexOf(item);
         }

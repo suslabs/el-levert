@@ -348,19 +348,19 @@ let Util = {
     },
 
     findNthCharacter: (str, char, n) => {
-        let index = -1;
+        let idx = -1;
 
         while (n > 0) {
-            index = str.indexOf(char, index + 1);
+            idx = str.indexOf(char, idx + 1);
 
-            if (index === -1) {
+            if (idx === -1) {
                 return -1;
             }
 
             n--;
         }
 
-        return index;
+        return idx;
     },
 
     hasPrefix: (prefixes, str) => {

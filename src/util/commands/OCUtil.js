@@ -254,11 +254,11 @@ const OCUtil = {
 };
 
 {
-    OCUtil.tiers = OCUtil.voltageNames.map((name, index) => {
+    OCUtil.tiers = OCUtil.voltageNames.map((name, idx) => {
         return {
-            tier: index + 1,
+            tier: idx + 1,
             name,
-            eu_threshold: OCUtil.BASE_EU * Math.pow(OCUtil.EU_MULT, index)
+            eu_threshold: OCUtil.BASE_EU * Math.pow(OCUtil.EU_MULT, idx)
         };
     });
 }

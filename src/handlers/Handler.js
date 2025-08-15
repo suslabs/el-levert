@@ -26,7 +26,13 @@ class Handler {
         this.unload = this._unload;
 
         this._childExecute = this.execute;
-        this.execute = this._execute.bind(this);
+        this.execute = this._execute;
+
+        this._childDelete = this.delete;
+        this.delete = this._delete;
+
+        this._childResubmit = this.resubmit;
+        this.resubmit = this._resubmit;
     }
 
     reply(data) {}
@@ -36,7 +42,50 @@ class Handler {
             return false;
         }
 
-        return this._childExecute(...args) ?? false;
+        return this._childExecute.apply(this, args) ?? false;
+    }
+
+    _delete(...args) {
+        if (!this.enabled) {
+            return false;
+        }
+
+        let deleteFunc;
+
+        if (typeof this._childDelete === "function") {
+            deleteFunc = this._childDelete;
+        } else {
+            deleteFunc = this._defaultDelete;
+        }
+
+        return deleteFunc.apply(this, args);
+    }
+
+    _defaultDelete() {
+        return false;
+    }
+
+    _resubmit(...args) {
+        if (!this.enabled) {
+            return false;
+        }
+
+        let resubmitFunc;
+
+        if (typeof this._childResubmit === "function") {
+            resubmitFunc = this._childResubmit;
+        } else {
+            resubmitFunc = this._defaultResubmit;
+        }
+
+        return resubmitFunc.apply(this, args);
+    }
+
+    async _defaultResubmit(...args) {
+        let success = await this.delete(...args);
+        success |= await this.execute(...args);
+
+        return success;
     }
 
     _load(...args) {
@@ -48,7 +97,7 @@ class Handler {
             return;
         }
 
-        return this._childLoad(...args);
+        return this._childLoad.apply(this, args);
     }
 
     _unload(...args) {
@@ -60,7 +109,7 @@ class Handler {
             return;
         }
 
-        return this._childUnload(...args);
+        return this._childUnload.apply(this, args);
     }
 
     async _addDelay(t1, delta = false) {

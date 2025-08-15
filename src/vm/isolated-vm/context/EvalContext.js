@@ -35,8 +35,11 @@ class EvalContext {
     }
 
     constructor(options, inspectorOptions = {}) {
-        this.memLimit = options.memLimit;
-        this.timeLimit = options.timeLimit;
+        const invalidMemLimit = isNaN(options.memLimit) || options.memLimit <= 0;
+        this.memLimit = invalidMemLimit ? -1 : options.memLimit;
+
+        const invalidTimeLimit = isNaN(options.timeLimit) || options.timeLimit <= 0;
+        this.timeLimit = invalidTimeLimit ? -1 : options.timeLimit;
 
         this._setupInspector(inspectorOptions);
 
@@ -52,7 +55,24 @@ class EvalContext {
         return this.isolate;
     }
 
+    get timeElapsed() {
+        this._checkIsolate();
+        return Number(this.isolate.wallTime / 1_000_000n);
+    }
+
+    get timeRemaining() {
+        this._checkIsolate();
+
+        if (this.timeLimit === -1) {
+            return NaN;
+        }
+
+        return Util.clamp(this.timeLimit - this.timeElapsed, 0);
+    }
+
     async setVMObject(name, _class, params, targetProp = "this") {
+        this._checkIsolate();
+
         const obj = new _class(...params),
             targetObj = targetProp === "this" ? obj : obj[targetProp];
 
@@ -77,6 +97,7 @@ class EvalContext {
     }
 
     async compileScript(code, setField = true) {
+        this._checkIsolate();
         code = this.inspector.getDebuggerCode(code);
 
         const script = await this.isolate.compileScript(code, {
@@ -91,6 +112,7 @@ class EvalContext {
     }
 
     async runScript(code) {
+        this._checkIsolate();
         const compileNow = typeof code !== "undefined";
 
         let script;
@@ -98,7 +120,7 @@ class EvalContext {
         if (compileNow) {
             script = await this.compileScript(code, false);
         } else if (typeof this._script === "undefined") {
-            throw new VMError("Can't run script, no script was compiled");
+            throw new VMError("Can't run, no script was compiled");
         } else {
             script = this._script;
         }
@@ -106,11 +128,16 @@ class EvalContext {
         await this.inspector.waitForConnection();
 
         try {
-            return await script.run(this.context, {
-                timeout: this.timeLimit,
+            const config = {
                 promise: EvalContext.allowPromiseReturn,
                 copy: true
-            });
+            };
+
+            if (this.timeLimit !== -1) {
+                config.timeout = this.timeLimit;
+            }
+
+            return await script.run(this.context, config);
         } catch (err) {
             if (this.enableInspector || VMErrors.custom.includes(err.name)) {
                 throw err;
@@ -130,6 +157,44 @@ class EvalContext {
         this._disposeVMObjects();
         this._disposeScript();
         this._disposeIsolate();
+    }
+
+    static _constructFunc(objName, funcName, properties) {
+        const funcProperties = {
+            singleContext: false,
+            parent: objName,
+            name: funcName
+        };
+
+        return new VMFunction({
+            ...funcProperties,
+            ...properties
+        });
+    }
+
+    static _constructFuncs(objMap, names) {
+        return Object.entries(objMap).flatMap(([objKey, funcMap]) => {
+            if (funcMap == null) {
+                throw new VMError("Invalid object map");
+            }
+
+            const objName = names.global[objKey],
+                funcNames = names.func[objKey];
+
+            if (typeof objName === "undefined") {
+                throw new VMError(`Object ${objKey} not found`);
+            }
+
+            return Object.entries(funcMap).map(([funcKey, props]) => {
+                const funcName = funcNames[funcKey];
+
+                if (typeof funcName === "undefined") {
+                    throw new VMError(`Function ${funcKey} not found`);
+                }
+
+                return this._constructFunc(objName, funcName, props);
+            });
+        });
     }
 
     _getScriptName() {
@@ -174,16 +239,13 @@ class EvalContext {
 
     _setPropertyMap() {
         const propertyMap = new Map();
-
         propertyMap.set("msg", this.msg);
 
         this._propertyMap = propertyMap;
     }
 
     async _registerFuncs() {
-        for (const func of EvalContext.functions) {
-            await func.register(this, this._propertyMap);
-        }
+        await Promise.all(EvalContext.functions.map(func => func.register(this, this._propertyMap)));
     }
 
     async _setupContext(values) {
@@ -205,10 +267,15 @@ class EvalContext {
     }
 
     async _setupIsolate(values) {
-        this.isolate = new Isolate({
-            memoryLimit: this.memLimit,
+        const config = {
             inspector: this.enableInspector
-        });
+        };
+
+        if (this.memLimit !== -1) {
+            this.memoryLimit = this.memLimit;
+        }
+
+        this.isolate = new Isolate(config);
 
         await this._setupContext(values);
         this.inspector.create(this.isolate);
@@ -256,42 +323,10 @@ class EvalContext {
         delete this.isolate;
     }
 
-    static _constructFunc(objName, funcName, properties) {
-        const funcProperties = {
-            singleContext: false,
-            parent: objName,
-            name: funcName
-        };
-
-        return new VMFunction({
-            ...funcProperties,
-            ...properties
-        });
-    }
-
-    static _constructFuncs(objMap, names) {
-        return Object.entries(objMap).flatMap(([objKey, funcMap]) => {
-            if (funcMap == null) {
-                throw new VMError("Invalid object map");
-            }
-
-            const objName = names.global[objKey],
-                funcNames = names.func[objKey];
-
-            if (typeof objName === "undefined") {
-                throw new VMError(`Object ${objKey} not found`);
-            }
-
-            return Object.entries(funcMap).map(([funcKey, props]) => {
-                const funcName = funcNames[funcKey];
-
-                if (typeof funcName === "undefined") {
-                    throw new VMError(`Function ${funcKey} not found`);
-                }
-
-                return this._constructFunc(objName, funcName, props);
-            });
-        });
+    _checkIsolate() {
+        if (typeof this.isolate === "undefined") {
+            throw new VMError("Isolate not initialized");
+        }
     }
 }
 

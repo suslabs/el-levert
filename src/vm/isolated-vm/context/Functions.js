@@ -2,7 +2,7 @@ import { FuncTypes, ExecutionTypes } from "../../../structures/vm/FuncTypes.js";
 
 import FakeMsg from "../classes/FakeMsg.js";
 import FakeUtil from "../classes/FakeUtil.js";
-import FakeAxios from "../classes/FakeAxios.js";
+import FakeHttp from "../classes/FakeHttp.js";
 import FakeVM from "../classes/FakeVM.js";
 
 import ManevraError from "../functionErrors/ManevraError.js";
@@ -25,6 +25,14 @@ const Functions = Object.freeze({
         getWallTime: {
             type: FuncTypes.regular,
             ref: FakeVM.getWallTime
+        },
+        timeElapsed: {
+            type: FuncTypes.regular,
+            ref: FakeVM.timeElapsed
+        },
+        timeRemaining: {
+            type: FuncTypes.regular,
+            ref: FakeVM.timeRemaining
         }
     },
 
@@ -48,12 +56,12 @@ const Functions = Object.freeze({
         fetchMessage: {
             type: FuncTypes.syncPromise,
             ref: FakeUtil.fetchMessage,
-            binds: ["msg.msg.author.id", "msg.msg.channelId"]
+            binds: ["path:msg.msg.author.id", "path:msg.msg.channelId"]
         },
         fetchMessages: {
             type: FuncTypes.syncPromise,
             ref: FakeUtil.fetchMessages,
-            binds: ["msg.msg.author.id", "msg.msg.channelId"]
+            binds: ["path:msg.msg.author.id", "path:msg.msg.channelId"]
         },
         findUserById: {
             type: FuncTypes.syncPromise,
@@ -65,14 +73,15 @@ const Functions = Object.freeze({
         },
         executeTag: {
             ref: FakeUtil.executeTag,
-            execution: ExecutionTypes.script
+            execution: ExecutionTypes.script,
+            otherRefs: [{ ref: FakeUtil.fetchTag }]
         }
     },
 
     http: {
         request: {
             type: FuncTypes.syncPromise,
-            ref: FakeAxios.request
+            ref: FakeHttp.request
         }
     }
 });

@@ -33,7 +33,7 @@ class VM {
             return;
         }
 
-        return this._childLoad(...args);
+        return this._childLoad.apply(this, args);
     }
 
     _unload(...args) {
@@ -45,7 +45,7 @@ class VM {
             return;
         }
 
-        return this._childUnload(...args);
+        return this._childUnload.apply(this, args);
     }
 
     _runScript(code, ...args) {
@@ -61,7 +61,7 @@ class VM {
             throw new VMError(msg);
         }
 
-        return this._childRunScript(code, ...args);
+        return this._childRunScript.apply(this, [code].concat(args));
     }
 }
 

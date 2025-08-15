@@ -25,7 +25,7 @@ function logSending(preview) {
         return;
     }
 
-    const text = DiscordUtil.getEmbed(preview).description;
+    const text = DiscordUtil.getEmbedData(preview).description;
     getLogger().debug(`Sending preview:${LoggerUtil.formatLog(text)}`);
 }
 

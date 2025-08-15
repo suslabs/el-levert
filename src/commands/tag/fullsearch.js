@@ -10,7 +10,7 @@ import DiscordUtil from "../../util/DiscordUtil.js";
 const unavailable = "No text available";
 
 function getWordIndices(body, ranges) {
-    const matches = [...body.matchAll(/\S+/g)],
+    const matches = Array.from(body.matchAll(/\S+/g)),
         wordInds = new Set();
 
     for (let i = 0; i < ranges.length; i += 2) {

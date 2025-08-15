@@ -1,14 +1,8 @@
+import VMFunction from "../../structures/vm/VMFunction.js";
+
 import Util from "../Util.js";
 import Codegen from "./Codegen.js";
 import TypeTester from "../TypeTester.js";
-
-const funcOptions = {
-    arguments: {
-        copy: true
-    }
-};
-
-const optionsStr = Codegen.object(funcOptions);
 
 function objDeclaration(objName) {
     if (Util.empty(objName)) {
@@ -38,7 +32,7 @@ function resultBody(call, ret, errName) {
 
     let body = Codegen.declaration("res", call, true);
 
-    if (errName) {
+    if (!Util.empty(errName)) {
         body += "\n\n" + Codegen.throw(errName, "res");
     }
 
@@ -46,7 +40,9 @@ function resultBody(call, ret, errName) {
 }
 
 function refFuncBody(type, ret, errName) {
-    const call = Codegen.call(Codegen.access(["$0", type]), ["undefined", "args", optionsStr]);
+    const callOptionsStr = Codegen.object(VMFunction.callOptions),
+        call = Codegen.call(Codegen.access(["$0", type]), ["undefined", "args", callOptionsStr]);
+
     return resultBody(call, ret, errName);
 }
 
@@ -95,9 +91,10 @@ function getRegisterCode(options, funcOptions = {}, errorOptions = {}) {
         func = funcOptions.func;
 
     const errClass = errorOptions.class,
-        useError = typeof errClass !== "undefined",
-        errAccessible = errorOptions.accessible ?? false,
-        errName = useError ? TypeTester.className(errClass) : undefined;
+        useError = typeof errClass !== "undefined";
+
+    const errName = useError ? TypeTester.className(errClass) : "",
+        errAccessible = errorOptions.accessible ?? false;
 
     const commonArgs = [objName, funcName, !useError, errName];
 

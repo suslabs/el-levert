@@ -4,7 +4,9 @@
     },
     "vm": {
         "getCpuTime": "getCpuTime",
-        "getWallTime": "getWallTime"
+        "getWallTime": "getWallTime",
+        "timeElapsed": "timeElapsed",
+        "timeRemaining": "timeRemaining"
     },
     "util": {
         "delay": "delay",

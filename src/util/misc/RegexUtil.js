@@ -1,3 +1,5 @@
+import Util from "../Util.js";
+
 const RegexUtil = Object.freeze({
     _regexEscapeRegex: /[.*+?^${}()|[\]\\]/g,
     escapeRegex: str => {
@@ -22,6 +24,16 @@ const RegexUtil = Object.freeze({
         }
 
         return match.groups[foundName];
+    },
+
+    wordStart: (str, idx) => {
+        const char = str[idx - 1];
+        return idx === 0 || char === " " || !Util.alphanumeric.includes();
+    },
+
+    wordEnd: (str, idx) => {
+        const char = str[idx + 1];
+        return idx === str.length || char === " " || !Util.alphanumeric.includes(char);
     }
 });
 
