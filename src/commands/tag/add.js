@@ -14,46 +14,54 @@ export default {
             return `:information_source: ${this.getArgsHelp("name body")}`;
         }
 
-        const [t_name, t_args] = ParserUtil.splitArgs(args, true);
+        let [t_name, t_args] = ParserUtil.splitArgs(args, true);
 
         if (this.matchesSubcmd(t_name)) {
             return `:police_car: **${t_name}** is a __command__, not a __tag__. You can't manipulate commands.`;
         }
 
-        const err = getClient().tagManager.checkName(t_name);
+        {
+            let err;
+            [t_name, err] = getClient().tagManager.checkName(t_name, false);
 
-        if (err) {
-            return `:warning: ${err}.`;
+            if (err !== null) {
+                return `:warning: ${err}.`;
+            }
         }
 
-        const parsed = await this.parentCmd.parseBase(t_args, msg),
+        let parsed = await this.parentCmd.parseBase(t_args, msg),
             { body, type } = parsed;
 
         if (parsed.err !== null) {
             return parsed.err;
+        } else {
+            let err;
+            [body, err] = getClient().tagManager.checkBody(body, false);
+
+            if (err !== null) {
+                return `:warning: ${err}.`;
+            }
         }
 
         try {
-            await getClient().tagManager.add(t_name, body, msg.author.id, type);
+            await getClient().tagManager.add(t_name, body, msg.author.id, type, {
+                validateNew: false
+            });
         } catch (err) {
-            if (err.name === "TagError") {
-                if (err.message === "Tag already exists") {
-                    const out = `:warning: Tag **${t_name}** already exists,`;
+            if (err.name !== "TagError") {
+                throw err;
+            }
 
+            switch (err.message) {
+                case "Tag already exists":
                     const tag = err.ref,
                         owner = await tag.getOwner();
 
-                    if (owner === "not found") {
-                        return out + " tag owner not found.";
-                    } else {
-                        return out + ` and is owned by \`${owner}\`.`;
-                    }
-                } else {
+                    const out = `:warning: Tag **${t_name}** already exists,`;
+                    return out + (owner === "not found" ? " tag owner not found." : ` and is owned by \`${owner}\`.`);
+                default:
                     return `:warning: ${err.message}.`;
-                }
             }
-
-            throw err;
         }
 
         return `:white_check_mark: Created tag **${t_name}**.`;

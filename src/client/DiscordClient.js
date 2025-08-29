@@ -138,65 +138,35 @@ class DiscordClient {
                 continue;
             }
 
-            let option = options[key];
-
-            if (typeof options[key] === "function") {
-                option = option.bind(this);
-            }
+            const option = typeof options[key] === "function" ? options[key].bind(this) : options[key];
 
             this.options[key] = option;
             this[key] = option;
         }
 
-        const allowedMentions = {
+        this.client.options.allowedMentions = {
             repliedUser: this.pingReply,
-            parse: []
+            parse: this.mentionUsers ? ["users", "roles"] : []
         };
-
-        if (this.mentionUsers) {
-            allowedMentions.parse.push(AllowedMentionsTypes.User, AllowedMentionsTypes.Role);
-        } else {
-            allowedMentions.users = [];
-        }
-
-        Object.assign(this.client.options, allowedMentions);
     }
 
     async login(token, exitOnFailure = false) {
         this.logger?.info("Logging in...");
 
-        const loginPromise = new Promise((resolve, reject) => {
-            this.client.login(token).catch(err => {
-                if (!exitOnFailure) {
-                    reject(err);
-                }
+        try {
+            await this.client.login(token);
+            await Util.waitForCondition(() => this.loggedIn, new ClientError("Login took too long"), this.timeout);
 
-                this.logger?.error("Error occured while logging in:", err);
-                resolve(false);
-            });
+            return true;
+        } catch (err) {
+            this.logger?.error("Error occurred while logging in:", err);
 
-            Util.waitForCondition(() => this.loggedIn, new ClientError("Login took too long"), this.timeout)
-                .then(_ => {
-                    if (exitOnFailure) {
-                        resolve(true);
-                    }
-
-                    resolve();
-                })
-                .catch(err => {
-                    if (!exitOnFailure) {
-                        reject(err);
-                    }
-
-                    this.logger?.error(err);
-                    resolve(false);
-                });
-        });
-
-        const res = await loginPromise;
-
-        if (exitOnFailure && !res) {
-            this.killProcess();
+            if (exitOnFailure) {
+                this.killProcess();
+                return false;
+            } else {
+                throw err;
+            }
         }
     }
 
@@ -217,16 +187,16 @@ class DiscordClient {
     }
 
     setActivity(config) {
-        const validTypes = Object.entries(ActivityType)
-                .filter(([key, value]) => !isNaN(key) && value !== "Custom")
-                .map(([, value]) => value),
-            lowercaseTypes = validTypes.map(type => type.toLowerCase());
+        const lowercaseTypes = DiscordClient._validActivityTypes.map(type => type.toLowerCase());
 
         let activityType = config.type.toLowerCase(),
             num = lowercaseTypes.indexOf(activityType);
 
         if (num === -1) {
-            throw new ClientError(`Invalid activity type: ${activityType}. Valid types are: ${validTypes.join(" ")}`);
+            throw new ClientError(
+                `Invalid activity type: ${activityType}. Valid types are: ${DiscordClient._validActivityTypes.join(" ")}`,
+                activityType
+            );
         }
 
         if (config.text == null) {
@@ -248,9 +218,7 @@ class DiscordClient {
     async fetchGuild(sv_id, options = {}) {
         if (sv_id == null) {
             throw new ClientError("No guild ID provided");
-        }
-
-        if (!TypeTester.isObject(options)) {
+        } else if (!TypeTester.isObject(options)) {
             throw new ClientError("Invalid options provided");
         }
 
@@ -276,13 +244,9 @@ class DiscordClient {
     async fetchMember(sv_id, user_id, options = {}) {
         if (sv_id == null) {
             throw new ClientError("No guild or guild ID provided");
-        }
-
-        if (user_id == null) {
+        } else if (user_id == null) {
             throw new ClientError("No user or user ID provided");
-        }
-
-        if (!TypeTester.isObject(options)) {
+        } else if (!TypeTester.isObject(options)) {
             throw new ClientError("Invalid options provided");
         }
 
@@ -345,13 +309,9 @@ class DiscordClient {
     async fetchChannel(ch_id, options = {}) {
         if (ch_id == null) {
             throw new ClientError("No channel ID provided");
-        }
-
-        if (!TypeTester.isObject(options)) {
+        } else if (!TypeTester.isObject(options)) {
             throw new ClientError("Invalid options provided");
-        }
-
-        if (typeof ch_id === "string") {
+        } else if (typeof ch_id === "string") {
             if (Util.empty(ch_id)) {
                 throw new ClientError("Invalid channel ID provided (length = 0)");
             }
@@ -401,7 +361,10 @@ class DiscordClient {
                     member = user_id;
 
                     if (member.guild !== channel.guild) {
-                        throw new ClientError("The member's guild isn't the same as the channel's guild");
+                        throw new ClientError("The member's guild isn't the same as the channel's guild", {
+                            memberGuild: member.guild,
+                            channelGuild: channel.guild
+                        });
                     }
                 }
 
@@ -436,19 +399,13 @@ class DiscordClient {
     }
 
     async fetchMessage(ch_id, msg_id, options = {}) {
-        if (msg_id == null) {
-            throw new ClientError("No message ID provided");
-        }
-
         if (ch_id == null) {
             throw new ClientError("No channel or channel ID provided");
-        }
-
-        if (!TypeTester.isObject(options)) {
+        } else if (msg_id == null) {
+            throw new ClientError("No message ID provided");
+        } else if (!TypeTester.isObject(options)) {
             throw new ClientError("Invalid options provided");
-        }
-
-        if (typeof msg_id === "string") {
+        } else if (typeof msg_id === "string") {
             if (Util.empty(msg_id)) {
                 throw new ClientError("Invalid message ID provided (length = 0)");
             }
@@ -497,9 +454,7 @@ class DiscordClient {
     async fetchMessages(ch_id, options = {}, fetchOptions = {}) {
         if (ch_id == null) {
             throw new ClientError("No channel or channel ID provided");
-        }
-
-        if (!TypeTester.isObject(options) || !TypeTester.isObject(fetchOptions)) {
+        } else if (!TypeTester.isObject(options) || !TypeTester.isObject(fetchOptions)) {
             throw new ClientError("Invalid options provided");
         }
 
@@ -549,9 +504,7 @@ class DiscordClient {
     async findUserById(user_id, options = {}) {
         if (user_id == null) {
             throw new ClientError("No user ID provided");
-        }
-
-        if (!TypeTester.isObject(options)) {
+        } else if (!TypeTester.isObject(options)) {
             throw new ClientError("Invalid options provided");
         }
 
@@ -578,9 +531,7 @@ class DiscordClient {
     async findUsers(query, options = {}, fetchOptions = {}) {
         if (query == null) {
             throw new ClientError("No query provided");
-        }
-
-        if (!TypeTester.isObject(options) || !TypeTester.isObject(fetchOptions)) {
+        } else if (!TypeTester.isObject(options) || !TypeTester.isObject(fetchOptions)) {
             throw new ClientError("Invalid options provided");
         }
 
@@ -613,13 +564,7 @@ class DiscordClient {
             }
 
             const user = await this.findUserById(user_id);
-
-            if (user) {
-                user.user = user;
-                return [user];
-            }
-
-            return [];
+            return user ? ((user.user = user), [user]) : [];
         }
 
         if (!options.searchMembers) {
@@ -667,8 +612,14 @@ class DiscordClient {
         this.logger?.info(`The bot is online. Logged in as "${this.botUsername}".`);
     }
 
+    static {
+        this._validActivityTypes = Object.entries(ActivityType)
+            .filter(([key, value]) => !isNaN(key) && value !== "Custom")
+            .map(([, value]) => value);
+    }
+
     async _loadEvents() {
-        if (this.eventsDir === "") {
+        if (Util.empty(this.eventsDir)) {
             throw new ClientError("Events directory not set");
         }
 
@@ -684,7 +635,7 @@ class DiscordClient {
 
     _unloadEvents() {
         if (typeof this._eventLoader === "undefined" || !this._eventLoader.loaded) {
-            throw new ClientError("Can't unload events, events weren't loaded");
+            throw new ClientError("Can't unload events, events were never loaded");
         }
 
         this._eventLoader.removeListeners();

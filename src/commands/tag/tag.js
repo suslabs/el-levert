@@ -31,26 +31,24 @@ async function parseBase(t_args, msg) {
 
     if (hasAttachments) {
         try {
-            [body, isScript] = await getClient().tagManager.fetchTagBody(t_args, msg);
+            ({ body, isScript } = await getClient().tagManager.downloadBody(t_args, msg, "tag"));
         } catch (err) {
             getLogger().error(err);
 
-            if (err.name === "TagError") {
-                return {
-                    body: null,
-                    type: null,
-                    err: `:warning: ${err.message}.`
-                };
-            }
-
-            return {
-                body: null,
-                type: null,
-                err: {
-                    content: ":no_entry_sign: Downloading attachment failed:",
-                    ...DiscordUtil.getFileAttach(err.stack, "error.js")
-                }
-            };
+            return err.name === "TagError"
+                ? {
+                      body: null,
+                      type: null,
+                      err: `:warning: ${err.message}.`
+                  }
+                : {
+                      body: null,
+                      type: null,
+                      err: {
+                          content: ":no_entry_sign: Downloading attachment failed:",
+                          ...DiscordUtil.getFileAttach(err.stack, "error.js")
+                      }
+                  };
         }
     } else {
         let tagBody = t_args;
@@ -65,11 +63,7 @@ async function parseBase(t_args, msg) {
     let type;
 
     if (isScript) {
-        if (TagTypes.scriptTypes.includes(t_type)) {
-            type = t_type;
-        } else {
-            type = TagTypes.defaultScriptType;
-        }
+        type = TagTypes.scriptTypes.includes(t_type) ? t_type : TagTypes.defaultScriptType;
     } else {
         type = TagTypes.textType;
     }
@@ -90,9 +84,7 @@ async function getPreview(out, msg) {
         return out;
     }
 
-    const previewMsg = {
-            embeds: [preview]
-        },
+    const previewMsg = { embeds: [preview] },
         cleanOut = getClient().previewHandler.removeLink(out);
 
     if (!Util.empty(cleanOut)) {
@@ -135,12 +127,15 @@ export default {
             return `:information_source: ${this.getSubcmdHelp()} **tag_name** \`[tag_args]\``;
         }
 
-        const [t_name, t_args] = ParserUtil.splitArgs(args, true);
+        let [t_name, t_args] = ParserUtil.splitArgs(args, true);
 
-        const err = getClient().tagManager.checkName(t_name);
+        {
+            let err;
+            [t_name, err] = getClient().tagManager.checkName(t_name, false);
 
-        if (err) {
-            return `:warning: ${err}.`;
+            if (err !== null) {
+                return `:warning: ${err}.`;
+            }
         }
 
         let tag = await getClient().tagManager.fetch(t_name);
@@ -159,58 +154,52 @@ export default {
 
         if (tag.isAlias) {
             try {
-                tag = await getClient().tagManager.fetchAlias(tag);
+                tag = await getClient().tagManager.fetchAlias(tag, true);
             } catch (err) {
-                if (err.name === "TagError") {
-                    switch (err.message) {
-                        case "Tag recursion detected":
-                            return `:warning: Epic recursion fail: **${err.ref.join("** -> **")}**`;
-                        case "Hop not found":
-                            return `:warning: Tag **${err.ref}** doesn't exist.`;
-                    }
+                if (err.name !== "TagError") {
+                    throw err;
                 }
 
-                throw err;
+                switch (err.message) {
+                    case "Tag recursion detected":
+                        return `:warning: Epic recursion fail: **${err.ref.join("** -> **")}**`;
+                    case "Hop not found":
+                        return `:warning: Tag **${err.ref}** doesn't exist.`;
+                    default:
+                        return `:warinig: ${err.message}.`;
+                }
             }
         }
 
         let out;
 
         try {
-            out = await getClient().tagManager.execute(tag, t_args, msg);
+            out = await getClient().tagManager.execute(tag, t_args, { msg });
         } catch (err) {
-            let emoji;
-
             switch (err.name) {
                 case "TagError":
-                    emoji = ":warning:";
-                    break;
-                case "VMError":
-                    emoji = ":no_entry_sign:";
-                    break;
+                    return `:warning: ${err.message}.`;
+                case "ClientError":
+                    return `:no_entry_sign: Can't execute script tag. ${err.message}.`;
                 default:
                     throw err;
             }
-
-            return `${emoji} ${err.message}.`;
         }
 
-        if (getClient().previewHandler.canPreview(out)) {
-            return [
-                await getPreview(out, msg),
-                {
-                    type: "options",
-                    limitType: "none"
-                }
-            ];
-        } else {
-            return [
-                out,
-                {
-                    type: "options",
-                    useConfigLimits: true
-                }
-            ];
-        }
+        return getClient().previewHandler.canPreview(out)
+            ? [
+                  await getPreview(out, msg),
+                  {
+                      type: "options",
+                      limitType: "none"
+                  }
+              ]
+            : [
+                  out,
+                  {
+                      type: "options",
+                      useConfigLimits: true
+                  }
+              ];
     }
 };

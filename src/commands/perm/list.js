@@ -22,11 +22,9 @@ export default {
         const format = formatGroups(groups),
             embed = new EmbedBuilder().setDescription(format);
 
-        const out = {
+        return {
             content: ":information_source: Registered permissions:",
             embeds: [embed]
         };
-
-        return out;
     }
 };

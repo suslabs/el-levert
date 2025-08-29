@@ -20,11 +20,7 @@ class ProxiedResult {
 
     setInfo(info) {
         for (const prop of infoProps) {
-            if (typeof info === "undefined") {
-                this.info[prop] = infoDefault;
-            } else {
-                this.info[prop] = info[prop] ?? infoDefault;
-            }
+            this.info[prop] = info?.[prop] ?? infoDefault;
         }
     }
 
@@ -37,7 +33,6 @@ class ProxiedResult {
 
     toJSON(spaces, replacer) {
         const data = this._data ?? this.data;
-
         return JSON.stringify(data, spaces, replacer);
     }
 

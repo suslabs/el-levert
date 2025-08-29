@@ -92,40 +92,33 @@ class LevertClient extends DiscordClient {
         });
     }
 
-    loadComponent(name, barrel, ctorArgs = {}, options = {}) {
-        let compInfo = this.components.get(name) ?? {},
-            alreadyLoaded = compInfo?.loaded ?? false;
-
-        if (alreadyLoaded) {
-            throw new ClientError(`"${name}" component is already loaded`);
-        }
-
+    loadComponents(groupName, barrel, ctorArgs = {}, options = {}) {
         const showLogMessages = options.showLogMessages ?? true,
             showLoadingMessages = options.showLoadingMessages ?? true;
 
-        let pluralName = options.pluralName,
-            listName;
+        let collectionName, orderedName;
+        ({ groupName, collectionName, orderedName } = this._getCompsName(groupName, options));
 
-        if (typeof pluralName === "undefined") {
-            if (name.endsWith("s")) {
-                pluralName = name;
-                name = name.slice(0, -1);
-            } else {
-                pluralName = `${name}s`;
-            }
+        const groupInfo = this.components.get(groupName) ?? {};
+
+        if (groupInfo.loaded) {
+            throw new ClientError(`"${groupName}" component group is already loaded`, { groupName });
         }
 
-        listName = `${name}List`;
-
         if (showLogMessages) {
-            this.logger.info(`Loading ${pluralName}...`);
+            this.logger.info(`Initializing "${groupName}" components...`);
         }
 
         const components = Object.entries(barrel);
 
         for (const [compName, compClass] of components) {
-            if (TypeTester.outOfRange(LevertClient.minPriority, LevertClient.maxPriority, compClass.loadPriority)) {
-                throw new ClientError(`Invalid load priority ${compClass.loadPriority} for component ${compName}`);
+            const compLoadPriority = compClass.loadPriority;
+
+            if (TypeTester.outOfRange(LevertClient.minPriority, LevertClient.maxPriority, compLoadPriority)) {
+                throw new ClientError(`Invalid load priority ${compLoadPriority} for component "${compName}"`, {
+                    compName,
+                    compLoadPriority
+                });
             } else {
                 compClass.loadPriority ??= LevertClient.maxPriority;
             }
@@ -134,20 +127,22 @@ class LevertClient extends DiscordClient {
         components.sort(([, a], [, b]) => a.loadPriority - b.loadPriority);
 
         for (const [compName, args] of Object.entries(ctorArgs)) {
-            const _args = {
+            const finalArgs = {
                 enabled: true,
                 args: []
             };
 
-            if (Array.isArray(args)) {
-                _args.args = args;
+            if (typeof args === "boolean") {
+                finalArgs.enabled = args;
+            } else if (Array.isArray(args)) {
+                finalArgs.args = args;
             } else if (TypeTester.isObject(args)) {
-                Object.assign(_args, args);
+                Object.assign(finalArgs, args);
             } else {
-                _args.enabled = args;
+                throw new ClientError("Invalid constructor args", args);
             }
 
-            ctorArgs[compName] = _args;
+            ctorArgs[compName] = finalArgs;
         }
 
         const enabledComps = components.filter(([compName]) => ctorArgs[compName].enabled),
@@ -155,15 +150,20 @@ class LevertClient extends DiscordClient {
                 const compArgs = ctorArgs[compName].args;
 
                 if (!Array.isArray(compArgs)) {
-                    throw new ClientError(`Invalid constructor args for component ${compName}`);
+                    throw new ClientError(`Invalid constructor args for component "${compName}"`, { compName });
                 }
 
                 return [compName, new compClass(...compArgs)];
             });
 
         for (const [compName, compInst] of compInstances) {
-            if (TypeTester.outOfRange(LevertClient.minPriority, LevertClient.maxPriority, compInst.priority)) {
-                throw new ClientError(`Invalid handler priority ${compInst.priority} for component ${compName}`);
+            const compPriority = compInst.priority;
+
+            if (TypeTester.outOfRange(LevertClient.minPriority, LevertClient.maxPriority, compPriority)) {
+                throw new ClientError(`Invalid handler priority ${compPriority} for component "${compName}"`, {
+                    compName,
+                    compPriority
+                });
             } else {
                 compInst.priority ??= LevertClient.minPriority;
             }
@@ -179,119 +179,80 @@ class LevertClient extends DiscordClient {
             }
         }
 
-        this[pluralName] = Object.fromEntries(compInstances);
-        this[listName] = compList;
-
-        compInfo = {
-            ...compInfo,
-            pluralName,
-            listName,
+        Object.assign(groupInfo, {
+            collectionName,
+            orderedName,
             loaded: false
-        };
+        });
 
-        this.components.set(name, compInfo);
+        this.components.set(groupName, groupInfo);
 
-        const compLoading = compName => {
-            if (showLogMessages && showLoadingMessages) {
-                this.logger.info(`Loading ${name}: ${compName}...`);
+        this[collectionName] = Object.fromEntries(compInstances);
+        this[orderedName] = compList;
+
+        const loadingStarted = () => {
+            if (showLoadingMessages) {
+                this.logger.info(`Loading ${collectionName}...`);
             }
         };
 
-        const compLoaded = (compName, compInst) => {
-            if (showLogMessages) {
-                this.logger.info(`Loaded ${name}: ${compName}`);
-            }
-
-            this[compName] = compInst;
-        };
-
-        const loadFinished = () => {
+        const loadingFinished = () => {
             const postLoad = options.postLoad;
 
             if (typeof postLoad === "function") {
                 postLoad();
             }
 
-            compInfo.loaded = true;
-
             if (showLogMessages) {
-                this.logger.info(`Loaded ${pluralName}.`);
+                this.logger.info(`Loaded ${collectionName}.`);
+            }
+
+            groupInfo.loaded = true;
+            return groupInfo;
+        };
+
+        const compLoading = compName => {
+            if (showLogMessages && showLoadingMessages) {
+                this.logger.info(`Loading ${groupName}: ${compName}...`);
             }
         };
 
-        if (showLoadingMessages) {
-            this.logger.info(`Loading ${pluralName}...`);
-        }
+        const compLoaded = (compName, compInst) => {
+            if (showLogMessages) {
+                this.logger.info(`Loaded ${groupName}: ${compName}`);
+            }
+
+            this[compName] = compInst;
+        };
+
+        loadingStarted();
 
         const res = ArrayUtil.maybeAsyncForEach(compInstances, ([compName, compInst]) => {
             compLoading(compName);
-            const compRes = compInst.load();
-
-            if (TypeTester.isPromise(compRes)) {
-                return (async () => {
-                    await compRes;
-                    compLoaded(compName, compInst);
-                })();
-            } else {
-                compLoaded(compName, compInst);
-            }
+            return Util.maybeAsyncThen(compInst.load(), _ => compLoaded(compName, compInst));
         });
 
-        if (TypeTester.isPromise(res)) {
-            return (async () => {
-                await res;
-                loadFinished();
-            })();
-        } else {
-            loadFinished();
-        }
+        return Util.maybeAsyncThen(res, _ => loadingFinished());
     }
 
-    unloadComponent(name, options = {}) {
-        let compInfo, compLoaded;
-
-        const checkLoaded = () => {
-            compInfo = this.components.get(name);
-            compLoaded = typeof compInfo !== "undefined" && compInfo.loaded;
-        };
-
-        checkLoaded();
-        if (!compLoaded) {
-            if (name.endsWith("s")) {
-                name = name.slice(0, -1);
-                checkLoaded();
-            }
-
-            if (!compLoaded) {
-                throw new ClientError(`"${name}" component isn't loaded`);
-            }
-        }
-
-        const pluralName = compInfo.pluralName,
-            listName = compInfo.listName;
-
+    unloadComponents(groupName, options = {}) {
         const showLogMessages = options.showLogMessages ?? true,
             showUnloadingMessages = options.showUnloadingMessages ?? true;
 
-        const compUnloading = compName => {
-            if (showLogMessages && showUnloadingMessages) {
-                this.logger.info(`Unloading ${name}: ${compName}`);
-            }
-        };
+        let groupInfo;
+        ({ info: groupInfo, groupName } = this._getCompsInfo(groupName));
 
-        const compUnloaded = compName => {
+        const unloadingStarted = () => {
             if (showLogMessages) {
-                this.logger.info(`Unloaded ${name}: ${compName}`);
+                this.logger.info(`Unloading ${groupInfo.collectionName}...`);
             }
-
-            delete this[compName];
         };
 
-        const unloadFinished = () => {
-            ArrayUtil.wipeArray(this[listName]);
+        const unloadingFinished = () => {
+            ArrayUtil.wipeArray(this[groupInfo.orderedName]);
 
-            delete this[pluralName];
-            delete this[listName];
+            delete this[groupInfo.collectionName];
+            delete this[groupInfo.orderedName];
 
             const postUnload = options.postUnload;
 
@@ -299,43 +260,76 @@ class LevertClient extends DiscordClient {
                 postUnload();
             }
 
-            compInfo.loaded = false;
-
             if (showLogMessages) {
-                this.logger.info(`Unloaded ${pluralName}.`);
+                this.logger.info(`Unloaded ${groupInfo.collectionName}.`);
+            }
+
+            this.components.delete(groupName);
+
+            groupInfo.loaded = false;
+            return groupInfo;
+        };
+
+        const compUnloading = compName => {
+            if (showLogMessages && showUnloadingMessages) {
+                this.logger.info(`Unloading ${groupName}: ${compName}`);
             }
         };
 
-        if (showLogMessages) {
-            this.logger.info(`Unloading ${pluralName}...`);
-        }
-
-        const res = ObjectUtil.wipeObject(this[pluralName], (compName, compInst) => {
-            compUnloading(compName);
-            const compRes = compInst.unload();
-
-            if (TypeTester.isPromise(compRes)) {
-                return (async () => {
-                    await compRes;
-                    compUnloaded(compName);
-                })();
-            } else {
-                compUnloaded(compName);
+        const compUnloaded = compName => {
+            if (showLogMessages) {
+                this.logger.info(`Unloaded ${groupName}: ${compName}`);
             }
+
+            delete this[compName];
+        };
+
+        unloadingStarted();
+
+        const res = ObjectUtil.wipeObject(this[groupInfo.collectionName], (compName, compInst) => {
+            compUnloading(compName);
+            return Util.maybeAsyncThen(compInst.unload(), _ => compUnloaded(compName, compInst));
         });
 
-        if (TypeTester.isPromise(res)) {
-            return (async () => {
-                await res;
-                unloadFinished();
-            })();
+        return Util.maybeAsyncThen(res, _ => unloadingFinished());
+    }
+
+    checkComponent(groupName, compName, options = {}) {
+        const throwErrors = options.throwErrors ?? true,
+            msgName = options.altName ?? compName;
+
+        let msg, ref;
+
+        let groupInfo, groupLoaded;
+        ({ info: groupInfo, loaded: groupLoaded, groupName } = this._getCompsInfo(groupName));
+        let component;
+
+        if (groupLoaded) {
+            const collection = this[groupInfo.collectionName];
+            component = collection[compName];
         } else {
-            unloadFinished();
+            msg = `"${groupName}" component group isn't loaded`;
+        }
+
+        if (typeof component === "undefined") {
+            msg = `${msgName} isn't initialized`;
+        } else if (!component.enabled) {
+            msg = `${msgName} isn't enabled`;
+        }
+
+        if (throwErrors) {
+            return typeof msg === "undefined"
+                ? component
+                : (() => {
+                      throw new ClientError(msg, ref);
+                  })();
+        } else {
+            return msg ?? false;
         }
     }
 
     async start() {
-        this._t1 = performance.now();
+        this.__t1__1 = performance.now();
 
         if (this.started) {
             throw new ClientError("The bot can only be started once");
@@ -372,10 +366,10 @@ class LevertClient extends DiscordClient {
     }
 
     async stop(kill = false) {
-        this._t1 = performance.now();
+        this.__t1__1 = performance.now();
 
         if (!this.started) {
-            throw new ClientError("The bot can't be stopped if it hasn't been started already");
+            throw new ClientError("The bot can't be stopped if it hasn't been started once");
         }
 
         this._disableInputManager();
@@ -401,10 +395,10 @@ class LevertClient extends DiscordClient {
     }
 
     async restart(configs) {
-        this.__t1 = performance.now();
+        this.__t1__2 = performance.now();
 
         if (!this.started) {
-            throw new ClientError("The bot can't be restarted if it hasn't been started already");
+            throw new ClientError("The bot can't be restarted if it hasn't been started once");
         }
 
         this.logger.info("Restarting bot...");
@@ -427,7 +421,7 @@ class LevertClient extends DiscordClient {
         await this.start();
 
         if (this.config.enableCliCommands) {
-            return this._getBenchmarkTime("__t1");
+            return this._getBenchmarkTime("__t1__2");
         } else {
             return this._logRestartedTime();
         }
@@ -462,6 +456,67 @@ class LevertClient extends DiscordClient {
         delete this.bridgeBotExps;
 
         this._setBridgeBotConfig();
+    }
+
+    _setupLogger() {
+        this._deleteLogger();
+
+        const configOpts = [LevertClient.loggerName, this.config.logFile, true, this.config.logLevel],
+            config = getDefaultLoggerConfig(...configOpts);
+
+        this.logger = createLogger(config);
+        this._wrapEvent = wrapEvent.bind(undefined, this.logger);
+    }
+
+    _deleteLogger() {
+        if (this.logger === null) {
+            return;
+        }
+
+        this.logger.end();
+        this.logger = null;
+
+        delete this._wrapEvent;
+    }
+
+    _getCompsName(groupName, options = {}) {
+        let collectionName = options.pluralName;
+
+        if (typeof collectionName === "undefined") {
+            if (groupName.endsWith("s")) {
+                collectionName = groupName;
+                groupName = Util.before(groupName, -1);
+            } else {
+                collectionName = `${groupName}s`;
+            }
+        }
+
+        return {
+            groupName,
+            collectionName,
+            orderedName: `${groupName}List`
+        };
+    }
+
+    _getCompsInfo(groupName, errorIfNotFound = true) {
+        let info, loaded;
+
+        const checkLoaded = () => {
+            info = this.components.get(groupName);
+            loaded = info?.loaded ?? false;
+            return loaded;
+        };
+
+        if (!checkLoaded() && groupName.endsWith("s")) {
+            groupName = Util.before(groupName, -1);
+            checkLoaded();
+        }
+
+        if (loaded) {
+            return { info, loaded, groupName };
+        } else if (errorIfNotFound) {
+            throw new ClientError(`"${groupName}" component group isn't loaded`, { groupName });
+        }
     }
 
     _parseBridgeBotFormat(format) {
@@ -540,29 +595,6 @@ class LevertClient extends DiscordClient {
         this.useBridgeBot = enabled;
     }
 
-    _setupLogger() {
-        if (this.logger !== null) {
-            this._deleteLogger();
-        }
-
-        const configOpts = [LevertClient.loggerName, this.config.logFile, true, this.config.logLevel],
-            config = getDefaultLoggerConfig(...configOpts);
-
-        this.logger = createLogger(config);
-        this._wrapEvent = wrapEvent.bind(undefined, this.logger);
-    }
-
-    _deleteLogger() {
-        if (this.logger === null) {
-            return;
-        }
-
-        this.logger.end();
-        this.logger = null;
-
-        delete this._wrapEvent;
-    }
-
     _loadMessageProcessor() {
         this._executeAllHandlers = executeAllHandlers.bind(undefined, this);
         this.messageProcessor = new MessageProcessor(this);
@@ -578,7 +610,7 @@ class LevertClient extends DiscordClient {
     }
 
     _loadHandlers() {
-        this.loadComponent(
+        this.loadComponents(
             "handlers",
             Handlers,
 
@@ -599,7 +631,7 @@ class LevertClient extends DiscordClient {
     }
 
     _unloadHandlers() {
-        this.unloadComponent("handlers", {
+        this.unloadComponents("handlers", {
             showUnloadingMessages: false
         });
 
@@ -607,7 +639,7 @@ class LevertClient extends DiscordClient {
     }
 
     async _loadManagers() {
-        await this.loadComponent("managers", Managers, {
+        await this.loadComponents("managers", Managers, {
             tagManager: [],
             permManager: [this.config.enablePermissions],
             commandManager: [],
@@ -627,7 +659,7 @@ class LevertClient extends DiscordClient {
     }
 
     async _unloadManagers() {
-        await this.unloadComponent("managers");
+        await this.unloadComponents("managers");
     }
 
     _loadVMs() {
@@ -641,13 +673,13 @@ class LevertClient extends DiscordClient {
             vmArgs.externalVM = [];
         }
 
-        this.loadComponent("VMs", VMs, vmArgs, {
+        this.loadComponents("VMs", VMs, vmArgs, {
             showLoadingMessages: false
         });
     }
 
     _unloadVMs() {
-        this.unloadComponent("VMs", {
+        this.unloadComponents("VMs", {
             showUnloadingMessages: false
         });
     }
@@ -753,26 +785,26 @@ class LevertClient extends DiscordClient {
 
     _getBenchmarkTime(startName) {
         const t2 = performance.now(),
-            time = Util.timeDelta(t2, this[startName]);
+            elapsed = Util.timeDelta(t2, this[startName]);
 
         delete this[startName];
-        return time;
+        return elapsed;
     }
 
     _logStartedTime() {
-        const time = this._getBenchmarkTime("_t1");
+        const time = this._getBenchmarkTime("__t1__1");
         this.logger.info(`Startup complete in ${Util.formatNumber(time)} ms.`);
         return time;
     }
 
     _logStoppedTime() {
-        const time = this._getBenchmarkTime("_t1");
+        const time = this._getBenchmarkTime("__t1__1");
         this.logger.info(`Bot stopped in ${Util.formatNumber(time)} ms.`);
         return time;
     }
 
     _logRestartedTime() {
-        const time = this._getBenchmarkTime("__t1");
+        const time = this._getBenchmarkTime("__t1__2");
         this.logger.info(`Bot restarted in ${Util.formatNumber(time)} ms.`);
         return time;
     }

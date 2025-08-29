@@ -38,7 +38,8 @@ class Tag {
                 ArrayUtil.removeItem(names, 0);
             }
         } else {
-            names = [names];
+            const name = names;
+            names = [name];
         }
 
         const flag = names.reduce((flag, name) => flag | this._getFlag(name, false), 0);
@@ -47,7 +48,7 @@ class Tag {
 
     constructor(data) {
         if (typeof data?.hops === "string") {
-            data.hops = data.hops.split(this.constructor._hopsSeparator);
+            data.hops = data.hops.split(Tag._hopsSeparator);
         }
 
         ObjectUtil.setValuesWithDefaults(this, data, this.constructor.defaultValues);
@@ -81,7 +82,7 @@ class Tag {
     }
 
     getHopsString() {
-        return this.hops.join(this.constructor._hopsSeparator);
+        return this.hops.join(Tag._hopsSeparator);
     }
 
     setName(name) {
@@ -89,10 +90,13 @@ class Tag {
 
         this.name = name;
         this.hops[0] = name;
+
+        return true;
     }
 
     setOwner(owner) {
         this.owner = owner ?? this.constructor.defaultValues.owner;
+        return true;
     }
 
     setBody(body, type) {
@@ -101,6 +105,8 @@ class Tag {
         if (type != null) {
             this.setType(type);
         }
+
+        return true;
     }
 
     aliasTo(target, args) {
@@ -148,10 +154,8 @@ class Tag {
     setVersion(version) {
         if (typeof version !== "string" || Util.empty(version)) {
             throw new TagError("Invalid version");
-        }
-
-        if (!TagTypes.versionTypes.includes(version)) {
-            throw new TagError("Unknown version: " + version);
+        } else if (!TagTypes.versionTypes.includes(version)) {
+            throw new TagError("Unknown version: " + version, version);
         }
 
         return this._setVersion(version);
@@ -176,7 +180,7 @@ class Tag {
 
         if (Array.isArray(type)) {
             if (type.length > 2) {
-                throw new TagError("Invalid type");
+                throw new TagError("Invalid type", type);
             }
 
             [type, version] = type;
@@ -192,9 +196,7 @@ class Tag {
 
         if (typeof type !== "string" || Util.empty(type)) {
             throw new TagError("Invalid type");
-        }
-
-        if (type === TagTypes.textType) {
+        } else if (type === TagTypes.textType) {
             return this.type;
         }
 
@@ -209,7 +211,7 @@ class Tag {
         }
 
         if (!typeSet) {
-            throw new TagError("Unknown type: " + type);
+            throw new TagError("Unknown type: " + type, type);
         }
 
         this.type = newType;
@@ -221,11 +223,8 @@ class Tag {
     }
 
     getSize() {
-        const bodySize = Util.utf8ByteLength(this.body),
-            argsSize = Util.utf8ByteLength(this.args);
-
-        const totalSize = bodySize + argsSize;
-        return totalSize / 1024;
+        const sizes = [this.body, this.args].map(str => Util.utf8ByteLength(str));
+        return ArrayUtil.sum(sizes) / Util.dataBytes.kilobyte;
     }
 
     async getOwner(username = true, onlyMembers = false, sv_id) {
@@ -248,19 +247,11 @@ class Tag {
 
         if (owner == null) {
             return username ? "not found" : null;
-        }
-
-        if (!username) {
+        } else if (!username) {
             return owner;
         }
 
-        let u_name = owner.user.username;
-
-        if (owner.nickname) {
-            u_name += `(${owner.nickname})`;
-        }
-
-        return u_name;
+        return owner.user.username + (owner.nickname ? `(${owner.nickname})` : "");
     }
 
     format(argsLimit = 100) {
@@ -307,14 +298,12 @@ class Tag {
             const formattedType = discord ? bold(this.getType()) : this.getType(),
                 header = `Script type is ${formattedType}.`;
 
-            if (discord) {
-                return {
-                    content: header,
-                    ...DiscordUtil.getFileAttach(body, "script.js")
-                };
-            } else {
-                return `${header}\n---\n${body}\n---`;
-            }
+            return discord
+                ? {
+                      content: header,
+                      ...DiscordUtil.getFileAttach(body, "script.js")
+                  }
+                : `${header}\n---\n${body}\n---`;
         }
 
         if (this.isAlias) {
@@ -393,10 +382,19 @@ class Tag {
     }
 
     _setAliasProps(hops, args) {
-        this.hops = hops;
-        this.args = args;
+        if (Array.isArray(hops) && !Util.empty(hops)) {
+            this.hops = hops;
+        }
+
+        const argsList = [].concat(args ?? []).filter(Boolean);
+        this.args = argsList.join(Tag._argsSeparator);
 
         this._fetched = true;
+    }
+
+    _setOriginalProps(tag) {
+        this.name = tag.name;
+        this.owner = tag.owner;
     }
 
     _setVersion(version) {
@@ -405,6 +403,7 @@ class Tag {
     }
 
     static _hopsSeparator = ",";
+    static _argsSeparator = " ";
 
     static _timeProps = ["registered", "lastEdited"];
 
@@ -427,17 +426,17 @@ class Tag {
 
     static _getFlag(name, strict = true) {
         if (typeof name !== "string" || Util.empty(name)) {
-            if (strict) {
-                throw new TagError("Invalid flag");
-            } else {
-                return 0;
-            }
+            return strict
+                ? (() => {
+                      throw new TagError("Invalid flag");
+                  })()
+                : 0;
         }
 
         const flag = TagFlags[name];
 
         if (typeof flag === "undefined") {
-            throw new TagError("Unknown flag: " + name);
+            throw new TagError("Unknown flag: " + name, name);
         }
 
         return flag;

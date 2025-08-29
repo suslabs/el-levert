@@ -1,19 +1,29 @@
+import Util from "../Util.js";
+
 import UtilError from "../../errors/UtilError.js";
 
 const CleanroomUtil = Object.freeze({
-    minSize: 3,
-    maxSize: 15,
+    minSize: [3, 3, 3],
+    maxSize: [15, 15, 15],
 
     calc: (l, w, h) => {
-        const { minSize, maxSize } = CleanroomUtil;
+        let dims;
 
-        if (l < minSize || w < minSize || h < minSize) {
-            throw new UtilError(`Cleanroom must be at least ${minSize}x${minSize}x${minSize}`);
+        if (Array.isArray(l)) {
+            dims = l;
+        } else {
+            dims = [l, w, h];
         }
 
-        if (l > maxSize || w > maxSize || h > maxSize) {
-            throw new UtilError(`Cleanroom cannot be bigger than ${maxSize}x${maxSize}x${maxSize}`);
+        dims = dims.map(d => Util.clamp(d, 0));
+
+        if (dims.some((d, i) => d < CleanroomUtil.minSize[i])) {
+            throw new UtilError(`Cleanroom must be at least ${CleanroomUtil.minSize.join("x")}`, dims);
+        } else if (dims.some((d, i) => d > CleanroomUtil.maxSize[i])) {
+            throw new UtilError(`Cleanroom cannot be bigger than ${CleanroomUtil.maxSize.join("x")}`, dims);
         }
+
+        [l, w, h] = dims;
 
         const l_inner = l - 2,
             w_inner = w - 2,
@@ -29,7 +39,12 @@ const CleanroomUtil = Object.freeze({
             filters = roof - 1,
             walls = shell - frame - filters;
 
-        return { frame, walls, filters };
+        return {
+            controller: 1,
+            frame,
+            walls,
+            filters
+        };
     }
 });
 

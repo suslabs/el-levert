@@ -11,15 +11,9 @@ function diceSearch(haystack, needle, options = {}) {
     minDist ??= 0.5;
 
     let distances = haystack.map((elem, i) => {
-        let val;
+        const val = searchKey == null ? elem : elem[searchKey],
+            dist = diceDist(val, needle);
 
-        if (searchKey == null) {
-            val = elem;
-        } else {
-            val = elem[searchKey];
-        }
-
-        const dist = diceDist(val, needle);
         return [i, dist];
     });
 
@@ -32,12 +26,7 @@ function diceSearch(haystack, needle, options = {}) {
     const oversized = typeof maxResults === "number" && distances.length > maxResults,
         count = oversized ? maxResults : distances.length;
 
-    const results = Array(count);
-
-    for (let i = 0; i < count; i++) {
-        results[i] = haystack[distances[i][0]];
-    }
-
+    const results = Array.from({ length: count }, (_, i) => haystack[distances[i][0]]);
     return outputResult(results, oversized);
 }
 

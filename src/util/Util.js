@@ -1,28 +1,38 @@
 import fs from "node:fs/promises";
 
+import TypeTester from "./TypeTester.js";
+
 import UtilError from "../errors/UtilError.js";
 
 let Util = {
-    durationSeconds: {
-        year: 31536000,
+    durationSeconds: Object.freeze({
+        milli: 1 / 1000,
+        second: 1,
+        minute: 60,
+        hour: 3600,
+        day: 86400,
         month: 2592000,
         week: 604800,
-        day: 86400,
-        hour: 3600,
-        minute: 60,
-        second: 1,
-        milli: 1 / 1000
-    },
+        year: 31536000
+    }),
+
+    dataBytes: Object.freeze({
+        byte: 1,
+        kilobyte: 1024,
+        megabyte: 1048576,
+        gigabyte: 1073741824,
+        terabyte: 1099511627776
+    }),
 
     numbers: "0123456789",
     alphabet: "abcdefghijklmnopqrstuvwxyz",
 
-    parseInt: (str, radix = 10, defaultValue) => {
-        if (typeof str !== "string" || typeof radix !== "number") {
-            return defaultValue ?? NaN;
-        }
+    random: (a, b) => {
+        return a + ~~(Math.random() * (b - a));
+    },
 
-        if (radix < 2 || radix > 36) {
+    parseInt: (str, radix = 10, defaultValue) => {
+        if (typeof str !== "string" || typeof radix !== "number" || radix < 2 || radix > 36) {
             return defaultValue ?? NaN;
         }
 
@@ -74,74 +84,137 @@ let Util = {
         return num.toLocaleString("en-US", options);
     },
 
-    directoryExists: async path => {
-        let stat;
+    splitAt: (str, sep = " ") => {
+        const idx = str.indexOf(sep);
 
-        try {
-            stat = await fs.stat(path);
-        } catch (err) {
-            if (err.code === "ENOENT") {
-                return false;
-            }
+        let first, second;
 
-            throw err;
+        if (idx === -1) {
+            first = str;
+            second = "";
+        } else {
+            first = str.slice(0, idx);
+            second = str.slice(idx);
         }
 
-        if (typeof stat !== "undefined") {
-            return stat.isDirectory();
+        return [first, second];
+    },
+
+    directoryExists: async path => {
+        try {
+            return (await fs.stat(path)).isDirectory();
+        } catch (err) {
+            return err.code === "ENOENT"
+                ? false
+                : (() => {
+                      throw err;
+                  })();
         }
     },
 
     delay: ms => {
+        ms = Math.round(ms);
         return new Promise(resolve => setTimeout(resolve, ms));
     },
 
+    runWithTimeout: (callback, timeoutError, timeout = 10000) => {
+        if (typeof callback !== "function") {
+            throw new UtilError("Callback function required");
+        }
+
+        timeout = Util.clamp(timeout, 0);
+
+        if (typeof timeoutError === "string") {
+            timeoutError = new Error(timeoutError);
+        } else if (!(timeoutError instanceof Error)) {
+            timeoutError = new UtilError("Operation timed out");
+        }
+
+        const res = callback();
+
+        if (timeout <= 0 || !TypeTester.isPromise(res)) {
+            return Promise.resolve(res);
+        }
+
+        let _timeout = null;
+
+        const clearTimer = () => {
+            clearTimeout(_timeout);
+            _timeout = null;
+        };
+
+        const timeoutPromise = new Promise((_, reject) => {
+            _timeout = setTimeout(() => reject(timeoutError), timeout);
+        });
+
+        return Promise.race([res.finally(clearTimer), timeoutPromise]);
+    },
+
     waitForCondition: (condition, timeoutError, timeout = 0, interval = 100) => {
-        return new Promise((resolve, reject) => {
-            let _timeout, _interval;
+        let [_timeout, _interval] = [null, null];
 
-            function clearTimers() {
-                if (_timeout) {
-                    clearTimeout(_timeout);
-                }
+        if (timeout > 0) {
+            if (typeof timeoutError === "string") {
+                timeoutError = new Error(timeoutError);
+            } else if (!(timeoutError instanceof Error)) {
+                timeoutError = new UtilError("Condition timed out");
+            }
+        }
 
-                clearInterval(_interval);
-
-                _timeout = undefined;
-                _interval = undefined;
+        const clearTimers = () => {
+            if (_timeout !== null) {
+                clearTimeout(_timeout);
             }
 
-            if (timeout > 0) {
-                if (!(timeoutError instanceof Error)) {
-                    timeoutError = new UtilError("Condition timed out");
-                }
+            clearInterval(_interval);
 
+            _timeout = _interval = null;
+        };
+
+        return new Promise((resolve, reject) => {
+            if (timeout > 0) {
                 _timeout = setTimeout(() => {
-                    reject(timeoutError);
                     clearTimers();
+                    reject(timeoutError);
                 }, timeout);
             }
 
             _interval = setInterval(() => {
-                let res;
+                let val;
 
                 try {
-                    res = condition();
+                    val = !!condition();
                 } catch (err) {
-                    reject(err);
                     clearTimers();
+                    reject(err);
 
                     return;
                 }
 
-                if (res) {
-                    resolve();
+                if (val) {
                     clearTimers();
+                    resolve();
 
                     return;
                 }
             }, interval);
         });
+    },
+
+    maybeAsyncThen: (res, thenFn, errorFn) => {
+        if (TypeTester.isPromise(res)) {
+            return res.then(thenFn, errorFn);
+        }
+
+        try {
+            return typeof thenFn === "function" ? thenFn(res) : res;
+        } catch (err) {
+            return typeof errorFn === "function"
+                ? errorFn(err)
+                : (() => {
+                      throw err;
+                  })();
+        }
     },
 
     stripSpaces: str => {
@@ -165,42 +238,49 @@ let Util = {
         }
     },
 
-    removeRangeStr: (str, i, length = 1, end = false) => {
+    _camelToWordsRegex: /([a-z])([A-Z])/g,
+    camelCaseToWords: str => {
+        const words = str.replace(Util._camelToWordsRegex, "$1 $2");
+        return words.toLowerCase();
+    },
+
+    _wordsToCamelRegex: /(?:^\w|[A-Z]|\b\w|\s+)/g,
+    wordsToCamelCase: str => {
+        str = str.toLowerCase();
+
+        const camel = str.replace(Util._wordsToCamelRegex, (match, i) => match[`to${i ? "Upper" : "Lower"}Case`]());
+        return Util.stripSpaces(camel);
+    },
+
+    removeStringRange: (str, i, length = 1, end = false) => {
         const last = end ? length : i + length;
         return str.slice(0, i) + str.slice(last);
     },
 
-    replaceRangeStr: (str, replacement, i, length = 1, end = false) => {
+    replaceStringRange: (str, replacement, i, length = 1, end = false) => {
         const last = end ? length : i + length;
         return str.slice(0, i) + replacement + str.slice(last);
     },
 
     randomString: n => {
-        const alphabet = Util.alphanumeric,
-            result = Array(n);
-
-        for (let i = 0; i < n; i++) {
-            result[i] = alphabet[~~(Math.random() * alphabet.length)];
-        }
-
-        return result.join("");
+        Array.from({ length: n }, () => Util.randomElement(Util.alphanumeric)).join("");
     },
 
     utf8ByteLength: str => {
         let i = 0,
             len = Util.countChars(str);
 
-        let codepoint,
+        let code,
             length = 0;
 
         for (; i < len; i++) {
-            codepoint = str.codePointAt(i);
+            code = str.codePointAt(i);
 
-            if (codepoint <= 0x7f) {
+            if (code <= 0x7f) {
                 length += 1;
-            } else if (codepoint <= 0x7ff) {
+            } else if (code <= 0x7ff) {
                 length += 2;
-            } else if (codepoint <= 0xffff) {
+            } else if (code <= 0xffff) {
                 length += 3;
             } else {
                 length += 4;
@@ -350,24 +430,19 @@ let Util = {
     findNthCharacter: (str, char, n) => {
         let idx = -1;
 
-        while (n > 0) {
+        for (; n > 0; n--) {
             idx = str.indexOf(char, idx + 1);
 
             if (idx === -1) {
                 return -1;
             }
-
-            n--;
         }
 
         return idx;
     },
 
     hasPrefix: (prefixes, str) => {
-        if (!Array.isArray(prefixes)) {
-            prefixes = [prefixes];
-        }
-
+        prefixes = Array.isArray(prefixes) ? prefixes : [prefixes];
         return prefixes.some(prefix => str.startsWith(prefix));
     },
 
@@ -391,20 +466,24 @@ let Util = {
         return Util.length(obj) > 1;
     },
 
-    first: (array, start = 0) => {
-        return array[start];
+    first: (obj, start = 0, n = 1) => {
+        return n > 1 ? obj.slice(start, start + n) : obj[start];
     },
 
-    last: (array, end = 0) => {
-        return array[array.length - end - 1];
+    last: (obj, end = 0, n = 1) => {
+        return n > 1 ? obj.slice(-end - n, -end || undefined) : obj.at(-end - 1);
     },
 
-    after: (array, start = 0) => {
-        return array.slice(start + 1);
+    after: (obj, start = 0, n = -1) => {
+        return n > 0 ? obj.slice(start + 1, start + 1 + n) : obj.slice(start + 1);
     },
 
-    randomElement: (array, a = 0, b = array.length) => {
-        return array[a + ~~(Math.random() * (b - a))];
+    before: (obj, end = 0, n = -1) => {
+        return n > 0 ? obj.slice(Math.max(0, end - n), end) : obj.slice(0, end);
+    },
+
+    randomElement: (obj, a = 0, b = obj.length, n = 1) => {
+        return n > 1 ? Array.from({ length: n }, () => obj[Util.random(a, b)]) : obj[Util.random(a, b)];
     },
 
     setFirst(array, value, start = 0) {
@@ -487,7 +566,7 @@ let Util = {
         }
 
         const dt = (t2 - t1) / div;
-        return Math.floor(Math.abs(dt));
+        return Math.round(Math.abs(dt));
     },
 
     duration: (delta, options = {}) => {

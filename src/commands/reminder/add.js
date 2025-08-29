@@ -20,26 +20,24 @@ export default {
             return `:information_source: ${this.getArgsHelp('date "message"')}`;
         }
 
-        let quote = match[2],
-            message = match[3];
-
-        if (!Util.empty(message)) {
-            message = message.replaceAll("\\" + quote, quote);
-        }
-
-        const err = getClient().reminderManager.checkMessage(message);
-
-        if (err) {
-            return `:warning: ${err}.`;
-        }
-
         let parsedDate = parseDate(date);
 
         if (!parsedDate) {
             parsedDate = parseDate(`in ${date}`);
-
             if (!parsedDate) {
                 return `:warning: Invalid date: \`${date}\`.`;
+            }
+        }
+
+        let [quote, message] = Util.after(match, 1);
+        message = message.replaceAll("\\" + quote, quote);
+
+        {
+            let err;
+            [message, err] = getClient().reminderManager.checkMessage(message, false);
+
+            if (err !== null) {
+                return `:warning: ${err}.`;
             }
         }
 
@@ -47,25 +45,23 @@ export default {
             reminder;
 
         try {
-            reminder = await getClient().reminderManager.add(msg.author.id, end, message);
+            reminder = await getClient().reminderManager.add(msg.author.id, end, message, {
+                validateNew: false
+            });
         } catch (err) {
-            if (err.name === "ReminderError") {
-                if (err.message === "Invalid end time") {
-                    return ":warning: Can't add a reminder for a time in the past.";
-                } else {
-                    return `:warning: ${err.message}.`;
-                }
+            if (err.name !== "ReminderError") {
+                throw err;
             }
 
-            throw err;
+            switch (err.message) {
+                case "Invalid end time":
+                    return ":warning: Can't add a reminder for a time in the past.";
+                default:
+                    return `:warning: ${err.message}.`;
+            }
         }
 
-        let out = ":information_source: You will be reminded on " + reminder.format();
-
-        if (!out.endsWith('"')) {
-            out += ".";
-        }
-
-        return out;
+        const format = reminder.format();
+        return `:information_source: You will be reminded on ${format}${format.endsWith('"') ? "" : "."}`;
     }
 };

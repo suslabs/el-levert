@@ -1,4 +1,5 @@
 import Util from "../Util.js";
+import ArrayUtil from "../ArrayUtil.js";
 
 const Codegen = {
     get indentation() {
@@ -30,9 +31,7 @@ const Codegen = {
 
         if (Util.empty(code)) {
             return ";";
-        }
-
-        if (force) {
+        } else if (force) {
             return code + ";";
         }
 
@@ -41,11 +40,7 @@ const Codegen = {
         let replaced = last_nl ? code.slice(last_nl) : code;
         replaced = replaced.replaceAll(" ", "");
 
-        if (Codegen._statementExp.test(replaced)) {
-            return code + ";";
-        }
-
-        return code;
+        return code + (Codegen._statementExp.test(replaced) ? "" : ";");
     },
 
     declaration: (name, value, isConst = false) => {
@@ -54,11 +49,7 @@ const Codegen = {
         name = name.toString().trim();
         value = value?.toString().trim() ?? "";
 
-        if (Util.empty(value)) {
-            return Codegen.statement(`${type} ${name}`);
-        }
-
-        return Codegen.statement(`${type} ${name} = ${value}`);
+        return Codegen.statement(Util.empty(value) ? `${type} ${name}` : `${type} ${name} = ${value}`);
     },
 
     assignment: (name, value, statement = true) => {
@@ -109,9 +100,7 @@ const Codegen = {
     },
 
     access: names => {
-        if (!Array.isArray(names)) {
-            names = [names];
-        }
+        names = ArrayUtil.guaranteeArray(names);
 
         const tokens = names.map((name, i) => {
             let optional = false;
@@ -155,21 +144,10 @@ const Codegen = {
     },
 
     throw: (err, msg) => {
-        const name = "throw";
-
         err = err?.toString().trim() ?? "";
 
-        let value = "";
-
-        if (Util.empty(msg)) {
-            value = "null";
-        } else if (!Array.isArray(msg)) {
-            msg = [msg];
-        }
-
-        if (Array.isArray(msg)) {
-            value = Codegen.array(msg, false);
-        }
+        let name = "throw",
+            value = Util.empty(msg) ? "null" : msg;
 
         if (!Util.empty(err)) {
             value = "new " + Codegen.call(err, value);
@@ -180,12 +158,7 @@ const Codegen = {
 
     function: (name, args, body, options = {}) => {
         name = name?.toString().trim() ?? "";
-
-        if (args == null) {
-            args = [];
-        } else if (!Array.isArray(args)) {
-            args = [args];
-        }
+        args = ArrayUtil.guaranteeArray(args ?? []);
 
         const cls = options.class ?? false,
             arrow = options.arrow ?? false;
@@ -219,20 +192,15 @@ const Codegen = {
 
         if (Util.empty(elseBody)) {
             return ifBlock;
+        } else {
+            const elseBlock = elseHeader + Codegen.block(elseBody);
+            return `${ifBlock} ${elseBlock}`;
         }
-
-        const elseBlock = elseHeader + Codegen.block(elseBody);
-        return `${ifBlock} ${elseBlock}`;
     },
 
     call: (name, args) => {
         name = name.toString().trim();
-
-        if (args == null) {
-            args = [];
-        } else if (!Array.isArray(args)) {
-            args = [args];
-        }
+        args = ArrayUtil.guaranteeArray(args ?? []);
 
         const values = Codegen.array(args, false);
         return Codegen.statement(`${name}(${values})`);

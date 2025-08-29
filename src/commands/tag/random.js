@@ -14,12 +14,15 @@ export default {
             return `:information_source: ${this.getArgsHelp("prefix")}`;
         }
 
-        const [prefix, t_args] = ParserUtil.splitArgs(args);
+        let [prefix, t_args] = ParserUtil.splitArgs(args);
 
-        const err = getClient().tagManager.checkName(prefix);
+        {
+            let err;
+            [prefix, err] = getClient().tagManager.checkName(prefix, false);
 
-        if (err) {
-            return `:warning: ${err}.`;
+            if (err !== null) {
+                return `:warning: ${err}.`;
+            }
         }
 
         const name = await getClient().tagManager.random(prefix);

@@ -9,55 +9,54 @@ export default {
     category: "util",
 
     handler: args => {
-        const dims = args.split("x");
+        const split = args.split("x"),
+            dims = split.map(d => Util.parseInt(d));
 
-        if (dims.length !== 3) {
+        if (split.length !== 3) {
             return `:warning: Invalid arguments specified. All dimensions must be provided in \`LxWxH\` format.`;
-        }
-
-        const l = Util.parseInt(dims[0]),
-            w = Util.parseInt(dims[1]),
-            h = Util.parseInt(dims[2]);
-
-        if (Number.isNaN(l) || Number.isNaN(w) || Number.isNaN(h)) {
-            return `:warning: Invalid dimensions: \`${dims[0]}x${dims[1]}x${dims[2]}\`.`;
+        } else if (dims.some(d => Number.isNaN(d))) {
+            return `:warning: Invalid dimensions: \`${args}\`.`;
         }
 
         let info;
 
         try {
-            info = CleanroomUtil.calc(l, w, h);
+            info = CleanroomUtil.calc(dims);
         } catch (err) {
-            if (err.name === "UtilError") {
-                return `:warning: ${err.message}.`;
+            if (err.name !== "UtilError") {
+                throw err;
             }
 
-            throw err;
+            if (err.message.includes("at least")) {
+                return `:warning: Cleanroom size must be at least **${CleanroomUtil.minSize.join("x")}**.`;
+            } else if (err.message.includes("bigger")) {
+                return `:warning: Cleanroom cannot be bigger than **${CleanroomUtil.maxSize.join("x")}**.`;
+            } else {
+                return `:warning: ${err.message}.`;
+            }
         }
 
-        const header = `:information_source: Resources required for a \`${l}x${w}x${h}\` cleanroom:`;
-
-        const { frame, walls, filters } = info;
+        const header = `:information_source: Resources required for a \`${args}\` cleanroom:`;
 
         const embed = new EmbedBuilder()
             .addFields(
                 {
                     name: "Cleanroom controller:",
-                    value: "- 1"
+                    value: "- " + Util.formatNumber(info.controller)
                 },
                 {
                     name: "Plascrete frame:",
-                    value: "- " + Util.formatNumber(frame),
+                    value: "- " + Util.formatNumber(info.frame),
                     inline: true
                 },
                 {
                     name: "Plascrete or glass walls:",
-                    value: "- " + Util.formatNumber(walls),
+                    value: "- " + Util.formatNumber(info.walls),
                     inline: true
                 },
                 {
                     name: "Filter casings:",
-                    value: "- " + Util.formatNumber(filters),
+                    value: "- " + Util.formatNumber(info.filters),
                     inline: true
                 }
             )

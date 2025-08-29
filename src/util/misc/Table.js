@@ -118,9 +118,7 @@ const charsets = Object.freeze({
 
 const TableUtil = Object.freeze({
     columnWidth: (heading, rows, minWidth = 0, maxWidth = Infinity) => {
-        if (rows == null) {
-            rows = [];
-        }
+        rows ??= [];
 
         const lineMax = ArrayUtil.maxLength(rows),
             width = Math.max(Util.stringLength(heading), lineMax);
@@ -183,12 +181,7 @@ const Lines = Object.freeze({
 
     insertSeparator: (charset, sideLines) => line => {
         const separator = charset.vertical.line;
-
-        if (sideLines) {
-            return separator + line.join(separator) + separator;
-        } else {
-            return line.join(separator);
-        }
+        return sideLines ? `${separator}${line.join(separator)}${separator}` : line.join(separator);
     }
 });
 
@@ -199,9 +192,8 @@ class Table {
         this.columns = columns ?? {};
         this.rows = rows ?? {};
 
-        this.rows = rows;
-
         this.style = style ?? Table.defaultStyle;
+
         this.options = options;
 
         this.customChars = options.customCharset;
@@ -212,20 +204,20 @@ class Table {
 
     get charset() {
         if (this.style === "custom") {
-            if (this.customChars == null) {
-                throw new UtilError("No custom charset object provided");
-            }
-
-            return this.customChars;
+            return this.customChars == null
+                ? (() => {
+                      throw new UtilError("No custom charset object provided");
+                  })()
+                : this.customChars;
         }
 
         const charset = charsets[this.style];
 
-        if (typeof charset === "undefined") {
-            throw new UtilError("Invalid style: " + this.style);
-        }
-
-        return charset;
+        return typeof charset === "undefined"
+            ? (() => {
+                  throw new UtilError("Invalid style: " + this.style, this.style);
+              })()
+            : charset;
     }
 
     get columnIds() {
@@ -303,7 +295,7 @@ class Table {
         const lines = this._getSeparatedLines();
 
         const headingLine = Util.first(lines),
-            contentLines = Util.after(lines).join("\n");
+            contentLines = Util.after(lines, 0).join("\n");
 
         const formattedTable = [headingLine];
 
@@ -339,9 +331,7 @@ class Table {
 
 function drawTable(columns, rows, style, options) {
     for (const id of Object.keys(rows)) {
-        if (!Array.isArray(rows[id])) {
-            rows[id] = [rows[id]];
-        }
+        rows[id] = ArrayUtil.guaranteeArray(rows[id]);
     }
 
     const table = new Table(columns, rows, style, options);

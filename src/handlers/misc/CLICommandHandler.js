@@ -2,11 +2,16 @@ import Handler from "../Handler.js";
 
 import { getClient, getLogger } from "../../LevertClient.js";
 
+import Util from "../../util/Util.js";
+
 class CLICommandHandler extends Handler {
     static $name = "cliCommandHandler";
 
-    constructor(enabled, options) {
-        super(enabled, options);
+    constructor(enabled) {
+        super(enabled, {
+            minResponseTime: 0,
+            globalTimeLimit: 0
+        });
     }
 
     reply(level, ...data) {
@@ -22,22 +27,26 @@ class CLICommandHandler extends Handler {
             return;
         }
 
-        const [cmd, _name, args] = getClient().cliCommandManager.getCommand(str);
+        const [cmd, name, args] = getClient().cliCommandManager.getCommand(str);
 
         if (cmd === null) {
             this.reply(
                 "error",
-                `Command "${_name}" not found. 
+                `Command "${name}" not found. 
 Use ${getClient().cliCommandManager.commandPrefix}help to get all available commands.`
             );
 
             return;
         }
 
+        const executeMain = async () => {
+            return await cmd.execute(args);
+        };
+
         let out;
 
         try {
-            out = await cmd.execute(args);
+            out = await Util.runWithTimeout(executeMain, "Command execution timed out", this.globalTimeout);
         } catch (err) {
             getLogger().error(
                 `Encountered exception while executing command "${cmd.name}":\n${err.stack ?? err.message}`

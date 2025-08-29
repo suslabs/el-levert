@@ -115,13 +115,9 @@ function getRegisterCode(options, funcOptions = {}, errorOptions = {}) {
         }
     }
 
-    if (stringFunc) {
-        funcDeclCode += stringFuncDeclaration(...commonArgs, func);
-    } else {
-        funcDeclCode += refFuncDeclaration(...commonArgs, type);
-    }
-
+    funcDeclCode += stringFunc ? stringFuncDeclaration(...commonArgs, func) : refFuncDeclaration(...commonArgs, type);
     const code = `${objDeclCode}\n\n${funcDeclCode}`;
+
     return Codegen.closure(code);
 }
 

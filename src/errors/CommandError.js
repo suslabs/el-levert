@@ -1,5 +1,5 @@
-import CustomError from "./CustomError.js";
+import ReferenceError from "./ReferenceError.js";
 
-class CommandError extends CustomError {}
+class CommandError extends ReferenceError {}
 
 export default CommandError;

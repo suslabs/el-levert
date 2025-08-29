@@ -1,5 +1,5 @@
-import CustomError from "./CustomError.js";
+import ReferenceError from "./ReferenceError.js";
 
-class VMError extends CustomError {}
+class VMError extends ReferenceError {}
 
 export default VMError;

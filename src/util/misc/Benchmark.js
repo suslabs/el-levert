@@ -13,7 +13,7 @@ class Benchmark {
                 out = func(...args);
 
             const t2 = performance.now(),
-                elapsed = t2 - t1;
+                elapsed = Util.timeDelta(t2, t1);
 
             if (typeof result === "undefined") {
                 result = out;

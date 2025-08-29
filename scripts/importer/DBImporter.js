@@ -1,5 +1,7 @@
 import JsonLoader from "../../src/loaders/JsonLoader.js";
 
+import TagManager from "../../src/managers/database/TagManager.js";
+
 import Tag from "./mock/FakeTag.js";
 import { TagTypes } from "../../src/structures/tag/TagTypes.js";
 
@@ -19,64 +21,52 @@ class DBImporter {
     }
 
     async updateDatabase(path, mode = "overwrite") {
+        if (!DBImporter._updateModes.includes(mode)) {
+            throw new ImporterError("Invalid update mode: " + mode, mode);
+        }
+
         let importTags = await this._loadTags(path),
-            currTags = await this.tagManager.dump(true);
+            currentTags = await this.tagManager.dump(true);
 
+        let diffTypes;
         let existingTags, newTags, deletedTags;
-        ({ existingTags, newTags, deletedTags, oldTags: currTags } = DBImporter._getDifference(currTags, importTags));
 
-        importTags = DBImporter._getMap(importTags);
-        currTags = DBImporter._getMap(currTags);
+        switch (mode) {
+            case "overwrite":
+                diffTypes = "all";
+                this.logger.warn("Overwriting existing tags...");
+                break;
+            case "amend":
+                diffTypes = ["existing", "new"];
+                this.logger.warn("Amending existing tags...");
+                break;
+        }
 
-        Tag.fetchFinished = true;
+        ({
+            existingTags,
+            newTags,
+            deletedTags,
+            oldTags: currentTags
+        } = DBImporter._getDifference(currentTags, importTags, diffTypes));
+
+        importTags = TagManager.getNameMap(importTags);
+        currentTags = TagManager.getNameMap(currentTags);
+
+        Tag._fetchFinished = true;
+
         let count = 0;
 
-        for (const name of existingTags) {
-            const currTag = currTags.get(name),
-                importTag = importTags.get(name);
-
-            if (!currTag.equals(importTag)) {
-                try {
-                    await this.tagManager.updateProps(currTag, importTag);
-                    count++;
-                } catch (err) {
-                    this.logger.error(`Error occured while updating "${name}":`, err);
-                }
-            }
+        switch (mode) {
+            case "overwrite":
+                count += await this._deleteTags(deletedTags, currentTags);
+            // eslint-disable-next-line no-fallthrough
+            case "amend":
+                count += await this._updateTags(existingTags, importTags, currentTags);
+                count += await this._addTags(newTags, importTags, currentTags);
+                break;
         }
 
-        for (const name of newTags) {
-            const currTag = currTags.get(name),
-                importTag = importTags.get(name);
-
-            if (typeof currTag === "undefined") {
-                try {
-                    await this.tagManager._add(importTag);
-                    count++;
-                } catch (err) {
-                    this.logger.error(`Error occured while adding "${name}":`.err);
-                }
-            }
-        }
-
-        for (const name of deletedTags) {
-            const oldTag = currTags.get(name);
-
-            try {
-                await this.tagManager.delete(oldTag);
-                count++;
-            } catch (err) {
-                this.logger.error(`Error occured while deleting "${name}":`, err);
-            }
-        }
-
-        Tag.fetchFinished = false;
-
-        if (count > 0) {
-            this.logger.info(`Updated ${count} tags.`);
-        } else {
-            this.logger.info("No tags were updated.");
-        }
+        this.logger.info(count > 0 ? `Updated ${count} tag(s).` : "No tags were updated successfully.");
     }
 
     async fix() {
@@ -117,6 +107,7 @@ class DBImporter {
         body: "string"
     };
 
+    static _updateModes = ["overwrite", "amend"];
     static _diffTypes = ["existing", "new", "deleted"];
 
     static _parseTag(data) {
@@ -132,37 +123,45 @@ class DBImporter {
         return tag;
     }
 
-    static _getDifference(currTags, importTags, diffTypes = "all") {
+    static _getDifference(currentTags, importTags, diffTypes = "all") {
         if (diffTypes === "all") {
             diffTypes = DBImporter._diffTypes;
         } else {
-            if (!Array.isArray(diffTypes)) {
-                diffTypes = [diffTypes];
-            }
+            diffTypes = ArrayUtil.guaranteeArray(diffTypes);
 
             if (!diffTypes.every(type => DBImporter._diffTypes.includes(type))) {
-                throw new ImporterError("Invalid diff types");
+                throw new ImporterError("Invalid diff types", diffTypes);
             }
         }
+
+        const diff = {};
 
         const importNames = importTags.map(tag => tag.name),
             importNamesSet = new Set(importNames);
 
-        const currNamesSet = new Set(currTags.map(tag => tag.name));
+        let oldTags, oldNames;
 
-        const oldTags = currTags.filter(tag => tag.isOld),
+        if (diffTypes.includes("existing") || diffTypes.includes("deleted")) {
+            oldTags = currentTags.filter(tag => tag.isOld);
             oldNames = oldTags.map(tag => tag.name);
 
-        return {
-            existingTags: oldNames.filter(name => importNamesSet.has(name)),
-            newTags: importNames.filter(name => !currNamesSet.has(name)),
-            deletedTags: oldNames.filter(name => !importNamesSet.has(name)),
-            oldTags
-        };
-    }
+            diff.oldTags = oldTags;
+        }
 
-    static _getMap(tags) {
-        return new Map(tags.map(tag => [tag.name, tag]));
+        if (diffTypes.includes("existing")) {
+            diff.existingTags = oldNames.filter(name => importNamesSet.has(name));
+        }
+
+        if (diffTypes.includes("new")) {
+            const currentNamesSet = new Set(currentTags.map(tag => tag.name));
+            diff.newTags = importNames.filter(name => !currentNamesSet.has(name));
+        }
+
+        if (diffTypes.includes("deleted")) {
+            diff.deletedTags = oldNames.filter(name => !importNamesSet.has(name));
+        }
+
+        return diff;
     }
 
     _validTag(data) {
@@ -176,10 +175,11 @@ class DBImporter {
             return false;
         }
 
-        const name = alias ? Util.first(data.hops) : data.name,
-            err = this.tagManager.checkName(name);
+        let name = alias ? Util.first(data.hops) : data.name,
+            err;
+        [name, err] = this.tagManager.checkName(name, false);
 
-        if (err || TagCommand.subcommands.includes(name)) {
+        if (err !== null || TagCommand.subcommands.includes(name)) {
             return false;
         }
 
@@ -194,15 +194,76 @@ class DBImporter {
         data = data.filter(data => this._validTag(data));
         data = ArrayUtil.unique(data, "name");
 
-        const oldDefault = TagTypes.defaultVersion;
-        TagTypes.defaultVersion = TagTypes.versionTypes[0];
+        let tags;
 
-        const tags = data.map(tag => DBImporter._parseTag(tag));
+        {
+            const oldDefault = TagTypes.defaultVersion;
+            TagTypes.defaultVersion = TagTypes.versionTypes[0];
 
-        TagTypes.defaultVersion = oldDefault;
+            tags = data.map(tag => DBImporter._parseTag(tag));
+
+            TagTypes.defaultVersion = oldDefault;
+        }
 
         this.tags = tags;
         return tags;
+    }
+
+    async _updateTags(existingTags, importTags, currentTags) {
+        let count = 0;
+
+        for (const name of existingTags) {
+            const currTag = currentTags.get(name),
+                importTag = importTags.get(name);
+
+            if (!currTag.equals(importTag)) {
+                try {
+                    await this.tagManager.updateProps(currTag, importTag);
+                    count++;
+                } catch (err) {
+                    this.logger.error(`Error occured while updating "${name}":`, err);
+                }
+            }
+        }
+
+        return count;
+    }
+
+    async _addTags(newTags, importTags, currentTags) {
+        let count = 0;
+
+        for (const name of newTags) {
+            const currentTag = currentTags.get(name),
+                importTag = importTags.get(name);
+
+            if (typeof currentTag === "undefined") {
+                try {
+                    await this.tagManager._addPrepared(importTag);
+                    count++;
+                } catch (err) {
+                    this.logger.error(`Error occured while adding "${name}":`.err);
+                }
+            }
+        }
+
+        return count;
+    }
+
+    async _deleteTags(deletedTags, currentTags) {
+        let count = 0;
+
+        for (const name of deletedTags) {
+            const oldTag = currentTags.get(name);
+
+            try {
+                await this.tagManager.delete(oldTag);
+                count++;
+            } catch (err) {
+                this.logger.error(`Error occured while deleting "${name}":`, err);
+            }
+        }
+
+        return count;
     }
 
     async _fixQuotas() {

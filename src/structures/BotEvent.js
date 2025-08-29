@@ -10,9 +10,7 @@ class BotEvent {
     constructor(options) {
         if (typeof options.name !== "string") {
             throw new EventError("Event must have a name");
-        }
-
-        if (typeof options.listener !== "function") {
+        } else if (typeof options.listener !== "function") {
             throw new EventError("Event must have a listener function");
         }
 
@@ -29,11 +27,8 @@ class BotEvent {
         client = this.client ?? client;
         this.client = client;
 
-        if (this.once) {
-            client.once(this.name, this.listener);
-        } else {
-            client.on(this.name, this.listener);
-        }
+        const listenerFunc = this.once ? client.once : client.on;
+        listenerFunc.call(client, this.name, this.listener);
 
         this.registered = true;
     }

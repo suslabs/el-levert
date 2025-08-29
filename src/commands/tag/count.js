@@ -33,9 +33,9 @@ export default {
 
                 if (typeof find === "undefined") {
                     return `:warning: User \`${u_name}\` not found.`;
+                } else {
+                    user = find.user;
                 }
-
-                user = find.user;
             }
         }
 

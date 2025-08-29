@@ -35,11 +35,7 @@ class CommandObjectLoader extends ObjectLoader {
             }
         }
 
-        if (shouldLoad ?? true) {
-            return LoadStatus.successful;
-        } else {
-            return LoadStatus.ignore;
-        }
+        return (shouldLoad ?? true) ? LoadStatus.successful : LoadStatus.ignore;
     }
 
     getLoadedMessage() {

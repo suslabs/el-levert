@@ -30,7 +30,7 @@ class Molecule extends Map {
         if (Array.isArray(rhs)) {
             const valid = rhs.map(([element, freq]) => {
                 if (!Molecule.validElement(element)) {
-                    throw new StoikError(`Invalid element format: ${element}`);
+                    throw new StoikError("Invalid element format", element);
                 }
 
                 return [element, freq ?? 1];
@@ -45,7 +45,7 @@ class Molecule extends Map {
 
     set(key, value) {
         if (!Molecule.validElement(key)) {
-            throw new StoikError("Invalid element format");
+            throw new StoikError("Invalid element format", key);
         }
 
         return super.set(key, value);
@@ -103,11 +103,7 @@ class Molecule extends Map {
         const current = lhs.get(element) ?? 0,
             newFreq = subtract ? current - rhsFreq : current + rhsFreq;
 
-        if (newFreq === 0) {
-            lhs.delete(element);
-        } else {
-            lhs.set(element, newFreq);
-        }
+        newFreq === 0 ? lhs.delete(element) : lhs.set(element, newFreq);
     }
 
     static _addOrSubtract(lhs, subtract, ...args) {

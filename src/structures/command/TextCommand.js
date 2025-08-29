@@ -57,11 +57,7 @@ class TextCommand extends BaseCommand {
     }
 
     getSubcmdNames(includeAliases = true) {
-        if (includeAliases) {
-            return Array.from(super.getSubcmdMap().keys());
-        } else {
-            return super.getSubcmdNames();
-        }
+        return includeAliases ? Array.from(super.getSubcmdMap().keys()) : super.getSubcmdNames();
     }
 
     getSubcmds() {
@@ -113,9 +109,7 @@ class TextCommand extends BaseCommand {
             return false;
         }
 
-        const split = args.split(" ");
-
-        for (const part of split) {
+        for (const part of args.split(" ")) {
             if (this.helpArgs.includes(part)) {
                 return true;
             }

@@ -14,21 +14,6 @@ let DiscordUtil = {
     msgCharLimit: 2000,
     embedCharLimit: 4096,
 
-    codeblockRegex: /(?<!\\)(?:`{3}([\S]+\n)?([\s\S]*?)`{3}|`([^`\n]+)`)/g,
-
-    findCodeblocks: str => {
-        const matches = str.matchAll(DiscordUtil.codeblockRegex);
-        return Array.from(matches).map(match => [match.index, match.index + match[0].length]);
-    },
-
-    getFileAttach: (data, name = "message.txt") => {
-        const attachment = new AttachmentBuilder(Buffer.from(data), { name });
-
-        return {
-            files: [attachment]
-        };
-    },
-
     userIdRegex: /\d{17,20}/g,
 
     findUserIds: str => {
@@ -41,6 +26,18 @@ let DiscordUtil = {
     findMentions: str => {
         const matches = Array.from(str.matchAll(DiscordUtil.mentionRegex));
         return matches.map(match => match[1]);
+    },
+
+    codeblockRegex: /(?<!\\)(?:`{3}([\S]+\n)?([\s\S]*?)`{3}|`([^`\n]+)`)/g,
+
+    findCodeblocks: str => {
+        const matches = str.matchAll(DiscordUtil.codeblockRegex);
+        return Array.from(matches).map(match => [match.index, match.index + match[0].length]);
+    },
+
+    getFileAttach: (data, name = "message.txt") => {
+        const attachment = new AttachmentBuilder(Buffer.from(data), { name });
+        return { files: [attachment] };
     },
 
     msgUrlRegex:
@@ -117,18 +114,15 @@ let DiscordUtil = {
     },
 
     formatChannelName: channel => {
-        const inDms = channel.type === ChannelType.DM;
+        const inDms = channel.type === ChannelType.DM,
+            inThread = [ChannelType.PublicThread, ChannelType.PrivateThread].includes(channel.type);
 
         if (inDms) {
             return "DMs";
-        }
-
-        const inThread = [ChannelType.PublicThread, ChannelType.PrivateThread].includes(channel.type);
-
-        if (inThread) {
-            return `"${channel.name}" (thread of parent channel #${channel.parent.name})`;
         } else {
-            return `#${channel.name}`;
+            return inThread
+                ? `"${channel.name}" (thread of parent channel #${channel.parent.name})`
+                : `#${channel.name}`;
         }
     },
 
@@ -272,18 +266,16 @@ let DiscordUtil = {
                 count = Util.countLines;
                 break;
             default:
-                throw new UtilError("Invalid count type: " + countType);
+                throw new UtilError("Invalid count type: " + countType, countType);
         }
 
         if (countAreas === "all") {
             countAreas = DiscordUtil._countAreas;
         } else {
-            if (!Array.isArray(countAreas)) {
-                countAreas = [countAreas];
-            }
+            countAreas = ArrayUtil.guaranteeArray(countAreas);
 
             if (!countAreas.every(area => DiscordUtil._countAreas.includes(area))) {
-                throw new UtilError("Invalid count areas");
+                throw new UtilError("Invalid count areas", countAreas);
             }
         }
 
@@ -367,7 +359,7 @@ let DiscordUtil = {
         return false;
     },
 
-    mdDelimiters: [
+    _mdDelimiters: [
         { pattern: "```", length: 3 },
         { pattern: "**", length: 2 },
         { pattern: "__", length: 2 },
@@ -377,7 +369,6 @@ let DiscordUtil = {
         { pattern: "_", length: 1 },
         { pattern: "`", length: 1 }
     ],
-
     markdownTrimString: (str, charLimit, lineLimit) => {
         let stack = [],
             contentCount = 0,
@@ -395,7 +386,7 @@ let DiscordUtil = {
             let mdFound = false;
 
             if (!isEscaped) {
-                for (const { pattern, length } of DiscordUtil.mdDelimiters) {
+                for (const { pattern, length } of DiscordUtil._mdDelimiters) {
                     const part = str.slice(i, length);
 
                     if (part === pattern) {
@@ -458,58 +449,59 @@ let DiscordUtil = {
     },
 
     fetchAttachment: async (msg, responseType = "text", options = {}) => {
-        const contentTypes = [].concat(options.allowedContentTypes ?? []),
-            maxSize = (options.maxSize ?? Infinity) * 1024;
+        const ctypes = [].concat(options.allowedContentType ?? [], options.allowedContentTypes ?? []);
 
-        let attach;
+        const maxSizeKb = Math.round(options.maxSize ?? Infinity),
+            maxSize = maxSizeKb * Util.dataBytes.kilobyte;
 
-        if (typeof msg.file !== "undefined") {
-            attach = msg.file;
-        } else if (!Util.empty(msg.attachments)) {
-            attach = msg.attachments.at(0);
-        }
+        const maxSizeError = attachSize =>
+            new UtilError(`The attachment can take up at most ${maxSizeKb} kb`, { attachSize, maxSizeKb });
 
-        const url = msg.fileUrl ?? attach?.url;
+        const attach = msg.file ?? msg.attachments?.at(0),
+            url = msg.fileUrl ?? attach?.url;
 
-        if (typeof url === "undefined") {
+        if (typeof url !== "string" || Util.empty(url)) {
             throw new UtilError("Message doesn't have any attachments");
         }
 
         const attachInfo = msg.attachInfo ?? DiscordUtil.parseAttachmentUrl(url),
             contentType = attach?.contentType;
 
-        const [extensions, ctPrefixes] = ArrayUtil.split(contentTypes, type => type.startsWith("."));
+        const [ctypePrefs, extensions] = ArrayUtil.split(ctypes, type => type.startsWith("."));
 
         if (!Util.empty(extensions)) {
-            if (typeof attachInfo === "undefined") {
+            if (attachInfo == null || Util.empty(attachInfo.ext)) {
                 throw new UtilError("Extension can only be validated for attachment URLs");
-            }
-
-            if (!extensions.includes(attachInfo.ext)) {
-                throw new UtilError("Invalid file extension: " + attachInfo.ext);
+            } else if (!extensions.includes(attachInfo.ext)) {
+                throw new UtilError("Invalid file extension: " + attachInfo.ext, attachInfo.ext);
             }
         }
 
-        if (!Util.empty(ctPrefixes)) {
-            if (typeof contentType === "undefined") {
+        if (!Util.empty(ctypePrefs)) {
+            if (contentType == null) {
                 throw new UtilError("Attachment doesn't have a content type");
-            }
-
-            if (!Util.hasPrefix(ctPrefixes, contentType)) {
-                throw new UtilError("Invalid content type: " + contentType);
+            } else if (!Util.hasPrefix(ctypePrefs, contentType)) {
+                throw new UtilError("Invalid content type: " + contentType, contentType);
             }
         }
 
         if (attach?.size > maxSize) {
-            throw new UtilError(`The attachment can take up at most ${maxSize} kb`);
+            throw maxSizeError();
         }
 
-        const res = await axios.request({
-            url,
-            responseType
-        });
+        let res;
 
-        return res.data;
+        try {
+            res = await axios.request({
+                url,
+                maxContentLength: maxSize,
+                responseType
+            });
+        } catch (err) {
+            throw err.message?.startsWith("maxContentLength") ? maxSizeError() : err;
+        }
+
+        return { attach, body: res.data, contentType };
     }
 };
 

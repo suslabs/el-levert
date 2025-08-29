@@ -28,11 +28,7 @@ class BaseCommandManager extends Manager {
     }
 
     getCommands(includeSubcommands = false) {
-        if (includeSubcommands) {
-            return this.commands;
-        } else {
-            return this.commands.filter(command => !command.isSubcmd);
-        }
+        return includeSubcommands ? this.commands : this.commands.filter(command => !command.isSubcmd);
     }
 
     searchCommands(name) {
@@ -77,16 +73,12 @@ class BaseCommandManager extends Manager {
         let [deleted] = ArrayUtil.removeItem(this.commands, command);
 
         if (errorIfNotFound && !deleted) {
-            throw new CommandError(`Couldn't delete ${command.getName(true)}`);
+            throw new CommandError(`Couldn't delete ${command.getName(true)}`, command.getName());
         }
 
         this._commandLoader.deleteData(command, errorIfNotFound);
 
-        if (!removeSubcommands) {
-            return deleted;
-        }
-
-        if (Util.empty(command.subcmds)) {
+        if (!removeSubcommands || Util.empty(command.subcmds)) {
             return deleted;
         }
 
@@ -109,7 +101,7 @@ class BaseCommandManager extends Manager {
             deleted &= ArrayUtil.removeItem(this.commands, subcmd)[0];
 
             if (errorIfNotFound && !deleted) {
-                throw new CommandError(`Couldn't delete ${subcmd.getName(true)}`);
+                throw new CommandError(`Couldn't delete ${subcmd.getName(true)}`, subcmd.getName());
             }
 
             this._commandLoader.deleteData(subcmd, errorIfNotFound);
@@ -128,7 +120,7 @@ class BaseCommandManager extends Manager {
         const [deleted] = ArrayUtil.removeItem(this.commands, subcmd);
 
         if (errorIfNotFound && !deleted) {
-            throw new CommandError(`Couldn't delete ${subcmd.getName(true)}`);
+            throw new CommandError(`Couldn't delete ${subcmd.getName(true)}`, subcmd.getName());
         }
 
         if (parent != null) {
@@ -210,7 +202,7 @@ class BaseCommandManager extends Manager {
     _findDuplicateCommands() {
         return this.commands
             .map((command, i) => {
-                const previous = this.commands.slice(0, i),
+                const previous = Util.before(this.commands, i),
                     duplicate = previous.findLast(other => command.equivalent(other));
 
                 if (typeof duplicate === "undefined") {

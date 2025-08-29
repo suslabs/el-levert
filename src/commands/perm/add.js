@@ -8,28 +8,29 @@ export default {
     aliases: ["give"],
     parent: "perm",
     subcommand: true,
-    allowed: getClient().permManager.adminLevel,
+    allowed: "admin",
 
     handler: async function (args, msg, perm) {
-        const [g_name, u_name] = ParserUtil.splitArgs(args);
+        let [g_name, u_name] = ParserUtil.splitArgs(args);
 
         if (Util.empty(args) || Util.empty(g_name) || Util.empty(u_name)) {
             return `:information_source: ${this.getArgsHelp("group_name (ping/id/username)")}`;
         }
 
-        const err = getClient().permManager.checkName(g_name);
+        {
+            let err;
+            [g_name, err] = getClient().permManager.checkName(g_name, false);
 
-        if (err) {
-            return `:warning: ${err}.`;
+            if (err !== null) {
+                return `:warning: ${err}.`;
+            }
         }
 
         const group = await getClient().permManager.fetchGroup(g_name);
 
         if (group === null) {
             return `:warning: Group **${g_name}** doesn't exist.`;
-        }
-
-        if (perm < group.level) {
+        } else if (!getClient().permManager.allowed(perm, group.level)) {
             return `:warning: Can't add a user to a group with a higher level your own. (**${perm}** < **${group.level}**)`;
         }
 
@@ -37,20 +38,18 @@ export default {
 
         if (typeof find === "undefined") {
             return `:warning: User \`${u_name}\` not found.`;
-        }
-
-        if (await getClient().permManager.isInGroup(g_name, find.id)) {
+        } else if (await getClient().permManager.isInGroup(g_name, find.id)) {
             return `:warning: User \`${find.user.username}\` (\`${find.user.id}\`) is already a part of the group **${g_name}**.`;
         }
 
         try {
             await getClient().permManager.add(group, find.user.id);
         } catch (err) {
-            if (err.name === "PermissionError") {
-                return `:warning: ${err.message}.`;
+            if (err.name !== "PermissionError") {
+                throw err;
             }
 
-            throw err;
+            return `:warning: ${err.message}.`;
         }
 
         return `:white_check_mark: Added user \`${find.user.username}\` (\`${find.user.id}\`) to group **${g_name}**.`;

@@ -14,7 +14,7 @@ class TextLoader extends FileLoader {
             ...options
         });
 
-        this.encoding = options.encoding ?? "utf-8";
+        this.encoding = options.encoding ?? "utf8";
     }
 
     set path(val) {

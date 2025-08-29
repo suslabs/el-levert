@@ -8,39 +8,40 @@ export default {
     aliases: ["delete", "delete_group"],
     parent: "perm",
     subcommand: true,
-    allowed: getClient().permManager.adminLevel,
+    allowed: "admin",
 
     handler: async function (args, msg, perm) {
         if (Util.empty(args)) {
             return `:information_source: ${this.getArgsHelp("group_name")}`;
         }
 
-        const [g_name] = ParserUtil.splitArgs(args);
+        let [g_name] = ParserUtil.splitArgs(args);
 
-        const err = getClient().permManager.checkName(g_name);
+        {
+            let err;
+            [g_name, err] = getClient().permManager.checkName(g_name, false);
 
-        if (err) {
-            return `:warning: ${err}.`;
+            if (err !== null) {
+                return `:warning: ${err}.`;
+            }
         }
 
         const group = await getClient().permManager.fetchGroup(g_name);
 
         if (group === null) {
             return `:warning: Group **${g_name}** doesn't exist.`;
-        }
-
-        if (perm < group.level) {
+        } else if (!getClient().permManager.allowed(perm, group.level)) {
             return `:warning: Can't remove a group with a level that is higher than yours. (**${perm}** < **${group.level}**)`;
         }
 
         try {
             await getClient().permManager.removeGroup(group);
         } catch (err) {
-            if (err.name === "PermissionError") {
-                return `:warning: ${err.message}.`;
+            if (err.name !== "PermissionError") {
+                throw err;
             }
 
-            throw err;
+            return `:warning: ${err.message}.`;
         }
 
         return `:white_check_mark: Removed group **${g_name}** and all of its users.`;

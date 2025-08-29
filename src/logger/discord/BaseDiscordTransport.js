@@ -11,19 +11,18 @@ import LoggerError from "../../errors/LoggerError.js";
 class BaseDiscordTransport extends Transport {
     constructor(opts) {
         super(opts);
+        const compName = this.constructor.$name;
 
-        if (typeof this.constructor.$name !== "string") {
+        if (typeof compName !== "string" || Util.empty(compName)) {
             throw new LoggerError("Discord transport must have a default name");
-        }
-
-        if (typeof this.sendLog !== "function") {
+        } else if (typeof this.sendLog !== "function") {
             throw new LoggerError("Child class must have a sendLog function");
         }
 
         const charLimit = opts.charLimit ?? DiscordUtil.embedCharLimit;
         this.charLimit = Util.clamp(charLimit, 0, DiscordUtil.embedCharLimit);
 
-        this.name = opts.name ?? this.constructor.$name;
+        this.name = opts.name ?? compName;
         this.sendInterval = opts.sendInterval ?? 0;
 
         this.client = opts.client;
@@ -116,7 +115,7 @@ class BaseDiscordTransport extends Transport {
 
         if (info.timestamp != null) {
             const date = new Date(info.timestamp),
-                timestamp = Math.floor(date.getTime() * Util.durationSeconds.milli),
+                timestamp = Math.round(date.getTime() * Util.durationSeconds.milli),
                 formattedTimestamp = time(timestamp, TimestampStyles.RelativeTime);
 
             embed.setTimestamp(date);
@@ -192,11 +191,9 @@ class BaseDiscordTransport extends Transport {
     }
 
     _startSendLoop() {
-        if (!this.sendDelayed) {
-            return;
+        if (this.sendDelayed) {
+            this._sendTimer = setInterval(this._sendLogs, this.sendInterval);
         }
-
-        this._sendTimer = setInterval(this._sendLogs, this.sendInterval);
     }
 
     _stopSendLoop() {

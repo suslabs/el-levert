@@ -9,7 +9,7 @@ import TypeTester from "../../util/TypeTester.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
 
-function logUsage(msg, name, args) {
+function logCommandUsage(msg, name, args) {
     const cmdArgs = !Util.empty(args) ? ` with args:${LoggerUtil.formatLog(args)}` : ".";
 
     getLogger().info(
@@ -17,16 +17,12 @@ function logUsage(msg, name, args) {
     );
 }
 
-function logTime(time) {
-    getLogger().info(`Command execution took ${Util.formatNumber(time)} ms.`);
+function logExecutionTime(elapsed) {
+    getLogger().info(`Command execution took ${Util.formatNumber(elapsed)} ms.`);
 }
 
-function logOutput(cmd, out) {
-    if (!getLogger().isDebugEnabled()) {
-        return;
-    }
-
-    getLogger().debug(`Command "${cmd.name}" returned:${LoggerUtil.formatLog(out)}`);
+function logCommandOutput(cmd, out) {
+    getLogger().isDebugEnabled() && getLogger().debug(`Command "${cmd.name}" returned:${LoggerUtil.formatLog(out)}`);
 }
 
 class CommandHandler extends MessageHandler {
@@ -35,7 +31,6 @@ class CommandHandler extends MessageHandler {
 
     constructor(enabled) {
         super(enabled, true, true, {
-            minResponseTime: getClient().config.minResponseTime,
             userSweepInterval: 10 / Util.durationSeconds.milli
         });
     }
@@ -45,35 +40,69 @@ class CommandHandler extends MessageHandler {
             return false;
         }
 
-        try {
-            return await this.userTracker.withUser(msg.author.id, async () => {
-                const [cmd, , args] = getClient().commandManager.getCommand(msg.content, msg);
+        const executeMain = async () => {
+            const [cmd, , args] = getClient().commandManager.getCommand(msg.content, msg);
 
-                if (!cmd) {
-                    return false;
-                }
-
-                this._sendTyping(msg);
-
-                await this._executeAndReply(cmd, msg, args);
-                return true;
-            });
-        } catch (err) {
-            if (err.name === "HandlerError") {
-                await this.reply(msg, ":warning: Please wait for the previous command to finish.");
-                return true;
+            if (!cmd) {
+                return false;
             }
 
-            return false;
+            this._sendTyping(msg);
+
+            await this._executeAndReply(cmd, msg, args);
+            return true;
+        };
+
+        try {
+            return await this.userTracker.withUser(msg.author.id, executeMain);
+        } catch (err) {
+            switch (err.name) {
+                case "HandlerError":
+                    if (err.message === "User already exists") {
+                        await this.reply(msg, ":warning: Please wait for the previous command to finish.");
+                        break;
+                    }
+                // eslint-disable-next-line no-fallthrough
+                default:
+                    throw err;
+            }
+
+            return true;
         }
     }
 
+    async _executeCommand(cmd, msg, args) {
+        logCommandUsage(msg, cmd.name, args);
+
+        let outRes, outErr;
+        [outRes, outErr] = Array(2).fill(null);
+
+        const t1 = performance.now();
+
+        try {
+            outRes = await cmd.execute(args, { msg });
+        } catch (err) {
+            outErr = err;
+        }
+
+        const t2 = performance.now();
+
+        const outInfo = {
+            elapsed: Util.timeDelta(t2, t1)
+        };
+
+        logExecutionTime(outInfo.elapsed);
+        return [outRes, outErr, outInfo];
+    }
+
     async _executeAndReply(cmd, msg, args) {
-        const [res, execErr, time] = await this._executeCommand(cmd, msg, args);
-        await this._addDelay(time, true);
+        const [res, execErr, info] = await this._executeCommand(cmd, msg, args);
+        await this._addDelay(info.elapsed, true);
 
         if (execErr !== null) {
-            await this._handleExecutionError(execErr, msg, cmd);
+            const out = `executing command ${bold(cmd.name)}`;
+            await this.replyWithError(msg, execErr, "command", out);
+
             return;
         }
 
@@ -87,42 +116,8 @@ class CommandHandler extends MessageHandler {
             }
         }
 
-        logOutput(cmd, res);
+        logCommandOutput(cmd, res);
         await this.reply(msg, res, options);
-    }
-
-    async _executeCommand(cmd, msg, args) {
-        logUsage(msg, cmd.name, args);
-
-        let res,
-            err = null;
-
-        const t1 = performance.now();
-
-        try {
-            res = await cmd.execute(args, { msg });
-        } catch (e) {
-            err = e;
-        }
-
-        const t2 = performance.now(),
-            time = Util.timeDelta(t2, t1);
-
-        logTime(time);
-        return [res, err, time];
-    }
-
-    async _handleExecutionError(err, msg, cmd) {
-        getLogger().error("Command execution failed:", err);
-
-        try {
-            await this.reply(msg, {
-                content: `:no_entry_sign: Encountered exception while executing command ${bold(cmd.name)}:`,
-                ...DiscordUtil.getFileAttach(err?.stack ?? err?.message ?? "No message", "error.js")
-            });
-        } catch (err) {
-            getLogger().error("Reporting command error failed:", err);
-        }
     }
 }
 

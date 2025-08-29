@@ -17,7 +17,7 @@ class SqlDatabase {
         this.options = options;
 
         this.queryExtension = options.queryExtension ?? ".sql";
-        this.queryEncoding = options.queryEncoding ?? "utf-8";
+        this.queryEncoding = options.queryEncoding ?? "utf8";
         this.enableWAL = options.enableWAL ?? true;
 
         this.db = null;
@@ -33,13 +33,7 @@ class SqlDatabase {
             enableWALMode: this.enableWAL
         };
 
-        let db;
-
-        if (this.db === null) {
-            db = new SqliteDatabase(this.dbPath, mode, dbConfig);
-        } else {
-            db = this.db;
-        }
+        const db = this.db ?? new SqliteDatabase(this.dbPath, mode, dbConfig);
 
         try {
             await db.open();
@@ -84,16 +78,7 @@ class SqlDatabase {
 
     _isValidQueryPath(queryPath) {
         const parsed = path.parse(queryPath);
-
-        if (parsed.dir === this.queryPath && parsed.name === "create") {
-            return false;
-        }
-
-        if (parsed.ext !== this.queryExtension) {
-            return false;
-        }
-
-        return true;
+        return parsed.ext === this.queryExtension && !(parsed.dir === this.queryPath && parsed.name === "create");
     }
 
     async _readQuery(queryPath, categoryName) {
@@ -131,11 +116,8 @@ class SqlDatabase {
 
     async _readQueries() {
         await DirectoryLoader.listFilesRecursiveAsync(this.queryPath, 1, async (itemPath, type) => {
-            if (type === "directory") {
-                await this._readDirectory(itemPath);
-            } else {
-                await this._readQuery(itemPath);
-            }
+            const readFunc = type === "directory" ? this._readDirectory : this._readQuery;
+            await readFunc.call(this, itemPath);
         });
     }
 

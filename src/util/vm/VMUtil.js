@@ -12,13 +12,11 @@ const VMUtil = {
             throw new UtilError("Can't resolve object, no property map provided");
         }
 
-        const split = path.split(".");
-
-        return split.reduce(({ obj }, key) => {
+        return path.split(".").reduce(({ obj }, key) => {
             const next = obj?.[key] ?? propertyMap.get(key);
 
             if (typeof next === "undefined") {
-                throw new UtilError(`Property not found: ${key}`);
+                throw new UtilError(`Property not found: ${key}`, key);
             }
 
             return { parent: obj, obj: next };
@@ -28,7 +26,7 @@ const VMUtil = {
     removeCircularReferences: obj => {
         const pathMap = new Map();
 
-        function recRemove(val, path) {
+        const recRemove = (val, path) => {
             if (!TypeTester.isObject(val)) {
                 return val;
             }
@@ -37,16 +35,10 @@ const VMUtil = {
 
             if (seenPath) {
                 const joinedPath = seenPath.join(".");
-
-                if (joinedPath.length < 1) {
-                    return "[Circular reference]";
-                } else {
-                    return `[Circular reference: ${joinedPath}]`;
-                }
+                return `[Circular reference${joinedPath.length < 1 ? "" : `: ${joinedPath}`}]`;
             }
 
             pathMap.set(val, path);
-
             const newVal = Array.isArray(val) ? [] : {};
 
             for (const [key, value] of Object.entries(val)) {
@@ -55,7 +47,7 @@ const VMUtil = {
 
             pathMap.delete(val);
             return newVal;
-        }
+        };
 
         return recRemove(obj, []);
     },
@@ -63,9 +55,7 @@ const VMUtil = {
     formatOutput: out => {
         if (out == null) {
             return out;
-        }
-
-        if (Array.isArray(out)) {
+        } else if (Array.isArray(out)) {
             return out.join(", ");
         }
 
@@ -113,9 +103,7 @@ const VMUtil = {
 
         if (msg == null) {
             return out;
-        }
-
-        if (typeof msg.content !== "undefined") {
+        } else if (typeof msg.content !== "undefined") {
             out.content = VMUtil.formatOutput(msg.content);
         }
 
@@ -182,12 +170,7 @@ const VMUtil = {
     rewriteIVMStackTrace: err => {
         return VMUtil.rewriteStackTrace(err, (msgLine, stackFrames) => {
             const boundaryLine = stackFrames.findIndex(frame => frame.startsWith("at " + VMUtil._boundary));
-
-            if (boundaryLine === -1) {
-                return false;
-            }
-
-            return [msgLine, stackFrames.slice(0, boundaryLine + 1)];
+            return boundaryLine >= 0 ? [msgLine, stackFrames.slice(0, boundaryLine + 1)] : false;
         });
     },
 
@@ -195,12 +178,7 @@ const VMUtil = {
     rewriteReplStackTrace: err => {
         return VMUtil.rewriteStackTrace(err, (msgLine, stackFrames) => {
             const replLine = stackFrames.findIndex(frame => frame.startsWith("at " + VMUtil._repl));
-
-            if (replLine === -1) {
-                return false;
-            }
-
-            return [msgLine, stackFrames.slice(0, replLine + 1)];
+            return replLine >= 0 ? [msgLine, stackFrames.slice(0, replLine + 1)] : false;
         });
     },
 

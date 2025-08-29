@@ -38,14 +38,7 @@ export default {
             return DiscordUtil.getFileAttach(format, "tags.json");
         }
 
-        let format;
-
-        if (inline) {
-            format = tags.join(",");
-        } else {
-            format = tags.join("\n");
-        }
-
+        const format = tags.join(inline ? "," : "\n");
         return DiscordUtil.getFileAttach(format, "tags.txt");
     }
 };

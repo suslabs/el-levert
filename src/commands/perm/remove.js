@@ -7,29 +7,30 @@ export default {
     name: "remove",
     parent: "perm",
     subcommand: true,
-    allowed: getClient().permManager.adminLevel,
+    allowed: "admin",
 
     handler: async function (args, msg, perm) {
-        const [g_name, u_name] = ParserUtil.splitArgs(args);
+        let [g_name, u_name] = ParserUtil.splitArgs(args);
 
         if (Util.empty(args) || Util.empty(g_name) || Util.empty(u_name)) {
             return `:information_source: ${this.getArgsHelp("group_name (ping/id/username)")}`;
         }
 
-        const err = getClient().permManager.checkName(g_name);
+        {
+            let err;
+            [g_name, err] = getClient().permManager.checkName(g_name, false);
 
-        if (err) {
-            return `:warning: ${err}.`;
+            if (err !== null) {
+                return `:warning: ${err}.`;
+            }
         }
 
         const group = await getClient().permManager.fetchGroup(g_name);
 
         if (group === null) {
             return `:warning: Group **${g_name}** doesn't exist.`;
-        }
-
-        if (perm < group.level) {
-            return `:warning: Can't remove a user (\`${find.user.username}\` \`${find.user.id}\`) from a group with a higher level your own. (**${perm}** < **${group.level}**)`;
+        } else if (!getClient().permManager.allowed(perm, group.level)) {
+            return `:warning: Can't remove a user (\`${find.user.username}\` \`${find.user.id}\`) from a group with a higher level your own. (**${group.level}** > **${perm}**)`;
         }
 
         const find = Util.first(await getClient().findUsers(u_name));
@@ -43,17 +44,17 @@ export default {
         try {
             removed = await getClient().permManager.remove(group, find.user.id);
         } catch (err) {
-            if (err.name === "PermissionError") {
-                return `:warning: ${err.message}.`;
+            if (err.name !== "PermissionError") {
+                throw err;
             }
 
-            throw err;
+            return `:warning: ${err.message}.`;
         }
 
-        if (!removed) {
+        if (removed) {
+            return `:white_check_mark: Removed user \`${find.user.username}\` (\`${find.user.id}\`) from group **${g_name}**.`;
+        } else {
             return `:warning: User \`${find.user.username}\` (\`${find.user.id}\`) is not in group **${g_name}**.`;
         }
-
-        return `:white_check_mark: Removed user \`${find.user.username}\` (\`${find.user.id}\`) from group **${g_name}**.`;
     }
 };

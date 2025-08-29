@@ -42,11 +42,7 @@ class InspectorServer {
     }
 
     get inspectorConnected() {
-        if (this._inspectorContext === null) {
-            return false;
-        }
-
-        return this._inspectorContext.inspector.connected;
+        return this._inspectorContext?.inspector.connected ?? false;
     }
 
     setup() {
@@ -79,10 +75,7 @@ class InspectorServer {
             return;
         }
 
-        if (this.logPackets) {
-            getLogger().debug(`Sending: ${msg}`);
-        }
-
+        this.logPackets && getLogger().debug(`Sending: ${msg}`);
         this._inspectorSocket.send(msg);
     };
 
@@ -129,9 +122,7 @@ class InspectorServer {
         });
 
         socket.on("message", msg => {
-            if (this.logPackets) {
-                getLogger().debug(`Recieved: ${msg}`);
-            }
+            this.logPackets && getLogger().debug(`Recieved: ${msg}`);
 
             try {
                 this._inspectorContext?.inspector.sendMessage(msg);

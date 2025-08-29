@@ -16,31 +16,31 @@ function logUsage(msg, str) {
     );
 }
 
-function logCancelled(reason) {
+function logGenerateCancelled(reason) {
     getLogger().info(`Generating preview cancelled: ${reason}.`);
 }
 
-function logSending(preview) {
-    if (!getLogger().isDebugEnabled()) {
-        return;
+function logPreviewSending(preview) {
+    if (getLogger().isDebugEnabled()) {
+        const text = DiscordUtil.getEmbedData(preview).description;
+        getLogger().debug(`Sending preview:${LoggerUtil.formatLog(text)}`);
     }
-
-    const text = DiscordUtil.getEmbedData(preview).description;
-    getLogger().debug(`Sending preview:${LoggerUtil.formatLog(text)}`);
 }
 
-function logGenTime(t1) {
-    if (!getLogger().isDebugEnabled()) {
-        return;
-    }
+function logGenerateTime(t1) {
+    if (getLogger().isDebugEnabled()) {
+        const t2 = performance.now(),
+            elapsed = Util.timeDelta(t2, t1);
 
-    const t2 = performance.now();
-    getLogger().debug(`Preview generation took ${Util.formatNumber(Util.timeDelta(t2, t1))} ms.`);
+        getLogger().debug(`Preview generation took ${Util.formatNumber(elapsed)} ms.`);
+    }
 }
 
 function logSendTime(t1) {
-    const t2 = performance.now();
-    getLogger().info(`Sending preview took ${Util.formatNumber(Util.timeDelta(t2, t1))} ms.`);
+    const t2 = performance.now(),
+        elapsed = Util.timeDelta(t2, t1);
+
+    getLogger().info(`Sending preview took ${Util.formatNumber(elapsed)} ms.`);
 }
 
 class PreviewHandler extends MessageHandler {
@@ -71,7 +71,7 @@ class PreviewHandler extends MessageHandler {
         const match = Util.first(DiscordUtil.findMessageUrls(str));
 
         if (typeof match === "undefined") {
-            throw new HandlerError("Invalid input string");
+            throw new HandlerError("Invalid input string", str);
         }
 
         const { raw: rawMsgUrl, sv_id, ch_id, msg_id } = match;
@@ -82,13 +82,13 @@ class PreviewHandler extends MessageHandler {
         });
 
         if (prevMsg === null) {
-            throw new HandlerError("Preview message not found");
+            throw new HandlerError("Preview message not found", { sv_id, ch_id, msg_id });
         }
 
         let content = prevMsg.content,
             image;
 
-        content = Util.trimString(content, ...this._getLimits(true, true).outTrim);
+        content = Util.trimString(content, ...this.getLimits(true, true).outTrim);
 
         if (!Util.empty(prevMsg.attachments)) {
             const attach = prevMsg.attachments.first(),
@@ -99,11 +99,7 @@ class PreviewHandler extends MessageHandler {
             }
 
             if (Util.empty(content)) {
-                if (isImage) {
-                    content = hyperlink(`[Image (${attach.name})]`, attach.url);
-                } else {
-                    content = hyperlink(`[Attachment (${attach.name})]`, attach.url);
-                }
+                content = hyperlink(`[${isImage ? "Image" : "Attachment"} (${attach.name})]`, attach.url);
             }
         }
 
@@ -137,7 +133,7 @@ class PreviewHandler extends MessageHandler {
                 text: `From ${channel}`
             });
 
-        logGenTime(t1);
+        logGenerateTime(t1);
         return embed;
     }
 
@@ -152,25 +148,19 @@ class PreviewHandler extends MessageHandler {
         try {
             preview = await this.generatePreview(msg, msg.content);
         } catch (err) {
-            if (err.name === "HandlerError") {
-                logCancelled(err.message);
-                return false;
+            if (err.name !== "HandlerError") {
+                await this.replyWithError(msg, err, "preview", "generating preview");
+                return true;
             }
 
-            getLogger().error("Preview generation failed:", err);
-
-            await this.reply(msg, {
-                content: ":no_entry_sign: Encountered exception while generating preview:",
-                ...DiscordUtil.getFileAttach(err.stack, "error.js")
-            });
-
+            logGenerateCancelled(err.message);
             return false;
         }
 
-        logSending(preview);
+        logPreviewSending(preview);
 
         this._sendTyping(msg);
-        await this._addDelay();
+        await this._addDelay(0);
 
         try {
             await this.reply(
@@ -182,11 +172,10 @@ class PreviewHandler extends MessageHandler {
                     limitType: "none"
                 }
             );
-        } catch (err) {
-            return true;
-        }
 
-        logSendTime(t1);
+            logSendTime(t1);
+        } catch (err) {}
+
         return true;
     }
 }

@@ -5,16 +5,15 @@ import { pathToFileURL, fileURLToPath } from "node:url";
 import "../../setupGlobals.js";
 
 const MockMapPath = path.resolve(projRoot, process.env.MOCK_MAP_PATH || "mock-map.json"),
-    MockMap = JSON.parse(fs.readFileSync(MockMapPath, "utf-8"));
+    MockMap = JSON.parse(fs.readFileSync(MockMapPath, "utf8"));
 
 const MockUrls = new Map(
-    Object.entries(MockMap).map(([moduleName, relativePath]) => {
-        const absolutePath = path.resolve(projRoot, relativePath);
-        return [moduleName, pathToFileURL(absolutePath).href];
-    })
-);
-
-const MockFiles = new Set(MockUrls.values());
+        Object.entries(MockMap).map(([moduleName, relativePath]) => {
+            const absolutePath = path.resolve(projRoot, relativePath);
+            return [moduleName, pathToFileURL(absolutePath).href];
+        })
+    ),
+    MockFiles = new Set(MockUrls.values());
 
 function extractModuleName(specifier) {
     if (specifier.startsWith("file://")) {

@@ -75,7 +75,7 @@ function parseInput(split) {
 }
 
 function codeblock(str) {
-    return `\`\`\`lua\\n${str}\`\`\``;
+    return `\`\`\`lua\n${str}\`\`\``;
 }
 
 export default {
@@ -84,12 +84,13 @@ export default {
     category: "util",
 
     handler: function (args) {
-        if (Util.empty(args)) {
+        const split = args.split(" ").filter(part => !Util.empty(part));
+
+        if (Util.empty(split)) {
             return getErrorText(this);
         }
 
-        const split = args.split(" "),
-            recipe = parseInput(split);
+        const recipe = parseInput(split);
 
         if (recipe === null) {
             return getErrorText(this);
@@ -107,16 +108,15 @@ export default {
         const header = `:information_source: Input: **${recipe.base_eu} EU/t** for **${OCUtil.formatDuration(recipe.base_duration)}**`;
 
         const columns = {
-            eu: "EU/t",
-            time: "Time",
-            tier: "Voltage"
-        };
-
-        const rows = {
-            eu: outputs.map(row => Util.formatNumber(row.eu, 3) + " EU/t"),
-            time: outputs.map(row => OCUtil.formatDuration(row.time)),
-            tier: outputs.map(row => OCUtil.getTierName(row.tier))
-        };
+                eu: "EU/t",
+                time: "Time",
+                tier: "Voltage"
+            },
+            rows = {
+                eu: outputs.map(row => Util.formatNumber(row.eu, 3) + " EU/t"),
+                time: outputs.map(row => OCUtil.formatDuration(row.time)),
+                tier: outputs.map(row => OCUtil.getTierName(row.tier))
+            };
 
         if (hasChance) {
             columns.chance = "Chance";

@@ -27,39 +27,27 @@ class Loader {
         this.result = {};
 
         this._childLoad = this.load;
-        this.load = this._load;
+        this.load = this._load.bind(this);
 
         this._childWrite = this.write;
-        this.write = this._write;
+        this.write = this._write.bind(this);
 
         this._childDispose = this.dispose;
-        this.dispose = this._dispose;
+        this.dispose = this._dispose.bind(this);
     }
 
     getName(capitalized = false) {
-        let type = this.type.replaceAll("_", " "),
-            name = this.name;
+        const type = this.type.replaceAll("_", " "),
+            name = [this.name, type].filter(str => !Util.empty(str)).join(" ");
 
-        if (!Util.empty(type)) {
-            if (!Util.empty(name)) {
-                name += " ";
-            }
-
-            name += type;
-        }
-
-        if (capitalized) {
-            name = Util.capitalize(name);
-        }
-
-        return name;
+        return capitalized ? Util.capitalize(name) : name;
     }
 
     getData() {
         const data = this[this.dataField];
 
         if (typeof data === "undefined") {
-            throw new LoaderError("Data field not found");
+            throw new LoaderError("Data field not found", this.dataField);
         }
 
         return data;
@@ -67,12 +55,7 @@ class Loader {
 
     failure(err, loggerMsg, logLevel = "error") {
         if (typeof err === "string") {
-            let message = err;
-
-            if (message.endsWith(".")) {
-                message = message.slice(0, -1);
-            }
-
+            const message = err.endsWith(".") ? Util.before(err, -1) : err;
             err = new LoaderError(message);
         }
 
@@ -98,11 +81,10 @@ class Loader {
             loadedMessage = "";
 
         if (!ignored) {
-            if (typeof this.getLoadedMessage === "function") {
-                loadedMessage = this.getLoadedMessage();
-            } else {
-                loadedMessage = `Loaded ${this.getName()} successfully.`;
-            }
+            loadedMessage =
+                typeof this.getLoadedMessage === "function"
+                    ? this.getLoadedMessage()
+                    : `Loaded ${this.getName()} successfully.`;
         } else if (typeof this.getIgnoredMessage === "function") {
             loadedMessage = this.getIgnoredMessage();
         }
@@ -129,11 +111,10 @@ class Loader {
             writtenMessage = "";
 
         if (!ignored) {
-            if (typeof this.getWrittenMessage === "function") {
-                writtenMessage = this.getWrittenMessage();
-            } else {
-                writtenMessage = `Wrote ${this.getName()} successfully.`;
-            }
+            writtenMessage =
+                typeof this.getWrittenMessage === "function"
+                    ? this.getWrittenMessage()
+                    : `Wrote ${this.getName()} successfully.`;
         } else if (typeof this.getIgnoredMessage === "function") {
             writtenMessage = this.getIgnoredMessage();
         }
@@ -152,26 +133,19 @@ class Loader {
     }
 
     _load(...args) {
-        let loadingMessage;
-
-        if (typeof this.getLoadingMessage === "function") {
-            loadingMessage = this.getLoadingMessage();
-        } else {
-            loadingMessage = `Loading ${this.getName()}...`;
-        }
+        const loadingMessage =
+            typeof this.getLoadingMessage === "function" ? this.getLoadingMessage() : `Loading ${this.getName()}...`;
 
         if (!Util.empty(loadingMessage)) {
             this.logger?.debug(loadingMessage);
         }
 
-        this.result = {};
-        const res = this._childLoad.apply(this, args);
+        this._resetResult();
 
-        if (TypeTester.isPromise(res)) {
-            return this._loadAsync(res);
-        } else {
-            return this._loadSync(res);
-        }
+        const res = this._childLoad.apply(this, args),
+            loadFunc = TypeTester.isPromise(res) ? this._loadAsync : this._loadSync;
+
+        return loadFunc.call(this, res);
     }
 
     _write(data, ...args) {
@@ -179,39 +153,35 @@ class Loader {
             return LoadStatus.successful;
         }
 
-        let writingMessage;
-
-        if (typeof this.getWritingMessage === "function") {
-            writingMessage = this.getWritingMessage();
-        } else {
-            writingMessage = `Writing ${this.getName()}...`;
-        }
+        const writingMessage =
+            typeof this.getWritingMessage === "function" ? this.getWritingMessage() : `Writing ${this.getName()}...`;
 
         if (!Util.empty(writingMessage)) {
             this.logger?.debug(writingMessage);
         }
 
         data ??= this.data;
+
         if (data === null) {
             return this.failure(`Can't write ${this.getName()}, no data provided.`);
         }
 
-        this.result = {};
-        const res = this._childWrite.apply(this, [data].concat(args));
+        this._resetResult();
 
-        if (TypeTester.isPromise(res)) {
-            return this._writeAsync(res, data);
-        } else {
-            return this._writeSync(res, data);
-        }
+        const res = this._childWrite.apply(this, [data].concat(args)),
+            writeFunc = TypeTester.isPromise(res) ? this._writeAsync : this._writeSync;
+
+        return writeFunc.call(this, res);
     }
 
     _dispose() {
-        if (typeof this._childDispose !== "function") {
-            return;
+        if (typeof this._childDispose === "function") {
+            return this._childDispose();
         }
+    }
 
-        return this._childDispose();
+    _resetResult() {
+        this.result = {};
     }
 }
 

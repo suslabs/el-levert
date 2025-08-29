@@ -8,7 +8,7 @@ export default {
     aliases: ["take"],
     parent: "perm",
     subcommand: true,
-    allowed: getClient().permManager.adminLevel,
+    allowed: "admin",
 
     handler: async function (args, msg, perm) {
         const [u_name] = ParserUtil.splitArgs(args);
@@ -36,20 +36,17 @@ export default {
 
         const theirLevel = await getClient().permManager.maxLevel(find.user.id);
 
-        if (perm < theirLevel) {
+        if (!getClient().permManager.allowed(perm, theirLevel)) {
             return `:warning: Can't remove permissions of a user (\`${find.user.username}\` \`${find.user.id}\`) with a level higher than your own. (**${perm}** < **${theirLevel}**)`;
         }
 
         const removed = await getClient().permManager.removeAll(find.user.id);
 
         if (!removed) {
-            const out = `:information_source: User \`${find.user.username}\` (\`${find.user.id}\`) doesn't have any permissions`;
+            const out = `:information_source: User \`${find.user.username}\` (\`${find.user.id}\`) doesn't have any permissions`,
+                findIsOwner = getClient().permManager.isOwner(find.user.id);
 
-            if (getClient().permManager.isOwner(find.user.id)) {
-                return out + " other than being the bot owner.";
-            } else {
-                return out + ".";
-            }
+            return out + findIsOwner ? " other than being the bot owner." : ".";
         }
 
         return `:white_check_mark: Removed \`${find.user.username}\`'s (\`${find.user.id}\`) permissions.`;

@@ -1,12 +1,16 @@
+import Util from "../util/Util.js";
+
 import VMError from "../errors/VMError.js";
 
 class VM {
-    constructor(enabled, options) {
-        if (typeof this.constructor.$name !== "string") {
-            throw new VMError("VM must have a name");
-        }
+    static VMname = "vm";
 
-        if (typeof this.runScript !== "function") {
+    constructor(enabled, options) {
+        const compName = this.constructor.$name;
+
+        if (typeof compName !== "string" && !Util.empty(compName)) {
+            throw new VMError("VM must have a name");
+        } else if (typeof this.runScript !== "function") {
             throw new VMError("Child class must have a runScript function");
         }
 
@@ -15,13 +19,13 @@ class VM {
         this.options = options;
 
         this._childLoad = this.load;
-        this.load = this._load;
+        this.load = this._load.bind(this);
 
         this._childUnload = this.unload;
-        this.unload = this._unload;
+        this.unload = this._unload.bind(this);
 
         this._childRunScript = this.runScript;
-        this.runScript = this._runScript;
+        this.runScript = this._runScript.bind(this);
     }
 
     _load(...args) {
@@ -29,11 +33,9 @@ class VM {
             return;
         }
 
-        if (typeof this._childLoad !== "function") {
-            return;
+        if (typeof this._childLoad === "function") {
+            return this._childLoad.apply(this, args);
         }
-
-        return this._childLoad.apply(this, args);
     }
 
     _unload(...args) {
@@ -41,23 +43,14 @@ class VM {
             return;
         }
 
-        if (typeof this._childUnload !== "function") {
-            return;
+        if (typeof this._childUnload === "function") {
+            return this._childUnload.apply(this, args);
         }
-
-        return this._childUnload.apply(this, args);
     }
 
     _runScript(code, ...args) {
         if (!this.enabled) {
-            let msg;
-
-            if (typeof this.getDisabledMessage === "function") {
-                msg = this.getDisabledMessage();
-            } else {
-                msg = "VM is disabled";
-            }
-
+            const msg = typeof this.getDisabledMessage === "function" ? this.getDisabledMessage() : "VM is disabled";
             throw new VMError(msg);
         }
 

@@ -8,7 +8,7 @@ export default {
     aliases: ["create", "create_group"],
     parent: "perm",
     subcommand: true,
-    allowed: getClient().permManager.adminLevel,
+    allowed: "admin",
 
     handler: async function (args, msg, perm) {
         let [g_name, level] = ParserUtil.splitArgs(args);
@@ -17,33 +17,45 @@ export default {
             return `:information_source: ${this.getArgsHelp("group_name level")}`;
         }
 
-        const err = getClient().permManager.checkName(g_name);
-
-        if (err) {
-            return `:warning: ${err}.`;
-        }
-
         level = Util.parseInt(level);
 
-        if (perm < level) {
-            return `:warning: Can't create a group with a level that is higher than your own. (**${level}** > **${perm}**)`;
+        {
+            let err;
+            [g_name, err] = getClient().permManager.checkName(g_name, false);
+
+            if (err !== null) {
+                return `:warning: ${err}.`;
+            }
+        }
+
+        {
+            let err;
+            [level, err] = getClient().permManager.checkLevel(level, false);
+
+            if (err !== null) {
+                return `:warning: ${err}.`;
+            }
+        }
+
+        if (!getClient().permManager.allowed(perm, level)) {
+            return `:warning: Can't create a group with a level that is higher than your own. (**${perm}** < **${level}**)`;
         }
 
         try {
-            await getClient().permManager.addGroup(g_name, level);
+            await getClient().permManager.addGroup(g_name, level, {
+                validateNew: false
+            });
         } catch (err) {
-            if (err.name === "PermissionError") {
-                switch (err.message) {
-                    case "Group already exists":
-                        return `:warning: Group **${g_name}** already exists.`;
-                    case "Invalid level":
-                        return `Invalid level: \`${level}\`. Level must be an int larger than 0.`;
-                    default:
-                        return `:warning: ${err.message}.`;
-                }
+            if (err.name !== "PermissionError") {
+                throw err;
             }
 
-            throw err;
+            switch (err.message) {
+                case "Group already exists":
+                    return `:warning: Group **${g_name}** already exists.`;
+                default:
+                    return `:warning: ${err.message}.`;
+            }
         }
 
         return `:white_check_mark: Added group **${g_name}** with level **${level}**.`;

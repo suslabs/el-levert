@@ -13,37 +13,34 @@ export default {
             return `:information_source: ${this.getArgsHelp("name other_tag [args]")}`;
         }
 
-        const [t_name, t_args] = ParserUtil.splitArgs(args, true),
+        let [t_name, t_args] = ParserUtil.splitArgs(args, true),
             [a_name, a_args] = ParserUtil.splitArgs(t_args, true);
 
         if (this.matchesSubcmd(t_name)) {
             return `:police_car: **${t_name}** is a __command__, not a __tag__. You can't manipulate commands.`;
         }
 
-        const err1 = getClient().tagManager.checkName(t_name),
-            err2 = getClient().tagManager.checkName(a_name);
-
-        if (err1 ?? err2) {
-            return `:warning: ${err1 ?? err2}.`;
-        }
-
         if (Util.empty(a_name)) {
-            return `:warning: Alias target must be specified.
-If you want to de-alias the tag, \`edit\` it.`;
+            return ":warning: Alias target must be specified. If you want to de-alias the tag, `edit` it.";
         }
 
-        let tag = await getClient().tagManager.fetch(t_name),
-            out = "";
+        {
+            let err1, err2;
+            [t_name, err1] = getClient().tagManager.checkName(t_name, false);
+            [a_name, err2] = getClient().tagManager.checkName(a_name, false);
 
-        if (tag !== null && tag.owner !== msg.author.id && perm < getClient().permManager.modLevel) {
+            if (err1 !== null || err2 !== null) {
+                return `:warning: ${err1 ?? err2}.`;
+            }
+        }
+
+        const tag = await getClient().tagManager.fetch(t_name);
+
+        if (tag !== null && tag.owner !== msg.author.id && !getClient().permManager.allowed(perm, "mod")) {
             const out = `:warning: You can only edit your own tags.`,
                 owner = await tag.getOwner();
 
-            if (owner === "not found") {
-                return out + " Tag owner not found.";
-            } else {
-                return out + ` The tag is owned by \`${owner}\`.`;
-            }
+            return out + (owner === "not found" ? " tag owner not found." : ` and is owned by \`${owner}\`.`);
         }
 
         const a_tag = await getClient().tagManager.fetch(a_name);
@@ -52,27 +49,26 @@ If you want to de-alias the tag, \`edit\` it.`;
             return `:warning: Tag **${a_name}** doesn't exist.`;
         }
 
+        const createOptions = {
+            name: t_name,
+            owner: msg.author.id
+        };
+
         let created = false;
 
         try {
-            const createOptions = {
-                name: t_name,
-                owner: msg.author.id
-            };
-
-            [, created] = await getClient().tagManager.alias(tag, a_tag, a_args, createOptions);
+            [, created] = await getClient().tagManager.alias(tag, a_tag, a_args, createOptions, {
+                validateNew: false
+            });
         } catch (err) {
-            if (err.name === "TagError") {
-                return `:warning: ${err.message}.`;
+            if (err.name !== "TagError") {
+                throw err;
             }
 
-            throw err;
+            return `:warning: ${err.message}.`;
         }
 
-        if (created) {
-            out = `Created tag **${t_name}**. `;
-        }
-
-        return `:white_check_mark: ${out}Aliased tag **${t_name}** to **${a_name}**.`;
+        const out = created ? `Created tag **${t_name}** and aliased` : "Aliased";
+        return `:white_check_mark: ${out} tag **${t_name}** to **${a_name}**.`;
     }
 };

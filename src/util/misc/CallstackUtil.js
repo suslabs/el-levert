@@ -5,22 +5,26 @@ import UtilError from "../../errors/UtilError.js";
 
 const CallstackUtil = Object.freeze({
     getCallstack: () => {
-        const oldLimit = Error.stackTraceLimit;
-        Error.stackTraceLimit = 1000;
+        let stack;
 
-        const oldPrepare = Error.prepareStackTrace;
-        Error.prepareStackTrace = (_, stack) => stack;
+        {
+            const oldLimit = Error.stackTraceLimit,
+                oldPrepare = Error.prepareStackTrace;
 
-        const stack = new Error().stack;
-        Error.prepareStackTrace = oldPrepare;
+            Error.stackTraceLimit = 1000;
+            Error.prepareStackTrace = (_, stack) => stack;
 
-        Error.stackTraceLimit = oldLimit;
+            stack = new Error().stack;
+
+            Error.prepareStackTrace = oldPrepare;
+            Error.stackTraceLimit = oldLimit;
+        }
 
         if (!TypeTester.isObject(stack)) {
             throw new UtilError("Invalid callstack");
         }
 
-        return Util.after(stack);
+        return Util.after(stack, 0);
     },
 
     getCallInfo: (options = {}) => {
@@ -32,11 +36,11 @@ const CallstackUtil = Object.freeze({
         try {
             stack = CallstackUtil.getCallstack().slice(minDepth);
         } catch (err) {
-            if (err.name === "UtilError") {
-                return "no info";
-            }
-
-            throw err;
+            return err.name === "UtilError"
+                ? "no info"
+                : (() => {
+                      throw err;
+                  })();
         }
 
         const site = stack.find(

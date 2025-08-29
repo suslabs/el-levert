@@ -6,6 +6,7 @@ import MessageTracker from "./tracker/MessageTracker.js";
 import { getClient, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import ArrayUtil from "../../util/ArrayUtil.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 import RegexUtil from "../../util/misc/RegexUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
@@ -37,27 +38,26 @@ function logWordsUsage(msg, words) {
 }
 
 function logReactTime(t1) {
-    if (!getLogger().isDebugEnabled()) {
-        return;
-    }
+    if (getLogger().isDebugEnabled()) {
+        const t2 = performance.now(),
+            elapsed = Util.timeDelta(t2, t1);
 
-    const t2 = performance.now();
-    getLogger().debug(`Reacting took ${Util.formatNumber(Util.timeDelta(t2, t1))} ms.`);
+        getLogger().debug(`Reacting took ${Util.formatNumber(elapsed)} ms.`);
+    }
 }
 
 function logRemove(msg) {
-    if (!getLogger().isDebugEnabled()) {
-        return;
-    }
-
-    getLogger().debug(
-        `Removing reactions from message ${msg.id} sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)}).`
-    );
+    getLogger().isDebugEnabled() &&
+        getLogger().debug(
+            `Removing reactions from message ${msg.id} sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)}).`
+        );
 }
 
 function logRemoveTime(t1) {
-    const t2 = performance.now();
-    getLogger().debug(`Removing reactions took ${Util.formatNumber(Util.timeDelta(t2, t1))} ms.`);
+    const t2 = performance.now(),
+        elapsed = Util.timeDelta(t2, t1);
+
+    getLogger().debug(`Removing reactions took ${Util.formatNumber(elapsed)} ms.`);
 }
 
 class ReactionHandler extends Handler {
@@ -103,7 +103,7 @@ class ReactionHandler extends Handler {
         const codeblockRanges = DiscordUtil.findCodeblocks(content);
 
         for (const range of codeblockRanges) {
-            content = Util.removeRangeStr(content, ...range, true);
+            content = Util.removeStringRange(content, ...range, true);
         }
 
         let reacted = await this._funnyReact(content, msg);
@@ -218,7 +218,6 @@ class ReactionHandler extends Handler {
         }
 
         logParensUsage(msg, parens);
-
         const emojis = this.parens.left.slice(0, right).concat(this.parens.right.slice(0, left));
 
         try {
@@ -239,13 +238,10 @@ class ReactionHandler extends Handler {
             return null;
         }
 
-        const counts = foundWords.reduce(
-            (counts, [word]) => ({
-                ...counts,
-                [word]: 0
-            }),
-            {}
-        );
+        const counts = foundWords.reduce((obj, [word]) => {
+            obj[word] = 0;
+            return obj;
+        }, {});
 
         let foundOne = false;
 
@@ -287,7 +283,7 @@ class ReactionHandler extends Handler {
 
         for (const [word, count] of Object.entries(words)) {
             const reactList = this._reactMap.get(word),
-                samples = Array.from({ length: count }, () => ReactionHandler._getEmoji(reactList));
+                samples = ArrayUtil.withLength(count, () => ReactionHandler._getEmoji(reactList));
 
             samples.forEach(emoji => typeof emoji !== "undefined" && emojis.add(emoji));
         }
@@ -305,22 +301,15 @@ class ReactionHandler extends Handler {
         }
 
         logWordsUsage(msg, Object.keys(words));
-
-        let reactFunc;
-
-        if (this.multipleReacts) {
-            reactFunc = this._multipleReact;
-        } else {
-            reactFunc = this._singleReact;
-        }
+        const reactFunc = this.multipleReacts ? this._multipleReact : this._singleReact;
 
         try {
             await reactFunc.call(this, msg, words);
+            logReactTime(t1);
         } catch (err) {
             getLogger().error("Failed to react to message:", err);
         }
 
-        logReactTime(t1);
         return true;
     }
 }

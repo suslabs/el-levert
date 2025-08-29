@@ -7,8 +7,7 @@ function printfTemplate(info) {
     let callInfo = "";
 
     if (includeCalls) {
-        callInfo = CallstackUtil.getCallInfo({ depth: logCallDepth });
-        callInfo = " " + callInfo;
+        callInfo = " " + CallstackUtil.getCallInfo({ depth: logCallDepth });
     }
 
     let log = `[${info.timestamp}]${callInfo} - ${info.service} - ${info.level}: ${info.message}`;

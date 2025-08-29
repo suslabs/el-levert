@@ -9,6 +9,7 @@ import { getClient, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
+import ArrayUtil from "../../util/ArrayUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import VMUtil from "../../util/vm/VMUtil.js";
 
@@ -30,6 +31,8 @@ class MessageHandler extends Handler {
         this.hasUserTracker = hasUserTracker;
 
         this.useConfigLimits = options.useConfigLimits ?? false;
+
+        this.setLimits();
     }
 
     async reply(msg, data, options = {}) {
@@ -38,15 +41,45 @@ class MessageHandler extends Handler {
         let msgReply;
 
         if (Array.isArray(out)) {
-            msgReply = [];
+            msgReply = Array(out.length);
 
             for (const [i, msgOut] of out.entries()) {
-                msgReply.push(await this._reply(msg, msgOut, i));
+                const replyFunc = this._getReplyFunc(msg, i);
+                msgReply[i] = await this._reply(msg, replyFunc, msgOut, i);
             }
 
             msgReply = msgReply.filter(Boolean);
         } else {
-            msgReply = await this._reply(msg, out);
+            const replyFunc = this._getReplyFunc(msg);
+            msgReply = await this._reply(msg, replyFunc, out);
+        }
+
+        if (this.hasReplyTracker) {
+            this.replyTracker.addReply(msg, msgReply);
+        }
+    }
+
+    async replyWithError(msg, err, type, out) {
+        let msgReply;
+
+        if (Array.isArray(err)) {
+            msgReply = Array(err.length);
+
+            type = ArrayUtil.guaranteeArray(type, err.length);
+            out = ArrayUtil.guaranteeArray(out, err.length);
+
+            for (const [i, msgOut] of err.entries()) {
+                const replyFunc = this._getReplyFunc(msg, i);
+                msgReply[i] = await this._replyWithExecError(msgOut, replyFunc, type[i], out[i]);
+            }
+
+            msgReply = msgReply.filter(Boolean);
+        } else {
+            type = ArrayUtil.guaranteeFirst(type);
+            out = ArrayUtil.guaranteeFirst(out);
+
+            const replyFunc = this._getReplyFunc(msg);
+            msgReply = await this._replyWithExecError(err, replyFunc, type, out);
         }
 
         if (this.hasReplyTracker) {
@@ -63,12 +96,6 @@ class MessageHandler extends Handler {
     }
 
     load() {
-        this.outCharLimit = getClient().config.outCharLimit;
-        this.outLineLimit = getClient().config.outLineLimit;
-
-        this.embedCharLimit = getClient().config.embedCharLimit;
-        this.embedLineLimit = getClient().config.embedLineLimit;
-
         if (this.hasReplyTracker) {
             this.replyTracker = new ReplyTracker(100);
         }
@@ -157,12 +184,20 @@ class MessageHandler extends Handler {
         msg.channel.sendTyping().catch(_ => {});
     }
 
-    _getLimits(useConfig = true, useTrim = false) {
-        const outChar = useConfig ? this.outCharLimit : DiscordUtil.msgCharLimit,
-            outLine = useConfig ? this.outLineLimit : null;
+    setLimits(limits) {
+        this._outCharLimit = getClient().config.outCharLimit ?? this._outCharLimit;
+        this._outLineLimit = getClient().config.outLineLimit ?? this._outLineLimit;
 
-        const embedChar = useConfig ? this.embedCharLimit : DiscordUtil.embedCharLimit,
-            embedLine = useConfig ? this.embedLineLimit : null;
+        this._embedCharLimit = getClient().config.embedCharLimit ?? this._embedCharLimit;
+        this._embedLineLimit = getClient().config.embedLineLimit ?? this._embedLineLimit;
+    }
+
+    getLimits(useConfig = true, useTrim = false) {
+        const outChar = useConfig ? this._outCharLimit : DiscordUtil.msgCharLimit,
+            outLine = useConfig ? this._outLineLimit : null;
+
+        const embedChar = useConfig ? this._embedCharLimit : DiscordUtil.embedCharLimit,
+            embedLine = useConfig ? this._embedLineLimit : null;
 
         const limits = {
             out: [outChar, outLine],
@@ -181,8 +216,9 @@ class MessageHandler extends Handler {
     }
 
     _applyLimits(data, options) {
-        const useConfig = options.useConfigLimits ?? this.useConfigLimits,
-            limitType = options.limitType ?? "default",
+        const useConfig = options.useConfigLimits ?? this.useConfigLimits;
+
+        const limitType = options.limitType ?? "default",
             useTrim = limitType === "trim";
 
         const { out, content, embeds } = MessageHandler._formatOutput(data);
@@ -214,7 +250,7 @@ class MessageHandler extends Handler {
             }
         };
 
-        const limits = this._getLimits(useConfig, useTrim),
+        const limits = this.getLimits(useConfig, useTrim),
             { out: outLimits, embed: embedLimits } = limits;
 
         const contentOversize = Util.overSizeLimits(content, ...outLimits);
@@ -323,50 +359,62 @@ class MessageHandler extends Handler {
         return out;
     }
 
-    async _reply(msg, data, i) {
-        let replyFunc;
+    _getReplyFunc(msg, i) {
+        return !Number.isInteger(i) || i <= 0 ? msg.reply.bind(msg) : msg.channel.send.bind(msg.channel);
+    }
 
-        if (i > 0) {
-            replyFunc = msg.channel.send.bind(msg.channel);
-        } else {
-            replyFunc = msg.reply.bind(msg);
+    async _replyWithEmptyMsg(replyFunc) {
+        return await replyFunc(`:no_entry_sign: ${MessageHandler._emptyMessage}.`);
+    }
+
+    async _reply(msg, replyFunc, data, i) {
+        if (typeof replyFunc !== "function") {
+            return null;
         }
+
+        const n = i != null ? ` ${i}` : "",
+            out = `sending reply${n}`;
+
+        const handleError = err => this._replyWithExecError(err, replyFunc, "reply", out),
+            handleEmptyMessage = () => this._replyWithEmptyMsg(replyFunc).catch(err => handleError(err));
 
         if (TypeTester.isObject(data)) {
             if (Util.empty(data.content) && Object.keys(data).every(key => key === "content")) {
-                return await this._handleEmptyMessage(replyFunc);
+                return await handleEmptyMessage();
             }
         } else if (Util.empty(data)) {
-            return await this._handleEmptyMessage(replyFunc);
+            return await handleEmptyMessage();
         }
 
         try {
             return await replyFunc(data);
         } catch (err) {
-            return await this._handleReplyError(err, replyFunc, i);
+            switch (err.code) {
+                case RESTJSONErrorCodes.CannotSendAnEmptyMessage:
+                    return await handleEmptyMessage();
+            }
+
+            return await handleError(err);
         }
     }
 
-    async _handleEmptyMessage(replyFunc) {
-        return await replyFunc(`:no_entry_sign: ${MessageHandler._emptyMessage}.`);
-    }
+    async _replyWithExecError(err1, replyFunc, type, out) {
+        getLogger().error(`${Util.capitalize(out)} failed:`, err1);
 
-    async _handleReplyError(err, replyFunc, i) {
-        switch (err.code) {
-            case RESTJSONErrorCodes.CannotSendAnEmptyMessage:
-                return await this._handleEmptyMessage(replyFunc);
+        if (typeof replyFunc !== "function") {
+            return null;
         }
 
-        const n = i != null ? ` ${i}` : "";
-        getLogger().error(`Reply${n} failed:`, err);
+        const errMsg = err1?.stack ?? err1?.message ?? "No error message available";
 
         try {
             return await replyFunc({
-                content: `:no_entry_sign: Encountered exception while sending reply${n}:`,
-                ...DiscordUtil.getFileAttach(err.stack, "error.js")
+                content: `:no_entry_sign: Encountered exception while ${out}:`,
+                ...DiscordUtil.getFileAttach(errMsg, "error.js")
             });
-        } catch (err) {
-            getLogger().error("Reporting reply error failed:", err);
+        } catch (err2) {
+            getLogger().error(`Reporting ${type} error failed:`, err2);
+            return null;
         }
     }
 }

@@ -59,11 +59,10 @@ export default {
             ...DiscordUtil.getFileAttach(format)
         };
 
-        if (user === msg.author) {
-            out.content = `:information_source: You have the following tags:`;
-        } else {
-            out.content = `:information_source: User \`${user.username}\` has the following tags:`;
-        }
+        out.content =
+            ":information_source: " + user === msg.author
+                ? "You have"
+                : `User \`${user.username}\` has` + " the following tags:";
 
         return out;
     }

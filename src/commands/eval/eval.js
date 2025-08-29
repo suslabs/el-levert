@@ -7,36 +7,33 @@ import ParserUtil from "../../util/commands/ParserUtil.js";
 async function evalBase(args, msg) {
     let body;
 
-    if (!Util.empty(msg.attachments)) {
-        try {
-            [body] = await getClient().tagManager.downloadBody(null, msg);
-        } catch (err) {
-            if (err.name === "TagError") {
-                return {
-                    body: null,
-                    err: `:warning: ${err.message}.`
-                };
-            }
-
-            return {
-                body: null,
-                err: {
-                    content: ":no_entry_sign: Downloading attachment failed:",
-                    ...DiscordUtil.getFileAttach(err.stack, "error.js")
-                }
-            };
-        }
-    } else {
+    if (Util.empty(msg.attachments)) {
         ({ body } = ParserUtil.parseScript(args));
+    } else {
+        try {
+            ({ body } = await getClient().tagManager.downloadBody(null, msg, "eval"));
+        } catch (err) {
+            return err.name === "TagError"
+                ? {
+                      body: null,
+                      err: `:warning: ${err.message}.`
+                  }
+                : {
+                      body: null,
+                      err: {
+                          content: ":no_entry_sign: Downloading attachment failed:",
+                          ...DiscordUtil.getFileAttach(err.stack, "error.js")
+                      }
+                  };
+        }
     }
 
-    if (Util.empty(body)) {
-        return {
-            err: ":no_entry_sign: Can't eval an empty script."
-        };
-    } else {
-        return { body, err: null };
-    }
+    return Util.empty(body)
+        ? {
+              body: null,
+              err: ":no_entry_sign: Can't eval an empty script."
+          }
+        : { body, err: null };
 }
 
 async function altevalBase(args, msg, lang) {
@@ -53,23 +50,23 @@ async function altevalBase(args, msg, lang) {
     try {
         [evalOut, resCode] = await getClient().externalVM.runScript(body, lang);
     } catch (err) {
-        if (err.name === "ExternalVMError") {
-            let parsed;
-
-            try {
-                parsed = JSON.parse(err.message);
-            } catch (err) {
-                return `:no_entry_sign: ${Util.capitalize(err.message)}.`;
-            }
-
-            const format = Object.values(parsed)
-                .map(err => Util.capitalize(err).join(","))
-                .join("\n");
-
-            return `:no_entry_sign: ${format}.`;
+        if (err.name !== "ExternalVMError") {
+            throw err;
         }
 
-        throw err;
+        let parsed;
+
+        try {
+            parsed = JSON.parse(err.message);
+        } catch (err) {
+            return `:no_entry_sign: ${Util.capitalize(err.message)}.`;
+        }
+
+        const format = Object.values(parsed)
+            .map(err => Util.capitalize(err).join(","))
+            .join("\n");
+
+        return `:no_entry_sign: ${format}.`;
     }
 
     switch (resCode) {
@@ -145,11 +142,11 @@ export default {
         try {
             out = await getClient().tagVM.runScript(body, { msg });
         } catch (err) {
-            if (err.name === "VMError") {
-                out = `:no_entry_sign: ${err.message}.`;
-            } else {
+            if (err.name !== "VMError") {
                 throw err;
             }
+
+            out = `:no_entry_sign: ${err.message}.`;
         }
 
         return [

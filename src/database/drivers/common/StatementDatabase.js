@@ -17,17 +17,11 @@ export default function (base) {
         removeStatement(statement) {
             const [removed] = ArrayUtil.removeItem(this.statements, statement);
 
-            if (!removed) {
-                const err = new DatabaseError("Statement not found");
-
-                if (this.throwErrors) {
-                    throw err;
-                }
-
-                return false;
+            if (this.throwErrors && !removed) {
+                throw new DatabaseError("Statement not found");
             }
 
-            return true;
+            return removed;
         }
 
         async finalizeStatement(statement) {

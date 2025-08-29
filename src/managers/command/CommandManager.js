@@ -34,12 +34,7 @@ class CommandManager extends TextCommandManager {
 
     getCommands(perm, includeSubcommands) {
         const commands = super.getCommands(includeSubcommands);
-
-        if (perm == null) {
-            return commands;
-        } else {
-            return commands.filter(command => command.canExecute(perm));
-        }
+        return perm == null ? commands : commands.filter(command => command.canExecute(perm));
     }
 
     searchCommands(name) {
@@ -96,11 +91,7 @@ class CommandManager extends TextCommandManager {
     }
 
     _getBridgeBotExp(id) {
-        if (this._individualBridgeBotExps) {
-            return this._bridgeBotExps.get(id);
-        } else {
-            return this._bridgeBotExp;
-        }
+        return this._individualBridgeBotExps ? this._bridgeBotExps.get(id) : this._bridgeBotExp;
     }
 }
 

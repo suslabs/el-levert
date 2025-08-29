@@ -11,36 +11,42 @@ const emptyCommand = {
 
 const builtinCommands = ["help", "break", "clear", "editor", "help", "load", "save"];
 
-function replEval(code, context = {}) {
-    code = code.replace(/^\s*\.(?=\w)/gm, "//.");
-
-    const input = new PassThrough(),
-        output = new PassThrough();
-
-    const results = [];
-
+function initReplServer(sin, sout, writer) {
     const server = repl.start({
-        input,
-        output,
+        input: sin,
+        output: sout,
 
         prompt: "",
         useGlobal: true,
         ignoreUndefined: true,
         terminal: false,
 
-        writer: output => {
-            if (typeof output !== "undefined") {
-                results.push(output);
-            }
-
-            return "";
-        }
+        writer
     });
 
     for (const command of builtinCommands) {
         server.defineCommand(command, emptyCommand);
     }
 
+    return server;
+}
+
+function replEval(code, context = {}) {
+    code = code.replace(/^\s*\.(?=\w)/gm, "//.");
+
+    const input = new PassThrough(),
+        output = new PassThrough();
+
+    const results = [],
+        writer = output => {
+            if (typeof output !== "undefined") {
+                results.push(output);
+            }
+
+            return "";
+        };
+
+    const server = initReplServer(input, output, writer);
     Object.assign(server.context, context);
 
     return new Promise((resolve, reject) => {
@@ -50,9 +56,11 @@ function replEval(code, context = {}) {
             if (final instanceof Error) {
                 VMUtil.rewriteReplStackTrace(final);
                 reject(final);
-            } else {
-                resolve(final);
+
+                return;
             }
+
+            resolve(final);
         });
 
         server.once("error", err => {
@@ -60,7 +68,8 @@ function replEval(code, context = {}) {
             reject(err);
         });
 
-        input.end(`${code}\n.exit\n`);
+        input.write(`${code}\n`);
+        input.end(".exit\n");
     });
 }
 

@@ -4,16 +4,58 @@ import TypeTester from "./TypeTester.js";
 import UtilError from "../errors/UtilError.js";
 
 const ArrayUtil = Object.freeze({
-    frequency: (array, callback) => {
-        const getValue = ArrayUtil._valueFunc(callback),
-            map = new Map();
+    withLength: (length, callback) => {
+        return Array.from({ length }, (_, i) => callback(i));
+    },
 
-        for (const item of array) {
-            const val = getValue(item);
-            map.set(val, (map.get(val) || 0) + 1);
+    guaranteeArray: (obj, length) => {
+        if (typeof length !== "number") {
+            return Array.isArray(obj) ? obj : [obj];
         }
 
-        return map;
+        return Array.isArray(obj)
+            ? obj.concat(new Array(Util.clamp(length - obj.length, 0)).fill())
+            : new Array(length).fill(obj);
+    },
+
+    guaranteeFirst: obj => {
+        return Array.isArray(obj) ? obj[0] : obj;
+    },
+
+    sum: (array, callback) => {
+        const getValue = ArrayUtil._valueFunc(callback);
+        return array.reduce((total, item) => total + getValue(item), 0);
+    },
+
+    concat: (array, ...args) => {
+        return Array.isArray(array) ? array.concat(...args) : [array, ...args].join("");
+    },
+
+    frequency: (array, callback) => {
+        const getValue = ArrayUtil._valueFunc(callback);
+
+        return array.reduce((map, item) => {
+            const val = getValue(item);
+            map.set(val, (map.get(val) || 0) + 1);
+
+            return map;
+        }, new Map());
+    },
+
+    unique: (array, callback) => {
+        const getValue = ArrayUtil._valueFunc(callback),
+            seen = new Set();
+
+        return array.filter(item => {
+            const val = getValue(item);
+
+            if (seen.has(val)) {
+                return false;
+            } else {
+                seen.add(val);
+                return true;
+            }
+        });
     },
 
     sameElements(arr1, arr2, strict = true, callback) {
@@ -46,36 +88,6 @@ const ArrayUtil = Object.freeze({
         return true;
     },
 
-    concat: (a, ...args) => {
-        const concatenated = [].concat(a, ...args);
-
-        if (Array.isArray(a)) {
-            return concatenated;
-        } else {
-            return concatenated.join("");
-        }
-    },
-
-    split: (array, callback) => {
-        return array.reduce(
-            (acc, item, i) => {
-                if (callback(item, i)) {
-                    acc[0].push(item);
-                } else {
-                    acc[1].push(item);
-                }
-
-                return acc;
-            },
-            [[], []]
-        );
-    },
-
-    zip: (arr1, arr2) => {
-        const len = Math.min(arr1.length, arr2.length);
-        return Array.from({ length: len }, (_, i) => [arr1[i], arr2[i]]);
-    },
-
     sort: (array, callback) => {
         const getValue = ArrayUtil._valueFunc(callback);
 
@@ -94,37 +106,25 @@ const ArrayUtil = Object.freeze({
         });
     },
 
-    unique: (array, callback) => {
-        const getValue = ArrayUtil._valueFunc(callback),
-            seen = new Set();
+    split: (array, callback) => {
+        return array.reduce(
+            (acc, item, i) => {
+                const idx = Number(callback(item, i));
 
-        return array.filter(item => {
-            const val = getValue(item);
+                while (acc.length <= idx) {
+                    acc.push([]);
+                }
 
-            if (seen.has(val)) {
-                return false;
-            }
-
-            seen.add(val);
-            return true;
-        });
+                acc[idx].push(item);
+                return acc;
+            },
+            [[], []]
+        );
     },
 
-    maxLength: (arr, length = "string") => {
-        let lengthFunc;
-
-        switch (length) {
-            case "array":
-                lengthFunc = Util.length;
-                break;
-            case "string":
-                lengthFunc = Util.stringLength;
-                break;
-            default:
-                throw new UtilError("Invalid length function: " + length);
-        }
-
-        return Math.max(...arr.map(x => lengthFunc(x)));
+    zip: (arr1, arr2) => {
+        const len = Math.min(arr1.length, arr2.length);
+        return Array.from({ length: len }, (_, i) => [arr1[i], arr2[i]]);
     },
 
     removeItem: (array, item, callback) => {
@@ -140,15 +140,9 @@ const ArrayUtil = Object.freeze({
             return [true, getRemoved()];
         }
 
-        const ret = callback(idx, array);
-
-        if (TypeTester.isPromise(ret)) {
-            return ret.then(shouldDelete => {
-                return shouldDelete ? [true, getRemoved()] : [false, undefined];
-            });
-        } else {
-            return ret ? [true, getRemoved()] : [false, undefined];
-        }
+        return Util.maybeAsyncThen(callback(idx, array), shouldDelete =>
+            shouldDelete ? [true, getRemoved()] : [false, undefined]
+        );
     },
 
     maybeAsyncForEach: (array, callback) => {
@@ -231,12 +225,7 @@ const ArrayUtil = Object.freeze({
                 for (; j < length; j++) {
                     item = array[j];
 
-                    if (j === i) {
-                        ret = await ret;
-                    } else {
-                        ret = await callback(item, j);
-                    }
-
+                    ret = await (j === i ? ret : callback(item, j));
                     deleteItem();
                 }
 
@@ -249,16 +238,21 @@ const ArrayUtil = Object.freeze({
         }
     },
 
-    _valueFunc: callback => {
-        switch (typeof callback) {
+    maxLength: (array, length = "string") => {
+        let lengthFunc;
+
+        switch (length) {
+            case "array":
+                lengthFunc = Util.length;
+                break;
             case "string":
-                const propName = callback;
-                return obj => obj[propName];
-            case "function":
-                return callback;
+                lengthFunc = Util.stringLength;
+                break;
             default:
-                return val => val;
+                throw new UtilError("Invalid length function: " + length, length);
         }
+
+        return Math.max(...array.map(x => lengthFunc(x)));
     },
 
     _indexFunc: (array, item) => {
@@ -270,6 +264,17 @@ const ArrayUtil = Object.freeze({
                 return array.findIndex(callback);
             default:
                 return array.indexOf(item);
+        }
+    },
+    _valueFunc: callback => {
+        switch (typeof callback) {
+            case "string":
+                const propName = callback;
+                return obj => obj[propName];
+            case "function":
+                return callback;
+            default:
+                return val => val;
         }
     }
 });

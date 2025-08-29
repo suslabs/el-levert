@@ -38,12 +38,7 @@ class InputManager extends Manager {
         }
 
         this._active = value;
-
-        if (value) {
-            this.load();
-        } else {
-            this.unload();
-        }
+        value ? this.load() : this.unload();
     }
 
     load() {
@@ -56,7 +51,7 @@ class InputManager extends Manager {
     }
 
     async unload() {
-        if (!this.loopRunning) {
+        if (this.loopRunning) {
             return;
         }
 
@@ -106,7 +101,7 @@ class InputManager extends Manager {
             endsWithTrigger = processed.endsWith(this.multilineTrigger);
 
         while (processed.endsWith(this.multilineTrigger)) {
-            processed = processed.slice(0, -this.multilineTrigger.length).trimEnd();
+            processed = Util.before(processed, -this.multilineTrigger.length).trimEnd();
         }
 
         return [processed, endsWithTrigger];
@@ -140,12 +135,7 @@ class InputManager extends Manager {
 
             const [processed, endsWithTrigger] = this._processLine(input);
 
-            if (endsWithTrigger) {
-                input = await this._readMultilineInput(processed);
-            } else {
-                input = processed.trimStart();
-            }
-
+            input = endsWithTrigger ? await this._readMultilineInput(processed) : processed.trimStart();
             await this._handleInput(input);
         }
     }

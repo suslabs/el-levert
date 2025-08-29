@@ -30,7 +30,7 @@ class JsonLoader extends TextLoader {
         this.spaces = options.spaces ?? 0;
 
         this._childValidate = this.validate;
-        this.validate = this._validate;
+        this.validate = this._validate.bind(this);
     }
 
     set path(val) {
@@ -43,15 +43,7 @@ class JsonLoader extends TextLoader {
             replacer = options.replacer ?? this.replacer,
             spaces = options.spaces ?? this.spaces;
 
-        let jsonData;
-
-        if (typeof stringify === "function") {
-            jsonData = stringify(data, options);
-        } else {
-            jsonData = JSON.stringify(data, replacer, spaces);
-        }
-
-        return jsonData;
+        return typeof stringify === "function" ? stringify(data, options) : JSON.stringify(data, replacer, spaces);
     }
 
     load() {
@@ -94,13 +86,9 @@ class JsonLoader extends TextLoader {
         return errors
             .map(err => {
                 const split = err.instancePath.split("/"),
-                    newPath = Util.after(split).join(".");
+                    newPath = Util.after(split, 0).join(".");
 
-                if (Util.empty(newPath)) {
-                    return Util.capitalize(err.message);
-                } else {
-                    return `Property ${newPath} ${err.message}`;
-                }
+                return Util.empty(newPath) ? Util.capitalize(err.message) : `Property ${newPath} ${err.message}`;
             })
             .join("\n");
     }
@@ -190,10 +178,9 @@ class JsonLoader extends TextLoader {
             } else {
                 return res.then(status => (this._schemaLoadStatus = status));
             }
-        } else if (typeof this.schema === "undefined") {
-            this._schemaLoadStatus = this.failure("No schema provided");
         } else {
-            this._schemaLoadStatus = LoadStatus.successful;
+            this._schemaLoadStatus =
+                typeof this.schema === "undefined" ? this.failure("No schema provided") : LoadStatus.successful;
         }
 
         return this.sync ? undefined : Promise.resolve();
@@ -208,13 +195,8 @@ class JsonLoader extends TextLoader {
             delete this._ajvValidate;
         }
 
-        const existingValidator = JsonLoader._ajv.getSchema(this.schema.$id);
-
-        if (typeof existingValidator === "undefined") {
-            this._ajvValidate = JsonLoader._ajv.compile(this.schema);
-        } else {
-            this._ajvValidate = existingValidator;
-        }
+        const existing = JsonLoader._ajv.getSchema(this.schema.$id);
+        this._ajvValidate = existing ?? JsonLoader._ajv.compile(this.schema);
 
         return LoadStatus.successful;
     }
@@ -261,12 +243,7 @@ class JsonLoader extends TextLoader {
 
             if (!valid) {
                 let errMessage = "Validation failed";
-
-                if (typeof error === "undefined") {
-                    errMessage += ".";
-                } else {
-                    errMessage += ":\n" + JsonLoader._formatValidationErrors(error);
-                }
+                errMessage += typeof error === "undefined" ? "." : ":\n" + JsonLoader._formatValidationErrors(error);
 
                 return this.failure(errMessage);
             }

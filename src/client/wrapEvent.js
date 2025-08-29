@@ -19,11 +19,7 @@ const wrapEvent = (logger, func) =>
             return;
         }
 
-        if (TypeTester.isPromise(out)) {
-            out = wrapPromise(logger, out);
-        }
-
-        return out;
+        return TypeTester.isPromise(out) ? wrapPromise(logger, out) : out;
     };
 
 export default wrapEvent;

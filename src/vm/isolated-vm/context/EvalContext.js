@@ -35,20 +35,30 @@ class EvalContext {
     }
 
     constructor(options, inspectorOptions = {}) {
-        const invalidMemLimit = isNaN(options.memLimit) || options.memLimit <= 0;
-        this.memLimit = invalidMemLimit ? -1 : options.memLimit;
+        this.options = options;
+        this.inspectorOptions = inspectorOptions;
 
-        const invalidTimeLimit = isNaN(options.timeLimit) || options.timeLimit <= 0;
-        this.timeLimit = invalidTimeLimit ? -1 : options.timeLimit;
+        const invalidMemLimit = !Number.isFinite(options.memLimit) || options.memLimit <= 0;
+        this.memLimit = invalidMemLimit ? -1 : Math.round(options.memLimit);
 
-        this._setupInspector(inspectorOptions);
+        const invalidTimeLimit = !Number.isFinite(options.timeLimit) || options.timeLimit <= 0;
+        this.timeLimit = invalidTimeLimit ? -1 : Math.round(options.timeLimit);
 
-        this.scriptName = this._getScriptName();
+        this.enableInspector = inspectorOptions.enable ?? false;
+
+        this._aborter = new AbortController();
+        this.abortSignal = this._aborter.signal;
+
         this._vmObjects = [];
+    }
+
+    get scriptName() {
+        return this.enableInspector ? `file:///${EvalContext.filename}` : `(<${EvalContext.evaluated}>)`;
     }
 
     async getIsolate(values = {}) {
         if (typeof this.isolate === "undefined") {
+            this._setupInspector();
             await this._setupIsolate(values);
         }
 
@@ -62,12 +72,7 @@ class EvalContext {
 
     get timeRemaining() {
         this._checkIsolate();
-
-        if (this.timeLimit === -1) {
-            return NaN;
-        }
-
-        return Util.clamp(this.timeLimit - this.timeElapsed, 0);
+        return this.timeLimit > 0 ? Util.clamp(this.timeLimit - this.timeElapsed, 0) : NaN;
     }
 
     async setVMObject(name, _class, params, targetProp = "this") {
@@ -77,14 +82,19 @@ class EvalContext {
             targetObj = targetProp === "this" ? obj : obj[targetProp];
 
         if (typeof targetObj === "undefined") {
-            throw new VMError(`Invalid target property "${targetProp}" on object: ${name}`);
+            throw new VMError(`Invalid target property "${targetProp}" on object: ${name}`, {
+                object: name,
+                targetProp
+            });
         }
 
         const targetName = `vm${Util.capitalize(name)}`,
             vmName = globalNames[name];
 
         if (typeof vmName === "undefined") {
-            throw new VMError("Unknown global object: " + name);
+            throw new VMError("Unknown global object: " + name, {
+                global: name
+            });
         }
 
         const vmObj = new ExternalCopy(targetObj);
@@ -96,19 +106,9 @@ class EvalContext {
         this._vmObjects.push({ name, targetName });
     }
 
-    async compileScript(code, setField = true) {
+    async compileScript(code) {
         this._checkIsolate();
-        code = this.inspector.getDebuggerCode(code);
-
-        const script = await this.isolate.compileScript(code, {
-            filename: this.scriptName
-        });
-
-        if (setField) {
-            this._script = script;
-        } else {
-            return script;
-        }
+        return await this._compileScript(code, true);
     }
 
     async runScript(code) {
@@ -118,7 +118,7 @@ class EvalContext {
         let script;
 
         if (compileNow) {
-            script = await this.compileScript(code, false);
+            script = await this._compileScript(code, false);
         } else if (typeof this._script === "undefined") {
             throw new VMError("Can't run, no script was compiled");
         } else {
@@ -153,10 +153,17 @@ class EvalContext {
     }
 
     dispose() {
+        this._aborter.abort();
+
         this._disposeInspector();
         this._disposeVMObjects();
         this._disposeScript();
+        this._disposeContext();
         this._disposeIsolate();
+    }
+
+    _setupInspector() {
+        this.inspector = new IsolateInspector(this.enableInspector, this.inspectorOptions);
     }
 
     static _constructFunc(objName, funcName, properties) {
@@ -174,7 +181,7 @@ class EvalContext {
 
     static _constructFuncs(objMap, names) {
         return Object.entries(objMap).flatMap(([objKey, funcMap]) => {
-            if (funcMap == null) {
+            if (typeof funcMap !== "object") {
                 throw new VMError("Invalid object map");
             }
 
@@ -182,34 +189,19 @@ class EvalContext {
                 funcNames = names.func[objKey];
 
             if (typeof objName === "undefined") {
-                throw new VMError(`Object ${objKey} not found`);
+                throw new VMError(`Name for object "${objKey}" not found`, objKey);
             }
 
             return Object.entries(funcMap).map(([funcKey, props]) => {
                 const funcName = funcNames[funcKey];
 
                 if (typeof funcName === "undefined") {
-                    throw new VMError(`Function ${funcKey} not found`);
+                    throw new VMError(`Name for function "${funcKey}" not found`, funcKey);
                 }
 
                 return this._constructFunc(objName, funcName, props);
             });
         });
-    }
-
-    _getScriptName() {
-        if (this.enableInspector) {
-            return `file:///${EvalContext.filename}`;
-        } else {
-            return `(<${EvalContext.evaluated}>)`;
-        }
-    }
-
-    _setupInspector(options) {
-        const enableInspector = options.enable ?? false;
-
-        this.inspector = new IsolateInspector(enableInspector, options);
-        this.enableInspector = enableInspector;
     }
 
     async _setGlobal() {
@@ -226,11 +218,15 @@ class EvalContext {
     }
 
     async _setTag(tag, args) {
-        await this.setVMObject("tag", FakeTag, [tag, args], "fixedTag");
+        if (tag != null && args != null) {
+            await this.setVMObject("tag", FakeTag, [tag, args], "fixedTag");
+        }
     }
 
     async _setMsg(msg) {
-        await this.setVMObject("msg", FakeMsg, [msg], "fixedMsg");
+        if (msg != null) {
+            await this.setVMObject("msg", FakeMsg, [msg], "fixedMsg");
+        }
     }
 
     async _setVM() {
@@ -272,13 +268,27 @@ class EvalContext {
         };
 
         if (this.memLimit !== -1) {
-            this.memoryLimit = this.memLimit;
+            config.memoryLimit = this.memLimit;
         }
 
         this.isolate = new Isolate(config);
 
         await this._setupContext(values);
         this.inspector.create(this.isolate);
+    }
+
+    async _compileScript(code, setScript) {
+        code = this.inspector.getDebuggerCode(code);
+
+        const script = await this.isolate.compileScript(code, {
+            filename: this.scriptName
+        });
+
+        if (setScript) {
+            this._script = script;
+        }
+
+        return script;
     }
 
     _disposeInspector() {
@@ -312,12 +322,8 @@ class EvalContext {
     }
 
     _disposeIsolate() {
-        if (typeof this.isolate === "undefined") {
-            return;
-        }
-
-        if (!this.isolate.isDisposed) {
-            this.isolate.dispose();
+        if (!this.isolate?.isDisposed) {
+            this.isolate?.dispose();
         }
 
         delete this.isolate;

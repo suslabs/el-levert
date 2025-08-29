@@ -9,32 +9,39 @@ export default {
     subcommand: true,
 
     handler: async function (args, msg) {
-        const index = Util.parseInt(args);
+        let index = Util.parseInt(args) - 1;
 
         if (Util.empty(args) || Number.isNaN(index)) {
             return `:information_source: ${this.getArgsHelp("index")}`;
         }
 
-        let res = false;
+        {
+            let err;
+            [index, err] = getClient().reminderManager.checkIndex(index, false);
+
+            if (err !== null) {
+                return `:warning: ${err}.`;
+            }
+        }
+
+        let removed = false;
 
         try {
-            res = await getClient().reminderManager.remove(msg.author.id, index - 1);
+            const reminder = await getClient().reminderManager.remove(msg.author.id, index);
+            removed = reminder !== null;
         } catch (err) {
-            if (err.name === "ReminderError") {
-                if (err.message === "Reminder doesn't exist") {
-                    return `:warning: Reminder **${index}** doesn't exist.`;
-                } else {
-                    return `:warning: ${err.message}.`;
-                }
+            if (err.name !== "ReminderError") {
+                throw err;
             }
 
-            throw err;
+            switch (err.message) {
+                case "Reminder doesn't exist":
+                    return `:warning: Reminder **${index}** doesn't exist.`;
+                default:
+                    return `:warning: ${err.message}.`;
+            }
         }
 
-        if (!res) {
-            return ":information_source: You don't have any reminders.";
-        }
-
-        return `:information_source: Removed reminder **${index}**.`;
+        return `:information_source: ${removed ? `Removed reminder **${index}**.` : "You don't have any reminders."}`;
     }
 };

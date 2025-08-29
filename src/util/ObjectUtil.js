@@ -1,5 +1,6 @@
 import Util from "./Util.js";
 import TypeTester from "./TypeTester.js";
+import ArrayUtil from "./ArrayUtil.js";
 
 import UtilError from "../errors/UtilError.js";
 
@@ -58,15 +59,13 @@ const ObjectUtil = Object.freeze({
         let enumerable, nonEnumerable, both, keys;
 
         if (options == null) {
-            options = ObjectUtil._validPropOptions[0];
+            options = [ObjectUtil._validPropOptions[0]];
             both = true;
         } else {
-            if (!Array.isArray(options)) {
-                options = [options];
-            }
+            options = ArrayUtil.guaranteeArray(options);
 
             if (!options.every(option => ObjectUtil._validPropOptions.includes(option))) {
-                throw new UtilError("Invalid property options");
+                throw new UtilError("Invalid property options", ObjectUtil._validPropOptions);
             }
 
             both = options.includes("both");
@@ -74,7 +73,7 @@ const ObjectUtil = Object.freeze({
         }
 
         if (options.length < 1) {
-            throw new UtilError("Invalid property options");
+            throw new UtilError("Invalid property options", ObjectUtil._validPropOptions);
         } else if (keys) {
             return Object.assign(target, source);
         } else if (both) {
@@ -94,10 +93,8 @@ const ObjectUtil = Object.freeze({
 
         if (both) {
             descriptors = allDescriptors;
-        } else if (enumerable) {
-            descriptors = allDescriptors.filter(([, desc]) => desc.enumerable);
-        } else if (nonEnumerable) {
-            descriptors = allDescriptors.filter(([, desc]) => !desc.enumerable);
+        } else {
+            descriptors = allDescriptors.filter(([, desc]) => (enumerable ? desc.enumerable : !desc.enumerable));
         }
 
         if (TypeTester.isObject(props)) {
@@ -105,8 +102,8 @@ const ObjectUtil = Object.freeze({
         }
 
         descriptors = Object.fromEntries(descriptors);
-
         Object.defineProperties(target, descriptors);
+
         return target;
     },
 
@@ -122,7 +119,7 @@ const ObjectUtil = Object.freeze({
             let { propName, desc } = prop;
 
             if (typeof propName !== "string" || Util.empty(propName) || !TypeTester.isObject(desc)) {
-                throw new UtilError("Invalid property recieved from factory");
+                throw new UtilError("Invalid property recieved from factory", prop);
             }
 
             desc = ObjectUtil.shallowClone(desc);
@@ -184,12 +181,7 @@ const ObjectUtil = Object.freeze({
                 for (; j < length; j++) {
                     [key, item] = entries[j];
 
-                    if (j === i) {
-                        ret = await ret;
-                    } else {
-                        ret = await callback(key, item, j);
-                    }
-
+                    ret = await (j === i ? ret : callback(key, item, j));
                     deleteItem();
                 }
 

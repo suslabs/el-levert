@@ -1,5 +1,5 @@
-import CustomError from "./CustomError.js";
+import ReferenceError from "./ReferenceError.js";
 
-class HandlerError extends CustomError {}
+class HandlerError extends ReferenceError {}
 
 export default HandlerError;

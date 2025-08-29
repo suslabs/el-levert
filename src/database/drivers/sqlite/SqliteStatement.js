@@ -137,11 +137,8 @@ class SqliteStatement {
             return true;
         }
 
-        if (expected) {
-            return new DatabaseError(msg ?? SqliteStatement._stNotFinalizedMsg);
-        } else {
-            return new DatabaseError(msg ?? SqliteStatement._stFinalizedMsg);
-        }
+        const defaultMsg = expected ? SqliteStatement._stNotFinalizedMsg : SqliteStatement._stFinalizedMsg;
+        return new DatabaseError(msg ?? defaultMsg);
     }
 
     _checkFinalizedSync(expected, msg) {
@@ -155,9 +152,9 @@ class SqliteStatement {
 
         if (this.throwErrors) {
             throw res;
+        } else {
+            return false;
         }
-
-        return false;
     }
 
     _checkFinalizedAsync(resolve, reject, expected, msg) {

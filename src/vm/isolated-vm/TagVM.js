@@ -15,11 +15,7 @@ import VMError from "../../errors/VMError.js";
 import VMErrors from "./VMErrors.js";
 
 function logUsage(code) {
-    if (!getLogger().isDebugEnabled()) {
-        return;
-    }
-
-    getLogger().debug(`Running script:${LoggerUtil.formatLog(code)}`);
+    getLogger().isDebugEnabled() && getLogger().debug(`Running script:${LoggerUtil.formatLog(code)}`);
 }
 
 function logFinished(t1, info) {
@@ -34,16 +30,16 @@ function logFinished(t1, info) {
 }
 
 function logOutput(dataType, out) {
-    if (!getLogger().isDebugEnabled()) {
-        return;
+    if (getLogger().isDebugEnabled()) {
+        const desc = dataType === "script" ? "output" : "data";
+        getLogger().debug(`Returning ${dataType} ${desc}:${LoggerUtil.formatLog(out)}`);
     }
-
-    const desc = dataType === "script" ? "output" : "data";
-    getLogger().debug(`Returning ${dataType} ${desc}:${LoggerUtil.formatLog(out)}`);
 }
 
 class TagVM extends VM {
     static $name = "tagVM";
+    static VMname = "isolated-vm";
+
     static loadPriority = 1;
 
     static logInspectorPackets = false;
@@ -170,18 +166,17 @@ class TagVM extends VM {
                 return ["reply", this._processReply(err.message)];
         }
 
-        for (const [name, info] of Object.entries(VMErrors)) {
-            if (name === "custom") {
-                continue;
-            }
+        const foundError = Object.entries(VMErrors).find(
+            ([name, info]) => name !== "custom" && err.message === info.in
+        );
 
-            if (err.message === info.in) {
-                getLogger().debug(`IVM error: ${info.out}.`);
-                throw new VMError(info.out);
-            }
+        if (typeof foundError === "undefined") {
+            throw err;
+        } else {
+            const [, info] = foundError;
+            getLogger().debug(`IVM error: ${info.out}.`);
+            throw new VMError(info.out);
         }
-
-        throw err;
     }
 }
 

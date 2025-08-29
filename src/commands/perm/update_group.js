@@ -8,30 +8,22 @@ export default {
     aliases: ["edit", "edit_group"],
     parent: "perm",
     subcommand: true,
-    allowed: getClient().permManager.adminLevel,
+    allowed: "admin",
 
     handler: async function (args, msg, perm) {
-        let [g_name, g_data] = ParserUtil.splitArgs(args),
-            [newName, newLevel] = ParserUtil.splitArgs(g_data);
+        let [g_name, g_data] = ParserUtil.splitArgs(args);
 
         if (Util.empty(args) || Util.empty(g_name) || Util.empty(g_data)) {
             return `:information_source: ${this.getArgsHelp("group_name (new_name/unchanged) (new_level/unchanged)")}`;
         }
 
-        if (Util.empty(newName) || newName === "unchanged") {
-            newName = null;
-        } else {
-            const err = getClient().permManager.checkName(g_name);
+        {
+            let err;
+            [g_name, err] = getClient().permManager.checkName(g_name, false);
 
-            if (err) {
+            if (err !== null) {
                 return `:warning: ${err}.`;
             }
-        }
-
-        if (Util.empty(newLevel) || newLevel === "unchanged") {
-            newLevel = null;
-        } else {
-            newLevel = Util.parseInt(newLevel);
         }
 
         const group = await getClient().permManager.fetchGroup(g_name);
@@ -40,25 +32,50 @@ export default {
             return `:warning: Group **${g_name}** doesn't exist.`;
         }
 
-        if (perm < newLevel) {
+        let [newName, newLevel] = ParserUtil.splitArgs(g_data);
+
+        if (Util.empty(newName) || newName === "unchanged") {
+            newName = null;
+        } else {
+            let err;
+            [newName, err] = getClient().permManager.checkName(newName, false);
+
+            if (err !== null) {
+                return `:warning: ${err}.`;
+            }
+        }
+
+        if (Util.empty(newLevel) || newLevel === "unchanged") {
+            newLevel = null;
+        } else {
+            newLevel = Util.parseInt(newLevel);
+            let err;
+            [newLevel, err] = getClient().permManager.checkLevel(newLevel, false);
+
+            if (err !== null) {
+                return `:warning: ${err}.`;
+            }
+        }
+
+        if (!getClient().permManager.allowed(perm, newLevel)) {
             return `:warning: Can't update a group to have a level that is higher than your own. (**${perm}** < **${newLevel}**)`;
         }
 
         try {
-            await getClient().permManager.updateGroup(group, newName, newLevel);
+            await getClient().permManager.updateGroup(group, newName, newLevel, {
+                validateNew: false
+            });
         } catch (err) {
-            if (err.name === "PermissionError") {
-                switch (err.message) {
-                    case "Group already exists":
-                        return `:warning: Group **${g_name}** already exists.`;
-                    case "Invalid level":
-                        return `Invalid level: \`${newLevel}\`. Level must be an int larger than 0.`;
-                    default:
-                        return `:warning: ${err.message}.`;
-                }
+            if (err.name !== "PermissionError") {
+                throw err;
             }
 
-            throw err;
+            switch (err.message) {
+                case "Group already exists":
+                    return `:warning: Group **${g_name}** already exists.`;
+                default:
+                    return `:warning: ${err.message}.`;
+            }
         }
 
         return `:white_check_mark: Updated group **${g_name}**.`;

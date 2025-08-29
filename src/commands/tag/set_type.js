@@ -6,23 +6,26 @@ export default {
     name: "set_type",
     parent: "tag",
     subcommand: true,
-    allowed: getClient().permManager.modLevel,
+    allowed: "mod",
 
     handler: async function (args) {
         if (args.length < 2) {
             return `:information_source: ${this.getArgsHelp("name (version/type)")}`;
         }
 
-        const [t_name, t_args] = ParserUtil.splitArgs(args, true);
+        let [t_name, t_args] = ParserUtil.splitArgs(args, true);
 
         if (this.matchesSubcmd(t_name)) {
             return `:police_car: **${t_name}** is a __command__, not a __tag__. You can't manipulate commands.`;
         }
 
-        const err = getClient().tagManager.checkName(t_name);
+        {
+            let err;
+            [t_name, err] = getClient().tagManager.checkName(t_name, false);
 
-        if (err) {
-            return `:warning: ${err}.`;
+            if (err !== null) {
+                return `:warning: ${err}.`;
+            }
         }
 
         let [type, version] = ParserUtil.splitArgs(t_args, [true, true]),
@@ -41,13 +44,16 @@ export default {
         }
 
         try {
-            await getClient().tagManager.updateProps(t_name, tag);
+            await getClient().tagManager.updateProps(t_name, tag, {
+                validateNew: false,
+                checkExisting: false
+            });
         } catch (err) {
-            if (err.name === "TagError") {
-                return `:warning: ${err.message}.`;
+            if (err.name !== "TagError") {
+                throw err;
             }
 
-            throw err;
+            return `:warning: ${err.message}.`;
         }
 
         return `:white_check_mark: Updated tag **${t_name}**.`;

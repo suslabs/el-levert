@@ -24,7 +24,7 @@ function getFormat(config) {
         }
 
         if (!validFormats.includes(name)) {
-            throw new LoggerError("Invalid format: " + name);
+            throw new LoggerError("Invalid format: " + name, name);
         }
 
         return winston.format[name](opts);

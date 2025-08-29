@@ -13,16 +13,19 @@ export default {
             return `:information_source: ${this.getArgsHelp("name new_body")}`;
         }
 
-        const [t_name, t_args] = ParserUtil.splitArgs(args, true);
+        let [t_name, t_args] = ParserUtil.splitArgs(args, true);
 
         if (this.matchesSubcmd(t_name)) {
             return `:police_car: **${t_name}** is a __command__, not a __tag__. You can't manipulate commands.`;
         }
 
-        const err = getClient().tagManager.checkName(t_name);
+        {
+            let err;
+            [t_name, err] = getClient().tagManager.checkName(t_name, false);
 
-        if (err) {
-            return `:warning: ${err}.`;
+            if (err !== null) {
+                return `:warning: ${err}.`;
+            }
         }
 
         const tag = await getClient().tagManager.fetch(t_name);
@@ -31,32 +34,37 @@ export default {
             return `:warning: Tag **${t_name}** doesn't exist.`;
         }
 
-        if (tag.owner !== msg.author.id && perm < getClient().permManager.modLevel) {
+        if (tag.owner !== msg.author.id && !getClient().permManager.allowed(perm, "mod")) {
             const out = `:warning: You can only edit your own tags.`,
                 owner = await tag.getOwner();
 
-            if (owner === "not found") {
-                return out + " Tag owner not found.";
-            } else {
-                return out + ` The tag is owned by \`${owner}\`.`;
-            }
+            return out + (owner === "not found" ? " tag owner not found." : ` and is owned by \`${owner}\`.`);
         }
 
-        const parsed = await this.parentCmd.parseBase(t_args, msg),
+        let parsed = await this.parentCmd.parseBase(t_args, msg),
             { body, type } = parsed;
 
         if (parsed.err !== null) {
             return parsed.err;
+        } else {
+            let err;
+            [body, err] = getClient().tagManager.checkBody(body, false);
+
+            if (err !== err) {
+                return `:warning: ${err}.`;
+            }
         }
 
         try {
-            await getClient().tagManager.edit(tag, body, type);
+            await getClient().tagManager.edit(tag, body, type, {
+                validateNew: false
+            });
         } catch (err) {
-            if (err.name === "TagError") {
-                return `:warning: ${err.message}.`;
+            if (err.name !== "TagError") {
+                throw err;
             }
 
-            throw err;
+            return `:warning: ${err.message}.`;
         }
 
         return `:white_check_mark: Edited tag **${t_name}**.`;
