@@ -1,3 +1,5 @@
+import Util from "../Util.js";
+
 import UtilError from "../../errors/UtilError.js";
 
 const CleanroomUtil = Object.freeze({
@@ -7,12 +9,14 @@ const CleanroomUtil = Object.freeze({
     calc: (l, w, h) => {
         const { minSize, maxSize } = CleanroomUtil;
 
-        if (l < minSize || w < minSize || h < minSize) {
-            throw new UtilError(`Cleanroom must be at least ${minSize}x${minSize}x${minSize}`);
-        }
+        l = Util.clamp(l, 0);
+        w = Util.clamp(w, 0);
+        h = Util.clamp(h, 0);
 
-        if (l > maxSize || w > maxSize || h > maxSize) {
-            throw new UtilError(`Cleanroom cannot be bigger than ${maxSize}x${maxSize}x${maxSize}`);
+        if (l < minSize || w < minSize || h < minSize) {
+            throw new UtilError(`Cleanroom must be at least ${minSize}x${minSize}x${minSize}`, { l, w, h });
+        } else if (l > maxSize || w > maxSize || h > maxSize) {
+            throw new UtilError(`Cleanroom cannot be bigger than ${maxSize}x${maxSize}x${maxSize}`, { l, w, h });
         }
 
         const l_inner = l - 2,

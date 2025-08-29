@@ -1,5 +1,5 @@
-import CustomError from "./CustomError.js";
+import ReferenceError from "./ReferenceError.js";
 
-class LoggerError extends CustomError {}
+class LoggerError extends ReferenceError {}
 
 export default LoggerError;

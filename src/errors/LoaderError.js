@@ -1,5 +1,5 @@
-import CustomError from "./CustomError.js";
+import ReferenceError from "./ReferenceError.js";
 
-class LoaderError extends CustomError {}
+class LoaderError extends ReferenceError {}
 
 export default LoaderError;

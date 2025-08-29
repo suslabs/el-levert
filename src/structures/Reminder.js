@@ -26,7 +26,7 @@ class Reminder {
 
     getTimestamp(discord = true, style = TimestampStyles.ShortDateTime) {
         if (discord) {
-            const timestamp = Math.floor(this.end * Util.durationSeconds.milli);
+            const timestamp = Math.round(this.end * Util.durationSeconds.milli);
             return time(timestamp, style);
         }
 

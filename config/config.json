@@ -14,6 +14,7 @@
     "embedCharLimit": 3000,
     "embedLineLimit": 40,
     "minResponseTime": 0.1,
+    "globalTimeLimit": 60,
     "reminderMsgLimit": 512,
     "reminderSendInterval": 10,
     "maxTagNameLength": 32,

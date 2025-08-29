@@ -1,4 +1,3 @@
-/* eslint-disable no-fallthrough */
 import { dataProps, infoProps, passthroughProps, targetProp } from "./ResultProperties.js";
 
 import Util from "../../../util/Util.js";
@@ -18,9 +17,7 @@ const ResultProxyHandler = Object.freeze({
 
                     if (privProp === targetProp) {
                         return target;
-                    }
-
-                    if (dataProps.includes(privProp)) {
+                    } else if (dataProps.includes(privProp)) {
                         return target[privProp];
                     }
                 }
@@ -28,12 +25,9 @@ const ResultProxyHandler = Object.freeze({
                 if (infoProps.includes(prop)) {
                     return target.info[prop];
                 }
+            // eslint-disable-next-line no-fallthrough
             default:
-                if (target.data == null) {
-                    return;
-                }
-
-                return target.data[prop];
+                return target.data?.[prop];
         }
     },
 
@@ -65,6 +59,7 @@ const ResultProxyHandler = Object.freeze({
                 if (infoProps.includes(prop)) {
                     return false;
                 }
+            // eslint-disable-next-line no-fallthrough
             default:
                 target.data[prop] = newVal;
                 return true;
@@ -80,11 +75,7 @@ const ResultProxyHandler = Object.freeze({
     },
 
     ownKeys: target => {
-        if (target.data == null) {
-            return [];
-        }
-
-        return Reflect.ownKeys(target.data);
+        return target.data ? Reflect.ownKeys(target.data) : [];
     },
 
     getOwnPropertyDescriptor: (target, prop) => {

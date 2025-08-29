@@ -1,5 +1,5 @@
-import CustomError from "./CustomError.js";
+import ReferenceError from "./ReferenceError.js";
 
-class ReminderError extends CustomError {}
+class ReminderError extends ReferenceError {}
 
 export default ReminderError;

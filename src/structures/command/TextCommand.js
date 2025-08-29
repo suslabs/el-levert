@@ -57,11 +57,7 @@ class TextCommand extends BaseCommand {
     }
 
     getSubcmdNames(includeAliases = true) {
-        if (includeAliases) {
-            return Array.from(super.getSubcmdMap().keys());
-        } else {
-            return super.getSubcmdNames();
-        }
+        return includeAliases ? Array.from(super.getSubcmdMap().keys()) : super.getSubcmdNames();
     }
 
     getSubcmds() {

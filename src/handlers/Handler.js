@@ -1,14 +1,16 @@
-import HandlerError from "../errors/HandlerError.js";
+import { getClient } from "../LevertClient.js";
 
 import Util from "../util/Util.js";
 
+import HandlerError from "../errors/HandlerError.js";
+
 class Handler {
     constructor(enabled = true, options = {}) {
-        if (typeof this.constructor.$name !== "string") {
-            throw new HandlerError("Handler must have a name");
-        }
+        const compName = this.constructor.$name;
 
-        if (typeof this.execute !== "function") {
+        if (typeof compName !== "string" || Util.empty(compName)) {
+            throw new HandlerError("Handler must have a name");
+        } else if (typeof this.execute !== "function") {
             throw new HandlerError("Child class must have an execute function");
         }
 
@@ -17,22 +19,35 @@ class Handler {
         this.options = options;
 
         this.priority ??= options.priority ?? 0;
-        this.minResponseTime = options.minResponseTime ?? 0;
+
+        const minResponseTime =
+                typeof options.minResponseTime === "undefined"
+                    ? getClient().config.minResponseTime
+                    : options.minResponseTime,
+            invalidResponseTime = !Number.isFinite(minResponseTime) || minResponseTime <= 0;
+        this.minResponseTime = invalidResponseTime ? -1 : Math.round(minResponseTime);
+
+        const globalTimeLimit =
+                typeof options.globalTimeLimit === "undefined"
+                    ? getClient().config.globalTimeLimit
+                    : options.globalTimeLimit,
+            invalidTimeLimit = !Number.isFinite(globalTimeLimit) || globalTimeLimit <= 0;
+        this.globalTimeLimit = invalidTimeLimit ? -1 : Math.round(globalTimeLimit);
 
         this._childLoad = this.load;
-        this.load = this._load;
+        this.load = this._load.bind(this);
 
         this._childUnload = this.unload;
-        this.unload = this._unload;
+        this.unload = this._unload.bind(this);
 
         this._childExecute = this.execute;
-        this.execute = this._execute;
+        this.execute = this._execute.bind(this);
 
         this._childDelete = this.delete;
-        this.delete = this._delete;
+        this.delete = this._delete.bind(this);
 
         this._childResubmit = this.resubmit;
-        this.resubmit = this._resubmit;
+        this.resubmit = this._resubmit.bind(this);
     }
 
     reply(data) {}
@@ -50,14 +65,7 @@ class Handler {
             return false;
         }
 
-        let deleteFunc;
-
-        if (typeof this._childDelete === "function") {
-            deleteFunc = this._childDelete;
-        } else {
-            deleteFunc = this._defaultDelete;
-        }
-
+        const deleteFunc = typeof this._childDelete === "function" ? this._childDelete : this._defaultDelete;
         return deleteFunc.apply(this, args);
     }
 
@@ -70,14 +78,7 @@ class Handler {
             return false;
         }
 
-        let resubmitFunc;
-
-        if (typeof this._childResubmit === "function") {
-            resubmitFunc = this._childResubmit;
-        } else {
-            resubmitFunc = this._defaultResubmit;
-        }
-
+        const resubmitFunc = typeof this._childResubmit === "function" ? this._childResubmit : this._defaultResubmit;
         return resubmitFunc.apply(this, args);
     }
 
@@ -93,11 +94,9 @@ class Handler {
             return;
         }
 
-        if (typeof this._childLoad !== "function") {
-            return;
+        if (typeof this._childLoad === "function") {
+            return this._childLoad.apply(this, args);
         }
-
-        return this._childLoad.apply(this, args);
     }
 
     _unload(...args) {
@@ -105,33 +104,25 @@ class Handler {
             return;
         }
 
-        if (typeof this._childUnload !== "function") {
-            return;
+        if (typeof this._childUnload === "function") {
+            return this._childUnload.apply(this, args);
         }
-
-        return this._childUnload.apply(this, args);
     }
 
-    async _addDelay(t1, delta = false) {
-        if (this.minResponseTime <= 0) {
+    async _addDelay(t1, delta = true) {
+        if (this.minResponseTime === -1) {
             return;
         }
 
-        if (isNaN(t1) || t1 <= 0) {
+        if (!Number.isFinite(t1) || t1 <= 0) {
             return await Util.delay(this.minResponseTime);
         }
 
-        let time;
+        const t2 = performance.now(),
+            elapsed = delta ? t1 : Util.timeDelta(t2, t1);
 
-        if (delta) {
-            time = t1;
-        } else {
-            const t2 = performance.now();
-            time = Util.timeDelta(t2, t1);
-        }
-
-        if (time < this.minResponseTime) {
-            const delay = this.minResponseTime - time;
+        if (elapsed < this.minResponseTime) {
+            const delay = this.minResponseTime - elapsed;
             await Util.delay(delay);
         }
     }

@@ -35,9 +35,8 @@ export default {
             throw err;
         }
 
-        const header = `:information_source: Resources required for a \`${l}x${w}x${h}\` cleanroom:`;
-
-        const { frame, walls, filters } = info;
+        const header = `:information_source: Resources required for a \`${l}x${w}x${h}\` cleanroom:`,
+            { frame, walls, filters } = info;
 
         const embed = new EmbedBuilder()
             .addFields(

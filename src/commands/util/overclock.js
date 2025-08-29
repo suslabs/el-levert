@@ -107,16 +107,15 @@ export default {
         const header = `:information_source: Input: **${recipe.base_eu} EU/t** for **${OCUtil.formatDuration(recipe.base_duration)}**`;
 
         const columns = {
-            eu: "EU/t",
-            time: "Time",
-            tier: "Voltage"
-        };
-
-        const rows = {
-            eu: outputs.map(row => Util.formatNumber(row.eu, 3) + " EU/t"),
-            time: outputs.map(row => OCUtil.formatDuration(row.time)),
-            tier: outputs.map(row => OCUtil.getTierName(row.tier))
-        };
+                eu: "EU/t",
+                time: "Time",
+                tier: "Voltage"
+            },
+            rows = {
+                eu: outputs.map(row => Util.formatNumber(row.eu, 3) + " EU/t"),
+                time: outputs.map(row => OCUtil.formatDuration(row.time)),
+                tier: outputs.map(row => OCUtil.getTierName(row.tier))
+            };
 
         if (hasChance) {
             columns.chance = "Chance";

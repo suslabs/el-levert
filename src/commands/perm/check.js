@@ -30,14 +30,10 @@ export default {
             const [u_name] = ParserUtil.splitArgs(args),
                 find = Util.first(await getClient().findUsers(u_name));
 
-            if (typeof find === "undefined") {
-                user = {
-                    id: u_name,
-                    username: u_name
-                };
-            } else {
-                user = find.user;
-            }
+            user = find?.user ?? {
+                id: u_name,
+                username: u_name
+            };
         }
 
         const groups = await getClient().permManager.fetch(user.id);

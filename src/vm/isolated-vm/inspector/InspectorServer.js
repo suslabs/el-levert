@@ -42,11 +42,7 @@ class InspectorServer {
     }
 
     get inspectorConnected() {
-        if (this._inspectorContext === null) {
-            return false;
-        }
-
-        return this._inspectorContext.inspector.connected;
+        return this._inspectorContext?.inspector.connected ?? false;
     }
 
     setup() {

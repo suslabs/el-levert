@@ -38,16 +38,14 @@ class VMFunction {
     constructor(options, propertyMap) {
         if (typeof options.name !== "string") {
             throw new VMError("VM function must have a name");
-        }
-
-        if (typeof options.ref === "undefined") {
+        } else if (typeof options.ref === "undefined") {
             throw new VMError("VM function must have a reference function");
         }
 
         ObjectUtil.setValuesWithDefaults(this, options, this.constructor.defaultValues);
 
         if (!Object.values(FuncTypes).includes(this.type)) {
-            throw new VMError("Invalid function type provided");
+            throw new VMError("Invalid function type provided: " + this.type, this.type);
         }
 
         switch (this.execution) {
@@ -55,7 +53,7 @@ class VMFunction {
                 this._stringFunc = false;
 
                 if (!Util.empty(this.otherRefs)) {
-                    throw new VMError("Other refs are only allowed for script functions");
+                    throw new VMError("Other refs are only allowed for script functions", this.otherRefs);
                 }
 
                 break;
@@ -63,7 +61,7 @@ class VMFunction {
                 this._stringFunc = true;
                 break;
             default:
-                throw new VMError("Invalid execution type provided");
+                throw new VMError("Invalid execution type provided: " + this.execution, this.execution);
         }
 
         if (this.singleContext) {
@@ -81,7 +79,7 @@ class VMFunction {
 
     async register(evalContext, propertyMap) {
         if (this.singleContext && this.registered) {
-            throw new VMError("VM function has already been registered");
+            throw new VMError("VM function has already been registered", this.name);
         }
 
         evalContext = this.context ?? evalContext;
@@ -109,10 +107,8 @@ class VMFunction {
     static _resolveReference(ref, propertyMap) {
         if (typeof ref === "function") {
             return ref;
-        }
-
-        if (typeof ref !== "string" || !ref.startsWith(VMFunction.pathPrefix)) {
-            throw new VMError("Invalid reference function path");
+        } else if (typeof ref !== "string" || !ref.startsWith(VMFunction.pathPrefix)) {
+            throw new VMError("Invalid reference function path", ref);
         }
 
         let path = ref.slice(VMFunction.pathPrefix.length),
@@ -130,9 +126,7 @@ class VMFunction {
     static _resolveBinds(func, binds, propertyMap) {
         if (typeof func !== "function") {
             throw new VMError("Can't bind unresolved ref function");
-        }
-
-        if (!Array.isArray(binds) || Util.empty(binds)) {
+        } else if (!Array.isArray(binds) || Util.empty(binds)) {
             return func;
         }
 

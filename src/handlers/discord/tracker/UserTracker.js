@@ -63,25 +63,25 @@ class UserTracker {
         }
 
         if (this.hasUser(id)) {
-            throw new HandlerError("User already exists");
-        }
-
-        const added = this.addUser(id);
-
-        if (!added) {
+            throw new HandlerError("User already exists", id);
+        } else if (!this.addUser(id)) {
             return;
         }
 
+        let res;
+
         try {
-            const res = callback();
-
-            if (TypeTester.isPromise(res)) {
-                return res.finally(() => this.removeUser(id));
-            }
-
-            return res;
-        } finally {
+            res = callback();
+        } catch (err) {
             this.removeUser(id);
+            throw err;
+        }
+
+        if (TypeTester.isPromise(res)) {
+            return res.finally(() => this.removeUser(id));
+        } else {
+            this.removeUser(id);
+            return res;
         }
     }
 

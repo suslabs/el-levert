@@ -17,20 +17,22 @@ class Command extends TextCommand {
         this.allowed = options.allowed ?? 0;
         this.ownerOnly = options.ownerOnly ?? false;
 
+        const ownerLevel = getClient().permManager.getLevels().owner;
+
         if (this.ownerOnly) {
-            this.allowed = getClient().permManager.ownerLevel;
-        } else if (this.allowed === getClient().permManager.ownerLevel) {
+            this.allowed = ownerLevel;
+        } else if (this.allowed === ownerLevel || this.allowed === "owner") {
             this.ownerOnly = true;
+            this.allowed = ownerLevel;
         }
     }
 
     canExecute(perm) {
         if (!this.ownerOnly) {
-            return perm >= this.allowed;
+            return getClient().permManager.allowed(perm, this.allowed);
         }
 
-        const canExecute = perm === getClient().permManager.ownerLevel;
-        return canExecute ? true : 0;
+        return perm === this.allowed ? true : 0;
     }
 
     getSubcmds(perm) {
@@ -56,11 +58,9 @@ class Command extends TextCommand {
         } else {
             const subcmds = this.getSubcmds(perm);
 
-            if (includeAliases) {
-                subNames = subcmds.flatMap(command => [command.name, ...command.aliases]);
-            } else {
-                subNames = subcmds.map(cmd => cmd.name);
-            }
+            subNames = includeAliases
+                ? subcmds.flatMap(command => [command.name, ...command.aliases])
+                : subcmds.map(cmd => cmd.name);
         }
 
         ArrayUtil.sort(subNames);
