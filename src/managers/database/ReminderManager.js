@@ -12,8 +12,10 @@ import LoggerUtil from "../../util/LoggerUtil.js";
 import ReminderError from "../../errors/ReminderError.js";
 
 function logTime(t1) {
-    const t2 = performance.now();
-    getLogger().info(`Sending reminders took ${Util.formatNumber(Util.timeDelta(t2, t1))} ms.`);
+    const t2 = performance.now(),
+        elapsed = Util.timeDelta(t2, t1);
+
+    getLogger().info(`Sending reminders took ${Util.formatNumber(elapsed)} ms.`);
 }
 
 class ReminderManager extends DBManager {
@@ -21,6 +23,7 @@ class ReminderManager extends DBManager {
     static loadPriority = 3;
 
     static maxMsgLength = 512;
+    static areWeChecking = false;
 
     constructor(enabled) {
         super(enabled, "reminder", "remind_db", ReminderDatabase);
@@ -31,67 +34,114 @@ class ReminderManager extends DBManager {
         this._sendTimer = null;
     }
 
-    checkMessage(msg) {
-        const oversized = Util.overSizeLimits(msg, this.maxMsgLength, 1);
+    checkIndex(index, throwErrors = true) {
+        let msg, ref;
 
-        if (!oversized) {
-            return false;
+        if (!Number.isInteger(index) || index < 0) {
+            msg = "Invalid reminder index";
+            ref = { index };
         }
 
-        const [chars, lines] = oversized;
+        const errored = typeof msg !== "undefined";
 
-        if (chars !== null) {
-            return `Reminder messages can be at most ${this.maxMsgLength} characters long.`;
-        } else if (lines !== null) {
-            return "Reminder messages can only contain a single line.";
+        if (throwErrors) {
+            return errored
+                ? (() => {
+                      throw new ReminderError(msg, ref);
+                  })()
+                : index;
+        } else {
+            return errored ? [null, msg] : [index, null];
+        }
+    }
+
+    checkMessage(remMsg, throwErrors = true) {
+        let msg, ref;
+        remMsg = remMsg.trim();
+
+        let oversized;
+
+        if (remMsg != null && typeof remMsg !== "string") {
+            msg = "Invalid reminder message";
+        } else if ((oversized = Util.overSizeLimits(remMsg, this.maxMsgLength, 1))) {
+            const [chars, lines] = oversized;
+
+            if (chars !== null) {
+                msg = `Reminder messages can be at most ${this.maxMsgLength} characters long.`;
+                ref = {
+                    msgLength: remMsg.length,
+                    maxLength: this.maxTagNameLength
+                };
+            } else if (lines !== null) {
+                msg = "Reminder messages can only contain a single line.";
+                ref = {
+                    lineCount: lines,
+                    maxLines: 1
+                };
+            }
+        }
+
+        const errored = typeof msg !== "undefined";
+
+        if (throwErrors) {
+            return errored
+                ? (() => {
+                      throw new ReminderError(msg, ref);
+                  })()
+                : remMsg;
+        } else {
+            return errored ? [null, msg] : [remMsg, null];
         }
     }
 
     async list(user) {
-        const reminders = await this.remind_db.fetch(user);
-
-        if (reminders === null) {
-            return null;
-        }
-
-        return reminders;
+        return await this.remind_db.fetch(user);
     }
 
     async listAll() {
         return await this.remind_db.list();
     }
 
-    async add(user, end, msg) {
-        if (end < Date.now()) {
-            throw new ReminderError("Invalid end time");
+    async add(user, end, msg, validate = true) {
+        if (validate) {
+            msg = this.checkMessage(msg);
+
+            if (end < Date.now()) {
+                throw new ReminderError("Invalid end time", end);
+            }
         }
 
-        msg = msg?.trim();
         const reminder = new Reminder({ user, end, msg });
-
         await this.remind_db.add(reminder);
 
         getLogger().info(`Added reminder for user: ${user} until: ${end} with message:${LoggerUtil.formatLog(msg)}`);
         return reminder;
     }
 
-    async remove(user, index) {
-        const reminders = await this.list(user);
-
-        if (reminders === null) {
-            return false;
+    async remove(user, index, validate = false) {
+        if (validate) {
+            index = this.checkIndex(index);
         }
 
-        const reminder = reminders[index];
+        const reminders = await this.list(user),
+            reminder = reminders?.[index];
 
-        if (typeof reminder === "undefined") {
+        if (reminders === null) {
+            return null;
+        } else if (typeof reminder === "undefined") {
             throw new ReminderError("Reminder doesn't exist");
         }
 
-        await this.remind_db.remove(reminder);
+        const res = await this.remind_db.remove(reminder),
+            updated = res.changes > 0;
 
-        getLogger().info(`Removed reminder: ${index} for user: ${user}.`);
-        return true;
+        if (updated) {
+            getLogger().info(`Removed reminder: ${index} for user: ${user}.`);
+        } else if (validate) {
+            throw new ReminderError("Reminder doesn't exist", reminder);
+        }
+
+        return reminder;
     }
 
     async removeAll(user) {
@@ -143,7 +193,7 @@ class ReminderManager extends DBManager {
     _sendReminders = async () => {
         const t1 = performance.now();
 
-        if (getLogger().isDebugEnabled()) {
+        if (ReminderManager.areWeChecking && getLogger().isDebugEnabled()) {
             const interval = Util.round(this.sendInterval * Util.durationSeconds.milli, 1);
             getLogger().debug(`Checking reminders... (${interval}s)`);
         }
@@ -151,7 +201,7 @@ class ReminderManager extends DBManager {
         const reminders = await this.getPastReminders();
 
         if (Util.empty(reminders)) {
-            getLogger().debug("No reminders to send.");
+            ReminderManager.areWeChecking && getLogger().debug("No reminders to send.");
             return;
         }
 

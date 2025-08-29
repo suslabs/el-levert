@@ -2,7 +2,7 @@ import Util from "../Util.js";
 
 import UtilError from "../../errors/UtilError.js";
 
-const OCUtil = {
+let OCUtil = {
     OC_RATIO: 2,
     EU_MULT: 4,
     HEAT_INC: 100,
@@ -28,19 +28,11 @@ const OCUtil = {
     },
 
     parseDuration: input => {
-        if (input.endsWith("t")) {
-            return Math.floor(Util.parseInt(input));
-        } else {
-            return Math.floor(Number.parseFloat(input) * 20);
-        }
+        return input.endsWith("t") ? Util.parseInt(input.slice(0, -1)) : Math.floor(Number.parseFloat(input) * 20);
     },
 
     formatDuration: time => {
-        if (time >= 20) {
-            return Util.formatNumber(time / 20, 2) + "s";
-        } else {
-            return time + "t";
-        }
+        return time < 20 ? time + "t" : Util.formatNumber(time / 20, 2) + "s";
     },
 
     getTier: voltage => {
@@ -74,8 +66,8 @@ const OCUtil = {
         return OCUtil.getEuTier(voltageEu * amperage - 1);
     },
 
-    calcTierDiff: (currTier, targetTier) => {
-        return Util.clamp(targetTier - currTier, 0, OCUtil.tierCount - 1);
+    calcTierDiff: (currentTier, targetTier) => {
+        return Util.clamp(targetTier - currentTier, 0, OCUtil.tierCount - 1);
     },
 
     calcOverclockTiers: (eu, voltage) => {
@@ -233,7 +225,7 @@ const OCUtil = {
                 calcFunc = OCUtil.calculateEbfOverclock;
                 break;
             default:
-                throw new UtilError("Invalid recipe type: " + recipe.oc_type);
+                throw new UtilError("Invalid recipe type: " + recipe.oc_type, recipe.oc_type);
         }
 
         let last;
@@ -263,4 +255,5 @@ const OCUtil = {
     });
 }
 
+OCUtil = Object.freeze(OCUtil);
 export default OCUtil;

@@ -16,11 +16,7 @@ class FileLoader extends Loader {
     }
 
     set path(val) {
-        if (typeof val === "string") {
-            this._path = path.resolve(projRoot, val);
-        } else {
-            this._path = val;
-        }
+        this._path = typeof val === "string" ? path.resolve(projRoot, val) : val;
     }
 
     get path() {

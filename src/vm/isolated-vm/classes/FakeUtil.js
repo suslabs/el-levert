@@ -21,6 +21,8 @@ const FakeUtil = Object.freeze({
     }),
 
     delay: (context, ms) => {
+        ms = Math.round(ms);
+
         return new Promise((resolve, reject) => {
             let resolveTimer, rejectTimer;
 
@@ -37,7 +39,9 @@ const FakeUtil = Object.freeze({
     },
 
     fetchTag: async name => {
-        if (getClient().tagManager.checkName(name)) {
+        const [, err] = getClient().tagManager.checkName(name, false);
+
+        if (err !== null) {
             return null;
         }
 
@@ -45,14 +49,8 @@ const FakeUtil = Object.freeze({
 
         if (tag === null) {
             return null;
-        }
-
-        if (tag.isAlias) {
-            const owner = tag.owner;
-            tag = await getClient().tagManager.fetchAlias(tag);
-
-            tag.setName(name);
-            tag.setOwner(owner);
+        } else if (tag.isAlias) {
+            tag = await getClient().tagManager.fetchAlias(tag, true);
         }
 
         const data = tag.getData();

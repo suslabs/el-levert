@@ -9,8 +9,8 @@ const targetWsUrl = `ws://127.0.0.1:${targetPort}`,
 
 let connectionCount = 0;
 
-let httpServer = null,
-    wsServer = null;
+let httpServer, wsServer;
+[httpServer, wsServer] = Array(2).fill(null);
 
 function httpReqHandler(req, res) {
     switch (req.url) {
@@ -48,14 +48,14 @@ function httpReqHandler(req, res) {
 }
 
 function httpUpgradeHandler(req, socket, head) {
-    const currConnection = ++connectionCount;
+    const connection_id = ++connectionCount;
 
-    console.log(`${currConnection}: Recieved connection.`);
+    console.log(`${connection_id}: Recieved connection.`);
     const proxyWs = new WebSocket(targetWsUrl);
 
     proxyWs.on("open", () => {
         wsServer.handleUpgrade(req, socket, head, ws => {
-            wsServer.emit("connection", ws, proxyWs, currConnection);
+            wsServer.emit("connection", ws, proxyWs, connection_id);
         });
     });
 
@@ -70,8 +70,8 @@ function httpUpgradeHandler(req, socket, head) {
     });
 }
 
-function wsConenctionHandler(ws, proxyWs, currConnection) {
-    console.log(`${currConnection}: WebSocket connected.`);
+function wsConenctionHandler(ws, proxyWs, connection_id) {
+    console.log(`${connection_id}: WebSocket connected.`);
 
     ws.on("message", message => {
         if (proxyWs.readyState === WebSocket.OPEN) {
@@ -86,7 +86,7 @@ function wsConenctionHandler(ws, proxyWs, currConnection) {
     });
 
     ws.on("close", () => {
-        console.log(`${currConnection}: WebSocket disconnected.\n`);
+        console.log(`${connection_id}: WebSocket disconnected.\n`);
         proxyWs.close();
     });
 

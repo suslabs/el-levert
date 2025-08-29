@@ -9,7 +9,7 @@ class FakeMsg {
     constructor(msg) {
         this.msg = msg ?? undefined;
 
-        if (msg == null) {
+        if (typeof this.msg === "undefined") {
             this.fixedMsg = {};
             return this;
         }
@@ -18,7 +18,10 @@ class FakeMsg {
             channel = msg.channel,
             guild = channel?.guild;
 
-        const messageIds = channel?.messages?.cache.last(FakeMsg.messageCount).map(msg => msg.id);
+        const messageIds = channel?.messages?.cache
+            .last(FakeMsg.messageCount)
+            .slice(1)
+            .map(msg => msg.id);
 
         this.fixedMsg = VMUtil.removeCircularReferences({
             channelId: msg.channelId,

@@ -7,36 +7,33 @@ import ParserUtil from "../../util/commands/ParserUtil.js";
 async function evalBase(args, msg) {
     let body;
 
-    if (!Util.empty(msg.attachments)) {
-        try {
-            [body] = await getClient().tagManager.downloadBody(null, msg);
-        } catch (err) {
-            if (err.name === "TagError") {
-                return {
-                    body: null,
-                    err: `:warning: ${err.message}.`
-                };
-            }
-
-            return {
-                body: null,
-                err: {
-                    content: ":no_entry_sign: Downloading attachment failed:",
-                    ...DiscordUtil.getFileAttach(err.stack, "error.js")
-                }
-            };
-        }
-    } else {
+    if (Util.empty(msg.attachments)) {
         ({ body } = ParserUtil.parseScript(args));
+    } else {
+        try {
+            ({ body } = await getClient().tagManager.downloadBody(null, msg, "eval"));
+        } catch (err) {
+            return err.name === "TagError"
+                ? {
+                      body: null,
+                      err: `:warning: ${err.message}.`
+                  }
+                : {
+                      body: null,
+                      err: {
+                          content: ":no_entry_sign: Downloading attachment failed:",
+                          ...DiscordUtil.getFileAttach(err.stack, "error.js")
+                      }
+                  };
+        }
     }
 
-    if (Util.empty(body)) {
-        return {
-            err: ":no_entry_sign: Can't eval an empty script."
-        };
-    } else {
-        return { body, err: null };
-    }
+    return Util.empty(body)
+        ? {
+              body: null,
+              err: ":no_entry_sign: Can't eval an empty script."
+          }
+        : { body, err: null };
 }
 
 async function altevalBase(args, msg, lang) {

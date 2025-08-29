@@ -1,4 +1,6 @@
+import Util from "../Util.js";
 import TypeTester from "../TypeTester.js";
+import ArrayUtil from "../ArrayUtil.js";
 import RegexUtil from "../misc/RegexUtil.js";
 import DiscordUtil from "../DiscordUtil.js";
 
@@ -19,16 +21,10 @@ const ParserUtil = Object.freeze({
         let sep = options.sep ?? [" ", "\n"],
             n = options.n ?? 1;
 
-        if (sep.length === 0) {
-            if (lowercaseFirst) {
-                return [str.toLowerCase(), ""];
-            } else {
-                return [str, ""];
-            }
-        }
-
-        if (!Array.isArray(sep)) {
-            sep = [sep];
+        if (Util.empty(sep)) {
+            return [lowercaseFirst ? str.toLowerCase() : str, ""];
+        } else {
+            sep = ArrayUtil.guaranteeArray(sep);
         }
 
         let first, second;
@@ -36,7 +32,7 @@ const ParserUtil = Object.freeze({
         let idx = -1,
             sepLength;
 
-        if (sep.length === 1) {
+        if (Util.single(sep)) {
             sep = sep[0] ?? sep;
 
             idx = str.indexOf(sep);
@@ -87,34 +83,23 @@ const ParserUtil = Object.freeze({
             second = str.slice(idx + sepLength);
         }
 
-        if (lowercaseFirst) {
-            first = first.toLowerCase();
-        }
-
-        if (lowercaseSecond) {
-            second = second.toLowerCase();
-        }
-
-        return [first, second];
+        return [lowercaseFirst ? first.toLowerCase() : first, lowercaseSecond ? second.toLowerCase() : second];
     },
 
-    _parseScirptResult: (body, isScript = false, lang = "") => ({ body, isScript, lang }),
-
+    _parseScriptResult: (body, isScript = false, lang = "") => ({ body, isScript, lang }),
     parseScript: script => {
         const match = script.match(DiscordUtil.parseScriptRegex);
 
         if (!match) {
-            return ParserUtil._parseScirptResult(script);
+            return ParserUtil._parseScriptResult(script);
         }
 
         const body = (match[2] ?? match[3])?.trim(),
             lang = match[1]?.trim() ?? "";
 
-        if (typeof body === "undefined") {
-            return ParserUtil._parseScirptResult(script);
-        }
-
-        return ParserUtil._parseScirptResult(body, true, lang);
+        return typeof body === "undefined"
+            ? ParserUtil._parseScriptResult(script)
+            : ParserUtil._parseScriptResult(body, true, lang);
     }
 });
 

@@ -16,15 +16,16 @@ class ConfigLoader extends BaseConfigLoader {
         config.embedLineLimit = Util.clamp(config.embedLineLimit, 0, DiscordUtil.embedCharLimit);
 
         config.minResponseTime = Util.clamp(
-            config.minResponseTime / Util.durationSeconds.milli,
-            -1,
+            Math.round(config.minResponseTime / Util.durationSeconds.milli),
+            null,
             10 / Util.durationSeconds.milli
         );
+        config.globalTimeLimit = Math.round(config.globalTimeLimit / Util.durationSeconds.milli);
 
-        config.timeLimit = Math.floor(config.timeLimit / Util.durationSeconds.milli);
-        config.otherTimeLimit = Math.floor(config.timeLimit / Util.durationSeconds.milli);
+        config.timeLimit = Math.round(config.timeLimit / Util.durationSeconds.milli);
+        config.otherTimeLimit = Math.round(config.timeLimit / Util.durationSeconds.milli);
 
-        config.reminderSendInterval = Math.floor(config.reminderSendInterval / Util.durationSeconds.milli);
+        config.reminderSendInterval = Math.round(config.reminderSendInterval / Util.durationSeconds.milli);
     }
 }
 

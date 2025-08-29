@@ -35,6 +35,8 @@ function formatCode(code) {
 
 class TagVM2 extends VM {
     static $name = "tagVM2";
+    static VMname = "vm2";
+
     static loadPriority = 2;
 
     constructor(enabled, options = {}) {

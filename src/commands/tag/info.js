@@ -13,24 +13,27 @@ export default {
     aliases: ["data"],
     parent: "tag",
     subcommand: true,
-    allowed: getClient().permManager.modLevel,
+    allowed: "mod",
 
     handler: async function (args) {
         if (Util.empty(args)) {
             return `:information_source: ${this.getArgsHelp("name")}`;
         }
 
-        const [t_name, i_type] = ParserUtil.splitArgs(args, [true, true]),
+        let [t_name, i_type] = ParserUtil.splitArgs(args, [true, true]),
             raw = i_type === "raw";
 
         if (this.matchesSubcmd(t_name)) {
             return `:police_car: **${t_name}** is a __command__, not a __tag__. You can't manipulate commands.`;
         }
 
-        const err = getClient().tagManager.checkName(t_name);
+        {
+            let err;
+            [t_name, err] = getClient().tagManager.checkName(t_name, false);
 
-        if (err) {
-            return `:warning: ${err}.`;
+            if (err !== null) {
+                return `:warning: ${err}.`;
+            }
         }
 
         const tag = await getClient().tagManager.fetch(t_name);

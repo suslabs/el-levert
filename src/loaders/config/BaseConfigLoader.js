@@ -19,7 +19,7 @@ class BaseConfigLoader extends JsonLoader {
         });
 
         this._childModify = this.modify;
-        this.modify = this._modify;
+        this.modify = this._modify.bind(this);
     }
 
     async load() {
@@ -35,14 +35,9 @@ class BaseConfigLoader extends JsonLoader {
     }
 
     _modify() {
-        if (typeof this._childModify !== "function") {
-            return;
-        }
-
-        const modifiedConfig = this._childModify(this.data);
-
-        if (typeof modifiedConfig !== "undefined") {
-            this.config = modifiedConfig;
+        if (typeof this._childModify === "function") {
+            const modifiedConfig = this._childModify(this.data);
+            this.config = modifiedConfig ?? this.config;
         }
     }
 }

@@ -65,11 +65,9 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
                 resolve();
             });
         }).then(_ => {
-            if (!this.WALMode) {
-                return;
+            if (this.WALMode) {
+                return this.enableWALMode();
             }
-
-            return this.enableWALMode();
         });
     }
 
@@ -350,11 +348,8 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
             return true;
         }
 
-        if (expected) {
-            return new DatabaseError(msg ?? SqliteDatabase._dbNotOpenMsg);
-        } else {
-            return new DatabaseError(msg ?? SqliteDatabase._dbOpenMsg);
-        }
+        const defaultMsg = expected ? SqliteDatabase._dbNotOpenMsg : SqliteDatabase._dbOpenMsg;
+        return new DatabaseError(msg ?? defaultMsg);
     }
 
     _checkDatabaseOpenSync(expected, msg) {
@@ -368,9 +363,9 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
 
         if (this.throwErrors) {
             throw res;
+        } else {
+            return false;
         }
-
-        return false;
     }
 
     _checkDatabaseOpenAsync(resolve, reject, expected, msg) {
@@ -401,9 +396,9 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
 
         if (this.throwErrors) {
             throw err;
+        } else {
+            return false;
         }
-
-        return false;
     }
 
     _throwErrorAsync(resolve, reject, err) {

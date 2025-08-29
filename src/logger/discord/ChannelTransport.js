@@ -47,7 +47,7 @@ class ChannelTransport extends BaseDiscordTransport {
         const channel = this.client.channels.cache.get(id);
 
         if (typeof channel === "undefined") {
-            throw new LoggerError("Channel not found");
+            throw new LoggerError("Channel not found", id);
         }
 
         return channel;

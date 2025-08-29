@@ -7,14 +7,14 @@ class FakeTag {
 
         const fixedTag = {};
 
-        if (!Util.empty(args)) {
-            fixedTag.args = args;
+        if (!Util.empty(this.args)) {
+            fixedTag.args = this.args;
         }
 
-        if (tag != null) {
-            fixedTag.body = tag.body;
-            fixedTag.name = tag.name;
-            fixedTag.owner = tag.owner;
+        if (typeof this.tag !== "undefined") {
+            fixedTag.body = this.tag.body;
+            fixedTag.name = this.tag.name;
+            fixedTag.owner = this.tag.owner;
         }
 
         this.fixedTag = fixedTag;

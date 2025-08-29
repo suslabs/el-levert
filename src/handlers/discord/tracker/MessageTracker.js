@@ -44,7 +44,7 @@ class MessageTracker {
         const funcName = `delete${Util.capitalize(itemName)}`,
             items = this[funcName](triggerMsg);
 
-        if (items === null) {
+        if (items == null) {
             return false;
         }
 

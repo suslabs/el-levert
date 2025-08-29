@@ -24,11 +24,7 @@ class User {
     }
 
     setUsername(username) {
-        if (username == null) {
-            username = "NOT FOUND";
-        }
-
-        this.username = username;
+        this.username = username ?? "NOT FOUND";
     }
 
     format(discord = false) {

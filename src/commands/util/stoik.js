@@ -98,17 +98,11 @@ Example: \`3CuSO4 + 2Al(NO3)3 -> 3Cu(NO3)2 + Al2(SO4)3\``;
         }
 
         const equation = Stoik.formatEquation(leftMolec, rightMolec),
-            [balanced, res] = Stoik.checkBalance(equation);
+            [balanced, info] = Stoik.checkBalance(equation);
 
-        let header;
+        const header = `${balanced ? ":white_check_mark:" : ":x:"} Your reaction __is ${balanced ? "" : "not "}balanced__.`;
 
-        if (balanced) {
-            header = ":white_check_mark: Your reaction __is balanced__.";
-        } else {
-            header = ":x: Your reaction __is not balanced__.";
-        }
-
-        for (const val of res) {
+        for (const val of info) {
             for (const [key, value] of Object.entries(val)) {
                 if (typeof value === "number") {
                     val[key] = Util.formatNumber(value);
@@ -116,27 +110,25 @@ Example: \`3CuSO4 + 2Al(NO3)3 -> 3Cu(NO3)2 + Al2(SO4)3\``;
             }
         }
 
-        const maxLeft = ArrayUtil.maxLength(res.map(val => val.reactantCount)),
-            maxRight = ArrayUtil.maxLength(res.map(val => val.productCount));
+        const maxLeft = ArrayUtil.maxLength(info.map(val => val.reactantCount)),
+            maxRight = ArrayUtil.maxLength(info.map(val => val.productCount));
 
         const columns = {
-            left: "Reactants",
-            right: "Products",
-            res: "Balanced"
-        };
-
-        const rows = {
-            left: res.map(val => formatElement(val.element, val.reactantCount, maxLeft)),
-            right: res.map(val => formatElement(val.element, val.productCount, maxRight)),
-            res: res.map(val => (val.balanced ? "✓" : "✗"))
-        };
+                left: "Reactants",
+                right: "Products",
+                res: "Balanced"
+            },
+            rows = {
+                left: info.map(val => formatElement(val.element, val.reactantCount, maxLeft)),
+                right: info.map(val => formatElement(val.element, val.productCount, maxRight)),
+                res: info.map(val => (val.balanced ? "✓" : "✗"))
+            };
 
         const table = drawTable(columns, rows, "light", {
-            sideLines: false,
-            center: true
-        });
-
-        const embed = new EmbedBuilder().setDescription(codeblock(table));
+                sideLines: false,
+                center: true
+            }),
+            embed = new EmbedBuilder().setDescription(codeblock(table));
 
         return {
             content: header,

@@ -53,6 +53,10 @@ const TypeTester = Object.freeze({
         }
     },
 
+    isInRange: (value, range) => {
+        return range.some(([first, last]) => value >= first && value <= last);
+    },
+
     outOfRange(propName, min, max, ...args) {
         const hasPropName = typeof propName === "string",
             getProp = hasPropName ? obj => obj[propName] : obj => obj;
@@ -75,36 +79,32 @@ const TypeTester = Object.freeze({
         if (args.length === 1) {
             const obj = args[0];
             return check(getProp(obj));
+        } else {
+            return args.find(obj => check(getProp(obj)));
         }
-
-        return args.find(obj => check(getProp(obj)));
     },
 
     _validProp: (obj, expected) => {
         if (typeof expected === "string") {
-            if (expected === "object") {
-                return TypeTester.isObject(obj);
-            } else {
-                return typeof obj === expected;
-            }
-        }
-
-        if (typeof expected === "function") {
+            return expected === "object" ? TypeTester.isObject(obj) : typeof obj === expected;
+        } else if (typeof expected === "function") {
             return obj instanceof expected;
+        } else if (TypeTester.isObject(expected)) {
+            return TypeTester.validateProps(obj, expected);
+        } else {
+            throw new UtilError("Invalid expected type provided", expected);
         }
-
-        if (TypeTester.isObject(expected)) {
-            if (TypeTester.isObject(obj)) {
-                return TypeTester.validateProps(obj, expected);
-            } else {
-                return false;
-            }
-        }
-
-        throw new UtilError("Invalid expected type");
     },
     validateProps: (obj, requiredProps) => {
+        if (!TypeTester.isObject(obj)) {
+            return false;
+        }
+
         for (const [name, expected] of Object.entries(requiredProps)) {
+            if (!(name in obj)) {
+                return false;
+            }
+
             const prop = obj[name];
 
             if (!TypeTester._validProp(prop, expected)) {

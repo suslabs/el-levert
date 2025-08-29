@@ -336,7 +336,7 @@ describe("evaluate", () => {
             [TokenType.Join]: [TokenType.Join]
         };
 
-        function combine(input) {
+        const combine = input => {
             const output = [];
 
             for (let i = 0; i < input.length; i++) {
@@ -346,7 +346,7 @@ describe("evaluate", () => {
             }
 
             return output;
-        }
+        };
 
         const tokenPermutations = combine(Object.values(exampleTokens));
 
