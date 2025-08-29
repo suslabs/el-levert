@@ -266,13 +266,11 @@ const Stoik = Object.freeze({
 
         if (evaluated instanceof Molecule) {
             return evaluated;
-        }
-
-        if (Array.isArray(evaluated) && evaluated[0] === TokenType.Element) {
+        } else if (Array.isArray(evaluated) && evaluated[0] === TokenType.Element) {
             return Molecule.fromElement(evaluated[1]);
         }
 
-        throw new StoikError(`Unexpected result type: ${TypeTester.className(evaluated)}`);
+        throw new StoikError(`Unexpected result type: ${TypeTester.className(evaluated)}`, evaluated);
     },
 
     formatEquation(lhs, rhs) {
@@ -387,12 +385,7 @@ const Stoik = Object.freeze({
             right = Molecule.fromElement(right[1]);
         }
 
-        if (opType === TokenType.Subtract) {
-            left.subtractMut(right);
-        } else {
-            left.addMut(right);
-        }
-
+        (opType === TokenType.Subtract ? left.subtractMut : left.addMut)(right);
         opStack.push(left);
     }
 });

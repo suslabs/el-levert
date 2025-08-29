@@ -22,19 +22,18 @@ class DBManager extends Manager {
     }
 
     async checkDatabase() {
-        if (!(await Util.directoryExists(this._dbDir))) {
-            await fs.mkdir(this._dbDir, {
-                recursive: true
-            });
-        }
-
         try {
+            await fs.mkdir(this._dbDir, { recursive: true });
             await fs.access(this._dbPath);
-        } catch (err) {
-            return false;
-        }
 
-        return true;
+            return true;
+        } catch (err) {
+            return err.code === "ENOENT"
+                ? false
+                : (() => {
+                      throw err;
+                  })();
+        }
     }
 
     async load() {

@@ -15,13 +15,27 @@ import DBImporter from "./DBImporter.js";
 
 import Util from "../../src/util/Util.js";
 
-const help = "Usage: npm run importer [--json-path tags.json] [--fix] [--purge-old] ",
+const help = `
+Usage:
+  npm run importer [options]
+
+Options:
+  -h, --help         Show this help message
+  -j, --json-path    Path to the tags JSON file
+  -a, --amend        Amend existing tags
+  -x, --fix          Automatically fix DB issues
+  -1, --purge-old    Purge old tags
+`.trim(),
     usage = "See npm run importer --help for usage.";
 
 const argsOptions = {
     help: {
         type: "boolean",
         short: "h"
+    },
+    amend: {
+        type: "boolean",
+        short: "a"
     },
     "json-path": {
         type: "string",
@@ -64,16 +78,17 @@ function getInputValues(args) {
         return null;
     }
 
-    const argsNames = Object.keys(args.values),
-        showHelp = Util.empty(argsNames) || args.values.help;
+    const values = args.values,
+        argsNames = Object.keys(values);
 
-    if (showHelp) {
+    if (Util.empty(argsNames) || values.help) {
         console.log(help);
         return null;
     }
 
-    let jsonPath = args.values["json-path"] ?? "",
-        fix = args.values.fix ?? false,
+    let jsonPath = values["json-path"] ?? "",
+        amend = values.amend ?? false,
+        fix = values.fix ?? false,
         purgeOld = args.values["purge-old"] ?? false;
 
     if (Util.empty(jsonPath)) {
@@ -94,6 +109,7 @@ function getInputValues(args) {
 
     return {
         jsonPath,
+        amend,
         fix,
         purgeOld
     };
@@ -153,7 +169,8 @@ async function loadTagManager() {
     const importer = new DBImporter(tagManager, logger);
 
     if (!Util.empty(input.jsonPath)) {
-        await importer.updateDatabase(input.jsonPath);
+        const updateMode = DBImporter._updateModes[Number(input.amend)];
+        await importer.updateDatabase(input.jsonPath, updateMode);
     } else if (input.fix) {
         await importer.fix();
     } else if (input.purgeOld) {

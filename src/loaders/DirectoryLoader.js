@@ -17,23 +17,22 @@ class DirectoryLoader extends Loader {
 
         while (stack.length) {
             const { path: currentDir, depth } = stack.pop(),
-                items = fs.readdirSync(currentDir);
+                items = fs.readdirSync(currentDir, { withFileTypes: true });
 
             for (const item of items) {
-                const itemPath = path.join(currentDir, item),
-                    stat = fs.statSync(itemPath);
+                const itemPath = path.join(currentDir, item.name);
 
-                if (stat.isDirectory() && depth < maxDepth) {
+                if (item.isDirectory() && depth < maxDepth) {
                     stack.push({
                         path: itemPath,
                         depth: depth + 1
                     });
-                } else if (!stat.isDirectory()) {
+                } else if (!item.isDirectory()) {
                     files.push(itemPath);
                 }
 
                 if (typeof callback === "function") {
-                    const type = stat.isDirectory() ? "directory" : "file";
+                    const type = item.isDirectory() ? "directory" : "file";
                     callback(itemPath, type);
                 }
             }
@@ -48,23 +47,22 @@ class DirectoryLoader extends Loader {
 
         while (stack.length) {
             const { path: currentDir, depth } = stack.pop(),
-                items = await fsPromises.readdir(currentDir);
+                items = await fsPromises.readdir(currentDir, { withFileTypes: true });
 
             for (const item of items) {
-                const itemPath = path.join(currentDir, item),
-                    stat = await fsPromises.stat(itemPath);
+                const itemPath = path.join(currentDir, item.name);
 
-                if (stat.isDirectory() && depth < maxDepth) {
+                if (item.isDirectory() && depth < maxDepth) {
                     stack.push({
                         path: itemPath,
                         depth: depth + 1
                     });
-                } else if (!stat.isDirectory()) {
+                } else if (!item.isDirectory()) {
                     files.push(itemPath);
                 }
 
                 if (typeof callback === "function") {
-                    const type = stat.isDirectory() ? "directory" : "file";
+                    const type = item.isDirectory() ? "directory" : "file";
                     await callback(itemPath, type);
                 }
             }
@@ -91,11 +89,7 @@ class DirectoryLoader extends Loader {
     }
 
     set dirPath(val) {
-        if (typeof val === "string") {
-            this._dirPath = path.resolve(projRoot, val);
-        } else {
-            this._dirPath = val;
-        }
+        this._dirPath = typeof val === "string" ? path.resolve(projRoot, val) : val;
     }
 
     get dirPath() {

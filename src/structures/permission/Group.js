@@ -14,10 +14,21 @@ class Group {
         ObjectUtil.setValuesWithDefaults(this, data, this.constructor.defaultValues);
     }
 
+    setName(name) {
+        this.name = name;
+        return true;
+    }
+
+    setLevel(level) {
+        this.level = level;
+        return true;
+    }
+
     setUsers(users) {
         const groupUsers = users.filter(user => user.group === this.name);
 
         this.users = groupUsers;
+        return true;
     }
 
     formatUsers(full = false, discord = false) {
@@ -31,15 +42,15 @@ class Group {
             title += ` - User${s}:`;
         }
 
-        if (!Util.empty(this.users)) {
+        if (Util.empty(this.users)) {
+            userFormat = `${spaces}${discord ? "- " : ""}None`;
+        } else {
             userFormat = this.users
                 .map((user, i) => {
                     const name = user.format(discord);
                     return `${spaces}${discord ? "-" : `${i + 1}.`} ${name}`;
                 })
                 .join("\n");
-        } else {
-            userFormat = `${spaces}${discord ? "- " : ""}None`;
         }
 
         const format = `${title}\n${userFormat}`;

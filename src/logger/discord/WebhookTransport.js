@@ -48,7 +48,7 @@ class WebhookTransport extends BaseDiscordTransport {
         const match = url.match(WebhookTransport._urlRegex);
 
         if (match === null) {
-            throw new LoggerError("Invalid webhook url");
+            throw new LoggerError("Invalid webhook url", url);
         }
 
         const { id, token } = match.groups,

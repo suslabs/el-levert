@@ -1,8 +1,8 @@
+import ArrayUtil from "../ArrayUtil.js";
+
 const FunctionUtil = Object.freeze({
     bindArgs: (fn, boundArgs) => {
-        if (!Array.isArray(boundArgs)) {
-            boundArgs = [boundArgs];
-        }
+        boundArgs = ArrayUtil.guaranteeArray(boundArgs);
 
         return function (...args) {
             return fn.apply(this, boundArgs.concat(args));
@@ -20,6 +20,13 @@ const FunctionUtil = Object.freeze({
 
         const args = match[1];
         return args.split(", ").map(arg => arg.trim());
+    },
+
+    getArgumentPositions: (func, names) => {
+        const argsNames = FunctionUtil.functionArgumentNames(func),
+            positions = names.map(name => argsNames.indexOf(name));
+
+        return positions.filter(pos => pos !== -1);
     }
 });
 

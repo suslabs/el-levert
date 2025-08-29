@@ -1,5 +1,5 @@
-import CustomError from "./CustomError.js";
+import ReferenceError from "./ReferenceError.js";
 
-class PermissionError extends CustomError {}
+class PermissionError extends ReferenceError {}
 
 export default PermissionError;

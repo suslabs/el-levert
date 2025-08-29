@@ -1,15 +1,15 @@
 let inProcessIds = [];
 
-function isProcessing(msg_id) {
-    return inProcessIds.includes(msg_id);
-}
-
 function addId(msg_id) {
     inProcessIds.push(msg_id);
 }
 
 function removeId(msg_id) {
     inProcessIds = inProcessIds.filter(id => id !== msg_id);
+}
+
+function isProcessing(msg_id) {
+    return inProcessIds.includes(msg_id);
 }
 
 async function executeAllHandlers(client, funcName, msg, ...args) {

@@ -17,13 +17,16 @@ export default {
             return `:information_source: ${this.getArgsHelp("name [all/max_results]")}`;
         }
 
-        const [t_name, m_str] = ParserUtil.splitArgs(args, [true, true]),
+        let [t_name, m_str] = ParserUtil.splitArgs(args, [true, true]),
             all = m_str === "all";
 
-        const err = getClient().tagManager.checkName(t_name);
+        {
+            let err;
+            [t_name, err] = getClient().tagManager.checkName(t_name, false);
 
-        if (err) {
-            return `:warning: ${err}.`;
+            if (err !== null) {
+                return `:warning: ${err}.`;
+            }
         }
 
         let maxResults;

@@ -49,6 +49,9 @@
         "minResponseTime": {
             "type": "number"
         },
+        "globalTimeLimit": {
+            "type": "number"
+        },
         "reminderMsgLimit": {
             "type": "number"
         },
@@ -187,6 +190,7 @@
         "embedCharLimit",
         "embedLineLimit",
         "minResponseTime",
+        "globalTimeLimit",
         "reminderMsgLimit",
         "reminderSendInterval",
         "maxTagNameLength",
