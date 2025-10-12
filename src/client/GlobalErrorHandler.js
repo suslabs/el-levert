@@ -1,8 +1,8 @@
-let logger_;
+let _logger;
 
 function exceptionHandler(err1) {
     try {
-        logger_.error("Uncaught exception:", err1);
+        _logger.error("Uncaught exception:", err1);
     } catch (err2) {
         console.error("Error occured while reporting uncaught error:");
         console.error(err2);
@@ -13,24 +13,24 @@ function exceptionHandler(err1) {
 }
 
 function rejectionHandler(reason, promise) {
-    logger_.error("Unhandled promise rejection:", reason);
+    _logger.error("Unhandled promise rejection:", reason);
 }
 
 function registerGlobalErrorHandler(logger) {
-    logger_ = logger;
+    _logger = logger;
 
     process.on("unhandledRejection", rejectionHandler);
     process.on("uncaughtException", exceptionHandler);
 
-    logger_.info("Registered global error handler.");
+    _logger.info("Registered global error handler.");
 }
 
 function removeGlobalErrorHandler() {
     process.removeListener("unhandledRejection", rejectionHandler);
     process.removeListener("uncaughtException", exceptionHandler);
 
-    logger_.info("Removed global error handler.");
-    logger_ = undefined;
+    _logger.info("Removed global error handler.");
+    _logger = undefined;
 }
 
 export { registerGlobalErrorHandler, removeGlobalErrorHandler };

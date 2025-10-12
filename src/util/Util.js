@@ -263,7 +263,7 @@ let Util = {
     },
 
     randomString: n => {
-        Array.from({ length: n }, () => Util.randomElement(Util.alphanumeric)).join("");
+        return Util.randomElement(Util.alphanumeric, 0, Util.alphanumeric.length, n).join("");
     },
 
     utf8ByteLength: str => {

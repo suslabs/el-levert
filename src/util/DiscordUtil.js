@@ -502,6 +502,14 @@ let DiscordUtil = {
         }
 
         return { attach, body: res.data, contentType };
+    },
+
+    rebindMessage: (msg, client) => {
+        const ch_id = msg.channel.id;
+        delete msg.channel;
+
+        const channel = client.channels.cache.get(ch_id);
+        Object.defineProperty(msg, "channel", { value: channel });
     }
 };
 

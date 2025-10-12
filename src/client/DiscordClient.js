@@ -22,7 +22,6 @@ const {
 
     ActivityType,
     ChannelType,
-    AllowedMentionsTypes,
 
     PermissionsBitField,
 

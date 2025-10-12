@@ -1,4 +1,6 @@
+import Util from "../Util.js";
 import TypeTester from "../TypeTester.js";
+import ObjectUtil from "../ObjectUtil.js";
 
 import UtilError from "../../errors/UtilError.js";
 
@@ -91,7 +93,6 @@ const VMUtil = {
         "title",
         "url"
     ],
-
     formatReply: (text, msg) => {
         let out = {};
 
@@ -108,15 +109,9 @@ const VMUtil = {
         }
 
         if (TypeTester.isObject(msg.embed)) {
-            const embed = {};
-
-            for (const prop of VMUtil._allowedEmbedProps) {
-                if (prop in msg.embed) {
-                    embed[prop] = msg.embed[prop];
-                }
-            }
-
+            const embed = ObjectUtil.filterObject(msg.embed, key => VMUtil._allowedEmbedProps.includes(key));
             embed.description ??= "";
+
             out.embeds = [embed];
         }
 
@@ -125,6 +120,84 @@ const VMUtil = {
         }
 
         return out;
+    },
+
+    _reqConfigDefaults: {
+        maxRedirects: 5,
+        validateStatus: () => true
+    },
+    _allowedReqConfig: [
+        "url",
+        "method",
+        "headers",
+        "params",
+        "data",
+        "auth",
+        "responseType",
+        "responseEncoding",
+        "proxy",
+        "decompress"
+    ],
+    _jsonRequestRegex: /\.(json|geojson)(?:[?#]|$)/i,
+    makeRequestConfig: (data, context) => {
+        const reqConfig = {
+            signal: context?.abortSignal
+        };
+
+        if (TypeTester.isObject(data)) {
+            const filtered = ObjectUtil.filterObject(data, key => VMUtil._allowedReqConfig.includes(key)),
+                timeout = Number.isFinite(data.timeout) ? data.timeout : Infinity;
+
+            Object.assign(reqConfig, VMUtil._configDefaults, filtered);
+
+            if (typeof context !== "undefined") {
+                reqConfig.timeout = Util.clamp(Math.round(timeout), 0, context.timeRemaining);
+            }
+        } else if (typeof data === "string") {
+            Object.assign(reqConfig, VMUtil._configDefaults, {
+                url: data,
+                timeout: context?.timeRemaining
+            });
+        } else {
+            throw new UtilError("Invalid request data");
+        }
+
+        if (typeof reqConfig.responseType !== "string" || Util.empty(reqConfig.responseType)) {
+            reqConfig.responseType =
+                typeof reqConfig.url === "string" && VMUtil._jsonRequestRegex.test(reqConfig.url) ? "json" : "text";
+        }
+
+        return reqConfig;
+    },
+
+    getResponseData: (res, reqError, reqConfig) => {
+        const ok = res?.status >= 100 && res?.status < 300;
+
+        const resStatus = res?.status ?? 0,
+            resStatusText = res?.statusText ?? reqError?.message ?? "Network error";
+
+        const resUrl = res?.request?.res?.responseUrl ?? res?.request?._currentUrl ?? reqConfig?.url,
+            resHeaders = ObjectUtil.rewriteObject(
+                res?.headers || {},
+                key => key.toLowerCase(),
+                value => (Array.isArray(value) ? value.join(", ") : String(value))
+            );
+
+        const resData = {
+            ok,
+            status: resStatus,
+            statusText: resStatusText,
+            url: resUrl,
+            headers: resHeaders,
+            data: res?.data ?? null
+        };
+
+        if (reqError != null) {
+            const reqErrMessage = reqError?.message ?? String(reqError);
+            resData.error = { message: reqErrMessage };
+        }
+
+        return resData;
     },
 
     initialBreakpoint: "/* break on script start */ debugger;",

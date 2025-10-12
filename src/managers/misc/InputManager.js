@@ -51,7 +51,7 @@ class InputManager extends Manager {
     }
 
     async unload() {
-        if (this.loopRunning) {
+        if (!this.loopRunning) {
             return;
         }
 

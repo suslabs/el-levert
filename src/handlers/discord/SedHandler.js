@@ -1,3 +1,4 @@
+import RE2 from "re2";
 import { MessageType, EmbedBuilder, italic } from "discord.js";
 
 import MessageHandler from "./MessageHandler.js";
@@ -79,7 +80,7 @@ class SedHandler extends MessageHandler {
         let regex, sedMsg, content;
 
         try {
-            regex = new RegExp(regexStr, flagsStr);
+            regex = new RE2(regexStr, flagsStr);
         } catch (err) {
             if (err instanceof SyntaxError) {
                 throw new HandlerError("Invalid regex or flags", { regexStr, flagsStr });
