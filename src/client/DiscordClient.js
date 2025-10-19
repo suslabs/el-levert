@@ -25,8 +25,11 @@ const {
 
     PermissionsBitField,
 
-    User,
-    GuildMember
+    Guild,
+    GuildMember,
+    BaseChannel,
+    Message,
+    User
 } = discord;
 
 class DiscordClient {
@@ -215,15 +218,18 @@ class DiscordClient {
     }
 
     async fetchGuild(sv_id, options = {}) {
-        if (sv_id == null) {
-            throw new ClientError("No guild ID provided");
-        } else if (!TypeTester.isObject(options)) {
+        if (!TypeTester.isObject(options)) {
             throw new ClientError("Invalid options provided");
         }
 
         ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultGuildOptions);
 
         let guild;
+        [sv_id, guild] = this._parseDiscordId(sv_id, "guild", Guild);
+
+        if (guild !== null) {
+            return guild;
+        }
 
         try {
             guild = await this.client.guilds.fetch(sv_id, {
@@ -241,54 +247,24 @@ class DiscordClient {
     }
 
     async fetchMember(sv_id, user_id, options = {}) {
-        if (sv_id == null) {
-            throw new ClientError("No guild or guild ID provided");
-        } else if (user_id == null) {
-            throw new ClientError("No user or user ID provided");
-        } else if (!TypeTester.isObject(options)) {
+        if (!TypeTester.isObject(options)) {
             throw new ClientError("Invalid options provided");
-        }
-
-        let guild;
-
-        switch (typeof sv_id) {
-            case "string":
-                if (Util.empty(sv_id)) {
-                    throw new ClientError("Invalid guild ID provided (length = 0)");
-                }
-
-                guild = await this.fetchGuild(sv_id);
-
-                if (guild === null) {
-                    return null;
-                }
-
-                break;
-            case "object":
-                guild = sv_id;
-                break;
-            default:
-                throw new ClientError("Invalid guild or guild ID provided");
-        }
-
-        switch (typeof user_id) {
-            case "string":
-                if (Util.empty(user_id)) {
-                    throw new ClientError("Invalid user ID provided (length = 0)");
-                }
-
-                break;
-            case "object":
-                const user = user_id;
-                user_id = user.id;
-                break;
-            default:
-                throw new ClientError("Invalid user or user ID provided");
         }
 
         ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultMemberOptions);
 
+        const guild = await this.fetchGuild(sv_id, options);
+
+        if (guild === null) {
+            return null;
+        }
+
         let member;
+        [user_id, member] = this._parseDiscordId(user_id, "member", GuildMember);
+
+        if (member !== null) {
+            return member;
+        }
 
         try {
             member = await guild.members.fetch(user_id, {
@@ -306,139 +282,97 @@ class DiscordClient {
     }
 
     async fetchChannel(ch_id, options = {}) {
-        if (ch_id == null) {
-            throw new ClientError("No channel ID provided");
-        } else if (!TypeTester.isObject(options)) {
+        if (!TypeTester.isObject(options)) {
             throw new ClientError("Invalid options provided");
-        } else if (typeof ch_id === "string") {
-            if (Util.empty(ch_id)) {
-                throw new ClientError("Invalid channel ID provided (length = 0)");
-            }
-        } else {
-            throw new ClientError("Invalid channel ID provided");
         }
 
         ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultChannelOptions);
 
         let channel;
+        [ch_id, channel] = this._parseDiscordId(ch_id, "channel", BaseChannel);
 
-        try {
-            channel = await this.client.channels.fetch(ch_id, {
-                force: !options.cache
-            });
-        } catch (err) {
-            if ([RESTJSONErrorCodes.UnknownChannel, RESTJSONErrorCodes.MissingAccess].includes(err.code)) {
-                return null;
+        if (channel === null) {
+            try {
+                channel = await this.client.channels.fetch(ch_id, {
+                    force: !options.cache
+                });
+            } catch (err) {
+                if ([RESTJSONErrorCodes.UnknownChannel, RESTJSONErrorCodes.MissingAccess].includes(err.code)) {
+                    return null;
+                }
+
+                throw err;
             }
-
-            throw err;
         }
 
         if (!options.checkAccess) {
             return channel;
         }
 
-        let user_id = options.user_id,
-            user,
-            member;
+        const user_id = options.user_id;
 
-        if (user_id == null) {
-            throw new ClientError("No user/member or user ID provided");
-        }
-
-        switch (typeof user_id) {
-            case "string":
-                if (Util.empty(user_id)) {
-                    throw new ClientError("Invalid user ID provided (length = 0)");
-                }
-
-                break;
-            case "object":
-                if (user_id instanceof User) {
-                    user = user_id;
-                } else if (user_id instanceof GuildMember) {
-                    member = user_id;
-
-                    if (member.guild !== channel.guild) {
-                        throw new ClientError("The member's guild isn't the same as the channel's guild", {
-                            memberGuild: member.guild,
-                            channelGuild: channel.guild
-                        });
+        switch (channel.type) {
+            case ChannelType.DM:
+                if (user_id == null) {
+                    throw new ClientError("No user ID provided");
+                } else if (typeof user_id === "string") {
+                    if (Util.empty(user_id)) {
+                        throw new ClientError("No user ID provided (length = 0)");
+                    } else if (channel.recipientId !== user_id) {
+                        return null;
                     }
+                } else {
+                    throw new ClientError("Invalid user ID provided");
                 }
 
-                user_id = user?.id ?? member?.id;
                 break;
             default:
-                throw new ClientError("Invalid user/member or user ID provided");
-        }
-
-        if (channel.type === ChannelType.DM) {
-            if (channel.recipientId !== user_id) {
-                return null;
-            }
-        } else {
-            if (typeof member === "undefined") {
-                member = await this.fetchMember(channel.guild, user_id);
+                const member = await this.fetchMember(channel.guild, user_id);
 
                 if (member === null) {
                     return null;
                 }
-            }
 
-            const threadChannel = [ChannelType.PublicThread, ChannelType.PrivateThread].includes(channel.type),
-                perms = (threadChannel ? channel.parent : channel).memberPermissions(member, true);
+                if (member.guild !== channel.guild) {
+                    throw new ClientError("The member's guild isn't the same as the channel's guild", {
+                        memberGuild: member.guild,
+                        channelGuild: channel.guild
+                    });
+                }
 
-            if (perms === null || !perms.has(PermissionsBitField.Flags.ViewChannel)) {
-                return null;
-            }
+                const threadChannel = [ChannelType.PublicThread, ChannelType.PrivateThread].includes(channel.type),
+                    perms = (threadChannel ? channel.parent : channel).memberPermissions(member, true);
+
+                if (perms === null || !perms.has(PermissionsBitField.Flags.ViewChannel)) {
+                    return null;
+                }
         }
 
         return channel;
     }
 
     async fetchMessage(ch_id, msg_id, options = {}) {
-        if (ch_id == null) {
-            throw new ClientError("No channel or channel ID provided");
-        } else if (msg_id == null) {
-            throw new ClientError("No message ID provided");
-        } else if (!TypeTester.isObject(options)) {
+        if (!TypeTester.isObject(options)) {
             throw new ClientError("Invalid options provided");
-        } else if (typeof msg_id === "string") {
-            if (Util.empty(msg_id)) {
-                throw new ClientError("Invalid message ID provided (length = 0)");
-            }
-        } else {
-            throw new ClientError("Invalid message ID provided");
-        }
-
-        let channel;
-
-        switch (typeof ch_id) {
-            case "string":
-                const channelOptions = {
-                    checkAccess: options.checkAccess,
-                    user_id: options.user_id
-                };
-
-                channel = await this.fetchChannel(ch_id, channelOptions);
-
-                if (channel === null) {
-                    return null;
-                }
-
-                break;
-            case "object":
-                channel = ch_id;
-                break;
-            default:
-                throw new ClientError("Invalid channel or channel ID provided");
         }
 
         ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultMessageOptions);
 
+        const channel = await this.fetchChannel(ch_id, options);
+
+        if (channel === null) {
+            return null;
+        }
+
+        let message;
+        [msg_id, message] = this._parseDiscordId(msg_id, "message", Message);
+
+        if (message !== null) {
+            return message;
+        }
+
         try {
-            return await channel.messages.fetch(msg_id, {
+            message = await channel.messages.fetch(msg_id, {
                 force: !options.cache
             });
         } catch (err) {
@@ -448,44 +382,27 @@ class DiscordClient {
 
             throw err;
         }
+
+        return message;
     }
 
     async fetchMessages(ch_id, options = {}, fetchOptions = {}) {
-        if (ch_id == null) {
-            throw new ClientError("No channel or channel ID provided");
-        } else if (!TypeTester.isObject(options) || !TypeTester.isObject(fetchOptions)) {
+        if (!TypeTester.isObject(options) || !TypeTester.isObject(fetchOptions)) {
             throw new ClientError("Invalid options provided");
         }
 
         ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultMessagesOptions);
 
-        let channel;
+        const channel = await this.fetchChannel(ch_id, options);
 
-        switch (typeof ch_id) {
-            case "string":
-                const channelOptions = {
-                    checkAccess: options.checkAccess,
-                    user_id: options.user_id
-                };
-
-                channel = await this.fetchChannel(ch_id, channelOptions);
-
-                if (channel === null) {
-                    return null;
-                }
-
-                break;
-            case "object":
-                channel = ch_id;
-                break;
-            default:
-                throw new ClientError("Invalid channel or channel ID");
+        if (channel === null) {
+            return null;
         }
 
         ObjectUtil.setValuesWithDefaults(fetchOptions, fetchOptions, this.constructor.defaultMessagesFetchOptions);
         fetchOptions.force = !options.cache;
 
-        let messages;
+        let messages = null;
 
         try {
             messages = await channel.messages.fetch(fetchOptions);
@@ -501,15 +418,18 @@ class DiscordClient {
     }
 
     async findUserById(user_id, options = {}) {
-        if (user_id == null) {
-            throw new ClientError("No user ID provided");
-        } else if (!TypeTester.isObject(options)) {
+        if (!TypeTester.isObject(options)) {
             throw new ClientError("Invalid options provided");
         }
 
         ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultUserOptions);
 
         let user;
+        [user_id, user] = this._parseDiscordId(user_id, "user", User);
+
+        if (user !== null) {
+            return ((user.user = user), user);
+        }
 
         try {
             user = await this.client.users.fetch(user_id, {
@@ -523,8 +443,7 @@ class DiscordClient {
             throw err;
         }
 
-        user.user = user;
-        return user;
+        return ((user.user = user), user);
     }
 
     async findUsers(query, options = {}, fetchOptions = {}) {
@@ -536,7 +455,7 @@ class DiscordClient {
 
         ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultUsersOptions);
 
-        let guilds;
+        let guilds = null;
 
         if (typeof options.sv_id === "string") {
             guilds = [await this.fetchGuild(options.sv_id)];
@@ -549,7 +468,7 @@ class DiscordClient {
             user_id = foundId ?? foundMention;
 
         if (typeof user_id !== "undefined") {
-            let member;
+            let member = null;
 
             if (options.searchMembers) {
                 const members = await Promise.all(guilds.map(guild => this.fetchMember(guild, user_id)));
@@ -633,12 +552,33 @@ class DiscordClient {
     }
 
     _unloadEvents() {
-        if (typeof this._eventLoader === "undefined" || !this._eventLoader.loaded) {
+        if (!this._eventLoader?.loaded) {
             throw new ClientError("Can't unload events, events were never loaded");
         }
 
         this._eventLoader.removeListeners();
         delete this._eventLoader;
+    }
+
+    _parseDiscordId(id, name, _class) {
+        if (id instanceof _class) {
+            const obj = id;
+            return [obj.id, id];
+        } else if (TypeTester.isObject(id)) {
+            ({ id } = id);
+        }
+
+        if (id == null) {
+            throw new ClientError(`No ${name} ID provided`, name);
+        } else if (typeof id === "string") {
+            if (Util.empty(id)) {
+                throw new ClientError(`No ${name} ID provided (length = 0)`, name);
+            }
+
+            return [id, null];
+        } else {
+            throw new ClientError(`Invalid ${name} ID provided`, name);
+        }
     }
 }
 

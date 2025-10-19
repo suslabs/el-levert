@@ -59,9 +59,7 @@ const ParserUtil = Object.freeze({
                     sepLength = match[0].length;
                 }
             } else {
-                let match;
-
-                for (let i = 1; (match = exp.exec(str)) !== null; i++) {
+                for (let i = 1, match; (match = exp.exec(str)) !== null; i++) {
                     if (i === n) {
                         idx = match.index;
                         sepLength = match[0].length;

@@ -43,11 +43,15 @@ class Loader {
         return capitalized ? Util.capitalize(name) : name;
     }
 
-    getData() {
+    getData(errorIfNotFound = true) {
         const data = this[this.dataField];
 
         if (typeof data === "undefined") {
-            throw new LoaderError("Data field not found", this.dataField);
+            return errorIfNotFound
+                ? () => {
+                      throw new LoaderError("Data field not found", this.dataField);
+                  }
+                : null;
         }
 
         return data;

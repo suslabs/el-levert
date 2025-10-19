@@ -272,16 +272,16 @@ class DirectoryLoader extends Loader {
     }
 
     getLoader(data, errorIfNotFound = false) {
-        let dataLoader;
+        let dataLoader = null;
 
         for (const loader of this.loaders.values()) {
-            if (loader.getData() === data) {
+            if (loader.getData(false) === data) {
                 dataLoader = loader;
                 break;
             }
         }
 
-        if (errorIfNotFound && typeof dataLoader === "undefined") {
+        if (errorIfNotFound && dataLoader === null) {
             return this.failure("Data loader not found");
         }
 
@@ -294,7 +294,7 @@ class DirectoryLoader extends Loader {
             return loader?.path;
         }
 
-        let dataPath;
+        let dataPath = null;
 
         for (const [path, value] of this.data) {
             if (value === data) {
@@ -303,7 +303,7 @@ class DirectoryLoader extends Loader {
             }
         }
 
-        if (errorIfNotFound && typeof dataPath === "undefined") {
+        if (errorIfNotFound && dataPath === null) {
             return this.failure("Data path not found");
         }
 

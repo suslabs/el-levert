@@ -16,7 +16,7 @@ export default {
             units = unitStr.split(" ").filter(unit => !Util.empty(unit));
 
         if (Util.empty(inStr) || Util.empty(units)) {
-            return `:information_source: ${this.getArgsHelp("input unit unit1 unit2 ...")}`;
+            return `:information_source: ${this.getArgsHelp("input from_unit to_unit ...")}`;
         }
 
         const inVal = Number.parseFloat(inStr),

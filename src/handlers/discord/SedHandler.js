@@ -2,6 +2,7 @@ import RE2 from "re2";
 import { MessageType, EmbedBuilder, italic } from "discord.js";
 
 import MessageHandler from "./MessageHandler.js";
+import MessageLimitTypes from "./MessageLimitTypes.js";
 
 import { getClient, getLogger } from "../../LevertClient.js";
 
@@ -137,7 +138,7 @@ class SedHandler extends MessageHandler {
         const t1 = performance.now();
         this._sendTyping(msg);
 
-        let sed;
+        let sed = null;
 
         try {
             sed = await this.generateSed(msg, msg.content);
@@ -167,7 +168,7 @@ class SedHandler extends MessageHandler {
                 },
                 {
                     useConfigLimits: true,
-                    limitType: "trim"
+                    limitType: MessageLimitTypes.trim
                 }
             );
 

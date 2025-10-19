@@ -41,7 +41,7 @@ export default {
             try {
                 const filePath = path.join(inputDir, fileName);
 
-                const tagName = tagPrefix + (i + 1).toString(),
+                const tagName = `tagPrefix${i + 1}`,
                     contents = await fs.readFile(filePath, "utf8");
 
                 getClient().tagManager.checkBody(contents);

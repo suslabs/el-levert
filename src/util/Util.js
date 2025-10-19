@@ -2,6 +2,9 @@ import fs from "node:fs/promises";
 
 import TypeTester from "./TypeTester.js";
 
+import LengthTypes from "./LengthTypes.js";
+import CountTypes from "./CountTypes.js";
+
 import UtilError from "../errors/UtilError.js";
 
 let Util = {
@@ -180,7 +183,7 @@ let Util = {
             }
 
             _interval = setInterval(() => {
-                let val;
+                let val = null;
 
                 try {
                     val = !!condition();
@@ -311,12 +314,30 @@ let Util = {
         return count;
     },
 
+    _countFunc: countType => {
+        if (typeof countType !== "string" || Util.empty(countType)) {
+            throw new UtilError("No count type provided");
+        }
+
+        switch (countType) {
+            case CountTypes.chars:
+                return Util.countChars;
+            case CountTypes.lines:
+                return Util.countLines;
+            default:
+                throw new UtilError("Invalid count type: " + countType, countType);
+        }
+    },
+    getCount: (str, countType) => {
+        return Util._countFunc(countType)(str);
+    },
+
     overSizeLimits: (str, charLimit, lineLimit) => {
         if (typeof str !== "string") {
             return false;
         }
 
-        let count;
+        let count = null;
 
         if (typeof charLimit === "number") {
             count = Util.countChars(str);
@@ -446,44 +467,62 @@ let Util = {
         return prefixes.some(prefix => str.startsWith(prefix));
     },
 
-    length: obj => {
-        return obj?.length ?? obj?.size ?? 0;
+    length: val => {
+        return val?.length ?? val?.size ?? 0;
     },
 
-    stringLength: obj => {
-        return obj == null ? 0 : String(obj).length;
+    stringLength: val => {
+        return val == null ? 0 : String(val).length;
     },
 
-    empty: obj => {
-        return Util.length(obj) === 0;
+    _lengthFunc: lengthType => {
+        if (typeof lengthType !== "string" || Util.empty(lengthType)) {
+            throw new UtilError("No length type provided");
+        }
+
+        switch (lengthType) {
+            case LengthTypes.array:
+                return Util.length;
+            case LengthTypes.string:
+                return Util.stringLength;
+            default:
+                throw new UtilError("Invalid length type: " + lengthType, lengthType);
+        }
+    },
+    getLength: (val, lengthType) => {
+        return Util._lengthFunc(lengthType)(val);
     },
 
-    single: obj => {
-        return Util.length(obj) === 1;
+    empty: val => {
+        return Util.length(val) === 0;
     },
 
-    multiple: obj => {
-        return Util.length(obj) > 1;
+    single: val => {
+        return Util.length(val) === 1;
     },
 
-    first: (obj, start = 0, n = 1) => {
-        return n > 1 ? obj.slice(start, start + n) : obj[start];
+    multiple: val => {
+        return Util.length(val) > 1;
     },
 
-    last: (obj, end = 0, n = 1) => {
-        return n > 1 ? obj.slice(-end - n, -end || undefined) : obj.at(-end - 1);
+    first: (val, start = 0, n = 1) => {
+        return n > 1 ? val.slice(start, start + n) : val[start];
     },
 
-    after: (obj, start = 0, n = -1) => {
-        return n > 0 ? obj.slice(start + 1, start + 1 + n) : obj.slice(start + 1);
+    last: (val, end = 0, n = 1) => {
+        return n > 1 ? val.slice(-end - n, -end || undefined) : val.at(-end - 1);
     },
 
-    before: (obj, end = 0, n = -1) => {
-        return n > 0 ? obj.slice(Math.max(0, end - n), end) : obj.slice(0, end);
+    after: (val, start = 0, n = -1) => {
+        return n > 0 ? val.slice(start + 1, start + 1 + n) : val.slice(start + 1);
     },
 
-    randomElement: (obj, a = 0, b = obj.length, n = 1) => {
-        return n > 1 ? Array.from({ length: n }, () => obj[Util.random(a, b)]) : obj[Util.random(a, b)];
+    before: (val, end = 0, n = -1) => {
+        return n > 0 ? val.slice(Math.max(0, end - n), end) : val.slice(0, end);
+    },
+
+    randomElement: (val, a = 0, b = val.length, n = 1) => {
+        return n > 1 ? Array.from({ length: n }, () => val[Util.random(a, b)]) : val[Util.random(a, b)];
     },
 
     setFirst(array, value, start = 0) {

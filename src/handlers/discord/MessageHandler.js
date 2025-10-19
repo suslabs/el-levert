@@ -2,7 +2,7 @@ import { RESTJSONErrorCodes } from "discord.js";
 
 import Handler from "../Handler.js";
 
-import MessageTracker from "./tracker/MessageTracker.js";
+import ReplyTracker from "./tracker/ReplyTracker.js";
 import UserTracker from "./tracker/UserTracker.js";
 
 import { getClient, getLogger } from "../../LevertClient.js";
@@ -13,15 +13,8 @@ import ArrayUtil from "../../util/ArrayUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import VMUtil from "../../util/vm/VMUtil.js";
 
-class ReplyTracker extends MessageTracker {
-    static listNames = {
-        reply: "replies"
-    };
-
-    static {
-        this._init();
-    }
-}
+import MessageLimitTypes from "./MessageLimitTypes.js";
+import EmbedCountAreas from "../../util/EmbedCountAreas.js";
 
 class MessageHandler extends Handler {
     constructor(enabled, hasReplyTracker = true, hasUserTracker = false, options = {}) {
@@ -38,7 +31,7 @@ class MessageHandler extends Handler {
     async reply(msg, data, options = {}) {
         const out = this._getOutput(data, options);
 
-        let msgReply;
+        let msgReply = null;
 
         if (Array.isArray(out)) {
             msgReply = Array(out.length);
@@ -60,7 +53,7 @@ class MessageHandler extends Handler {
     }
 
     async replyWithError(msg, err, type, out) {
-        let msgReply;
+        let msgReply = null;
 
         if (Array.isArray(err)) {
             msgReply = Array(err.length);
@@ -218,12 +211,12 @@ class MessageHandler extends Handler {
     _applyLimits(data, options) {
         const useConfig = options.useConfigLimits ?? this.useConfigLimits;
 
-        const limitType = options.limitType ?? "default",
-            useTrim = limitType === "trim";
+        const limitType = options.limitType ?? MessageLimitTypes.default,
+            useTrim = limitType === MessageLimitTypes.trim;
 
         const { out, content, embeds } = MessageHandler._formatOutput(data);
 
-        if (limitType === "none") {
+        if (limitType === MessageLimitTypes.none) {
             out.content = content;
 
             if (!Util.empty(embeds)) {
@@ -257,11 +250,11 @@ class MessageHandler extends Handler {
 
         if (contentOversize) {
             switch (limitType) {
-                case "default":
-                case "file":
+                case MessageLimitTypes.default:
+                case MessageLimitTypes.file:
                     addFile("end", content);
                     break;
-                case "error":
+                case MessageLimitTypes.error:
                     const [chars, lines] = contentOversize;
 
                     if (chars !== null) {
@@ -275,7 +268,7 @@ class MessageHandler extends Handler {
                     }
 
                     break;
-                case "trim":
+                case MessageLimitTypes.trim:
                     out.content = Util.trimString(content, ...limits.outTrim, {
                         oversized: contentOversize
                     });
@@ -290,7 +283,7 @@ class MessageHandler extends Handler {
             return out;
         }
 
-        let countAreas = useTrim ? "body" : "all",
+        let countAreas = useTrim ? EmbedCountAreas.body : EmbedCountAreas.all,
             embedOversize;
 
         const newEmbeds = [];
@@ -308,13 +301,8 @@ class MessageHandler extends Handler {
             const n = Util.single(out.embeds) ? "" : ` ${i + 1}`;
 
             switch (limitType) {
-                case "file":
-                    const embedFormat = DiscordUtil.stringifyEmbed(embed, `embed${n}.txt`);
-                    addFile(`embed${n}.txt`, embedFormat);
-
-                    break;
-                case "default":
-                case "error":
+                case MessageLimitTypes.default:
+                case MessageLimitTypes.error:
                     const [chars, lines] = embedOversize;
 
                     if (chars !== null) {
@@ -328,7 +316,12 @@ class MessageHandler extends Handler {
                     }
 
                     break;
-                case "trim":
+                case MessageLimitTypes.file:
+                    const embedFormat = DiscordUtil.stringifyEmbed(embed, `embed${n}.txt`);
+                    addFile(`embed${n}.txt`, embedFormat);
+
+                    break;
+                case MessageLimitTypes.trim:
                     DiscordUtil.trimEmbed(embed, ...limits.embedTrim, {
                         oversized: embedOversize
                     });
@@ -346,7 +339,7 @@ class MessageHandler extends Handler {
     }
 
     _getOutput(data, options) {
-        let out;
+        let out = "";
 
         if (Array.isArray(data)) {
             out = data.map(_out => this._applyLimits(_out, options));

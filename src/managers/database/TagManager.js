@@ -123,7 +123,7 @@ class TagManager extends DBManager {
         const hops = [],
             args = [];
 
-        let lastTag;
+        let lastTag = null;
 
         for (const hop of tag.hops) {
             if (validate) {
@@ -258,7 +258,7 @@ class TagManager extends DBManager {
             checkExisting = validate.checkExisting ?? true;
         }
 
-        let oldTag;
+        let oldTag = null;
 
         if (name instanceof Tag) {
             oldTag = name;
@@ -336,7 +336,7 @@ class TagManager extends DBManager {
             this.checkName(aliasTag.name);
         }
 
-        let validateAliasName;
+        let validateAliasName = false;
         let create, name, owner;
 
         if (tag === null) {
@@ -572,7 +572,7 @@ class TagManager extends DBManager {
     async leaderboard(type, limit = 20) {
         const defaultUser = { username: "NOT FOUND" };
 
-        let leaderboard;
+        let leaderboard = [];
 
         switch (type) {
             case "count":

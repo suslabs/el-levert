@@ -4,6 +4,8 @@ import Util from "../../util/Util.js";
 import ParserUtil from "../../util/commands/ParserUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 
+import MessageLimitTypes from "../../handlers/discord/MessageLimitTypes.js";
+
 import { TagTypes } from "../../structures/tag/TagTypes.js";
 
 const dummyMsg = {
@@ -60,7 +62,7 @@ async function parseBase(t_args, msg) {
         ({ body, isScript } = ParserUtil.parseScript(tagBody));
     }
 
-    let type;
+    let type = null;
 
     if (isScript) {
         type = TagTypes.scriptTypes.includes(t_type) ? t_type : TagTypes.defaultScriptType;
@@ -72,7 +74,7 @@ async function parseBase(t_args, msg) {
 }
 
 async function getPreview(out, msg) {
-    let preview;
+    let preview = null;
 
     try {
         preview = await getClient().previewHandler.generatePreview(msg, out);
@@ -80,7 +82,7 @@ async function getPreview(out, msg) {
         getLogger().error("Preview gen failed:", err);
     }
 
-    if (typeof preview === "undefined") {
+    if (preview === null) {
         return out;
     }
 
@@ -191,7 +193,7 @@ export default {
                   await getPreview(out, msg),
                   {
                       type: "options",
-                      limitType: "none"
+                      limitType: MessageLimitTypes.none
                   }
               ]
             : [

@@ -5,7 +5,7 @@ import DiscordUtil from "../../util/DiscordUtil.js";
 import ParserUtil from "../../util/commands/ParserUtil.js";
 
 async function evalBase(args, msg) {
-    let body;
+    let body = "";
 
     if (Util.empty(msg.attachments)) {
         ({ body } = ParserUtil.parseScript(args));
@@ -54,7 +54,7 @@ async function altevalBase(args, msg, lang) {
             throw err;
         }
 
-        let parsed;
+        let parsed = {};
 
         try {
             parsed = JSON.parse(err.message);
@@ -137,7 +137,7 @@ export default {
             return parsed.err;
         }
 
-        let out;
+        let out = null;
 
         try {
             out = await getClient().tagVM.runScript(body, { msg });

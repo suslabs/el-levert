@@ -166,14 +166,12 @@ class TagVM extends VM {
                 return ["reply", this._processReply(err.message)];
         }
 
-        const foundError = Object.entries(VMErrors).find(
-            ([name, info]) => name !== "custom" && err.message === info.in
-        );
+        const find = Object.entries(VMErrors).find(([name, info]) => name !== "custom" && err.message === info.in);
 
-        if (typeof foundError === "undefined") {
+        if (typeof find === "undefined") {
             throw err;
         } else {
-            const [, info] = foundError;
+            const [, info] = find;
             getLogger().debug(`IVM error: ${info.out}.`);
             throw new VMError(info.out);
         }

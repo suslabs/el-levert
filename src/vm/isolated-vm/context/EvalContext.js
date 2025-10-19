@@ -16,6 +16,7 @@ import globalNames from "./globalNames.json" assert { type: "json" };
 import funcNames from "./funcNames.json" assert { type: "json" };
 
 import Util from "../../../util/Util.js";
+import TypeTester from "../../../util/TypeTester.js";
 import ArrayUtil from "../../../util/ArrayUtil.js";
 import VMUtil from "../../../util/vm/VMUtil.js";
 
@@ -75,11 +76,28 @@ class EvalContext {
         return this.timeLimit > 0 ? Util.clamp(this.timeLimit - this.timeElapsed, 0) : NaN;
     }
 
-    async setVMObject(name, _class, params, targetProp = "this") {
+    async setVMObject(name, _class, params, targetProp) {
+        if (typeof name !== "string" || Util.empty(name)) {
+            throw new VMError("No object name provided");
+        }
+
         this._checkIsolate();
 
-        const obj = new _class(...params),
+        let obj, targetObj;
+
+        if (TypeTester.isClass(_class)) {
+            obj = new _class(...params);
+            targetObj = targetProp == null || targetProp === "this" ? obj : obj[targetProp];
+        } else {
+            obj = _class;
+            targetProp = params ?? "this";
+
+            if (obj == null) {
+                throw new VMError(`No data provided for object: ${name}`, { object: name });
+            }
+
             targetObj = targetProp === "this" ? obj : obj[targetProp];
+        }
 
         if (typeof targetObj === "undefined") {
             throw new VMError(`Invalid target property "${targetProp}" on object: ${name}`, {
@@ -92,9 +110,7 @@ class EvalContext {
             vmName = globalNames[name];
 
         if (typeof vmName === "undefined") {
-            throw new VMError("Unknown global object: " + name, {
-                global: name
-            });
+            throw new VMError("Unknown global object: " + name, { global: name });
         }
 
         const vmObj = new ExternalCopy(targetObj);
@@ -106,6 +122,25 @@ class EvalContext {
         this._vmObjects.push({ name, targetName });
     }
 
+    deleteVMObject(name, errorIfNotFound = true) {
+        if (typeof name !== "string" || Util.empty(name)) {
+            throw new VMError("No object name provided");
+        }
+
+        const obj = this._vmObjects.find(obj => obj.name === name);
+
+        if (typeof obj === "undefined") {
+            return errorIfNotFound
+                ? () => {
+                      throw new VMError(`Object ${name} not found`, name);
+                  }
+                : null;
+        }
+
+        this._disposeVMObjects(obj);
+        return obj;
+    }
+
     async compileScript(code) {
         this._checkIsolate();
         return await this._compileScript(code, true);
@@ -115,10 +150,11 @@ class EvalContext {
         this._checkIsolate();
         const compileNow = typeof code !== "undefined";
 
-        let script;
+        let script = null;
 
         if (compileNow) {
             script = await this._compileScript(code, false);
+            await this.setVMObject("code", code);
         } else if (typeof this._script === "undefined") {
             throw new VMError("Can't run, no script was compiled");
         } else {
@@ -149,6 +185,8 @@ class EvalContext {
             if (compileNow) {
                 script.release();
             }
+
+            this.deleteVMObject("code", false);
         }
     }
 
@@ -296,16 +334,20 @@ class EvalContext {
         delete this.inspector;
     }
 
+    _disposeVMObject(obj) {
+        if (typeof obj.name !== "undefined") {
+            delete this[obj.name];
+        }
+
+        if (typeof obj.targetName !== "undefined") {
+            this[obj.targetName]?.release();
+            delete this[obj.targetName];
+        }
+    }
+
     _disposeVMObjects() {
         ArrayUtil.wipeArray(this._vmObjects, obj => {
-            if (typeof obj.name !== "undefined") {
-                delete this[obj.name];
-            }
-
-            if (typeof obj.targetName !== "undefined") {
-                this[obj.targetName]?.release();
-                delete this[obj.targetName];
-            }
+            this._disposeVMObject(obj);
         });
     }
 

@@ -5,6 +5,9 @@ import TagManager from "../../src/managers/database/TagManager.js";
 import Tag from "./mock/FakeTag.js";
 import { TagTypes } from "../../src/structures/tag/TagTypes.js";
 
+import DBUpdateModes from "./DBUpdateModes.js";
+import TagDifferenceType from "./TagDifferenceType.js";
+
 import Util from "../../src/util/Util.js";
 import TypeTester from "../../src/util/TypeTester.js";
 import ArrayUtil from "../../src/util/ArrayUtil.js";
@@ -15,29 +18,76 @@ import TagCommand from "../../src/commands/tag/tag.js";
 import ImporterError from "../../src/errors/ImporterError.js";
 
 class DBImporter {
+    static getDifference(currentTags, importTags, diffTypes = TagDifferenceType.all) {
+        if (diffTypes === TagDifferenceType.all) {
+            diffTypes = Object.values(TagDifferenceType).pop();
+        } else {
+            diffTypes = ArrayUtil.guaranteeArray(diffTypes);
+
+            if (!diffTypes.every(type => Object.values(TagDifferenceType).includes(type))) {
+                throw new ImporterError("Invalid diff types", diffTypes);
+            }
+        }
+
+        const hasExisting = diffTypes.includes(TagDifferenceType.existing),
+            hasNew = diffTypes.includes(TagDifferenceType.new),
+            hasDeleted = diffTypes.includes(TagDifferenceType.deleted);
+
+        const diff = {};
+
+        const importNames = importTags.map(tag => tag.name),
+            importNamesSet = new Set(importNames);
+
+        let oldTags, oldNames;
+
+        if (hasExisting || hasDeleted) {
+            oldTags = currentTags.filter(tag => tag.isOld);
+            oldNames = oldTags.map(tag => tag.name);
+
+            diff.oldTags = oldTags;
+        }
+
+        if (hasExisting) {
+            diff.existingTags = oldNames.filter(name => importNamesSet.has(name));
+        }
+
+        if (hasNew) {
+            const currentNamesSet = new Set(currentTags.map(tag => tag.name));
+            diff.newTags = importNames.filter(name => !currentNamesSet.has(name));
+        }
+
+        if (hasDeleted) {
+            diff.deletedTags = oldNames.filter(name => !importNamesSet.has(name));
+        }
+
+        return diff;
+    }
+
     constructor(tagManager, logger) {
         this.logger = logger;
         this.tagManager = tagManager;
     }
 
-    async updateDatabase(path, mode = "overwrite") {
-        if (!DBImporter._updateModes.includes(mode)) {
+    async updateDatabase(path, mode = DBUpdateModes.overwrite) {
+        if (typeof mode !== "string" || Util.empty(mode)) {
+            throw new ImporterError("No update mode provided");
+        } else if (!Object.values(DBUpdateModes).includes(mode)) {
             throw new ImporterError("Invalid update mode: " + mode, mode);
         }
 
         let importTags = await this._loadTags(path),
             currentTags = await this.tagManager.dump(true);
 
-        let diffTypes;
+        let diffTypes = [];
         let existingTags, newTags, deletedTags;
 
         switch (mode) {
-            case "overwrite":
-                diffTypes = "all";
+            case DBUpdateModes.overwrite:
+                diffTypes = TagDifferenceType.all;
                 this.logger.warn("Overwriting existing tags...");
                 break;
-            case "amend":
-                diffTypes = ["existing", "new"];
+            case DBUpdateModes.amend:
+                diffTypes = [TagDifferenceType.existing, TagDifferenceType.new];
                 this.logger.warn("Amending existing tags...");
                 break;
         }
@@ -47,7 +97,7 @@ class DBImporter {
             newTags,
             deletedTags,
             oldTags: currentTags
-        } = DBImporter._getDifference(currentTags, importTags, diffTypes));
+        } = DBImporter.getDifference(currentTags, importTags, diffTypes));
 
         importTags = TagManager.getNameMap(importTags);
         currentTags = TagManager.getNameMap(currentTags);
@@ -57,10 +107,10 @@ class DBImporter {
         let count = 0;
 
         switch (mode) {
-            case "overwrite":
+            case DBUpdateModes.overwrite:
                 count += await this._deleteTags(deletedTags, currentTags);
             // eslint-disable-next-line no-fallthrough
-            case "amend":
+            case DBUpdateModes.amend:
                 count += await this._updateTags(existingTags, importTags, currentTags);
                 count += await this._addTags(newTags, importTags, currentTags);
                 break;
@@ -107,9 +157,6 @@ class DBImporter {
         body: "string"
     };
 
-    static _updateModes = ["overwrite", "amend"];
-    static _diffTypes = ["existing", "new", "deleted"];
-
     static _parseTag(data) {
         const { body, isScript } = ParserUtil.parseScript(data.body),
             type = isScript ? TagTypes.defaultScriptType : TagTypes.textType;
@@ -121,47 +168,6 @@ class DBImporter {
         });
 
         return tag;
-    }
-
-    static _getDifference(currentTags, importTags, diffTypes = "all") {
-        if (diffTypes === "all") {
-            diffTypes = DBImporter._diffTypes;
-        } else {
-            diffTypes = ArrayUtil.guaranteeArray(diffTypes);
-
-            if (!diffTypes.every(type => DBImporter._diffTypes.includes(type))) {
-                throw new ImporterError("Invalid diff types", diffTypes);
-            }
-        }
-
-        const diff = {};
-
-        const importNames = importTags.map(tag => tag.name),
-            importNamesSet = new Set(importNames);
-
-        let oldTags, oldNames;
-
-        if (diffTypes.includes("existing") || diffTypes.includes("deleted")) {
-            oldTags = currentTags.filter(tag => tag.isOld);
-            oldNames = oldTags.map(tag => tag.name);
-
-            diff.oldTags = oldTags;
-        }
-
-        if (diffTypes.includes("existing")) {
-            diff.existingTags = oldNames.filter(name => importNamesSet.has(name));
-        }
-
-        if (diffTypes.includes("new")) {
-            const currentNamesSet = new Set(currentTags.map(tag => tag.name));
-            diff.newTags = importNames.filter(name => !currentNamesSet.has(name));
-        }
-
-        if (diffTypes.includes("deleted")) {
-            diff.deletedTags = oldNames.filter(name => !importNamesSet.has(name));
-        }
-
-        return diff;
     }
 
     _validTag(data) {

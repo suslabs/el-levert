@@ -85,9 +85,9 @@ function formatSnippet(words, inds, n, discord) {
 
 function formatSearchResults(results, ranges, n, discord) {
     const format = results.map((tag, i) => {
-        const idx = Util.single(results) ? "-" : (i + 1).toString() + ".";
+        const idx = Util.single(results) ? "-" : `${i + 1}.`;
 
-        let snippet;
+        let snippet = "";
 
         if (Util.empty(tag.body)) {
             snippet = discord ? `*${unavailable}*` : unavailable;
@@ -127,7 +127,7 @@ export default {
         let [query, m_str] = ParserUtil.splitArgs(args, [true, true]),
             all = m_str === "all";
 
-        let maxResults;
+        let maxResults = 0;
 
         if (all) {
             maxResults = Infinity;

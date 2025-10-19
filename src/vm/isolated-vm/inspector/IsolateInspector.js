@@ -31,7 +31,7 @@ class IsolateInspector {
 
         getLogger().debug("Creating inspector channel...");
 
-        if (typeof isolate === "undefined") {
+        if (isolate == null) {
             isolate = this.isolate;
         } else {
             this.isolate = isolate;

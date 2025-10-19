@@ -1,6 +1,6 @@
 class FakeUser {
     constructor(member) {
-        this.member = member;
+        this.member = member ?? undefined;
 
         if (typeof member === "undefined") {
             this.fixedUser = {};

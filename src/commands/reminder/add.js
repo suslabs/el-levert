@@ -30,7 +30,7 @@ export default {
         }
 
         let [quote, message] = Util.after(match, 1);
-        message = message.replaceAll("\\" + quote, quote);
+        message = message?.replaceAll("\\" + quote, quote);
 
         {
             let err;
@@ -45,9 +45,7 @@ export default {
             reminder;
 
         try {
-            reminder = await getClient().reminderManager.add(msg.author.id, end, message, {
-                validateNew: false
-            });
+            reminder = await getClient().reminderManager.add(msg.author.id, end, message, false);
         } catch (err) {
             if (err.name !== "ReminderError") {
                 throw err;

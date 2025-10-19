@@ -25,17 +25,17 @@ class CommandObjectLoader extends ObjectLoader {
 
         this.data = command;
 
-        let shouldLoad;
+        let shouldLoad = true;
 
         if (typeof command.load === "function") {
             try {
-                shouldLoad = await command.load();
+                shouldLoad = (await command.load()) ?? shouldLoad;
             } catch (err) {
                 return this.failure(err, "Error occured while loading command:");
             }
         }
 
-        return (shouldLoad ?? true) ? LoadStatus.successful : LoadStatus.ignore;
+        return shouldLoad ? LoadStatus.successful : LoadStatus.ignore;
     }
 
     getLoadedMessage() {

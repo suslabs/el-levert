@@ -1,6 +1,7 @@
 import { ChannelType, EmbedBuilder, hyperlink } from "discord.js";
 
 import MessageHandler from "./MessageHandler.js";
+import MessageLimitTypes from "./MessageLimitTypes.js";
 
 import { getClient, getLogger } from "../../LevertClient.js";
 
@@ -142,7 +143,7 @@ class PreviewHandler extends MessageHandler {
             return false;
         }
 
-        let preview;
+        let preview = null;
         const t1 = performance.now();
 
         try {
@@ -169,7 +170,7 @@ class PreviewHandler extends MessageHandler {
                     embeds: [preview]
                 },
                 {
-                    limitType: "none"
+                    limitType: MessageLimitTypes.none
                 }
             );
 

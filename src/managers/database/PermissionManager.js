@@ -196,7 +196,7 @@ class PermissionManager extends DBManager {
             return this.getLevels().default;
         }
 
-        let maxLevel;
+        let maxLevel = 0;
 
         if (Util.single(groups)) {
             maxLevel = Util.first(groups).level;
@@ -431,7 +431,7 @@ class PermissionManager extends DBManager {
         }
 
         for (const user of users) {
-            let find;
+            let find = null;
 
             try {
                 find = await getClient().findUserById(user.user);

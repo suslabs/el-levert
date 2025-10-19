@@ -17,7 +17,7 @@ class ChannelTransport extends BaseDiscordTransport {
 
         let channel = opts.channel;
 
-        if (typeof channel === "undefined") {
+        if (channel == null) {
             channel = this._getChannel(opts.channelId);
         } else {
             this.channelId = channel.id;

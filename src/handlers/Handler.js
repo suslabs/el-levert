@@ -21,16 +21,12 @@ class Handler {
         this.priority ??= options.priority ?? 0;
 
         const minResponseTime =
-                typeof options.minResponseTime === "undefined"
-                    ? getClient().config.minResponseTime
-                    : options.minResponseTime,
+                options.minResponseTime == null ? getClient().config.minResponseTime : options.minResponseTime,
             invalidResponseTime = !Number.isFinite(minResponseTime) || minResponseTime <= 0;
         this.minResponseTime = invalidResponseTime ? -1 : Math.round(minResponseTime);
 
         const globalTimeLimit =
-                typeof options.globalTimeLimit === "undefined"
-                    ? getClient().config.globalTimeLimit
-                    : options.globalTimeLimit,
+                options.globalTimeLimit == null ? getClient().config.globalTimeLimit : options.globalTimeLimit,
             invalidTimeLimit = !Number.isFinite(globalTimeLimit) || globalTimeLimit <= 0;
         this.globalTimeLimit = invalidTimeLimit ? -1 : Math.round(globalTimeLimit);
 

@@ -205,7 +205,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
                 return;
             }
 
-            let statement;
+            let statement = null;
 
             let callback = err => {
                 if (this._throwErrorAsync(resolve, reject, err)) {

@@ -10,7 +10,7 @@ const wrapPromise = (logger, promise) =>
 
 const wrapEvent = (logger, func) =>
     function (...args) {
-        let out;
+        let out = null;
 
         try {
             out = func(...args);

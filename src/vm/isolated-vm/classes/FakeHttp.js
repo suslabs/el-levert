@@ -10,7 +10,7 @@ import TypeTester from "../../../util/TypeTester.js";
 const client = axios.create();
 
 client.interceptors.request.use(reqConfig => {
-    let bodyBuffer;
+    let bodyBuffer = null;
 
     if (reqConfig.data == null) {
         bodyBuffer = Buffer.alloc(0);
@@ -29,7 +29,8 @@ const FakeHttp = Object.freeze({
     request: async (context, data) => {
         const reqConfig = VMUtil.makeRequestConfig(data, context);
 
-        let res, reqErr;
+        let res = null,
+            reqErr = null;
 
         try {
             res = await client.request(reqConfig);

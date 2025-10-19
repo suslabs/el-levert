@@ -26,7 +26,8 @@ import ModuleUtil from "./util/misc/ModuleUtil.js";
 
 import ClientError from "./errors/ClientError.js";
 
-let token, client;
+let token = null,
+    client = null;
 
 class LevertClient extends DiscordClient {
     static loggerName = "El Levert";
@@ -37,7 +38,7 @@ class LevertClient extends DiscordClient {
     constructor(configs) {
         super();
 
-        if (typeof client === "undefined") {
+        if (client === null) {
             client = this;
         } else {
             throw new ClientError("The client can only be constructed once");
@@ -59,7 +60,7 @@ class LevertClient extends DiscordClient {
 
     isBridgeBot(id) {
         if (TypeTester.isObject(id)) {
-            id = id.id;
+            ({ id } = id);
         }
 
         if (!this.useBridgeBot || id == null) {
@@ -302,6 +303,7 @@ class LevertClient extends DiscordClient {
 
         let groupInfo, groupLoaded;
         ({ info: groupInfo, loaded: groupLoaded, groupName } = this._getCompsInfo(groupName));
+
         let component;
 
         if (groupLoaded) {

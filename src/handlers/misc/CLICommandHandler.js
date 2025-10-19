@@ -43,7 +43,7 @@ Use ${getClient().cliCommandManager.commandPrefix}help to get all available comm
             return await cmd.execute(args);
         };
 
-        let out;
+        let out = null;
 
         try {
             out = await Util.runWithTimeout(executeMain, "Command execution timed out", this.globalTimeout);

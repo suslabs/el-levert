@@ -2,7 +2,7 @@ import Util from "../Util.js";
 
 class Benchmark {
     static runFunction(name, runs, func, ...args) {
-        let result;
+        let result = null;
 
         let min = Number.MAX_VALUE,
             max = 0,
@@ -15,7 +15,7 @@ class Benchmark {
             const t2 = performance.now(),
                 elapsed = Util.timeDelta(t2, t1);
 
-            if (typeof result === "undefined") {
+            if (result === null) {
                 result = out;
             }
 

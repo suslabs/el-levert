@@ -4,6 +4,8 @@ import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
 import OCUtil from "../../util/commands/OCUtil.js";
 
+import OCTypes from "../../util/commands/OCTypes.js";
+
 import { drawTable } from "../../util/misc/Table.js";
 
 function getErrorText(cmd) {
@@ -37,10 +39,10 @@ function parseInput(split) {
         return null;
     }
 
-    let recipe;
+    let recipe = null;
 
     if (args[0] === "ebf") {
-        const ocType = args[5] ? "ebf parallel" : "ebf";
+        const ocType = args[5] ? OCTypes.ebfParallel : OCTypes.ebf;
 
         recipe = {
             base_eu: Util.parseInt(args[1]),
@@ -52,7 +54,7 @@ function parseInput(split) {
             oc_type: ocType
         };
     } else {
-        const ocType = args[4] ? "parallel" : "recipe";
+        const ocType = args[4] ? OCTypes.parallel : OCTypes.recipe;
 
         recipe = {
             base_eu: Util.parseInt(args[0]),

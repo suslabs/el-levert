@@ -12,6 +12,7 @@ import { LevertClient } from "./mock/FakeClient.js";
 import TagManager from "../../src/managers/database/TagManager.js";
 
 import DBImporter from "./DBImporter.js";
+import DBUpdateModes from "./DBDBUpdateModes.js";
 
 import Util from "../../src/util/Util.js";
 
@@ -52,7 +53,7 @@ const argsOptions = {
 };
 
 function parseArgs() {
-    let args;
+    let args = null;
 
     try {
         args = nodeParseArgs({
@@ -60,14 +61,14 @@ function parseArgs() {
             args: process.argv.slice(2)
         });
     } catch (err) {
-        if (err.code?.startsWith("ERR_PARSE")) {
-            console.error(`ERROR: ${err.message}.`);
-            console.log(usage);
-
-            return null;
+        if (!err.code?.startsWith("ERR_PARSE")) {
+            throw err;
         }
 
-        throw err;
+        console.error(`ERROR: ${err.message}.`);
+        console.log(usage);
+
+        return null;
     }
 
     return args;
@@ -169,7 +170,7 @@ async function loadTagManager() {
     const importer = new DBImporter(tagManager, logger);
 
     if (!Util.empty(input.jsonPath)) {
-        const updateMode = DBImporter._updateModes[Number(input.amend)];
+        const updateMode = Object.values(DBUpdateModes)[Number(input.amend)];
         await importer.updateDatabase(input.jsonPath, updateMode);
     } else if (input.fix) {
         await importer.fix();

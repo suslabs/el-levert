@@ -1,5 +1,7 @@
 import Util from "../Util.js";
 
+import OCTypes from "./OCTypes.js";
+
 import UtilError from "../../errors/UtilError.js";
 
 let OCUtil = {
@@ -201,6 +203,18 @@ let OCUtil = {
         return out;
     },
 
+    _calcFunc: ocType => {
+        switch (ocType) {
+            case OCTypes.recipe:
+            case OCTypes.parallel:
+                return OCUtil.calculateOverclock;
+            case OCTypes.ebf:
+            case OCTypes.ebfParallel:
+                return OCUtil.calculateEbfOverclock;
+            default:
+                throw new UtilError("Invalid recipe type: " + ocType, ocType);
+        }
+    },
     overclock: recipe => {
         const baseTier = OCUtil.getEuTier(recipe.base_eu),
             outputs = [];
@@ -209,22 +223,9 @@ let OCUtil = {
             return outputs;
         }
 
-        let calcFunc;
+        const calcFunc = OCUtil._calcFunc(recipe.oc_type);
 
-        switch (recipe.oc_type) {
-            case "recipe":
-            case "parallel":
-                calcFunc = OCUtil.calculateOverclock;
-                break;
-            case "ebf":
-            case "ebf_parallel":
-                calcFunc = OCUtil.calculateEbfOverclock;
-                break;
-            default:
-                throw new UtilError("Invalid recipe type: " + recipe.oc_type, recipe.oc_type);
-        }
-
-        let last;
+        let last = null;
 
         for (let voltage = baseTier; voltage <= OCUtil.tierCount; voltage++) {
             const res = calcFunc(recipe, voltage);

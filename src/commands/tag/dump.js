@@ -22,7 +22,7 @@ export default {
         }
 
         if (full) {
-            let spaces;
+            let spaces = 0;
 
             if (!Util.empty(s_str)) {
                 spaces = Util.parseInt(s_str);

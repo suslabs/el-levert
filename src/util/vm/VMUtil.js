@@ -2,15 +2,17 @@ import Util from "../Util.js";
 import TypeTester from "../TypeTester.js";
 import ObjectUtil from "../ObjectUtil.js";
 
+import VMHttpErrorTypes from "./VMHttpErrorTypes.js";
+
 import UtilError from "../../errors/UtilError.js";
 
 const VMUtil = {
     resolveObject(path, propertyMap) {
-        if (typeof path !== "string") {
-            throw new UtilError("Invalid path provided");
+        if (typeof path !== "string" || Util.empty(path)) {
+            throw new UtilError("Can't resolve object, no path provided");
         }
 
-        if (typeof propertyMap === "undefined") {
+        if (!(propertyMap instanceof Map)) {
             throw new UtilError("Can't resolve object, no property map provided");
         }
 
@@ -136,7 +138,8 @@ const VMUtil = {
         "responseType",
         "responseEncoding",
         "proxy",
-        "decompress"
+        "decompress",
+        "errorType"
     ],
     _jsonRequestRegex: /\.(json|geojson)(?:[?#]|$)/i,
     makeRequestConfig: (data, context) => {
@@ -171,33 +174,44 @@ const VMUtil = {
     },
 
     getResponseData: (res, reqError, reqConfig) => {
-        const ok = res?.status >= 100 && res?.status < 300;
+        const errorType = reqConfig?.errorType ?? VMHttpErrorTypes.legacy;
 
-        const resStatus = res?.status ?? 0,
+        const resStatus = res?.status ?? -1,
             resStatusText = res?.statusText ?? reqError?.message ?? "Network error";
 
-        const resUrl = res?.request?.res?.responseUrl ?? res?.request?._currentUrl ?? reqConfig?.url,
-            resHeaders = ObjectUtil.rewriteObject(
-                res?.headers || {},
-                key => key.toLowerCase(),
-                value => (Array.isArray(value) ? value.join(", ") : String(value))
-            );
+        const resHeaders = ObjectUtil.rewriteObject(
+            res?.headers || {},
+            key => key.toLowerCase(),
+            value => (Array.isArray(value) ? value.join(", ") : String(value))
+        );
 
         const resData = {
-            ok,
             status: resStatus,
             statusText: resStatusText,
-            url: resUrl,
             headers: resHeaders,
             data: res?.data ?? null
         };
 
-        if (reqError != null) {
-            const reqErrMessage = reqError?.message ?? String(reqError);
-            resData.error = { message: reqErrMessage };
-        }
+        switch (errorType) {
+            default:
+            case VMHttpErrorTypes.legacy:
+                if (reqError == null) {
+                    return resData;
+                } else {
+                    throw new Error(`Request failed with status code ${resStatus}`);
+                }
+            case VMHttpErrorTypes.value:
+                resData.ok = res?.status >= 100 && res?.status < 300;
+                resData.url = res?.request?.res?.responseUrl ?? reqConfig?.url ?? null;
 
-        return resData;
+                if (reqError != null) {
+                    resData.error = {
+                        message: reqError?.message ?? String(reqError)
+                    };
+                }
+
+                return resData;
+        }
     },
 
     initialBreakpoint: "/* break on script start */ debugger;",
@@ -239,18 +253,18 @@ const VMUtil = {
         err.stack = newStack;
     },
 
-    _boundary: "(<isolated-vm boundary>)",
+    _ivmBoundary: "(<isolated-vm boundary>)",
     rewriteIVMStackTrace: err => {
         return VMUtil.rewriteStackTrace(err, (msgLine, stackFrames) => {
-            const boundaryLine = stackFrames.findIndex(frame => frame.startsWith("at " + VMUtil._boundary));
+            const boundaryLine = stackFrames.findIndex(frame => frame.startsWith("at " + VMUtil._ivmBoundary));
             return boundaryLine >= 0 ? [msgLine, stackFrames.slice(0, boundaryLine + 1)] : false;
         });
     },
 
-    _repl: "REPL",
+    _replBoundary: "REPL",
     rewriteReplStackTrace: err => {
         return VMUtil.rewriteStackTrace(err, (msgLine, stackFrames) => {
-            const replLine = stackFrames.findIndex(frame => frame.startsWith("at " + VMUtil._repl));
+            const replLine = stackFrames.findIndex(frame => frame.startsWith("at " + VMUtil._replBoundary));
             return replLine >= 0 ? [msgLine, stackFrames.slice(0, replLine + 1)] : false;
         });
     },

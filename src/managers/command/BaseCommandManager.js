@@ -246,7 +246,7 @@ class BaseCommandManager extends Manager {
         const [commands, status] = await commandLoader.load();
 
         if (status === LoadStatus.failed) {
-            return;
+            return null;
         }
 
         this.commands = commands;

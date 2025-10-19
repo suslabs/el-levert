@@ -1,7 +1,7 @@
 import { ChannelType } from "discord.js";
 
 import Handler from "../Handler.js";
-import MessageTracker from "./tracker/MessageTracker.js";
+import ReactionTracker from "./tracker/ReactionTracker.js";
 
 import { getClient, getLogger } from "../../LevertClient.js";
 
@@ -12,16 +12,6 @@ import RegexUtil from "../../util/misc/RegexUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 
 import normalizeText from "../../util/misc/normalizeText.js";
-
-class ReactionTracker extends MessageTracker {
-    static listNames = {
-        reaction: "reactions"
-    };
-
-    static {
-        this._init();
-    }
-}
 
 function logParensUsage(msg, parens) {
     const s = parens.total > 1 ? "e" : "i";

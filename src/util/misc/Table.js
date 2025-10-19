@@ -128,7 +128,7 @@ const TableUtil = Object.freeze({
 
     padLine: (line, widths, extraSpaces, centerText) => {
         return line.map((x, i) => {
-            const str = x?.toString() ?? "",
+            const str = String(x ?? ""),
                 endPad = widths[i] ?? 0;
 
             if (centerText) {

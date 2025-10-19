@@ -1,7 +1,7 @@
 import Util from "./Util.js";
 import TypeTester from "./TypeTester.js";
 
-import UtilError from "../errors/UtilError.js";
+import LengthTypes from "./LengthTypes.js";
 
 const ArrayUtil = Object.freeze({
     withLength: (length, callback) => {
@@ -238,21 +238,8 @@ const ArrayUtil = Object.freeze({
         }
     },
 
-    maxLength: (array, length = "string") => {
-        let lengthFunc;
-
-        switch (length) {
-            case "array":
-                lengthFunc = Util.length;
-                break;
-            case "string":
-                lengthFunc = Util.stringLength;
-                break;
-            default:
-                throw new UtilError("Invalid length function: " + length, length);
-        }
-
-        return Math.max(...array.map(x => lengthFunc(x)));
+    maxLength: (array, lengthType = LengthTypes.string) => {
+        return Math.max(...array.map(x => Util.getLength(x, lengthType)));
     },
 
     _indexFunc: (array, item) => {

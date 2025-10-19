@@ -8,6 +8,9 @@ import Util from "./Util.js";
 import TypeTester from "./TypeTester.js";
 import ArrayUtil from "./ArrayUtil.js";
 
+import EmbedCountAreas from "./EmbedCountAreas.js";
+import CountTypes from "./CountTypes.js";
+
 import UtilError from "../errors/UtilError.js";
 
 let DiscordUtil = {
@@ -243,10 +246,9 @@ let DiscordUtil = {
         return blocks.join("\n\n");
     },
 
-    _countAreas: ["body", "content", "details", "fields"],
     getEmbedSize: (embed, options = {}) => {
-        let countType = options.count ?? "chars",
-            countAreas = options.areas ?? "all",
+        let countType = options.count ?? CountTypes.chars,
+            countAreas = options.areas ?? EmbedCountAreas.all,
             countURLs = options.urls ?? false;
 
         const embedData = DiscordUtil.getEmbedData(embed);
@@ -255,43 +257,38 @@ let DiscordUtil = {
             return 0;
         }
 
-        let size = 0,
-            count;
+        const count = Util._countFunc(countType);
 
-        switch (countType) {
-            case "chars":
-                count = Util.countChars;
-                break;
-            case "lines":
-                count = Util.countLines;
-                break;
-            default:
-                throw new UtilError("Invalid count type: " + countType, countType);
-        }
+        let size = 0;
 
-        if (countAreas === "all") {
-            countAreas = DiscordUtil._countAreas;
+        if (countAreas === EmbedCountAreas.all) {
+            countAreas = Object.values(EmbedCountAreas).pop();
         } else {
             countAreas = ArrayUtil.guaranteeArray(countAreas);
 
-            if (!countAreas.every(area => DiscordUtil._countAreas.includes(area))) {
+            if (!countAreas.every(area => Object.values(EmbedCountAreas).includes(area))) {
                 throw new UtilError("Invalid count areas", countAreas);
             }
         }
 
-        if (countAreas.includes("content")) {
+        const hasContent = countAreas.includes(EmbedCountAreas.content),
+            hasBody = countAreas.includes(EmbedCountAreas.body),
+            hasDetails = countAreas.includes(EmbedCountAreas.details),
+            hasFields = countAreas.includes(EmbedCountAreas.fields);
+
+        if (hasContent) {
             size += count(embedData.title);
             size += count(embedData.description);
-        } else if (countAreas.includes("body")) {
+        } else if (hasBody) {
             size += count(embedData.description);
         }
 
-        if (countAreas.includes("details")) {
+        if (hasDetails) {
             size += count(embedData.author?.name);
             size += count(embedData.timestamp);
             size += count(embedData.footer?.text);
 
-            if (countType === "chars" && countURLs) {
+            if (countType === CountTypes.chars && countURLs) {
                 size += count(embedData.url);
                 size += count(embedData.thumbnail?.url);
                 size += count(embedData.image?.url);
@@ -303,21 +300,21 @@ let DiscordUtil = {
             }
         }
 
-        if (!countAreas.includes("fields")) {
+        if (!hasFields) {
             return size;
         }
 
         const fieldsSize = (embedData.fields ?? []).reduce((sum, field, i) => {
             const { name, value, inline } = field;
 
-            if (countType === "lines" && i > 0 && inline) {
+            if (countType === CountTypes.lines && i > 0 && inline) {
                 return sum;
             }
 
             let nameSize = count(name),
                 valueSize = count(value);
 
-            if (countType === "lines" && name) {
+            if (countType === CountTypes.lines && name) {
                 nameSize++;
             }
 
@@ -332,12 +329,12 @@ let DiscordUtil = {
             return false;
         }
 
-        let count;
+        let count = 0;
 
         if (typeof charLimit === "number") {
             count = DiscordUtil.getEmbedSize(embed, {
                 ...options,
-                count: "chars"
+                count: CountTypes.chars
             });
 
             if (count > charLimit) {
@@ -348,7 +345,7 @@ let DiscordUtil = {
         if (typeof lineLimit === "number") {
             count = DiscordUtil.getEmbedSize(embed, {
                 ...options,
-                count: "lines"
+                count: CountTypes.lines
             });
 
             if (count > lineLimit) {
@@ -426,7 +423,7 @@ let DiscordUtil = {
 
         if (oversized == null) {
             oversized = DiscordUtil.overSizeLimits(embedData, charLimit, lineLimit, {
-                areas: "body"
+                areas: EmbedCountAreas.body
             });
         }
 
@@ -439,7 +436,7 @@ let DiscordUtil = {
 
         if (
             DiscordUtil.overSizeLimits(embedData, charLimit, lineLimit, {
-                areas: "fields"
+                areas: EmbedCountAreas.fields
             })
         ) {
             delete embedData.fields;
@@ -489,7 +486,7 @@ let DiscordUtil = {
             throw maxSizeError();
         }
 
-        let res;
+        let res = null;
 
         try {
             res = await axios.request({

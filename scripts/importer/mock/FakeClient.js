@@ -1,10 +1,10 @@
 import ClientError from "../../../src/errors/ClientError.js";
 
-let client;
+let client = null;
 
 class LevertClient {
     constructor(config, logger) {
-        if (typeof client === "undefined") {
+        if (client === null) {
             client = this;
         } else {
             throw new ClientError("The client can only be constructed once");

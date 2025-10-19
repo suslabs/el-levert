@@ -68,7 +68,7 @@ class UserTracker {
             return;
         }
 
-        let res;
+        let res = null;
 
         try {
             res = callback();

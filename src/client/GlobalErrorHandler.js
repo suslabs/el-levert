@@ -1,4 +1,4 @@
-let _logger;
+let _logger = null;
 
 function exceptionHandler(err1) {
     try {
@@ -30,7 +30,7 @@ function removeGlobalErrorHandler() {
     process.removeListener("uncaughtException", exceptionHandler);
 
     _logger.info("Removed global error handler.");
-    _logger = undefined;
+    _logger = null;
 }
 
 export { registerGlobalErrorHandler, removeGlobalErrorHandler };

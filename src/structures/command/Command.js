@@ -51,7 +51,7 @@ class Command extends TextCommand {
             return "";
         }
 
-        let subNames;
+        let subNames = [];
 
         if (perm == null) {
             subNames = this.getSubcmdNames(includeAliases);

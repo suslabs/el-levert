@@ -12,7 +12,7 @@ export default {
 
         getClient().silenceDiscordTransports(false);
 
-        if (typeof res === "undefined") {
+        if (res === null) {
             return ":no_entry_sign: Reloading commands failed.";
         } else if (res.total < 1) {
             return ":information_source: No commands were reloaded.";

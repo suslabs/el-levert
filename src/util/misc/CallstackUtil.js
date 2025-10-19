@@ -5,7 +5,7 @@ import UtilError from "../../errors/UtilError.js";
 
 const CallstackUtil = Object.freeze({
     getCallstack: () => {
-        let stack;
+        let stack = null;
 
         {
             const oldLimit = Error.stackTraceLimit,

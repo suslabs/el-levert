@@ -57,11 +57,15 @@ class ReminderManager extends DBManager {
 
     checkMessage(remMsg, throwErrors = true) {
         let msg, ref;
-        remMsg = remMsg.trim();
+        remMsg = remMsg?.trim();
+
+        if (remMsg == null) {
+            return throwErrors ? remMsg : [remMsg, null];
+        }
 
         let oversized;
 
-        if (remMsg != null && typeof remMsg !== "string") {
+        if (typeof remMsg !== "string") {
             msg = "Invalid reminder message";
         } else if ((oversized = Util.overSizeLimits(remMsg, this.maxMsgLength, 1))) {
             const [chars, lines] = oversized;

@@ -29,7 +29,7 @@ export default {
             }
         }
 
-        let maxResults;
+        let maxResults = 0;
 
         if (all) {
             maxResults = Infinity;

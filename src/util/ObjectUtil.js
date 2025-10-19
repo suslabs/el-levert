@@ -2,6 +2,8 @@ import Util from "./Util.js";
 import TypeTester from "./TypeTester.js";
 import ArrayUtil from "./ArrayUtil.js";
 
+import AssignPropertyTypes from "./AssignPropertyTypes.js";
+
 import UtilError from "../errors/UtilError.js";
 
 const ObjectUtil = Object.freeze({
@@ -54,47 +56,46 @@ const ObjectUtil = Object.freeze({
         return Object.assign(target, source, values);
     },
 
-    _validPropOptions: ["both", "enum", "nonenum", "keys"],
     assign: (target, source, options, props) => {
-        let enumerable, nonEnumerable, both, keys;
+        let _enum, nonenum, both, keys;
 
         if (options == null) {
-            options = [ObjectUtil._validPropOptions[0]];
+            options = [AssignPropertyTypes.both];
             both = true;
         } else {
             options = ArrayUtil.guaranteeArray(options);
 
-            if (!options.every(option => ObjectUtil._validPropOptions.includes(option))) {
-                throw new UtilError("Invalid property options", ObjectUtil._validPropOptions);
+            if (!options.every(option => Object.values(AssignPropertyTypes).includes(option))) {
+                throw new UtilError("Invalid property options", options);
             }
 
-            both = options.includes("both");
-            keys = options.includes("keys");
+            both = options.includes(AssignPropertyTypes.both);
+            keys = options.includes(AssignPropertyTypes.keys);
         }
 
-        if (options.length < 1) {
-            throw new UtilError("Invalid property options", ObjectUtil._validPropOptions);
+        if (Util.empty(options)) {
+            throw new UtilError("Invalid property options", options);
         } else if (keys) {
             return Object.assign(target, source);
         } else if (both) {
-            enumerable = nonEnumerable = true;
+            _enum = nonenum = true;
         } else {
-            enumerable = options.includes("enum");
-            nonEnumerable = options.includes("nonenum");
+            _enum = options.includes(AssignPropertyTypes.enum);
+            nonenum = options.includes(AssignPropertyTypes.nonenum);
 
-            both = enumerable && nonEnumerable;
+            both = _enum && nonenum;
         }
 
         const allDescriptors = (desc => Reflect.ownKeys(desc).map(key => [key, desc[key]]))(
             Object.getOwnPropertyDescriptors(source)
         );
 
-        let descriptors;
+        let descriptors = [];
 
         if (both) {
             descriptors = allDescriptors;
         } else {
-            descriptors = allDescriptors.filter(([, desc]) => (enumerable ? desc.enumerable : !desc.enumerable));
+            descriptors = allDescriptors.filter(([, desc]) => (_enum ? desc.enumerable : !desc.enumerable));
         }
 
         if (TypeTester.isObject(props)) {
@@ -107,7 +108,7 @@ const ObjectUtil = Object.freeze({
         return target;
     },
 
-    shallowClone: (obj, options = "keys") => {
+    shallowClone: (obj, options = AssignPropertyTypes.keys) => {
         const clone = Object.create(Object.getPrototypeOf(obj));
         return ObjectUtil.assign(clone, obj, options);
     },
