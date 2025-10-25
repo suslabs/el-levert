@@ -1,3 +1,4 @@
+import Util from "../util/Util.js";
 import ObjectUtil from "../util/ObjectUtil.js";
 
 import EventError from "../errors/EventError.js";
@@ -8,7 +9,7 @@ class BotEvent {
     };
 
     constructor(options) {
-        if (typeof options.name !== "string") {
+        if (!Util.nonemptyString(options.name)) {
             throw new EventError("Event must have a name");
         } else if (typeof options.listener !== "function") {
             throw new EventError("Event must have a listener function");

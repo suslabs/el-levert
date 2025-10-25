@@ -56,7 +56,7 @@ class PermissionManager extends DBManager {
 
         const ownerName = OwnerGroup.name;
 
-        if (typeof name !== "string" || Util.empty(name)) {
+        if (!Util.nonemptyString(name)) {
             msg = "Invalid group name";
         } else if (name.length > this.maxGroupNameLength) {
             msg = `The group name can be at most ${this.maxGroupNameLength} characters long`;

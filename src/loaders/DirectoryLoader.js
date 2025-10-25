@@ -373,7 +373,7 @@ class DirectoryLoader extends Loader {
     _loadFilePaths() {
         this.logger?.debug(`Reading ${this.getName()}...`);
 
-        if (typeof this._dirPath !== "string") {
+        if (!Util.nonemptyString(this._dirPath)) {
             const failure = this.failure(`Invalid ${this.getName()}`);
             return this.sync ? failure : Promise.resolve(failure);
         }

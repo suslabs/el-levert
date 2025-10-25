@@ -6,7 +6,7 @@ class Manager {
     constructor(enabled = true, options = {}) {
         const compName = this.constructor.$name;
 
-        if (typeof compName !== "string" || Util.empty(compName)) {
+        if (!Util.nonemptyString(compName)) {
             throw new ManagerError("Manager must have a name");
         } else if (typeof this.load !== "function") {
             throw new ManagerError("Child class must have a load function");

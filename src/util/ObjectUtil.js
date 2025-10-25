@@ -119,7 +119,7 @@ const ObjectUtil = Object.freeze({
         for (const prop of props) {
             let { propName, desc } = prop;
 
-            if (typeof propName !== "string" || Util.empty(propName) || !TypeTester.isObject(desc)) {
+            if (!Util.nonemptyString(propName) || !TypeTester.isObject(desc)) {
                 throw new UtilError("Invalid property recieved from factory", prop);
             }
 

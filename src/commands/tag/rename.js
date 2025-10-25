@@ -43,7 +43,7 @@ export default {
             const out = ":warning: You can only rename your own tags.",
                 owner = await tag.getOwner();
 
-            return out + (owner === "not found" ? " tag owner not found." : ` and is owned by \`${owner}\`.`);
+            return out + (owner === "not found" ? " Tag owner not found." : ` The tag is owned by \`${owner}\`.`);
         }
 
         try {

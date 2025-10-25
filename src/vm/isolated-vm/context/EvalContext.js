@@ -77,7 +77,7 @@ class EvalContext {
     }
 
     async setVMObject(name, _class, params, targetProp) {
-        if (typeof name !== "string" || Util.empty(name)) {
+        if (!Util.nonemptyString(name)) {
             throw new VMError("No object name provided");
         }
 
@@ -123,7 +123,7 @@ class EvalContext {
     }
 
     deleteVMObject(name, errorIfNotFound = true) {
-        if (typeof name !== "string" || Util.empty(name)) {
+        if (!Util.nonemptyString(name)) {
             throw new VMError("No object name provided");
         }
 

@@ -37,7 +37,7 @@ class ChannelTransport extends BaseDiscordTransport {
     static _disableCodes = [RESTJSONErrorCodes.CannotSendMessagesInNonTextChannel];
 
     _getChannel(id) {
-        if (!this._hasClient || typeof id !== "string" || Util.empty(id)) {
+        if (!this._hasClient || !Util.nonemptyString(id)) {
             throw new LoggerError(
                 "If a channel object wasn't provided, a client object and a channel id must be provided instead"
             );

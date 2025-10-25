@@ -8,7 +8,7 @@ class AuthLoader extends BaseConfigLoader {
     }
 
     modify(config) {
-        if (typeof config.owner !== "string" || Util.empty(config.owner)) {
+        if (!Util.nonemptyString(config.owner)) {
             config.owner = "0";
         }
     }

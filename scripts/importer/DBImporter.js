@@ -69,7 +69,7 @@ class DBImporter {
     }
 
     async updateDatabase(path, mode = DBUpdateModes.overwrite) {
-        if (typeof mode !== "string" || Util.empty(mode)) {
+        if (!Util.nonemptyString(mode)) {
             throw new ImporterError("No update mode provided");
         } else if (!Object.values(DBUpdateModes).includes(mode)) {
             throw new ImporterError("Invalid update mode: " + mode, mode);

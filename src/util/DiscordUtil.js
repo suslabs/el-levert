@@ -457,7 +457,7 @@ let DiscordUtil = {
         const attach = msg.file ?? msg.attachments?.at(0),
             url = msg.fileUrl ?? attach?.url;
 
-        if (typeof url !== "string" || Util.empty(url)) {
+        if (!Util.nonemptyString(url)) {
             throw new UtilError("Message doesn't have any attachments");
         }
 

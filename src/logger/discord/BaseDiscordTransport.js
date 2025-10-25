@@ -13,7 +13,7 @@ class BaseDiscordTransport extends Transport {
         super(opts);
         const compName = this.constructor.$name;
 
-        if (typeof compName !== "string" || Util.empty(compName)) {
+        if (!Util.nonemptyString(compName)) {
             throw new LoggerError("Discord transport must have a default name");
         } else if (typeof this.sendLog !== "function") {
             throw new LoggerError("Child class must have a sendLog function");

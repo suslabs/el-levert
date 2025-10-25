@@ -41,7 +41,7 @@ class WebhookTransport extends BaseDiscordTransport {
     static _disableCodes = [RESTJSONErrorCodes.InvalidWebhookToken, RESTJSONErrorCodes.UnknownWebhook];
 
     _getWebhook(url) {
-        if (typeof url !== "string" || Util.empty(url)) {
+        if (!Util.nonemptyString(url)) {
             throw new LoggerError("If a webhook object wasn't provided, a webhook url must be provided instead");
         }
 

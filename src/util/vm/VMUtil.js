@@ -8,11 +8,9 @@ import UtilError from "../../errors/UtilError.js";
 
 const VMUtil = {
     resolveObject(path, propertyMap) {
-        if (typeof path !== "string" || Util.empty(path)) {
+        if (!Util.nonemptyString(path)) {
             throw new UtilError("Can't resolve object, no path provided");
-        }
-
-        if (!(propertyMap instanceof Map)) {
+        } else if (!(propertyMap instanceof Map)) {
             throw new UtilError("Can't resolve object, no property map provided");
         }
 
@@ -165,9 +163,8 @@ const VMUtil = {
             throw new UtilError("Invalid request data");
         }
 
-        if (typeof reqConfig.responseType !== "string" || Util.empty(reqConfig.responseType)) {
-            reqConfig.responseType =
-                typeof reqConfig.url === "string" && VMUtil._jsonRequestRegex.test(reqConfig.url) ? "json" : "text";
+        if (!Util.nonemptyString(reqConfig.responseType)) {
+            reqConfig.responseType = VMUtil._jsonRequestRegex.test(reqConfig.url) ? "json" : "text";
         }
 
         return reqConfig;

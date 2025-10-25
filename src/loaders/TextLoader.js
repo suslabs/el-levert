@@ -7,6 +7,8 @@ import FileLoader from "./FileLoader.js";
 import LoadStatus from "./LoadStatus.js";
 import WriteModes from "./WriteModes.js";
 
+import Util from "../util/Util.js";
+
 class TextLoader extends FileLoader {
     constructor(name, filePath, logger, options = {}) {
         super(name, filePath, logger, {
@@ -114,7 +116,7 @@ class TextLoader extends FileLoader {
     }
 
     static _getTempPath(filePath) {
-        if (typeof filePath !== "string") {
+        if (!Util.nonemptyString(filePath)) {
             return null;
         }
 

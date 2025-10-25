@@ -152,7 +152,7 @@ class Tag {
     }
 
     setVersion(version) {
-        if (typeof version !== "string" || Util.empty(version)) {
+        if (!Util.nonemptyString(version)) {
             throw new TagError("Invalid version");
         } else if (!TagTypes.versionTypes.includes(version)) {
             throw new TagError("Unknown version: " + version, version);
@@ -194,7 +194,7 @@ class Tag {
         let newType = this._setVersion(version),
             typeSet = false;
 
-        if (typeof type !== "string" || Util.empty(type)) {
+        if (!Util.nonemptyString(type)) {
             throw new TagError("Invalid type");
         } else if (type === TagTypes.textType) {
             return this.type;
@@ -386,7 +386,7 @@ class Tag {
             this.hops = hops;
         }
 
-        const argsList = [].concat(args ?? []).filter(Boolean);
+        const argsList = [].concat(args ?? []).filter(arg => !Util.empty(arg));
         this.args = argsList.join(Tag._argsSeparator);
 
         this._fetched = true;
@@ -425,7 +425,7 @@ class Tag {
     }
 
     static _getFlag(name, strict = true) {
-        if (typeof name !== "string" || Util.empty(name)) {
+        if (!Util.nonemptyString(name)) {
             return strict
                 ? (() => {
                       throw new TagError("Invalid flag");

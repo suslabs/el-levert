@@ -8,7 +8,7 @@ class Handler {
     constructor(enabled = true, options = {}) {
         const compName = this.constructor.$name;
 
-        if (typeof compName !== "string" || Util.empty(compName)) {
+        if (!Util.nonemptyString(compName)) {
             throw new HandlerError("Handler must have a name");
         } else if (typeof this.execute !== "function") {
             throw new HandlerError("Child class must have an execute function");

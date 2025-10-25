@@ -8,7 +8,7 @@ class VM {
     constructor(enabled, options) {
         const compName = this.constructor.$name;
 
-        if (typeof compName !== "string" && !Util.empty(compName)) {
+        if (!Util.nonemptyString(compName)) {
             throw new VMError("VM must have a name");
         } else if (typeof this.runScript !== "function") {
             throw new VMError("Child class must have a runScript function");

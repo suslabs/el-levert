@@ -40,7 +40,7 @@ const Codegen = {
         let replaced = last_nl ? code.slice(last_nl) : code;
         replaced = replaced.replaceAll(" ", "");
 
-        return code + (Codegen._statementExp.test(replaced) ? "" : ";");
+        return code + (Codegen._statementExp.test(replaced) ? ";" : "");
     },
 
     declaration: (name, value, isConst = false) => {
@@ -82,9 +82,17 @@ const Codegen = {
         return brackets ? `[${values}]` : values;
     },
 
-    object: obj => {
-        const jsonStr = JSON.stringify(obj, null, 2);
-        return jsonStr.replace(/"([^"]+)":/g, "$1:");
+    object: (obj, asJson = true) => {
+        if (asJson) {
+            return JSON.stringify(obj, undefined, Codegen.indentation);
+        } else {
+            return Codegen.block(
+                Object.entries(obj)
+                    .map(([key, value]) => `"${key}": ${value}`)
+                    .join(",\n"),
+                false
+            );
+        }
     },
 
     equals: (name, value, is = true, strict = true) => {

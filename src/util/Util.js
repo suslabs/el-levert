@@ -315,7 +315,7 @@ let Util = {
     },
 
     _countFunc: countType => {
-        if (typeof countType !== "string" || Util.empty(countType)) {
+        if (!Util.nonemptyString(countType)) {
             throw new UtilError("No count type provided");
         }
 
@@ -476,7 +476,7 @@ let Util = {
     },
 
     _lengthFunc: lengthType => {
-        if (typeof lengthType !== "string" || Util.empty(lengthType)) {
+        if (!Util.nonemptyString(lengthType)) {
             throw new UtilError("No length type provided");
         }
 
@@ -491,6 +491,10 @@ let Util = {
     },
     getLength: (val, lengthType) => {
         return Util._lengthFunc(lengthType)(val);
+    },
+
+    nonemptyString: str => {
+        return typeof str === "string" && str.length > 0;
     },
 
     empty: val => {

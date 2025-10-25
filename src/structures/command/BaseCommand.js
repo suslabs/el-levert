@@ -13,7 +13,7 @@ class BaseCommand {
     };
 
     constructor(options) {
-        if (typeof options.name !== "string") {
+        if (!Util.nonemptyString(options.name)) {
             throw new CommandError("Command must have a name");
         } else if (typeof options.handler !== "function") {
             throw new CommandError("Command must have a handler function");

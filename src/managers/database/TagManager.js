@@ -46,7 +46,7 @@ class TagManager extends DBManager {
         let msg, ref;
         name = name.trim();
 
-        if (typeof name !== "string" || Util.empty(name)) {
+        if (!Util.nonemptyString(name)) {
             msg = "Invalid tag name";
         } else if (name.length > this.maxTagNameLength) {
             msg = `The tag name can be at most ${this.maxTagNameLength} characters long`;
@@ -663,7 +663,7 @@ class TagManager extends DBManager {
     }
 
     async _runScriptTag(tag, type, args, values) {
-        const evalArgs = [args, tag.args].filter(Boolean).join(" ");
+        const evalArgs = [args, tag.args].filter(arg => !Util.empty(arg)).join(" ");
 
         const inputValues = {
             tag,
