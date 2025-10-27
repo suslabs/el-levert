@@ -1,4 +1,4 @@
-import { bold } from "discord.js";
+import { bold, codeBlock } from "discord.js";
 
 import { getClient } from "../../LevertClient.js";
 
@@ -57,7 +57,7 @@ class Tag {
             userType = typeof type === "string";
 
         if (Util.empty(this.hops)) {
-            this.hops[0] = this.name;
+            this.hops.push(this.name);
         } else if (this.isAlias) {
             this.body = this.constructor.defaultValues.body;
 
@@ -89,7 +89,7 @@ class Tag {
         name ??= this.constructor.defaultValues.name;
 
         this.name = name;
-        this.hops[0] = name;
+        Util.setFirst(this.hops, name);
 
         return true;
     }
@@ -301,7 +301,7 @@ class Tag {
             return discord
                 ? {
                       content: header,
-                      ...DiscordUtil.getFileAttach(body, "script.js")
+                      ...DiscordUtil.getFileAttach(body, `${this.name}.js`)
                   }
                 : `${header}\n---\n${body}\n---`;
         }
@@ -311,27 +311,26 @@ class Tag {
                 formattedAliasName = discord ? bold(this.aliasName) : this.aliasName,
                 header = `${formattedName} is an alias of ${formattedAliasName}.`;
 
-            let out = header;
+            if (Util.empty(this.args)) {
+                return discord ? { content: header } : header;
+            } else if (discord) {
+                let out = `${header} (with args: )`;
 
-            if (!Util.empty(this.args)) {
-                out += ` (with args: `;
-
-                if (discord) {
-                    out += ")";
-
+                if (Util.overSizeLimits(this.args, 500, 1)) {
                     return {
                         content: out,
-                        ...DiscordUtil.getFileAttach(args, "args.txt")
+                        ...DiscordUtil.getFileAttach(args, `${this.name}-args.txt`)
                     };
                 }
 
-                out += `${this.args})`;
+                out += `\n${codeBlock(this.args)}`;
+                return { content: out };
+            } else {
+                return `${header} (with args: ${this.args})`;
             }
-
-            return discord ? { content: out } : out;
         }
 
-        return discord ? DiscordUtil.getFileAttach(body, "tag.txt") : body;
+        return discord ? DiscordUtil.getFileAttach(body, `${this.name}.txt`) : body;
     }
 
     getTimeInfo(raw = false) {

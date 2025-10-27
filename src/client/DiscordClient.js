@@ -73,7 +73,7 @@ class DiscordClient {
     };
 
     static defaultMessagesFetchOptions = {
-        limit: 100
+        limit: 50
     };
 
     static defaultUserOptions = {
@@ -88,7 +88,7 @@ class DiscordClient {
     };
 
     static defaultUsersFetchOptions = {
-        limit: 100
+        limit: 50
     };
 
     constructor(intents, partials) {
@@ -402,6 +402,14 @@ class DiscordClient {
         ObjectUtil.setValuesWithDefaults(fetchOptions, fetchOptions, this.constructor.defaultMessagesFetchOptions);
         fetchOptions.force = !options.cache;
 
+        {
+            const parseAsMessage = msg_id => this._parseDiscordId(msg_id, "message", Message, false)[0] ?? undefined;
+
+            fetchOptions.before = parseAsMessage(fetchOptions.before);
+            fetchOptions.after = parseAsMessage(fetchOptions.after);
+            fetchOptions.around = parseAsMessage(fetchOptions.around);
+        }
+
         let messages = null;
 
         try {
@@ -560,7 +568,7 @@ class DiscordClient {
         delete this._eventLoader;
     }
 
-    _parseDiscordId(id, name, _class) {
+    _parseDiscordId(id, name, _class, strictExists) {
         if (id instanceof _class) {
             const obj = id;
             return [obj.id, id];
@@ -569,7 +577,11 @@ class DiscordClient {
         }
 
         if (id == null) {
-            throw new ClientError(`No ${name} ID provided`, name);
+            return strictExists
+                ? (() => {
+                      throw new ClientError(`No ${name} ID provided`, name);
+                  })()
+                : [null, null];
         } else if (typeof id === "string") {
             if (Util.empty(id)) {
                 throw new ClientError(`No ${name} ID provided (length = 0)`, name);

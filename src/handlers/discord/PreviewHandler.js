@@ -75,7 +75,7 @@ class PreviewHandler extends MessageHandler {
             throw new HandlerError("Invalid input string", str);
         }
 
-        const { raw: rawMsgUrl, sv_id, ch_id, msg_id } = match;
+        const { sv_id, ch_id, msg_id } = match;
 
         const prevMsg = await getClient().fetchMessage(ch_id, msg_id, {
             user_id: msg.author.id,
@@ -92,30 +92,37 @@ class PreviewHandler extends MessageHandler {
         content = Util.trimString(content, ...this.getLimits(true, true).outTrim);
 
         if (!Util.empty(prevMsg.attachments)) {
-            const attach = prevMsg.attachments.first(),
-                isImage = attach.contentType.startsWith("image/");
+            let attach = prevMsg.attachments.first(),
+                attachType = "";
 
-            if (isImage) {
-                image = attach.url;
+            switch (Util.splitAt(attach.contentType, "/")[0]) {
+                case "image":
+                    attachType = "Image";
+                    image = attach.url;
+                    break;
+                case "video":
+                    attachType = "Video";
+                    break;
+                default:
+                    attachType = "Attachment";
+                    break;
             }
 
             if (Util.empty(content)) {
-                content = hyperlink(`[${isImage ? "Image" : "Attachment"} (${attach.name})]`, attach.url);
+                const prefix = Util.empty(attachType) ? "" : attachType + " ";
+                content = hyperlink(`[${prefix}(${attach.name})]`, attach.url);
             }
         }
 
         if (prevMsg.channel.type !== ChannelType.DM) {
-            const msgUrl = new URL(rawMsgUrl);
-            msgUrl.protocol = "https";
-            msgUrl.hostname = "discord.com";
-
-            content += "\n\n" + hyperlink("[Jump to Message]", msgUrl.href);
+            const msgUrl = DiscordUtil.getMessageUrl(sv_id, ch_id, msg_id);
+            content += "\n\n" + hyperlink("[Jump to Message]", msgUrl);
         }
 
         let channel = DiscordUtil.formatChannelName(prevMsg.channel);
 
-        if (prevMsg.guild && sv_id !== prevMsg.guild.id) {
-            channel += ` - ${prevMsg.guild.name}`;
+        if (typeof prevMsg.guild !== "undefined" && prevMsg.guild.id !== sv_id) {
+            channel += ` in ${prevMsg.guild.name}`;
         }
 
         const username = prevMsg.author.displayName,
@@ -163,19 +170,17 @@ class PreviewHandler extends MessageHandler {
         this._sendTyping(msg);
         await this._addDelay(0);
 
-        try {
-            await this.reply(
-                msg,
-                {
-                    embeds: [preview]
-                },
-                {
-                    limitType: MessageLimitTypes.none
-                }
-            );
-
-            logSendTime(t1);
-        } catch (err) {}
+        await this.reply(
+            msg,
+            {
+                embeds: [preview]
+            },
+            {
+                limitType: MessageLimitTypes.none
+            }
+        )
+            .then(() => logSendTime(t1))
+            .catch(() => {});
 
         return true;
     }

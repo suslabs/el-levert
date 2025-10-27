@@ -72,8 +72,13 @@ class IsolateInspector {
     }
 
     sendMessage(msg) {
-        const str = String(msg);
-        this._channel.dispatchProtocolMessage(str);
+        if (msg instanceof Buffer) {
+            msg = msg.toString("utf-8");
+        } else if (typeof msg !== "string") {
+            throw new VMError("Invalid message provided");
+        }
+
+        this._channel.dispatchProtocolMessage(msg);
     }
 
     onConnection() {

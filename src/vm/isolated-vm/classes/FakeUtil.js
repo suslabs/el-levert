@@ -105,17 +105,22 @@ const FakeUtil = Object.freeze({
         );
 
         if (msgs === null) {
-            const msg_id = ch_id,
-                msg = await getClient().fetchMessage(default_id, msg_id, {
+            const before_id = ch_id;
+
+            msgs = await getClient().fetchMessages(
+                default_id,
+                {
                     user_id,
                     checkAccess: true
-                });
+                },
+                {
+                    before: before_id
+                }
+            );
+        }
 
-            if (msg === null) {
-                return null;
-            }
-
-            msgs = [msg];
+        if (msgs === null) {
+            return null;
         }
 
         msgs = msgs.map(msg => new FakeMsg(msg).fixedMsg);

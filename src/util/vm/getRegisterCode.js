@@ -116,9 +116,7 @@ function getRegisterCode(options, funcOptions = {}, errorOptions = {}) {
     }
 
     funcDeclCode += stringFunc ? stringFuncDeclaration(...commonArgs, func) : refFuncDeclaration(...commonArgs, type);
-    const code = `${objDeclCode}\n\n${funcDeclCode}`;
-
-    return Codegen.closure(code);
+    return Codegen.closure(`${objDeclCode}\n\n${funcDeclCode}`);
 }
 
 export default getRegisterCode;

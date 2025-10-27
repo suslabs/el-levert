@@ -89,11 +89,11 @@ class InputManager extends Manager {
     }
 
     async _readLine(prompt) {
-        try {
-            return await this.rl.question(prompt, {
+        return await this.rl
+            .question(prompt, {
                 signal: this._aborter.signal
-            });
-        } catch {}
+            })
+            .catch(() => {});
     }
 
     _processLine(line) {

@@ -141,6 +141,8 @@ const VMUtil = {
     ],
     _jsonRequestRegex: /\.(json|geojson)(?:[?#]|$)/i,
     makeRequestConfig: (data, context) => {
+        const errorType = data?.errorType ?? VMHttpErrorTypes.legacy;
+
         const reqConfig = {
             signal: context?.abortSignal
         };
@@ -163,8 +165,16 @@ const VMUtil = {
             throw new UtilError("Invalid request data");
         }
 
-        if (!Util.nonemptyString(reqConfig.responseType)) {
-            reqConfig.responseType = VMUtil._jsonRequestRegex.test(reqConfig.url) ? "json" : "text";
+        switch (errorType) {
+            default:
+            case VMHttpErrorTypes.legacy:
+                break;
+            case VMHttpErrorTypes.value:
+                if (!Util.nonemptyString(reqConfig.responseType)) {
+                    reqConfig.responseType = VMUtil._jsonRequestRegex.test(reqConfig.url) ? "json" : "text";
+                }
+
+                break;
         }
 
         return reqConfig;

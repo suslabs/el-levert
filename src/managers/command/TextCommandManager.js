@@ -1,3 +1,5 @@
+import { inlineCode } from "discord.js";
+
 import BaseCommandManager from "./BaseCommandManager.js";
 
 import TextCommand from "../../structures/command/TextCommand.js";
@@ -53,6 +55,10 @@ class TextCommandManager extends BaseCommandManager {
         return str.slice(this.commandPrefix.length);
     }
 
+    _isInvalidCategory(name) {
+        return name === this._commandInvalidValues.category;
+    }
+
     _categorizeCommands(sort, ...etc) {
         const allowedCmds = this.getCommands(...etc),
             categories = new Map();
@@ -68,31 +74,24 @@ class TextCommandManager extends BaseCommandManager {
 
         let entries = Array.from(categories.entries());
 
-        entries.sort((a, b) => {
-            const aName = a[0],
-                bName = b[0];
+        entries.sort(([aName], [bName]) => {
+            const aInvalid = this._isInvalidCategory(aName),
+                bInvalid = this._isInvalidCategory(bName);
 
-            if (aName === this._commandInvalidValues.category) {
-                return -1;
+            if (aInvalid === bInvalid) {
+                return aName.localeCompare(bName);
+            } else {
+                return aInvalid ? -1 : 1;
             }
-
-            if (bName === this._commandInvalidValues.category) {
-                return 1;
-            }
-
-            return aName.localeCompare(bName);
         });
 
         for (const [, cmds] of entries) {
-            cmds.sort((a, b) => {
-                const aName = a.name,
-                    bName = b.name;
-
-                return aName.localeCompare(bName, undefined, {
+            cmds.sort(({ name: aName }, { name: bName }) =>
+                aName.localeCompare(bName, undefined, {
                     numeric: true,
                     sensitivity: "base"
-                });
-            });
+                })
+            );
         }
 
         return new Map(entries);
@@ -111,24 +110,14 @@ class TextCommandManager extends BaseCommandManager {
             num = 1;
 
         for (const name of categoryKeys) {
-            let formattedName = categoryNames[name],
-                header;
+            const foundName = categoryNames[name],
+                formattedName = Util.nonemptyString(foundName)
+                    ? Util.capitalize(foundName)
+                    : Util.capitalize(name).replaceAll(/[_-]/g, " ");
 
-            if (typeof formattedName === "undefined") {
-                formattedName = Util.capitalize(name).replaceAll(/[_-]/g, " ");
-            } else {
-                formattedName = Util.capitalize(formattedName);
-            }
-
-            if (name === this._commandInvalidValues.category) {
-                header = "";
-            } else {
-                header = `${num}${discord ? "\\" : ""}. ${formattedName} commands:`;
-                num++;
-            }
-
-            headers[i] = header;
-            i++;
+            headers[i++] = this._isInvalidCategory(name)
+                ? ""
+                : `${num++}${discord ? "\\" : ""}. ${formattedName} commands:`;
         }
 
         return headers;
@@ -148,24 +137,11 @@ class TextCommandManager extends BaseCommandManager {
         let i = 0;
 
         for (const [name, cmds] of categoryEntries) {
-            const cmdNames = cmds.map(cmd => cmd.getName());
+            const cmdNames = cmds.map(cmd => cmd.getName()),
+                formattedNames = (discord ? cmdNames.map(n => inlineCode(n)) : cmdNames).join(", ");
 
-            let categoryFormat = "";
-
-            if (name !== this._commandInvalidValues.category) {
-                categoryFormat = `\n${spaces}`;
-            }
-
-            if (discord) {
-                const names = `\`${cmdNames.join("`, `")}\``;
-                categoryFormat += `\\- ${names}`;
-            } else {
-                const names = cmdNames.join(", ");
-                categoryFormat += `- ${names}`;
-            }
-
-            namesFormat[i] = categoryFormat;
-            i++;
+            namesFormat[i++] =
+                `${this._isInvalidCategory(name) ? "" : `\n${spaces}`}${discord ? "\\" : ""}- ${formattedNames}`;
         }
 
         return namesFormat;

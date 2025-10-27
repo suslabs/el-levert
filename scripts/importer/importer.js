@@ -128,12 +128,10 @@ async function loadConfig() {
     const configLogger = setupLogger("Init"),
         configLoader = new ConfigLoader(configLogger);
 
-    try {
-        const [config] = await configLoader.load();
-        return config;
-    } finally {
-        configLogger.close();
-    }
+    return await configLoader
+        .load()
+        .then(res => res[0])
+        .finally(() => configLogger.close());
 }
 
 function loadClient(config, logger) {

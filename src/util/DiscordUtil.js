@@ -43,8 +43,12 @@ let DiscordUtil = {
         return { files: [attachment] };
     },
 
+    getMessageUrl: (sv_id, ch_id, msg_id) => {
+        return `https://www.discord.com/channels/${sv_id}/${ch_id}/${msg_id}`;
+    },
+
     msgUrlRegex:
-        /(?:(https?:)\/\/)?(?:(www|ptb)\.)?discord\.com\/channels\/(?<sv_id>\d{18,19}|@me)\/(?<ch_id>\d{18,19})(?:\/(?<msg_id>\d{18,19}))/g,
+        /(?:(https?:)\/\/)?(?:(www|ptb|canary)\.)?discord\.com\/channels\/(?<sv_id>\d{18,19}|@me)\/(?<ch_id>\d{18,19})(?:\/(?<msg_id>\d{18,19}))/g,
 
     findMessageUrls: str => {
         const matches = Array.from(str.matchAll(DiscordUtil.msgUrlRegex));
@@ -116,17 +120,19 @@ let DiscordUtil = {
         return new Date(timestamp + DiscordUtil.discordEpoch);
     },
 
-    formatChannelName: channel => {
-        const inDms = channel.type === ChannelType.DM,
-            inThread = [ChannelType.PublicThread, ChannelType.PrivateThread].includes(channel.type);
-
-        if (inDms) {
+    formatChannelName: (channel, currentGuild) => {
+        if (channel.type === ChannelType.DM) {
             return "DMs";
-        } else {
-            return inThread
-                ? `"${channel.name}" (thread of parent channel #${channel.parent.name})`
-                : `#${channel.name}`;
         }
+
+        const inThread = [ChannelType.PublicThread, ChannelType.PrivateThread].includes(channel.type),
+            hasGuild = [currentGuild, channel.guild].every(obj => typeof obj !== "undefined");
+
+        const nameFormat = inThread
+            ? `"${channel.name}" (thread of parent channel #${channel.parent?.name ?? "unknown"})`
+            : `#${channel.name}`;
+
+        return hasGuild && channel.guild.id !== currentGuild.id ? `${nameFormat} in ${channel.guild.name}` : nameFormat;
     },
 
     getEmbedData: embed => {

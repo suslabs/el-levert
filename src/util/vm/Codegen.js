@@ -12,7 +12,7 @@ const Codegen = {
     },
 
     indent: (code, times = 1) => {
-        code = code?.toString().trim() ?? "";
+        code = String(code ?? "").trim();
 
         const spaces = Codegen.spaces.repeat(times);
 
@@ -26,8 +26,20 @@ const Codegen = {
         return lines.join("\n");
     },
 
+    isIdentifier: str => {
+        return Codegen._identifierExp.test(str);
+    },
+
+    identifier: str => {
+        return Codegen.isIdentifier(str) ? str : JSON.stringify(str);
+    },
+
+    isStatement: str => {
+        return !Codegen._statementExp.test(str);
+    },
+
     statement: (code, force = false) => {
-        code = code?.toString().trim() ?? "";
+        code = String(code ?? "").trim();
 
         if (Util.empty(code)) {
             return ";";
@@ -40,21 +52,22 @@ const Codegen = {
         let replaced = last_nl ? code.slice(last_nl) : code;
         replaced = replaced.replaceAll(" ", "");
 
-        return code + (Codegen._statementExp.test(replaced) ? ";" : "");
+        return code + (Codegen.isStatement(replaced) ? "" : ";");
     },
 
-    declaration: (name, value, isConst = false) => {
+    declaration: (name, value, isConst = false, statement = true) => {
         const type = isConst ? "const" : "let";
 
-        name = name.toString().trim();
-        value = value?.toString().trim() ?? "";
+        name = String(name).trim();
+        value = String(value ?? "").trim() ?? "";
 
-        return Codegen.statement(Util.empty(value) ? `${type} ${name}` : `${type} ${name} = ${value}`);
+        const body = Util.empty(value) ? `${type} ${name}` : `${type} ${name} = ${value}`;
+        return statement ? Codegen.statement(body, true) : body;
     },
 
     assignment: (name, value, statement = true) => {
-        name = name.toString().trim();
-        value = value.toString().trim();
+        name = String(name).trim();
+        value = String(value).trim();
 
         const body = `${name} = ${value}`;
         return statement ? Codegen.statement(body, true) : body;
@@ -78,17 +91,18 @@ const Codegen = {
     },
 
     array: (arr, brackets = true) => {
-        const values = arr.map(val => val.toString().trim()).join(", ");
+        const values = arr.map(val => String(val).trim()).join(", ");
         return brackets ? `[${values}]` : values;
     },
 
     object: (obj, asJson = true) => {
         if (asJson) {
-            return JSON.stringify(obj, undefined, Codegen.indentation);
+            const str = JSON.stringify(obj, undefined, Codegen.indentation);
+            return str.replace(Codegen._objectKeyExp, "$1$2:");
         } else {
             return Codegen.block(
                 Object.entries(obj)
-                    .map(([key, value]) => `"${key}": ${value}`)
+                    .map(([key, value]) => `${Codegen.identifier(key)}: ${String(value)}`)
                     .join(",\n"),
                 false
             );
@@ -107,24 +121,54 @@ const Codegen = {
         return Codegen.equals(type, Codegen._undef, is);
     },
 
-    access: names => {
+    access: (names, statement = false) => {
         names = ArrayUtil.guaranteeArray(names);
 
-        const tokens = names.map((name, i) => {
-            let optional = false;
+        names = names.map((name, i) => {
+            const first = i === 0,
+                last = i === names.length - 1;
 
-            if (Array.isArray(name)) {
-                if (i === names.length - 1) {
-                    [name] = name;
-                } else {
-                    [name, optional] = name;
+            let dynamic = false,
+                optional = false;
+
+            if (typeof name === "object") {
+                const opts = name;
+                name = opts.name;
+
+                dynamic = opts.dynamic ?? false;
+
+                if (!last) {
+                    optional = opts.optional ?? false;
                 }
             }
 
-            return name + (optional ? "?" : "");
+            return {
+                first,
+                last,
+
+                name,
+
+                dynamic,
+                optional
+            };
         });
 
-        return tokens.join(".");
+        const tokens = names.map(opts => {
+            if (opts.first) {
+                return opts.name;
+            }
+
+            const chain = opts.optional ? "?." : "";
+
+            if (opts.dynamic) {
+                return chain + `[${opts.name}]`;
+            } else {
+                return chain + Codegen.isIdentifier(opts.name) ? `.${opts.name}` : `[${JSON.stringify(opts.name)}]`;
+            }
+        });
+
+        const body = tokens.join("");
+        return statement ? Codegen.statement(body) : body;
     },
 
     block: (body, statement = true) => {
@@ -138,35 +182,38 @@ const Codegen = {
         return header + Codegen.indent(body) + footer;
     },
 
-    return: value => {
+    return: (value, statement = true) => {
         const name = "return";
 
-        if (Util.empty(value)) {
-            return Codegen.statement(name);
-        } else if (Array.isArray(value)) {
-            return Codegen.statement(`${name} ${Codegen.array(value)}`);
+        let body = null;
+
+        if (Array.isArray(value)) {
+            body = `${name} ${Codegen.array(value)}`;
+        } else {
+            value = String(value).trim();
+            body = Util.empty(value) ? name : `${name} ${value}`;
         }
 
-        value = value.toString().trim();
-        return Codegen.statement(`${name} ${value}`);
+        return statement ? Codegen.statement(body) : body;
     },
 
-    throw: (err, msg) => {
-        err = err?.toString().trim() ?? "";
+    throw: (err, msg, statement = true) => {
+        err = String(err ?? "").trim();
 
         let name = "throw",
-            value = Util.empty(msg) ? "null" : msg;
+            value = Util.empty(msg) ? "undefined" : msg;
 
         if (!Util.empty(err)) {
-            value = "new " + Codegen.call(err, value);
+            value = Codegen.instantiate(err, value);
         }
 
-        return Codegen.statement(`${name} ${value}`);
+        const body = `${name} ${value}`;
+        return statement ? Codegen.statement(body) : body;
     },
 
     function: (name, args, body, options = {}) => {
-        name = name?.toString().trim() ?? "";
-        args = ArrayUtil.guaranteeArray(args ?? []);
+        name = String(name ?? "").trim();
+        args = ArrayUtil.guaranteeArray(args, null, true);
 
         const cls = options.class ?? false,
             arrow = options.arrow ?? false;
@@ -191,7 +238,7 @@ const Codegen = {
     },
 
     if(expr, ifBody, elseBody) {
-        expr = expr?.toString().trim() ?? "";
+        expr = String(expr ?? "").trim();
 
         const ifHeader = `if (${expr}) `,
             elseHeader = "else ";
@@ -206,12 +253,18 @@ const Codegen = {
         }
     },
 
-    call: (name, args) => {
-        name = name.toString().trim();
-        args = ArrayUtil.guaranteeArray(args ?? []);
+    call: (name, args, statement = true) => {
+        name = String(name).trim();
+        args = ArrayUtil.guaranteeArray(args, null, true);
 
-        const values = Codegen.array(args, false);
-        return Codegen.statement(`${name}(${values})`);
+        const values = Codegen.array(args, false),
+            body = `${name}(${values})`;
+
+        return statement ? Codegen.statement(body) : body;
+    },
+
+    instantiate: (name, args, statement = true) => {
+        return `new ${Codegen.call(name, args, statement)}`;
     },
 
     closure: body => {
@@ -222,7 +275,7 @@ const Codegen = {
     },
 
     tryCatch: (tryBody, catchBody, errName = "err") => {
-        errName = errName?.toString().trim() ?? "";
+        errName = String(errName ?? "").trim();
 
         const tryHeader = "try ",
             catchHeader = `catch (${errName}) `;
@@ -234,8 +287,8 @@ const Codegen = {
     },
 
     class: (name, extnds, body) => {
-        name = name?.toString().trim() ?? "";
-        extnds = extnds?.toString().trim() ?? "";
+        name = String(name ?? "").trim();
+        extnds = String(extnds ?? "").trim();
 
         let header = `class `;
 
@@ -253,6 +306,9 @@ const Codegen = {
     getObject: code => {
         return new Function(Codegen.return(code))();
     },
+
+    _identifierExp: /^[A-Za-z_$][A-Za-z0-9_$]*$/,
+    _objectKeyExp: /^(\s*)"([A-Za-z_$][A-Za-z0-9_$]*)":/gm,
 
     _statementExp: /[\s\S]*[\w\d$_)\]]$/
 };

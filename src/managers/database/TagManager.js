@@ -72,7 +72,7 @@ class TagManager extends DBManager {
     }
 
     checkBody(body, throwErrors = true) {
-        body = body.toString().trim();
+        body = String(body).trim();
 
         let msg, ref;
 

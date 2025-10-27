@@ -8,8 +8,10 @@ const ArrayUtil = Object.freeze({
         return Array.from({ length }, (_, i) => callback(i));
     },
 
-    guaranteeArray: (obj, length) => {
-        if (typeof length !== "number") {
+    guaranteeArray: (obj, length, nullEmpty = false) => {
+        if (nullEmpty && obj == null) {
+            return [];
+        } else if (typeof length !== "number") {
             return Array.isArray(obj) ? obj : [obj];
         }
 

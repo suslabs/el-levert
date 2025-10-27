@@ -1,25 +1,23 @@
 import TypeTester from "../util/TypeTester.js";
 
-const wrapPromise = (logger, promise) =>
-    new Promise((resolve, reject) => {
-        promise.then(resolve).catch(err => {
-            logger.error("Event exception:", err);
-            resolve();
-        });
-    });
+function wrapOutput(out, logger) {
+    if (TypeTester.isPromise(out)) {
+        return out.catch(err => logger.error("Event exception:", err));
+    } else {
+        return out;
+    }
+}
 
-const wrapEvent = (logger, func) =>
-    function (...args) {
-        let out = null;
-
+function wrapEvent(logger, func) {
+    return function (...args) {
         try {
-            out = func(...args);
+            const out = func(...args);
+            return wrapOutput(out, logger);
         } catch (err) {
             logger.error("Event exception:", err);
             return;
         }
-
-        return TypeTester.isPromise(out) ? wrapPromise(logger, out) : out;
     };
+}
 
 export default wrapEvent;

@@ -9,6 +9,7 @@ import { getClient, getLogger } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import ParserUtil from "../../util/commands/ParserUtil.js";
+import RegexUtil from "../../util/misc/RegexUtil.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
 
 import HandlerError from "../../errors/HandlerError.js";
@@ -77,6 +78,10 @@ class SedHandler extends MessageHandler {
         const { body: regexStr } = ParserUtil.parseScript(match.groups.regex_str ?? ""),
             { body: replace } = ParserUtil.parseScript(match.groups.replace ?? ""),
             { body: flagsStr } = ParserUtil.parseScript(match.groups.flags_str ?? "");
+
+        if (!RegexUtil.flagsRegex.test(flagsStr)) {
+            throw new HandlerError("Invalid regex flags", { flagsStr });
+        }
 
         let regex, sedMsg, content;
 
@@ -159,21 +164,18 @@ class SedHandler extends MessageHandler {
         }
 
         logSending(sed);
-
-        try {
-            await this.reply(
-                msg,
-                {
-                    embeds: [sed]
-                },
-                {
-                    useConfigLimits: true,
-                    limitType: MessageLimitTypes.trim
-                }
-            );
-
-            logSendTime(t1);
-        } catch (err) {}
+        await this.reply(
+            msg,
+            {
+                embeds: [sed]
+            },
+            {
+                useConfigLimits: true,
+                limitType: MessageLimitTypes.trim
+            }
+        )
+            .then(() => logSendTime(t1))
+            .catch(() => {});
 
         return true;
     }

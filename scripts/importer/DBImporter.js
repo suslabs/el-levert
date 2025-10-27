@@ -139,12 +139,10 @@ class DBImporter {
         let count = 0;
 
         for (const tag of oldTags) {
-            try {
-                await this.tagManager.delete(tag);
-                count++;
-            } catch (err) {
-                this.logger.error(`Error occured while deleting "${tag.name}":`, err);
-            }
+            await this.tagManager
+                .delete(tag)
+                .then(() => count++)
+                .catch(err => this.logger.error(`Error occured while deleting "${tag.name}":`, err));
         }
 
         this.logger.info(`Finished purging ${count} old tags.`);
@@ -223,12 +221,10 @@ class DBImporter {
                 importTag = importTags.get(name);
 
             if (!currTag.equals(importTag)) {
-                try {
-                    await this.tagManager.updateProps(currTag, importTag);
-                    count++;
-                } catch (err) {
-                    this.logger.error(`Error occured while updating "${name}":`, err);
-                }
+                await this.tagManager
+                    .updateProps(currTag, importTag)
+                    .then(() => count++)
+                    .catch(err => this.logger.error(`Error occured while updating "${name}":`, err));
             }
         }
 
@@ -243,12 +239,10 @@ class DBImporter {
                 importTag = importTags.get(name);
 
             if (typeof currentTag === "undefined") {
-                try {
-                    await this.tagManager._addPrepared(importTag);
-                    count++;
-                } catch (err) {
-                    this.logger.error(`Error occured while adding "${name}":`.err);
-                }
+                await this.tagManager
+                    ._addPrepared(importTag)
+                    .then(() => count++)
+                    .catch(err => this.logger.error(`Error occured while adding "${name}":`.err));
             }
         }
 
@@ -261,12 +255,10 @@ class DBImporter {
         for (const name of deletedTags) {
             const oldTag = currentTags.get(name);
 
-            try {
-                await this.tagManager.delete(oldTag);
-                count++;
-            } catch (err) {
-                this.logger.error(`Error occured while deleting "${name}":`, err);
-            }
+            await this.tagManager
+                .delete(oldTag)
+                .then(() => count++)
+                .catch(err => this.logger.error(`Error occured while deleting "${name}":`, err));
         }
 
         return count;
@@ -284,20 +276,17 @@ class DBImporter {
         let count = 0;
 
         for (const [user, quota] of Object.entries(sizes)) {
-            if (quota === 0) {
+            if (quota <= 0) {
                 continue;
             }
 
-            try {
-                await this.tagManager.tag_db.db.run("INSERT INTO Quotas VALUES ($user, $quota);", {
+            await this.tagManager.tag_db.db
+                .run("INSERT INTO Quotas VALUES ($user, $quota);", {
                     $user: user,
                     $quota: quota
-                });
-
-                count++;
-            } catch (err) {
-                this.logger.error(err);
-            }
+                })
+                .then(() => count++)
+                .catch(err => this.logger.error(`Error recalculating quota for user ${user}:`, err));
         }
 
         this.logger.info(`Recalculated quota for ${count} users.`);

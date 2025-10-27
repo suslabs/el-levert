@@ -246,16 +246,16 @@ class MessageHandler extends Handler {
         const limits = this.getLimits(useConfig, useTrim),
             { out: outLimits, embed: embedLimits } = limits;
 
-        const contentOversize = Util.overSizeLimits(content, ...outLimits);
+        const contentOversized = Util.overSizeLimits(content, ...outLimits);
 
-        if (contentOversize) {
+        if (contentOversized) {
             switch (limitType) {
                 case MessageLimitTypes.default:
                 case MessageLimitTypes.file:
                     addFile("end", content);
                     break;
                 case MessageLimitTypes.error:
-                    const [chars, lines] = contentOversize;
+                    const [chars, lines] = contentOversized;
 
                     if (chars !== null) {
                         return {
@@ -270,7 +270,7 @@ class MessageHandler extends Handler {
                     break;
                 case MessageLimitTypes.trim:
                     out.content = Util.trimString(content, ...limits.outTrim, {
-                        oversized: contentOversize
+                        oversized: contentOversized
                     });
 
                     break;
@@ -284,16 +284,16 @@ class MessageHandler extends Handler {
         }
 
         let countAreas = useTrim ? EmbedCountAreas.body : EmbedCountAreas.all,
-            embedOversize;
+            embedOversized;
 
         const newEmbeds = [];
 
         for (const [i, embed] of embeds.entries()) {
-            embedOversize = DiscordUtil.overSizeLimits(embed, ...embedLimits, {
+            embedOversized = DiscordUtil.overSizeLimits(embed, ...embedLimits, {
                 areas: countAreas
             });
 
-            if (!useTrim && !embedOversize) {
+            if (!useTrim && !embedOversized) {
                 newEmbeds.push(embed);
                 continue;
             }
@@ -303,7 +303,7 @@ class MessageHandler extends Handler {
             switch (limitType) {
                 case MessageLimitTypes.default:
                 case MessageLimitTypes.error:
-                    const [chars, lines] = embedOversize;
+                    const [chars, lines] = embedOversized;
 
                     if (chars !== null) {
                         return {
@@ -323,7 +323,7 @@ class MessageHandler extends Handler {
                     break;
                 case MessageLimitTypes.trim:
                     DiscordUtil.trimEmbed(embed, ...limits.embedTrim, {
-                        oversized: embedOversize
+                        oversized: embedOversized
                     });
 
                     newEmbeds.push(embed);

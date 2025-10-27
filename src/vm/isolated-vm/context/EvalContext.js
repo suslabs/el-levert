@@ -148,45 +148,50 @@ class EvalContext {
 
     async runScript(code) {
         this._checkIsolate();
-        const compileNow = typeof code !== "undefined";
+        const compileNow = Util.nonemptyString(code);
 
         let script = null;
 
         if (compileNow) {
-            script = await this._compileScript(code, false);
-            await this.setVMObject("code", code);
+            try {
+                script = await this._compileScript(code, false);
+            } catch (err) {
+                return [undefined, err];
+            }
         } else if (typeof this._script === "undefined") {
             throw new VMError("Can't run, no script was compiled");
         } else {
             script = this._script;
         }
 
-        await this.inspector.waitForConnection();
+        const config = {
+            timeout: this.timeLimit !== -1 ? this.timeLimit : undefined,
+            promise: EvalContext.allowPromiseReturn,
+            copy: true
+        };
 
         try {
-            const config = {
-                promise: EvalContext.allowPromiseReturn,
-                copy: true
-            };
-
-            if (this.timeLimit !== -1) {
-                config.timeout = this.timeLimit;
+            if (compileNow) {
+                await this.setVMObject("code", code);
             }
 
-            return await script.run(this.context, config);
-        } catch (err) {
-            if (this.enableInspector || VMErrors.custom.includes(err.name)) {
-                throw err;
-            }
+            await this.inspector.waitForConnection();
 
-            VMUtil.rewriteIVMStackTrace(err);
-            throw err;
+            return await script
+                .run(this.context, config)
+                .then(out => [out, null])
+                .catch(err => {
+                    if (!this.enableInspector && !VMErrors.custom.includes(err.name)) {
+                        VMUtil.rewriteIVMStackTrace(err);
+                    }
+
+                    return [undefined, err];
+                });
         } finally {
             if (compileNow) {
                 script.release();
+                this.deleteVMObject("code", false);
             }
-
-            this.deleteVMObject("code", false);
         }
     }
 
@@ -302,12 +307,9 @@ class EvalContext {
 
     async _setupIsolate(values) {
         const config = {
+            memoryLimit: this.memLimit !== -1 ? this.memLimit : undefined,
             inspector: this.enableInspector
         };
-
-        if (this.memLimit !== -1) {
-            config.memoryLimit = this.memLimit;
-        }
 
         this.isolate = new Isolate(config);
 

@@ -3,7 +3,7 @@ import WebSocket from "ws";
 
 import { getLogger } from "../../../LevertClient.js";
 
-import LoggerUtil from "../../../util/LoggerUtil.js";
+import getCloseReason from "../../../util/misc/wsCloseReason.js";
 
 class InspectorServer {
     static inspectorUrl = "devtools://devtools/bundled/inspector.html";
@@ -112,16 +112,17 @@ class InspectorServer {
         this._connectInspector();
 
         socket.on("error", err => {
-            getLogger().error("Inspector websocket error:", err);
+            getLogger().error("Inspector websocket closing with error:", err);
             this._disconnectInspector();
         });
 
         socket.on("close", code => {
-            getLogger().debug(`Inspector websocket closed:${LoggerUtil.formatLog(code)}`);
+            getLogger().debug(`Inspector websocket closed with code: ${code} (${getCloseReason(code)})`);
             this._disconnectInspector();
         });
 
         socket.on("message", msg => {
+            msg = msg.toString("utf-8");
             this.logPackets && getLogger().debug(`Recieved: ${msg}`);
 
             try {

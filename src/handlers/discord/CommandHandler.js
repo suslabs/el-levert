@@ -22,7 +22,13 @@ function logExecutionTime(elapsed) {
 }
 
 function logCommandOutput(cmd, out) {
-    getLogger().isDebugEnabled() && getLogger().debug(`Command "${cmd.name}" returned:${LoggerUtil.formatLog(out)}`);
+    if (getLogger().isDebugEnabled()) {
+        if (Array.isArray(out) && Util.single(out)) {
+            out = Util.first(out);
+        }
+
+        getLogger().debug(`Command "${cmd.name}" returned:${LoggerUtil.formatLog(out)}`);
+    }
 }
 
 class CommandHandler extends MessageHandler {
@@ -74,17 +80,15 @@ class CommandHandler extends MessageHandler {
     async _executeCommand(cmd, msg, args) {
         logCommandUsage(msg, cmd.name, args);
 
-        let outRes, outErr;
-        [outRes, outErr] = Array(2).fill(null);
+        let outRes = null,
+            outErr = null;
 
         const t1 = performance.now();
-
         try {
             outRes = await cmd.execute(args, { msg });
         } catch (err) {
             outErr = err;
         }
-
         const t2 = performance.now();
 
         const outInfo = {

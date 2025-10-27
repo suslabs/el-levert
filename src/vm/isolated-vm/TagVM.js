@@ -29,7 +29,7 @@ function logFinished(t1, info) {
     getLogger().log(level, `Script execution took ${Util.formatNumber(Util.timeDelta(t2, t1))} ms.`);
 }
 
-function logOutput(dataType, out) {
+function logOutput(out, dataType) {
     if (getLogger().isDebugEnabled()) {
         const desc = dataType === "script" ? "output" : "data";
         getLogger().debug(`Returning ${dataType} ${desc}:${LoggerUtil.formatLog(out)}`);
@@ -54,7 +54,6 @@ class TagVM extends VM {
     }
 
     async runScript(code, values) {
-        const t1 = performance.now();
         logUsage(code);
 
         if (this._inspectorServer?.inspectorConnected) {
@@ -62,23 +61,26 @@ class TagVM extends VM {
             throw new VMError("Inspector is already connected.");
         }
 
-        const context = await this._getEvalContext(values);
+        const t1 = performance.now(),
+            context = await this._getEvalContext(values);
 
-        let out, dataType;
+        let out,
+            outErr = null;
 
         try {
-            out = await context.runScript(code);
-            [dataType, out] = this._handleScriptOuput(out);
+            [out, outErr] = await context.runScript(code);
         } catch (err) {
-            [dataType, out] = this._handleScriptError(err);
-        } finally {
-            logFinished(t1, this.enableInspector);
-
-            this._inspectorServer?.executionFinished();
-            context.dispose();
+            outErr = err;
         }
 
-        logOutput(dataType, out);
+        logFinished(t1, this.enableInspector);
+        this._inspectorServer?.executionFinished();
+        context.dispose();
+
+        let dataType;
+        [out, dataType] = outErr ? this._handleScriptError(outErr) : this._handleScriptOuput(out);
+
+        logOutput(out, dataType);
         return out;
     }
 
@@ -134,7 +136,7 @@ class TagVM extends VM {
     }
 
     _handleScriptOuput(out) {
-        return ["script", VMUtil.formatOutput(out)];
+        return [VMUtil.formatOutput(out), "script"];
     }
 
     _processReply(msg) {
@@ -161,9 +163,9 @@ class TagVM extends VM {
                 throw err;
 
             case VMErrors.custom[0]:
-                return ["exit", err.exitData];
+                return [err.exitData, "exit"];
             case VMErrors.custom[1]:
-                return ["reply", this._processReply(err.message)];
+                return [this._processReply(err.message), "reply"];
         }
 
         const find = Object.entries(VMErrors).find(([name, info]) => name !== "custom" && err.message === info.in);

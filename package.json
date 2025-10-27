@@ -8,14 +8,15 @@
         "start": "node --no-warnings=ExperimentalWarning index.js",
         "format": "prettier --config .prettierrc --ignore-path .prettierignore --write **/*.{js,cjs,json}",
         "lint": "eslint . --config .eslintrc.json --ignore-path .gitignore --ext .js",
-        "importer": "cross-env MOCK_MAP_PATH=\"./scripts/importer/mock/mock-map.json\" node --no-warnings=ExperimentalWarning --loader \"./scripts/mock/mock-loader.js\" ./scripts/importer/importer.js"
+        "importer": "cross-env MOCK_MAP_PATH=\"./scripts/importer/mock/mock-map.json\" node --no-warnings=ExperimentalWarning --loader \"./scripts/mock/mock-loader.js\" ./scripts/importer/importer.js",
+        "proxyserv": "node ./scripts/vscode/proxyserv.cjs"
     },
     "dependencies": {
         "@leeoniya/ufuzzy": "^1.0.19",
         "ajv": "^8.17.1",
         "axios": "^1.12.2",
         "chrono-node": "^2.9.0",
-        "discord.js": "^14.23.2",
+        "discord.js": "^14.24.0",
         "isolated-vm": "^5.0.4",
         "re2": "^1.22.1",
         "sqlite3": "^5.1.7",
@@ -23,7 +24,7 @@
     },
     "optionalDependencies": {
         "generic-pool": "^3.9.0",
-        "vm2": "^3.9.19"
+        "vm2": "^3.10.0"
     },
     "devDependencies": {
         "@babel/eslint-parser": "^7.28.4",
