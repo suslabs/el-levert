@@ -1,4 +1,4 @@
-import { bold, inlineCode, codeBlock } from "discord.js";
+import { escapeMarkdown, bold, inlineCode, codeBlock } from "discord.js";
 
 import BaseCommand from "./BaseCommand.js";
 
@@ -27,13 +27,7 @@ class TextCommand extends BaseCommand {
     }
 
     matches(name, checkAliases = true) {
-        if (super.matches(name)) {
-            return true;
-        } else if (checkAliases && !Util.empty(this.aliases)) {
-            return this.aliases.includes(name);
-        } else {
-            return false;
-        }
+        return super.matches(name) || (checkAliases && this.aliases.includes(name));
     }
 
     matchesSubcmd(name, checkAliases = true) {
@@ -109,13 +103,7 @@ class TextCommand extends BaseCommand {
             return false;
         }
 
-        for (const part of args.split(" ")) {
-            if (this.helpArgs.includes(part)) {
-                return true;
-            }
-        }
-
-        return false;
+        return args.split(" ").some(part => this.helpArgs.includes(part));
     }
 
     getHelpText(discord = false) {
@@ -141,7 +129,7 @@ class TextCommand extends BaseCommand {
     getArgsHelp(args, discord = false) {
         const prefix = this.prefix + (this.isSubcmd ? this.parent + " " : "");
 
-        const formattedName = discord ? bold(this.name) : this.name,
+        const formattedName = discord ? bold(escapeMarkdown(this.name)) : this.name,
             formattedArgs = Util.empty(args) ? "" : " " + (discord ? inlineCode(args) : args);
 
         return `${prefix}${formattedName}${formattedArgs}`;
@@ -174,7 +162,7 @@ class TextCommand extends BaseCommand {
     }
 
     _formatSubcmdHelp(subcmds, discord) {
-        const formattedName = discord ? bold(this.name) : this.name,
+        const formattedName = discord ? bold(escapeMarkdown(this.name)) : this.name,
             formattedSubcmds = discord ? inlineCode(subcmds) : subcmds;
 
         return `${this.prefix}${formattedName} ${formattedSubcmds}`;

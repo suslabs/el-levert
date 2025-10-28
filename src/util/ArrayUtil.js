@@ -44,6 +44,13 @@ const ArrayUtil = Object.freeze({
         }, new Map());
     },
 
+    hasDuplicates: (array, callback) => {
+        const getValue = ArrayUtil._valueFunc(callback),
+            values = array.map(item => getValue(item));
+
+        return new Set(values) === array.length;
+    },
+
     unique: (array, callback) => {
         const getValue = ArrayUtil._valueFunc(callback),
             seen = new Set();

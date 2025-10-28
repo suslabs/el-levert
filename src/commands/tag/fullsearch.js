@@ -19,7 +19,7 @@ function getWordIndices(body, ranges) {
 
         matches.forEach((match, j) => {
             const wordStart = match.index,
-                wordEnd = wordStart + match[0].length;
+                wordEnd = wordStart + Util.first(match).length;
 
             if (start < wordEnd && end > wordStart) {
                 wordInds.add(j);
@@ -28,7 +28,7 @@ function getWordIndices(body, ranges) {
         });
     }
 
-    const words = matches.map(match => match[0]);
+    const words = matches.map(match => Util.first(match));
     return [words, Array.from(wordInds)];
 }
 
@@ -85,8 +85,6 @@ function formatSnippet(words, inds, n, discord) {
 
 function formatSearchResults(results, ranges, n, discord) {
     const format = results.map((tag, i) => {
-        const idx = Util.single(results) ? "-" : `${i + 1}.`;
-
         let snippet = "";
 
         if (Util.empty(tag.body)) {
@@ -95,6 +93,8 @@ function formatSearchResults(results, ranges, n, discord) {
             const [words, wordInds] = getWordIndices(tag.body, ranges[i]);
             snippet = formatSnippet(words, wordInds, n, discord);
         }
+
+        const idx = Util.single(results) ? "-" : `${i + 1}.`;
 
         if (discord) {
             const cmd = `${this.prefix}${this.parentCmd.aliases[0]}`;

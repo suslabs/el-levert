@@ -223,7 +223,8 @@ class TagManager extends DBManager {
         }
 
         const newTag = new Tag({
-            ...tag,
+            name: tag.name,
+            owner: tag.owner,
             body,
             type
         });
@@ -644,7 +645,7 @@ class TagManager extends DBManager {
         return { body, isScript };
     }
 
-    static _scriptContentTypes = ["application/javascript"];
+    static _scriptContentTypes = ["application/javascript", "text/javascript"];
     static _fileContentTypes = this._scriptContentTypes.concat(["text/plain"]);
 
     async _addPrepared(tag) {

@@ -48,37 +48,41 @@ let DiscordUtil = {
     },
 
     msgUrlRegex:
-        /(?:(https?:)\/\/)?(?:(www|ptb|canary)\.)?discord\.com\/channels\/(?<sv_id>\d{18,19}|@me)\/(?<ch_id>\d{18,19})(?:\/(?<msg_id>\d{18,19}))/g,
+        /(?:(https?:)\/\/)?(?:(www|ptb|canary)\.)?discord\.com\/channels\/(?<sv_id>\d{18,19}|@me)\/(?<ch_id>\d{18,19})(?:\/(?<msg_id>\d{18,19}))/gi,
+
+    _msgUrlMatchResult: match => {
+        if (!match) {
+            return null;
+        }
+
+        const groups = match.groups;
+
+        return {
+            raw: match[0],
+
+            protocol: match[1] ?? "",
+            subdomain: match[2] ?? "",
+
+            sv_id: groups.sv_id,
+            ch_id: groups.ch_id,
+            msg_id: groups.msg_id
+        };
+    },
+
+    parseMessageUrl: url => {
+        const match = url.match(DiscordUtil.singleMsgRegex);
+        return DiscordUtil._msgUrlMatchResult(match);
+    },
 
     findMessageUrls: str => {
         const matches = Array.from(str.matchAll(DiscordUtil.msgUrlRegex));
-
-        return matches.map(match => {
-            const groups = match.groups;
-
-            return {
-                raw: match[0],
-
-                protocol: match[1] ?? "",
-                subdomain: match[2] ?? "",
-
-                sv_id: groups.sv_id,
-                ch_id: groups.ch_id,
-                msg_id: groups.msg_id
-            };
-        });
+        return matches.map(match => DiscordUtil._msgUrlMatchResult(match));
     },
 
     attachUrlRegex:
-        /^(?<prefix>(?:(https?:)\/\/)?(cdn|media)\.discordapp\.(com|net)\/attachments\/(?<sv_id>\d+)\/(?<ch_id>\d+)\/(?<filename>.+?)(?<ext>\.[^.?]+)?(?=\?|$))\??(?:ex=(?<ex>[0-9a-f]+)&is=(?<is>[0-9a-f]+)&hm=(?<hm>[0-9a-f]+))?.*$/,
+        /(?<prefix>(?:(https?:)\/\/)?(cdn|media)\.discordapp\.(com|net)\/attachments\/(?<sv_id>\d+)\/(?<ch_id>\d+)\/(?<filename>.+?)(?<ext>\.\w+)?)(?:\?(?:ex=(?<ex>[0-9a-f]+)&is=(?<is>[0-9a-f]+)&hm=(?<hm>[0-9a-f]+))?)?(?=\s|$|\p{P})/giu,
 
-    parseAttachmentUrl: url => {
-        const match = url.match(DiscordUtil.attachUrlRegex);
-
-        if (!match) {
-            return;
-        }
-
+    _attachUrlMatchResult: match => {
         const groups = match.groups;
 
         const filename = groups.filename,
@@ -102,6 +106,16 @@ let DiscordUtil = {
             is: groups.is,
             hm: groups.hm
         };
+    },
+
+    parseAttachmentUrl: url => {
+        const match = url.match(DiscordUtil.singleAttachRegex);
+        return DiscordUtil._attachUrlMatchResult(match);
+    },
+
+    findAttachmentUrls: str => {
+        const matches = Array.from(str.matchAll(DiscordUtil.attachUrlRegex));
+        return matches.map(match => DiscordUtil._attachUrlMatchResult(match));
     },
 
     discordEpoch: 1420070400000,
@@ -518,6 +532,8 @@ let DiscordUtil = {
 
 {
     DiscordUtil.parseScriptRegex = new RegExp(`^${DiscordUtil.codeblockRegex.source}$`);
+    DiscordUtil.singleMsgRegex = new RegExp(`^${DiscordUtil.msgUrlRegex.source}$`, "i");
+    DiscordUtil.singleAttachRegex = new RegExp(`^${DiscordUtil.attachUrlRegex.source}$`, "iu");
 }
 
 DiscordUtil = Object.freeze(DiscordUtil);

@@ -1,3 +1,5 @@
+import { escapeMarkdown } from "discord.js";
+
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
@@ -52,12 +54,12 @@ export default {
 
             switch (err.message) {
                 case "Group already exists":
-                    return `:warning: Group **${g_name}** already exists.`;
+                    return `:warning: Group **${escapeMarkdown(g_name)}** already exists.`;
                 default:
                     return `:warning: ${err.message}.`;
             }
         }
 
-        return `:white_check_mark: Added group **${g_name}** with level **${level}**.`;
+        return `:white_check_mark: Added group **${escapeMarkdown(g_name)}** with level **${level}**.`;
     }
 };

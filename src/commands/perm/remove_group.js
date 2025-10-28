@@ -1,3 +1,5 @@
+import { escapeMarkdown } from "discord.js";
+
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
@@ -44,6 +46,6 @@ export default {
             return `:warning: ${err.message}.`;
         }
 
-        return `:white_check_mark: Removed group **${g_name}** and all of its users.`;
+        return `:white_check_mark: Removed group **${escapeMarkdown(g_name)}** and all of its users.`;
     }
 };

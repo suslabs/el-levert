@@ -1,3 +1,5 @@
+import { escapeMarkdown } from "discord.js";
+
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
@@ -16,7 +18,7 @@ export default {
         let [t_name, n_name] = ParserUtil.splitArgs(args, true);
 
         if (this.matchesSubcmd(t_name)) {
-            return `:police_car: **${t_name}** is a __command__, not a __tag__. You can't manipulate commands.`;
+            return `:police_car: **${escapeMarkdown(t_name)}** is a __command__, not a __tag__. You can't manipulate commands.`;
         }
 
         {
@@ -36,7 +38,7 @@ export default {
         const tag = await getClient().tagManager.fetch(t_name);
 
         if (tag === null) {
-            return `:warning: Tag **${t_name}** doesn't exist.`;
+            return `:warning: Tag **${escapeMarkdown(t_name)}** doesn't exist.`;
         }
 
         if (tag.owner !== msg.author.id && !getClient().permManager.allowed(perm, "mod")) {
@@ -60,13 +62,13 @@ export default {
                     const tag = err.ref,
                         owner = await tag.getOwner();
 
-                    const out = `:warning: Tag **${tag.name}** already exists,`;
+                    const out = `:warning: Tag **${escapeMarkdown(tag.name)}** already exists,`;
                     return out + (owner === "not found" ? " tag owner not found." : ` and is owned by \`${owner}\`.`);
                 default:
                     return `:warning: ${err.message}.`;
             }
         }
 
-        return `:white_check_mark: Renamed tag **${t_name}** to **${n_name}**.`;
+        return `:white_check_mark: Renamed tag **${escapeMarkdown(t_name)}** to **${escapeMarkdown(n_name)}**.`;
     }
 };

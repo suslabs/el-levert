@@ -1,3 +1,5 @@
+import { escapeMarkdown } from "discord.js";
+
 import { getClient, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
@@ -143,7 +145,7 @@ export default {
         let tag = await getClient().tagManager.fetch(t_name);
 
         if (tag === null) {
-            let out = `:warning: Tag **${t_name}** doesn't exist.`,
+            let out = `:warning: Tag **${escapeMarkdown(t_name)}** doesn't exist.`,
                 { results: find } = await getClient().tagManager.search(t_name, 5, 0.3);
 
             if (!Util.empty(find)) {
@@ -164,7 +166,8 @@ export default {
 
                 switch (err.message) {
                     case "Tag recursion detected":
-                        return `:warning: Epic recursion fail: **${err.ref.join("** -> **")}**`;
+                        const namesFormat = `**${err.ref.map(name => escapeMarkdown(name)).join("** -> **")}**`;
+                        return `:warning: Epic recursion fail: ${namesFormat}`;
                     case "Hop not found":
                         return `:warning: Tag **${err.ref}** doesn't exist.`;
                     default:

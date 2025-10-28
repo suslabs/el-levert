@@ -1,3 +1,5 @@
+import { escapeMarkdown } from "discord.js";
+
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
@@ -17,7 +19,7 @@ export default {
         let [t_name, t_args] = ParserUtil.splitArgs(args, true);
 
         if (this.matchesSubcmd(t_name)) {
-            return `:police_car: **${t_name}** is a __command__, not a __tag__. You can't manipulate commands.`;
+            return `:police_car: **${escapeMarkdown(t_name)}** is a __command__, not a __tag__. You can't manipulate commands.`;
         }
 
         {
@@ -57,13 +59,13 @@ export default {
                     const tag = err.ref,
                         owner = await tag.getOwner();
 
-                    const out = `:warning: Tag **${t_name}** already exists,`;
+                    const out = `:warning: Tag **${escapeMarkdown(t_name)}** already exists,`;
                     return out + (owner === "not found" ? " tag owner not found." : ` and is owned by \`${owner}\`.`);
                 default:
                     return `:warning: ${err.message}.`;
             }
         }
 
-        return `:white_check_mark: Created tag **${t_name}**.`;
+        return `:white_check_mark: Created tag **${escapeMarkdown(t_name)}**.`;
     }
 };

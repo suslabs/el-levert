@@ -1,3 +1,5 @@
+import { escapeMarkdown } from "discord.js";
+
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
@@ -17,7 +19,7 @@ export default {
             [a_name, a_args] = ParserUtil.splitArgs(t_args, true);
 
         if (this.matchesSubcmd(t_name)) {
-            return `:police_car: **${t_name}** is a __command__, not a __tag__. You can't manipulate commands.`;
+            return `:police_car: **${escapeMarkdown(t_name)}** is a __command__, not a __tag__. You can't manipulate commands.`;
         }
 
         if (Util.empty(a_name)) {
@@ -46,7 +48,7 @@ export default {
         const a_tag = await getClient().tagManager.fetch(a_name);
 
         if (!a_tag) {
-            return `:warning: Tag **${a_name}** doesn't exist.`;
+            return `:warning: Tag **${escapeMarkdown(a_name)}** doesn't exist.`;
         }
 
         const createOptions = {
@@ -68,7 +70,7 @@ export default {
             return `:warning: ${err.message}.`;
         }
 
-        const out = created ? `Created tag **${t_name}** and aliased` : "Aliased";
-        return `:white_check_mark: ${out} tag **${t_name}** to **${a_name}**.`;
+        const out = created ? `Created tag **${escapeMarkdown(t_name)}** and aliased` : "Aliased";
+        return `:white_check_mark: ${out} tag **${escapeMarkdown(t_name)}** to **${escapeMarkdown(a_name)}**.`;
     }
 };

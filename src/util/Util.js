@@ -255,6 +255,24 @@ let Util = {
         return Util.stripSpaces(camel);
     },
 
+    hasDuplicates: (str, sep = "") => {
+        if (str.length < 1) {
+            return false;
+        }
+
+        const split = sep === "" ? str : str.split(sep);
+        return new Set(split).length === split.length;
+    },
+
+    unique: (str, sep = "") => {
+        if (str.length < 1) {
+            return str;
+        }
+
+        const split = sep === "" ? str : str.split(sep);
+        return [...new Set(split)].join(sep);
+    },
+
     removeStringRange: (str, i, length = 1, end = false) => {
         const last = end ? length : i + length;
         return str.slice(0, i) + str.slice(last);

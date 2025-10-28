@@ -159,10 +159,14 @@ class PreviewHandler extends MessageHandler {
             if (err.name !== "HandlerError") {
                 await this.replyWithError(msg, err, "preview", "generating preview");
                 return true;
+            } else if (["Invalid input", "not found"].some(str => err.message.includes(str))) {
+                logGenerateCancelled(err.message);
+                return false;
             }
 
-            logGenerateCancelled(err.message);
-            return false;
+            getLogger().info(`${err.message}.`);
+            await this.reply(msg, `:warning: ${err.message}.`);
+            return true;
         }
 
         logPreviewSending(preview);

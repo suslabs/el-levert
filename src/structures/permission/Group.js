@@ -1,4 +1,4 @@
-import { bold } from "discord.js";
+import { escapeMarkdown, bold } from "discord.js";
 
 import Util from "../../util/Util.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
@@ -43,22 +43,24 @@ class Group {
         }
 
         if (Util.empty(this.users)) {
-            userFormat = `${spaces}${discord ? "- " : ""}None`;
+            const idx = discord ? "- " : "";
+            userFormat = `${spaces}${idx}None`;
         } else {
             userFormat = this.users
                 .map((user, i) => {
-                    const name = user.format(discord);
-                    return `${spaces}${discord ? "-" : `${i + 1}.`} ${name}`;
+                    const idx = discord ? "-" : `${i + 1}.`,
+                        name = user.format(discord);
+
+                    return `${spaces}${idx} ${name}`;
                 })
                 .join("\n");
         }
 
-        const format = `${title}\n${userFormat}`;
-        return format;
+        return `${title}\n${userFormat}`;
     }
 
     format(full = false, discord = false) {
-        const formattedName = discord ? bold(this.name) : `"${this.name}"`,
+        const formattedName = discord ? bold(escapeMarkdown(this.name)) : `"${this.name}"`,
             formattedLevel = discord ? bold(this.level) : this.level;
 
         if (full) {

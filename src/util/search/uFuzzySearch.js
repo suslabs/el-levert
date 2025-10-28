@@ -20,7 +20,7 @@ function uFuzzySearch(haystack, needle, options = {}) {
     const searchHaystack = searchKey == null ? haystack : haystack.map(x => x[searchKey]),
         inds = uf.filter(searchHaystack, needle);
 
-    if (inds === null || inds.length === 0) {
+    if (inds === null || inds.length < 1) {
         return outputResult([], [], false);
     }
 

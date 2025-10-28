@@ -1,4 +1,4 @@
-import { TimestampStyles, time, bold } from "discord.js";
+import { escapeMarkdown, time, TimestampStyles, bold } from "discord.js";
 
 import Util from "../util/Util.js";
 import ObjectUtil from "../util/ObjectUtil.js";
@@ -49,7 +49,7 @@ class Reminder {
         let format = this.getTimestamp(discord);
 
         if (this.hasMessage) {
-            const formattedMsg = discord ? bold(this.msg) : this.msg;
+            const formattedMsg = discord ? bold(escapeMarkdown(this.msg)) : this.msg;
             format += ` with the message: ${formattedMsg}`;
         }
 

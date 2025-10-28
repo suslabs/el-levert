@@ -1,7 +1,11 @@
+import { escapeMarkdown } from "discord.js";
+
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import ParserUtil from "../../util/commands/ParserUtil.js";
+
+const unchangedArgs = ["", "unchanged"];
 
 export default {
     name: "update_group",
@@ -29,12 +33,12 @@ export default {
         const group = await getClient().permManager.fetchGroup(g_name);
 
         if (group === null) {
-            return `:warning: Group **${g_name}** doesn't exist.`;
+            return `:warning: Group **${escapeMarkdown(g_name)}** doesn't exist.`;
         }
 
         let [newName, newLevel] = ParserUtil.splitArgs(g_data);
 
-        if (Util.empty(newName) || newName === "unchanged") {
+        if (unchangedArgs.includes(newName)) {
             newName = null;
         } else {
             let err;
@@ -45,7 +49,7 @@ export default {
             }
         }
 
-        if (Util.empty(newLevel) || newLevel === "unchanged") {
+        if (unchangedArgs.includes(newLevel)) {
             newLevel = null;
         } else {
             newLevel = Util.parseInt(newLevel);
@@ -72,12 +76,12 @@ export default {
 
             switch (err.message) {
                 case "Group already exists":
-                    return `:warning: Group **${g_name}** already exists.`;
+                    return `:warning: Group **${escapeMarkdown(g_name)}** already exists.`;
                 default:
                     return `:warning: ${err.message}.`;
             }
         }
 
-        return `:white_check_mark: Updated group **${g_name}**.`;
+        return `:white_check_mark: Updated group **${escapeMarkdown(g_name)}**.`;
     }
 };

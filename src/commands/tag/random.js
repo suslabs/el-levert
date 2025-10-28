@@ -31,6 +31,7 @@ export default {
             return `:warning: **No** tags matching the prefix were found.`;
         }
 
-        return await this.parentCmd.handler(`${name} ${t_args}`, msg);
+        const cmdArgs = [name, t_args].join(" ");
+        return await this.parentCmd.handler(cmdArgs, msg);
     }
 };

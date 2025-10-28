@@ -1,3 +1,5 @@
+import { escapeMarkdown } from "discord.js";
+
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
@@ -28,7 +30,7 @@ export default {
         const group = await getClient().permManager.fetchGroup(g_name);
 
         if (group === null) {
-            return `:warning: Group **${g_name}** doesn't exist.`;
+            return `:warning: Group **${escapeMarkdown(g_name)}** doesn't exist.`;
         } else if (!getClient().permManager.allowed(perm, group.level)) {
             return `:warning: Can't remove a user (\`${find.user.username}\` \`${find.user.id}\`) from a group with a higher level your own. (**${group.level}** > **${perm}**)`;
         }
@@ -52,9 +54,9 @@ export default {
         }
 
         if (removed) {
-            return `:white_check_mark: Removed user \`${find.user.username}\` (\`${find.user.id}\`) from group **${g_name}**.`;
+            return `:white_check_mark: Removed user \`${find.user.username}\` (\`${find.user.id}\`) from group **${escapeMarkdown(g_name)}**.`;
         } else {
-            return `:warning: User \`${find.user.username}\` (\`${find.user.id}\`) is not in group **${g_name}**.`;
+            return `:warning: User \`${find.user.username}\` (\`${find.user.id}\`) is not in group **${escapeMarkdown(g_name)}**.`;
         }
     }
 };

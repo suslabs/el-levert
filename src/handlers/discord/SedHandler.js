@@ -1,5 +1,5 @@
 import RE2 from "re2";
-import { MessageType, EmbedBuilder, italic } from "discord.js";
+import { MessageType, EmbedBuilder, bold } from "discord.js";
 
 import MessageHandler from "./MessageHandler.js";
 import MessageLimitTypes from "./MessageLimitTypes.js";
@@ -20,14 +20,18 @@ function logUsage(msg) {
     );
 }
 
-function logSending(sed) {
+function logGenerateCancelled(reason) {
+    getLogger().info(`Generating sed cancelled: ${reason}.`);
+}
+
+function logSedSending(sed) {
     if (getLogger().isDebugEnabled()) {
         const text = DiscordUtil.getEmbedData(sed).description;
         getLogger().debug(`Sending replaced message:${LoggerUtil.formatLog(text)}`);
     }
 }
 
-function logGenTime(t1) {
+function logGenerateTime(t1) {
     if (getLogger().isDebugEnabled()) {
         const t2 = performance.now(),
             elapsed = Util.timeDelta(t2, t1);
@@ -47,7 +51,8 @@ class SedHandler extends MessageHandler {
     static $name = "sedHandler";
 
     static sedUsage = "**Usage:** `sed/regex/replace/flags (optional)`";
-    static sedRegex = /^sed\/(?<regex_str>.+?)\/(?<replace>[^/]*)\/?(?<flags_str>.{1,2})?/;
+    static sedRegex =
+        /(?:^sed\/|\s+\/)(?<regex_str>(?:\\.|[^/])+)\/(?<replace>(?:\\.|[^/])+)\/?(?<flags_str>(?:\\.|[^/])+?)?(?=\s|$)/gi;
     static defaultFlags = "i";
 
     constructor(enabled) {
@@ -59,59 +64,86 @@ class SedHandler extends MessageHandler {
             return false;
         }
 
-        return SedHandler.sedRegex.test(str);
+        return str.toLowerCase().startsWith("sed/");
     }
 
     async generateSed(msg, str) {
         logUsage(msg);
         const t1 = performance.now();
 
-        const isReply = msg.type === MessageType.Reply,
-            match = str.match(SedHandler.sedRegex);
+        const matches = Array.from(str.matchAll(SedHandler.sedRegex));
 
-        if (!match) {
+        if (Util.empty(matches)) {
             throw new HandlerError("Invalid input string", str);
-        } else if (match.length < 3) {
-            throw new HandlerError("Invalid regex args", str);
         }
 
-        const { body: regexStr } = ParserUtil.parseScript(match.groups.regex_str ?? ""),
-            { body: replace } = ParserUtil.parseScript(match.groups.replace ?? ""),
-            { body: flagsStr } = ParserUtil.parseScript(match.groups.flags_str ?? "");
+        const singleRule = Util.single(matches),
+            expIdx = i => (singleRule ? undefined : i);
 
-        if (!RegexUtil.flagsRegex.test(flagsStr)) {
-            throw new HandlerError("Invalid regex flags", { flagsStr });
-        }
-
-        let regex, sedMsg, content;
-
-        try {
-            regex = new RE2(regexStr, flagsStr);
-        } catch (err) {
-            if (err instanceof SyntaxError) {
-                throw new HandlerError("Invalid regex or flags", { regexStr, flagsStr });
+        const rules = matches.map((match, i) => {
+            if (!match.groups) {
+                throw new HandlerError("Invalid regex args", {
+                    i: expIdx(i),
+                    str: Util.first(match)
+                });
             }
 
-            throw err;
-        }
+            let { regex_str: regexStr, replace, flags_str: flagsStr } = match.groups;
+            regexStr = ParserUtil.parseScript(regexStr || "").body.replaceAll("\\/", "/");
+            replace = ParserUtil.parseScript(replace || "").body.replaceAll("\\/", "/");
+            flagsStr = ParserUtil.parseScript(flagsStr || SedHandler.defaultFlags).body.toLowerCase();
 
-        if (isReply) {
+            if (!RegexUtil.validFlags(flagsStr)) {
+                throw new HandlerError("Invalid regex flags", {
+                    i: expIdx(i),
+                    flagsStr
+                });
+            }
+
+            try {
+                const regex = new RE2(regexStr, flagsStr);
+                return [regex, replace];
+            } catch (err) {
+                if (err instanceof SyntaxError) {
+                    throw new HandlerError("Invalid regex or flags", {
+                        i: expIdx(i),
+                        regexStr,
+                        flagsStr
+                    });
+                }
+
+                throw err;
+            }
+        });
+
+        const mergedRegex = singleRule ? Util.first(rules)[0] : RegexUtil.getMergedRegex(rules.map(rule => rule[0]));
+
+        let sedMsg, content;
+
+        if (msg.type === MessageType.Reply) {
             sedMsg = await getClient().fetchMessage(msg.channel.id, msg.reference.messageId);
             content = sedMsg.content;
 
-            if (!regex.test(content)) {
-                throw new HandlerError("No matching text found", { regex, content });
+            if (!mergedRegex.test(content)) {
+                throw new HandlerError("No matching text found", {
+                    regex: mergedRegex,
+                    content
+                });
             }
         } else {
-            sedMsg = await this._fetchMatch(msg.channel.id, regex, msg.id);
+            sedMsg = await this._fetchMatch(msg.channel.id, mergedRegex, msg.id);
             content = sedMsg?.content;
 
-            if (content == null) {
-                throw new HandlerError("No matching message found", { regex });
+            if (typeof content === "undefined") {
+                throw new HandlerError("No matching message found", {
+                    regex: mergedRegex
+                });
             }
         }
 
-        const replacedContent = content.replace(regex, replace ?? "");
+        const replacedContent = singleRule
+            ? content.replace(...Util.first(rules))
+            : RegexUtil.multipleReplace(content, ...rules);
 
         const username = sedMsg.author.displayName,
             avatar = sedMsg.author.displayAvatarURL(),
@@ -131,7 +163,7 @@ class SedHandler extends MessageHandler {
                 text: `From ${channel}`
             });
 
-        logGenTime(t1);
+        logGenerateTime(t1);
         return embed;
     }
 
@@ -141,7 +173,6 @@ class SedHandler extends MessageHandler {
         }
 
         const t1 = performance.now();
-        this._sendTyping(msg);
 
         let sed = null;
 
@@ -149,21 +180,29 @@ class SedHandler extends MessageHandler {
             sed = await this.generateSed(msg, msg.content);
         } catch (err) {
             if (err.name !== "HandlerError") {
-                const out = `generating ${italic(sed)} replace`;
-                await this.replyWithError(msg, err, "preview", out);
+                const out = `generating ${bold("sed")} replace`;
+                await this.replyWithError(msg, err, "sed", out);
 
                 return true;
+            } else if (err.message.startsWith("Invalid input")) {
+                logGenerateCancelled(err.message);
+                return false;
             }
 
-            const emoji = err.message.startsWith("No matching") ? ":no_entry_sign:" : ":warning:";
+            getLogger().info(`${err.message}.`);
 
-            getLogger().info(err.message + ".");
-            await this.reply(msg, `${emoji} ${err.message}.\n${SedHandler.sedUsage}`);
+            const emoji = err.message.startsWith("No matching") ? ":no_entry_sign:" : ":warning:",
+                errMsg = err.message + (err.ref?.i ? ` for expression ${bold(err.ref.i + 1)}.` : ".");
 
+            await this.reply(msg, `${emoji} ${errMsg}\n${SedHandler.sedUsage}`);
             return true;
         }
 
-        logSending(sed);
+        logSedSending(sed);
+
+        this._sendTyping(msg);
+        await this._addDelay(0);
+
         await this.reply(
             msg,
             {

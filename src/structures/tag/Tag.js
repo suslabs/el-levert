@@ -1,4 +1,4 @@
-import { bold, codeBlock } from "discord.js";
+import { escapeMarkdown, bold, codeBlock } from "discord.js";
 
 import { getClient } from "../../LevertClient.js";
 
@@ -307,8 +307,8 @@ class Tag {
         }
 
         if (this.isAlias) {
-            const formattedName = discord ? bold(this.name) : this.name,
-                formattedAliasName = discord ? bold(this.aliasName) : this.aliasName,
+            const formattedName = discord ? bold(escapeMarkdown(this.name)) : this.name,
+                formattedAliasName = discord ? bold(escapeMarkdown(this.aliasName)) : this.aliasName,
                 header = `${formattedName} is an alias of ${formattedAliasName}.`;
 
             if (Util.empty(this.args)) {

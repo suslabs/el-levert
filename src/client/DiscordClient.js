@@ -387,7 +387,7 @@ class DiscordClient {
     }
 
     async fetchMessages(ch_id, options = {}, fetchOptions = {}) {
-        if (!TypeTester.isObject(options) || !TypeTester.isObject(fetchOptions)) {
+        if (![options, fetchOptions].every(obj => TypeTester.isObject(obj))) {
             throw new ClientError("Invalid options provided");
         }
 
@@ -457,7 +457,7 @@ class DiscordClient {
     async findUsers(query, options = {}, fetchOptions = {}) {
         if (query == null) {
             throw new ClientError("No query provided");
-        } else if (!TypeTester.isObject(options) || !TypeTester.isObject(fetchOptions)) {
+        } else if (![options, fetchOptions].every(obj => TypeTester.isObject(obj))) {
             throw new ClientError("Invalid options provided");
         }
 
