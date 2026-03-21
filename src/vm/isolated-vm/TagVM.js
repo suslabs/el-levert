@@ -144,13 +144,17 @@ class TagVM extends VM {
 
         if (out.file != null) {
             let { data, name } = out.file;
-            delete out.file;
 
             if (TypeTester.isObject(data)) {
                 data = Object.values(data);
             }
 
-            Object.assign(out, DiscordUtil.getFileAttach(data, name));
+            const { file: _, ...outData } = out;
+
+            return {
+                ...outData,
+                ...DiscordUtil.getFileAttach(data, name)
+            };
         }
 
         return out;

@@ -143,12 +143,9 @@ class BaseDiscordTransport extends Transport {
 
         const out = {
             content,
-            embeds: [embed]
+            embeds: [embed],
+            ...(Util.empty(fileContent) ? {} : DiscordUtil.getFileAttach(fileContent, "log.txt"))
         };
-
-        if (!Util.empty(fileContent)) {
-            Object.assign(out, DiscordUtil.getFileAttach(fileContent, "log.txt"));
-        }
 
         return out;
     }

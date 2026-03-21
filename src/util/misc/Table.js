@@ -331,7 +331,7 @@ class Table {
 
 function drawTable(columns, rows, style, options) {
     Object.keys(rows).forEach(id => {
-        rows[id] = Util.guaranteeArray(rows[id]);
+        rows[id] = ArrayUtil.guaranteeArray(rows[id]);
     });
 
     const table = new Table(columns, rows, style, options);

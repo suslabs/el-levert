@@ -66,18 +66,13 @@ function getTransports(config) {
 }
 
 function getDefaultMeta(config) {
-    let meta = {};
-
-    if (config.meta != null) {
-        meta = config.meta;
-    }
-
-    if (config.name != null) {
-        meta.service = config.name;
-    }
+    const meta = {
+        ...(config.meta ?? {}),
+        ...(config.name == null ? {} : { service: config.name })
+    };
 
     if (Object.keys(meta).length < 1) {
-        meta = undefined;
+        return undefined;
     }
 
     return meta;

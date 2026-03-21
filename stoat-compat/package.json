@@ -1,0 +1,6 @@
+{
+    "name": "discord.js",
+    "main": "./discord.js",
+    "type": "module",
+    "private": true
+}

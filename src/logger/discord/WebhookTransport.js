@@ -37,7 +37,7 @@ class WebhookTransport extends BaseDiscordTransport {
         this.webhook.destroy();
     }
 
-    static _urlRegex = /^https:\/\/discord\.com\/api\/webhooks\/(?<id>\d+)\/(?<token>[\w_-]+)$/i;
+    static _urlRegex = /^https?:\/\/[^/]+(?:\/api)?\/webhooks\/(?<id>[A-Za-z0-9]+)\/(?<token>[A-Za-z0-9_-]+)$/i;
     static _disableCodes = [RESTJSONErrorCodes.InvalidWebhookToken, RESTJSONErrorCodes.UnknownWebhook];
 
     _getWebhook(url) {
@@ -52,7 +52,7 @@ class WebhookTransport extends BaseDiscordTransport {
         }
 
         const { id, token } = match.groups,
-            webhook = new WebhookClient({ id, token });
+            webhook = new WebhookClient({ id, token, client: this.client });
 
         this.webhookUrl = url;
         this.webhookId = id;

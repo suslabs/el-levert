@@ -668,12 +668,8 @@ class LevertClient extends DiscordClient {
         const vmArgs = {
             tagVM: [this.config.enableEval],
             tagVM2: [this.config.enableVM2],
-            externalVM: false
+            externalVM: this.config.enableOtherLangs ? [] : false
         };
-
-        if (this.config.enableOtherLangs) {
-            vmArgs.externalVM = [];
-        }
 
         this.loadComponents("VMs", VMs, vmArgs, {
             showLoadingMessages: false

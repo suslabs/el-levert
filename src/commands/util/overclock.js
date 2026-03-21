@@ -112,23 +112,17 @@ export default {
         const columns = {
                 eu: "EU/t",
                 time: "Time",
-                tier: "Voltage"
+                tier: "Voltage",
+                ...(hasChance ? { chance: "Chance" } : {}),
+                ...(hasParallel ? { parallel: "Parallel" } : {})
             },
             rows = {
                 eu: outputs.map(row => Util.formatNumber(row.eu, 3) + " EU/t"),
                 time: outputs.map(row => OCUtil.formatDuration(row.time)),
-                tier: outputs.map(row => OCUtil.getTierName(row.tier))
+                tier: outputs.map(row => OCUtil.getTierName(row.tier)),
+                ...(hasChance ? { chance: outputs.map(row => Util.round(row.chance, 3) + "%") } : {}),
+                ...(hasParallel ? { parallel: outputs.map(row => row.parallel + "x") } : {})
             };
-
-        if (hasChance) {
-            columns.chance = "Chance";
-            rows.chance = outputs.map(row => Util.round(row.chance, 3) + "%");
-        }
-
-        if (hasParallel) {
-            columns.parallel = "Parallel";
-            rows.parallel = outputs.map(row => row.parallel + "x");
-        }
 
         const table = drawTable(columns, rows, "light", {
             sideLines: false

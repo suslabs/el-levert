@@ -208,16 +208,18 @@ const VMUtil = {
                     throw new Error(`Request failed with status code ${resStatus}`);
                 }
             case VMHttpErrorTypes.value:
-                resData.ok = res?.status >= 100 && res?.status < 300;
-                resData.url = res?.request?.res?.responseUrl ?? reqConfig?.url ?? null;
-
-                if (reqError != null) {
-                    resData.error = {
-                        message: reqError?.message ?? String(reqError)
-                    };
-                }
-
-                return resData;
+                return {
+                    ...resData,
+                    ok: res?.status >= 100 && res?.status < 300,
+                    url: res?.request?.res?.responseUrl ?? reqConfig?.url ?? null,
+                    ...(reqError == null
+                        ? {}
+                        : {
+                              error: {
+                                  message: reqError?.message ?? String(reqError)
+                              }
+                          })
+                };
         }
     },
 

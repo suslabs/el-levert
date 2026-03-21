@@ -385,7 +385,12 @@ const Stoik = Object.freeze({
             right = Molecule.fromElement(right[1]);
         }
 
-        (opType === TokenType.Subtract ? left.subtractMut : left.addMut)(right);
+        if (opType === TokenType.Subtract) {
+            left.subtractMut(right);
+        } else {
+            left.addMut(right);
+        }
+
         opStack.push(left);
     }
 });

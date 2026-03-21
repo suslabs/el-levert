@@ -18,6 +18,7 @@ let DiscordUtil = {
     embedCharLimit: 4096,
 
     userIdRegex: /\d{17,20}/g,
+    // userIdRegex: /[A-Za-z0-9]{24,30}/g,
 
     findUserIds: str => {
         const matches = Array.from(str.matchAll(DiscordUtil.userIdRegex));
@@ -25,6 +26,7 @@ let DiscordUtil = {
     },
 
     mentionRegex: /<@(\d{17,20})>/g,
+    // mentionRegex: /<@([A-Za-z0-9]{24,30})>/g,
 
     findMentions: str => {
         const matches = Array.from(str.matchAll(DiscordUtil.mentionRegex));
