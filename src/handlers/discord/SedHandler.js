@@ -52,7 +52,7 @@ class SedHandler extends MessageHandler {
 
     static sedUsage = "**Usage:** `sed/regex/replace/flags (optional)`";
     static sedRegex =
-        /(?:^sed\/|\s+\/)(?<regex_str>(?:\\.|[^/])+)\/(?<replace>(?:\\.|[^/])+)\/?(?<flags_str>(?:\\.|[^/])+?)?(?=\s|$)/gi;
+        /(?:^sed\/|\s+\/)(?<regex_str>(?:\\.|[^/])+)\/(?<replace>(?:\\.|[^/])*)\/?(?<flags_str>(?:\\.|[^/])+?)?(?=\s|$)/gi;
     static defaultFlags = "i";
 
     constructor(enabled) {
