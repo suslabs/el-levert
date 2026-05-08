@@ -92,7 +92,7 @@ class ReactionHandler extends Handler {
 
         const codeblockRanges = DiscordUtil.findCodeblocks(content);
 
-        for (const range of codeblockRanges) {
+        for (const range of codeblockRanges.reverse()) {
             content = Util.removeStringRange(content, ...range, true);
         }
 
@@ -121,15 +121,15 @@ class ReactionHandler extends Handler {
     static _emojiExpLeft = new RegExp(`[()]+[${RegexUtil.escapeCharClass(this.emojiChars)}]`, "g");
 
     static _getWordList(funnyWords) {
-        return funnyWords.flatMap(elem => [].concat(elem.word ?? elem.words));
+        return funnyWords.flatMap(elem => ArrayUtil.guaranteeArray(elem.word ?? elem.words));
     }
 
     static _getReactMap(funnyWords) {
         const reactMap = new Map();
 
         for (const elem of funnyWords) {
-            const words = [].concat(elem.word ?? elem.words),
-                emojis = [].concat(elem.emoji ?? elem.emojis);
+            const words = ArrayUtil.guaranteeArray(elem.word ?? elem.words),
+                emojis = ArrayUtil.guaranteeArray(elem.emoji ?? elem.emojis);
 
             words.forEach(word => reactMap.set(word, emojis));
         }
@@ -278,7 +278,7 @@ class ReactionHandler extends Handler {
             samples.forEach(emoji => typeof emoji !== "undefined" && emojis.add(emoji));
         }
 
-        await Promise.all(emojis.map(emoji => this.react(msg, emoji)));
+        await Promise.all(Array.from(emojis, emoji => this.react(msg, emoji)));
     }
 
     async _funnyReact(content, msg) {

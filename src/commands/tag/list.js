@@ -59,10 +59,8 @@ export default {
             ...DiscordUtil.getFileAttach(format)
         };
 
-        out.content =
-            ":information_source: " + user === msg.author
-                ? "You have"
-                : `User \`${user.username}\` has` + " the following tags:";
+        const subject = user === msg.author ? "You have" : `User \`${user.username}\` has`;
+        out.content = `:information_source: ${subject} the following tags:`;
 
         return out;
     }

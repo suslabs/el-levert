@@ -5,11 +5,11 @@ CREATE TABLE 'Quotas' (
 ) STRICT;
 ---
 CREATE TABLE 'Tags' (
-    'hops' TEXT,
+    'aliasName' TEXT DEFAULT NULL,
     'name' TEXT,
     'body' TEXT,
     'owner' TEXT,
-    'args' TEXT,
+    'args' TEXT DEFAULT NULL,
     'registered' INTEGER,
     'lastEdited' INTEGER,
     'type' INTEGER,

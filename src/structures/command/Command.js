@@ -118,10 +118,10 @@ class Command extends TextCommand {
         const userId = asUser ?? msg?.author.id;
 
         if (userId == null) {
-            return getClient().permManager.getDefaultLevel();
+            return getClient().permManager.getLevels().default;
         }
 
-        return await getClient().permManager.maxLevel(msg.author.id);
+        return await getClient().permManager.maxLevel(userId);
     }
 }
 

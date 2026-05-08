@@ -20,6 +20,22 @@ class BotEvent {
         this.registered = false;
     }
 
+    getData(prefix = "", nullable = true, props = null) {
+        const data = ObjectUtil.filterObject(this, key => (props == null ? !key.startsWith("_") : props.includes(key)));
+
+        if (nullable) {
+            for (const prop of this.constructor._nullableDataProps.filter(
+                prop => props == null || props.includes(prop)
+            )) {
+                data[prop] ||= null;
+            }
+        }
+
+        return Object.fromEntries(Object.entries(data).map(entry => [prefix + entry[0], entry[1]]));
+    }
+
+    static _nullableDataProps = [];
+
     register(client) {
         if (this.registered) {
             throw new EventError("Event has already been registered");

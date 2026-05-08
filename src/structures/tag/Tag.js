@@ -19,11 +19,11 @@ class Tag {
     };
 
     static defaultValues = {
-        hops: [],
         name: "",
         body: "",
         owner: this.invalidValues.owner,
         args: "",
+        aliasName: "",
         type: TagTypes.defaultType
     };
 
@@ -47,18 +47,37 @@ class Tag {
     }
 
     constructor(data) {
+        let aliasName = data?.aliasName;
+
         if (typeof data?.hops === "string") {
-            data.hops = data.hops.split(Tag._hopsSeparator);
+            const hopString = data.hops,
+                hops = hopString.split(Tag._hopsSeparator);
+
+            if (
+                !Util.nonemptyString(aliasName) &&
+                hops.length === 1 &&
+                hops[0] !== data.name &&
+                Util.empty(data.body)
+            ) {
+                aliasName = hopString;
+            } else if (!Util.nonemptyString(aliasName)) {
+                aliasName = hops[1] ?? this.constructor.defaultValues.aliasName;
+            }
+        } else if (Array.isArray(data?.hops) && !Util.nonemptyString(aliasName)) {
+            aliasName = data.hops[1] ?? this.constructor.defaultValues.aliasName;
+        }
+
+        if (data != null) {
+            delete data.hops;
         }
 
         ObjectUtil.setValuesWithDefaults(this, data, this.constructor.defaultValues);
+        this.aliasName = aliasName ?? this.aliasName;
 
         let type = this.type,
             userType = typeof type === "string";
 
-        if (Util.empty(this.hops)) {
-            this.hops.push(this.name);
-        } else if (this.isAlias) {
+        if (this.isAlias) {
             this.body = this.constructor.defaultValues.body;
 
             if (userType) {
@@ -74,22 +93,25 @@ class Tag {
     }
 
     get isAlias() {
-        return Util.multiple(this.hops);
+        return Util.nonemptyString(this.aliasName) || Util.multiple(this._hops ?? []);
     }
 
-    get aliasName() {
-        return this.isAlias ? this.hops[1] : "";
-    }
+    get hops() {
+        if (Array.isArray(this._hops)) {
+            return this._hops;
+        }
 
-    getHopsString() {
-        return this.hops.join(Tag._hopsSeparator);
+        return this.isAlias ? [this.name, this.aliasName] : [this.name];
     }
 
     setName(name) {
         name ??= this.constructor.defaultValues.name;
 
         this.name = name;
-        Util.setFirst(this.hops, name);
+
+        if (Array.isArray(this._hops)) {
+            Util.setFirst(this._hops, name);
+        }
 
         return true;
     }
@@ -114,7 +136,9 @@ class Tag {
             throw new TagError("No target tag provided");
         }
 
-        this.hops.push(...target.hops);
+        this.aliasName = target.name;
+        delete this._hops;
+
         this.args = args ?? this.constructor.defaultValues.args;
 
         this.body = this.constructor.defaultValues.body;
@@ -191,14 +215,14 @@ class Tag {
             version = TagTypes.defaultVersion;
         }
 
-        let newType = this._setVersion(version),
-            typeSet = false;
-
         if (!Util.nonemptyString(type)) {
             throw new TagError("Invalid type");
-        } else if (type === TagTypes.textType) {
-            return this.type;
+        } else if (!TagTypes.versionTypes.includes(version)) {
+            throw new TagError("Unknown version: " + version, version);
         }
+
+        let newType = version === TagTypes.defaultVersion ? TagFlags.new : 0,
+            typeSet = type === TagTypes.textType;
 
         if (TagTypes.scriptTypes.includes(type)) {
             newType |= TagFlags.script;
@@ -218,8 +242,16 @@ class Tag {
         return newType;
     }
 
-    getData() {
-        return ObjectUtil.filterObject(this, key => !key.startsWith("_"));
+    getData(prefix = "", nullable = true, props = this.constructor.dataProps) {
+        const data = ObjectUtil.filterObject(this, key => props.includes(key));
+
+        if (nullable) {
+            for (const prop of this.constructor._nullableDataProps.filter(prop => props.includes(prop))) {
+                data[prop] ||= null;
+            }
+        }
+
+        return Object.fromEntries(Object.entries(data).map(entry => [prefix + entry[0], entry[1]]));
     }
 
     getSize() {
@@ -282,12 +314,11 @@ class Tag {
         return this.sameBody(tag) && this.sameType(tag);
     }
 
-    sameHops(tag) {
-        return ArrayUtil.sameElements(this.hops, tag.hops);
+    sameAlias(tag) {
+        return this.aliasName === tag.aliasName;
     }
-
     equals(tag) {
-        return this.equivalent(tag) && this.sameHops(tag);
+        return this.equivalent(tag) && this.sameAlias(tag);
     }
 
     getRaw(discord = false) {
@@ -351,41 +382,46 @@ class Tag {
         );
     }
 
-    async getInfo(raw = false, bodyLimit = 300) {
+    getInfo(raw = false, bodyLimit = 300) {
         if (raw) {
             return this.getData();
         }
 
-        const aliasName = this.isAlias ? this.aliasName : "none",
-            body = Util.empty(this.body) ? "empty" : Util.trimString(this.body, bodyLimit, null, { showDiff: true }),
-            args = Util.empty(this.args) ? "none" : Util.trimString(this.args, bodyLimit, null, { showDiff: true });
+        return (async () => {
+            const aliasName = this.isAlias ? this.aliasName : "none",
+                body = Util.empty(this.body)
+                    ? "empty"
+                    : Util.trimString(this.body, bodyLimit, null, { showDiff: true }),
+                args = Util.empty(this.args) ? "none" : Util.trimString(this.args, bodyLimit, null, { showDiff: true });
 
-        const info = {
-            hops: this.hops,
-            isAlias: this.isAlias,
-            name: this.name,
-            aliasName,
-            body,
-            isScript: this.isScript,
-            owner: await this.getOwner(),
-            ownerId: this.owner,
-            args,
-            ...this.getTimeInfo(false),
-            ...this.getTimeInfo(true),
-            type: this.getType(),
-            version: this.getVersion(),
-            typeInt: this.type
-        };
+            const info = {
+                hops: this.hops,
+                isAlias: this.isAlias,
+                name: this.name,
+                aliasName,
+                body,
+                isScript: this.isScript,
+                owner: await this.getOwner(),
+                ownerId: this.owner,
+                args,
+                ...this.getTimeInfo(false),
+                ...this.getTimeInfo(true),
+                type: this.getType(),
+                version: this.getVersion(),
+                typeInt: this.type
+            };
 
-        return info;
+            return info;
+        })();
     }
 
     _setAliasProps(hops, args) {
         if (Array.isArray(hops) && !Util.empty(hops)) {
-            this.hops = hops;
+            this._hops = hops;
+            this.aliasName = hops[1] ?? this.constructor.defaultValues.aliasName;
         }
 
-        const argsList = [].concat(args ?? []).filter(arg => !Util.empty(arg));
+        const argsList = ArrayUtil.guaranteeArray(args ?? []).filter(arg => !Util.empty(arg));
         this.args = argsList.join(Tag._argsSeparator);
 
         this._fetched = true;
@@ -400,6 +436,9 @@ class Tag {
         const funcName = `set${Util.capitalize(version)}`;
         return this[funcName]();
     }
+
+    static dataProps = ["aliasName", "name", "body", "owner", "args", "registered", "lastEdited", "type"];
+    static _nullableDataProps = ["aliasName", "args"];
 
     static _hopsSeparator = ",";
     static _argsSeparator = " ";

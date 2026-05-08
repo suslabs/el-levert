@@ -150,7 +150,6 @@ class DBImporter {
     }
 
     static _requiredTagProps = {
-        hops: Array,
         name: "string",
         body: "string"
     };
@@ -173,13 +172,18 @@ class DBImporter {
             return false;
         }
 
-        const alias = Util.multiple(data.hops);
+        if (typeof data.aliasName !== "string" && !Array.isArray(data.hops)) {
+            return false;
+        }
+
+        const aliasName = data.aliasName || data.hops?.[1] || "",
+            alias = Util.nonemptyString(aliasName);
 
         if (!alias && Util.empty(data.body)) {
             return false;
         }
 
-        let name = alias ? Util.first(data.hops) : data.name,
+        let name = data.hops?.[0] ?? data.name,
             err;
         [name, err] = this.tagManager.checkName(name, false);
 
@@ -188,6 +192,7 @@ class DBImporter {
         }
 
         data.name = name;
+        data.aliasName = aliasName;
         return true;
     }
 
@@ -242,7 +247,7 @@ class DBImporter {
                 await this.tagManager
                     ._addPrepared(importTag)
                     .then(() => count++)
-                    .catch(err => this.logger.error(`Error occured while adding "${name}":`.err));
+                    .catch(err => this.logger.error(`Error occured while adding "${name}":`, err));
             }
         }
 

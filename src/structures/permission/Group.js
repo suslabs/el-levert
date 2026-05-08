@@ -14,6 +14,18 @@ class Group {
         ObjectUtil.setValuesWithDefaults(this, data, this.constructor.defaultValues);
     }
 
+    getData(prefix = "", nullable = true, props = this.constructor.dataProps) {
+        const data = ObjectUtil.filterObject(this, key => props.includes(key));
+
+        if (nullable) {
+            for (const prop of this.constructor._nullableDataProps.filter(prop => props.includes(prop))) {
+                data[prop] ||= null;
+            }
+        }
+
+        return Object.fromEntries(Object.entries(data).map(entry => [prefix + entry[0], entry[1]]));
+    }
+
     setName(name) {
         this.name = name;
         return true;
@@ -69,6 +81,9 @@ class Group {
             return `${formattedName} - ${formattedLevel}`;
         }
     }
+
+    static dataProps = ["name", "level"];
+    static _nullableDataProps = [];
 
     static _indentation = 4;
     static _spaces = " ".repeat(this._indentation);

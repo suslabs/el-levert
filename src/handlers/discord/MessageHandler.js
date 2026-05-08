@@ -298,7 +298,7 @@ class MessageHandler extends Handler {
                 continue;
             }
 
-            const n = Util.single(out.embeds) ? "" : ` ${i + 1}`;
+            const n = Util.single(embeds) ? "" : ` ${i + 1}`;
 
             switch (limitType) {
                 case MessageLimitTypes.default:
@@ -317,8 +317,8 @@ class MessageHandler extends Handler {
 
                     break;
                 case MessageLimitTypes.file:
-                    const embedFormat = DiscordUtil.stringifyEmbed(embed, `embed${n}.txt`);
-                    addFile(`embed${n}.txt`, embedFormat);
+                    const embedFormat = DiscordUtil.stringifyEmbed(embed);
+                    addFile("end", embedFormat, `embed${n}.txt`);
 
                     break;
                 case MessageLimitTypes.trim:

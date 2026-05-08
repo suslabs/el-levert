@@ -35,6 +35,7 @@ export default {
                 throw err;
             }
 
+            const validUnits = `Valid units are: **${ConversionUtil.validUnits.join("**, **")}**`;
             let errOut;
 
             switch (err.message) {
@@ -54,7 +55,6 @@ export default {
                     break;
             }
 
-            const validUnits = `Valid units are: **${ConversionUtil.validUnits.join("**, **")}**`;
             return `:warning: ${errOut}\n${validUnits}`;
         }
 

@@ -48,9 +48,9 @@ class Loader {
 
         if (typeof data === "undefined") {
             return errorIfNotFound
-                ? () => {
+                ? (() => {
                       throw new LoaderError("Data field not found", this.dataField);
-                  }
+                  })()
                 : null;
         }
 

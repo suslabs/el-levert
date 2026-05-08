@@ -22,9 +22,7 @@ class ReminderDatabase extends SqlDatabase {
 
     async add(reminder) {
         return await this.queries.add.run({
-            $user: reminder.user,
-            $end: reminder.end,
-            $msg: reminder.msg
+            ...reminder.getData("$", true, ["user", "end", "msg"])
         });
     }
 

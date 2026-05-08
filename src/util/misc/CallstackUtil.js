@@ -43,9 +43,10 @@ const CallstackUtil = Object.freeze({
                   })();
         }
 
-        const site = stack.find(
-            site => site.getFileName().startsWith(projRootUrl) && !excludeFunctions.includes(site.getFunctionName())
-        );
+        const site = stack.find(site => {
+            const fileName = site.getFileName();
+            return typeof fileName === "string" && fileName.startsWith(projRootUrl) && !excludeFunctions.includes(site.getFunctionName());
+        });
 
         if (typeof site === "undefined") {
             return "no info";

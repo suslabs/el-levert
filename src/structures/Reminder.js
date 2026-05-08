@@ -19,6 +19,18 @@ class Reminder {
         return !Util.empty(this.msg);
     }
 
+    getData(prefix = "", nullable = true, props = this.constructor.dataProps) {
+        const data = ObjectUtil.filterObject(this, key => props.includes(key));
+
+        if (nullable) {
+            for (const prop of this.constructor._nullableDataProps.filter(prop => props.includes(prop))) {
+                data[prop] ||= null;
+            }
+        }
+
+        return Object.fromEntries(Object.entries(data).map(entry => [prefix + entry[0], entry[1]]));
+    }
+
     isPast(date) {
         date ??= Date.now();
         return this.end <= date;
@@ -55,6 +67,9 @@ class Reminder {
 
         return format;
     }
+
+    static dataProps = ["id", "user", "end", "msg"];
+    static _nullableDataProps = [];
 }
 
 export default Reminder;

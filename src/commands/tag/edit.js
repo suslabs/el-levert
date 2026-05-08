@@ -52,7 +52,7 @@ export default {
             let err;
             [body, err] = getClient().tagManager.checkBody(body, false);
 
-            if (err !== err) {
+            if (err !== null) {
                 return `:warning: ${err}.`;
             }
         }

@@ -1,1 +1,1 @@
-UPDATE Tags SET hops = $hops, name = $name, lastEdited = $lastEdited, type = $type WHERE name = $oldName;
+UPDATE Tags SET aliasName = $aliasName, name = $name, lastEdited = $lastEdited, type = $type WHERE name = $oldName;

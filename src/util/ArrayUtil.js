@@ -48,7 +48,7 @@ const ArrayUtil = Object.freeze({
         const getValue = ArrayUtil._valueFunc(callback),
             values = array.map(item => getValue(item));
 
-        return new Set(values) === array.length;
+        return new Set(values).size !== values.length;
     },
 
     unique: (array, callback) => {

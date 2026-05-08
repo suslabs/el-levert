@@ -43,6 +43,10 @@ class SqliteStatement {
 
     bind(...param) {
         return new Promise((resolve, reject) => {
+            if (!this._checkFinalizedAsync(resolve, reject)) {
+                return;
+            }
+
             this._st.bind(...param, err => {
                 if (this._throwErrorAsync(resolve, reject, err)) {
                     return;
@@ -150,7 +154,7 @@ class SqliteStatement {
 
         this._db.emit(DatabaseEvents.promiseError, res);
 
-        if (this.throwErrors) {
+        if (this._db.throwErrors) {
             throw res;
         } else {
             return false;
@@ -166,7 +170,7 @@ class SqliteStatement {
 
         this._db.emit(DatabaseEvents.promiseError, res);
 
-        if (this.throwErrors) {
+        if (this._db.throwErrors) {
             reject(res);
         } else {
             resolve();

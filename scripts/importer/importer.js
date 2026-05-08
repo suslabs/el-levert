@@ -12,7 +12,7 @@ import { LevertClient } from "./mock/FakeClient.js";
 import TagManager from "../../src/managers/database/TagManager.js";
 
 import DBImporter from "./DBImporter.js";
-import DBUpdateModes from "./DBDBUpdateModes.js";
+import DBUpdateModes from "./DBUpdateModes.js";
 
 import Util from "../../src/util/Util.js";
 

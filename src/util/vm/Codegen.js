@@ -124,7 +124,7 @@ const Codegen = {
     access: (names, statement = false) => {
         names = ArrayUtil.guaranteeArray(names);
 
-        names = names.map((name, i) => {
+        names = names.filter(Boolean).map((name, i) => {
             const first = i === 0,
                 last = i === names.length - 1;
 

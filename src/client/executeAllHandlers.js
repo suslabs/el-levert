@@ -19,16 +19,18 @@ async function executeAllHandlers(client, funcName, msg, ...args) {
 
     addId(msg.id);
 
-    for (const handler of client.handlerList) {
-        const handlerFunc = handler[funcName].bind(handler),
-            executed = await handlerFunc(msg, ...args);
+    try {
+        for (const handler of client.handlerList) {
+            const handlerFunc = handler[funcName].bind(handler),
+                executed = await handlerFunc(msg, ...args);
 
-        if (executed) {
-            break;
+            if (executed) {
+                break;
+            }
         }
+    } finally {
+        removeId(msg.id);
     }
-
-    removeId(msg.id);
 }
 
 export default executeAllHandlers;

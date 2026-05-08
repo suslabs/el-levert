@@ -113,7 +113,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
 
     run(sql, ...param) {
         return new Promise((resolve, reject) => {
-            if (!this._checkDatabaseOpenAsync()) {
+            if (!this._checkDatabaseOpenAsync(resolve, reject)) {
                 return;
             }
 
@@ -131,7 +131,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
 
     get(sql, ...param) {
         return new Promise((resolve, reject) => {
-            if (!this._checkDatabaseOpenAsync()) {
+            if (!this._checkDatabaseOpenAsync(resolve, reject)) {
                 return;
             }
 
@@ -149,7 +149,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
 
     all(sql, ...param) {
         return new Promise((resolve, reject) => {
-            if (!this._checkDatabaseOpenAsync()) {
+            if (!this._checkDatabaseOpenAsync(resolve, reject)) {
                 return;
             }
 
@@ -167,7 +167,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
 
     each(sql, param, callback) {
         return new Promise((resolve, reject) => {
-            if (!this._checkDatabaseOpenAsync()) {
+            if (!this._checkDatabaseOpenAsync(resolve, reject)) {
                 return;
             }
 
@@ -185,7 +185,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
 
     exec(sql) {
         return new Promise((resolve, reject) => {
-            if (!this._checkDatabaseOpenAsync()) {
+            if (!this._checkDatabaseOpenAsync(resolve, reject)) {
                 return;
             }
 
@@ -201,7 +201,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
 
     prepare(sql, ...param) {
         return new Promise((resolve, reject) => {
-            if (!this._checkDatabaseOpenAsync()) {
+            if (!this._checkDatabaseOpenAsync(resolve, reject)) {
                 return;
             }
 
@@ -285,7 +285,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
 
     loadExtension(path) {
         return new Promise((resolve, reject) => {
-            if (!this._checkDatabaseOpenAsync()) {
+            if (!this._checkDatabaseOpenAsync(resolve, reject)) {
                 return;
             }
 

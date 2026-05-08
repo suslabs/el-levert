@@ -66,6 +66,32 @@ const ResultProxyHandler = Object.freeze({
         }
     },
 
+    deleteProperty: (target, prop) => {
+        if (passthroughProps.includes(prop)) {
+            return Reflect.deleteProperty(target, prop);
+        }
+
+        switch (typeof prop) {
+            case "symbol":
+                return Reflect.deleteProperty(target, prop);
+            case "string":
+                if (prop.startsWith("_")) {
+                    const privProp = Util.after(prop, 0);
+
+                    if (privProp === targetProp || dataProps.includes(privProp)) {
+                        return false;
+                    }
+                }
+
+                if (infoProps.includes(prop)) {
+                    return false;
+                }
+            // eslint-disable-next-line no-fallthrough
+            default:
+                return delete target.data?.[prop];
+        }
+    },
+
     has: (target, prop) => {
         if (typeof prop === "symbol" || passthroughProps.includes(prop)) {
             return prop in target;

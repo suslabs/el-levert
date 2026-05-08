@@ -151,13 +151,13 @@ const VMUtil = {
             const filtered = ObjectUtil.filterObject(data, key => VMUtil._allowedReqConfig.includes(key)),
                 timeout = Number.isFinite(data.timeout) ? data.timeout : Infinity;
 
-            Object.assign(reqConfig, VMUtil._configDefaults, filtered);
+            Object.assign(reqConfig, VMUtil._reqConfigDefaults, filtered);
 
             if (typeof context !== "undefined") {
                 reqConfig.timeout = Util.clamp(Math.round(timeout), 0, context.timeRemaining);
             }
         } else if (typeof data === "string") {
-            Object.assign(reqConfig, VMUtil._configDefaults, {
+            Object.assign(reqConfig, VMUtil._reqConfigDefaults, {
                 url: data,
                 timeout: context?.timeRemaining
             });

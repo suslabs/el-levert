@@ -1,3 +1,5 @@
+/* global WebSocket */
+
 import { URL, URLSearchParams } from "node:url";
 
 import { getLogger } from "../../../LevertClient.js";
@@ -139,7 +141,7 @@ class InspectorServer {
 
     _bindEvents() {
         this.websocketServer.on("connection", this._listener);
-        this.websocketServer.on("close", _ => this._socketClosed);
+        this.websocketServer.on("close", this._socketClosed);
     }
 
     _connectInspector() {

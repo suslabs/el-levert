@@ -12,8 +12,8 @@ class ReactionsLoader extends BaseConfigLoader {
             config.parens = {};
         }
 
-        if (!TypeTester.isObject(config.funnyWords)) {
-            config.funnyWords = {};
+        if (!Array.isArray(config.funnyWords)) {
+            config.funnyWords = [];
         }
     }
 }

@@ -261,7 +261,7 @@ let Util = {
         }
 
         const split = sep === "" ? str : str.split(sep);
-        return new Set(split).length === split.length;
+        return new Set(split).size !== split.length;
     },
 
     unique: (str, sep = "") => {
@@ -580,6 +580,10 @@ let Util = {
     },
 
     smallRound: (num, digits) => {
+        if (num === 0) {
+            return 0;
+        }
+
         const tresh = 1 / 10 ** digits;
 
         if (Math.abs(num) <= tresh) {
@@ -639,7 +643,7 @@ let Util = {
             blacklist = Array.isArray(options.blacklist) ? options.blacklist : ["milli"];
 
         const durationNames = Object.keys(Util.durationSeconds).filter(name => {
-                const inWhitelist = whitelist.length ? blacklist.includes(name) : true,
+                const inWhitelist = whitelist.length ? whitelist.includes(name) : true,
                     inBlacklist = blacklist.includes(name);
 
                 return inWhitelist && !inBlacklist;

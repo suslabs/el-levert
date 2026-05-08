@@ -232,7 +232,8 @@ class SedHandler extends MessageHandler {
                 return false;
             }
 
-            return regex.test(msg);
+            regex.lastIndex = 0;
+            return regex.test(msg.content);
         });
 
         return sedMsg ?? null;

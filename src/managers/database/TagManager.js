@@ -39,6 +39,7 @@ class TagManager extends DBManager {
     }
 
     isTagName(name) {
+        this.tagNameRegex.lastIndex = 0;
         return this.tagNameRegex.test(name);
     }
 
@@ -123,9 +124,11 @@ class TagManager extends DBManager {
         const hops = [],
             args = [];
 
-        let lastTag = null;
+        let lastTag = tag;
 
-        for (const hop of tag.hops) {
+        while (lastTag !== null) {
+            const hop = lastTag.name;
+
             if (validate) {
                 this.checkName(hop);
             }
@@ -137,17 +140,23 @@ class TagManager extends DBManager {
 
             hops.push(hop);
 
-            if (hop === tag.name) {
-                lastTag = tag;
-            } else {
-                lastTag = await this.fetch(hop);
+            args.push(lastTag.args);
 
-                if (lastTag === null) {
-                    throw new TagError("Hop not found", hop);
-                }
+            if (!lastTag.isAlias) {
+                break;
             }
 
-            args.push(lastTag.args);
+            const aliasName = lastTag.aliasName;
+
+            if (validate) {
+                this.checkName(aliasName);
+            }
+
+            lastTag = await this.fetch(aliasName);
+
+            if (lastTag === null) {
+                throw new TagError("Hop not found", aliasName);
+            }
         }
 
         lastTag._setAliasProps(hops, args);
@@ -297,17 +306,6 @@ class TagManager extends DBManager {
             }
         }
 
-        if (!validateNew || !oldTag.sameBody(tag)) {
-            const sizeDiff = tag.getSize() - oldTag.getSize();
-
-            if (oldTag.owner === tag.owner) {
-                await this._updateQuota(tag.owner, sizeDiff);
-            } else {
-                await this._updateQuota(oldTag.owner, -sizeDiff);
-                await this._updateQuota(tag.owner, sizeDiff);
-            }
-        }
-
         const res = await this.tag_db.updateProps(name, tag),
             updated = res.changes > 0;
 
@@ -315,6 +313,18 @@ class TagManager extends DBManager {
             getLogger().info(`Updated tag: "${oldTag.name}" with data:${LoggerUtil.formatLog(tag.getData())}`);
         } else if (validateProvided) {
             throw new TagError("Tag doesn't exist", name);
+        }
+
+        if (updated && (!validateNew || !oldTag.sameBody(tag) || oldTag.owner !== tag.owner)) {
+            const oldSize = oldTag.getSize(),
+                newSize = tag.getSize();
+
+            if (oldTag.owner === tag.owner) {
+                await this._updateQuota(tag.owner, newSize - oldSize);
+            } else {
+                await this._updateQuota(oldTag.owner, -oldSize);
+                await this._updateQuota(tag.owner, newSize);
+            }
         }
 
         return tag;
@@ -404,6 +414,9 @@ class TagManager extends DBManager {
             this.checkName(tag.name);
         }
 
+        const oldOwner = tag.owner,
+            tagSize = tag.getSize();
+
         const res = await this.tag_db.chown(tag, newOwner),
             updated = res.changes > 0;
 
@@ -413,10 +426,10 @@ class TagManager extends DBManager {
             throw new TagError("Tag doesn't exist", tag.name);
         }
 
-        const tagSize = tag.getSize();
-
-        await this._updateQuota(tag.owner, -tagSize);
-        await this._updateQuota(newOwner, tagSize);
+        if (updated && oldOwner !== newOwner) {
+            await this._updateQuota(oldOwner, -tagSize);
+            await this._updateQuota(newOwner, tagSize);
+        }
 
         return tag;
     }
@@ -460,7 +473,7 @@ class TagManager extends DBManager {
             updated = res.changes > 0;
 
         if (updated) {
-            await this.tag_db.updateHops(oldName, newName, Tag._hopsSeparator);
+            await this.tag_db.updateAliases(oldName, newName);
             getLogger().info(`Renamed tag: "${oldName}" to: "${newName}"`);
         } else if (validateProvided) {
             throw new TagError("Tag doesn't exist", tag.name);

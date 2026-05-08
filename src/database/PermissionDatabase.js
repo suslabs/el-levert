@@ -32,8 +32,7 @@ class PermissionDatabase extends SqlDatabase {
 
     async addGroup(group) {
         return await this.groupQueries.add.run({
-            $name: group.name,
-            $level: group.level
+            ...group.getData("$")
         });
     }
 

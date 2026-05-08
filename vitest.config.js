@@ -7,6 +7,9 @@ export default defineConfig({
         setupFiles: [],
         include: ["test/**/*.test.js"],
         exclude: ["**/node_modules/**"],
-        reporters: ["default"]
+        reporters: ["default"],
+        coverage: {
+            exclude: ["stoat-compat/**", "src/vm/vm2/**", "src/vm/judge0/**"]
+        }
     }
 });

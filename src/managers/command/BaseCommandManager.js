@@ -55,7 +55,7 @@ class BaseCommandManager extends Manager {
     deleteCommands() {
         let n = 0;
 
-        if (this._commandLoader.loaded) {
+        if (this._commandLoader?.loaded) {
             n = this._commandLoader.deleteCommands();
         } else {
             getLogger().debug("No commands to delete.");
@@ -76,7 +76,7 @@ class BaseCommandManager extends Manager {
             throw new CommandError(`Couldn't delete ${command.getName(true)}`, command.getName());
         }
 
-        this._commandLoader.deleteData(command, errorIfNotFound);
+        this._commandLoader?.deleteData(command, errorIfNotFound);
 
         if (!removeSubcommands || Util.empty(command.subcmds)) {
             return deleted;
@@ -104,7 +104,7 @@ class BaseCommandManager extends Manager {
                 throw new CommandError(`Couldn't delete ${subcmd.getName(true)}`, subcmd.getName());
             }
 
-            this._commandLoader.deleteData(subcmd, errorIfNotFound);
+            this._commandLoader?.deleteData(subcmd, errorIfNotFound);
         }
 
         command.removeSubcommands();

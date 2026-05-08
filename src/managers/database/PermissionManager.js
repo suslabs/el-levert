@@ -187,7 +187,7 @@ class PermissionManager extends DBManager {
 
     async maxLevel(id) {
         if (!this.enabled) {
-            return this._disabledLevel;
+            return this.disabledLevel;
         }
 
         const groups = await this.fetch(id);
@@ -366,9 +366,9 @@ class PermissionManager extends DBManager {
             this.checkName(group.name);
         }
 
-        if (group.name === newName) {
+        if (newName !== null && group.name === newName) {
             throw new PermissionError("Can't update group with the same name", group.name);
-        } else if (group.level === newLevel) {
+        } else if (newLevel !== null && group.level === newLevel) {
             throw new PermissionError("Can't update group with the same level", group.level);
         }
 

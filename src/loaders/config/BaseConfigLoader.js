@@ -37,7 +37,7 @@ class BaseConfigLoader extends JsonLoader {
     _modify() {
         if (typeof this._childModify === "function") {
             const modifiedConfig = this._childModify(this.data);
-            this.config = modifiedConfig ?? this.config;
+            this.data = modifiedConfig ?? this.data;
         }
     }
 }

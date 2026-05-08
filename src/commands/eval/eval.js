@@ -1,5 +1,6 @@
 import { getClient } from "../../LevertClient.js";
 
+import ArrayUtil from "../../util/ArrayUtil.js";
 import Util from "../../util/Util.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import ParserUtil from "../../util/commands/ParserUtil.js";
@@ -63,7 +64,7 @@ async function altevalBase(args, msg, lang) {
         }
 
         const format = Object.values(parsed)
-            .map(err => Util.capitalize(err).join(","))
+            .map(err => ArrayUtil.guaranteeArray(err).map(Util.capitalize).join(", "))
             .join("\n");
 
         return `:no_entry_sign: ${format}.`;
@@ -120,13 +121,17 @@ export default {
 
         this.evalBase = evalBase.bind(this);
         this.langNames = langNames;
+        this.subcommands = ["langs"];
 
-        if (!getClient().config.enableOtherLangs) {
-            return;
+        if (getClient().config.enableOtherLangs) {
+            this.subcommands.push("c", "cpp", "py");
+            this.altevalBase = altevalBase.bind(this);
+            Object.assign(this.langNames, altLangNames);
         }
 
-        this.altevalBase = altevalBase.bind(this);
-        Object.assign(this.langNames, altLangNames);
+        if (getClient().config.enableVM2) {
+            this.subcommands.push("vm2");
+        }
     },
 
     handler: async function (args, msg) {

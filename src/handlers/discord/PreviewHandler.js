@@ -58,6 +58,7 @@ class PreviewHandler extends MessageHandler {
             return false;
         }
 
+        DiscordUtil.msgUrlRegex.lastIndex = 0;
         return DiscordUtil.msgUrlRegex.test(str);
     }
 
@@ -66,14 +67,14 @@ class PreviewHandler extends MessageHandler {
     }
 
     async generatePreview(msg, str) {
-        logUsage(msg, str);
-        const t1 = performance.now();
-
         const match = Util.first(DiscordUtil.findMessageUrls(str));
 
         if (typeof match === "undefined") {
             throw new HandlerError("Invalid input string", str);
         }
+
+        logUsage(msg, str);
+        const t1 = performance.now();
 
         const { sv_id, ch_id, msg_id } = match;
 

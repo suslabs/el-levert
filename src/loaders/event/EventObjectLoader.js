@@ -20,8 +20,12 @@ class EventObjectLoader extends ObjectLoader {
             return status;
         }
 
-        const event = new BotEvent(this.data);
-        this.data = event;
+        try {
+            const event = new BotEvent(this.data);
+            this.data = event;
+        } catch (err) {
+            return this.failure(err);
+        }
 
         return LoadStatus.successful;
     }

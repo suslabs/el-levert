@@ -3,6 +3,7 @@ import { WebhookClient, RESTJSONErrorCodes } from "discord.js";
 import BaseDiscordTransport from "./BaseDiscordTransport.js";
 
 import Util from "../../util/Util.js";
+import TypeTester from "../../util/TypeTester.js";
 
 import LoggerError from "../../errors/LoggerError.js";
 
@@ -14,7 +15,7 @@ class WebhookTransport extends BaseDiscordTransport {
 
         let webhook = opts.webhook;
 
-        if (typeof webhook !== "object") {
+        if (!TypeTester.isObject(webhook)) {
             webhook = this._getWebhook(opts.url);
         } else {
             this.webhookUrl = webhook.url;

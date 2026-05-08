@@ -224,7 +224,7 @@ class EvalContext {
 
     static _constructFuncs(objMap, names) {
         return Object.entries(objMap).flatMap(([objKey, funcMap]) => {
-            if (typeof funcMap !== "object") {
+            if (!TypeTester.isObject(funcMap)) {
                 throw new VMError("Invalid object map");
             }
 

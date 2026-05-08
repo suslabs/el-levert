@@ -11,6 +11,17 @@ function sortTags(tags) {
 }
 
 class TagDatabase extends SqlDatabase {
+    static legacyUpdateAliasesSql =
+        "UPDATE Tags SET hops = $newName " +
+        "WHERE hops = $name OR hops = name || ',' || $name OR hops LIKE name || ',' || $name || ',%';";
+
+    async _loadQueries() {
+        await this._detectAliasColumn();
+        await this._readQueries();
+        this._rewriteAliasQueries();
+        await this._bindQueries();
+    }
+
     async fetch(name) {
         const row = await this.tagQueries.fetch.get({
             $name: name
@@ -27,13 +38,7 @@ class TagDatabase extends SqlDatabase {
         tag.setRegistered();
 
         return await this.tagQueries.add.run({
-            $hops: tag.getHopsString(),
-            $name: tag.name,
-            $body: tag.body,
-            $owner: tag.owner,
-            $args: tag.args,
-            $registered: tag.registered,
-            $type: tag.type
+            ...tag.getData("$", true, ["aliasName", "name", "body", "owner", "args", "registered", "type"])
         });
     }
 
@@ -42,26 +47,14 @@ class TagDatabase extends SqlDatabase {
         tag.setLastEdited();
 
         return await this.tagQueries.edit.run({
-            $hops: tag.getHopsString(),
-            $name: tag.name,
-            $body: tag.body,
-            $args: tag.args,
-            $lastEdited: tag.lastEdited,
-            $type: tag.type
+            ...tag.getData("$", true, ["aliasName", "name", "body", "args", "lastEdited", "type"])
         });
     }
 
     async updateProps(name, tag) {
         return await this.tagQueries.updateProps.run({
             $tagName: name,
-            $hops: tag.getHopsString(),
-            $name: tag.name,
-            $body: tag.body,
-            $owner: tag.owner,
-            $args: tag.args,
-            $registered: tag.registered,
-            $lastEdited: tag.lastEdited,
-            $type: tag.type
+            ...tag.getData("$")
         });
     }
 
@@ -72,10 +65,7 @@ class TagDatabase extends SqlDatabase {
         tag.setOwner(newOwner);
 
         return await this.tagQueries.chown.run({
-            $name: tag.name,
-            $owner: tag.owner,
-            $lastEdited: tag.lastEdited,
-            $type: tag.type
+            ...tag.getData("$", true, ["name", "owner", "lastEdited", "type"])
         });
     }
 
@@ -88,18 +78,14 @@ class TagDatabase extends SqlDatabase {
 
         return await this.tagQueries.rename.run({
             $oldName: oldName,
-            $hops: tag.getHopsString(),
-            $name: tag.name,
-            $lastEdited: tag.lastEdited,
-            $type: tag.type
+            ...tag.getData("$", true, ["aliasName", "name", "lastEdited", "type"])
         });
     }
 
-    async updateHops(name, newName, sep) {
-        return await this.tagQueries.updateHops.run({
+    async updateAliases(name, newName) {
+        return await this.tagQueries.updateAliases.run({
             $name: name,
-            $newName: newName,
-            $sep: sep
+            $newName: newName
         });
     }
 
@@ -197,6 +183,27 @@ class TagDatabase extends SqlDatabase {
         });
 
         return Array.from(rows);
+    }
+
+    async _detectAliasColumn() {
+        const rows = await this.db.all("PRAGMA table_info(Tags);"),
+            columns = Array.from(rows).map(row => row.name);
+
+        this._aliasColumn = columns.includes("aliasName") || !columns.includes("hops") ? "aliasName" : "hops";
+    }
+
+    _rewriteAliasQueries() {
+        if (this._aliasColumn !== "hops") {
+            return;
+        }
+
+        const tagQueries = this.queryStrings.tagQueries;
+
+        for (const [name, query] of Object.entries(tagQueries)) {
+            tagQueries[name] = query.replaceAll(/(?<!\$)\baliasName\b/g, "hops");
+        }
+
+        tagQueries.updateAliases = this.constructor.legacyUpdateAliasesSql;
     }
 }
 

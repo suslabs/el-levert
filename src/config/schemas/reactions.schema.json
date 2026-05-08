@@ -13,10 +13,10 @@
         "parens": {
             "type": "object",
             "properties": {
-                "leftParens": {
+                "left": {
                     "type": "array"
                 },
-                "rightParens": {
+                "right": {
                     "type": "array"
                 }
             }

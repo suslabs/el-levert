@@ -61,7 +61,11 @@ export default {
             }
         }
 
-        if (!getClient().permManager.allowed(perm, newLevel)) {
+        if (newName === null && newLevel === null) {
+            return ":warning: No group changes provided.";
+        }
+
+        if (newLevel !== null && !getClient().permManager.allowed(perm, newLevel)) {
             return `:warning: Can't update a group to have a level that is higher than your own. (**${perm}** < **${newLevel}**)`;
         }
 

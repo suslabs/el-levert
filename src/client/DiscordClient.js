@@ -108,7 +108,7 @@ class DiscordClient {
 
     buildClient() {
         if (this.client !== null) {
-            new ClientError("Can't create a new client before disposing the old one");
+            throw new ClientError("Can't create a new client before disposing the old one");
         }
 
         this.logger?.info("Creating client...");
@@ -466,7 +466,7 @@ class DiscordClient {
         let guilds = null;
 
         if (typeof options.sv_id === "string") {
-            guilds = [await this.fetchGuild(options.sv_id)];
+            guilds = [await this.fetchGuild(options.sv_id)].filter(Boolean);
         } else {
             guilds = Array.from(this.client.guilds.cache.values());
         }
@@ -483,7 +483,7 @@ class DiscordClient {
                 member = members.find(Boolean);
             }
 
-            if (typeof member !== "undefined") {
+            if (member != null) {
                 return [member];
             } else if (options.onlyMembers) {
                 return [];
@@ -505,7 +505,7 @@ class DiscordClient {
                     guild.members
                         .fetch({
                             query,
-                            limit: fetchOptions.fetchLimit
+                            limit: fetchOptions.limit
                         })
                         .then(member => Array.from(member.values()))
                 )
@@ -517,7 +517,7 @@ class DiscordClient {
         return diceSearch(uniqueMembers, query, {
             maxResults: options.limit,
             minDist: options.searchMinDist,
-            searchKey: "username"
+            searchKey: "displayName"
         }).results;
     }
 

@@ -1,7 +1,7 @@
 --- Tags ---
 
 Tag {
-    $hops: tag.getHopsString(),
+    $aliasName: tag.aliasName,
     $name: tag.name,
     $body: tag.body,
     $owner: tag.owner,

@@ -141,7 +141,7 @@ let OCUtil = {
     },
 
     calculateOverclock: (recipe, voltage) => {
-        const isParallel = recipe.oc_type.startsWith("parallel");
+        const isParallel = recipe.oc_type === OCTypes.parallel;
 
         let baseEu = recipe.base_eu;
 
@@ -172,7 +172,7 @@ let OCUtil = {
     },
 
     calculateEbfOverclock: (recipe, voltage) => {
-        const isParallel = recipe.oc_type.startsWith("parallel");
+        const isParallel = recipe.oc_type === OCTypes.ebfParallel;
 
         let baseEu = recipe.base_eu;
 

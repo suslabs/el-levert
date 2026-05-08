@@ -29,16 +29,16 @@ export default {
 
         const group = await getClient().permManager.fetchGroup(g_name);
 
-        if (group === null) {
-            return `:warning: Group **${escapeMarkdown(g_name)}** doesn't exist.`;
-        } else if (!getClient().permManager.allowed(perm, group.level)) {
-            return `:warning: Can't remove a user (\`${find.user.username}\` \`${find.user.id}\`) from a group with a higher level your own. (**${group.level}** > **${perm}**)`;
-        }
-
         const find = Util.first(await getClient().findUsers(u_name));
 
         if (typeof find === "undefined") {
             return `:warning: User \`${u_name}\` not found.`;
+        }
+
+        if (group === null) {
+            return `:warning: Group **${escapeMarkdown(g_name)}** doesn't exist.`;
+        } else if (!getClient().permManager.allowed(perm, group.level)) {
+            return `:warning: Can't remove user \`${find.user.username}\` (\`${find.user.id}\`) from a group with a higher level than your own. (**${group.level}** > **${perm}**)`;
         }
 
         let removed = false;

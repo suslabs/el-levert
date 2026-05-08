@@ -5,6 +5,7 @@
     "private": true,
     "scripts": {
         "test": "vitest run",
+        "coverage": "vitest run --coverage",
         "start": "node --experimental-websocket --no-warnings=ExperimentalWarning index.js",
         "format": "prettier --config .prettierrc --ignore-path .prettierignore --write **/*.{js,cjs,json}",
         "lint": "eslint . --config .eslintrc.json --ignore-path .gitignore --ext .js",
@@ -16,12 +17,12 @@
         "ajv": "^8.17.1",
         "axios": "^1.12.2",
         "chrono-node": "^2.9.0",
+        "discord.js": "^14.24.0",
         "isolated-vm": "^5.0.4",
         "re2": "^1.22.1",
         "sqlite3": "^5.1.7",
         "stoat.js": "^7.3.6",
-        "winston": "^3.18.3",
-        "discord.js": "^14.24.0"
+        "winston": "^3.18.3"
     },
     "optionalDependencies": {
         "generic-pool": "^3.9.0",
@@ -30,6 +31,7 @@
     "devDependencies": {
         "@babel/eslint-parser": "^7.28.4",
         "@babel/plugin-syntax-import-assertions": "^7.27.1",
+        "@vitest/coverage-v8": "^3.2.4",
         "cross-env": "^10.1.0",
         "eslint": "^8.57.1",
         "eslint-plugin-unused-imports": "^4.2.0",

@@ -32,7 +32,7 @@ const ObjectUtil = Object.freeze({
     },
 
     reverseObject: obj => {
-        return Object.fromEntriesObject.fromEntries(Object.entries(obj).map(([key, value]) => [value, key]));
+        return Object.fromEntries(Object.entries(obj).map(([key, value]) => [value, key]));
     },
 
     setValuesWithDefaults: (target, source, defaults = {}) => {
@@ -114,7 +114,7 @@ const ObjectUtil = Object.freeze({
     },
 
     defineProperty(obj, factory, ...args) {
-        const props = [].concat(factory(...args)).filter(Boolean);
+        const props = ArrayUtil.guaranteeArray(factory(...args)).filter(Boolean);
 
         for (const prop of props) {
             let { propName, desc } = prop;

@@ -25,7 +25,7 @@ let DiscordUtil = {
         return matches.map(match => match[0]);
     },
 
-    mentionRegex: /<@(\d{17,20})>/g,
+    mentionRegex: /<@!?(\d{17,20})>/g,
     // mentionRegex: /<@([A-Za-z0-9]{24,30})>/g,
 
     findMentions: str => {
@@ -77,6 +77,7 @@ let DiscordUtil = {
     },
 
     findMessageUrls: str => {
+        DiscordUtil.msgUrlRegex.lastIndex = 0;
         const matches = Array.from(str.matchAll(DiscordUtil.msgUrlRegex));
         return matches.map(match => DiscordUtil._msgUrlMatchResult(match));
     },
@@ -85,6 +86,10 @@ let DiscordUtil = {
         /(?<prefix>(?:(https?:)\/\/)?(cdn|media)\.discordapp\.(com|net)\/attachments\/(?<sv_id>\d+)\/(?<ch_id>\d+)\/(?<filename>.+?)(?<ext>\.\w+)?)(?:\?(?:ex=(?<ex>[0-9a-f]+)&is=(?<is>[0-9a-f]+)&hm=(?<hm>[0-9a-f]+))?)?(?=\s|$|\p{P})/giu,
 
     _attachUrlMatchResult: match => {
+        if (!match) {
+            return null;
+        }
+
         const groups = match.groups;
 
         const filename = groups.filename,
@@ -284,7 +289,7 @@ let DiscordUtil = {
         let size = 0;
 
         if (countAreas === EmbedCountAreas.all) {
-            countAreas = Object.values(EmbedCountAreas).pop();
+            countAreas = Object.values(EmbedCountAreas).filter(area => area !== EmbedCountAreas.all);
         } else {
             countAreas = ArrayUtil.guaranteeArray(countAreas);
 
@@ -406,7 +411,7 @@ let DiscordUtil = {
 
             if (!isEscaped) {
                 for (const { pattern, length } of DiscordUtil._mdDelimiters) {
-                    const part = str.slice(i, length);
+                    const part = str.slice(i, i + length);
 
                     if (part === pattern) {
                         const hasContentAfter = part.trim().length > 0;
@@ -442,6 +447,12 @@ let DiscordUtil = {
         const embedData = DiscordUtil.getEmbedData(embed);
 
         let oversized = options.oversized;
+
+        if (oversized === true) {
+            oversized = DiscordUtil.overSizeLimits(embedData, charLimit, lineLimit, {
+                areas: EmbedCountAreas.body
+            });
+        }
 
         if (oversized == null) {
             oversized = DiscordUtil.overSizeLimits(embedData, charLimit, lineLimit, {

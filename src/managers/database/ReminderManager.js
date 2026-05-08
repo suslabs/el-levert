@@ -74,7 +74,7 @@ class ReminderManager extends DBManager {
                 msg = `Reminder messages can be at most ${this.maxMsgLength} characters long.`;
                 ref = {
                     msgLength: remMsg.length,
-                    maxLength: this.maxTagNameLength
+                    maxLength: this.maxMsgLength / 2
                 };
             } else if (lines !== null) {
                 msg = "Reminder messages can only contain a single line.";
