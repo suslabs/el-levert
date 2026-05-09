@@ -7,9 +7,18 @@ export default defineConfig({
         setupFiles: [],
         include: ["test/**/*.test.js"],
         exclude: ["**/node_modules/**"],
+        pool: "forks",
+        fileParallelism: false,
+        singleFork: true,
         reporters: ["default"],
         coverage: {
-            exclude: ["stoat-compat/**", "src/vm/vm2/**", "src/vm/judge0/**"]
+            exclude: [
+                "stoat-compat/**",
+                "src/vm/vm2/**",
+                "src/vm/judge0/**",
+                "scripts/mock/**",
+                "scripts/importer/mock/**"
+            ]
         }
     }
 });

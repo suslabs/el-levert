@@ -1,5 +1,5 @@
-import Stoik from "../../src/parsers/stoik/Stoik.js";
-import Molecule from "../../src/parsers/stoik/Molecule.js";
+import Stoik from "../../../src/parsers/stoik/Stoik.js";
+import Molecule from "../../../src/parsers/stoik/Molecule.js";
 
 describe("Molecule", () => {
     it("should properly initialize using all constructors", () => {

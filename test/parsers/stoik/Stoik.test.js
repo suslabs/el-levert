@@ -1,9 +1,9 @@
-import Stoik from "../../src/parsers/stoik/Stoik.js";
-import Molecule from "../../src/parsers/stoik/Molecule.js";
+import Stoik from "../../../src/parsers/stoik/Stoik.js";
+import Molecule from "../../../src/parsers/stoik/Molecule.js";
 
-import { TokenType } from "../../src/parsers/stoik/Tokens.js";
+import { TokenType } from "../../../src/parsers/stoik/Tokens.js";
 
-import StoikError from "../../src/errors/StoikError.js";
+import StoikError from "../../../src/errors/StoikError.js";
 
 describe("tokenize", () => {
     it("should throw on invalid characters", () => {
@@ -214,7 +214,6 @@ describe("evaluate", () => {
         const result = Stoik.evaluate("H2O");
 
         expect(result).toBeInstanceOf(Molecule);
-
         expect(result).toEqual(
             new Molecule([
                 ["H", 2],
@@ -227,7 +226,6 @@ describe("evaluate", () => {
         const result = Stoik.evaluate("H2O2");
 
         expect(result).toBeInstanceOf(Molecule);
-
         expect(result).toEqual(
             new Molecule([
                 ["H", 2],
@@ -240,7 +238,6 @@ describe("evaluate", () => {
         const result = Stoik.evaluate("2H2O2");
 
         expect(result).toBeInstanceOf(Molecule);
-
         expect(result).toEqual(
             new Molecule([
                 ["H", 4],
@@ -253,7 +250,6 @@ describe("evaluate", () => {
         const result = Stoik.evaluate("(H2O)2");
 
         expect(result).toBeInstanceOf(Molecule);
-
         expect(result).toEqual(
             new Molecule([
                 ["H", 4],
@@ -266,7 +262,6 @@ describe("evaluate", () => {
         const result = Stoik.evaluate("2(H2O)2");
 
         expect(result).toBeInstanceOf(Molecule);
-
         expect(result).toEqual(
             new Molecule([
                 ["H", 8],
@@ -290,7 +285,6 @@ describe("evaluate", () => {
         const result = Stoik.evaluate("5(H2O)3((FeW)5CrMo2V)6CoMnSi");
 
         expect(result).toBeInstanceOf(Molecule);
-
         expect(result).toEqual(
             new Molecule([
                 ["H", 30],
