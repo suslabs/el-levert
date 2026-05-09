@@ -21,6 +21,8 @@ let DiscordUtil = {
     // userIdRegex: /[A-Za-z0-9]{24,30}/g,
 
     findUserIds: str => {
+        DiscordUtil.userIdRegex.lastIndex = 0;
+
         const matches = Array.from(str.matchAll(DiscordUtil.userIdRegex));
         return matches.map(match => match[0]);
     },
@@ -29,6 +31,8 @@ let DiscordUtil = {
     // mentionRegex: /<@([A-Za-z0-9]{24,30})>/g,
 
     findMentions: str => {
+        DiscordUtil.mentionRegex.lastIndex = 0;
+
         const matches = Array.from(str.matchAll(DiscordUtil.mentionRegex));
         return matches.map(match => match[1]);
     },
@@ -36,8 +40,14 @@ let DiscordUtil = {
     codeblockRegex: /(?<!\\)(?:`{3}([\S]+\n)?([\s\S]*?)`{3}|`([^`\n]+)`)/g,
 
     findCodeblocks: str => {
+        DiscordUtil.codeblockRegex.lastIndex = 0;
+
         const matches = str.matchAll(DiscordUtil.codeblockRegex);
         return Array.from(matches).map(match => [match.index, match.index + match[0].length]);
+    },
+
+    maskCodeblocks: (str, mask = " ") => {
+        return Util.maskRanges(str, DiscordUtil.findCodeblocks(str), mask);
     },
 
     getFileAttach: (data, name = "message.txt") => {
@@ -78,6 +88,7 @@ let DiscordUtil = {
 
     findMessageUrls: str => {
         DiscordUtil.msgUrlRegex.lastIndex = 0;
+
         const matches = Array.from(str.matchAll(DiscordUtil.msgUrlRegex));
         return matches.map(match => DiscordUtil._msgUrlMatchResult(match));
     },
@@ -121,6 +132,8 @@ let DiscordUtil = {
     },
 
     findAttachmentUrls: str => {
+        DiscordUtil.attachUrlRegex.lastIndex = 0;
+
         const matches = Array.from(str.matchAll(DiscordUtil.attachUrlRegex));
         return matches.map(match => DiscordUtil._attachUrlMatchResult(match));
     },
@@ -289,7 +302,8 @@ let DiscordUtil = {
         let size = 0;
 
         if (countAreas === EmbedCountAreas.all) {
-            countAreas = Object.values(EmbedCountAreas).filter(area => area !== EmbedCountAreas.all);
+            countAreas = Object.values(EmbedCountAreas);
+            countAreas.pop();
         } else {
             countAreas = ArrayUtil.guaranteeArray(countAreas);
 

@@ -1,18 +1,22 @@
-import { getClient } from "../../LevertClient.js";
+import { getClient, getEmoji } from "../../LevertClient.js";
 
-export default {
-    name: "remove_all",
-    aliases: ["delete_all"],
-    parent: "reminder",
-    subcommand: true,
+class ReminderRemoveAllCommand {
+    static info = {
+        name: "remove_all",
+        aliases: ["delete_all"],
+        parent: "reminder",
+        subcommand: true
+    };
 
-    handler: async (_, msg) => {
-        const removed = await getClient().reminderManager.removeAll(msg.author.id);
+    async handler(ctx) {
+        const removed = await getClient().reminderManager.removeAll(ctx.msg.author.id);
 
         if (removed) {
-            return `:information_source: Removed all reminders.`;
-        } else {
-            return ":information_source: You don't have any reminders.";
+            return `${getEmoji("info")} Removed all reminders.`;
         }
+
+        return `${getEmoji("info")} You don't have any reminders.`;
     }
-};
+}
+
+export default ReminderRemoveAllCommand;

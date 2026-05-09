@@ -1,33 +1,41 @@
 import { EmbedBuilder } from "discord.js";
 
-import { getClient } from "../../LevertClient.js";
+import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-import ParserUtil from "../../util/commands/ParserUtil.js";
 
 function formatGroups(groups) {
     if (Util.multiple(groups)) {
         const format = groups.map((group, i) => `${i + 1}. ${group.format(true)}`);
         return format.join("\n");
-    } else {
-        return Util.first(groups).format();
     }
+
+    return Util.first(groups).format();
 }
 
 function codeblock(str) {
     return `\`\`\`\n${str}\`\`\``;
 }
 
-export default {
-    name: "check",
-    parent: "perm",
-    subcommand: true,
+class PermCheckCommand {
+    static info = {
+        name: "check",
+        parent: "perm",
+        subcommand: true,
+        arguments: [
+            {
+                name: "userName",
+                parser: "split",
+                index: 0
+            }
+        ]
+    };
 
-    handler: async (args, msg) => {
-        let user = msg.author;
+    async handler(ctx) {
+        let user = ctx.msg.author;
 
-        if (!Util.empty(args)) {
-            const [u_name] = ParserUtil.splitArgs(args),
+        if (!Util.empty(ctx.argsText)) {
+            const u_name = ctx.arg("userName"),
                 find = Util.first(await getClient().findUsers(u_name));
 
             user = find?.user ?? {
@@ -39,20 +47,17 @@ export default {
         const groups = await getClient().permManager.fetch(user.id);
 
         if (groups === null) {
-            if (user === msg.author) {
-                return `:information_source: You have **no** permissions.`;
-            } else {
-                return `:information_source: User \`${user.username}\` has **no** permissions.`;
+            if (user === ctx.msg.author) {
+                return `${getEmoji("info")} You have **no** permissions.`;
             }
+
+            return `${getEmoji("info")} User \`${user.username}\` has **no** permissions.`;
         }
 
-        let header;
-
-        if (user === msg.author) {
-            header = ":information_source: You have the following permissions:";
-        } else {
-            header = `:information_source: User \`${user.username}\` has the following permissions:`;
-        }
+        const header =
+            user === ctx.msg.author
+                ? `${getEmoji("info")} You have the following permissions:`
+                : `${getEmoji("info")} User \`${user.username}\` has the following permissions:`;
 
         const format = formatGroups(groups),
             maxLevel = await getClient().permManager.maxLevel(user.id);
@@ -64,4 +69,6 @@ export default {
             embeds: [embed]
         };
     }
-};
+}
+
+export default PermCheckCommand;

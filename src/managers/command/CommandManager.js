@@ -2,7 +2,7 @@ import TextCommandManager from "./TextCommandManager.js";
 
 import Command from "../../structures/command/Command.js";
 
-import { getClient } from "../../LevertClient.js";
+import { getClient, getConfig } from "../../LevertClient.js";
 
 import RegexUtil from "../../util/misc/RegexUtil.js";
 
@@ -13,9 +13,9 @@ class CommandManager extends TextCommandManager {
     static commandClass = Command;
 
     constructor(enabled) {
-        const commandsDir = getClient().config.commandsPath,
-            commandPrefix = getClient().config.cmdPrefix,
-            excludeDir = getClient().config.cliCommandsPath;
+        const commandsDir = getConfig().commandsPath,
+            commandPrefix = getConfig().cmdPrefix,
+            excludeDir = getConfig().cliCommandsPath;
 
         super(enabled, commandsDir, commandPrefix, {
             excludeDirs: [excludeDir]
@@ -23,7 +23,7 @@ class CommandManager extends TextCommandManager {
     }
 
     isCommand(str, msg) {
-        const author = msg.author.id;
+        const author = msg?.author.id;
 
         if (getClient().isBridgeBot(author)) {
             return this._getBridgeBotExp(author).test(str);
@@ -54,7 +54,7 @@ class CommandManager extends TextCommandManager {
     }
 
     _getCommandContent(str, msg) {
-        const author = msg.author.id;
+        const author = msg?.author.id;
 
         if (getClient().isBridgeBot(author)) {
             const match = str.match(this._getBridgeBotExp(author));

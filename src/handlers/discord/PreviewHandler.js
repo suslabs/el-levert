@@ -3,15 +3,18 @@ import { ChannelType, EmbedBuilder, hyperlink } from "discord.js";
 import MessageHandler from "./MessageHandler.js";
 import MessageLimitTypes from "./MessageLimitTypes.js";
 
-import { getClient, getLogger } from "../../LevertClient.js";
+import { getClient, getConfig, getEmoji, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
+import Benchmark from "../../util/misc/Benchmark.js";
 
 import HandlerError from "../../errors/HandlerError.js";
 
 function logUsage(msg, str) {
+    DiscordUtil.msgUrlRegex.lastIndex = 0;
+
     getLogger().info(
         `Generating preview for "${str.match(DiscordUtil.msgUrlRegex)[0]}", issued by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)}).`
     );
@@ -28,19 +31,18 @@ function logPreviewSending(preview) {
     }
 }
 
-function logGenerateTime(t1) {
-    if (getLogger().isDebugEnabled()) {
-        const t2 = performance.now(),
-            elapsed = Util.timeDelta(t2, t1);
-
-        getLogger().debug(`Preview generation took ${Util.formatNumber(elapsed)} ms.`);
+function logGenerateTime(timeKey) {
+    if (!getLogger().isDebugEnabled()) {
+        Benchmark.stopTiming(timeKey, null);
+        return;
     }
+
+    const elapsed = Benchmark.stopTiming(timeKey, false);
+    getLogger().debug(`Preview generation took ${Util.formatNumber(elapsed)} ms.`);
 }
 
-function logSendTime(t1) {
-    const t2 = performance.now(),
-        elapsed = Util.timeDelta(t2, t1);
-
+function logSendTime(timeKey) {
+    const elapsed = Benchmark.stopTiming(timeKey, false);
     getLogger().info(`Sending preview took ${Util.formatNumber(elapsed)} ms.`);
 }
 
@@ -49,7 +51,7 @@ class PreviewHandler extends MessageHandler {
 
     constructor(enabaled) {
         super(enabaled, true, false, {
-            minResponseTime: getClient().config.minResponseTime + 0.5 / Util.durationSeconds.milli
+            minResponseTime: getConfig().minResponseTime + 0.5 / Util.durationSeconds.milli
         });
     }
 
@@ -63,6 +65,7 @@ class PreviewHandler extends MessageHandler {
     }
 
     removeLink(str) {
+        DiscordUtil.msgUrlRegex.lastIndex = 0;
         return str.replace(DiscordUtil.msgUrlRegex, "");
     }
 
@@ -74,7 +77,7 @@ class PreviewHandler extends MessageHandler {
         }
 
         logUsage(msg, str);
-        const t1 = performance.now();
+        const timeKey = Benchmark.startTiming(Symbol("preview_generate"));
 
         const { sv_id, ch_id, msg_id } = match;
 
@@ -142,7 +145,7 @@ class PreviewHandler extends MessageHandler {
                 text: `From ${channel}`
             });
 
-        logGenerateTime(t1);
+        logGenerateTime(timeKey);
         return embed;
     }
 
@@ -152,21 +155,28 @@ class PreviewHandler extends MessageHandler {
         }
 
         let preview = null;
-        const t1 = performance.now();
+        const timeKey = Benchmark.startTiming(Symbol("preview_send"));
 
         try {
             preview = await this.generatePreview(msg, msg.content);
         } catch (err) {
             if (err.name !== "HandlerError") {
+                Benchmark.stopTiming(timeKey, null);
+
                 await this.replyWithError(msg, err, "preview", "generating preview");
                 return true;
             } else if (["Invalid input", "not found"].some(str => err.message.includes(str))) {
+                Benchmark.stopTiming(timeKey, null);
+
                 logGenerateCancelled(err.message);
                 return false;
             }
 
+            Benchmark.stopTiming(timeKey, null);
+
             getLogger().info(`${err.message}.`);
-            await this.reply(msg, `:warning: ${err.message}.`);
+
+            await this.reply(msg, `${getEmoji("warn")} ${err.message}.`);
             return true;
         }
 
@@ -184,8 +194,8 @@ class PreviewHandler extends MessageHandler {
                 limitType: MessageLimitTypes.none
             }
         )
-            .then(() => logSendTime(t1))
-            .catch(() => {});
+            .then(() => logSendTime(timeKey))
+            .catch(() => Benchmark.stopTiming(timeKey, null));
 
         return true;
     }

@@ -1,9 +1,13 @@
 import { getClient } from "../../LevertClient.js";
 
-export default {
-    name: "stop",
+class StopCommand {
+    static info = {
+        name: "stop"
+    };
 
-    handler: async _ => {
+    async handler() {
         await getClient().stop(true);
     }
-};
+}
+
+export default StopCommand;

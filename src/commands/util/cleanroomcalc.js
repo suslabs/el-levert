@@ -1,62 +1,108 @@
 import { EmbedBuilder } from "discord.js";
 
+import { getEmoji } from "../../LevertClient.js";
+
 import Util from "../../util/Util.js";
 import CleanroomUtil from "../../util/commands/CleanroomUtil.js";
 
-export default {
-    name: "cleanroomcalc",
-    aliases: ["crc"],
-    category: "util",
+import ParserError from "../../errors/ParserError.js";
 
-    handler: args => {
-        const split = args.split("x"),
-            dims = split.map(d => Util.parseInt(d));
+function parseDimensions(argsText) {
+    const split = `${argsText ?? ""}`.split("x");
 
-        if (split.length !== 3) {
-            return `:warning: Invalid arguments specified. All dimensions must be provided in \`LxWxH\` format.`;
-        } else if (dims.some(d => Number.isNaN(d))) {
-            return `:warning: Invalid dimensions: \`${args}\`.`;
-        }
+    if (split.length !== 3) {
+        throw new ParserError("All cleanroom dimensions must be provided", {
+            reason: "missing_dimensions",
+            input: argsText,
+            parts: split
+        });
+    }
 
-        let info;
+    const dimensions = split.map(part => Util.parseInt(part));
+
+    if (dimensions.some(dimension => Number.isNaN(dimension))) {
+        throw new ParserError("Cleanroom dimensions must be numbers", {
+            reason: "invalid_dimensions",
+            input: argsText,
+            dimensions
+        });
+    }
+
+    return dimensions;
+}
+
+class CleanroomCalcCommand {
+    static info = {
+        name: "cleanroomcalc",
+        aliases: ["crc"],
+        category: "util",
+        arguments: [
+            {
+                name: "dimensions",
+                parser: parseDimensions
+            }
+        ]
+    };
+
+    handler(ctx) {
+        let dims;
 
         try {
-            info = CleanroomUtil.calc(dims);
+            dims = ctx.arg("dimensions");
+        } catch (err) {
+            if (err.name !== "ParserError") {
+                throw err;
+            }
+
+            switch (err.ref?.reason) {
+                case "missing_dimensions":
+                    return `${getEmoji("warn")} Invalid arguments specified. All dimensions must be provided in \`LxWxH\` format.`;
+                case "invalid_dimensions":
+                    return `${getEmoji("warn")} Invalid dimensions: \`${ctx.argsText}\`.`;
+                default:
+                    throw err;
+            }
+        }
+
+        let roomInfo;
+
+        try {
+            roomInfo = CleanroomUtil.calc(dims);
         } catch (err) {
             if (err.name !== "UtilError") {
                 throw err;
             }
 
             if (err.message.includes("at least")) {
-                return `:warning: Cleanroom size must be at least **${CleanroomUtil.minSize.join("x")}**.`;
+                return `${getEmoji("warn")} Cleanroom size must be at least **${CleanroomUtil.minSize.join("x")}**.`;
             } else if (err.message.includes("bigger")) {
-                return `:warning: Cleanroom cannot be bigger than **${CleanroomUtil.maxSize.join("x")}**.`;
+                return `${getEmoji("warn")} Cleanroom cannot be bigger than **${CleanroomUtil.maxSize.join("x")}**.`;
             } else {
-                return `:warning: ${err.message}.`;
+                return `${getEmoji("warn")} ${err.message}.`;
             }
         }
 
-        const header = `:information_source: Resources required for a \`${args}\` cleanroom:`;
+        const header = `${getEmoji("info")} Resources required for a \`${ctx.argsText}\` cleanroom:`;
 
         const embed = new EmbedBuilder()
             .addFields(
                 {
                     name: "Cleanroom controller:",
-                    value: "- " + Util.formatNumber(info.controller)
+                    value: "- " + Util.formatNumber(roomInfo.controller)
                 },
                 {
                     name: "Plascrete frame:",
-                    value: "- " + Util.formatNumber(info.frame),
+                    value: "- " + Util.formatNumber(roomInfo.frame),
                     inline: true
                 },
                 {
                     name: "Plascrete or glass walls:",
-                    value: "- " + Util.formatNumber(info.walls),
+                    value: "- " + Util.formatNumber(roomInfo.walls),
                     inline: true
                 },
                 {
                     name: "Filter casings:",
-                    value: "- " + Util.formatNumber(info.filters),
+                    value: "- " + Util.formatNumber(roomInfo.filters),
                     inline: true
                 }
             )
@@ -69,4 +115,6 @@ export default {
             embeds: [embed]
         };
     }
-};
+}
+
+export default CleanroomCalcCommand;

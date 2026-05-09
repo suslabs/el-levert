@@ -1,11 +1,15 @@
 import { getClient } from "../../LevertClient.js";
 
-export default {
-    name: "help",
-    aliases: ["list"],
+class HelpCommand {
+    static info = {
+        name: "help",
+        aliases: ["list"]
+    };
 
-    handler: _ => {
+    handler() {
         const help = getClient().cliCommandManager.getHelp();
         return `Available commands are:\n${help}`;
     }
-};
+}
+
+export default HelpCommand;

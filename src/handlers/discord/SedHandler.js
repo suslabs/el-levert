@@ -4,13 +4,14 @@ import { MessageType, EmbedBuilder, bold } from "discord.js";
 import MessageHandler from "./MessageHandler.js";
 import MessageLimitTypes from "./MessageLimitTypes.js";
 
-import { getClient, getLogger } from "../../LevertClient.js";
+import { getClient, getEmoji, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import ParserUtil from "../../util/commands/ParserUtil.js";
 import RegexUtil from "../../util/misc/RegexUtil.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
+import Benchmark from "../../util/misc/Benchmark.js";
 
 import HandlerError from "../../errors/HandlerError.js";
 
@@ -31,19 +32,18 @@ function logSedSending(sed) {
     }
 }
 
-function logGenerateTime(t1) {
-    if (getLogger().isDebugEnabled()) {
-        const t2 = performance.now(),
-            elapsed = Util.timeDelta(t2, t1);
-
-        getLogger().debug(`Sed generation took ${Util.formatNumber(elapsed)} ms.`);
+function logGenerateTime(timeKey) {
+    if (!getLogger().isDebugEnabled()) {
+        Benchmark.stopTiming(timeKey, null);
+        return;
     }
+
+    const elapsed = Benchmark.stopTiming(timeKey, false);
+    getLogger().debug(`Sed generation took ${Util.formatNumber(elapsed)} ms.`);
 }
 
-function logSendTime(t1) {
-    const t2 = performance.now(),
-        elapsed = Util.timeDelta(t2, t1);
-
+function logSendTime(timeKey) {
+    const elapsed = Benchmark.stopTiming(timeKey, false);
     getLogger().info(`Sending replaced message took ${Util.formatNumber(elapsed)} ms.`);
 }
 
@@ -52,7 +52,7 @@ class SedHandler extends MessageHandler {
 
     static sedUsage = "**Usage:** `sed/regex/replace/flags (optional)`";
     static sedRegex =
-        /(?:^sed\/|\s+\/)(?<regex_str>(?:\\.|[^/])+)\/(?<replace>(?:\\.|[^/])*)\/?(?<flags_str>(?:\\.|[^/])+?)?(?=\s|$)/gi;
+        /(?:^sed\/|\s+\/)(?<regex_text>(?:\\.|[^/])+)\/(?<replace>(?:\\.|[^/])*)\/?(?<flags_text>(?:\\.|[^/])+?)?(?=\s|$)/gi;
     static defaultFlags = "i";
 
     constructor(enabled) {
@@ -69,8 +69,9 @@ class SedHandler extends MessageHandler {
 
     async generateSed(msg, str) {
         logUsage(msg);
-        const t1 = performance.now();
+        const timeKey = Benchmark.startTiming(Symbol("sed_generate"));
 
+        SedHandler.sedRegex.lastIndex = 0;
         const matches = Array.from(str.matchAll(SedHandler.sedRegex));
 
         if (Util.empty(matches)) {
@@ -88,27 +89,27 @@ class SedHandler extends MessageHandler {
                 });
             }
 
-            let { regex_str: regexStr, replace, flags_str: flagsStr } = match.groups;
-            regexStr = ParserUtil.parseScript(regexStr || "").body.replaceAll("\\/", "/");
+            let { regex_text: regexText, replace, flags_text: flagsText } = match.groups;
+            regexText = ParserUtil.parseScript(regexText || "").body.replaceAll("\\/", "/");
             replace = ParserUtil.parseScript(replace || "").body.replaceAll("\\/", "/");
-            flagsStr = ParserUtil.parseScript(flagsStr || SedHandler.defaultFlags).body.toLowerCase();
+            flagsText = ParserUtil.parseScript(flagsText || SedHandler.defaultFlags).body.toLowerCase();
 
-            if (!RegexUtil.validFlags(flagsStr)) {
+            if (!RegexUtil.validFlags(flagsText)) {
                 throw new HandlerError("Invalid regex flags", {
                     i: expIdx(i),
-                    flagsStr
+                    flagsText
                 });
             }
 
             try {
-                const regex = new RE2(regexStr, flagsStr);
+                const regex = new RE2(regexText, flagsText);
                 return [regex, replace];
             } catch (err) {
                 if (err instanceof SyntaxError) {
                     throw new HandlerError("Invalid regex or flags", {
                         i: expIdx(i),
-                        regexStr,
-                        flagsStr
+                        regexText,
+                        flagsText
                     });
                 }
 
@@ -123,6 +124,8 @@ class SedHandler extends MessageHandler {
         if (msg.type === MessageType.Reply) {
             sedMsg = await getClient().fetchMessage(msg.channel.id, msg.reference.messageId);
             content = sedMsg.content;
+
+            mergedRegex.lastIndex = 0;
 
             if (!mergedRegex.test(content)) {
                 throw new HandlerError("No matching text found", {
@@ -163,7 +166,7 @@ class SedHandler extends MessageHandler {
                 text: `From ${channel}`
             });
 
-        logGenerateTime(t1);
+        logGenerateTime(timeKey);
         return embed;
     }
 
@@ -172,7 +175,7 @@ class SedHandler extends MessageHandler {
             return false;
         }
 
-        const t1 = performance.now();
+        const timeKey = Benchmark.startTiming(Symbol("sed_send"));
 
         let sed = null;
 
@@ -181,17 +184,20 @@ class SedHandler extends MessageHandler {
         } catch (err) {
             if (err.name !== "HandlerError") {
                 const out = `generating ${bold("sed")} replace`;
+                Benchmark.stopTiming(timeKey, null);
                 await this.replyWithError(msg, err, "sed", out);
 
                 return true;
             } else if (err.message.startsWith("Invalid input")) {
+                Benchmark.stopTiming(timeKey, null);
                 logGenerateCancelled(err.message);
                 return false;
             }
 
+            Benchmark.stopTiming(timeKey, null);
             getLogger().info(`${err.message}.`);
 
-            const emoji = err.message.startsWith("No matching") ? ":no_entry_sign:" : ":warning:",
+            const emoji = getEmoji(err.message.startsWith("No matching") ? "error" : "warn"),
                 errMsg = err.message + (err.ref?.i ? ` for expression ${bold(err.ref.i + 1)}.` : ".");
 
             await this.reply(msg, `${emoji} ${errMsg}\n${SedHandler.sedUsage}`);
@@ -213,8 +219,8 @@ class SedHandler extends MessageHandler {
                 limitType: MessageLimitTypes.trim
             }
         )
-            .then(() => logSendTime(t1))
-            .catch(() => {});
+            .then(() => logSendTime(timeKey))
+            .catch(() => Benchmark.stopTiming(timeKey, null));
 
         return true;
     }

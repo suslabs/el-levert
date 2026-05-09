@@ -97,6 +97,44 @@ const ArrayUtil = Object.freeze({
         return true;
     },
 
+    diff: (oldArray, newArray, callback) => {
+        const getValue = ArrayUtil._valueFunc(callback),
+            counts = new Map();
+
+        const shared = [],
+            removed = [],
+            added = [];
+
+        for (const item of oldArray) {
+            const value = getValue(item);
+            counts.set(value, (counts.get(value) || 0) + 1);
+        }
+
+        for (const item of newArray) {
+            const value = getValue(item),
+                count = counts.get(value) || 0;
+
+            if (count > 0) {
+                counts.set(value, count - 1);
+                shared.push(item);
+            } else {
+                added.push(item);
+            }
+        }
+
+        for (const item of oldArray) {
+            const value = getValue(item),
+                count = counts.get(value) || 0;
+
+            if (count > 0) {
+                counts.set(value, count - 1);
+                removed.push(item);
+            }
+        }
+
+        return { shared, removed, added };
+    },
+
     sort: (array, callback) => {
         const getValue = ArrayUtil._valueFunc(callback);
 

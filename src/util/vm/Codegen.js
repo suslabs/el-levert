@@ -97,6 +97,8 @@ const Codegen = {
 
     object: (obj, asJson = true) => {
         if (asJson) {
+            Codegen._objectKeyExp.lastIndex = 0;
+
             const str = JSON.stringify(obj, undefined, Codegen.indentation);
             return str.replace(Codegen._objectKeyExp, "$1$2:");
         } else {

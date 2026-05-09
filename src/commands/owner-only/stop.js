@@ -1,13 +1,17 @@
-import { getClient } from "../../LevertClient.js";
+import { getClient, getEmoji } from "../../LevertClient.js";
 
-export default {
-    name: "stop",
-    ownerOnly: true,
-    category: "owner-only",
+class StopCommand {
+    static info = {
+        name: "stop",
+        ownerOnly: true,
+        category: "owner-only"
+    };
 
-    handler: async (_, msg) => {
-        await msg.reply(":information_source: Stopping bot...");
+    async handler(ctx) {
+        await ctx.reply(`${getEmoji("info")} Stopping bot...`);
 
         await getClient().stop(true);
     }
-};
+}
+
+export default StopCommand;

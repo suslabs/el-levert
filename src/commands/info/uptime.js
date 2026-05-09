@@ -1,12 +1,14 @@
-import { getClient } from "../../LevertClient.js";
+import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 
-export default {
-    name: "uptime",
-    category: "info",
+class UptimeCommand {
+    static info = {
+        name: "uptime",
+        category: "info"
+    };
 
-    handler: _ => {
+    handler() {
         const uptime = Util.duration(getClient().uptime, {
             format: true,
             largestN: 3
@@ -24,6 +26,8 @@ export default {
             timeZone: "UTC"
         });
 
-        return `:information_source: The bot has been running for **${uptime}**. (since **${startedDate}**)`;
+        return `${getEmoji("info")} The bot has been running for **${uptime}**. (since **${startedDate}**)`;
     }
-};
+}
+
+export default UptimeCommand;

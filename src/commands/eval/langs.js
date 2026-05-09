@@ -1,5 +1,7 @@
 import { EmbedBuilder } from "discord.js";
 
+import { getEmoji } from "../../LevertClient.js";
+
 function formatNames(langNames) {
     const format = Object.entries(langNames).map((entry, i) => {
         const [key, name] = entry;
@@ -9,20 +11,22 @@ function formatNames(langNames) {
     return format.join("\n");
 }
 
-export default {
-    name: "langs",
-    parent: "eval",
-    subcommand: true,
+class EvalLangsCommand {
+    static info = {
+        name: "langs",
+        parent: "eval",
+        subcommand: true
+    };
 
-    handler: function () {
+    handler() {
         const format = formatNames(this.parentCmd.langNames),
             embed = new EmbedBuilder().setDescription(format);
 
-        const out = {
-            content: ":information_source: Supported languages:",
+        return {
+            content: `${getEmoji("info")} Supported languages:`,
             embeds: [embed]
         };
-
-        return out;
     }
-};
+}
+
+export default EvalLangsCommand;

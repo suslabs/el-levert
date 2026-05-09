@@ -1,23 +1,48 @@
 import { parseDate } from "chrono-node";
 
-import { getClient } from "../../LevertClient.js";
+import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 
 const messageRegex = /(.+?)\s*(?:(?:(['"`])((?:[^\2\\]|\\.)*?)\2)|$)/;
 
-export default {
-    name: "add",
-    aliases: ["set", "create"],
-    parent: "reminder",
-    subcommand: true,
+class ReminderAddCommand {
+    static info = {
+        name: "add",
+        aliases: ["set", "create"],
+        parent: "reminder",
+        subcommand: true,
+        arguments: [
+            {
+                name: "date",
+                parser: "match",
+                regex: messageRegex,
+                index: 1
+            },
+            {
+                name: "quote",
+                parser: "match",
+                regex: messageRegex,
+                index: 2
+            },
+            {
+                name: "message",
+                parser: "match",
+                regex: messageRegex,
+                index: 3,
+                transform: (value, _context, parsed) =>
+                    typeof value === "string" && typeof parsed.quote === "string"
+                        ? value.replaceAll("\\" + parsed.quote, parsed.quote)
+                        : value
+            }
+        ]
+    };
 
-    handler: async function (args, msg) {
-        const match = args.match(messageRegex),
-            date = match?.[1];
+    async handler(ctx) {
+        const date = ctx.arg("date");
 
-        if (Util.empty(args) || Util.empty(date)) {
-            return `:information_source: ${this.getArgsHelp('date "message"')}`;
+        if (Util.empty(ctx.argsText) || Util.empty(date)) {
+            return `${getEmoji("info")} ${this.getArgsHelp('date "message"')}`;
         }
 
         let parsedDate = parseDate(date);
@@ -25,27 +50,25 @@ export default {
         if (!parsedDate) {
             parsedDate = parseDate(`in ${date}`);
             if (!parsedDate) {
-                return `:warning: Invalid date: \`${date}\`.`;
+                return `${getEmoji("warn")} Invalid date: \`${date}\`.`;
             }
         }
 
-        let [quote, message] = Util.after(match, 1);
-        message = message?.replaceAll("\\" + quote, quote);
+        let message = ctx.arg("message");
 
         {
             let err;
             [message, err] = getClient().reminderManager.checkMessage(message, false);
 
             if (err !== null) {
-                return `:warning: ${err}.`;
+                return `${getEmoji("warn")} ${err}.`;
             }
         }
 
-        let end = new Date(parsedDate).getTime(),
-            reminder;
+        let reminder;
 
         try {
-            reminder = await getClient().reminderManager.add(msg.author.id, end, message, false);
+            reminder = await getClient().reminderManager.add(ctx.msg.author.id, new Date(parsedDate).getTime(), message, false);
         } catch (err) {
             if (err.name !== "ReminderError") {
                 throw err;
@@ -53,13 +76,15 @@ export default {
 
             switch (err.message) {
                 case "Invalid end time":
-                    return ":warning: Can't add a reminder for a time in the past.";
+                    return `${getEmoji("warn")} Can't add a reminder for a time in the past.`;
                 default:
-                    return `:warning: ${err.message}.`;
+                    return `${getEmoji("warn")} ${err.message}.`;
             }
         }
 
         const format = reminder.format();
-        return `:information_source: You will be reminded on ${format}${format.endsWith('"') ? "" : "."}`;
+        return `${getEmoji("info")} You will be reminded on ${format}${format.endsWith('"') ? "" : "."}`;
     }
-};
+}
+
+export default ReminderAddCommand;

@@ -1,24 +1,55 @@
 import { escapeMarkdown } from "discord.js";
 
-import { getClient } from "../../LevertClient.js";
+import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-import ParserUtil from "../../util/commands/ParserUtil.js";
 
 const unchangedArgs = ["", "unchanged"];
 
-export default {
-    name: "update_group",
-    aliases: ["edit", "edit_group"],
-    parent: "perm",
-    subcommand: true,
-    allowed: "admin",
+class PermUpdateGroupCommand {
+    static info = {
+        name: "update_group",
+        aliases: ["edit", "edit_group"],
+        parent: "perm",
+        subcommand: true,
+        allowed: "admin",
+        arguments: [
+            {
+                name: "groupName",
+                parser: "split",
+                index: 0
+            },
+            {
+                name: "groupData",
+                parser: "split",
+                index: 1
+            },
+            {
+                name: "newNameText",
+                from: "groupData",
+                parser: "split",
+                index: 0
+            },
+            {
+                name: "newLevelText",
+                from: "groupData",
+                parser: "split",
+                index: 1
+            },
+            {
+                name: "newLevel",
+                from: "newLevelText",
+                transform: "int"
+            }
+        ]
+    };
 
-    handler: async function (args, msg, perm) {
-        let [g_name, g_data] = ParserUtil.splitArgs(args);
+    async handler(ctx) {
+        let g_name = ctx.arg("groupName"),
+            g_data = ctx.arg("groupData");
 
-        if (Util.empty(args) || Util.empty(g_name) || Util.empty(g_data)) {
-            return `:information_source: ${this.getArgsHelp("group_name (new_name/unchanged) (new_level/unchanged)")}`;
+        if (Util.empty(ctx.argsText) || Util.empty(g_name) || Util.empty(g_data)) {
+            return `${getEmoji("info")} ${this.getArgsHelp("group_name (new_name/unchanged) (new_level/unchanged)")}`;
         }
 
         {
@@ -26,17 +57,19 @@ export default {
             [g_name, err] = getClient().permManager.checkName(g_name, false);
 
             if (err !== null) {
-                return `:warning: ${err}.`;
+                return `${getEmoji("warn")} ${err}.`;
             }
         }
 
         const group = await getClient().permManager.fetchGroup(g_name);
 
         if (group === null) {
-            return `:warning: Group **${escapeMarkdown(g_name)}** doesn't exist.`;
+            return `${getEmoji("warn")} Group **${escapeMarkdown(g_name)}** doesn't exist.`;
         }
 
-        let [newName, newLevel] = ParserUtil.splitArgs(g_data);
+        let newName = ctx.arg("newNameText"),
+            newLevel = ctx.arg("newLevel"),
+            newLevelText = ctx.arg("newLevelText");
 
         if (unchangedArgs.includes(newName)) {
             newName = null;
@@ -45,28 +78,27 @@ export default {
             [newName, err] = getClient().permManager.checkName(newName, false);
 
             if (err !== null) {
-                return `:warning: ${err}.`;
+                return `${getEmoji("warn")} ${err}.`;
             }
         }
 
-        if (unchangedArgs.includes(newLevel)) {
+        if (unchangedArgs.includes(newLevelText)) {
             newLevel = null;
         } else {
-            newLevel = Util.parseInt(newLevel);
             let err;
             [newLevel, err] = getClient().permManager.checkLevel(newLevel, false);
 
             if (err !== null) {
-                return `:warning: ${err}.`;
+                return `${getEmoji("warn")} ${err}.`;
             }
         }
 
         if (newName === null && newLevel === null) {
-            return ":warning: No group changes provided.";
+            return `${getEmoji("warn")} No group changes provided.`;
         }
 
-        if (newLevel !== null && !getClient().permManager.allowed(perm, newLevel)) {
-            return `:warning: Can't update a group to have a level that is higher than your own. (**${perm}** < **${newLevel}**)`;
+        if (newLevel !== null && !getClient().permManager.allowed(ctx.perm, newLevel)) {
+            return `${getEmoji("warn")} Can't update a group to have a level that is higher than your own. (**${ctx.perm}** < **${newLevel}**)`;
         }
 
         try {
@@ -80,12 +112,14 @@ export default {
 
             switch (err.message) {
                 case "Group already exists":
-                    return `:warning: Group **${escapeMarkdown(g_name)}** already exists.`;
+                    return `${getEmoji("warn")} Group **${escapeMarkdown(g_name)}** already exists.`;
                 default:
-                    return `:warning: ${err.message}.`;
+                    return `${getEmoji("warn")} ${err.message}.`;
             }
         }
 
-        return `:white_check_mark: Updated group **${escapeMarkdown(g_name)}**.`;
+        return `${getEmoji("ok")} Updated group **${escapeMarkdown(g_name)}**.`;
     }
-};
+}
+
+export default PermUpdateGroupCommand;

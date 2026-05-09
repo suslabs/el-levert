@@ -1,5 +1,7 @@
 import { EmbedBuilder } from "discord.js";
 
+import { getEmoji } from "../../LevertClient.js";
+
 import Stoik from "../../parsers/stoik/Stoik.js";
 
 import Util from "../../util/Util.js";
@@ -9,16 +11,16 @@ import ParserUtil from "../../util/commands/ParserUtil.js";
 
 import { drawTable } from "../../util/misc/Table.js";
 
-function evaluate(input, side) {
+function evaluate(ctx, side) {
     try {
-        const molec = Stoik.evaluate(input);
+        const molec = Stoik.evaluate(ctx);
         return [molec, null];
     } catch (err) {
         if (err.name !== "StoikError") {
             throw err;
         }
 
-        const out = `:warning: Malformed **${side}-hand side** expression. ${formatError(err)}`;
+        const out = `${getEmoji("warn")} Malformed **${side}-hand side** expression. ${formatError(err)}`;
 
         return [null, out];
     }
@@ -68,17 +70,36 @@ function codeblock(str) {
     return `\`\`\`lua\n${str}\`\`\``;
 }
 
-export default {
-    name: "stoik",
-    category: "util",
+class StoikCommand {
+    static info = {
+        name: "stoik",
+        category: "util",
+        arguments: [
+            {
+                name: "left",
+                parser: "split",
+                options: {
+                    sep: ["=", "->"]
+                },
+                index: 0
+            },
+            {
+                name: "right",
+                parser: "split",
+                options: {
+                    sep: ["=", "->"]
+                },
+                index: 1
+            }
+        ]
+    };
 
-    handler: args => {
-        const [left, right] = ParserUtil.splitArgs(args, false, {
-            sep: ["=", "->"]
-        });
+    handler(ctx) {
+        const left = ctx.arg("left"),
+            right = ctx.arg("right");
 
         if (Util.empty(left) || Util.empty(right)) {
-            return `:warning: No expression provided. Please format the equation like:
+            return `${getEmoji("warn")} No expression provided. Please format the equation like:
 \`Reactant1 + Reactant2 -> Product1 + Product2\`
 
 Example: \`3CuSO4 + 2Al(NO3)3 -> 3Cu(NO3)2 + Al2(SO4)3\``;
@@ -98,11 +119,11 @@ Example: \`3CuSO4 + 2Al(NO3)3 -> 3Cu(NO3)2 + Al2(SO4)3\``;
         }
 
         const equation = Stoik.formatEquation(leftMolec, rightMolec),
-            [balanced, info] = Stoik.checkBalance(equation);
+            [balanced, infoRows] = Stoik.checkBalance(equation);
 
-        const header = `${balanced ? ":white_check_mark:" : ":x:"} Your reaction __is ${balanced ? "" : "not "}balanced__.`;
+        const header = `${getEmoji(balanced ? "ok" : "error")} Your reaction __is ${balanced ? "" : "not "}balanced__.`;
 
-        for (const val of info) {
+        for (const val of infoRows) {
             for (const [key, value] of Object.entries(val)) {
                 if (typeof value === "number") {
                     val[key] = Util.formatNumber(value);
@@ -110,8 +131,8 @@ Example: \`3CuSO4 + 2Al(NO3)3 -> 3Cu(NO3)2 + Al2(SO4)3\``;
             }
         }
 
-        const maxLeft = ArrayUtil.maxLength(info.map(val => val.reactantCount)),
-            maxRight = ArrayUtil.maxLength(info.map(val => val.productCount));
+        const maxLeft = ArrayUtil.maxLength(infoRows.map(val => val.reactantCount)),
+            maxRight = ArrayUtil.maxLength(infoRows.map(val => val.productCount));
 
         const columns = {
                 left: "Reactants",
@@ -119,9 +140,9 @@ Example: \`3CuSO4 + 2Al(NO3)3 -> 3Cu(NO3)2 + Al2(SO4)3\``;
                 res: "Balanced"
             },
             rows = {
-                left: info.map(val => formatElement(val.element, val.reactantCount, maxLeft)),
-                right: info.map(val => formatElement(val.element, val.productCount, maxRight)),
-                res: info.map(val => (val.balanced ? "✓" : "✗"))
+                left: infoRows.map(val => formatElement(val.element, val.reactantCount, maxLeft)),
+                right: infoRows.map(val => formatElement(val.element, val.productCount, maxRight)),
+                res: infoRows.map(val => (val.balanced ? "✓" : "✗"))
             };
 
         const table = drawTable(columns, rows, "light", {
@@ -135,4 +156,6 @@ Example: \`3CuSO4 + 2Al(NO3)3 -> 3Cu(NO3)2 + Al2(SO4)3\``;
             embeds: [embed]
         };
     }
-};
+}
+
+export default StoikCommand;

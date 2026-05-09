@@ -2,11 +2,13 @@ import loadConfig from "../../config/loadConfig.js";
 
 import { getClient, getLogger } from "../../LevertClient.js";
 
-export default {
-    name: "restart",
-    aliases: ["reload"],
+class RestartCommand {
+    static info = {
+        name: "restart",
+        aliases: ["reload"]
+    };
 
-    handler: async _ => {
+    async handler() {
         await getClient().restart(() => {
             getLogger().info("Reloading configs...");
             return loadConfig(getLogger());
@@ -14,4 +16,6 @@ export default {
 
         return "Restarted bot!";
     }
-};
+}
+
+export default RestartCommand;

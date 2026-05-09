@@ -5,7 +5,7 @@ import { DisabledGroup, OwnerGroup, OwnerUser } from "../../structures/permissio
 import Group from "../../structures/permission/Group.js";
 import User from "../../structures/permission/User.js";
 
-import { getClient, getLogger } from "../../LevertClient.js";
+import { getClient, getConfig, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 
@@ -18,15 +18,15 @@ class PermissionManager extends DBManager {
     constructor(enabled) {
         super(enabled, "permission", "perm_db", PermissionDatabase);
 
-        this.maxGroupNameLength = getClient().config.maxGroupNameLength;
+        this.maxGroupNameLength = getConfig().maxGroupNameLength;
 
         this.owner = getClient().owner;
 
         this.setLevels({
             disabledLevel: DisabledGroup.level,
             defaultLevel: Group.defaultValues.level,
-            modLevel: getClient().config.tagModeratorLevel,
-            adminLevel: getClient().config.permissionAdminLevel,
+            modLevel: getConfig().tagModeratorLevel,
+            adminLevel: getConfig().permissionAdminLevel,
             ownerLevel: OwnerGroup.level
         });
     }

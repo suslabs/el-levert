@@ -5,7 +5,7 @@ import Handler from "../Handler.js";
 import ReplyTracker from "./tracker/ReplyTracker.js";
 import UserTracker from "./tracker/UserTracker.js";
 
-import { getClient, getLogger } from "../../LevertClient.js";
+import { getConfig, getEmoji, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
@@ -26,6 +26,20 @@ class MessageHandler extends Handler {
         this.useConfigLimits = options.useConfigLimits ?? false;
 
         this.setLimits();
+    }
+
+    getReply(msg, i = 0) {
+        if (!this.hasReplyTracker) {
+            return null;
+        }
+
+        const { replies } = this.replyTracker.getData(msg);
+
+        if (!Array.isArray(replies) || replies.length <= 0) {
+            return null;
+        }
+
+        return Number.isInteger(i) ? (replies[i] ?? null) : replies;
     }
 
     async reply(msg, data, options = {}) {
@@ -50,6 +64,8 @@ class MessageHandler extends Handler {
         if (this.hasReplyTracker) {
             this.replyTracker.addReply(msg, msgReply);
         }
+
+        return msgReply;
     }
 
     async replyWithError(msg, err, type, out) {
@@ -78,6 +94,54 @@ class MessageHandler extends Handler {
         if (this.hasReplyTracker) {
             this.replyTracker.addReply(msg, msgReply);
         }
+
+        return msgReply;
+    }
+
+    async contextReply(context, ...args) {
+        return await this._contextReply(context, this.reply, this.editReply, ...args);
+    }
+
+    async contextReplyWithError(context, ...args) {
+        return await this._contextReply(context, this.replyWithError, this.editReplyWithError, ...args);
+    }
+
+    async editReply(msg, data, options = {}, i = 0) {
+        const existing = this.getReply(msg, i);
+
+        if (existing === null) {
+            return await this.reply(msg, data, options);
+        }
+
+        const out = this._getOutput(data, options);
+
+        if (Array.isArray(out)) {
+            const [first, ...rest] = out,
+                edited = await this._editReply(msg, existing, first, i);
+
+            if (!Util.empty(rest)) {
+                await this.reply(msg, rest, options);
+            }
+
+            return edited;
+        }
+
+        return await this._editReply(msg, existing, out, i);
+    }
+
+    async editReplyWithError(msg, err, type, out, i = 0) {
+        const existing = this.getReply(msg, i);
+
+        if (existing === null) {
+            return await this.replyWithError(msg, err, type, out);
+        }
+
+        const errorOut = this._getErrorOutput(err, out);
+        return await this._editReply(msg, existing, errorOut, i, type, out);
+    }
+
+    async editFromContext(context, ...args) {
+        return await this.editReply(context.msg, ...args);
     }
 
     async delete(msg) {
@@ -86,6 +150,10 @@ class MessageHandler extends Handler {
         }
 
         return await this.replyTracker.deleteWithCallback(msg, "reply", msg => msg.delete());
+    }
+
+    async deleteReplyFromContext(context) {
+        return await this.delete(context.msg);
     }
 
     load() {
@@ -110,22 +178,39 @@ class MessageHandler extends Handler {
         }
     }
 
+    setLimits(limits) {
+        this._outCharLimit = getConfig().outCharLimit ?? this._outCharLimit;
+        this._outLineLimit = getConfig().outLineLimit ?? this._outLineLimit;
+
+        this._embedCharLimit = getConfig().embedCharLimit ?? this._embedCharLimit;
+        this._embedLineLimit = getConfig().embedLineLimit ?? this._embedLineLimit;
+    }
+
+    getLimits(useConfig = true, useTrim = false) {
+        const outChar = useConfig ? this._outCharLimit : DiscordUtil.msgCharLimit,
+            outLine = useConfig ? this._outLineLimit : null;
+
+        const embedChar = useConfig ? this._embedCharLimit : DiscordUtil.embedCharLimit,
+            embedLine = useConfig ? this._embedLineLimit : null;
+
+        const limits = {
+            out: [outChar, outLine],
+            embed: [embedChar, embedLine]
+        };
+
+        if (useTrim) {
+            const outTrim = DiscordUtil.msgCharLimit - outChar < 3 ? DiscordUtil.msgCharLimit - 3 : outChar,
+                embedTrim = DiscordUtil.embedCharLimit - embedChar < 3 ? DiscordUtil.embedCharLimit - 3 : embedChar;
+
+            limits.outTrim = [outTrim, outLine];
+            limits.embedTrim = [embedTrim, embedLine];
+        }
+
+        return limits;
+    }
+
     static _mentionRegex = /@(everyone|here)/g;
     static _emptyMessage = "Cannot send an empty message";
-
-    static _formatOutput(data) {
-        const msgData = TypeTester.isObject(data);
-
-        const out = msgData ? (({ content: _1, embeds: _2, ...rest }) => rest)(data) : {};
-
-        const rawContent = msgData ? data.content : data,
-            content = VMUtil.formatOutput(rawContent)?.trim();
-
-        const rawEmbeds = msgData ? data.embeds : undefined,
-            embeds = rawEmbeds?.filter(Boolean).map(embed => DiscordUtil.getBuiltEmbed(embed));
-
-        return { out, content, embeds };
-    }
 
     static _escapeMentions(str) {
         if (typeof str !== "string") {
@@ -133,6 +218,7 @@ class MessageHandler extends Handler {
         }
 
         const codeblockRanges = DiscordUtil.findCodeblocks(str);
+        MessageHandler._mentionRegex.lastIndex = 0;
 
         return str.replaceAll(MessageHandler._mentionRegex, (match, p1, offset) => {
             for (const [start, end] of codeblockRanges) {
@@ -173,42 +259,37 @@ class MessageHandler extends Handler {
         }
     }
 
+    static _formatOutput(data) {
+        const msgData = TypeTester.isObject(data),
+            out = msgData ? data : {};
+
+        const rawContent = msgData ? data.content : data,
+            content = VMUtil.formatOutput(rawContent)?.trim();
+
+        const rawEmbeds = msgData ? data.embeds : undefined,
+            embeds = rawEmbeds?.filter(Boolean).map(embed => DiscordUtil.getBuiltEmbed(embed));
+
+        if (msgData) {
+            delete out.content;
+            delete out.embeds;
+        }
+
+        return { out, content, embeds };
+    }
+
+    static _isEmptyPayload(data) {
+        if (TypeTester.isObject(data)) {
+            return Util.empty(data.content) && Object.keys(data).every(key => key === "content");
+        }
+
+        return Util.empty(data);
+    }
+
     _sendTyping(msg) {
         msg.channel.sendTyping().catch(_ => {});
     }
 
-    setLimits(limits) {
-        this._outCharLimit = getClient().config.outCharLimit ?? this._outCharLimit;
-        this._outLineLimit = getClient().config.outLineLimit ?? this._outLineLimit;
-
-        this._embedCharLimit = getClient().config.embedCharLimit ?? this._embedCharLimit;
-        this._embedLineLimit = getClient().config.embedLineLimit ?? this._embedLineLimit;
-    }
-
-    getLimits(useConfig = true, useTrim = false) {
-        const outChar = useConfig ? this._outCharLimit : DiscordUtil.msgCharLimit,
-            outLine = useConfig ? this._outLineLimit : null;
-
-        const embedChar = useConfig ? this._embedCharLimit : DiscordUtil.embedCharLimit,
-            embedLine = useConfig ? this._embedLineLimit : null;
-
-        const limits = {
-            out: [outChar, outLine],
-            embed: [embedChar, embedLine]
-        };
-
-        if (useTrim) {
-            const outTrim = DiscordUtil.msgCharLimit - outChar < 3 ? DiscordUtil.msgCharLimit - 3 : outChar,
-                embedTrim = DiscordUtil.embedCharLimit - embedChar < 3 ? DiscordUtil.embedCharLimit - 3 : embedChar;
-
-            limits.outTrim = [outTrim, outLine];
-            limits.embedTrim = [embedTrim, embedLine];
-        }
-
-        return limits;
-    }
-
-    _applyLimits(data, options) {
+    _applyLimits(data, options = {}) {
         const useConfig = options.useConfigLimits ?? this.useConfigLimits;
 
         const limitType = options.limitType ?? MessageLimitTypes.default,
@@ -259,11 +340,11 @@ class MessageHandler extends Handler {
 
                     if (chars !== null) {
                         return {
-                            content: `:warning: Content is too long. (${chars} / ${outLimits[0]})`
+                            content: `${getEmoji("warn")} Content is too long. (${chars} / ${outLimits[0]})`
                         };
                     } else if (lines !== null) {
                         return {
-                            content: `:warning: Content has too many newlines. (${lines} / ${outLimits[1]})`
+                            content: `${getEmoji("warn")} Content has too many newlines. (${lines} / ${outLimits[1]})`
                         };
                     }
 
@@ -307,11 +388,11 @@ class MessageHandler extends Handler {
 
                     if (chars !== null) {
                         return {
-                            content: `:warning: Embed${n} is too long. (${chars} / ${embedLimits[0]})`
+                            content: `${getEmoji("warn")} Embed${n} is too long. (${chars} / ${embedLimits[0]})`
                         };
                     } else if (lines !== null) {
                         return {
-                            content: `:warning: Embed${n} has too many newlines. (${lines} / ${embedLimits[1]})`
+                            content: `${getEmoji("warn")} Embed${n} has too many newlines. (${lines} / ${embedLimits[1]})`
                         };
                     }
 
@@ -352,43 +433,21 @@ class MessageHandler extends Handler {
         return out;
     }
 
+    _getErrorOutput(err, out) {
+        const errMsg = err.stack ?? err.message ?? "No error message available";
+
+        return {
+            content: `${getEmoji("error")} Encountered exception while ${out}:`,
+            ...DiscordUtil.getFileAttach(errMsg, "error.js")
+        };
+    }
+
     _getReplyFunc(msg, i) {
         return !Number.isInteger(i) || i <= 0 ? msg.reply.bind(msg) : msg.channel.send.bind(msg.channel);
     }
 
     async _replyWithEmptyMsg(replyFunc) {
-        return await replyFunc(`:no_entry_sign: ${MessageHandler._emptyMessage}.`);
-    }
-
-    async _reply(msg, replyFunc, data, i) {
-        if (typeof replyFunc !== "function") {
-            return null;
-        }
-
-        const n = i != null ? ` ${i}` : "",
-            out = `sending reply${n}`;
-
-        const handleError = err => this._replyWithExecError(err, replyFunc, "reply", out),
-            handleEmptyMessage = () => this._replyWithEmptyMsg(replyFunc).catch(err => handleError(err));
-
-        if (TypeTester.isObject(data)) {
-            if (Util.empty(data.content) && Object.keys(data).every(key => key === "content")) {
-                return await handleEmptyMessage();
-            }
-        } else if (Util.empty(data)) {
-            return await handleEmptyMessage();
-        }
-
-        try {
-            return await replyFunc(data);
-        } catch (err) {
-            switch (err.code) {
-                case RESTJSONErrorCodes.CannotSendAnEmptyMessage:
-                    return await handleEmptyMessage();
-            }
-
-            return await handleError(err);
-        }
+        return await replyFunc(`${getEmoji("error")} ${MessageHandler._emptyMessage}.`);
     }
 
     async _replyWithExecError(err1, replyFunc, type, out) {
@@ -398,16 +457,70 @@ class MessageHandler extends Handler {
             return null;
         }
 
-        const errMsg = err1?.stack ?? err1?.message ?? "No error message available";
-
         try {
-            return await replyFunc({
-                content: `:no_entry_sign: Encountered exception while ${out}:`,
-                ...DiscordUtil.getFileAttach(errMsg, "error.js")
-            });
+            return await replyFunc(this._getErrorOutput(err1, out));
         } catch (err2) {
             getLogger().error(`Reporting ${type} error failed:`, err2);
             return null;
+        }
+    }
+
+    async _runReplyFunc(replyFunc, data, i, type, out, handleEmptyMessage) {
+        if (typeof replyFunc !== "function") {
+            return null;
+        }
+
+        const n = i != null ? ` ${i}` : "";
+        out += n;
+
+        const handleError = err => this._replyWithExecError(err, replyFunc, type, out);
+
+        if (MessageHandler._isEmptyPayload(data)) {
+            return await handleEmptyMessage(handleError);
+        }
+
+        try {
+            return await replyFunc(data);
+        } catch (err) {
+            switch (err.code) {
+                case RESTJSONErrorCodes.CannotSendAnEmptyMessage:
+                    return await handleEmptyMessage(handleError);
+                default:
+                    return await handleError(err);
+            }
+        }
+    }
+
+    async _reply(msg, replyFunc, data, i) {
+        return await this._runReplyFunc(
+            replyFunc,
+            data,
+            i,
+            "reply",
+            "sending reply",
+            async handleError => await this._replyWithEmptyMsg(replyFunc).catch(err => handleError(err))
+        );
+    }
+
+    async _edit(msg, editFunc, data, i) {
+        return await this._runReplyFunc(editFunc, data, i, "edit", "editing reply", async () => await editFunc(" "));
+    }
+
+    async _editReply(msg, existing, data, i = 0, type = "reply", out = "editing reply") {
+        const edited = await this._edit(msg, existing.edit.bind(existing), data, i, type, out);
+
+        if (edited != null && this.hasReplyTracker) {
+            this.replyTracker.editReply(msg, existing, edited);
+        }
+
+        return edited;
+    }
+
+    async _contextReply(context, replyFunc, editFunc, ...args) {
+        if (context.processingReplySent && this.getReply(context.msg) !== null) {
+            return await editFunc.call(this, context.msg, ...args);
+        } else {
+            return await replyFunc.call(this, context.msg, ...args);
         }
     }
 }

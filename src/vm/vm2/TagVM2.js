@@ -5,7 +5,7 @@ import VM2ProcPool from "./process-pool/ProcessPool.js";
 import FakeUtil from "./classes/FakeUtil.js";
 import FakeAxios from "./classes/FakeAxios.js";
 
-import { getClient, getLogger } from "../../LevertClient.js";
+import { getConfig, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import VMUtil from "../../util/vm/VMUtil.js";
@@ -44,8 +44,8 @@ class TagVM2 extends VM {
 
         this.vmOptions = options.vmOptions ?? defaultVMOptions;
 
-        this.memLimit = getClient().config.otherMemLimit;
-        this.timeLimit = getClient().config.otherTimeLimit;
+        this.memLimit = getConfig().otherMemLimit;
+        this.timeLimit = getConfig().otherTimeLimit;
     }
 
     createProcPool() {

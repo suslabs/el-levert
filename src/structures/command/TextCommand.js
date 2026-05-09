@@ -4,23 +4,17 @@ import BaseCommand from "./BaseCommand.js";
 
 import Util from "../../util/Util.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
-import ParserUtil from "../../util/commands/ParserUtil.js";
+
+import TextCommandInfo from "./info/TextCommandInfo.js";
+import TextCommandContext from "./context/TextCommandContext.js";
 
 class TextCommand extends BaseCommand {
-    static invalidValues = {
-        ...BaseCommand.invalidValues,
-        category: "none"
-    };
+    static infoClass = TextCommandInfo;
+    static contextClass = TextCommandContext;
 
-    static defaultValues = {
-        ...BaseCommand.defaultValues,
-        description: "",
-        usage: "",
-        aliases: [],
-        helpArgs: ["help", "-help", "-h", "usage"],
-        category: this.invalidValues.category,
-        prefix: ""
-    };
+    static {
+        this._registerInfoGetters();
+    }
 
     get hasHelp() {
         return !Util.empty(this.description) || !Util.empty(this.usage);
@@ -59,7 +53,7 @@ class TextCommand extends BaseCommand {
     }
 
     getSubcmdList(includeAliases = true, sep = "|") {
-        if (this.isSubcmd) {
+        if (this.subcommand) {
             return "";
         }
 
@@ -98,12 +92,12 @@ class TextCommand extends BaseCommand {
         }
     }
 
-    isHelpCall(args) {
+    isHelpCall(context) {
         if (!this.hasHelp) {
             return false;
         }
 
-        return args.split(" ").some(part => this.helpArgs.includes(part));
+        return context.argsText.split(" ").some(part => this.helpArgs.includes(part));
     }
 
     getHelpText(discord = false) {
@@ -127,7 +121,7 @@ class TextCommand extends BaseCommand {
     }
 
     getArgsHelp(args, discord = false) {
-        const prefix = this.prefix + (this.isSubcmd ? this.parent + " " : "");
+        const prefix = this.prefix + (this.subcommand ? this.parent + " " : "");
 
         const formattedName = discord ? bold(escapeMarkdown(this.name)) : this.name,
             formattedArgs = Util.empty(args) ? "" : " " + (discord ? inlineCode(args) : args);
@@ -140,21 +134,32 @@ class TextCommand extends BaseCommand {
         return this._formatSubcmdHelp(subcmds, discord);
     }
 
-    async execute(args, ...etc) {
-        if (this.isHelpCall(args)) {
+    createContext(data = {}) {
+        const context = super.createContext(data);
+        return context instanceof TextCommandContext ? context : new this.constructor.contextClass(context);
+    }
+
+    async execute(context) {
+        context = this.createContext(context);
+
+        if (this.isHelpCall(context)) {
             return this.getHelpText();
         }
 
-        if (!this.isSubcmd) {
-            const [subName, subArgs] = ParserUtil.splitArgs(args),
+        if (!this.subcommand) {
+            const [subName, subArgs] = context.splitArgs(),
                 subCmd = this.getSubcmd(subName);
 
             if (subCmd !== null) {
-                return await subCmd.execute(subArgs, ...etc);
+                return await subCmd.execute(
+                    context.withArgs(subArgs, {
+                        commandName: subName
+                    })
+                );
             }
         }
 
-        return await super.execute(args, ...etc);
+        return await super.execute(context);
     }
 
     equals(cmd) {

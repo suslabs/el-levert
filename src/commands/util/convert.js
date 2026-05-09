@@ -1,29 +1,49 @@
+import { getEmoji } from "../../LevertClient.js";
+
 import Util from "../../util/Util.js";
-import ParserUtil from "../../util/commands/ParserUtil.js";
 import ConversionUtil from "../../util/commands/ConversionUtil.js";
 
 function codeblock(str) {
     return `\`\`\`lua\n${str}\`\`\``;
 }
 
-export default {
-    name: "convert",
-    aliases: ["c"],
-    category: "util",
+class ConvertCommand {
+    static info = {
+        name: "convert",
+        aliases: ["c"],
+        category: "util",
+        arguments: [
+            {
+                name: "inputText",
+                parser: "split",
+                index: 0
+            },
+            {
+                name: "unitText",
+                parser: "split",
+                index: 1
+            },
+            {
+                name: "units",
+                from: "unitText",
+                parser: "words"
+            }
+        ]
+    };
 
-    handler: function (args) {
-        const [inStr, unitStr] = ParserUtil.splitArgs(args),
-            units = unitStr.split(" ").filter(unit => !Util.empty(unit));
+    handler(ctx) {
+        const inText = ctx.arg("inputText"),
+            units = ctx.arg("units");
 
-        if (Util.empty(inStr) || Util.empty(units)) {
-            return `:information_source: ${this.getArgsHelp("input from_unit to_unit ...")}`;
+        if (Util.empty(inText) || Util.empty(units)) {
+            return `${getEmoji("info")} ${this.getArgsHelp("input from_unit to_unit ...")}`;
         }
 
-        const inVal = Number.parseFloat(inStr),
+        const inVal = Number.parseFloat(inText),
             [inUnit, ...outUnits] = units;
 
         if (Number.isNaN(inVal)) {
-            return `:warning: Invalid input value: \`${inStr}\`.`;
+            return `${getEmoji("warn")} Invalid input value: \`${inText}\`.`;
         }
 
         let out;
@@ -55,9 +75,11 @@ export default {
                     break;
             }
 
-            return `:warning: ${errOut}\n${validUnits}`;
+            return `${getEmoji("warn")} ${errOut}\n${validUnits}`;
         }
 
         return codeblock(out.join(" = "));
     }
-};
+}
+
+export default ConvertCommand;

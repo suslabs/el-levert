@@ -3,7 +3,7 @@ import path from "node:path";
 
 import Manager from "../Manager.js";
 
-import { getClient, getLogger } from "../../LevertClient.js";
+import { getConfig, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 
@@ -50,7 +50,7 @@ class DBManager extends Manager {
     };
 
     _setPaths() {
-        this._dbDir = getClient().config.dbPath;
+        this._dbDir = getConfig().dbPath;
 
         const dbFilename = dbFilenames[this.dbName];
         this._dbPath = path.resolve(projRoot, this._dbDir, dbFilename);

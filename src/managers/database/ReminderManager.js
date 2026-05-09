@@ -3,18 +3,17 @@ import ReminderDatabase from "../../database/ReminderDatabase.js";
 
 import Reminder from "../../structures/Reminder.js";
 
-import { getClient, getLogger } from "../../LevertClient.js";
+import { getClient, getConfig, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
+import Benchmark from "../../util/misc/Benchmark.js";
 
 import ReminderError from "../../errors/ReminderError.js";
 
-function logTime(t1) {
-    const t2 = performance.now(),
-        elapsed = Util.timeDelta(t2, t1);
-
+function logTime(timeKey) {
+    const elapsed = Benchmark.stopTiming(timeKey, false);
     getLogger().info(`Sending reminders took ${Util.formatNumber(elapsed)} ms.`);
 }
 
@@ -28,7 +27,7 @@ class ReminderManager extends DBManager {
     constructor(enabled) {
         super(enabled, "reminder", "remind_db", ReminderDatabase);
 
-        this.sendInterval = getClient().config.reminderSendInterval;
+        this.sendInterval = getConfig().reminderSendInterval;
         this.maxMsgLength = Util.clamp(ReminderManager.maxMsgLength, 0, DiscordUtil.msgCharLimit - 500);
 
         this._sendTimer = null;
@@ -195,7 +194,7 @@ class ReminderManager extends DBManager {
     }
 
     _sendReminders = async () => {
-        const t1 = performance.now();
+        const timeKey = Benchmark.startTiming(Symbol("send_reminders"));
 
         if (ReminderManager.areWeChecking && getLogger().isDebugEnabled()) {
             const interval = Util.round(this.sendInterval * Util.durationSeconds.milli, 1);
@@ -206,13 +205,14 @@ class ReminderManager extends DBManager {
 
         if (Util.empty(reminders)) {
             ReminderManager.areWeChecking && getLogger().debug("No reminders to send.");
+            Benchmark.stopTiming(timeKey, null);
             return;
         }
 
         getLogger().info(`Sending ${reminders.length} reminder(s)...`);
         await Promise.all(reminders.map(reminder => this.sendReminder(reminder)));
 
-        logTime(t1);
+        logTime(timeKey);
     };
 
     _stopSendLoop() {

@@ -1,9 +1,11 @@
 import { getClient } from "../../LevertClient.js";
 
-export default {
-    name: "reload_commands",
+class ReloadCommandsCommand {
+    static info = {
+        name: "reload_commands"
+    };
 
-    handler: async _ => {
+    async handler() {
         getClient().silenceDiscordTransports(true);
 
         await getClient().commandManager.reloadCommands();
@@ -11,4 +13,6 @@ export default {
         getClient().silenceDiscordTransports(false);
         return "Reloaded commands!";
     }
-};
+}
+
+export default ReloadCommandsCommand;

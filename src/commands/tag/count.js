@@ -1,14 +1,23 @@
-import { getClient } from "../../LevertClient.js";
+import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-import ParserUtil from "../../util/commands/ParserUtil.js";
 
-export default {
-    name: "count",
-    parent: "tag",
-    subcommand: true,
+class TagCountCommand {
+    static info = {
+        name: "count",
+        parent: "tag",
+        subcommand: true,
+        arguments: [
+            {
+                name: "subject",
+                parser: "split",
+                index: 0,
+                lowercase: true
+            }
+        ]
+    };
 
-    handler: async (args, msg) => {
+    async handler(ctx) {
         let user;
 
         let all = false,
@@ -16,8 +25,8 @@ export default {
             scriptTags = false,
             own = false;
 
-        findUser: if (!Util.empty(args)) {
-            const [u_name] = ParserUtil.splitArgs(args, true);
+        findUser: if (!Util.empty(ctx.argsText)) {
+            const u_name = ctx.arg("subject");
 
             all = u_name === "all";
             newTags = u_name === "new";
@@ -27,15 +36,15 @@ export default {
             if (all || newTags || scriptTags) {
                 break findUser;
             } else if (own) {
-                user = msg.author;
+                user = ctx.msg.author;
             } else {
                 const find = Util.first(await getClient().findUsers(u_name));
 
                 if (typeof find === "undefined") {
-                    return `:warning: User \`${u_name}\` not found.`;
-                } else {
-                    user = find.user;
+                    return `${getEmoji("warn")} User \`${u_name}\` not found.`;
                 }
+
+                user = find.user;
             }
         }
 
@@ -46,16 +55,17 @@ export default {
             tags = "tag" + (count > 1 ? "s" : "");
 
         if (own) {
-            return `:information_source: You have **${registered}** ${tags}.`;
+            return `${getEmoji("info")} You have **${registered}** ${tags}.`;
         } else if (typeof user !== "undefined") {
-            return `:information_source: User \`${user.username}\` has **${registered}** ${tags}.`;
+            return `${getEmoji("info")} User \`${user.username}\` has **${registered}** ${tags}.`;
         } else {
-            const are = count === 1 ? "is" : "are";
-
-            const flagName = Util.first(flags.filter(name => name !== null)),
+            const are = count === 1 ? "is" : "are",
+                flagName = Util.first(flags.filter(name => name !== null)),
                 areType = flagName ? flagName + " " : "";
 
-            return `:information_source: There ${are} **${registered}** ${areType}${tags} registered.`;
+            return `${getEmoji("info")} There ${are} **${registered}** ${areType}${tags} registered.`;
         }
     }
-};
+}
+
+export default TagCountCommand;

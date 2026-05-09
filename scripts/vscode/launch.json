@@ -2,13 +2,39 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Debug",
+            "type": "node-terminal",
+            "request": "launch",
+            "command": "npm start",
+            "cwd": "${workspaceFolder}",
+            "skipFiles": ["<node_internals>/**"]
+        },
+        {
+            "name": "Launch ProxyServ",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/vscode/proxyserv.cjs",
+            "cwd": "${workspaceFolder}",
+            "skipFiles": ["<node_internals>/**"],
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "noDebug": true
+        },
+        {
+            "name": "Attach to Remote",
+            "type": "node",
+            "request": "attach",
             "address": "127.0.0.1",
             "localRoot": "${workspaceFolder}",
-            "name": "Attach to Remote",
             "port": 9229,
-            "request": "attach",
-            "skipFiles": ["<node_internals>/**"],
-            "type": "node"
+            "skipFiles": ["<node_internals>/**"]
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Debug with Proxy",
+            "configurations": ["Debug", "Launch ProxyServ"],
+            "stopAll": true
         }
     ]
 }

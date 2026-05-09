@@ -1,30 +1,35 @@
-import { getClient } from "../../LevertClient.js";
+import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-import ParserUtil from "../../util/commands/ParserUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 
-import TextCommand from "../../structures/command/TextCommand.js";
-
 function formatTagList(tags) {
-    const format = tags.map((tag, i) => `${i + 1}. ${tag.format()}`);
-    return format.join("\n");
+    return tags.map((tag, i) => `${i + 1}. ${tag.format()}`).join("\n");
 }
 
-export default {
-    name: "list",
-    parent: "tag",
-    subcommand: true,
+class TagListCommand {
+    static info = {
+        name: "list",
+        parent: "tag",
+        subcommand: true,
+        arguments: [
+            {
+                name: "userName",
+                parser: "split",
+                index: 0
+            }
+        ]
+    };
 
-    handler: async function (args, msg) {
-        let user = msg.author;
+    async handler(ctx) {
+        let user = ctx.msg.author;
 
-        if (!Util.empty(args)) {
-            const [u_name] = ParserUtil.splitArgs(args),
+        if (!Util.empty(ctx.argsText)) {
+            const u_name = ctx.arg("userName"),
                 find = Util.first(await getClient().findUsers(u_name));
 
             if (typeof find === "undefined") {
-                return `:warning: User \`${u_name}\` not found.`;
+                return `${getEmoji("warn")} User \`${u_name}\` not found.`;
             }
 
             user = find.user;
@@ -33,12 +38,11 @@ export default {
         const tags = await getClient().tagManager.list(user.id);
 
         if (tags.count < 1) {
-            if (user === msg.author) {
-                const dumpCmd = TextCommand.prototype.getArgsHelp.call(this.getSubcmd("dump"));
-                return `:information_source: You don't have any tags. If you want to see the list of all available tags, use \`${dumpCmd}\`.`;
-            } else {
-                return `:information_source: User \`${user.username}\` has **no** tags.`;
+            if (user === ctx.msg.author) {
+                return `${getEmoji("info")} You don't have any tags. If you want to see the list of all available tags, use \`${this.getSubcmd("dump").getArgsHelp()}\`.`;
             }
+
+            return `${getEmoji("info")} User \`${user.username}\` has **no** tags.`;
         }
 
         let format = "";
@@ -55,13 +59,11 @@ export default {
             format += `OG Leveret tags:\n${formatTagList(tags.oldTags)}`;
         }
 
-        const out = {
+        return {
+            content: `${getEmoji("info")} ${user === ctx.msg.author ? "You have" : `User \`${user.username}\` has`} the following tags:`,
             ...DiscordUtil.getFileAttach(format)
         };
-
-        const subject = user === msg.author ? "You have" : `User \`${user.username}\` has`;
-        out.content = `:information_source: ${subject} the following tags:`;
-
-        return out;
     }
-};
+}
+
+export default TagListCommand;

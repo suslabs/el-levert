@@ -115,6 +115,9 @@ function onlyNormalChars(str) {
 }
 
 function stripCombiningMarks(str) {
+    lineBreakCombiningMarksExp.lastIndex = 0;
+    symbolCombiningMarksExp.lastIndex = 0;
+
     let clean = str.replace(lineBreakCombiningMarksExp, "");
     return clean.replace(symbolCombiningMarksExp, "$1");
 }
@@ -122,6 +125,7 @@ function stripCombiningMarks(str) {
 function normalizeText(str) {
     if (!onlyNormalChars(str)) {
         for (const char of Object.keys(lookalikeCharsExps)) {
+            lookalikeCharsExps[char].lastIndex = 0;
             str = str.replace(lookalikeCharsExps[char], char);
         }
     }

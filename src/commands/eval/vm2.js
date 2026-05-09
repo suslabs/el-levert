@@ -1,20 +1,26 @@
-import { getClient } from "../../LevertClient.js";
+import { getClient, getConfig } from "../../LevertClient.js";
 
-export default {
-    name: "vm2",
-    parent: "eval",
-    subcommand: true,
+class Vm2EvalCommand {
+    static info = {
+        name: "vm2",
+        parent: "eval",
+        subcommand: true
+    };
 
-    load: _ => getClient().config.enableVM2,
+    load() {
+        return getConfig().enableVM2;
+    }
 
-    handler: async function (args, msg) {
-        const parsed = await this.parentCmd.evalBase(args, msg),
+    async handler(ctx) {
+        const parsed = await this.parentCmd.evalBase(ctx.argsText, ctx.msg),
             body = parsed.body;
 
         if (parsed.err !== null) {
             return parsed.err;
         }
 
-        return await getClient().tagVM2.runScript(body, msg);
+        return await getClient().tagVM2.runScript(body, ctx.msg);
     }
-};
+}
+
+export default Vm2EvalCommand;

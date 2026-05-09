@@ -1,21 +1,35 @@
 import { escapeMarkdown } from "discord.js";
 
-import { getClient } from "../../LevertClient.js";
+import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-import ParserUtil from "../../util/commands/ParserUtil.js";
 
-export default {
-    name: "remove",
-    parent: "perm",
-    subcommand: true,
-    allowed: "admin",
+class PermRemoveCommand {
+    static info = {
+        name: "remove",
+        parent: "perm",
+        subcommand: true,
+        allowed: "admin",
+        arguments: [
+            {
+                name: "groupName",
+                parser: "split",
+                index: 0
+            },
+            {
+                name: "userName",
+                parser: "split",
+                index: 1
+            }
+        ]
+    };
 
-    handler: async function (args, msg, perm) {
-        let [g_name, u_name] = ParserUtil.splitArgs(args);
+    async handler(ctx) {
+        let g_name = ctx.arg("groupName"),
+            u_name = ctx.arg("userName");
 
-        if (Util.empty(args) || Util.empty(g_name) || Util.empty(u_name)) {
-            return `:information_source: ${this.getArgsHelp("group_name (ping/id/username)")}`;
+        if (Util.empty(ctx.argsText) || Util.empty(g_name) || Util.empty(u_name)) {
+            return `${getEmoji("info")} ${this.getArgsHelp("group_name (ping/id/username)")}`;
         }
 
         {
@@ -23,7 +37,7 @@ export default {
             [g_name, err] = getClient().permManager.checkName(g_name, false);
 
             if (err !== null) {
-                return `:warning: ${err}.`;
+                return `${getEmoji("warn")} ${err}.`;
             }
         }
 
@@ -32,13 +46,13 @@ export default {
         const find = Util.first(await getClient().findUsers(u_name));
 
         if (typeof find === "undefined") {
-            return `:warning: User \`${u_name}\` not found.`;
+            return `${getEmoji("warn")} User \`${u_name}\` not found.`;
         }
 
         if (group === null) {
-            return `:warning: Group **${escapeMarkdown(g_name)}** doesn't exist.`;
-        } else if (!getClient().permManager.allowed(perm, group.level)) {
-            return `:warning: Can't remove user \`${find.user.username}\` (\`${find.user.id}\`) from a group with a higher level than your own. (**${group.level}** > **${perm}**)`;
+            return `${getEmoji("warn")} Group **${escapeMarkdown(g_name)}** doesn't exist.`;
+        } else if (!getClient().permManager.allowed(ctx.perm, group.level)) {
+            return `${getEmoji("warn")} Can't remove user \`${find.user.username}\` (\`${find.user.id}\`) from a group with a higher level than your own. (**${group.level}** > **${ctx.perm}**)`;
         }
 
         let removed = false;
@@ -50,13 +64,15 @@ export default {
                 throw err;
             }
 
-            return `:warning: ${err.message}.`;
+            return `${getEmoji("warn")} ${err.message}.`;
         }
 
         if (removed) {
-            return `:white_check_mark: Removed user \`${find.user.username}\` (\`${find.user.id}\`) from group **${escapeMarkdown(g_name)}**.`;
-        } else {
-            return `:warning: User \`${find.user.username}\` (\`${find.user.id}\`) is not in group **${escapeMarkdown(g_name)}**.`;
+            return `${getEmoji("ok")} Removed user \`${find.user.username}\` (\`${find.user.id}\`) from group **${escapeMarkdown(g_name)}**.`;
         }
+
+        return `${getEmoji("warn")} User \`${find.user.username}\` (\`${find.user.id}\`) is not in group **${escapeMarkdown(g_name)}**.`;
     }
-};
+}
+
+export default PermRemoveCommand;

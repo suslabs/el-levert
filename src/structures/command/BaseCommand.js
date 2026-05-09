@@ -1,39 +1,67 @@
-import Util from "../../util/Util.js";
+import BaseCommandInfo from "./info/BaseCommandInfo.js";
+import BaseCommandContext from "./context/BaseCommandContext.js";
+
 import ArrayUtil from "../../util/ArrayUtil.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 
 import CommandError from "../../errors/CommandError.js";
 
 class BaseCommand {
-    static invalidValues = {};
+    static infoClass = BaseCommandInfo;
+    static contextClass = BaseCommandContext;
 
-    static defaultValues = {
-        parent: "",
-        subcommands: []
-    };
+    static get defaultValues() {
+        return this.infoClass.defaultValues;
+    }
 
-    constructor(options) {
-        if (!Util.nonemptyString(options.name)) {
-            throw new CommandError("Command must have a name");
-        } else if (typeof options.handler !== "function") {
+    static get invalidValues() {
+        return this.infoClass.invalidValues;
+    }
+
+    static {
+        this._registerInfoGetters();
+    }
+
+    constructor(info = {}) {
+        this.info = new this.constructor.infoClass(info);
+
+        if (typeof this.handler !== "function") {
             throw new CommandError("Command must have a handler function");
-        }
-
-        this.isSubcmd = options.subcommand ?? false;
-        delete options.subcommand;
-
-        ObjectUtil.setValuesWithDefaults(this, options, this.constructor.defaultValues);
-
-        if (this.isSubcmd && Util.empty(this.parent)) {
-            throw new CommandError("Subcommands must have a parent command");
         }
 
         this.subcmds = new Map();
         this.bound = false;
     }
 
+    createContext(data = {}) {
+        if (data instanceof this.constructor.contextClass) {
+            return data.command === this
+                ? data
+                : data.clone({
+                      command: this,
+                      _parsedArgs: undefined
+                  });
+        }
+
+        return new this.constructor.contextClass({
+            ...data,
+            command: this
+        });
+    }
+
     getData(prefix = "", nullable = true, props = null) {
-        const data = ObjectUtil.filterObject(this, key => (props == null ? !key.startsWith("_") : props.includes(key)));
+        const infoData = this.info.toObject();
+
+        const keys =
+            props ??
+            Array.from(
+                new Set([
+                    ...Object.keys(infoData),
+                    ...Object.keys(this).filter(key => !key.startsWith("_") && key !== "info")
+                ])
+            );
+
+        const data = Object.fromEntries(keys.map(key => [key, key in infoData ? infoData[key] : this[key]]));
 
         if (nullable) {
             for (const prop of this.constructor._nullableDataProps.filter(
@@ -45,8 +73,6 @@ class BaseCommand {
 
         return Object.fromEntries(Object.entries(data).map(entry => [prefix + entry[0], entry[1]]));
     }
-
-    static _nullableDataProps = [];
 
     matches(name) {
         return this.name === name;
@@ -78,7 +104,7 @@ class BaseCommand {
     }
 
     addSubcommand(subcmd) {
-        if (this.isSubcmd) {
+        if (this.subcommand) {
             throw new CommandError("Only parent commands can have subcommands");
         }
 
@@ -91,7 +117,7 @@ class BaseCommand {
     }
 
     removeSubcommand(subcmd) {
-        if (this.isSubcmd) {
+        if (this.subcommand) {
             throw new CommandError("Only parent commands can have subcommands");
         }
 
@@ -100,7 +126,7 @@ class BaseCommand {
     }
 
     removeSubcommands() {
-        if (this.isSubcmd) {
+        if (this.subcommand) {
             throw new CommandError("Only parent commands can have subcommands");
         }
 
@@ -109,7 +135,7 @@ class BaseCommand {
     }
 
     bind(command) {
-        if (!this.isSubcmd) {
+        if (!this.subcommand) {
             throw new CommandError("Can only bind subcommands");
         }
 
@@ -117,21 +143,12 @@ class BaseCommand {
         this.bound = true;
     }
 
-    async execute(args, context = {}, execCb) {
-        if (typeof execCb === "function") {
-            const res = await execCb();
-
-            if (typeof res !== "undefined") {
-                return res;
-            }
-        }
-
-        const contextArgs = Object.values(context);
-        return await this.handler(args, ...contextArgs);
+    async execute(context) {
+        return await this.handler(this.createContext(context));
     }
 
     subcmdOf(parent, subName) {
-        return this.isSubcmd && this.parent === parent.name && this.name === subName;
+        return this.subcommand && this.parent === parent.name && this.name === subName;
     }
 
     equivalent(cmd) {
@@ -142,16 +159,41 @@ class BaseCommand {
         return this.name === cmd.name && this._sameParent(cmd);
     }
 
+    static _nullableDataProps = [];
+
+    static _infoGetter(prop) {
+        return {
+            propName: prop,
+            desc: {
+                get() {
+                    return this.info[prop];
+                }
+            }
+        };
+    }
+
+    static _registerFunc(factory, ...args) {
+        ObjectUtil.defineProperty(this.prototype, factory, ...args);
+    }
+
+    static _registerInfoGetters() {
+        for (const prop of this.infoClass.dataProps) {
+            if (Object.getOwnPropertyDescriptor(this.prototype, prop) == null) {
+                this._registerFunc(this._infoGetter, prop);
+            }
+        }
+    }
+
     get _cmd() {
-        return this.isSubcmd ? this.parentCmd : this;
+        return this.subcommand ? this.parentCmd : this;
     }
 
     _getName(name, full = false, parentSep = ":") {
-        const includeParent = this.isSubcmd && parentSep !== false,
+        const includeParent = this.subcommand && parentSep !== false,
             parentName = this.parentCmd?.name ?? this.parent;
 
         if (full) {
-            const prefix = this.isSubcmd ? "sub" : "",
+            const prefix = this.subcommand ? "sub" : "",
                 parentFormat = includeParent ? ` of parent command "${parentName}"` : "";
 
             return `${prefix}command "${name}"${parentFormat}`;
@@ -162,7 +204,7 @@ class BaseCommand {
     }
 
     _sameParent(cmd) {
-        return this.isSubcmd === cmd.isSubcmd && this.parent === cmd.parent;
+        return this.subcommand === cmd.subcommand && this.parent === cmd.parent;
     }
 }
 

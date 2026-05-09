@@ -1,24 +1,52 @@
 import { escapeMarkdown } from "discord.js";
 
-import { getClient } from "../../LevertClient.js";
+import { getClient, getEmoji } from "../../LevertClient.js";
 
-import ParserUtil from "../../util/commands/ParserUtil.js";
+class TagSetTypeCommand {
+    static info = {
+        name: "set_type",
+        parent: "tag",
+        subcommand: true,
+        allowed: "mod",
+        arguments: [
+            {
+                name: "tagName",
+                parser: "split",
+                index: 0,
+                lowercase: true
+            },
+            {
+                name: "tagArgs",
+                parser: "split",
+                index: 1
+            },
+            {
+                name: "type",
+                from: "tagArgs",
+                parser: "split",
+                index: 0,
+                lowercase: [true, true]
+            },
+            {
+                name: "version",
+                from: "tagArgs",
+                parser: "split",
+                index: 1,
+                lowercase: [true, true]
+            }
+        ]
+    };
 
-export default {
-    name: "set_type",
-    parent: "tag",
-    subcommand: true,
-    allowed: "mod",
+    async handler(ctx) {
 
-    handler: async function (args) {
-        if (args.length < 2) {
-            return `:information_source: ${this.getArgsHelp("name (version/type)")}`;
+        if (ctx.argsText.length < 2) {
+            return `${getEmoji("info")} ${this.getArgsHelp("name (version/type)")}`;
         }
 
-        let [t_name, t_args] = ParserUtil.splitArgs(args, true);
+        let t_name = ctx.arg("tagName");
 
         if (this.matchesSubcmd(t_name)) {
-            return `:police_car: **${escapeMarkdown(t_name)}** is a __command__, not a __tag__. You can't manipulate commands.`;
+            return `${getEmoji("invalid")} **${escapeMarkdown(t_name)}** is a __command__, not a __tag__. You can't manipulate commands.`;
         }
 
         {
@@ -26,17 +54,18 @@ export default {
             [t_name, err] = getClient().tagManager.checkName(t_name, false);
 
             if (err !== null) {
-                return `:warning: ${err}.`;
+                return `${getEmoji("warn")} ${err}.`;
             }
         }
 
-        let [type, version] = ParserUtil.splitArgs(t_args, [true, true]),
+        let type = ctx.arg("type"),
+            version = ctx.arg("version"),
             setVersion = type === "version";
 
         const tag = await getClient().tagManager.fetch(t_name);
 
         if (tag === null) {
-            return `:warning: Tag **${escapeMarkdown(t_name)}** doesn't exist.`;
+            return `${getEmoji("warn")} Tag **${escapeMarkdown(t_name)}** doesn't exist.`;
         }
 
         if (setVersion) {
@@ -55,9 +84,11 @@ export default {
                 throw err;
             }
 
-            return `:warning: ${err.message}.`;
+            return `${getEmoji("warn")} ${err.message}.`;
         }
 
-        return `:white_check_mark: Updated tag **${escapeMarkdown(t_name)}**.`;
+        return `${getEmoji("ok")} Updated tag **${escapeMarkdown(t_name)}**.`;
     }
-};
+}
+
+export default TagSetTypeCommand;

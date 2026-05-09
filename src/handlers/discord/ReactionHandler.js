@@ -7,9 +7,9 @@ import { getClient, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
-import ObjectUtil from "../../util/ObjectUtil.js";
 import RegexUtil from "../../util/misc/RegexUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
+import Benchmark from "../../util/misc/Benchmark.js";
 
 import normalizeText from "../../util/misc/normalizeText.js";
 
@@ -27,13 +27,14 @@ function logWordsUsage(msg, words) {
     );
 }
 
-function logReactTime(t1) {
-    if (getLogger().isDebugEnabled()) {
-        const t2 = performance.now(),
-            elapsed = Util.timeDelta(t2, t1);
-
-        getLogger().debug(`Reacting took ${Util.formatNumber(elapsed)} ms.`);
+function logReactTime(timeKey) {
+    if (!getLogger().isDebugEnabled()) {
+        Benchmark.stopTiming(timeKey, null);
+        return;
     }
+
+    const elapsed = Benchmark.stopTiming(timeKey, false);
+    getLogger().debug(`Reacting took ${Util.formatNumber(elapsed)} ms.`);
 }
 
 function logRemove(msg) {
@@ -43,10 +44,13 @@ function logRemove(msg) {
         );
 }
 
-function logRemoveTime(t1) {
-    const t2 = performance.now(),
-        elapsed = Util.timeDelta(t2, t1);
+function logRemoveTime(timeKey) {
+    if (!getLogger().isDebugEnabled()) {
+        Benchmark.stopTiming(timeKey, null);
+        return;
+    }
 
+    const elapsed = Benchmark.stopTiming(timeKey, false);
     getLogger().debug(`Removing reactions took ${Util.formatNumber(elapsed)} ms.`);
 }
 
@@ -54,7 +58,17 @@ class ReactionHandler extends Handler {
     static $name = "reactionHandler";
     priority = -1;
 
-    static emojiChars = ":;=-x+";
+    static emoticonEyeChars = ":;=8xX";
+    static emoticonNoseChars = "-^'oO*";
+
+    static _parenEmoticonRegex = new RegExp(
+        `(?:[<>]?[${RegexUtil.escapeCharClass(this.emoticonEyeChars)}][${RegexUtil.escapeCharClass(
+            this.emoticonNoseChars
+        )}]?[()]+|[()]+[${RegexUtil.escapeCharClass(this.emoticonNoseChars)}]?[${RegexUtil.escapeCharClass(
+            this.emoticonEyeChars
+        )}]>?)`,
+        "g"
+    );
 
     constructor(enabled) {
         super(enabled);
@@ -75,12 +89,12 @@ class ReactionHandler extends Handler {
 
     async removeReacts(msg) {
         logRemove(msg);
-        const t1 = performance.now();
+        const timeKey = Benchmark.startTiming(Symbol("reaction_remove"));
 
         let botId = getClient().client.user.id;
         await this.reactionTracker.deleteWithCallback(msg, "reaction", react => react.users.remove(botId));
 
-        logRemoveTime(t1);
+        logRemoveTime(timeKey);
     }
 
     async execute(msg) {
@@ -88,28 +102,56 @@ class ReactionHandler extends Handler {
             return false;
         }
 
-        let content = msg.content;
+        const timeKey = Benchmark.startTiming(Symbol("reaction_execute"));
 
-        const codeblockRanges = DiscordUtil.findCodeblocks(content);
+        const plan = this._getReactionPlan(msg.content);
 
-        for (const range of codeblockRanges.reverse()) {
-            content = Util.removeStringRange(content, ...range, true);
+        if (plan.words.length > 0) {
+            logWordsUsage(msg, plan.words);
         }
 
-        let reacted = await this._funnyReact(content, msg);
+        if (plan.parens.total > 0) {
+            logParensUsage(msg, plan.parens);
+        }
 
-        if (reacted && !this.multipleReacts) {
-            return true;
-        } else if (this.enableParens) {
-            reacted |= await this._parensReact(content, msg);
+        const reacted = await this._reactWithPlan(msg, plan);
+
+        if (reacted) {
+            logReactTime(timeKey);
+        } else {
+            Benchmark.stopTiming(timeKey, null);
         }
 
         return reacted;
     }
 
     async resubmit(msg) {
-        await this.removeReacts(msg);
-        await this.execute(msg);
+        if (msg.channel.type === ChannelType.DM) {
+            return false;
+        }
+
+        const timeKey = Benchmark.startTiming(Symbol("reaction_resubmit"));
+
+        const plan = this._getReactionPlan(msg.content),
+            diff = this._getReactionDiff(msg, plan.emojis);
+
+        if (plan.words.length > 0 && diff.added.length > 0) {
+            logWordsUsage(msg, plan.words);
+        }
+
+        if (plan.parens.total > 0 && diff.added.length > 0) {
+            logParensUsage(msg, plan.parens);
+        }
+
+        const reacted = await this._reactWithDiff(msg, diff);
+
+        if (reacted) {
+            logReactTime(timeKey);
+        } else {
+            Benchmark.stopTiming(timeKey, null);
+        }
+
+        return reacted;
     }
 
     load() {
@@ -117,190 +159,341 @@ class ReactionHandler extends Handler {
         this._setParens();
     }
 
-    static _emojiExpRight = new RegExp(`[${RegexUtil.escapeCharClass(this.emojiChars)}][()]+`, "g");
-    static _emojiExpLeft = new RegExp(`[()]+[${RegexUtil.escapeCharClass(this.emojiChars)}]`, "g");
+    static _getEmoji(reactList) {
+        return Util.single(reactList) ? Util.first(reactList) : Util.randomElement(reactList);
+    }
 
-    static _getWordList(funnyWords) {
-        return funnyWords.flatMap(elem => ArrayUtil.guaranteeArray(elem.word ?? elem.words));
+    static _toStringArray(value) {
+        return ArrayUtil.guaranteeArray(value, undefined, true).filter(Util.nonemptyString);
+    }
+
+    static _getReactionEmoji(reaction) {
+        if (reaction == null) {
+            return null;
+        }
+
+        if (typeof reaction === "string") {
+            return reaction;
+        }
+
+        const emoji = reaction.emoji ?? reaction;
+
+        if (typeof emoji === "string") {
+            return emoji;
+        }
+
+        if (Util.nonemptyString(emoji?.name)) {
+            return emoji.id == null ? emoji.name : `${emoji.name}:${emoji.id}`;
+        }
+
+        if (Util.nonemptyString(emoji?.id)) {
+            return emoji.id;
+        }
+
+        return null;
     }
 
     static _getReactMap(funnyWords) {
         const reactMap = new Map();
 
         for (const elem of funnyWords) {
-            const words = ArrayUtil.guaranteeArray(elem.word ?? elem.words),
-                emojis = ArrayUtil.guaranteeArray(elem.emoji ?? elem.emojis);
+            const words = ReactionHandler._toStringArray(elem.word ?? elem.words).map(word =>
+                    normalizeText(word).trim()
+                ),
+                emojis = ReactionHandler._toStringArray(elem.emoji ?? elem.emojis);
 
-            words.forEach(word => reactMap.set(word, emojis));
+            if (words.length < 1 || emojis.length < 1) {
+                continue;
+            }
+
+            for (const word of words) {
+                if (Util.nonemptyString(word)) {
+                    reactMap.set(word, emojis);
+                }
+            }
         }
 
         return reactMap;
     }
 
-    static _getEmoji(reactList) {
-        return Util.single(reactList) ? Util.first(reactList) : Util.randomElement(reactList);
-    }
-
     _setWords() {
         this.funnyWords = getClient().reactions.funnyWords;
 
-        this._wordList = ReactionHandler._getWordList(this.funnyWords);
         this._reactMap = ReactionHandler._getReactMap(this.funnyWords);
+        this._wordList = [...this._reactMap.keys()];
+        this._wordRegex = RegexUtil.getWordRegex(this._wordList);
     }
 
     _setParens() {
         const parens = getClient().reactions.parens;
+        const left = ReactionHandler._toStringArray(parens?.left),
+            right = ReactionHandler._toStringArray(parens?.right);
 
-        this.enableParens = parens.left != null && parens.right != null;
-        this.parens = parens;
+        this.enableParens = left.length > 0 || right.length > 0;
+        this.parens = { left, right };
     }
 
-    _countUnmatchedParens(str) {
-        const parens = {
-            left: 0,
-            right: 0,
-            total: 0
-        };
+    _getVisibleContent(content) {
+        return DiscordUtil.maskCodeblocks(content);
+    }
 
-        if (!str.includes("(") && !str.includes(")")) {
-            return parens;
+    _getWordMatches(str) {
+        if (this._wordRegex == null) {
+            return [];
         }
 
-        let clean = str.replace(ReactionHandler._emojiExpRight, " ");
-        clean = clean.replace(ReactionHandler._emojiExpLeft, " ");
+        const seenWords = new Set(),
+            matches = [];
 
-        let open = 0,
-            closed = 0;
+        str = normalizeText(str);
+        this._wordRegex.lastIndex = 0;
+
+        for (const match of str.matchAll(this._wordRegex)) {
+            const word = match[0];
+
+            if (!this.multipleReacts && seenWords.has(word)) {
+                continue;
+            }
+
+            seenWords.add(word);
+            matches.push({
+                index: match.index,
+                word,
+                emojis: this._reactMap.get(word)
+            });
+        }
+
+        return matches;
+    }
+
+    _getWordCounts(str) {
+        const counts = {};
+
+        for (const { word } of this._getWordMatches(str)) {
+            counts[word] = (counts[word] ?? 0) + 1;
+        }
+
+        return Util.empty(Object.keys(counts)) ? null : counts;
+    }
+
+    _getParenReactionInfo(str) {
+        const info = {
+            left: 0,
+            right: 0,
+            total: 0,
+            hits: []
+        };
+
+        if (!this.enableParens || (!str.includes("(") && !str.includes(")"))) {
+            return info;
+        }
+
+        ReactionHandler._parenEmoticonRegex.lastIndex = 0;
+        const clean = str.replace(ReactionHandler._parenEmoticonRegex, match => match.replace(/[()]/g, " "));
+
+        const unmatchedLeft = [],
+            unmatchedRight = [];
 
         for (let i = 0; i < clean.length; i++) {
             const char = clean[i];
 
-            switch (char) {
-                case "(":
-                    open++;
-                    break;
-                case ")":
-                    if (open > 0) {
-                        open--;
-                    } else {
-                        closed++;
-                    }
-
-                    break;
+            if (char === "(") {
+                unmatchedLeft.push(i);
+            } else if (char === ")") {
+                if (unmatchedLeft.length > 0) {
+                    unmatchedLeft.pop();
+                } else {
+                    unmatchedRight.push(i);
+                }
             }
         }
 
-        parens.left = Util.clamp(open, 0, this.parens.right.length);
-        parens.right = Util.clamp(closed, 0, this.parens.left.length);
-        parens.total = parens.left + parens.right;
+        info.left = Util.clamp(unmatchedLeft.length, 0, this.parens.right.length);
+        info.right = Util.clamp(unmatchedRight.length, 0, this.parens.left.length);
+        info.total = info.left + info.right;
 
-        return parens;
+        this.parens.left.slice(0, info.right).forEach((emoji, i) => {
+            info.hits.push({
+                index: unmatchedRight[i],
+                emoji
+            });
+        });
+
+        this.parens.right.slice(0, info.left).forEach((emoji, i) => {
+            info.hits.push({
+                index: unmatchedLeft[i],
+                emoji
+            });
+        });
+
+        return info;
+    }
+
+    _countUnmatchedParens(str) {
+        const { left, right, total } = this._getParenReactionInfo(this._getVisibleContent(str));
+        return { left, right, total };
+    }
+
+    _getReactionPlan(content, options = {}) {
+        const visibleContent = this._getVisibleContent(content),
+            includeWords = options.words ?? true,
+            includeParens = options.parens ?? true;
+
+        const wordMatches = includeWords ? this._getWordMatches(visibleContent) : [],
+            parens = includeParens
+                ? this._getParenReactionInfo(visibleContent)
+                : { left: 0, right: 0, total: 0, hits: [] },
+            planned = [];
+
+        wordMatches.forEach(match => {
+            planned.push({
+                index: match.index,
+                emoji: ReactionHandler._getEmoji(match.emojis),
+                word: match.word
+            });
+        });
+
+        parens.hits.forEach(hit => planned.push(hit));
+        planned.sort((a, b) => a.index - b.index);
+
+        const seenEmojis = new Set(),
+            emojis = [];
+
+        for (const { emoji } of planned) {
+            if (emoji == null || seenEmojis.has(emoji)) {
+                continue;
+            }
+
+            seenEmojis.add(emoji);
+            emojis.push(emoji);
+        }
+
+        return {
+            emojis,
+            words: ArrayUtil.unique(wordMatches.map(match => match.word)),
+            parens: {
+                left: parens.left,
+                right: parens.right,
+                total: parens.total
+            }
+        };
+    }
+
+    _getTrackedReactions(msg) {
+        return this.reactionTracker.getData(msg).reactions;
+    }
+
+    _getReactionDiff(msg, nextEmojis) {
+        const trackedReactions = this._getTrackedReactions(msg),
+            { removed, added } = ArrayUtil.diff(trackedReactions, nextEmojis, ReactionHandler._getReactionEmoji);
+
+        return {
+            removed,
+            added
+        };
+    }
+
+    async _reactWithPlan(msg, plan) {
+        if (plan.emojis.length < 1) {
+            return false;
+        }
+
+        try {
+            await Promise.all(plan.emojis.map(emoji => this.react(msg, emoji)));
+        } catch (err) {
+            getLogger().error("Failed to react to message:", err);
+        }
+
+        return true;
+    }
+
+    async _reactWithDiff(msg, diff) {
+        const hasRemoved = diff.removed.length > 0,
+            hasAdded = diff.added.length > 0;
+
+        if (!hasRemoved && !hasAdded) {
+            return false;
+        }
+
+        if (hasRemoved) {
+            logRemove(msg);
+            const timeKey = Benchmark.startTiming(Symbol("reaction_diff_remove"));
+            const botId = getClient().client.user.id;
+
+            await Promise.all(
+                diff.removed.map(reaction => {
+                    this.reactionTracker.deleteReaction(msg, reaction);
+
+                    const remove = reaction?.users?.remove;
+
+                    if (typeof remove !== "function") {
+                        return Promise.resolve(undefined);
+                    }
+
+                    return Promise.resolve(remove.call(reaction.users, botId)).catch(err => {
+                        getLogger().error("Failed to remove reaction from message:", err);
+                    });
+                })
+            );
+
+            logRemoveTime(timeKey);
+        }
+
+        if (hasAdded) {
+            await this._reactWithPlan(msg, { emojis: diff.added });
+        }
+
+        return true;
     }
 
     async _parensReact(content, msg) {
-        const t1 = performance.now();
+        const timeKey = Benchmark.startTiming(Symbol("reaction_parens"));
 
-        const parens = this._countUnmatchedParens(content),
-            { left, right, total } = parens;
+        const plan = this._getReactionPlan(content, {
+                words: false,
+                parens: true
+            });
 
-        if (total < 1) {
+        if (plan.parens.total < 1) {
+            Benchmark.stopTiming(timeKey, null);
             return false;
         }
 
-        logParensUsage(msg, parens);
-        const emojis = this.parens.left.slice(0, right).concat(this.parens.right.slice(0, left));
+        logParensUsage(msg, plan.parens);
+        const reacted = await this._reactWithPlan(msg, plan);
 
-        try {
-            await Promise.all(emojis.map(emoji => this.react(msg, emoji)));
-        } catch (err) {
-            getLogger().error("Failed to react to message:", err);
+        if (reacted) {
+            logReactTime(timeKey);
+        } else {
+            Benchmark.stopTiming(timeKey, null);
         }
 
-        logReactTime(t1);
-        return true;
-    }
-
-    _getWordCounts(str) {
-        str = normalizeText(str);
-        const foundWords = this._wordList.map(word => [word, str.indexOf(word)]).filter(x => x[1] >= 0);
-
-        if (Util.empty(foundWords)) {
-            return null;
-        }
-
-        const counts = foundWords.reduce((obj, [word]) => {
-            obj[word] = 0;
-            return obj;
-        }, {});
-
-        let foundOne = false;
-
-        for (let [word, idx] of foundWords) {
-            while (idx !== -1) {
-                if (RegexUtil.wordStart(str, idx) && RegexUtil.wordEnd(str, idx + word.length - 1)) {
-                    counts[word]++;
-                    foundOne = true;
-
-                    if (!this.multipleReacts) {
-                        break;
-                    }
-                }
-
-                idx = str.indexOf(word, idx + word.length);
-            }
-        }
-
-        if (!foundOne) {
-            return null;
-        }
-
-        ObjectUtil.wipeObject(counts, (_, count) => count === 0);
-        return counts;
-    }
-
-    async _singleReact(msg, words) {
-        words = Object.keys(words);
-        const reactLists = new Set(words.map(w => this._reactMap.get(w)));
-
-        for (const list of reactLists) {
-            const emoji = ReactionHandler._getEmoji(list);
-            await this.react(msg, emoji);
-        }
-    }
-
-    async _multipleReact(msg, words) {
-        const emojis = new Set();
-
-        for (const [word, count] of Object.entries(words)) {
-            const reactList = this._reactMap.get(word),
-                samples = ArrayUtil.withLength(count, () => ReactionHandler._getEmoji(reactList));
-
-            samples.forEach(emoji => typeof emoji !== "undefined" && emojis.add(emoji));
-        }
-
-        await Promise.all(Array.from(emojis, emoji => this.react(msg, emoji)));
+        return reacted;
     }
 
     async _funnyReact(content, msg) {
-        const t1 = performance.now();
+        const timeKey = Benchmark.startTiming(Symbol("reaction_words"));
 
-        const words = this._getWordCounts(content);
+        const plan = this._getReactionPlan(content, {
+                words: true,
+                parens: false
+            });
 
-        if (words === null) {
+        if (plan.words.length < 1) {
+            Benchmark.stopTiming(timeKey, null);
             return false;
         }
 
-        logWordsUsage(msg, Object.keys(words));
-        const reactFunc = this.multipleReacts ? this._multipleReact : this._singleReact;
+        logWordsUsage(msg, plan.words);
+        const reacted = await this._reactWithPlan(msg, plan);
 
-        try {
-            await reactFunc.call(this, msg, words);
-            logReactTime(t1);
-        } catch (err) {
-            getLogger().error("Failed to react to message:", err);
+        if (reacted) {
+            logReactTime(timeKey);
+        } else {
+            Benchmark.stopTiming(timeKey, null);
         }
 
-        return true;
+        return reacted;
     }
 }
 

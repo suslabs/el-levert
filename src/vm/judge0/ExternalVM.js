@@ -3,15 +3,15 @@ import axios from "axios";
 import ReturnCodes from "./ReturnCodes.js";
 import VMError from "../../errors/VMError.js";
 
-import { getClient } from "../../LevertClient.js";
+import { getConfig } from "../../LevertClient.js";
 
 class ExternalVM {
     static $name = "externalVM";
     static loadPriority = 3;
 
     constructor() {
-        this.memLimit = getClient().config.otherMemLimit;
-        this.timeLimit = getClient().config.otherTimeLimit;
+        this.memLimit = getConfig().otherMemLimit;
+        this.timeLimit = getConfig().otherTimeLimit;
 
         this.codes = ReturnCodes;
 

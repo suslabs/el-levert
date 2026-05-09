@@ -40,8 +40,8 @@ function resultBody(call, ret, errName) {
 }
 
 function refFuncBody(type, ret, errName) {
-    const callOptionsStr = Codegen.object(VMFunction.callOptions),
-        call = Codegen.call(Codegen.access(["$0", type]), ["undefined", "args", callOptionsStr]);
+    const callOptionsText = Codegen.object(VMFunction.callOptions),
+        call = Codegen.call(Codegen.access(["$0", type]), ["undefined", "args", callOptionsText]);
 
     return resultBody(call, ret, errName);
 }

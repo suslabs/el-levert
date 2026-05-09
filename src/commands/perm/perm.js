@@ -1,13 +1,19 @@
-import { getClient } from "../../LevertClient.js";
+import { getConfig, getEmoji } from "../../LevertClient.js";
 
-export default {
-    name: "perm",
-    aliases: ["p"],
-    subcommands: ["add", "remove", "remove_all", "list", "add_group", "remove_group", "update_group", "check"],
+class PermCommand {
+    static info = {
+        name: "perm",
+        aliases: ["p"],
+        subcommands: ["add", "remove", "remove_all", "list", "add_group", "remove_group", "update_group", "check"]
+    };
 
-    load: _ => getClient().config.enablePermissions,
-
-    handler: function (_1, _2, perm) {
-        return `:information_source: ${this.getSubcmdHelp(perm)}`;
+    load() {
+        return getConfig().enablePermissions;
     }
-};
+
+    handler(ctx) {
+        return `${getEmoji("info")} ${this.getSubcmdHelp(ctx.perm)}`;
+    }
+}
+
+export default PermCommand;

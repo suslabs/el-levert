@@ -1,5 +1,7 @@
 import ObjectLoader from "../ObjectLoader.js";
 
+import deriveCommandClass from "../../util/commands/deriveCommandClass.js";
+
 import LoadStatus from "../LoadStatus.js";
 
 class CommandObjectLoader extends ObjectLoader {
@@ -18,10 +20,20 @@ class CommandObjectLoader extends ObjectLoader {
             return status;
         }
 
-        const command = new this.parentLoader.commandClass({
-            ...this.data,
-            ...this.parentLoader.extraOptions
-        });
+        const plainExport = this.data.default ?? this.data,
+            plainClass = typeof plainExport === "function" ? plainExport : null;
+
+        if (typeof plainClass !== "function") {
+            return this.failure("Command files must export a default class");
+        }
+
+        const DerivedCommand = deriveCommandClass(this.parentLoader.commandClass, plainClass),
+            command = new DerivedCommand({
+                ...plainClass.info,
+                ...this.parentLoader.extraOptions
+            });
+
+        Object.assign(command, new plainClass());
 
         this.data = command;
 

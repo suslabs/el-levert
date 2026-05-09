@@ -1,4 +1,4 @@
-import { getClient } from "../LevertClient.js";
+import { getConfig } from "../LevertClient.js";
 
 import Util from "../util/Util.js";
 
@@ -20,13 +20,11 @@ class Handler {
 
         this.priority ??= options.priority ?? 0;
 
-        const minResponseTime =
-                options.minResponseTime == null ? getClient().config.minResponseTime : options.minResponseTime,
+        const minResponseTime = options.minResponseTime == null ? getConfig().minResponseTime : options.minResponseTime,
             invalidResponseTime = !Number.isFinite(minResponseTime) || minResponseTime <= 0;
         this.minResponseTime = invalidResponseTime ? -1 : Math.round(minResponseTime);
 
-        const globalTimeLimit =
-                options.globalTimeLimit == null ? getClient().config.globalTimeLimit : options.globalTimeLimit,
+        const globalTimeLimit = options.globalTimeLimit == null ? getConfig().globalTimeLimit : options.globalTimeLimit,
             invalidTimeLimit = !Number.isFinite(globalTimeLimit) || globalTimeLimit <= 0;
         this.globalTimeLimit = invalidTimeLimit ? -1 : Math.round(globalTimeLimit);
 

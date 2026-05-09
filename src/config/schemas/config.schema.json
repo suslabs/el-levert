@@ -52,6 +52,9 @@
         "globalTimeLimit": {
             "type": "number"
         },
+        "commandWaitTime": {
+            "type": "number"
+        },
         "reminderMsgLimit": {
             "type": "number"
         },
@@ -157,6 +160,18 @@
         "logWebhook": {
             "type": "string"
         },
+        "emoji": {
+            "type": "object",
+            "properties": {
+                "info": { "type": "string" },
+                "warn": { "type": "string" },
+                "error": { "type": "string" },
+                "ok": { "type": "string" },
+                "invalid": { "type": "string" },
+                "waiting": { "type": "string" }
+            },
+            "required": ["info", "warn", "error", "ok", "invalid", "waiting"]
+        },
         "bridgeBotIds": {
             "type": "array"
         },
@@ -191,6 +206,7 @@
         "embedLineLimit",
         "minResponseTime",
         "globalTimeLimit",
+        "commandWaitTime",
         "reminderMsgLimit",
         "reminderSendInterval",
         "maxTagNameLength",
@@ -223,6 +239,7 @@
         "discordLogLevel",
         "logChannelId",
         "logWebhook",
+        "emoji",
         "bridgeBotIds"
     ],
     "anyOf": [{ "required": ["bridgeBotMessageFormat"] }, { "required": ["bridgeBotMessageFormats"] }]

@@ -4,17 +4,21 @@ import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 
-export default {
-    name: "eval",
+class EvalCommand {
+    static info = {
+        name: "eval"
+    };
 
-    handler: async args => {
-        if (Util.empty(args)) {
+    async handler(ctx) {
+        if (Util.empty(ctx.argsText)) {
             return "Can't eval an empty expression.";
         }
 
-        return await replEval(args, {
+        return await replEval(ctx.argsText, {
             getClient,
             Util
         });
     }
-};
+}
+
+export default EvalCommand;

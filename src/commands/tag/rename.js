@@ -1,24 +1,40 @@
 import { escapeMarkdown } from "discord.js";
 
-import { getClient } from "../../LevertClient.js";
+import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-import ParserUtil from "../../util/commands/ParserUtil.js";
 
-export default {
-    name: "rename",
-    parent: "tag",
-    subcommand: true,
+class TagRenameCommand {
+    static info = {
+        name: "rename",
+        parent: "tag",
+        subcommand: true,
+        arguments: [
+            {
+                name: "tagName",
+                parser: "split",
+                index: 0,
+                lowercase: true
+            },
+            {
+                name: "newName",
+                parser: "split",
+                index: 1,
+                lowercase: true
+            }
+        ]
+    };
 
-    handler: async function (args, msg, perm) {
-        if (Util.empty(args)) {
-            return `:information_source: ${this.getArgsHelp("name new_name")}`;
+    async handler(ctx) {
+        if (Util.empty(ctx.argsText)) {
+            return `${getEmoji("info")} ${this.getArgsHelp("name new_name")}`;
         }
 
-        let [t_name, n_name] = ParserUtil.splitArgs(args, true);
+        let t_name = ctx.arg("tagName"),
+            n_name = ctx.arg("newName");
 
         if (this.matchesSubcmd(t_name)) {
-            return `:police_car: **${escapeMarkdown(t_name)}** is a __command__, not a __tag__. You can't manipulate commands.`;
+            return `${getEmoji("invalid")} **${escapeMarkdown(t_name)}** is a __command__, not a __tag__. You can't manipulate commands.`;
         }
 
         {
@@ -27,25 +43,23 @@ export default {
             [n_name, err2] = getClient().tagManager.checkName(n_name, false);
 
             if (err1 !== null || err2 !== null) {
-                return `:warning: ${err1 ?? err2}.`;
+                return `${getEmoji("warn")} ${err1 ?? err2}.`;
             }
         }
 
         if (Util.empty(n_name)) {
-            return ":warning: You must specify the new tag name.";
+            return `${getEmoji("warn")} You must specify the new tag name.`;
         }
 
         const tag = await getClient().tagManager.fetch(t_name);
 
         if (tag === null) {
-            return `:warning: Tag **${escapeMarkdown(t_name)}** doesn't exist.`;
+            return `${getEmoji("warn")} Tag **${escapeMarkdown(t_name)}** doesn't exist.`;
         }
 
-        if (tag.owner !== msg.author.id && !getClient().permManager.allowed(perm, "mod")) {
-            const out = ":warning: You can only rename your own tags.",
-                owner = await tag.getOwner();
-
-            return out + (owner === "not found" ? " Tag owner not found." : ` The tag is owned by \`${owner}\`.`);
+        if (tag.owner !== ctx.msg.author.id && !getClient().permManager.allowed(ctx.perm, "mod")) {
+            const owner = await tag.getOwner();
+            return `${getEmoji("warn")} You can only rename your own tags.${owner === "not found" ? " Tag owner not found." : ` The tag is owned by \`${owner}\`.`}`;
         }
 
         try {
@@ -59,16 +73,17 @@ export default {
 
             switch (err.message) {
                 case "Tag already exists":
-                    const tag = err.ref,
-                        owner = await tag.getOwner();
+                    const existingTag = err.ref,
+                        owner = await existingTag.getOwner();
 
-                    const out = `:warning: Tag **${escapeMarkdown(tag.name)}** already exists,`;
-                    return out + (owner === "not found" ? " tag owner not found." : ` and is owned by \`${owner}\`.`);
+                    return `${getEmoji("warn")} Tag **${escapeMarkdown(existingTag.name)}** already exists,${owner === "not found" ? " tag owner not found." : ` and is owned by \`${owner}\`.`}`;
                 default:
-                    return `:warning: ${err.message}.`;
+                    return `${getEmoji("warn")} ${err.message}.`;
             }
         }
 
-        return `:white_check_mark: Renamed tag **${escapeMarkdown(t_name)}** to **${escapeMarkdown(n_name)}**.`;
+        return `${getEmoji("ok")} Renamed tag **${escapeMarkdown(t_name)}** to **${escapeMarkdown(n_name)}**.`;
     }
-};
+}
+
+export default TagRenameCommand;

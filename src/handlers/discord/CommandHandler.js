@@ -2,12 +2,17 @@ import { bold } from "discord.js";
 
 import MessageHandler from "./MessageHandler.js";
 
-import { getClient, getLogger } from "../../LevertClient.js";
+import CommandContext from "../../structures/command/context/CommandContext.js";
+
+import { getClient, getConfig, getEmoji, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
+import Benchmark from "../../util/misc/Benchmark.js";
+
+import CommandError from "../../errors/CommandError.js";
 
 function logCommandUsage(msg, name, args) {
     const cmdArgs = !Util.empty(args) ? ` with args:${LoggerUtil.formatLog(args)}` : ".";
@@ -39,23 +44,39 @@ class CommandHandler extends MessageHandler {
         super(enabled, true, true, {
             userSweepInterval: 10 / Util.durationSeconds.milli
         });
+
+        this.commandWaitTime = getConfig().commandWaitTime;
     }
 
-    async execute(msg) {
+    async execute(msg, options = {}) {
         if (!getClient().commandManager.isCommand(msg.content, msg)) {
             return false;
         }
 
         const executeMain = async () => {
-            const [cmd, , args] = getClient().commandManager.getCommand(msg.content, msg);
+            const [cmd, , , parsed] = getClient().commandManager.getCommand(msg.content, msg);
 
-            if (!cmd) {
+            if (!cmd || parsed === null) {
                 return false;
             }
 
             this._sendTyping(msg);
 
-            await this._executeAndReply(cmd, msg, args);
+            await this._executeAndReply(
+                cmd,
+                new CommandContext({
+                    command: cmd,
+                    commandName: parsed.name,
+                    raw: msg.content,
+                    rawContent: parsed.content,
+                    argsText: parsed.argsText,
+                    parseResult: parsed,
+                    message: msg,
+                    handler: this,
+                    isEdit: options.isEdit ?? false
+                })
+            );
+
             return true;
         };
 
@@ -65,7 +86,7 @@ class CommandHandler extends MessageHandler {
             switch (err.name) {
                 case "HandlerError":
                     if (err.message === "User already exists") {
-                        await this.reply(msg, ":warning: Please wait for the previous command to finish.");
+                        await this.reply(msg, `${getEmoji("warn")} Please wait for the previous command to finish.`);
                         break;
                     }
                 // eslint-disable-next-line no-fallthrough
@@ -77,51 +98,104 @@ class CommandHandler extends MessageHandler {
         }
     }
 
-    async _executeCommand(cmd, msg, args) {
-        logCommandUsage(msg, cmd.name, args);
+    async resubmit(msg) {
+        if (getClient().commandManager.isCommand(msg.content, msg)) {
+            await this.delete(msg);
+            return await this.execute(msg, { isEdit: true });
+        } else {
+            return await this.delete(msg);
+        }
+    }
+
+    async _executeCommand(cmd, context) {
+        logCommandUsage(context.msg, cmd.name, context.argsText);
 
         let outRes = null,
             outErr = null;
 
-        const t1 = performance.now();
+        const timer = this._startProcessingTimer(context),
+            timeoutError = new CommandError(`Timed out executing command ${bold(cmd.name)}.`);
+
+        const timeKey = Benchmark.startTiming(Symbol("command_execute"));
+
         try {
-            outRes = await cmd.execute(args, { msg });
+            outRes = await Util.runWithTimeout(() => cmd.execute(context), timeoutError, this.globalTimeLimit);
         } catch (err) {
             outErr = err;
+        } finally {
+            this._stopProcessingTimer(timer);
         }
-        const t2 = performance.now();
 
         const outInfo = {
-            elapsed: Util.timeDelta(t2, t1)
+            elapsed: Benchmark.stopTiming(timeKey, false),
+            timedOut: outErr === timeoutError
         };
 
         logExecutionTime(outInfo.elapsed);
         return [outRes, outErr, outInfo];
     }
 
-    async _executeAndReply(cmd, msg, args) {
-        const [res, execErr, info] = await this._executeCommand(cmd, msg, args);
+    async _executeAndReply(cmd, context) {
+        const [res, execErr, info] = await this._executeCommand(cmd, context);
         await this._addDelay(info.elapsed, true);
 
         if (execErr !== null) {
-            const out = `executing command ${bold(cmd.name)}`;
-            await this.replyWithError(msg, execErr, "command", out);
+            if (info.timedOut) {
+                const timeoutMsg = `${getEmoji("error")} ${execErr.message}`;
+                await this.contextReply(context, timeoutMsg);
+                return;
+            }
 
+            const out = `executing command ${bold(cmd.name)}`;
+
+            await this.contextReplyWithError(context, execErr, "command", out);
             return;
         }
 
-        let options;
+        if (context.replied) {
+            return;
+        }
 
-        if (Array.isArray(res) && !Util.empty(res)) {
-            const obj = Util.last(res);
+        let output = res,
+            options;
+
+        if (Array.isArray(output) && !Util.empty(output)) {
+            const obj = Util.last(output);
 
             if (TypeTester.isObject(obj) && obj.type === "options") {
-                options = res.pop();
+                options = output.pop();
             }
         }
 
-        logCommandOutput(cmd, res);
-        await this.reply(msg, res, options);
+        logCommandOutput(cmd, output);
+        await this.contextReply(context, output, options);
+    }
+
+    _startProcessingTimer(context) {
+        if (!Number.isFinite(this.commandWaitTime) || this.commandWaitTime <= 0) {
+            return null;
+        }
+
+        return setTimeout(() => {
+            this._sendProcessingReply(context).catch(err => {
+                getLogger().error("Could not send processing reply:", err);
+            });
+        }, this.commandWaitTime);
+    }
+
+    _stopProcessingTimer(timer) {
+        if (timer != null) {
+            clearTimeout(timer);
+        }
+    }
+
+    async _sendProcessingReply(context) {
+        if (context.replied || context.processingReplySent) {
+            return null;
+        }
+
+        context.processingReplySent = true;
+        return await this.reply(context.msg, `${getEmoji("waiting")} Processing command...`);
     }
 }
 

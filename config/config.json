@@ -15,6 +15,7 @@
     "embedLineLimit": 40,
     "minResponseTime": 0.1,
     "globalTimeLimit": 60,
+    "commandWaitTime": 3,
     "reminderMsgLimit": 512,
     "reminderSendInterval": 10,
     "maxTagNameLength": 32,
@@ -50,6 +51,14 @@
     "discordLogLevel": "info",
     "logChannelId": "",
     "logWebhook": "",
+    "emoji": {
+        "info": ":information_source:",
+        "warn": ":warning:",
+        "error": ":no_entry_sign:",
+        "ok": ":white_check_mark:",
+        "invalid": ":police_car:",
+        "waiting": ":hourglass_flowing_sand:"
+    },
     "bridgeBotIds": [],
     "bridgeBotMessageFormat": "\\*{2}.+?:\\*{2}\\s"
 }

@@ -4,7 +4,7 @@ import TagDatabase from "../../database/TagDatabase.js";
 import Tag from "../../structures/tag/Tag.js";
 import { TagTypes } from "../../structures/tag/TagTypes.js";
 
-import { getClient, getLogger } from "../../LevertClient.js";
+import { getClient, getConfig, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
@@ -31,11 +31,11 @@ class TagManager extends DBManager {
     constructor(enabled) {
         super(enabled, "tag", "tag_db", TagDatabase);
 
-        this.maxQuota = getClient().config.maxQuota;
-        this.maxTagSize = getClient().config.maxTagSize;
+        this.maxQuota = getConfig().maxQuota;
+        this.maxTagSize = getConfig().maxTagSize;
 
-        this.maxTagNameLength = getClient().config.maxTagNameLength;
-        this.tagNameRegex = new RegExp(getClient().config.tagNameRegex);
+        this.maxTagNameLength = getConfig().maxTagNameLength;
+        this.tagNameRegex = new RegExp(getConfig().tagNameRegex);
     }
 
     isTagName(name) {
@@ -664,13 +664,13 @@ class TagManager extends DBManager {
     async _addPrepared(tag) {
         await this.tag_db.add(tag);
 
-        const bodyLogStr = LoggerUtil.formatLog(
+        const bodyLogText = LoggerUtil.formatLog(
             Util.trimString(tag.body, 300, null, {
                 showDiff: true
             })
         );
 
-        getLogger().info(`Added tag: "${tag.name}" with type: ${tag.type}, body:${bodyLogStr}`);
+        getLogger().info(`Added tag: "${tag.name}" with type: ${tag.type}, body:${bodyLogText}`);
 
         const tagSize = tag.getSize();
         await this._updateQuota(tag.owner, tagSize);

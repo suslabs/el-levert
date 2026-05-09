@@ -1,32 +1,49 @@
 import { escapeMarkdown } from "discord.js";
 
-import { getClient } from "../../LevertClient.js";
+import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-import ParserUtil from "../../util/commands/ParserUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 
 function codeblock(str) {
     return `\`\`\`json\n${str}\`\`\``;
 }
 
-export default {
-    name: "info",
-    aliases: ["data"],
-    parent: "tag",
-    subcommand: true,
-    allowed: "mod",
+class TagInfoCommand {
+    static info = {
+        name: "info",
+        aliases: ["data"],
+        parent: "tag",
+        subcommand: true,
+        allowed: "mod",
+        arguments: [
+            {
+                name: "tagName",
+                parser: "split",
+                index: 0,
+                lowercase: [true, true]
+            },
+            {
+                name: "infoType",
+                parser: "split",
+                index: 1,
+                lowercase: [true, true]
+            }
+        ]
+    };
 
-    handler: async function (args) {
-        if (Util.empty(args)) {
-            return `:information_source: ${this.getArgsHelp("name")}`;
+    async handler(ctx) {
+
+        if (Util.empty(ctx.argsText)) {
+            return `${getEmoji("info")} ${this.getArgsHelp("name")}`;
         }
 
-        let [t_name, i_type] = ParserUtil.splitArgs(args, [true, true]),
+        let t_name = ctx.arg("tagName"),
+            i_type = ctx.arg("infoType"),
             raw = i_type === "raw";
 
         if (this.matchesSubcmd(t_name)) {
-            return `:police_car: **${escapeMarkdown(t_name)}** is a __command__, not a __tag__. You can't manipulate commands.`;
+            return `${getEmoji("invalid")} **${escapeMarkdown(t_name)}** is a __command__, not a __tag__. You can't manipulate commands.`;
         }
 
         {
@@ -34,19 +51,18 @@ export default {
             [t_name, err] = getClient().tagManager.checkName(t_name, false);
 
             if (err !== null) {
-                return `:warning: ${err}.`;
+                return `${getEmoji("warn")} ${err}.`;
             }
         }
 
         const tag = await getClient().tagManager.fetch(t_name);
 
         if (tag === null) {
-            return `:warning: Tag **${escapeMarkdown(t_name)}** doesn't exist.`;
+            return `${getEmoji("warn")} Tag **${escapeMarkdown(t_name)}** doesn't exist.`;
         }
 
-        const header = `:information_source: Tag info for **${escapeMarkdown(t_name)}**:`;
-
-        const info = await tag.getInfo(raw),
+        const header = `${getEmoji("info")} Tag info for **${escapeMarkdown(t_name)}**:`,
+            info = await tag.getInfo(raw),
             infoJson = JSON.stringify(info, undefined, 4);
 
         if (infoJson.length + 10 > getClient().commandHandler.outCharLimit) {
@@ -54,8 +70,10 @@ export default {
                 content: header,
                 ...DiscordUtil.getFileAttach(infoJson, "info.json")
             };
-        } else {
-            return `${header}\n${codeblock(infoJson)}`;
         }
+
+        return `${header}\n${codeblock(infoJson)}`;
     }
-};
+}
+
+export default TagInfoCommand;

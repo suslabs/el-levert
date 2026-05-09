@@ -1,10 +1,14 @@
-import { getClient } from "../../LevertClient.js";
+import { getClient, getEmoji } from "../../LevertClient.js";
 
-export default {
-    name: "version",
-    category: "info",
+class VersionCommand {
+    static info = {
+        name: "version",
+        category: "info"
+    };
 
-    handler: _ => {
-        return `:information_source: Current bot version: **${getClient().version}**`;
+    handler() {
+        return `${getEmoji("info")} Current bot version: **${getClient().version}**`;
     }
-};
+}
+
+export default VersionCommand;

@@ -1,13 +1,19 @@
-import { getClient } from "../../LevertClient.js";
+import { getConfig, getEmoji } from "../../LevertClient.js";
 
-export default {
-    name: "reminder",
-    aliases: ["r"],
-    subcommands: ["add", "list", "remove", "remove_all"],
+class ReminderCommand {
+    static info = {
+        name: "reminder",
+        aliases: ["r"],
+        subcommands: ["add", "list", "remove", "remove_all"]
+    };
 
-    load: _ => getClient().config.enableReminders,
-
-    handler: function (_1, _2, perm) {
-        return `:information_source: ${this.getSubcmdHelp(perm)}`;
+    load() {
+        return getConfig().enableReminders;
     }
-};
+
+    handler(ctx) {
+        return `${getEmoji("info")} ${this.getSubcmdHelp(ctx.perm)}`;
+    }
+}
+
+export default ReminderCommand;

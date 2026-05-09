@@ -1,7 +1,11 @@
-export default {
-    name: "clear",
+class ClearCommand {
+    static info = {
+        name: "clear"
+    };
 
-    handler: _ => {
+    handler() {
         console.clear();
     }
-};
+}
+
+export default ClearCommand;

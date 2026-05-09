@@ -243,6 +243,8 @@ let Util = {
 
     _camelToWordsRegex: /([a-z])([A-Z])/g,
     camelCaseToWords: str => {
+        Util._camelToWordsRegex.lastIndex = 0;
+
         const words = str.replace(Util._camelToWordsRegex, "$1 $2");
         return words.toLowerCase();
     },
@@ -250,6 +252,7 @@ let Util = {
     _wordsToCamelRegex: /(?:^\w|[A-Z]|\b\w|\s+)/g,
     wordsToCamelCase: str => {
         str = str.toLowerCase();
+        Util._wordsToCamelRegex.lastIndex = 0;
 
         const camel = str.replace(Util._wordsToCamelRegex, (match, i) => match[`to${i ? "Upper" : "Lower"}Case`]());
         return Util.stripSpaces(camel);
@@ -281,6 +284,54 @@ let Util = {
     replaceStringRange: (str, replacement, i, length = 1, end = false) => {
         const last = end ? length : i + length;
         return str.slice(0, i) + replacement + str.slice(last);
+    },
+
+    maskRanges: (str, ranges, mask = " ") => {
+        if (typeof str !== "string" || Util.empty(ranges) || !Util.nonemptyString(mask)) {
+            return str;
+        }
+
+        const normalized = ranges
+            .filter(range => range.length >= 2)
+            .map(([start, end]) => {
+                start = Util.clamp(Math.trunc(start), 0, str.length);
+                end = Util.clamp(Math.trunc(end), 0, str.length);
+                return start <= end ? [start, end] : [end, start];
+            })
+            .filter(([start, end]) => end > start)
+            .sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+
+        if (Util.empty(normalized)) {
+            return str;
+        }
+
+        let out = [],
+            [maskStart, maskEnd] = normalized[0],
+            lastIndex = 0;
+
+        const pushMask = () => {
+            out.push(str.slice(lastIndex, maskStart));
+            out.push(mask.repeat(maskEnd - maskStart));
+            lastIndex = maskEnd;
+        };
+
+        for (let i = 1; i < normalized.length; i++) {
+            const [start, end] = normalized[i];
+
+            if (start <= maskEnd) {
+                maskEnd = Math.max(maskEnd, end);
+                continue;
+            }
+
+            pushMask();
+            maskStart = start;
+            maskEnd = end;
+        }
+
+        pushMask();
+        out.push(str.slice(lastIndex));
+
+        return out.join("");
     },
 
     randomString: n => {
@@ -690,10 +741,10 @@ let Util = {
         const _format = Object.entries(durations).map(entry => {
             const [name, duration] = entry;
 
-            const durStr = Util.formatNumber(duration),
+            const durText = Util.formatNumber(duration),
                 s = duration !== 1 ? "s" : "";
 
-            return `${durStr} ${name}${s}`;
+            return `${durText} ${name}${s}`;
         });
 
         return _format.join(", ");

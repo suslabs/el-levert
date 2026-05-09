@@ -3,7 +3,7 @@ import Manager from "../Manager.js";
 import BaseCommand from "../../structures/command/Command.js";
 import CommandLoader from "../../loaders/command/CommandLoader.js";
 
-import { getClient, getLogger } from "../../LevertClient.js";
+import { getConfig, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
@@ -20,7 +20,7 @@ class BaseCommandManager extends Manager {
 
         this.commandsDir = commandsDir;
 
-        this.wrapCommands = options.wrapCommands ?? getClient().config.wrapEvents;
+        this.wrapCommands = options.wrapCommands ?? getConfig().wrapEvents;
         this.excludeDirs = options.excludeDirs;
         this.cmdFileExtension = options.cmdFileExtension ?? ".js";
 
@@ -28,7 +28,7 @@ class BaseCommandManager extends Manager {
     }
 
     getCommands(includeSubcommands = false) {
-        return includeSubcommands ? this.commands : this.commands.filter(command => !command.isSubcmd);
+        return includeSubcommands ? this.commands : this.commands.filter(command => !command.subcommand);
     }
 
     searchCommands(name) {
@@ -66,7 +66,7 @@ class BaseCommandManager extends Manager {
     }
 
     deleteCommand(command, removeSubcommands = true, errorIfNotFound = false) {
-        if (command.isSubcmd) {
+        if (command.subcommand) {
             throw new CommandError("Can only delete parent commands");
         }
 
@@ -112,7 +112,7 @@ class BaseCommandManager extends Manager {
     }
 
     deleteSubcommand(subcmd, parent, errorIfNotFound = false) {
-        if (!subcmd.isSubcmd) {
+        if (!subcmd.subcommand) {
             throw new CommandError("Can only delete subcommands");
         }
 
@@ -160,9 +160,9 @@ class BaseCommandManager extends Manager {
             bound = 0;
 
         for (const command of this.commands) {
-            total += +command.isSubcmd;
+            total += +command.subcommand;
 
-            if (command.isSubcmd || Util.empty(command.subcommands)) {
+            if (command.subcommand || Util.empty(command.subcommands)) {
                 continue;
             }
 
@@ -186,7 +186,7 @@ class BaseCommandManager extends Manager {
         const unbound = total - bound;
 
         if (unbound > 0) {
-            const unboundCmds = this.commands.filter(cmd => cmd.isSubcmd && !cmd.bound),
+            const unboundCmds = this.commands.filter(cmd => cmd.subcommand && !cmd.bound),
                 format = unboundCmds.map((cmd, i) => `${i + 1}. "${cmd.getName(false, '" -> "')}"`).join("\n");
 
             getLogger().warn(`Found ${unbound} orphaned subcommand(s):\n${format}`);
@@ -221,7 +221,7 @@ class BaseCommandManager extends Manager {
         const duplicates = this._findDuplicateCommands();
 
         ArrayUtil.wipeArray(duplicates, command => {
-            if (command.isSubcmd) {
+            if (command.subcommand) {
                 this.deleteSubcommand(command);
             } else {
                 this.deleteCommand(command, false);

@@ -1,13 +1,17 @@
 import TextCommandManager from "./TextCommandManager.js";
 
-import { getClient } from "../../LevertClient.js";
+import CLICommand from "../../structures/command/CLICommand.js";
+
+import { getConfig } from "../../LevertClient.js";
 
 class CLICommandManager extends TextCommandManager {
     static $name = "cliCommandManager";
 
+    static commandClass = CLICommand;
+
     constructor(enabled) {
-        const commandsDir = getClient().config.cliCommandsPath,
-            commandPrefix = getClient().config.cliCmdPrefix;
+        const commandsDir = getConfig().cliCommandsPath,
+            commandPrefix = getConfig().cliCmdPrefix;
 
         super(enabled, commandsDir, commandPrefix);
     }

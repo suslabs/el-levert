@@ -5,15 +5,17 @@ import { getClient } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 import VMUtil from "../../util/vm/VMUtil.js";
 
-export default {
-    name: "admin_eval",
-    ownerOnly: true,
-    category: "owner-only",
+class AdminEvalCommand {
+    static info = {
+        name: "admin_eval",
+        ownerOnly: true,
+        category: "owner-only"
+    };
 
-    handler: async function (args, msg) {
+    async handler(ctx) {
         const evalCmd = getClient().commandManager.searchCommands("eval");
 
-        const parsed = await evalCmd.evalBase(args, msg),
+        const parsed = await evalCmd.evalBase(ctx.argsText, ctx.msg),
             body = parsed.body;
 
         if (parsed.err !== null) {
@@ -34,4 +36,6 @@ export default {
             }
         ];
     }
-};
+}
+
+export default AdminEvalCommand;

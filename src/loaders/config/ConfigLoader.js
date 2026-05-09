@@ -24,6 +24,7 @@ class ConfigLoader extends BaseConfigLoader {
             10 / Util.durationSeconds.milli
         );
         config.globalTimeLimit = Math.round(config.globalTimeLimit / Util.durationSeconds.milli);
+        config.commandWaitTime = Math.round((config.commandWaitTime ?? 0) / Util.durationSeconds.milli);
 
         config.timeLimit = Math.round(config.timeLimit / Util.durationSeconds.milli);
         config.otherTimeLimit = Math.round(config.otherTimeLimit / Util.durationSeconds.milli);
@@ -46,13 +47,13 @@ class ConfigLoader extends BaseConfigLoader {
             return [null, false];
         }
 
-        let expStr = `(${format.join(")|(")})`;
+        let expText = `(${format.join(")|(")})`;
 
         let i = 1;
-        expStr = expStr.replaceAll(ConfigLoader.formatContentGroup, _ => `(?<content${i++}>)`);
+        expText = expText.replaceAll(ConfigLoader.formatContentGroup, _ => `(?<content${i++}>)`);
 
         try {
-            const exp = new RegExp(expStr);
+            const exp = new RegExp(expText);
             return [exp, true];
         } catch (err) {
             return [null, false];

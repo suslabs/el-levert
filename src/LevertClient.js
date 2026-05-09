@@ -23,6 +23,7 @@ import TypeTester from "./util/TypeTester.js";
 import ArrayUtil from "./util/ArrayUtil.js";
 import ObjectUtil from "./util/ObjectUtil.js";
 import ModuleUtil from "./util/misc/ModuleUtil.js";
+import Benchmark from "./util/misc/Benchmark.js";
 
 import ClientError from "./errors/ClientError.js";
 
@@ -331,7 +332,7 @@ class LevertClient extends DiscordClient {
     }
 
     async start() {
-        this.__t1__1 = performance.now();
+        Benchmark.startTiming("__t1__1");
 
         if (this.started) {
             throw new ClientError("The bot can only be started once");
@@ -368,7 +369,7 @@ class LevertClient extends DiscordClient {
     }
 
     async stop(kill = false) {
-        this.__t1__1 = performance.now();
+        Benchmark.startTiming("__t1__1");
 
         if (!this.started) {
             throw new ClientError("The bot can't be stopped if it hasn't been started once");
@@ -397,7 +398,7 @@ class LevertClient extends DiscordClient {
     }
 
     async restart(configs) {
-        this.__t1__2 = performance.now();
+        Benchmark.startTiming("__t1__2");
 
         if (!this.started) {
             throw new ClientError("The bot can't be restarted if it hasn't been started once");
@@ -423,7 +424,7 @@ class LevertClient extends DiscordClient {
         await this.start();
 
         if (this.config.enableCliCommands) {
-            return this._getBenchmarkTime("__t1__2");
+            return Benchmark.stopTiming("__t1__2");
         } else {
             return this._logRestartedTime();
         }
@@ -713,28 +714,20 @@ class LevertClient extends DiscordClient {
         this.inputManager.active = false;
     }
 
-    _getBenchmarkTime(startName) {
-        const t2 = performance.now(),
-            elapsed = Util.timeDelta(t2, this[startName]);
-
-        delete this[startName];
-        return elapsed;
-    }
-
     _logStartedTime() {
-        const time = this._getBenchmarkTime("__t1__1");
+        const time = Benchmark.stopTiming("__t1__1");
         this.logger.info(`Startup complete in ${Util.formatNumber(time)} ms.`);
         return time;
     }
 
     _logStoppedTime() {
-        const time = this._getBenchmarkTime("__t1__1");
+        const time = Benchmark.stopTiming("__t1__1");
         this.logger.info(`Bot stopped in ${Util.formatNumber(time)} ms.`);
         return time;
     }
 
     _logRestartedTime() {
-        const time = this._getBenchmarkTime("__t1__2");
+        const time = Benchmark.stopTiming("__t1__2");
         this.logger.info(`Bot restarted in ${Util.formatNumber(time)} ms.`);
         return time;
     }
@@ -749,8 +742,16 @@ function getClient() {
     return client;
 }
 
-function getLogger() {
-    return client.logger;
+function getConfig() {
+    return client?.config ?? null;
 }
 
-export { LevertClient, getClient, getLogger };
+function getEmoji(name) {
+    return getConfig()?.emoji?.[name] ?? "";
+}
+
+function getLogger() {
+    return client?.logger ?? null;
+}
+
+export { LevertClient, getClient, getConfig, getEmoji, getLogger };

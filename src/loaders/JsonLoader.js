@@ -233,8 +233,8 @@ class JsonLoader extends TextLoader {
             }
 
             if (!valid) {
-                const errStr = error ? `\n${error}` : "";
-                return this.failure("Validation failed." + errStr);
+                const errText = error ? `\n${error}` : "";
+                return this.failure("Validation failed." + errText);
             }
         }
 

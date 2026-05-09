@@ -1,59 +1,72 @@
 import { EmbedBuilder } from "discord.js";
 
-import { getClient } from "../../LevertClient.js";
+import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-import ParserUtil from "../../util/commands/ParserUtil.js";
 
 const leaderboardTypes = ["count", "size"];
-
 const defaultLimit = 10,
     maxLimit = 50;
 
 function formatLeaderboard(leaderboard, type) {
-    const format = leaderboard.map((entry, i) => {
-        let str = `${i + 1}. \`${entry.user.username}\`: `;
+    return leaderboard
+        .map((entry, i) => {
+            let str = `${i + 1}. \`${entry.user.username}\`: `;
 
-        switch (type) {
-            case "count":
-                const s = entry.count > 1 ? "s" : "";
-                str += `**${Util.formatNumber(entry.count)}** tag${s}`;
+            switch (type) {
+                case "count":
+                    str += `**${Util.formatNumber(entry.count)}** tag${entry.count > 1 ? "s" : ""}`;
+                    break;
+                case "size":
+                    str += `**${Util.formatNumber(entry.quota, 2)}** kb`;
+                    break;
+            }
 
-                break;
-            case "size":
-                str += `**${Util.formatNumber(entry.quota, 2)}** kb`;
-                break;
-        }
-
-        return str;
-    });
-
-    return format.join("\n");
+            return str;
+        })
+        .join("\n");
 }
 
-export default {
-    name: "leaderboard",
-    parent: "tag",
-    subcommand: true,
+class TagLeaderboardCommand {
+    static info = {
+        name: "leaderboard",
+        parent: "tag",
+        subcommand: true,
+        arguments: [
+            {
+                name: "leaderboardType",
+                parser: "split",
+                index: 0,
+                lowercase: true
+            },
+            {
+                name: "limitText",
+                parser: "split",
+                index: 1
+            }
+        ]
+    };
 
-    handler: async function (args) {
-        if (Util.empty(args)) {
-            return `:information_source: ${this.getArgsHelp(`(count/size) [limit <= ${maxLimit}]`)}`;
+    async handler(ctx) {
+
+        if (Util.empty(ctx.argsText)) {
+            return `${getEmoji("info")} ${this.getArgsHelp(`(count/size) [limit <= ${maxLimit}]`)}`;
         }
 
-        const [l_type, l_str] = ParserUtil.splitArgs(args, true);
+        const l_type = ctx.arg("leaderboardType"),
+            l_text = ctx.arg("limitText");
 
         if (!leaderboardTypes.includes(l_type)) {
-            return ":warning: Invalid leaderboard type.";
+            return `${getEmoji("warn")} Invalid leaderboard type.`;
         }
 
         let maxUsers = defaultLimit;
 
-        if (!Util.empty(l_str)) {
-            maxUsers = Util.parseInt(l_str);
+        if (!Util.empty(l_text)) {
+            maxUsers = Util.parseInt(l_text);
 
             if (Number.isNaN(maxUsers) || maxUsers < 1) {
-                return ":warning: Invalid limit: " + l_str;
+                return `${getEmoji("warn")} Invalid limit: ${l_text}`;
             }
 
             maxUsers = Util.clamp(maxUsers, 1, maxLimit);
@@ -62,15 +75,14 @@ export default {
         const leaderboard = await getClient().tagManager.leaderboard(l_type, maxUsers);
 
         if (Util.empty(leaderboard)) {
-            return ":information_source: There are **no** tags registered.";
+            return `${getEmoji("info")} There are **no** tags registered.`;
         }
 
-        const format = formatLeaderboard(leaderboard, l_type),
-            embed = new EmbedBuilder().setDescription(format);
-
         return {
-            content: `:information_source: Tag ${l_type} leaderboard:`,
-            embeds: [embed]
+            content: `${getEmoji("info")} Tag ${l_type} leaderboard:`,
+            embeds: [new EmbedBuilder().setDescription(formatLeaderboard(leaderboard, l_type))]
         };
     }
-};
+}
+
+export default TagLeaderboardCommand;

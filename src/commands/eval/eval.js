@@ -1,4 +1,4 @@
-import { getClient } from "../../LevertClient.js";
+import { getClient, getConfig, getEmoji } from "../../LevertClient.js";
 
 import ArrayUtil from "../../util/ArrayUtil.js";
 import Util from "../../util/Util.js";
@@ -17,12 +17,12 @@ async function evalBase(args, msg) {
             return err.name === "TagError"
                 ? {
                       body: null,
-                      err: `:warning: ${err.message}.`
+                      err: `${getEmoji("warn")} ${err.message}.`
                   }
                 : {
                       body: null,
                       err: {
-                          content: ":no_entry_sign: Downloading attachment failed:",
+                          content: `${getEmoji("error")} Downloading attachment failed:`,
                           ...DiscordUtil.getFileAttach(err.stack, "error.js")
                       }
                   };
@@ -32,14 +32,13 @@ async function evalBase(args, msg) {
     return Util.empty(body)
         ? {
               body: null,
-              err: ":no_entry_sign: Can't eval an empty script."
+              err: `${getEmoji("error")} Can't eval an empty script.`
           }
         : { body, err: null };
 }
 
 async function altevalBase(args, msg, lang) {
-    const base = this.evalBase ?? this.parentCmd.evalBase,
-        parsed = await base(args, msg),
+    const parsed = await evalBase(args, msg),
         body = parsed.body;
 
     if (parsed.err !== null) {
@@ -55,19 +54,19 @@ async function altevalBase(args, msg, lang) {
             throw err;
         }
 
-        let parsed = {};
+        let parsedJson = {};
 
         try {
-            parsed = JSON.parse(err.message);
-        } catch (err) {
-            return `:no_entry_sign: ${Util.capitalize(err.message)}.`;
+            parsedJson = JSON.parse(err.message);
+        } catch (parseErr) {
+            return `${getEmoji("error")} ${Util.capitalize(parseErr.message)}.`;
         }
 
-        const format = Object.values(parsed)
-            .map(err => ArrayUtil.guaranteeArray(err).map(Util.capitalize).join(", "))
+        const format = Object.values(parsedJson)
+            .map(errorEntry => ArrayUtil.guaranteeArray(errorEntry).map(Util.capitalize).join(", "))
             .join("\n");
 
-        return `:no_entry_sign: ${format}.`;
+        return `${getEmoji("error")} ${format}.`;
     }
 
     switch (resCode) {
@@ -75,11 +74,11 @@ async function altevalBase(args, msg, lang) {
             break;
         case 6:
             return {
-                content: ":no_entry_sign: Script compilation failed:",
+                content: `${getEmoji("error")} Script compilation failed:`,
                 ...DiscordUtil.getFileAttach(evalOut.compileOutput, "compile_error.js")
             };
         default:
-            return `:no_entry_sign: ${getClient().externalVM.codes[resCode]}.`;
+            return `${getEmoji("error")} ${getClient().externalVM.codes[resCode]}.`;
     }
 
     let out = "";
@@ -109,33 +108,42 @@ const altLangNames = {
     py: ":snake:"
 };
 
-export default {
-    name: "eval",
-    aliases: ["e", "exec"],
-    subcommands: ["c", "cpp", "py", "vm2", "langs"],
+class EvalCommand {
+    static info = {
+        name: "eval",
+        aliases: ["e", "exec"],
+        subcommands: ["c", "cpp", "py", "vm2", "langs"]
+    };
 
-    load: function () {
-        if (!getClient().config.enableEval) {
+    load() {
+        if (!getConfig().enableEval) {
             return false;
         }
 
-        this.evalBase = evalBase.bind(this);
-        this.langNames = langNames;
-        this.subcommands = ["langs"];
+        this.langNames = { ...langNames };
+        this.subcommands.length = 0;
+        this.subcommands.push("langs");
 
-        if (getClient().config.enableOtherLangs) {
+        if (getConfig().enableOtherLangs) {
             this.subcommands.push("c", "cpp", "py");
-            this.altevalBase = altevalBase.bind(this);
             Object.assign(this.langNames, altLangNames);
         }
 
-        if (getClient().config.enableVM2) {
+        if (getConfig().enableVM2) {
             this.subcommands.push("vm2");
         }
-    },
+    }
 
-    handler: async function (args, msg) {
-        const parsed = await this.evalBase(args, msg),
+    async evalBase(args, msg) {
+        return await evalBase(args, msg);
+    }
+
+    async altevalBase(args, msg, lang) {
+        return await altevalBase(args, msg, lang);
+    }
+
+    async handler(ctx) {
+        const parsed = await this.evalBase(ctx.argsText, ctx.msg),
             body = parsed.body;
 
         if (parsed.err !== null) {
@@ -145,13 +153,13 @@ export default {
         let out = null;
 
         try {
-            out = await getClient().tagVM.runScript(body, { msg });
+            out = await getClient().tagVM.runScript(body, { msg: ctx.msg });
         } catch (err) {
             if (err.name !== "VMError") {
                 throw err;
             }
 
-            out = `:no_entry_sign: ${err.message}.`;
+            out = `${getEmoji("error")} ${err.message}.`;
         }
 
         return [
@@ -162,4 +170,6 @@ export default {
             }
         ];
     }
-};
+}
+
+export default EvalCommand;

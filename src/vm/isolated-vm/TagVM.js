@@ -3,13 +3,14 @@ import VM from "../VM.js";
 import EvalContext from "./context/EvalContext.js";
 import InspectorServer from "./inspector/InspectorServer.js";
 
-import { getClient, getLogger } from "../../LevertClient.js";
+import { getConfig, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import VMUtil from "../../util/vm/VMUtil.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
+import Benchmark from "../../util/misc/Benchmark.js";
 
 import VMError from "../../errors/VMError.js";
 import VMErrors from "./VMErrors.js";
@@ -18,15 +19,16 @@ function logUsage(code) {
     getLogger().isDebugEnabled() && getLogger().debug(`Running script:${LoggerUtil.formatLog(code)}`);
 }
 
-function logFinished(t1, info) {
+function logFinished(timeKey, info) {
     if (!info && !getLogger().isDebugEnabled()) {
+        Benchmark.stopTiming(timeKey, null);
         return;
     }
 
-    const level = info ? "info" : "debug",
-        t2 = performance.now();
+    const elapsed = Benchmark.stopTiming(timeKey, false),
+        level = info ? "info" : "debug";
 
-    getLogger().log(level, `Script execution took ${Util.formatNumber(Util.timeDelta(t2, t1))} ms.`);
+    getLogger().log(level, `Script execution took ${Util.formatNumber(elapsed)} ms.`);
 }
 
 function logOutput(out, dataType) {
@@ -47,10 +49,10 @@ class TagVM extends VM {
     constructor(enabled) {
         super(enabled);
 
-        this.memLimit = getClient().config.memLimit;
-        this.timeLimit = getClient().config.timeLimit;
+        this.memLimit = getConfig().memLimit;
+        this.timeLimit = getConfig().timeLimit;
 
-        this.enableInspector = getClient().config.enableInspector;
+        this.enableInspector = getConfig().enableInspector;
     }
 
     async runScript(code, values) {
@@ -61,8 +63,9 @@ class TagVM extends VM {
             throw new VMError("Inspector is already connected.");
         }
 
-        const t1 = performance.now(),
-            context = await this._getEvalContext(values);
+        const timeKey = Benchmark.startTiming(Symbol("vm_script"));
+
+        const context = await this._getEvalContext(values);
 
         let out,
             outErr = null;
@@ -73,7 +76,8 @@ class TagVM extends VM {
             outErr = err;
         }
 
-        logFinished(t1, this.enableInspector);
+        logFinished(timeKey, this.enableInspector);
+
         this._inspectorServer?.executionFinished();
         context.dispose();
 
@@ -105,7 +109,7 @@ class TagVM extends VM {
             return;
         }
 
-        const inspectorPort = getClient().config.inspectorPort;
+        const inspectorPort = getConfig().inspectorPort;
 
         const options = {
             logPackets: TagVM.logInspectorPackets

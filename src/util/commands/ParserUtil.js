@@ -51,6 +51,7 @@ const ParserUtil = Object.freeze({
             const escaped = sep.map(item => RegexUtil.escapeRegex(item)),
                 exp = new RegExp(escaped.join("|"), "g");
 
+            exp.lastIndex = 0;
             if (n <= 1) {
                 const match = exp.exec(str);
 

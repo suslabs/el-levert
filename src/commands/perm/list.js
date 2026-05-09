@@ -1,30 +1,34 @@
 import { EmbedBuilder } from "discord.js";
 
-import { getClient } from "../../LevertClient.js";
+import { getClient, getEmoji } from "../../LevertClient.js";
 
 function formatGroups(groups) {
     const format = groups.map((group, i) => `${i + 1}\\. ${group.formatUsers(true, true)}`);
     return format.join("\n");
 }
 
-export default {
-    name: "list",
-    parent: "perm",
-    subcommand: true,
+class PermListCommand {
+    static info = {
+        name: "list",
+        parent: "perm",
+        subcommand: true
+    };
 
-    handler: async _ => {
+    async handler() {
         const groups = await getClient().permManager.listGroups(true);
 
         if (groups === null) {
-            return ":information_source: **No** permissions are registered.";
+            return `${getEmoji("info")} **No** permissions are registered.`;
         }
 
         const format = formatGroups(groups),
             embed = new EmbedBuilder().setDescription(format);
 
         return {
-            content: ":information_source: Registered permissions:",
+            content: `${getEmoji("info")} Registered permissions:`,
             embeds: [embed]
         };
     }
-};
+}
+
+export default PermListCommand;

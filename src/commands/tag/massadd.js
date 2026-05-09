@@ -1,31 +1,58 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import { getClient, getLogger } from "../../LevertClient.js";
+import { getClient, getEmoji, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-import ParserUtil from "../../util/commands/ParserUtil.js";
 
-export default {
-    name: "massadd",
-    parent: "tag",
-    subcommand: true,
-    ownerOnly: true,
+class TagMassAddCommand {
+    static info = {
+        name: "massadd",
+        parent: "tag",
+        subcommand: true,
+        ownerOnly: true,
+        arguments: [
+            {
+                name: "tagPrefix",
+                parser: "split",
+                index: 0
+            },
+            {
+                name: "rest",
+                parser: "split",
+                index: 1
+            },
+            {
+                name: "owner",
+                from: "rest",
+                parser: "split",
+                index: 0
+            },
+            {
+                name: "inputDir",
+                from: "rest",
+                parser: "split",
+                index: 1
+            }
+        ]
+    };
 
-    handler: async function (args) {
-        if (Util.empty(args)) {
-            return `:information_source: ${this.getArgsHelp("tag_prefix owner input_dir")}`;
+    async handler(ctx) {
+
+        if (Util.empty(ctx.argsText)) {
+            return `${getEmoji("info")} ${this.getArgsHelp("tag_prefix owner input_dir")}`;
         }
 
-        let [tagPrefix, split1] = ParserUtil.splitArgs(args),
-            [owner, inputDir] = ParserUtil.splitArgs(split1);
+        let tagPrefix = ctx.arg("tagPrefix"),
+            owner = ctx.arg("owner"),
+            inputDir = ctx.arg("inputDir");
 
         {
             let err;
             [tagPrefix, err] = getClient().tagManager.checkNew(tagPrefix, false);
 
             if (err !== null) {
-                return `:warning: ${err}.`;
+                return `${getEmoji("warn")} ${err}.`;
             }
         }
 
@@ -39,9 +66,8 @@ export default {
 
         for (const [i, file] of files.entries()) {
             try {
-                const filePath = path.join(inputDir, file.name);
-
-                const tagName = `${tagPrefix}${i + 1}`,
+                const filePath = path.join(inputDir, file.name),
+                    tagName = `${tagPrefix}${i + 1}`,
                     contents = await fs.readFile(filePath, "utf8");
 
                 getClient().tagManager.checkBody(contents);
@@ -58,4 +84,6 @@ export default {
 
         return out.join("\n");
     }
-};
+}
+
+export default TagMassAddCommand;

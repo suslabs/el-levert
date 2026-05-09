@@ -1,9 +1,13 @@
 import { getClient } from "../../LevertClient.js";
 
-export default {
-    name: "version",
+class VersionCommand {
+    static info = {
+        name: "version"
+    };
 
-    handler: _ => {
+    handler() {
         return `Current bot version: ${getClient().version}`;
     }
-};
+}
+
+export default VersionCommand;

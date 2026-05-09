@@ -3,9 +3,9 @@ import { inlineCode } from "discord.js";
 import BaseCommandManager from "./BaseCommandManager.js";
 
 import TextCommand from "../../structures/command/TextCommand.js";
+import CommandParser from "../../parsers/CommandParser.js";
 
 import Util from "../../util/Util.js";
-import ParserUtil from "../../util/commands/ParserUtil.js";
 
 import categoryNames from "./categoryNames.json" assert { type: "json" };
 
@@ -19,7 +19,7 @@ class TextCommandManager extends BaseCommandManager {
     }
 
     isCommand(str, ...etc) {
-        if (str.length <= this.commandPrefix.length) {
+        if (typeof str !== "string" || str.length <= this.commandPrefix.length) {
             return false;
         }
 
@@ -27,12 +27,22 @@ class TextCommandManager extends BaseCommandManager {
     }
 
     getCommand(str, ...etc) {
-        const content = this._getCommandContent(str, ...etc);
+        if (!this.isCommand(str, ...etc)) {
+            return [null, "", "", null];
+        }
 
-        const [name, args] = ParserUtil.splitArgs(content),
-            cmd = this.searchCommands(name);
+        const content = this._getCommandContent(str, ...etc),
+            parsed = new CommandParser({
+                content,
+                raw: str
+            }).parse();
 
-        return [cmd, name, args];
+        if (parsed === null) {
+            return [null, "", "", null];
+        }
+
+        const cmd = this.searchCommands(parsed.name);
+        return [cmd, parsed.name, parsed.argsText, parsed];
     }
 
     getHelp(discord = false, indentation = 4, ...etc) {

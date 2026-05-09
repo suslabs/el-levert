@@ -20,7 +20,8 @@ import ImporterError from "../../src/errors/ImporterError.js";
 class DBImporter {
     static getDifference(currentTags, importTags, diffTypes = TagDifferenceType.all) {
         if (diffTypes === TagDifferenceType.all) {
-            diffTypes = Object.values(TagDifferenceType).pop();
+            diffTypes = Object.values(TagDifferenceType);
+            diffTypes.pop();
         } else {
             diffTypes = ArrayUtil.guaranteeArray(diffTypes);
 
@@ -35,8 +36,7 @@ class DBImporter {
 
         const diff = {};
 
-        const importNames = importTags.map(tag => tag.name),
-            importNamesSet = new Set(importNames);
+        const importNames = importTags.map(tag => tag.name);
 
         let oldTags, oldNames;
 
@@ -47,17 +47,25 @@ class DBImporter {
             diff.oldTags = oldTags;
         }
 
+        let importVsOld;
+
+        if (hasExisting || hasDeleted) {
+            importVsOld = ArrayUtil.diff(oldNames, importNames);
+        }
+
         if (hasExisting) {
-            diff.existingTags = oldNames.filter(name => importNamesSet.has(name));
+            diff.existingTags = importVsOld.shared;
         }
 
         if (hasNew) {
-            const currentNamesSet = new Set(currentTags.map(tag => tag.name));
-            diff.newTags = importNames.filter(name => !currentNamesSet.has(name));
+            const currentNames = currentTags.map(tag => tag.name),
+                importVsCurrent = ArrayUtil.diff(currentNames, importNames);
+
+            diff.newTags = importVsCurrent.added;
         }
 
         if (hasDeleted) {
-            diff.deletedTags = oldNames.filter(name => !importNamesSet.has(name));
+            diff.deletedTags = importVsOld.removed;
         }
 
         return diff;
@@ -187,7 +195,9 @@ class DBImporter {
             err;
         [name, err] = this.tagManager.checkName(name, false);
 
-        if (err !== null || TagCommand.subcommands.includes(name)) {
+        const subcommands = TagCommand.info?.subcommands ?? [];
+
+        if (err !== null || subcommands.includes(name)) {
             return false;
         }
 

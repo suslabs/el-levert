@@ -1,29 +1,30 @@
-import { getClient } from "../../LevertClient.js";
+import { getClient, getEmoji } from "../../LevertClient.js";
 
 import TextCommand from "./TextCommand.js";
 
+import CommandInfo from "./info/CommandInfo.js";
+import CommandContext from "./context/CommandContext.js";
+
 import ArrayUtil from "../../util/ArrayUtil.js";
-import ObjectUtil from "../../util/ObjectUtil.js";
 
 class Command extends TextCommand {
-    static defaultValues = {
-        ...TextCommand.defaultValues,
-        allowed: 0,
-        ownerOnly: false
-    };
+    static infoClass = CommandInfo;
+    static contextClass = CommandContext;
 
-    constructor(options) {
-        super(options);
-        this.allowed = options.allowed ?? 0;
-        this.ownerOnly = options.ownerOnly ?? false;
+    static {
+        this._registerInfoGetters();
+    }
+
+    constructor(info) {
+        super(info);
 
         const ownerLevel = getClient().permManager.getLevels().owner;
 
         if (this.ownerOnly) {
-            this.allowed = ownerLevel;
+            this.info.allowed = ownerLevel;
         } else if (this.allowed === ownerLevel || this.allowed === "owner") {
-            this.ownerOnly = true;
-            this.allowed = ownerLevel;
+            this.info.ownerOnly = true;
+            this.info.allowed = ownerLevel;
         }
     }
 
@@ -42,12 +43,11 @@ class Command extends TextCommand {
             return subList;
         }
 
-        const allowedSubcmds = subList.filter(subcmd => subcmd.canExecute(perm));
-        return allowedSubcmds;
+        return subList.filter(subcmd => subcmd.canExecute(perm));
     }
 
     getSubcmdList(perm, includeAliases = true, sep = "|") {
-        if (this.isSubcmd) {
+        if (this.subcommand) {
             return "";
         }
 
@@ -80,35 +80,29 @@ class Command extends TextCommand {
         return this._formatSubcmdHelp(subcmds, true);
     }
 
-    async execute(args, context = {}, options = {}) {
-        context = ObjectUtil.shallowClone(context);
-
-        return await super.execute(args, context, async () => {
-            const perm = await this._checkPermission(context.msg, options);
-
-            if (typeof perm === "string") {
-                return perm;
-            } else {
-                context.perm = perm;
-            }
-        });
+    createContext(data = {}) {
+        const context = super.createContext(data);
+        return context instanceof CommandContext ? context : new this.constructor.contextClass(context);
     }
 
-    async _checkPermission(msg, options) {
-        const perm = await Command._getPermLevel(msg, options),
+    async execute(context, options = {}) {
+        context = this.createContext(context);
+
+        const perm = context.perm ?? (await Command._getPermLevel(context.message, options)),
             canExecute = this.canExecute(perm);
 
         switch (canExecute) {
             case 0:
-                return ":warning: Access denied.\nOnly the bot owner can execute this command.";
+                return `${getEmoji("warn")} Access denied.\nOnly the bot owner can execute this command.`;
             case false:
-                return `:warning: Access denied.\nOnly permission level ${this.allowed} and above can execute this command.`;
+                return `${getEmoji("warn")} Access denied.\nOnly permission level ${this.allowed} and above can execute this command.`;
             default:
-                return perm;
+                context.perm = perm;
+                return await super.execute(context);
         }
     }
 
-    static async _getPermLevel(msg, options) {
+    static async _getPermLevel(msg, options = {}) {
         const { asLevel, asUser } = options;
 
         if (asLevel != null) {

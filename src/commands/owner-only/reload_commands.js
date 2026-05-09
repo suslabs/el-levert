@@ -1,11 +1,13 @@
-import { getClient } from "../../LevertClient.js";
+import { getClient, getEmoji } from "../../LevertClient.js";
 
-export default {
-    name: "reload_commands",
-    ownerOnly: true,
-    category: "owner-only",
+class ReloadCommandsCommand {
+    static info = {
+        name: "reload_commands",
+        ownerOnly: true,
+        category: "owner-only"
+    };
 
-    handler: async _ => {
+    async handler() {
         getClient().silenceDiscordTransports(true);
 
         const res = await getClient().commandManager.reloadCommands();
@@ -13,14 +15,16 @@ export default {
         getClient().silenceDiscordTransports(false);
 
         if (res === null) {
-            return ":no_entry_sign: Reloading commands failed.";
+            return `${getEmoji("error")} Reloading commands failed.`;
         } else if (res.total < 1) {
-            return ":information_source: No commands were reloaded.";
+            return `${getEmoji("info")} No commands were reloaded.`;
         } else {
             const { ok, bad, total } = res,
                 s = total > 1 ? "s" : "";
 
-            return `:white_check_mark: Reloaded **${total}** command${s}. **${ok}** successful, **${bad}** failed.`;
+            return `${getEmoji("ok")} Reloaded **${total}** command${s}. **${ok}** successful, **${bad}** failed.`;
         }
     }
-};
+}
+
+export default ReloadCommandsCommand;

@@ -1,13 +1,19 @@
-import { getClient } from "../../LevertClient.js";
+import { getConfig } from "../../LevertClient.js";
 
-export default {
-    name: "c",
-    parent: "eval",
-    subcommand: true,
+class CEvalCommand {
+    static info = {
+        name: "c",
+        parent: "eval",
+        subcommand: true
+    };
 
-    load: _ => getClient().config.enableOtherLangs,
-
-    handler: function (args, msg) {
-        return this.parentCmd.altevalBase(args, msg, 75);
+    load() {
+        return getConfig().enableOtherLangs;
     }
-};
+
+    handler(ctx) {
+        return this.parentCmd.altevalBase(ctx.argsText, ctx.msg, 75);
+    }
+}
+
+export default CEvalCommand;

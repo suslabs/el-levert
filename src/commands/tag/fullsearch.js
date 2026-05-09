@@ -1,6 +1,6 @@
 import { EmbedBuilder } from "discord.js";
 
-import { getClient } from "../../LevertClient.js";
+import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import ParserUtil from "../../util/commands/ParserUtil.js";
@@ -23,13 +23,11 @@ function getWordIndices(body, ranges) {
 
             if (start < wordEnd && end > wordStart) {
                 wordInds.add(j);
-                return;
             }
         });
     }
 
-    const words = matches.map(match => Util.first(match));
-    return [words, Array.from(wordInds)];
+    return [matches.map(match => Util.first(match)), Array.from(wordInds)];
 }
 
 function getMergedWindows(count, inds, n) {
@@ -54,7 +52,6 @@ function getMergedWindows(count, inds, n) {
 
 function formatSnippet(words, inds, n, discord) {
     const windows = getMergedWindows(words.length, inds, n);
-
     let snippet = "";
 
     for (let k = 0; k < windows.length; k++) {
@@ -83,7 +80,7 @@ function formatSnippet(words, inds, n, discord) {
     return discord ? `> *${snippet}*` : snippet;
 }
 
-function formatSearchResults(results, ranges, n, discord) {
+function formatSearchResults(command, results, ranges, n, discord) {
     const format = results.map((tag, i) => {
         let snippet = "";
 
@@ -97,51 +94,73 @@ function formatSearchResults(results, ranges, n, discord) {
         const idx = Util.single(results) ? "-" : `${i + 1}.`;
 
         if (discord) {
-            const cmd = `${this.prefix}${this.parentCmd.aliases[0]}`;
+            const cmd = `${command.prefix}${command.parentCmd.aliases[0]}`;
             return `${idx} ${cmd} **${tag.name}**\n${snippet}`;
-        } else {
-            return `${idx} ${tag.name} - ${snippet}`;
         }
+
+        return `${idx} ${tag.name} - ${snippet}`;
     });
 
     return format.join("\n");
 }
 
 const defaultResultLimit = 8,
-    defaultContext = 3;
-
-const separators = ",.;-",
+    defaultContext = 3,
+    separators = ",.;-",
     splitRegex = new RegExp(RegexUtil.escapeCharClass(separators), "g");
 
-export default {
-    name: "fullsearch",
-    aliases: ["query"],
-    parent: "tag",
-    subcommand: true,
+class TagFullSearchCommand {
+    static info = {
+        name: "fullsearch",
+        aliases: ["query"],
+        parent: "tag",
+        subcommand: true,
+        arguments: [
+            {
+                name: "query",
+                parser: "split",
+                index: 0,
+                lowercase: [true, true]
+            },
+            {
+                name: "resultText",
+                parser: "split",
+                index: 1,
+                lowercase: [true, true]
+            },
+            {
+                name: "queryBody",
+                from: "query",
+                parser: "script"
+            }
+        ]
+    };
 
-    handler: async function (args) {
-        if (Util.empty(args)) {
-            return `:information_source: ${this.getArgsHelp("query [all/max_results]")}`;
+    async handler(ctx) {
+
+        if (Util.empty(ctx.argsText)) {
+            return `${getEmoji("info")} ${this.getArgsHelp("query [all/max_results]")}`;
         }
 
-        let [query, m_str] = ParserUtil.splitArgs(args, [true, true]),
-            all = m_str === "all";
+        let query = ctx.arg("queryBody"),
+            m_text = ctx.arg("resultText"),
+            all = m_text === "all";
 
         let maxResults = 0;
 
         if (all) {
             maxResults = Infinity;
-        } else if (!Util.empty(m_str)) {
-            maxResults = Util.parseInt(m_str);
+        } else if (!Util.empty(m_text)) {
+            maxResults = Util.parseInt(m_text);
 
             if (Number.isNaN(maxResults) || maxResults < 1) {
-                return ":warning: Invalid number: " + m_str;
+                return `${getEmoji("warn")} Invalid number: ${m_text}`;
             }
         } else {
             maxResults = defaultResultLimit;
         }
 
-        ({ body: query } = ParserUtil.parseScript(query));
+        splitRegex.lastIndex = 0;
         query = query.split(splitRegex).join(" ");
 
         const {
@@ -151,30 +170,33 @@ export default {
         } = await getClient().tagManager.fullSearch(query, maxResults);
 
         if (Util.empty(results)) {
-            return ":information_source: Found **no** similar tags.";
+            return `${getEmoji("info")} Found **no** similar tags.`;
         }
 
         const plus = oversized ? "+" : "",
-            s = Util.single(results) ? "" : "s";
-
-        const count = Util.formatNumber(results.length) + plus,
-            header = `:information_source: Found **${count}** matching tag${s}:`;
+            s = Util.single(results) ? "" : "s",
+            count = Util.formatNumber(results.length) + plus,
+            header = `${getEmoji("info")} Found **${count}** matching tag${s}:`;
 
         if (results.length > 2 * defaultResultLimit) {
-            const format = formatSearchResults(results, ranges, defaultContext, false);
-
             return {
                 content: header + "\n",
-                ...DiscordUtil.getFileAttach(format, "results.txt")
-            };
-        } else {
-            const format = formatSearchResults.call(this, results, ranges, defaultContext, true),
-                embed = new EmbedBuilder().setDescription(format);
-
-            return {
-                content: header,
-                embeds: [embed]
+                ...DiscordUtil.getFileAttach(
+                    formatSearchResults(this, results, ranges, defaultContext, false),
+                    "results.txt"
+                )
             };
         }
+
+        const embed = new EmbedBuilder().setDescription(
+            formatSearchResults(this, results, ranges, defaultContext, true)
+        );
+
+        return {
+            content: header,
+            embeds: [embed]
+        };
     }
-};
+}
+
+export default TagFullSearchCommand;

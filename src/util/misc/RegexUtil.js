@@ -3,11 +3,13 @@ import Util from "../Util.js";
 const RegexUtil = Object.freeze({
     _regexEscapeRegex: /[.*+?^${}()|[\]\\]/g,
     escapeRegex: str => {
+        RegexUtil._regexEscapeRegex.lastIndex = 0;
         return str.replace(RegexUtil._regexEscapeRegex, "\\$&");
     },
 
     _charClassExcapeRegex: /[-\\\]^]/g,
     escapeCharClass: str => {
+        RegexUtil._charClassExcapeRegex.lastIndex = 0;
         return str.replace(RegexUtil._charClassExcapeRegex, "\\$&");
     },
 
@@ -30,12 +32,27 @@ const RegexUtil = Object.freeze({
 
     wordStart: (str, idx) => {
         const char = str[idx - 1];
-        return idx === 0 || char === " " || !Util.alphanumeric.includes(char);
+        return idx <= 0 || char === " " || !Util.alphanumeric.includes(char);
     },
 
     wordEnd: (str, idx) => {
         const char = str[idx + 1];
-        return idx === str.length || char === " " || !Util.alphanumeric.includes(char);
+        return idx >= str.length - 1 || char === " " || !Util.alphanumeric.includes(char);
+    },
+
+    getWordRegex: (words, flags = "gu") => {
+        const validWords = [...new Set(words.filter(Util.nonemptyString))];
+
+        if (validWords.length < 1) {
+            return null;
+        }
+
+        const expFlags = Util.unique(flags.includes("u") ? flags : flags + "u"),
+            patterns = validWords
+                .map(word => RegexUtil.escapeRegex(word))
+                .sort((a, b) => b.length - a.length || a.localeCompare(b));
+
+        return new RegExp(`(?<![\\p{L}\\p{N}])(?:${patterns.join("|")})(?![\\p{L}\\p{N}])`, expFlags);
     },
 
     getMergedRegex: exps => {
@@ -45,10 +62,10 @@ const RegexUtil = Object.freeze({
 
         const regexCtor = exps[0].constructor;
 
-        const expStr = `(?:${exps.map(exp => exp.source).join(")|(?:")})`,
+        const expText = `(?:${exps.map(exp => exp.source).join(")|(?:")})`,
             expFlags = Util.unique(exps.map(exp => exp.flags));
 
-        return new regexCtor(expStr, expFlags);
+        return new regexCtor(expText, expFlags);
     },
 
     multipleReplace: (str, ...rules) => {
@@ -62,6 +79,8 @@ const RegexUtil = Object.freeze({
         for (const [regex, replacement] of rules) {
             const newFlags = Util.unique(regex.flags + "g"),
                 globalRegex = new regexCtor(regex.source, newFlags);
+
+            globalRegex.lastIndex = 0;
 
             for (const match of str.matchAll(globalRegex)) {
                 const start = match.index,
@@ -90,6 +109,7 @@ const RegexUtil = Object.freeze({
             if (typeof info.replacement === "function") {
                 replaced = info.replacement(fullMatch, ...info.match.slice(1), info.start, str);
             } else {
+                info.regex.lastIndex = 0;
                 replaced = fullMatch.replace(info.regex, info.replacement);
             }
 
@@ -102,6 +122,8 @@ const RegexUtil = Object.freeze({
 
     _templateReplaceRegex: /(?<!\\){{(.*?)}}(?!\\)/g,
     templateReplace: (template, strings) => {
+        RegexUtil._templateReplaceRegex.lastIndex = 0;
+
         return template.replace(RegexUtil._templateReplaceRegex, (match, key) => {
             key = key.trim();
             return strings[key] ?? match;
