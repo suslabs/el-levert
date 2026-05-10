@@ -10,13 +10,13 @@ import LoggerError from "../../errors/LoggerError.js";
 class WebhookTransport extends BaseDiscordTransport {
     static $name = "discord.webhook";
 
-    constructor(opts) {
-        super(opts);
+    constructor(options) {
+        super(options);
 
-        let webhook = opts.webhook;
+        let webhook = this.options.webhook;
 
         if (!TypeTester.isObject(webhook)) {
-            webhook = this._getWebhook(opts.url);
+            webhook = this._getWebhook(this.options.url);
         } else {
             this.webhookUrl = webhook.url;
             this.webhookId = webhook.id;

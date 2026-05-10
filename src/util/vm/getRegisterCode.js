@@ -84,7 +84,11 @@ function stringFuncDeclaration(objName, funcName, ret, errName, func) {
     return [funcDecl, Codegen.assignment(name, wrapperDecl)].join("\n\n");
 }
 
-function getRegisterCode(options, funcOptions = {}, errorOptions = {}) {
+function getRegisterCode(options, funcOptions, errorOptions) {
+    options = TypeTester.isObject(options) ? options : {};
+    funcOptions = TypeTester.isObject(funcOptions) ? funcOptions : {};
+    errorOptions = TypeTester.isObject(errorOptions) ? errorOptions : {};
+
     const { objName, funcName, type } = options;
 
     const stringFunc = funcOptions.stringFunc ?? false,

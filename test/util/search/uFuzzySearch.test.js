@@ -43,4 +43,15 @@ describe("uFuzzySearch", () => {
             hasInfo: false
         });
     });
+
+    test("normalizes invalid haystacks and options", () => {
+        expect(uFuzzySearch(null, "alp", 5)).toEqual({
+            results: [],
+            ranges: [],
+            other: {
+                oversized: false,
+                hasInfo: undefined
+            }
+        });
+    });
 });

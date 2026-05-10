@@ -1,4 +1,5 @@
 import Util from "../Util.js";
+import TypeTester from "../TypeTester.js";
 import ArrayUtil from "../ArrayUtil.js";
 
 const Codegen = {
@@ -91,6 +92,8 @@ const Codegen = {
     },
 
     array: (arr, brackets = true) => {
+        arr = ArrayUtil.guaranteeArray(arr, null, true);
+
         const values = arr.map(val => String(val).trim()).join(", ");
         return brackets ? `[${values}]` : values;
     },
@@ -133,7 +136,7 @@ const Codegen = {
             let dynamic = false,
                 optional = false;
 
-            if (typeof name === "object") {
+            if (TypeTester.isObject(name)) {
                 const opts = name;
                 name = opts.name;
 
@@ -165,7 +168,7 @@ const Codegen = {
             if (opts.dynamic) {
                 return chain + `[${opts.name}]`;
             } else {
-                return chain + Codegen.isIdentifier(opts.name) ? `.${opts.name}` : `[${JSON.stringify(opts.name)}]`;
+                return chain + (Codegen.isIdentifier(opts.name) ? `.${opts.name}` : `[${JSON.stringify(opts.name)}]`);
             }
         });
 
@@ -213,9 +216,11 @@ const Codegen = {
         return statement ? Codegen.statement(body) : body;
     },
 
-    function: (name, args, body, options = {}) => {
+    function: (name, args, body, options) => {
         name = String(name ?? "").trim();
         args = ArrayUtil.guaranteeArray(args, null, true);
+
+        options = TypeTester.isObject(options) ? options : {};
 
         const cls = options.class ?? false,
             arrow = options.arrow ?? false;

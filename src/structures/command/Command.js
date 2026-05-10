@@ -6,6 +6,7 @@ import CommandInfo from "./info/CommandInfo.js";
 import CommandContext from "./context/CommandContext.js";
 
 import ArrayUtil from "../../util/ArrayUtil.js";
+import TypeTester from "../../util/TypeTester.js";
 
 class Command extends TextCommand {
     static infoClass = CommandInfo;
@@ -80,13 +81,14 @@ class Command extends TextCommand {
         return this._formatSubcmdHelp(subcmds, true);
     }
 
-    createContext(data = {}) {
+    createContext(data) {
         const context = super.createContext(data);
         return context instanceof CommandContext ? context : new this.constructor.contextClass(context);
     }
 
-    async execute(context, options = {}) {
+    async execute(context, options) {
         context = this.createContext(context);
+        options = TypeTester.isObject(options) ? options : {};
 
         const perm = context.perm ?? (await Command._getPermLevel(context.message, options)),
             canExecute = this.canExecute(perm);
@@ -102,7 +104,8 @@ class Command extends TextCommand {
         }
     }
 
-    static async _getPermLevel(msg, options = {}) {
+    static async _getPermLevel(msg, options) {
+        options = TypeTester.isObject(options) ? options : {};
         const { asLevel, asUser } = options;
 
         if (asLevel != null) {

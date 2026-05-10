@@ -6,6 +6,8 @@ import VMFunction from "../../../src/structures/vm/VMFunction.js";
 
 describe("VMFunction", () => {
     test("validates constructor options and resolves bot references", async () => {
+        expect(() => new VMFunction()).toThrow("must have a name");
+        expect(() => new VMFunction("run", new Map())).toThrow("must have a name");
         expect(() => new VMFunction({}, new Map())).toThrow("must have a name");
         expect(() => new VMFunction({ name: "run" }, new Map())).toThrow("must have a reference");
         expect(() => new VMFunction({ name: "run", ref: () => {}, type: "bad" }, new Map())).toThrow(

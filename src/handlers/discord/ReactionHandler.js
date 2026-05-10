@@ -7,6 +7,7 @@ import { getClient, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
+import TypeTester from "../../util/TypeTester.js";
 import RegexUtil from "../../util/misc/RegexUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import Benchmark from "../../util/misc/Benchmark.js";
@@ -334,16 +335,20 @@ class ReactionHandler extends Handler {
         return { left, right, total };
     }
 
-    _getReactionPlan(content, options = {}) {
-        const visibleContent = this._getVisibleContent(content),
-            includeWords = options.words ?? true,
+    _getReactionPlan(content, options) {
+        options = TypeTester.isObject(options) ? options : {};
+
+        const includeWords = options.words ?? true,
             includeParens = options.parens ?? true;
 
-        const wordMatches = includeWords ? this._getWordMatches(visibleContent) : [],
-            parens = includeParens
-                ? this._getParenReactionInfo(visibleContent)
-                : { left: 0, right: 0, total: 0, hits: [] },
-            planned = [];
+        const visibleContent = this._getVisibleContent(content),
+            wordMatches = includeWords ? this._getWordMatches(visibleContent) : [];
+
+        const parens = includeParens
+            ? this._getParenReactionInfo(visibleContent)
+            : { left: 0, right: 0, total: 0, hits: [] };
+
+        const planned = [];
 
         wordMatches.forEach(match => {
             planned.push({
@@ -450,9 +455,9 @@ class ReactionHandler extends Handler {
         const timeKey = Benchmark.startTiming(Symbol("reaction_parens"));
 
         const plan = this._getReactionPlan(content, {
-                words: false,
-                parens: true
-            });
+            words: false,
+            parens: true
+        });
 
         if (plan.parens.total < 1) {
             Benchmark.stopTiming(timeKey, null);
@@ -475,9 +480,9 @@ class ReactionHandler extends Handler {
         const timeKey = Benchmark.startTiming(Symbol("reaction_words"));
 
         const plan = this._getReactionPlan(content, {
-                words: true,
-                parens: false
-            });
+            words: true,
+            parens: false
+        });
 
         if (plan.words.length < 1) {
             Benchmark.stopTiming(timeKey, null);

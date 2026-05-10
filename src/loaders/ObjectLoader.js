@@ -1,11 +1,14 @@
 import FileLoader from "./FileLoader.js";
 
+import TypeTester from "../util/TypeTester.js";
 import ModuleUtil from "../util/misc/ModuleUtil.js";
 
 import LoadStatus from "./LoadStatus.js";
 
 class ObjectLoader extends FileLoader {
-    constructor(name, filePath, logger, options = {}) {
+    constructor(name, filePath, logger, options) {
+        options = TypeTester.isObject(options) ? options : {};
+
         super(name, filePath, logger, {
             type: "object",
             ...options

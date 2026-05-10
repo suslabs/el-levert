@@ -15,15 +15,18 @@ describe("Codegen", () => {
         expect(Codegen.assignment("x", "2")).toBe("x = 2;");
         expect(Codegen.string('say "hi"')).toBe("'say \"hi\"'");
         expect(Codegen.array(["a", "b"])).toBe("[a, b]");
+        expect(Codegen.array("a")).toBe("[a]");
         expect(Codegen.object({ alpha: 1 })).toContain("alpha:");
         expect(Codegen.equals("a", "b", false)).toBe("a !== b");
         expect(Codegen.isUndefined("a")).toContain('typeof a === "undefined"');
         expect(Codegen.access(["root", "child"])).toBe("root.child");
         expect(Codegen.access(["root", { name: "key", dynamic: true }])).toBe("root[key]");
+        expect(Codegen.access(["root", "not valid"])).toBe('root["not valid"]');
         expect(Codegen.block("value")).toBe("{\n  value;\n}");
         expect(Codegen.return(["a", "b"])).toBe("return [a, b];");
         expect(Codegen.throw("Error", Codegen.string("boom"))).toBe('throw new Error("boom");');
         expect(Codegen.function("sum", ["a", "b"], "return a + b")).toContain("function sum(a, b)");
+        expect(Codegen.function("sum", ["a"], "return a", 5)).toContain("function sum(a)");
         expect(Codegen.if("a", "b", "c")).toContain("else");
         expect(Codegen.call("sum", ["1", "2"])).toBe("sum(1, 2);");
         expect(Codegen.instantiate("Thing", ["1"])).toBe("new Thing(1);");

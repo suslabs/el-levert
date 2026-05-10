@@ -427,10 +427,12 @@ let Util = {
         return false;
     },
 
-    trimString: (str, charLimit, lineLimit, options = {}) => {
+    trimString: (str, charLimit, lineLimit, options) => {
         if (typeof str !== "string") {
             return str;
         }
+
+        options = TypeTester.isObject(options) ? options : {};
 
         const tight = options.tight ?? false,
             showDiff = options.showDiff ?? false;
@@ -685,7 +687,9 @@ let Util = {
         return Math.round(Math.abs(dt));
     },
 
-    duration: (delta, options = {}) => {
+    duration: (delta, options) => {
+        options = TypeTester.isObject(options) ? options : {};
+
         const format = options.format ?? false,
             largestOnly = options.largestOnly ?? false,
             largestN = options.largestN ?? 0;

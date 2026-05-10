@@ -11,9 +11,15 @@ let ConversionUtil = {
     },
 
     convert: (inVal, inUnit, outUnits) => {
-        inUnit = inUnit.toLowerCase();
+        if (!Number.isFinite(inVal)) {
+            throw new UtilError("Invalid input value", inVal);
+        }
 
-        outUnits = ArrayUtil.guaranteeArray(outUnits).map(unit => unit.toLowerCase());
+        inUnit = typeof inUnit === "string" ? inUnit.toLowerCase() : "";
+
+        outUnits = ArrayUtil.guaranteeArray(outUnits)
+            .map(unit => (typeof unit === "string" ? unit.toLowerCase() : ""))
+            .filter(unit => !Util.empty(unit));
         outUnits = ArrayUtil.unique(outUnits).filter(unit => unit !== inUnit);
 
         if (Util.empty(outUnits)) {

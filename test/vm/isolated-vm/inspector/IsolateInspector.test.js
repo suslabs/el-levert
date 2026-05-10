@@ -37,6 +37,9 @@ describe("IsolateInspector branch coverage", () => {
     test("guards disabled mode and validates constructor requirements", async () => {
         expect(() => new IsolateInspector(true, {})).toThrow("No reply function provided");
 
+        const defaultInspector = new IsolateInspector(false);
+        expect(defaultInspector.getDebuggerCode("1 + 1")).toBe("1 + 1");
+
         const inspector = new IsolateInspector(false, {});
 
         expect(inspector.getDebuggerCode("1 + 1")).toBe("1 + 1");

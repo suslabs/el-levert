@@ -3,22 +3,25 @@ import { RESTJSONErrorCodes } from "discord.js";
 import BaseDiscordTransport from "./BaseDiscordTransport.js";
 
 import Util from "../../util/Util.js";
+import TypeTester from "../../util/TypeTester.js";
 
 import LoggerError from "../../errors/LoggerError.js";
 
 class ChannelTransport extends BaseDiscordTransport {
     static $name = "discord.channel";
 
-    constructor(opts) {
+    constructor(options) {
+        options = TypeTester.isObject(options) ? options : {};
+
         super({
             sendInterval: 2 / Util.durationSeconds.milli,
-            ...opts
+            ...options
         });
 
-        let channel = opts.channel;
+        let channel = options.channel;
 
         if (channel == null) {
-            channel = this._getChannel(opts.channelId);
+            channel = this._getChannel(options.channelId);
         } else {
             this.channelId = channel.id;
         }

@@ -110,7 +110,9 @@ describe("DiscordUtil", () => {
         };
         expect(built).toEqual(expect.any(Object));
         expect(DiscordUtil.stringifyEmbed(built, { headers: true, urls: true })).toContain("[Title]");
+        expect(DiscordUtil.stringifyEmbed(built, 5)).toContain("Title");
         expect(DiscordUtil.getEmbedSize(built, countOptions)).toBeGreaterThan(0);
+        expect(DiscordUtil.getEmbedSize(built, 5)).toBeGreaterThan(0);
         expect(DiscordUtil.overSizeLimits(built, 1, undefined, countOptions)).toEqual([expect.any(Number), null]);
         expect(
             DiscordUtil.overSizeLimits(built, undefined, 1, {
@@ -118,9 +120,11 @@ describe("DiscordUtil", () => {
                 count: "lines"
             })
         ).toEqual([null, expect.any(Number)]);
+        expect(DiscordUtil.overSizeLimits(built, 1, undefined, 5)).toEqual([expect.any(Number), null]);
 
         const trimmed = DiscordUtil.trimEmbed(built, 4, 1, { oversized: true });
         expect(trimmed.description.length).toBeGreaterThan(0);
+        expect(() => DiscordUtil.trimEmbed(built, 4, 1, 5)).not.toThrow();
     });
 
     test("fetches attachments with extension or content-type validation and rebinds messages", async () => {

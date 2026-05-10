@@ -5,7 +5,10 @@ import RegexUtil from "../misc/RegexUtil.js";
 import DiscordUtil from "../DiscordUtil.js";
 
 const ParserUtil = Object.freeze({
-    splitArgs: (str, lowercase = false, options = {}) => {
+    splitArgs: (str, lowercase = false, options) => {
+        str = typeof str === "string" ? str : String(str ?? "");
+        options = TypeTester.isObject(options) ? options : {};
+
         let multipleLowercase = Array.isArray(lowercase);
 
         if (!multipleLowercase && TypeTester.isObject(lowercase)) {
@@ -21,11 +24,15 @@ const ParserUtil = Object.freeze({
         let sep = options.sep ?? [" ", "\n"],
             n = options.n ?? 1;
 
+        sep = ArrayUtil.guaranteeArray(sep)
+            .map(item => (typeof item === "string" ? item : ""))
+            .filter(item => !Util.empty(item));
+
         if (Util.empty(sep)) {
             return [lowercaseFirst ? str.toLowerCase() : str, ""];
-        } else {
-            sep = ArrayUtil.guaranteeArray(sep);
         }
+
+        n = Number.isInteger(n) && n > 0 ? n : 1;
 
         let first, second;
 
@@ -87,6 +94,7 @@ const ParserUtil = Object.freeze({
 
     _parseScriptResult: (body, isScript = false, lang = "") => ({ body, isScript, lang }),
     parseScript: script => {
+        script = typeof script === "string" ? script : String(script ?? "");
         const match = script.match(DiscordUtil.parseScriptRegex);
 
         if (!match) {

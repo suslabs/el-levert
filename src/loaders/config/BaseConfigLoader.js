@@ -4,10 +4,14 @@ import JsonLoader from "../JsonLoader.js";
 
 import configPaths from "../../config/configPaths.json" assert { type: "json" };
 
+import TypeTester from "../../util/TypeTester.js";
+
 import LoadStatus from "../LoadStatus.js";
 
 class BaseConfigLoader extends JsonLoader {
-    constructor(name, logger, options = {}) {
+    constructor(name, logger, options) {
+        options = TypeTester.isObject(options) ? options : {};
+
         const configFilename = configPaths[name],
             configPath = path.join(configPaths.dir, configFilename);
 

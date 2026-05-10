@@ -17,13 +17,13 @@ import MessageLimitTypes from "./MessageLimitTypes.js";
 import EmbedCountAreas from "../../util/EmbedCountAreas.js";
 
 class MessageHandler extends Handler {
-    constructor(enabled, hasReplyTracker = true, hasUserTracker = false, options = {}) {
+    constructor(enabled, hasReplyTracker = true, hasUserTracker = false, options) {
         super(enabled, options);
 
         this.hasReplyTracker = hasReplyTracker;
         this.hasUserTracker = hasUserTracker;
 
-        this.useConfigLimits = options.useConfigLimits ?? false;
+        this.useConfigLimits = this.options.useConfigLimits ?? false;
 
         this.setLimits();
     }
@@ -42,7 +42,8 @@ class MessageHandler extends Handler {
         return Number.isInteger(i) ? (replies[i] ?? null) : replies;
     }
 
-    async reply(msg, data, options = {}) {
+    async reply(msg, data, options) {
+        options = TypeTester.isObject(options) ? options : {};
         const out = this._getOutput(data, options);
 
         let msgReply = null;
@@ -106,13 +107,14 @@ class MessageHandler extends Handler {
         return await this._contextReply(context, this.replyWithError, this.editReplyWithError, ...args);
     }
 
-    async editReply(msg, data, options = {}, i = 0) {
+    async editReply(msg, data, options, i = 0) {
         const existing = this.getReply(msg, i);
 
         if (existing === null) {
             return await this.reply(msg, data, options);
         }
 
+        options = TypeTester.isObject(options) ? options : {};
         const out = this._getOutput(data, options);
 
         if (Array.isArray(out)) {
@@ -289,7 +291,9 @@ class MessageHandler extends Handler {
         msg.channel.sendTyping().catch(_ => {});
     }
 
-    _applyLimits(data, options = {}) {
+    _applyLimits(data, options) {
+        options = TypeTester.isObject(options) ? options : {};
+
         const useConfig = options.useConfigLimits ?? this.useConfigLimits;
 
         const limitType = options.limitType ?? MessageLimitTypes.default,

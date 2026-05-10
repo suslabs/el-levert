@@ -6,6 +6,7 @@ import Loader from "./Loader.js";
 import FileLoader from "./FileLoader.js";
 
 import Util from "../util/Util.js";
+import TypeTester from "../util/TypeTester.js";
 import ArrayUtil from "../util/ArrayUtil.js";
 
 import LoadStatus from "./LoadStatus.js";
@@ -71,7 +72,9 @@ class DirectoryLoader extends Loader {
         return files;
     }
 
-    constructor(name, dirPath, logger, options = {}) {
+    constructor(name, dirPath, logger, options) {
+        options = TypeTester.isObject(options) ? options : {};
+
         super(name, logger, {
             type: "directory",
             ...options
@@ -96,7 +99,9 @@ class DirectoryLoader extends Loader {
         return this._dirPath;
     }
 
-    load(options = {}) {
+    load(options) {
+        options = TypeTester.isObject(options) ? options : {};
+
         let ok = 0,
             bad = 0;
 

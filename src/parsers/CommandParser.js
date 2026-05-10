@@ -1,10 +1,12 @@
 import ParserUtil from "../util/commands/ParserUtil.js";
 import Util from "../util/Util.js";
+import TypeTester from "../util/TypeTester.js";
 
 import ParserError from "../errors/ParserError.js";
 
 class CommandParser {
-    constructor(context = {}) {
+    constructor(context) {
+        context = TypeTester.isObject(context) ? context : {};
         this.context = context;
     }
 
@@ -26,8 +28,10 @@ class CommandParser {
         };
     }
 
-    parseArgument(def, parsed = {}) {
-        if (def == null || typeof def !== "object") {
+    parseArgument(def, parsed) {
+        parsed = TypeTester.isObject(parsed) ? parsed : {};
+
+        if (!TypeTester.isObject(def)) {
             throw new ParserError("Invalid command argument definition", {
                 def,
                 context: this.context
@@ -120,7 +124,7 @@ class CommandParser {
     }
 
     static _resolvePath(source, path) {
-        if (typeof path !== "string" || path.length < 1) {
+        if (!Util.nonemptyString(path)) {
             return source;
         }
 

@@ -8,6 +8,7 @@ import FakeAxios from "./classes/FakeAxios.js";
 import { getConfig, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import TypeTester from "../../util/TypeTester.js";
 import VMUtil from "../../util/vm/VMUtil.js";
 
 const defaultVMOptions = {
@@ -39,10 +40,10 @@ class TagVM2 extends VM {
 
     static loadPriority = 2;
 
-    constructor(enabled, options = {}) {
+    constructor(enabled, options) {
         super(enabled, options);
 
-        this.vmOptions = options.vmOptions ?? defaultVMOptions;
+        this.vmOptions = this.options.vmOptions ?? defaultVMOptions;
 
         this.memLimit = getConfig().otherMemLimit;
         this.timeLimit = getConfig().otherTimeLimit;
@@ -59,7 +60,8 @@ class TagVM2 extends VM {
         this.procPool.createPool();
     }
 
-    getContext(values = {}) {
+    getContext(values) {
+        values = TypeTester.isObject(values) ? values : {};
         const { msg, args } = values;
 
         const vmObjects = {

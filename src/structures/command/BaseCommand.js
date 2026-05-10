@@ -3,6 +3,7 @@ import BaseCommandContext from "./context/BaseCommandContext.js";
 
 import ArrayUtil from "../../util/ArrayUtil.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
+import TypeTester from "../../util/TypeTester.js";
 
 import CommandError from "../../errors/CommandError.js";
 
@@ -22,7 +23,7 @@ class BaseCommand {
         this._registerInfoGetters();
     }
 
-    constructor(info = {}) {
+    constructor(info) {
         this.info = new this.constructor.infoClass(info);
 
         if (typeof this.handler !== "function") {
@@ -33,7 +34,7 @@ class BaseCommand {
         this.bound = false;
     }
 
-    createContext(data = {}) {
+    createContext(data) {
         if (data instanceof this.constructor.contextClass) {
             return data.command === this
                 ? data
@@ -42,6 +43,8 @@ class BaseCommand {
                       _parsedArgs: undefined
                   });
         }
+
+        data = TypeTester.isObject(data) ? data : {};
 
         return new this.constructor.contextClass({
             ...data,

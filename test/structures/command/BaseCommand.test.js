@@ -50,6 +50,17 @@ describe("BaseCommand", () => {
                 })
             )
         ).toEqual(["x", 2]);
+
+        const emptyContext = new BaseCommandContext("bad-context-data");
+        expect(emptyContext.commandName).toBe("");
+        expect(emptyContext.clone("bad-overrides")).toBeInstanceOf(BaseCommandContext);
+        expect(emptyContext.withArgs("next", "bad-overrides").argsText).toBe("next");
+
+        const createdContext = parent.createContext("bad-context-data");
+        expect(createdContext).toBeInstanceOf(BaseCommandContext);
+        expect(createdContext.command).toBe(parent);
+        expect(createdContext.argsText).toBe("");
+
         expect(sub.subcmdOf(parent, "add")).toBe(true);
         expect(sub.equals(new TestBaseCommand({ name: "add", parent: "tag", subcommand: true }))).toBe(true);
         expect(sub.equivalent(new TestBaseCommand({ name: "add", parent: "tag", subcommand: true }))).toBe(true);

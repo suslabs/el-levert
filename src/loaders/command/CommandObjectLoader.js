@@ -1,11 +1,14 @@
 import ObjectLoader from "../ObjectLoader.js";
 
+import TypeTester from "../../util/TypeTester.js";
 import deriveCommandClass from "../../util/commands/deriveCommandClass.js";
 
 import LoadStatus from "../LoadStatus.js";
 
 class CommandObjectLoader extends ObjectLoader {
-    constructor(filePath, logger, options = {}) {
+    constructor(filePath, logger, options) {
+        options = TypeTester.isObject(options) ? options : {};
+
         super("command", filePath, logger, {
             throwOnFailure: false,
             ...options,

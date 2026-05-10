@@ -5,15 +5,17 @@ import SqliteDatabase from "./drivers/sqlite/SqliteDatabase.js";
 
 import ArrayUtil from "../util/ArrayUtil.js";
 import ObjectUtil from "../util/ObjectUtil.js";
+import TypeTester from "../util/TypeTester.js";
 
 import OpenModes from "./drivers/sqlite/OpenModes.js";
 import DirectoryLoader from "../loaders/DirectoryLoader.js";
 
 class SqlDatabase {
-    constructor(dbPath, queryPath, options = {}) {
+    constructor(dbPath, queryPath, options) {
         this.dbPath = dbPath;
         this.queryPath = queryPath;
 
+        options = TypeTester.isObject(options) ? options : {};
         this.options = options;
 
         this.queryExtension = options.queryExtension ?? ".sql";

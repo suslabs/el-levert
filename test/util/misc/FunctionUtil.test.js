@@ -15,6 +15,8 @@ describe("FunctionUtil", () => {
         function sample(first, second, third) {}
 
         expect(FunctionUtil.functionArgumentNames(sample)).toEqual(["first", "second", "third"]);
+        expect(FunctionUtil.functionArgumentNames(null)).toEqual([]);
         expect(FunctionUtil.getArgumentPositions(sample, ["third", "missing", "first"])).toEqual([2, 0]);
+        expect(FunctionUtil.getArgumentPositions(sample, "second")).toEqual([1]);
     });
 });

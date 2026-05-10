@@ -56,15 +56,15 @@ class ReminderManager extends DBManager {
 
     checkMessage(remMsg, throwErrors = true) {
         let msg, ref;
-        remMsg = remMsg?.trim();
 
         if (remMsg == null) {
             return throwErrors ? remMsg : [remMsg, null];
         }
 
         let oversized;
+        remMsg = typeof remMsg === "string" ? remMsg.trim() : "";
 
-        if (!Util.nonemptyString(remMsg)) {
+        if (Util.empty(remMsg)) {
             msg = "Invalid reminder message";
         } else if ((oversized = Util.overSizeLimits(remMsg, this.maxMsgLength, 1))) {
             const [chars, lines] = oversized;
@@ -73,7 +73,7 @@ class ReminderManager extends DBManager {
                 msg = `Reminder messages can be at most ${this.maxMsgLength} characters long.`;
                 ref = {
                     msgLength: remMsg.length,
-                    maxLength: this.maxMsgLength / 2
+                    maxLength: this.maxMsgLength
                 };
             } else if (lines !== null) {
                 msg = "Reminder messages can only contain a single line.";
@@ -117,7 +117,7 @@ class ReminderManager extends DBManager {
         if (validate) {
             msg = this.checkMessage(msg);
 
-            if (end < Date.now()) {
+            if (!Number.isInteger(end) || end < Date.now()) {
                 throw new ReminderError("Invalid end time", end);
             }
         }

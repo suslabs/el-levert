@@ -48,7 +48,9 @@ class CommandHandler extends MessageHandler {
         this.commandWaitTime = getConfig().commandWaitTime;
     }
 
-    async execute(msg, options = {}) {
+    async execute(msg, options) {
+        options = TypeTester.isObject(options) ? options : {};
+
         if (!getClient().commandManager.isCommand(msg.content, msg)) {
             return false;
         }

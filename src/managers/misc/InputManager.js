@@ -9,17 +9,17 @@ import Util from "../../util/Util.js";
 class InputManager extends Manager {
     static $name = "inputManager";
 
-    constructor(enabled, inputPrompt, options = {}) {
+    constructor(enabled, inputPrompt, options) {
         super(enabled, options);
 
         this.prompt = inputPrompt;
 
-        this.handleInput = options.handleInput;
-        this.exitCommand = typeof options.exitCmd === "undefined" ? "exit" : options.exitCmd;
-        this.onExit = options.onExit;
+        this.handleInput = this.options.handleInput;
+        this.exitCommand = typeof this.options.exitCmd === "undefined" ? "exit" : this.options.exitCmd;
+        this.onExit = this.options.onExit;
 
-        this.multilinePrompt = options.multilinePrompt ?? "...";
-        this.multilineTrigger = options.multilineContinuationTrigger ?? "\\";
+        this.multilinePrompt = this.options.multilinePrompt ?? "...";
+        this.multilineTrigger = this.options.multilineContinuationTrigger ?? "\\";
 
         this._aborter = null;
         this.rl = null;

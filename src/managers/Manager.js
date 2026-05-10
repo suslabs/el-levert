@@ -1,9 +1,10 @@
 import Util from "../util/Util.js";
+import TypeTester from "../util/TypeTester.js";
 
 import ManagerError from "../errors/ManagerError.js";
 
 class Manager {
-    constructor(enabled = true, options = {}) {
+    constructor(enabled = true, options) {
         const compName = this.constructor.$name;
 
         if (!Util.nonemptyString(compName)) {
@@ -14,6 +15,7 @@ class Manager {
 
         this.enabled = enabled;
 
+        options = TypeTester.isObject(options) ? options : {};
         this.options = options;
 
         this._childLoad = this.load;

@@ -1,11 +1,12 @@
 import { getConfig } from "../LevertClient.js";
 
 import Util from "../util/Util.js";
+import TypeTester from "../util/TypeTester.js";
 
 import HandlerError from "../errors/HandlerError.js";
 
 class Handler {
-    constructor(enabled = true, options = {}) {
+    constructor(enabled = true, options) {
         const compName = this.constructor.$name;
 
         if (!Util.nonemptyString(compName)) {
@@ -16,6 +17,7 @@ class Handler {
 
         this.enabled = enabled;
 
+        options = TypeTester.isObject(options) ? options : {};
         this.options = options;
 
         this.priority ??= options.priority ?? 0;

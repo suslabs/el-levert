@@ -3,6 +3,7 @@ import ObjectUtil from "../../util/ObjectUtil.js";
 import FunctionUtil from "../../util/misc/FunctionUtil.js";
 import getRegisterCode from "../../util/vm/getRegisterCode.js";
 import VMUtil from "../../util/vm/VMUtil.js";
+import TypeTester from "../../util/TypeTester.js";
 
 import { FuncTypes, ExecutionTypes } from "./FuncTypes.js";
 
@@ -37,6 +38,8 @@ class VMFunction {
     };
 
     constructor(options, propertyMap) {
+        options = TypeTester.isObject(options) ? options : {};
+
         if (typeof options.name !== "string") {
             throw new VMError("VM function must have a name");
         } else if (typeof options.ref === "undefined") {

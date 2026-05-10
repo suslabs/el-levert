@@ -2,17 +2,21 @@ import path from "node:path";
 
 import Loader from "./Loader.js";
 
+import TypeTester from "../util/TypeTester.js";
+
 import LoadStatus from "./LoadStatus.js";
 
 class FileLoader extends Loader {
-    constructor(name, filePath, logger, options = {}) {
+    constructor(name, filePath, logger, options) {
+        options = TypeTester.isObject(options) ? options : {};
+
         super(name, logger, {
             type: "file",
             ...options
         });
 
         this.path = filePath;
-        this.sync = this.options.sync ?? false;
+        this.sync = options.sync ?? false;
     }
 
     set path(val) {

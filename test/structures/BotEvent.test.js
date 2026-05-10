@@ -28,6 +28,8 @@ describe("BotEvent", () => {
     });
 
     test("validates constructor fields and serializes event data", () => {
+        expect(() => new BotEvent()).toThrow("Event must have a name");
+        expect(() => new BotEvent("ready")).toThrow("Event must have a name");
         expect(() => new BotEvent({ listener: () => {} })).toThrow("Event must have a name");
         expect(() => new BotEvent({ name: "ready" })).toThrow("Event must have a listener function");
 

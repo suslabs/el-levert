@@ -94,7 +94,10 @@ class LevertClient extends DiscordClient {
         });
     }
 
-    loadComponents(groupName, barrel, ctorArgs = {}, options = {}) {
+    loadComponents(groupName, barrel, ctorArgs, options) {
+        ctorArgs = TypeTester.isObject(ctorArgs) ? ctorArgs : {};
+        options = TypeTester.isObject(options) ? options : {};
+
         const showLogMessages = options.showLogMessages ?? true,
             showLoadingMessages = options.showLoadingMessages ?? true;
 
@@ -237,7 +240,9 @@ class LevertClient extends DiscordClient {
         return Util.maybeAsyncThen(res, _ => loadingFinished());
     }
 
-    unloadComponents(groupName, options = {}) {
+    unloadComponents(groupName, options) {
+        options = TypeTester.isObject(options) ? options : {};
+
         const showLogMessages = options.showLogMessages ?? true,
             showUnloadingMessages = options.showUnloadingMessages ?? true;
 
@@ -296,7 +301,9 @@ class LevertClient extends DiscordClient {
         return Util.maybeAsyncThen(res, _ => unloadingFinished());
     }
 
-    checkComponent(groupName, compName, options = {}) {
+    checkComponent(groupName, compName, options) {
+        options = TypeTester.isObject(options) ? options : {};
+
         const throwErrors = options.throwErrors ?? true,
             msgName = options.altName ?? compName;
 
@@ -490,7 +497,8 @@ class LevertClient extends DiscordClient {
         delete this._wrapEvent;
     }
 
-    _getCompsName(groupName, options = {}) {
+    _getCompsName(groupName, options) {
+        options = TypeTester.isObject(options) ? options : {};
         let collectionName = options.pluralName;
 
         if (typeof collectionName === "undefined") {

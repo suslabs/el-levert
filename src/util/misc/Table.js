@@ -1,5 +1,6 @@
 import Util from "../Util.js";
 import ArrayUtil from "../ArrayUtil.js";
+import TypeTester from "../TypeTester.js";
 
 import UtilError from "../../errors/UtilError.js";
 
@@ -188,7 +189,9 @@ const Lines = Object.freeze({
 class Table {
     static defaultStyle = "light";
 
-    constructor(columns, rows, style, options = {}) {
+    constructor(columns, rows, style, options) {
+        options = TypeTester.isObject(options) ? options : {};
+
         this.columns = columns ?? {};
         this.rows = rows ?? {};
 
@@ -234,7 +237,8 @@ class Table {
         const colIds = this.columnIds;
 
         if (colIds === null) {
-            return [0];
+            this.widths = [0];
+            return this.widths;
         }
 
         let maxWidths = colIds.map(id => {
@@ -272,8 +276,12 @@ class Table {
         const colIds = this.columnIds,
             colNames = this.columnNames;
 
+        if (colIds === null) {
+            return [[""]];
+        }
+
         const lines = Array(height + 1);
-        lines[0] = colIds ? colNames : [""];
+        lines[0] = colNames;
 
         for (let i = 0; i < height; i++) {
             const line = [];

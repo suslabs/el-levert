@@ -53,6 +53,8 @@ describe("ReminderManager", () => {
         const now = Date.now();
 
         expect(manager.checkIndex(0)).toBe(0);
+        expect(manager.checkMessage(null)).toBeNull();
+        expect(manager.checkMessage(123, false)).toEqual([null, "Invalid reminder message"]);
         expect(manager.checkMessage("  hello  ")).toBe("hello");
 
         const first = await manager.add("u1", now + 1000, "first", true);
@@ -73,6 +75,7 @@ describe("ReminderManager", () => {
         expect(await manager.removeAll("u2")).toBe(true);
         expect(await manager.exists("u2")).toBe(false);
         await expect(manager.add("u6", now - 1, "late", true)).rejects.toThrow("Invalid end time");
+        await expect(manager.add("u6", Number.NaN, "late", true)).rejects.toThrow("Invalid end time");
     });
 
     test("covers loop, disabled, and stale-removal paths", async () => {

@@ -9,6 +9,8 @@ describe("ParserUtil", () => {
         expect(ParserUtil.splitArgs("a,b,c", false, { sep: ",", n: 2 })).toEqual(["a,b", "c"]);
         expect(ParserUtil.splitArgs("a\nb c", { lowercase: [false, true], sep: [" ", "\n"] })).toEqual(["a", "b c"]);
         expect(ParserUtil.splitArgs("abc", false, { sep: [] })).toEqual(["abc", ""]);
+        expect(ParserUtil.splitArgs(null, false, { sep: [null, ","] })).toEqual(["", ""]);
+        expect(ParserUtil.splitArgs("abc", false, { sep: [null], n: 0 })).toEqual(["abc", ""]);
         expect(ParserUtil.splitArgs("abc", false, { sep: ",", n: 2 })).toEqual(["abc", ""]);
     });
 
@@ -28,6 +30,12 @@ describe("ParserUtil", () => {
         expect(ParserUtil.parseScript("`1 + 1`")).toEqual({
             body: "1 + 1",
             isScript: true,
+            lang: ""
+        });
+
+        expect(ParserUtil.parseScript(null)).toEqual({
+            body: "",
+            isScript: false,
             lang: ""
         });
     });

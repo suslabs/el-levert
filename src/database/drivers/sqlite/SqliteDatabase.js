@@ -6,6 +6,7 @@ import StatementDatabase from "../common/StatementDatabase.js";
 import SqliteStatement from "./SqliteStatement.js";
 import SqliteResult from "./SqliteResult.js";
 
+import TypeTester from "../../../util/TypeTester.js";
 import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
 
 import DatabaseEvents from "./DatabaseEvents.js";
@@ -27,12 +28,13 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
 
     static vacuumSql = "VACUUM;";
 
-    constructor(filename, mode, config = {}) {
+    constructor(filename, mode, config) {
         super();
 
         this.filename = filename;
         this.mode = mode ?? OpenModes.OPEN_RWCREATE;
 
+        config = TypeTester.isObject(config) ? config : {};
         this.config = config;
 
         this.WALMode = config.enableWALMode ?? false;

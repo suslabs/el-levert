@@ -27,7 +27,9 @@ const CallstackUtil = Object.freeze({
         return Util.after(stack, 0);
     },
 
-    getCallInfo: (options = {}) => {
+    getCallInfo: options => {
+        options = TypeTester.isObject(options) ? options : {};
+
         const minDepth = options.depth ?? 0,
             excludeFunctions = options.excludeFunctions ?? [];
 

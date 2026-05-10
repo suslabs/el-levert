@@ -1,12 +1,15 @@
 import DirectoryLoader from "../DirectoryLoader.js";
 import EventObjectLoader from "./EventObjectLoader.js";
 
+import TypeTester from "../../util/TypeTester.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
 
 import LoadStatus from "../LoadStatus.js";
 
 class EventLoader extends DirectoryLoader {
-    constructor(dirPath, client, logger, options = {}) {
+    constructor(dirPath, client, logger, options) {
+        options = TypeTester.isObject(options) ? options : {};
+
         super("event", dirPath, logger, {
             throwOnFailure: true,
             ...options,

@@ -7,6 +7,7 @@ import { getConfig, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
+import TypeTester from "../../util/TypeTester.js";
 
 import LoadStatus from "../../loaders/LoadStatus.js";
 
@@ -15,14 +16,14 @@ import CommandError from "../../errors/CommandError.js";
 class BaseCommandManager extends Manager {
     static commandClass = BaseCommand;
 
-    constructor(enabled, commandsDir, options = {}) {
+    constructor(enabled, commandsDir, options) {
         super(enabled, options);
 
         this.commandsDir = commandsDir;
 
-        this.wrapCommands = options.wrapCommands ?? getConfig().wrapEvents;
-        this.excludeDirs = options.excludeDirs;
-        this.cmdFileExtension = options.cmdFileExtension ?? ".js";
+        this.wrapCommands = this.options.wrapCommands ?? getConfig().wrapEvents;
+        this.excludeDirs = this.options.excludeDirs;
+        this.cmdFileExtension = this.options.cmdFileExtension ?? ".js";
 
         this.commands = [];
     }

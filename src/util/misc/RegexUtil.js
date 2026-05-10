@@ -20,7 +20,7 @@ const RegexUtil = Object.freeze({
     },
 
     firstGroup: (match, name) => {
-        if (!match) {
+        if (!match || match.groups == null) {
             return null;
         }
 
@@ -41,7 +41,7 @@ const RegexUtil = Object.freeze({
     },
 
     getWordRegex: (words, flags = "gu") => {
-        const validWords = [...new Set(words.filter(Util.nonemptyString))];
+        const validWords = [...new Set([].concat(words ?? []).filter(Util.nonemptyString))];
 
         if (validWords.length < 1) {
             return null;
@@ -56,6 +56,8 @@ const RegexUtil = Object.freeze({
     },
 
     getMergedRegex: exps => {
+        exps = Array.isArray(exps) ? exps.filter(exp => exp instanceof RegExp) : [];
+
         if (exps.length < 1) {
             return null;
         }

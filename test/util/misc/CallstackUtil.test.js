@@ -10,6 +10,7 @@ describe("CallstackUtil", () => {
         expect(typeof info).toBe("string");
         expect(info).not.toBe("no info");
         expect(CallstackUtil.getCallInfo({ depth: 9999 })).toBe("no info");
+        expect(typeof CallstackUtil.getCallInfo(5)).toBe("string");
 
         const oldRoot = globalThis.projRootUrl;
         globalThis.projRootUrl = "file:///missing-root";

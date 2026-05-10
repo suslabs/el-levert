@@ -177,7 +177,9 @@ let DiscordUtil = {
         return embed instanceof EmbedBuilder ? embed.toJSON() : embed;
     },
 
-    stringifyEmbed: (embed, options = {}) => {
+    stringifyEmbed: (embed, options) => {
+        options = TypeTester.isObject(options) ? options : {};
+
         const useHeaders = options.headers ?? false,
             includeURLs = options.urls ?? true;
 
@@ -286,7 +288,9 @@ let DiscordUtil = {
         return blocks.join("\n\n");
     },
 
-    getEmbedSize: (embed, options = {}) => {
+    getEmbedSize: (embed, options) => {
+        options = TypeTester.isObject(options) ? options : {};
+
         let countType = options.count ?? CountTypes.chars,
             countAreas = options.areas ?? EmbedCountAreas.all,
             countURLs = options.urls ?? false;
@@ -365,10 +369,12 @@ let DiscordUtil = {
         return size + fieldsSize;
     },
 
-    overSizeLimits: (embed, charLimit, lineLimit, options = {}) => {
+    overSizeLimits: (embed, charLimit, lineLimit, options) => {
         if (!TypeTester.isObject(embed)) {
             return false;
         }
+
+        options = TypeTester.isObject(options) ? options : {};
 
         let count = 0;
 
@@ -457,7 +463,9 @@ let DiscordUtil = {
         return Util.trimString(str, charLimit + 2 * suffix.length, lineLimit + 1) + suffix;
     },
 
-    trimEmbed(embed, charLimit, lineLimit, options = {}) {
+    trimEmbed(embed, charLimit, lineLimit, options) {
+        options = TypeTester.isObject(options) ? options : {};
+
         const embedData = DiscordUtil.getEmbedData(embed);
 
         let oversized = options.oversized;
@@ -492,7 +500,9 @@ let DiscordUtil = {
         return embedData;
     },
 
-    fetchAttachment: async (msg, responseType = "text", options = {}) => {
+    fetchAttachment: async (msg, responseType = "text", options) => {
+        options = TypeTester.isObject(options) ? options : {};
+
         const ctypes = [].concat(options.allowedContentType ?? [], options.allowedContentTypes ?? []);
 
         const maxSizeKb = Math.round(options.maxSize ?? Infinity),

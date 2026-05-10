@@ -1,5 +1,9 @@
 import uFuzzy from "@leeoniya/ufuzzy";
 
+import Util from "../Util.js";
+import TypeTester from "../TypeTester.js";
+import ArrayUtil from "../ArrayUtil.js";
+
 const uFuzzyOpts = {
     alpha: "a-z"
 };
@@ -13,9 +17,17 @@ const outputResult = (results, ranges, oversized, hasInfo) => ({
     other: { oversized, hasInfo }
 });
 
-function uFuzzySearch(haystack, needle, options = {}) {
-    const { maxResults, searchKey } = options,
+function uFuzzySearch(haystack, needle, options) {
+    haystack = Array.isArray(haystack) ? haystack : [];
+    options = TypeTester.isObject(options) ? options : {};
+
+    const maxResults = options.maxResults,
+        searchKey = options.searchKey,
         infoThresh = options.infoThresh ?? 1000;
+
+    if (Util.empty(haystack)) {
+        return outputResult([], [], false);
+    }
 
     const searchHaystack = searchKey == null ? haystack : haystack.map(x => x[searchKey]),
         inds = uf.filter(searchHaystack, needle);

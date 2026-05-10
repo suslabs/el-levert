@@ -1,28 +1,33 @@
 import TextCommandContext from "./TextCommandContext.js";
+import TypeTester from "../../../util/TypeTester.js";
 
 class CommandContext extends TextCommandContext {
-    constructor(data = {}) {
+    constructor(data) {
         super(data);
 
-        this.handler = data.handler ?? null;
+        this.handler = this.data.handler ?? null;
 
-        this.message = data.message ?? data.msg ?? null;
-        this.author = data.author ?? this.message?.author;
-        this.channel = data.channel ?? this.message?.channel;
+        this.message = this.data.message ?? this.data.msg ?? null;
+        this.author = this.data.author ?? this.message?.author;
+        this.channel = this.data.channel ?? this.message?.channel;
 
-        this.perm = data.perm;
+        this.perm = this.data.perm;
     }
 
     get msg() {
         return this.message;
     }
 
-    async reply(data, options = {}) {
+    async reply(data, options) {
+        options = TypeTester.isObject(options) ? options : {};
+
         this.markReplied();
         return await this.handler?.contextReply?.(this, data, options);
     }
 
-    async edit(data, options = {}) {
+    async edit(data, options) {
+        options = TypeTester.isObject(options) ? options : {};
+
         this.markReplied();
         return await this.handler?.editFromContext?.(this, data, options);
     }

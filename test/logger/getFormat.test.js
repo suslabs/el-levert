@@ -7,6 +7,7 @@ describe("getFormat", () => {
         expect(getFormat()).toHaveProperty("transform");
         expect(getFormat("json")).toHaveProperty("transform");
         expect(getFormat(["json", "simple"])).toHaveProperty("transform");
+        expect(() => getFormat({ name: "json" })).not.toThrow();
         expect(() => getFormat("definitely-invalid")).toThrow("Invalid format");
     });
 });

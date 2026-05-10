@@ -8,6 +8,7 @@ import User from "../../structures/permission/User.js";
 import { getClient, getConfig, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import TypeTester from "../../util/TypeTester.js";
 
 import PermissionError from "../../errors/PermissionError.js";
 
@@ -52,11 +53,11 @@ class PermissionManager extends DBManager {
 
     checkName(name, throwErrors = true, allowOwner = true) {
         let msg, ref;
-        name = name.trim();
+        name = typeof name === "string" ? name.trim() : "";
 
         const ownerName = OwnerGroup.name;
 
-        if (!Util.nonemptyString(name)) {
+        if (Util.empty(name)) {
             msg = "Invalid group name";
         } else if (name.length > this.maxGroupNameLength) {
             msg = `The group name can be at most ${this.maxGroupNameLength} characters long`;
@@ -142,6 +143,10 @@ class PermissionManager extends DBManager {
         }
 
         if (validate) {
+            if (!Number.isInteger(perm)) {
+                throw new PermissionError("Invalid permission level", perm);
+            }
+
             perm = Util.clamp(perm, this._defaultLevel);
         }
 
@@ -155,6 +160,10 @@ class PermissionManager extends DBManager {
                 }
             // eslint-disable-next-line no-fallthrough
             case "number":
+                if (validate && !levelName && !Number.isInteger(level)) {
+                    throw new PermissionError("Invalid level", level);
+                }
+
                 if (validate && !levelName) {
                     level = Util.clamp(level, this._defaultLevel);
                 }
@@ -371,7 +380,8 @@ class PermissionManager extends DBManager {
         return removed;
     }
 
-    async addGroup(name, level, validate = {}) {
+    async addGroup(name, level, validate) {
+        validate = TypeTester.isObject(validate) ? validate : (validate ?? false);
         let validateNew, checkExisting;
 
         if (typeof validate === "boolean") {
@@ -425,7 +435,9 @@ class PermissionManager extends DBManager {
         return group;
     }
 
-    async updateGroup(group, newName, newLevel, validate = {}) {
+    async updateGroup(group, newName, newLevel, validate) {
+        validate = TypeTester.isObject(validate) ? validate : (validate ?? false);
+
         let validateProvided, validateNew, checkExisting;
 
         if (typeof validate === "boolean") {

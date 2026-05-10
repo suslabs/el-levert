@@ -19,5 +19,7 @@ describe("Table", () => {
 
         expect(() => new Table({}, {}, "missing").charset).toThrow("Invalid style");
         expect(() => new Table({}, {}, "custom").charset).toThrow("No custom charset object provided");
+        expect(() => new Table({}, {}, "light", 5).draw()).not.toThrow();
+        expect(new Table({}, {}, "light", 5).draw()).toContain("┌");
     });
 });

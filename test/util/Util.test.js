@@ -60,6 +60,7 @@ describe("Util", () => {
         expect(Util.overSizeLimits("abcdef", 4)).toEqual([6, null]);
         expect(Util.overSizeLimits("a\nb\nc", null, 2)).toEqual([null, 3]);
         expect(Util.trimString("abcdef", 4)).toBe("abcd...");
+        expect(Util.trimString("abcdef", 4, null, 5)).toBe("abcd...");
         expect(Util.trimString("abcdef", 5, null, { showDiff: true })).toContain("more character");
         expect(Util.trimString("a\nb\nc", 50, 2, { showDiff: true })).toContain("more line");
     });
@@ -70,7 +71,11 @@ describe("Util", () => {
         expect(Util.getLength([1], LengthTypes.array)).toBe(1);
         expect(() => Util.getLength("x", "bad")).toThrow("Invalid length type");
         expect(Util.nonemptyString("x")).toBe(true);
+        expect(Util.nonemptyString(["x"])).toBe(false);
+        expect(Util.nonemptyString(0)).toBe(false);
         expect(Util.empty([])).toBe(true);
+        expect(Util.empty({ length: 1 })).toBe(false);
+        expect(Util.empty({})).toBe(true);
         expect(Util.single([1])).toBe(true);
         expect(Util.multiple([1, 2])).toBe(true);
         expect(Util.first("abcd", 1, 2)).toBe("bc");
@@ -103,6 +108,7 @@ describe("Util", () => {
         expect(Util.validUrl("https://example.com/test")).toBe(true);
         expect(() => Util.timeDelta(10n, 42n, 2n)).toThrow("Cannot convert a BigInt value to a number");
         expect(Util.duration(65_000)).toEqual({ second: 65 });
+        expect(Util.duration(65_000, 5)).toEqual({ second: 65 });
         expect(Util.duration(65_000, { largestOnly: true, format: true })).toBe("65 seconds");
         expect(Util.duration(65_000, { largestN: 1, format: true, whitelist: ["minute", "second"] })).toBe(
             "65 seconds"

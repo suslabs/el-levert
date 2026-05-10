@@ -45,9 +45,9 @@ class TagManager extends DBManager {
 
     checkName(name, throwErrors = true) {
         let msg, ref;
-        name = name.trim();
+        name = typeof name === "string" ? name.trim() : "";
 
-        if (!Util.nonemptyString(name)) {
+        if (Util.empty(name)) {
             msg = "Invalid tag name";
         } else if (name.length > this.maxTagNameLength) {
             msg = `The tag name can be at most ${this.maxTagNameLength} characters long`;
@@ -73,9 +73,8 @@ class TagManager extends DBManager {
     }
 
     checkBody(body, throwErrors = true) {
-        body = String(body).trim();
-
         let msg, ref;
+        body = String(body).trim();
 
         if (Util.empty(body)) {
             msg = "Tag body is empty";
@@ -190,7 +189,9 @@ class TagManager extends DBManager {
         return lastTag;
     }
 
-    async execute(tag, args, values = {}) {
+    async execute(tag, args, values) {
+        values = TypeTester.isObject(values) ? values : {};
+
         tag = await this.fetchAlias(tag, true);
         await this._incrementUsage(tag._usageName ?? tag.name);
 
@@ -205,12 +206,15 @@ class TagManager extends DBManager {
         }
     }
 
-    async add(name, body, owner, type, validate = {}) {
-        let validateNew, checkExisting;
+    async add(name, body, owner, type, validate) {
+        validate = TypeTester.isObject(validate) ? validate : (validate ?? null);
+
+        let validateNew = false,
+            checkExisting = true;
 
         if (typeof validate === "boolean") {
             validateNew = checkExisting = validate;
-        } else {
+        } else if (validate !== null) {
             validateNew = validate.validateNew ?? true;
             checkExisting = validate.checkExisting ?? true;
         }
@@ -234,7 +238,8 @@ class TagManager extends DBManager {
         return tag;
     }
 
-    async edit(tag, body, type, validate = {}) {
+    async edit(tag, body, type, validate) {
+        validate = TypeTester.isObject(validate) ? validate : (validate ?? false);
         let validateProvided, validateNew, checkExisting;
 
         if (typeof validate === "boolean") {
@@ -283,7 +288,8 @@ class TagManager extends DBManager {
         return newTag;
     }
 
-    async updateProps(name, tag, validate = {}) {
+    async updateProps(name, tag, validate) {
+        validate = TypeTester.isObject(validate) ? validate : (validate ?? false);
         let validateProvided, validateNew, checkExisting;
 
         if (typeof validate === "boolean") {
@@ -356,7 +362,10 @@ class TagManager extends DBManager {
         return tag;
     }
 
-    async alias(tag, aliasTag, args, createOptions, validate = {}) {
+    async alias(tag, aliasTag, args, createOptions, validate) {
+        createOptions = TypeTester.isObject(createOptions) ? createOptions : (createOptions ?? null);
+
+        validate = TypeTester.isObject(validate) ? validate : (validate ?? false);
         let validateProvided, validateNew, checkExisting;
 
         if (typeof validate === "boolean") {
@@ -460,7 +469,8 @@ class TagManager extends DBManager {
         return tag;
     }
 
-    async rename(tag, newName, validate = {}) {
+    async rename(tag, newName, validate) {
+        validate = TypeTester.isObject(validate) ? validate : (validate ?? false);
         let validateProvided, validateNew, checkExisting;
 
         if (typeof validate === "boolean") {
@@ -614,6 +624,10 @@ class TagManager extends DBManager {
 
     async leaderboard(type, limit = 20) {
         const defaultUser = { username: "NOT FOUND" };
+
+        if (!Number.isInteger(limit) || limit < 1) {
+            throw new TagError("Invalid leaderboard limit", limit);
+        }
 
         let leaderboard = [];
 

@@ -1,5 +1,10 @@
+import TypeTester from "../../../util/TypeTester.js";
+
 class BaseCommandContext {
-    constructor(data = {}) {
+    constructor(data) {
+        data = TypeTester.isObject(data) ? data : {};
+        this.data = data;
+
         this.options = data.options ?? {};
 
         this.command = data.command ?? null;
@@ -22,14 +27,18 @@ class BaseCommandContext {
         }
     }
 
-    clone(overrides = {}) {
+    clone(overrides) {
+        overrides = TypeTester.isObject(overrides) ? overrides : {};
+
         return new this.constructor({
             ...this,
             ...overrides
         });
     }
 
-    withArgs(argsText, overrides = {}) {
+    withArgs(argsText, overrides) {
+        overrides = TypeTester.isObject(overrides) ? overrides : {};
+
         return this.clone({
             ...overrides,
             argsText

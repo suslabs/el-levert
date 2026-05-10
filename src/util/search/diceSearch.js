@@ -1,14 +1,25 @@
 import diceDist from "./diceDist.js";
 
+import Util from "../Util.js";
+import TypeTester from "../TypeTester.js";
+
 const outputResult = (results, oversized) => ({
     results,
 
     other: { oversized }
 });
 
-function diceSearch(haystack, needle, options = {}) {
-    let { maxResults, minDist, searchKey } = options;
-    minDist ??= 0.5;
+function diceSearch(haystack, needle, options) {
+    haystack = Array.isArray(haystack) ? haystack : [];
+    options = TypeTester.isObject(options) ? options : {};
+
+    const maxResults = options.maxResults,
+        searchKey = options.searchKey;
+    let minDist = options.minDist ?? 0.5;
+
+    if (Util.empty(haystack)) {
+        return outputResult([], false);
+    }
 
     let distances = haystack.map((elem, i) => {
         const val = searchKey == null ? elem : elem[searchKey],

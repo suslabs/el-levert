@@ -1,4 +1,5 @@
 import ParserUtil from "../../../util/commands/ParserUtil.js";
+import TypeTester from "../../../util/TypeTester.js";
 
 import BaseCommandContext from "./BaseCommandContext.js";
 import CommandParser from "../../../parsers/CommandParser.js";
@@ -9,7 +10,7 @@ class TextCommandContext extends BaseCommandContext {
         return this._parser;
     }
 
-    splitArgs(lowercase = false, options = {}) {
+    splitArgs(lowercase = false, options) {
         return ParserUtil.splitArgs(this.argsText, lowercase, options);
     }
 
@@ -26,7 +27,9 @@ class TextCommandContext extends BaseCommandContext {
         return this.parsedArgs[name];
     }
 
-    withArgs(argsText, overrides = {}) {
+    withArgs(argsText, overrides) {
+        overrides = TypeTester.isObject(overrides) ? overrides : {};
+
         return super.withArgs(argsText, {
             ...overrides,
             _parser: undefined,

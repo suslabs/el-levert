@@ -7,7 +7,7 @@ import LoadStatus from "./LoadStatus.js";
 import LoaderError from "../errors/LoaderError.js";
 
 class Loader {
-    constructor(name, logger, options = {}) {
+    constructor(name, logger, options) {
         if (typeof this.load !== "function") {
             throw new LoaderError("Child class must have a load function");
         }
@@ -15,6 +15,7 @@ class Loader {
         this.name = name ?? "";
         this.logger = logger;
 
+        options = TypeTester.isObject(options) ? options : {};
         this.options = options;
 
         this.type = options.type ?? "";

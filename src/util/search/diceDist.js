@@ -1,5 +1,5 @@
 function diceDist(a, b) {
-    if (typeof a !== "string" && typeof a !== typeof b) {
+    if (typeof a !== "string" || typeof b !== "string") {
         return 0;
     } else if (a === b) {
         return 1;

@@ -12,9 +12,12 @@ describe("RegexUtil", () => {
         const match = /(?<nameA>alpha)|(?<nameB>beta)/.exec("beta");
         expect(RegexUtil.firstGroup(match, "name")).toBe("beta");
         expect(RegexUtil.firstGroup(null, "name")).toBeNull();
+        expect(RegexUtil.firstGroup(/alpha/.exec("alpha"), "name")).toBeNull();
         expect(RegexUtil.wordStart("hello-world", 6)).toBe(true);
         expect(RegexUtil.wordEnd("hello", 4)).toBe(true);
         expect(RegexUtil.getMergedRegex([])).toBeNull();
+        expect(RegexUtil.getMergedRegex([null, /dog/i]).source).toContain("dog");
+        expect("rabbit".match(RegexUtil.getWordRegex("rabbit"))).toEqual(["rabbit"]);
         expect("cleveret rabbit".match(RegexUtil.getWordRegex(["leveret", "rabbit"]))).toEqual(["rabbit"]);
         expect(RegexUtil.getMergedRegex([/cat/g, /dog/i]).source).toContain("cat");
         expect(RegexUtil.multipleReplace("abc123", [/[a-z]+/, "letters"], [/\d+/, value => `[${value}]`])).toBe(

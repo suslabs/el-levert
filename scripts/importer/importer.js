@@ -87,7 +87,7 @@ function getInputValues(args) {
         return null;
     }
 
-    let jsonPath = values["json-path"] ?? "",
+    let jsonPath = values["json-path"]?.trim() ?? "",
         amend = values.amend ?? false,
         fix = values.fix ?? false,
         purgeOld = args.values["purge-old"] ?? false;

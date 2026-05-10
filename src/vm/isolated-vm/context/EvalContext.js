@@ -35,8 +35,11 @@ class EvalContext {
         });
     }
 
-    constructor(options, inspectorOptions = {}) {
+    constructor(options, inspectorOptions) {
+        options = TypeTester.isObject(options) ? options : {};
         this.options = options;
+
+        inspectorOptions = TypeTester.isObject(inspectorOptions) ? inspectorOptions : {};
         this.inspectorOptions = inspectorOptions;
 
         const invalidMemLimit = !Number.isFinite(options.memLimit) || options.memLimit <= 0;
@@ -57,7 +60,9 @@ class EvalContext {
         return this.enableInspector ? `file:///${EvalContext.filename}` : `(<${EvalContext.evaluated}>)`;
     }
 
-    async getIsolate(values = {}) {
+    async getIsolate(values) {
+        values = TypeTester.isObject(values) ? values : {};
+
         if (typeof this.isolate === "undefined") {
             this._setupInspector();
             await this._setupIsolate(values);

@@ -4,13 +4,16 @@ import { EmbedBuilder, TimestampStyles, codeBlock, time, DiscordAPIError } from 
 import { EmbedColors, defaultColor } from "./EmbedColors.js";
 
 import Util from "../../util/Util.js";
+import TypeTester from "../../util/TypeTester.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 
 import LoggerError from "../../errors/LoggerError.js";
 
 class BaseDiscordTransport extends Transport {
-    constructor(opts) {
-        super(opts);
+    constructor(options) {
+        options = TypeTester.isObject(options) ? options : {};
+        super(options);
+
         const compName = this.constructor.$name;
 
         if (!Util.nonemptyString(compName)) {
@@ -19,19 +22,19 @@ class BaseDiscordTransport extends Transport {
             throw new LoggerError("Child class must have a sendLog function");
         }
 
-        const charLimit = opts.charLimit ?? DiscordUtil.embedCharLimit;
+        const charLimit = options.charLimit ?? DiscordUtil.embedCharLimit;
         this.charLimit = Util.clamp(charLimit, 0, DiscordUtil.embedCharLimit);
 
-        this.name = opts.name ?? compName;
-        this.sendInterval = opts.sendInterval ?? 0;
+        this.name = options.name ?? compName;
+        this.sendInterval = options.sendInterval ?? 0;
 
-        this.client = opts.client;
-        this._hasClient = opts.client != null;
+        this.client = options.client;
+        this._hasClient = options.client != null;
 
         this.initialized = false;
 
         if (typeof this.init === "function") {
-            this.init(opts);
+            this.init(options);
         } else {
             this.initialized = true;
         }

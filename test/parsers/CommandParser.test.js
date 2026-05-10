@@ -91,4 +91,26 @@ describe("CommandParser", () => {
             });
         }
     });
+
+    test("ignores invalid path sources instead of throwing", () => {
+        expect(CommandParser._resolvePath({ alpha: 1 }, null)).toEqual({ alpha: 1 });
+        expect(CommandParser._resolvePath({ alpha: 1 }, "")).toEqual({ alpha: 1 });
+    });
+
+    test("normalizes invalid object inputs at parser boundaries", () => {
+        const parser = new CommandParser("not-an-object");
+
+        expect(parser.parse()).toBeNull();
+        expect(
+            new CommandParser({
+                argsText: "hello"
+            }).parseArgument(
+                {
+                    name: "value"
+                },
+                "bad-parsed-data"
+            )
+        ).toBe("hello");
+        expect(() => parser.parseArgument(null, "bad-parsed-data")).toThrow(ParserError);
+    });
 });

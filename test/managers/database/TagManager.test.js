@@ -180,7 +180,9 @@ describe("TagManager", () => {
     test("covers validation and stale-row error paths against the real database", async () => {
         const manager = await createManager();
 
+        expect(manager.checkName(123, false)).toEqual([null, "Invalid tag name"]);
         expect(manager.checkName("bad name", false)).toEqual([null, expect.stringContaining("must consist")]);
+        expect(manager.checkBody(123, false)).toEqual(["123", null]);
         expect(manager.checkBody("", false)).toEqual([null, "Tag body is empty"]);
         await expect(manager.fetch("missing", true)).rejects.toThrow("Tag doesn't exist");
         expect(() => new Tag({ name: "bad", body: "body", owner: "u", type: "weird" })).toThrow("Unknown type: weird");
@@ -196,6 +198,7 @@ describe("TagManager", () => {
         const stale = new Tag({ name: "stale", body: "old", owner: "u5" });
         await expect(manager.delete(stale, true)).rejects.toThrow("Tag doesn't exist");
         await expect(manager.leaderboard("invalid")).rejects.toThrow("Invalid leaderboard type");
+        await expect(manager.leaderboard("count", 0)).rejects.toThrow("Invalid leaderboard limit");
     });
 
     test("handles attachment download paths and size errors through the real HTTP helper", async () => {

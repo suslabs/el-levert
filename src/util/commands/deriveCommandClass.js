@@ -1,6 +1,6 @@
 function deriveCommandClass(wrapperClass, plainClass) {
-    const derivedClass = class DerivedCommand extends wrapperClass {};
-    const descriptors = Object.getOwnPropertyDescriptors(plainClass.prototype);
+    const derivedClass = class DerivedCommand extends wrapperClass {},
+        descriptors = Object.getOwnPropertyDescriptors(plainClass.prototype);
 
     delete descriptors.constructor;
     Object.defineProperties(derivedClass.prototype, descriptors);

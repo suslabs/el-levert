@@ -12,7 +12,7 @@ import categoryNames from "./categoryNames.json" assert { type: "json" };
 class TextCommandManager extends BaseCommandManager {
     static commandClass = TextCommand;
 
-    constructor(enabled, commandsDir, commandPrefix, options = {}) {
+    constructor(enabled, commandsDir, commandPrefix, options) {
         super(enabled, commandsDir, options);
 
         this.commandPrefix = commandPrefix;

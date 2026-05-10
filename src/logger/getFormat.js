@@ -1,17 +1,17 @@
 import winston from "winston";
 
 import TypeTester from "../util/TypeTester.js";
+import ArrayUtil from "../util/ArrayUtil.js";
 
 import LoggerError from "../errors/LoggerError.js";
 
 const validFormats = Object.getOwnPropertyNames(winston.format).filter(name => !["length", "combine"].includes(name));
 
 function getFormat(config) {
-    switch (typeof config) {
-        case "undefined":
-            return winston.format.simple();
-        case "string":
-            config = [config];
+    if (config == null) {
+        return winston.format.simple();
+    } else {
+        config = ArrayUtil.guaranteeArray(config);
     }
 
     const formats = config.map(format => {

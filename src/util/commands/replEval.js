@@ -2,6 +2,7 @@ import repl from "node:repl";
 import { PassThrough } from "node:stream";
 
 import Util from "../Util.js";
+import TypeTester from "../TypeTester.js";
 import VMUtil from "../vm/VMUtil.js";
 
 const emptyCommand = {
@@ -31,7 +32,9 @@ function initReplServer(sin, sout, writer) {
     return server;
 }
 
-function replEval(code, context = {}) {
+function replEval(code, context) {
+    context = TypeTester.isObject(context) ? context : {};
+
     code = code.replace(/^\s*\.(?=\w)/gm, "//.");
 
     const input = new PassThrough(),

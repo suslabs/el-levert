@@ -96,6 +96,27 @@ describe("DBImporter", () => {
         expect(data.aliasName).toBe("target");
     });
 
+    test("validates import paths and update modes before loading", async () => {
+        const importer = Object.create(DBImporter.prototype, {
+            logger: {
+                value: {
+                    warn: vi.fn(),
+                    info: vi.fn(),
+                    error: vi.fn()
+                }
+            },
+            tagManager: {
+                value: {
+                    dump: vi.fn()
+                }
+            }
+        });
+
+        await expect(importer.updateDatabase("   ")).rejects.toThrow("No import path provided");
+        await expect(importer.updateDatabase("tags.json", 1)).rejects.toThrow("No update mode provided");
+        await expect(importer.updateDatabase("tags.json", "bad")).rejects.toThrow("Invalid update mode");
+    });
+
     test("fix recalculates quota counts, prunes zero usage, and preserves historical usage", async () => {
         const liveRuntime = await createRuntime({
                 loadVMs: false

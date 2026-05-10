@@ -135,10 +135,19 @@ describe("DiscordClient", () => {
             })
         ).toThrow("Invalid activity type");
 
+        expect(() => client.setActivity(null)).toThrow("Invalid activity config");
+
         expect(() =>
             client.setActivity({
                 type: "playing",
                 text: null
+            })
+        ).toThrow("Invalid activity text");
+
+        expect(() =>
+            client.setActivity({
+                type: "playing",
+                text: "   "
             })
         ).toThrow("Invalid activity text");
 
@@ -229,6 +238,7 @@ describe("DiscordClient", () => {
         const client = createClient();
 
         await expect(client.fetchGuild("id", null)).rejects.toThrow("Invalid options provided");
+        await expect(client.findUsers("   ")).rejects.toThrow("No query provided");
 
         client._parseDiscordId = vi
             .fn()

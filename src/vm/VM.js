@@ -1,4 +1,5 @@
 import Util from "../util/Util.js";
+import TypeTester from "../util/TypeTester.js";
 
 import VMError from "../errors/VMError.js";
 
@@ -16,6 +17,7 @@ class VM {
 
         this.enabled = enabled;
 
+        options = TypeTester.isObject(options) ? options : {};
         this.options = options;
 
         this._childLoad = this.load;

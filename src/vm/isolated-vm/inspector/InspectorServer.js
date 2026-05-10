@@ -3,6 +3,7 @@
 import { URL, URLSearchParams } from "node:url";
 
 import { getLogger } from "../../../LevertClient.js";
+import TypeTester from "../../../util/TypeTester.js";
 
 import getCloseReason from "../../../util/misc/wsCloseReason.js";
 
@@ -14,10 +15,11 @@ class InspectorServer {
         v8only: true
     };
 
-    constructor(enabled, port = 8080, options = {}) {
+    constructor(enabled, port = 8080, options) {
         this.enabled = enabled;
         this.port = port;
 
+        options = TypeTester.isObject(options) ? options : {};
         this.options = options;
 
         this.logPackets = options.logPackets ?? false;

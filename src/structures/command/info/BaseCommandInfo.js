@@ -1,5 +1,6 @@
 import Util from "../../../util/Util.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
+import TypeTester from "../../../util/TypeTester.js";
 import CommandError from "../../../errors/CommandError.js";
 
 class BaseCommandInfo {
@@ -13,7 +14,10 @@ class BaseCommandInfo {
         subcommands: []
     };
 
-    constructor(data = {}, overrides = {}) {
+    constructor(data, overrides) {
+        data = TypeTester.isObject(data) ? data : {};
+        overrides = TypeTester.isObject(overrides) ? overrides : {};
+
         const source = typeof data.toObject === "function" ? data.toObject() : data;
 
         ObjectUtil.setValuesWithDefaults(
@@ -27,9 +31,7 @@ class BaseCommandInfo {
 
         if (!this.constructor.isValidName(this.name)) {
             throw new CommandError("Command must have a name");
-        }
-
-        if (this.subcommand && !Util.nonemptyString(this.parent)) {
+        } else if (this.subcommand && !Util.nonemptyString(this.parent)) {
             throw new CommandError("Subcommands must have a parent command");
         }
     }

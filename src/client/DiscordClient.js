@@ -189,9 +189,14 @@ class DiscordClient {
     }
 
     setActivity(config) {
-        const lowercaseTypes = DiscordClient._validActivityTypes.map(type => type.toLowerCase());
+        if (!TypeTester.isObject(config)) {
+            throw new ClientError("Invalid activity config");
+        }
 
-        let activityType = config.type.toLowerCase(),
+        const activityType = typeof config.type === "string" ? config.type.trim().toLowerCase() : "",
+            activityText = typeof config.text === "string" ? config.text.trim() : "";
+
+        const lowercaseTypes = DiscordClient._validActivityTypes.map(type => type.toLowerCase()),
             num = lowercaseTypes.indexOf(activityType);
 
         if (num === -1) {
@@ -201,11 +206,11 @@ class DiscordClient {
             );
         }
 
-        if (config.text == null) {
+        if (Util.empty(activityText)) {
             throw new ClientError("Invalid activity text");
         }
 
-        const presence = this.client.user.setActivity(config.text, {
+        const presence = this.client.user.setActivity(activityText, {
                 type: num
             }),
             activity = Util.first(presence.activities);
@@ -217,11 +222,8 @@ class DiscordClient {
         return activity;
     }
 
-    async fetchGuild(sv_id, options = {}) {
-        if (!TypeTester.isObject(options)) {
-            throw new ClientError("Invalid options provided");
-        }
-
+    async fetchGuild(sv_id, options) {
+        options = TypeTester.isObject(options) ? options : {};
         ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultGuildOptions);
 
         let guild;
@@ -246,11 +248,8 @@ class DiscordClient {
         return guild;
     }
 
-    async fetchMember(sv_id, user_id, options = {}) {
-        if (!TypeTester.isObject(options)) {
-            throw new ClientError("Invalid options provided");
-        }
-
+    async fetchMember(sv_id, user_id, options) {
+        options = TypeTester.isObject(options) ? options : {};
         ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultMemberOptions);
 
         const guild = await this.fetchGuild(sv_id, options);
@@ -281,11 +280,8 @@ class DiscordClient {
         return member;
     }
 
-    async fetchChannel(ch_id, options = {}) {
-        if (!TypeTester.isObject(options)) {
-            throw new ClientError("Invalid options provided");
-        }
-
+    async fetchChannel(ch_id, options) {
+        options = TypeTester.isObject(options) ? options : {};
         ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultChannelOptions);
 
         let channel;
@@ -351,11 +347,8 @@ class DiscordClient {
         return channel;
     }
 
-    async fetchMessage(ch_id, msg_id, options = {}) {
-        if (!TypeTester.isObject(options)) {
-            throw new ClientError("Invalid options provided");
-        }
-
+    async fetchMessage(ch_id, msg_id, options) {
+        options = TypeTester.isObject(options) ? options : {};
         ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultMessageOptions);
 
         const channel = await this.fetchChannel(ch_id, options);
@@ -386,11 +379,8 @@ class DiscordClient {
         return message;
     }
 
-    async fetchMessages(ch_id, options = {}, fetchOptions = {}) {
-        if (![options, fetchOptions].every(obj => TypeTester.isObject(obj))) {
-            throw new ClientError("Invalid options provided");
-        }
-
+    async fetchMessages(ch_id, options, fetchOptions) {
+        options = TypeTester.isObject(options) ? options : {};
         ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultMessagesOptions);
 
         const channel = await this.fetchChannel(ch_id, options);
@@ -399,6 +389,7 @@ class DiscordClient {
             return null;
         }
 
+        fetchOptions = TypeTester.isObject(fetchOptions) ? fetchOptions : {};
         ObjectUtil.setValuesWithDefaults(fetchOptions, fetchOptions, this.constructor.defaultMessagesFetchOptions);
         fetchOptions.force = !options.cache;
 
@@ -425,11 +416,8 @@ class DiscordClient {
         return messages;
     }
 
-    async findUserById(user_id, options = {}) {
-        if (!TypeTester.isObject(options)) {
-            throw new ClientError("Invalid options provided");
-        }
-
+    async findUserById(user_id, options) {
+        options = TypeTester.isObject(options) ? options : {};
         ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultUserOptions);
 
         let user;
@@ -454,13 +442,14 @@ class DiscordClient {
         return ((user.user = user), user);
     }
 
-    async findUsers(query, options = {}, fetchOptions = {}) {
-        if (query == null) {
+    async findUsers(query, options, fetchOptions) {
+        query = typeof query === "string" ? query.trim() : "";
+
+        if (Util.empty(query)) {
             throw new ClientError("No query provided");
-        } else if (![options, fetchOptions].every(obj => TypeTester.isObject(obj))) {
-            throw new ClientError("Invalid options provided");
         }
 
+        options = TypeTester.isObject(options) ? options : {};
         ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultUsersOptions);
 
         let guilds = null;
@@ -497,6 +486,7 @@ class DiscordClient {
             return [];
         }
 
+        fetchOptions = TypeTester.isObject(fetchOptions) ? fetchOptions : {};
         ObjectUtil.setValuesWithDefaults(fetchOptions, fetchOptions, this.constructor.defaultUsersFetchOptions);
 
         const allMembers = (

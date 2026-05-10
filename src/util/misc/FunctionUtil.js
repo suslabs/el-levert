@@ -11,6 +11,10 @@ const FunctionUtil = Object.freeze({
 
     _funcArgsRegex: /(?:\()(.+)+(?:\))/,
     functionArgumentNames: func => {
+        if (typeof func !== "function") {
+            return [];
+        }
+
         const code = func.toString(),
             match = code.match(FunctionUtil._funcArgsRegex);
 
@@ -24,7 +28,7 @@ const FunctionUtil = Object.freeze({
 
     getArgumentPositions: (func, names) => {
         const argsNames = FunctionUtil.functionArgumentNames(func),
-            positions = names.map(name => argsNames.indexOf(name));
+            positions = ArrayUtil.guaranteeArray(names).map(name => argsNames.indexOf(name));
 
         return positions.filter(pos => pos !== -1);
     }

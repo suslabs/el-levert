@@ -1,12 +1,13 @@
+import TypeTester from "../../../util/TypeTester.js";
 import TextCommandContext from "./TextCommandContext.js";
 
 class CLICommandContext extends TextCommandContext {
-    constructor(data = {}) {
+    constructor(data) {
         super(data);
 
-        this.handler = data.handler ?? null;
+        this.handler = this.data.handler ?? null;
 
-        this.line = data.line ?? this.rawContent;
+        this.line = this.data.line ?? this.rawContent;
     }
 }
 
