@@ -7,6 +7,7 @@ import { TagTypes } from "../../src/structures/tag/TagTypes.js";
 
 import DBUpdateModes from "./DBUpdateModes.js";
 import TagDifferenceType from "./TagDifferenceType.js";
+import OpenModes from "../../src/database/drivers/sqlite/OpenModes.js";
 
 import Util from "../../src/util/Util.js";
 import TypeTester from "../../src/util/TypeTester.js";
@@ -128,11 +129,13 @@ class DBImporter {
     }
 
     async fix() {
-        //
-
         await this._fixQuotas();
+        await this._fixUsage();
 
+        await this.tagManager.tag_db.close();
+        await this.tagManager.tag_db.open(OpenModes.OPEN_READWRITE);
         await this.tagManager.tag_db.db.vacuum();
+        await this.tagManager.tag_db._loadQueries();
     }
 
     async purgeOld() {
@@ -282,7 +285,13 @@ class DBImporter {
     async _fixQuotas() {
         const tags = await this.tagManager.dump(true),
             sizes = tags.reduce((acc, tag) => {
-                acc[tag.owner] = (acc[tag.owner] || 0) + tag.getSize();
+                acc[tag.owner] ??= {
+                    quota: 0,
+                    count: 0
+                };
+
+                acc[tag.owner].quota += tag.getSize();
+                acc[tag.owner].count++;
                 return acc;
             }, {});
 
@@ -290,21 +299,28 @@ class DBImporter {
 
         let count = 0;
 
-        for (const [user, quota] of Object.entries(sizes)) {
-            if (quota <= 0) {
+        for (const [user, stats] of Object.entries(sizes)) {
+            if (stats.count <= 0) {
                 continue;
             }
 
             await this.tagManager.tag_db.db
-                .run("INSERT INTO Quotas VALUES ($user, $quota);", {
+                .run("INSERT INTO Quotas (user, quota, count) VALUES ($user, $quota, $count);", {
                     $user: user,
-                    $quota: quota
+                    $quota: stats.quota,
+                    $count: stats.count
                 })
                 .then(() => count++)
                 .catch(err => this.logger.error(`Error recalculating quota for user ${user}:`, err));
         }
 
         this.logger.info(`Recalculated quota for ${count} users.`);
+    }
+
+    async _fixUsage() {
+        const res = await this.tagManager.tag_db.db.run("DELETE FROM Usage WHERE count <= 0;");
+
+        this.logger.info(`Pruned ${res.changes ?? 0} usage row(s).`);
     }
 }
 

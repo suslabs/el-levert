@@ -94,6 +94,22 @@ class TagManager extends DBManager {
         }
     }
 
+    async exists(name, validate = false) {
+        if (Array.isArray(name)) {
+            if (validate) {
+                name = name.map(tagName => this.checkName(tagName));
+            }
+
+            if (Util.empty(name)) {
+                return [];
+            }
+        } else if (validate) {
+            name = this.checkName(name);
+        }
+
+        return await this.tag_db.exists(name);
+    }
+
     async fetch(name, validate = false) {
         if (validate) {
             this.checkName(name);
@@ -124,7 +140,8 @@ class TagManager extends DBManager {
         const hops = [],
             args = [];
 
-        let lastTag = tag;
+        let lastTag = tag,
+            usageName = null;
 
         while (lastTag !== null) {
             const hop = lastTag.name;
@@ -139,6 +156,10 @@ class TagManager extends DBManager {
             }
 
             hops.push(hop);
+
+            if (usageName === null && !(lastTag.isAlias && Util.empty(lastTag.args))) {
+                usageName = hop;
+            }
 
             args.push(lastTag.args);
 
@@ -160,6 +181,7 @@ class TagManager extends DBManager {
         }
 
         lastTag._setAliasProps(hops, args);
+        lastTag._usageName = usageName;
 
         if (aliasOriginal) {
             lastTag._setOriginalProps(tag);
@@ -170,6 +192,8 @@ class TagManager extends DBManager {
 
     async execute(tag, args, values = {}) {
         tag = await this.fetchAlias(tag, true);
+        await this._incrementUsage(tag._usageName ?? tag.name);
+
         const type = tag.getType();
 
         if (type === TagTypes.textType) {
@@ -251,8 +275,10 @@ class TagManager extends DBManager {
             throw new TagError("Tag doesn't exist", tag.name);
         }
 
-        const sizeDiff = newTag.getSize() - tag.getSize();
-        await this._updateQuota(tag.owner, sizeDiff);
+        if (updated) {
+            const sizeDiff = newTag.getSize() - tag.getSize();
+            await this._updateQuota(tag.owner, sizeDiff);
+        }
 
         return newTag;
     }
@@ -322,8 +348,8 @@ class TagManager extends DBManager {
             if (oldTag.owner === tag.owner) {
                 await this._updateQuota(tag.owner, newSize - oldSize);
             } else {
-                await this._updateQuota(oldTag.owner, -oldSize);
-                await this._updateQuota(tag.owner, newSize);
+                await this._updateQuota(oldTag.owner, -oldSize, -1);
+                await this._updateQuota(tag.owner, newSize, 1);
             }
         }
 
@@ -403,7 +429,7 @@ class TagManager extends DBManager {
             }
         }
 
-        await this._updateQuota(newTag.owner, sizeDiff);
+        await this._updateQuota(newTag.owner, sizeDiff, create ? 1 : 0);
         return [newTag, create];
     }
 
@@ -427,8 +453,8 @@ class TagManager extends DBManager {
         }
 
         if (updated && oldOwner !== newOwner) {
-            await this._updateQuota(oldOwner, -tagSize);
-            await this._updateQuota(newOwner, tagSize);
+            await this._updateQuota(oldOwner, -tagSize, -1);
+            await this._updateQuota(newOwner, tagSize, 1);
         }
 
         return tag;
@@ -500,7 +526,10 @@ class TagManager extends DBManager {
             throw new TagError("Tag doesn't exist", tag.name);
         }
 
-        await this._updateQuota(tag.owner, -tagSize);
+        if (updated) {
+            await this._updateQuota(tag.owner, -tagSize, -1);
+        }
+
         return tag;
     }
 
@@ -527,7 +556,7 @@ class TagManager extends DBManager {
     }
 
     async count(user, flags) {
-        if (Util.empty(user)) {
+        if (!Util.nonemptyString(user)) {
             user = null;
         }
 
@@ -568,7 +597,7 @@ class TagManager extends DBManager {
     }
 
     async random(prefix, validate = false) {
-        if (Util.empty(prefix)) {
+        if (!Util.nonemptyString(prefix)) {
             const tags = await this.dump();
             return Util.randomElement(tags) ?? null;
         } else if (validate) {
@@ -595,18 +624,32 @@ class TagManager extends DBManager {
             case "size":
                 leaderboard = await this.tag_db.sizeLeaderboard(limit);
                 break;
+            case "usage":
+                leaderboard = await this.tag_db.usageLeaderboard(limit);
+
+                break;
             default:
                 throw new TagError("Invalid leaderboard type: " + type, type);
         }
 
-        await Promise.all(
-            leaderboard.map(entry =>
-                getClient()
-                    .findUserById(entry.user)
-                    .catch(_ => null)
-                    .then(user => (entry.user = user ?? defaultUser))
-            )
-        );
+        switch (type) {
+            case "count":
+            case "size":
+                await Promise.all(
+                    leaderboard.map(entry =>
+                        getClient()
+                            .findUserById(entry.user)
+                            .catch(_ => null)
+                            .then(user => (entry.user = user ?? defaultUser))
+                    )
+                );
+                break;
+            case "usage":
+                const names = leaderboard.map(entry => entry.name),
+                    exists = await this.exists(names);
+
+                leaderboard.forEach((entry, index) => (entry.exists = exists[index]));
+        }
 
         return leaderboard;
     }
@@ -673,11 +716,11 @@ class TagManager extends DBManager {
         getLogger().info(`Added tag: "${tag.name}" with type: ${tag.type}, body:${bodyLogText}`);
 
         const tagSize = tag.getSize();
-        await this._updateQuota(tag.owner, tagSize);
+        await this._updateQuota(tag.owner, tagSize, 1);
     }
 
     async _runScriptTag(tag, type, args, values) {
-        const evalArgs = [args, tag.args].filter(arg => !Util.empty(arg)).join(" ");
+        const evalArgs = [args, tag.args].filter(Util.nonemptyString).join(" ");
 
         const inputValues = {
             tag,
@@ -701,19 +744,24 @@ class TagManager extends DBManager {
         }
     }
 
-    async _updateQuota(user, diff) {
-        if (diff === 0) {
+    async _updateQuota(user, sizeDiff, countDiff = 0) {
+        if (sizeDiff === 0 && countDiff === 0) {
             return;
         }
 
-        let userQuota = await this.tag_db.quotaFetch(user);
+        let [userQuota, userCount] = await Promise.all([
+            this.tag_db.quotaFetch(user),
+            this.tag_db.quotaCountFetch(user)
+        ]);
 
-        if (userQuota === null) {
+        if (userQuota === null || userCount === null) {
             await this.tag_db.quotaCreate(user);
             userQuota = 0;
+            userCount = 0;
         }
 
-        const newQuota = userQuota + diff;
+        const newQuota = userQuota + sizeDiff,
+            newCount = userCount + countDiff;
 
         if (newQuota > this.maxQuota) {
             throw new TagError(`Maximum quota of ${this.maxQuota} kb has been exceeded`, {
@@ -722,8 +770,26 @@ class TagManager extends DBManager {
             });
         }
 
-        await this.tag_db.quotaSet(user, newQuota);
-        getLogger().debug(`Updated quota for: ${user} diff: ${diff}`);
+        if (sizeDiff !== 0) {
+            await this.tag_db.quotaSet(user, newQuota);
+        }
+
+        if (countDiff !== 0) {
+            await this.tag_db.quotaCountSet(user, newCount);
+        }
+
+        getLogger().debug(`Updated quota for: ${user} size diff: ${sizeDiff} count diff: ${countDiff}`);
+    }
+
+    async _incrementUsage(name) {
+        const res = await this.tag_db.usageIncrement(name);
+
+        if (res.changes > 0) {
+            return;
+        }
+
+        await this.tag_db.usageCreate(name);
+        await this.tag_db.usageIncrement(name);
     }
 }
 

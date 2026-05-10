@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import createHttpStubServer from "../../helpers/httpStubServer.js";
 import { cleanupRuntime, createRuntime } from "../../helpers/runtimeHarness.js";
 
@@ -34,14 +34,14 @@ beforeEach(async () => {
     servers = [];
 
     runtime.client.checkComponent = (_family, name) => ({
-        runScript: async (body, values) => `${name}:${body}:${values.args}:${values.tag.name}`
+        runScript: (body, values) => `${name}:${body}:${values.args}:${values.tag.name}`
     });
-    runtime.client.findUserById = async id => {
+    runtime.client.findUserById = id => {
         if (id === "u9") {
-            throw new Error("missing");
+            return Promise.reject(new Error("missing"));
         }
 
-        return { id, username: `name-${id}` };
+        return Promise.resolve({ id, username: `name-${id}` });
     };
 });
 
@@ -92,6 +92,14 @@ describe("TagManager", () => {
         );
 
         expect(await manager.count()).toBe(7);
+        expect(await manager.count("u1")).toBe(2);
+        expect(await manager.tag_db.quotaCountFetch("u1")).toBe(2);
+        expect(await manager.tag_db.quotaCountFetch("u9")).toBe(1);
+        expect(await manager.tag_db.usageFetch("plain_alias")).toBe(1);
+        expect(await manager.tag_db.usageFetch("script_ivm")).toBe(1);
+        expect(await manager.tag_db.usageFetch("script_vm2")).toBe(1);
+        expect(await manager.tag_db.usageFetch("plain")).toBeNull();
+        expect(await manager.tag_db.usageFetch("plain_renamed")).toBe(0);
         expect(await manager.search("plain", 5, 0)).toMatchObject({
             results: expect.arrayContaining(["plain_alias", "plain_renamed"])
         });
@@ -103,6 +111,70 @@ describe("TagManager", () => {
 
         const sizeLeaderboard = await manager.leaderboard("size", 10);
         expect(sizeLeaderboard.some(entry => entry.user.username === "NOT FOUND")).toBe(true);
+
+        await manager.execute(await manager.fetch("roll1"), "");
+        await manager.delete(await manager.fetch("roll1"));
+        expect(await manager.count("u3")).toBe(1);
+        expect(await manager.tag_db.usageFetch("roll1")).toBe(1);
+
+        const usageLeaderboard = await manager.leaderboard("usage", 10);
+        expect(usageLeaderboard).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({ name: "plain_alias", count: 1, exists: true }),
+                expect.objectContaining({ name: "roll1", count: 1, exists: false })
+            ])
+        );
+    });
+
+    test("checks tag existence for single and multiple names", async () => {
+        const manager = await createManager();
+
+        await manager.add("alpha", "body", "u1", "text");
+        await manager.add("beta", "body", "u1", "text");
+
+        expect(await manager.exists("alpha")).toBe(true);
+        expect(await manager.exists("missing")).toBe(false);
+        expect(await manager.exists(["alpha", "missing", "beta"])).toEqual([true, false, true]);
+        await expect(manager.exists(["alpha", "bad name"], true)).rejects.toThrow("must consist");
+    });
+
+    test("treats uncertain public string inputs as absent instead of using generic length semantics", async () => {
+        const manager = await createManager();
+
+        await manager.add("alpha", "body", "u1", "text");
+        await manager.add("beta", "body", "u2", "text");
+        await manager.add("script", "return args", "u1", "ivm");
+
+        expect(await manager.count({ length: 1 })).toBe(3);
+        expect(await manager.random({ length: 1 })).toMatch(/^(alpha|beta|script)$/);
+        expect(await manager.execute(await manager.fetch("script"), ["bad"])).toBe("tagVM:return args::script");
+    });
+
+    test("routes alias usage down the chain until it hits bound args or the final target", async () => {
+        const manager = await createManager();
+
+        const target = await manager.add("target", "body", "u1", "text");
+        const [direct] = await manager.alias(null, target, "", {
+            name: "direct",
+            owner: "u1"
+        });
+        const [bound] = await manager.alias(null, target, "fixed", {
+            name: "bound",
+            owner: "u1"
+        });
+        const [passthrough] = await manager.alias(null, bound, "", {
+            name: "passthrough",
+            owner: "u1"
+        });
+
+        await manager.execute(direct, "runtime");
+        await manager.execute(bound, "runtime");
+        await manager.execute(passthrough, "runtime");
+
+        expect(await manager.tag_db.usageFetch("target")).toBe(1);
+        expect(await manager.tag_db.usageFetch("direct")).toBe(0);
+        expect(await manager.tag_db.usageFetch("bound")).toBe(2);
+        expect(await manager.tag_db.usageFetch("passthrough")).toBe(0);
     });
 
     test("covers validation and stale-row error paths against the real database", async () => {

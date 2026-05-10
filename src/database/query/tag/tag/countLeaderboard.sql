@@ -1,1 +1,0 @@
-SELECT owner as user, COUNT(*) as count FROM Tags GROUP BY user ORDER BY count DESC LIMIT $limit;

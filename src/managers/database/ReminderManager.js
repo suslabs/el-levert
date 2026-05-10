@@ -101,6 +101,14 @@ class ReminderManager extends DBManager {
         return await this.remind_db.fetch(user);
     }
 
+    async exists(user) {
+        if (!this.enabled) {
+            return Array.isArray(user) ? user.map(_ => false) : false;
+        }
+
+        return await this.remind_db.exists(user);
+    }
+
     async listAll() {
         return await this.remind_db.list();
     }

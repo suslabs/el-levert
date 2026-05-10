@@ -10,9 +10,9 @@ class TagQuotaCommand {
     };
 
     async handler(ctx) {
-        const tags = await getClient().tagManager.list(ctx.msg.author.id);
+        const count = await getClient().tagManager.count(ctx.msg.author.id);
 
-        if (tags.count === 0) {
+        if (count <= 0) {
             return `${getEmoji("info")} You have **no** tags.`;
         }
 

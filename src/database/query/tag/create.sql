@@ -1,6 +1,7 @@
 CREATE TABLE 'Quotas' (
     'user' TEXT,
     'quota' REAL,
+    'count' INTEGER,
     PRIMARY KEY('user')
 ) STRICT;
 ---
@@ -15,4 +16,10 @@ CREATE TABLE 'Tags' (
     'type' INTEGER,
     PRIMARY KEY('name'),
     FOREIGN KEY('owner') REFERENCES Quotas('user')
+) STRICT;
+---
+CREATE TABLE 'Usage' (
+    'name' TEXT,
+    'count' INTEGER,
+    PRIMARY KEY('name')
 ) STRICT;

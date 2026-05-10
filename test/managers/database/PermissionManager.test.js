@@ -35,7 +35,7 @@ beforeEach(async () => {
     managers = [];
 
     runtime.client.owner = "owner-id";
-    runtime.client.findUserById = async id => {
+    runtime.client.findUserById = id => {
         if (id === "404") {
             throw new Error("not found");
         }
@@ -97,6 +97,23 @@ describe("PermissionManager", () => {
         expect(await manager.fetchGroup("helpers")).toBeNull();
     });
 
+    test("checks stored permission existence for groups and users", async () => {
+        const manager = await createManager();
+
+        await manager.addGroup("mods", 5, true);
+        await manager.addGroup("admins", 8, true);
+        await manager.add(await manager.fetchGroup("mods"), "123", true);
+
+        expect(await manager.groupExists("mods")).toBe(true);
+        expect(await manager.groupExists("missing")).toBe(false);
+        expect(await manager.groupExists(["mods", "missing", "admins"])).toEqual([true, false, true]);
+        expect(await manager.userExists("123")).toBe(true);
+        expect(await manager.userExists("ghost")).toBe(false);
+        expect(await manager.userExists(["123", "ghost"])).toEqual([true, false]);
+        expect(await manager.groupExists([])).toEqual([]);
+        expect(await manager.userExists(["owner-id", "123"])).toEqual([false, true]);
+    });
+
     test("covers disabled and error paths without mocking the database layer", async () => {
         const manager = await createManager();
 
@@ -122,6 +139,8 @@ describe("PermissionManager", () => {
         expect(disabled.getLevels().default).toBe(disabled.disabledLevel);
         expect(await disabled.fetch("whoever")).toEqual([DisabledGroup]);
         expect(await disabled.fetchGroup("anything")).toBe(DisabledGroup);
+        expect(await disabled.userExists("whoever")).toBe(false);
+        expect(await disabled.groupExists("anything")).toBe(false);
         expect(await disabled.isInGroup("mods", "123")).toBe(false);
         expect(disabled.allowed(0, "admin")).toBe(true);
 

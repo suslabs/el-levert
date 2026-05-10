@@ -37,6 +37,8 @@ describe("TagDatabase", () => {
         await db.quotaCreate("u2");
         await db.quotaSet("u1", 4.5);
         await db.quotaSet("u2", 2.5);
+        await db.quotaCountSet("u1", 0);
+        await db.quotaCountSet("u2", 0);
 
         const plain = new Tag({ name: "plain", body: "body", owner: "u1" });
         const alias = new Tag({ name: "alias", owner: "u1" });
@@ -49,6 +51,13 @@ describe("TagDatabase", () => {
         await db.add(alias);
         await db.add(script);
         await db.add(legacy);
+        expect(await db.usageFetch("plain")).toBe(0);
+        await db.usageIncrement("plain");
+        await db.usageIncrement("plain");
+        expect(await db.usageFetch("plain")).toBe(2);
+        expect(await db.usageLeaderboard(5)).toEqual([
+            expect.objectContaining({ name: "plain", count: 2 })
+        ]);
 
         expect(await db.fetch("missing")).toBeNull();
         expect(await db.fetch("plain")).toMatchObject({ body: "body", owner: "u1" });
@@ -68,6 +77,8 @@ describe("TagDatabase", () => {
         );
         expect(await db.fetch("plain")).toBeNull();
         expect(await db.fetch("plain2")).toMatchObject({ body: "moved", owner: "u2", args: "args" });
+        expect(await db.usageFetch("plain")).toBeNull();
+        expect(await db.usageFetch("plain2")).toBe(2);
 
         const fetchedLegacy = await db.fetch("legacy");
         await db.chown(fetchedLegacy, "u2");
@@ -77,6 +88,8 @@ describe("TagDatabase", () => {
         await db.rename(fetchedAlias, "alias2");
         expect(await db.fetch("alias")).toBeNull();
         expect(await db.fetch("alias2")).toMatchObject({ aliasName: "plain" });
+        expect(await db.usageFetch("alias")).toBeNull();
+        expect(await db.usageFetch("alias2")).toBe(0);
 
         await db.updateAliases("plain", "plain2");
         expect(await db.fetch("alias2")).toMatchObject({ aliasName: "plain2" });
@@ -86,6 +99,9 @@ describe("TagDatabase", () => {
         expect((await db.fullDump()).map(tag => tag.name)).toEqual(["alias2", "legacy", "plain2", "script1"]);
         expect(await db.searchWithPrefix("pl")).toEqual(["plain2"]);
         expect((await db.list("u2")).map(tag => tag.name)).toEqual(["legacy", "plain2", "script1"]);
+
+        await db.quotaCountSet("u1", 1);
+        await db.quotaCountSet("u2", 3);
 
         expect(await db.count()).toBe(4);
         expect(await db.count("u2")).toBe(3);
@@ -99,6 +115,7 @@ describe("TagDatabase", () => {
 
         expect(await db.quotaFetch("missing")).toBeNull();
         expect(await db.quotaFetch("u1")).toBe(4.5);
+        expect(await db.quotaCountFetch("u1")).toBe(1);
         expect(await db.sizeLeaderboard(5)).toEqual([
             expect.objectContaining({ user: "u1", quota: 4.5 }),
             expect.objectContaining({ user: "u2", quota: 2.5 })
@@ -106,8 +123,55 @@ describe("TagDatabase", () => {
 
         await db.delete(await db.fetch("script1"));
         expect(await db.fetch("script1")).toBeNull();
+        expect(await db.usageFetch("script1")).toBe(0);
+
+        await db.delete(await db.fetch("plain2"));
+        expect(await db.usageFetch("plain2")).toBe(2);
+
+        await db.add(new Tag({ name: "plain2", body: "restored", owner: "u2" }));
+        expect(await db.usageFetch("plain2")).toBe(2);
 
         await db.open(OpenModes.OPEN_READWRITE);
+        await db.close();
+    });
+
+    test("checks tag existence for single and multiple names without fetching full tags", async () => {
+        const db = createDb();
+        await db.create();
+        await db.load();
+
+        await db.add(new Tag({ name: "alpha", body: "body", owner: "u1" }));
+        await db.add(new Tag({ name: "beta", body: "body", owner: "u1" }));
+
+        expect(await db.exists("alpha")).toBe(true);
+        expect(await db.exists("missing")).toBe(false);
+        expect(await db.exists(["alpha", "missing", "beta"])).toEqual([true, false, true]);
+        expect(await db.exists([])).toEqual([]);
+
+        await db.close();
+    });
+
+    test("uses cached quota counts for unfiltered user counts", async () => {
+        const db = createDb();
+        await db.create();
+        await db.load();
+
+        await db.quotaCreate("u1");
+        await db.quotaCreate("u2");
+        await db.quotaCountSet("u1", 99);
+        await db.quotaCountSet("u2", 5);
+
+        await db.add(new Tag({ name: "alpha", body: "body", owner: "u1" }));
+        await db.add(new Tag({ name: "script1", body: "console.log(1)", owner: "u1", type: "ivm" }));
+        await db.add(new Tag({ name: "beta", body: "body", owner: "u2" }));
+
+        expect(await db.count("u1")).toBe(99);
+        expect(await db.count("u1", Tag.getFlag("script"))).toBe(1);
+        expect(await db.countLeaderboard(5)).toEqual([
+            expect.objectContaining({ user: "u1", count: 99 }),
+            expect.objectContaining({ user: "u2", count: 5 })
+        ]);
+
         await db.close();
     });
 
@@ -164,6 +228,7 @@ describe("TagDatabase", () => {
             CREATE TABLE 'Quotas' (
                 'user' TEXT,
                 'quota' REAL,
+                'count' INTEGER,
                 PRIMARY KEY('user')
             ) STRICT;
             CREATE TABLE 'Tags' (
@@ -175,6 +240,11 @@ describe("TagDatabase", () => {
                 'registered' INTEGER,
                 'lastEdited' INTEGER,
                 'type' INTEGER,
+                PRIMARY KEY('name')
+            ) STRICT;
+            CREATE TABLE 'Usage' (
+                'name' TEXT,
+                'count' INTEGER,
                 PRIMARY KEY('name')
             ) STRICT;
         `);

@@ -97,14 +97,14 @@ describe("Tag", () => {
     });
 
     test("formats owners, raw output, time info, and equality helpers", async () => {
-        runtime.client.findUserById = async id =>
+        runtime.client.findUserById = id =>
             id === "found"
                 ? {
                       user: { username: "alice" },
                       nickname: "ally"
                   }
                 : null;
-        runtime.client.findUsers = async () => [
+        runtime.client.findUsers = () => [
             {
                 user: { username: "member" },
                 nickname: "mem"

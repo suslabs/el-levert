@@ -1,0 +1,1 @@
+INSERT OR IGNORE INTO Usage VALUES ($name, 0);

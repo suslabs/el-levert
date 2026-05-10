@@ -57,7 +57,6 @@ describe("Merged Branch Coverage", () => {
     let command;
     let userMsg;
     let adminMsg;
-    let otherMsg;
     let guildMsg;
 
     async function run(args, msg = userMsg) {
@@ -87,13 +86,6 @@ describe("Merged Branch Coverage", () => {
             author: {
                 id: "admin-user",
                 username: "admin"
-            }
-        });
-
-        otherMsg = createCommandMessage("%tag", {
-            author: {
-                id: "user-2",
-                username: "blake"
             }
         });
 
@@ -237,7 +229,7 @@ describe("Merged Branch Coverage", () => {
             expect(await run("add beta body")).toContain("Create failed");
 
             const takenErr = new TagError("Tag already exists", {
-                getOwner: async () => "not found"
+                getOwner: () => Promise.resolve("not found")
             });
 
             vi.spyOn(runtime.client.tagManager, "add").mockRejectedValueOnce(takenErr);
@@ -271,10 +263,10 @@ describe("Merged Branch Coverage", () => {
             expect(await run("chown add target")).toContain("is a __command__");
             expect(await run("chown alpha")).toContain("Invalid target user");
 
-            runtime.client.findUsers = async () => [];
+            runtime.client.findUsers = () => [];
             expect(await run("chown alpha ghost")).toContain("User `ghost` not found");
 
-            runtime.client.findUsers = async query => [
+            runtime.client.findUsers = query => [
                 {
                     id: `${query}-id`,
                     user: {
@@ -391,11 +383,11 @@ describe("Merged Branch Coverage", () => {
         test("covers list, count, search, random, leaderboard, dump, and fullsearch branches", async () => {
             expect(await run("list")).toContain("You don't have any tags");
 
-            runtime.client.findUsers = async () => [];
+            runtime.client.findUsers = () => [];
             expect(await run("list ghost")).toContain("User `ghost` not found");
             expect(await run("count ghost")).toContain("User `ghost` not found");
 
-            runtime.client.findUsers = async query => [
+            runtime.client.findUsers = query => [
                 {
                     id: `${query}-id`,
                     user: {
@@ -482,7 +474,7 @@ describe("Merged Branch Coverage", () => {
                 }
             ]);
 
-            expect(await run("leaderboard")).toContain("count/size");
+            expect(await run("leaderboard")).toContain("count/size/usage");
             expect(await run("leaderboard nope")).toContain("Invalid leaderboard type");
             expect(await run("leaderboard count nope")).toContain("Invalid limit");
 
@@ -513,6 +505,23 @@ describe("Merged Branch Coverage", () => {
 
             expect(await run("leaderboard size 1")).toMatchObject({
                 content: ":information_source: Tag size leaderboard:"
+            });
+
+            vi.spyOn(runtime.client.tagManager, "leaderboard").mockResolvedValueOnce([
+                {
+                    name: "alpha",
+                    count: 3,
+                    exists: true
+                },
+                {
+                    name: "beta",
+                    count: 2,
+                    exists: false
+                }
+            ]);
+
+            expect(await run("leaderboard usage 2")).toMatchObject({
+                content: ":information_source: Tag usage leaderboard:"
             });
 
             vi.spyOn(runtime.client.tagManager, "dump").mockResolvedValueOnce([]);

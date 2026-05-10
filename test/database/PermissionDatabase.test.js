@@ -52,6 +52,11 @@ describe("PermissionDatabase", () => {
         await db.addGroup(member);
         await db.addGroup(mod);
 
+        expect(await db.groupExists("member")).toBe(true);
+        expect(await db.groupExists("missing")).toBe(false);
+        expect(await db.groupExists(["member", "missing", "mod"])).toEqual([true, false, true]);
+        expect(await db.userExists("42")).toBe(false);
+        expect(await db.userExists(["42", "99"])).toEqual([false, false]);
         expect(await db.fetchGroup("missing")).toBeNull();
         expect(await db.fetchByLevel(99)).toBeNull();
         expect(await db.fetch("42")).toBeNull();
@@ -60,6 +65,7 @@ describe("PermissionDatabase", () => {
         expect((await db.listGroups()).map(group => group.name)).toEqual(["mod", "member"]);
 
         await db.add(member, user);
+        expect(await db.userExists("42")).toBe(true);
         expect((await db.fetch("42")).map(group => group.name)).toEqual(["member"]);
         expect(await db.listUsers()).toEqual([expect.objectContaining({ id: 1, user: "42", group: "member" })]);
 
@@ -71,10 +77,12 @@ describe("PermissionDatabase", () => {
         expect(await db.fetchGroup("mod")).toBeNull();
         expect(await db.fetchGroup("admin")).toMatchObject({ name: "admin", level: 10 });
 
+        await db.transferUsers(mod, admin);
         await db.add(admin, new User({ user: "99" }));
         await db.removeByGroup(admin);
         expect(await db.fetch("42")).toBeNull();
         expect(await db.fetch("99")).toBeNull();
+        expect(await db.userExists(["42", "99"])).toEqual([false, false]);
 
         await db.add(member, user);
         await db.remove(member, user);
@@ -86,5 +94,6 @@ describe("PermissionDatabase", () => {
 
         await db.removeGroup(member);
         expect(await db.fetchGroup("member")).toBeNull();
+        expect(await db.groupExists([])).toEqual([]);
     });
 });

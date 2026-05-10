@@ -49,6 +49,11 @@ describe("ReminderDatabase", () => {
         await db.add(new Reminder({ user: "42", end: 1000, msg: "early" }));
         await db.add(new Reminder({ user: "99", end: 2000, msg: "other" }));
 
+        expect(await db.exists("42")).toBe(true);
+        expect(await db.exists("404")).toBe(false);
+        expect(await db.exists(["42", "404", "99"])).toEqual([true, false, true]);
+        expect(await db.exists([])).toEqual([]);
+
         const userReminders = await db.fetch("42");
         expect(userReminders.map(reminder => reminder.msg)).toEqual(["early", "late"]);
         expect(userReminders.map(reminder => reminder.id)).toEqual([2, 1]);
@@ -61,6 +66,7 @@ describe("ReminderDatabase", () => {
 
         await db.removeAll("42");
         expect(await db.fetch("42")).toBeNull();
+        expect(await db.exists("42")).toBe(false);
         expect((await db.list()).map(reminder => reminder.user)).toEqual(["99"]);
     });
 });

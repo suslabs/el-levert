@@ -11,15 +11,32 @@ function sortTags(tags) {
 }
 
 class TagDatabase extends SqlDatabase {
-    static legacyUpdateAliasesSql =
-        "UPDATE Tags SET hops = $newName " +
-        "WHERE hops = $name OR hops = name || ',' || $name OR hops LIKE name || ',' || $name || ',%';";
-
     async _loadQueries() {
         await this._detectAliasColumn();
         await this._readQueries();
         this._rewriteAliasQueries();
         await this._bindQueries();
+    }
+
+    async exists(name) {
+        if (Array.isArray(name)) {
+            if (Util.empty(name)) {
+                return [];
+            }
+
+            const rows = await this.tagQueries.existsMultiple.all({
+                    $names: JSON.stringify(name)
+                }),
+                existing = new Set(rows.map(row => row.name));
+
+            return name.map(tagName => existing.has(tagName));
+        } else {
+            const row = await this.tagQueries.exists.get({
+                $name: name
+            });
+
+            return typeof row._data !== "undefined";
+        }
     }
 
     async fetch(name) {
@@ -37,9 +54,15 @@ class TagDatabase extends SqlDatabase {
     async add(tag) {
         tag.setRegistered();
 
-        return await this.tagQueries.add.run({
+        const res = await this.tagQueries.add.run({
             ...tag.getData("$", true, ["aliasName", "name", "body", "owner", "args", "registered", "type"])
         });
+
+        if (res.changes > 0) {
+            await this.usageCreate(tag.name);
+        }
+
+        return res;
     }
 
     async edit(tag) {
@@ -52,10 +75,16 @@ class TagDatabase extends SqlDatabase {
     }
 
     async updateProps(name, tag) {
-        return await this.tagQueries.updateProps.run({
+        const res = await this.tagQueries.updateProps.run({
             $tagName: name,
             ...tag.getData("$")
         });
+
+        if (res.changes > 0 && name !== tag.name) {
+            await this.usageRename(name, tag.name);
+        }
+
+        return res;
     }
 
     async chown(tag, newOwner) {
@@ -76,10 +105,16 @@ class TagDatabase extends SqlDatabase {
         const oldName = tag.name;
         tag.setName(newName);
 
-        return await this.tagQueries.rename.run({
+        const res = await this.tagQueries.rename.run({
             $oldName: oldName,
             ...tag.getData("$", true, ["aliasName", "name", "lastEdited", "type"])
         });
+
+        if (res.changes > 0) {
+            await this.usageRename(oldName, newName);
+        }
+
+        return res;
     }
 
     async updateAliases(name, newName) {
@@ -136,20 +171,20 @@ class TagDatabase extends SqlDatabase {
     }
 
     async count(user = null, flag = null) {
+        if (user !== null && flag === null) {
+            const cached = await this.quotaCountFetch(user);
+
+            if (cached !== null) {
+                return cached;
+            }
+        }
+
         const res = await this.tagQueries.count.get({
             $user: user,
             $flag: flag
         });
 
         return res.count;
-    }
-
-    async countLeaderboard(limit) {
-        const rows = await this.tagQueries.countLeaderboard.all({
-            $limit: limit
-        });
-
-        return Array.from(rows);
     }
 
     async quotaFetch(user) {
@@ -177,8 +212,80 @@ class TagDatabase extends SqlDatabase {
         });
     }
 
+    async quotaCountFetch(user) {
+        const count = await this.quotaQueries.countFetch.get({
+            $user: user
+        });
+
+        if (typeof count._data === "undefined") {
+            return null;
+        }
+
+        return count.count;
+    }
+
+    async quotaCountSet(user, count) {
+        return await this.quotaQueries.countSet.run({
+            $user: user,
+            $count: count
+        });
+    }
+
     async sizeLeaderboard(limit) {
         const rows = await this.quotaQueries.sizeLeaderboard.all({
+            $limit: limit
+        });
+
+        return Array.from(rows);
+    }
+
+    async countLeaderboard(limit) {
+        const rows = await this.quotaQueries.countLeaderboard.all({
+            $limit: limit
+        });
+
+        return Array.from(rows);
+    }
+
+    async usageFetch(name) {
+        const usage = await this.usageQueries.fetch.get({
+            $name: name
+        });
+
+        if (typeof usage._data === "undefined") {
+            return null;
+        }
+
+        return usage.count;
+    }
+
+    async usageCreate(name) {
+        return await this.usageQueries.create.run({
+            $name: name
+        });
+    }
+
+    async usageDelete(name) {
+        return await this.usageQueries.delete.run({
+            $name: name
+        });
+    }
+
+    async usageIncrement(name) {
+        return await this.usageQueries.increment.run({
+            $name: name
+        });
+    }
+
+    async usageRename(oldName, newName) {
+        return await this.usageQueries.rename.run({
+            $oldName: oldName,
+            $newName: newName
+        });
+    }
+
+    async usageLeaderboard(limit) {
+        const rows = await this.usageQueries.leaderboard.all({
             $limit: limit
         });
 
@@ -193,7 +300,10 @@ class TagDatabase extends SqlDatabase {
     }
 
     _rewriteAliasQueries() {
+        const legacyQueries = this.queryStrings.legacyQueries;
+
         if (this._aliasColumn !== "hops") {
+            delete this.queryStrings.legacyQueries;
             return;
         }
 
@@ -203,7 +313,8 @@ class TagDatabase extends SqlDatabase {
             tagQueries[name] = query.replaceAll(/(?<!\$)\baliasName\b/g, "hops");
         }
 
-        tagQueries.updateAliases = this.constructor.legacyUpdateAliasesSql;
+        tagQueries.updateAliases = legacyQueries.updateAliases;
+        delete this.queryStrings.legacyQueries;
     }
 }
 

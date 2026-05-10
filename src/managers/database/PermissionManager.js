@@ -175,6 +175,41 @@ class PermissionManager extends DBManager {
         return await this.perm_db.fetch(id);
     }
 
+    async userExists(id) {
+        if (!this.enabled) {
+            return Array.isArray(id) ? id.map(_ => false) : false;
+        }
+
+        if (Array.isArray(id)) {
+            const out = Array(id.length).fill(false),
+                checkIds = [],
+                checkIndexes = [];
+
+            for (const [index, userId] of id.entries()) {
+                if (userId === this.owner.user) {
+                    continue;
+                }
+
+                checkIds.push(userId);
+                checkIndexes.push(index);
+            }
+
+            const exists = await this.perm_db.userExists(checkIds);
+
+            for (const [index, existsIndex] of checkIndexes.entries()) {
+                out[existsIndex] = exists[index];
+            }
+
+            return out;
+        }
+
+        if (id === this.owner.user) {
+            return false;
+        }
+
+        return await this.perm_db.userExists(id);
+    }
+
     async fetchByLevel(level, validate = false) {
         if (level === this._ownerLevel) {
             return [OwnerGroup];
@@ -237,6 +272,47 @@ class PermissionManager extends DBManager {
         } else {
             return group;
         }
+    }
+
+    async groupExists(name, validate = false) {
+        if (!this.enabled) {
+            return Array.isArray(name) ? name.map(_ => false) : false;
+        }
+
+        if (Array.isArray(name)) {
+            if (validate) {
+                name = name.map(groupName => this.checkName(groupName));
+            }
+
+            const out = Array(name.length).fill(false),
+                checkNames = [],
+                checkIndexes = [];
+
+            for (const [index, groupName] of name.entries()) {
+                if (groupName === OwnerGroup.name) {
+                    continue;
+                }
+
+                checkNames.push(groupName);
+                checkIndexes.push(index);
+            }
+
+            const exists = await this.perm_db.groupExists(checkNames);
+
+            for (const [index, existsIndex] of checkIndexes.entries()) {
+                out[existsIndex] = exists[index];
+            }
+
+            return out;
+        } else if (validate) {
+            name = this.checkName(name);
+        }
+
+        if (name === OwnerGroup.name) {
+            return false;
+        }
+
+        return await this.perm_db.groupExists(name);
     }
 
     async add(group, id, validate = false) {

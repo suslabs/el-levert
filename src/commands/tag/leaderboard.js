@@ -4,14 +4,24 @@ import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 
-const leaderboardTypes = ["count", "size"];
+const leaderboardTypes = ["count", "size", "usage"];
 const defaultLimit = 10,
     maxLimit = 50;
 
 function formatLeaderboard(leaderboard, type) {
     return leaderboard
         .map((entry, i) => {
-            let str = `${i + 1}. \`${entry.user.username}\`: `;
+            let str;
+
+            switch (type) {
+                case "count":
+                case "size":
+                    str = `${i + 1}. \`${entry.user.username}\`: `;
+                    break;
+                case "usage":
+                    str = `${i + 1}. \`${entry.name}${entry.exists ? "" : "*"}\`: `;
+                    break;
+            }
 
             switch (type) {
                 case "count":
@@ -19,6 +29,9 @@ function formatLeaderboard(leaderboard, type) {
                     break;
                 case "size":
                     str += `**${Util.formatNumber(entry.quota, 2)}** kb`;
+                    break;
+                case "usage":
+                    str += `**${Util.formatNumber(entry.count)}** use${entry.count > 1 ? "s" : ""}`;
                     break;
             }
 
@@ -48,9 +61,8 @@ class TagLeaderboardCommand {
     };
 
     async handler(ctx) {
-
         if (Util.empty(ctx.argsText)) {
-            return `${getEmoji("info")} ${this.getArgsHelp(`(count/size) [limit <= ${maxLimit}]`)}`;
+            return `${getEmoji("info")} ${this.getArgsHelp(`(count/size/usage) [limit <= ${maxLimit}]`)}`;
         }
 
         const l_type = ctx.arg("leaderboardType"),

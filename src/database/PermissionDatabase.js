@@ -6,6 +6,27 @@ import User from "../structures/permission/User.js";
 import Util from "../util/Util.js";
 
 class PermissionDatabase extends SqlDatabase {
+    async groupExists(name) {
+        if (Array.isArray(name)) {
+            if (Util.empty(name)) {
+                return [];
+            }
+
+            const rows = await this.groupQueries.existsMultiple.all({
+                    $names: JSON.stringify(name)
+                }),
+                existing = new Set(rows.map(row => row.name));
+
+            return name.map(groupName => existing.has(groupName));
+        } else {
+            const row = await this.groupQueries.exists.get({
+                $name: name
+            });
+
+            return typeof row._data !== "undefined";
+        }
+    }
+
     async fetchGroup(name) {
         const row = await this.groupQueries.fetch.get({
             $name: name
@@ -56,6 +77,27 @@ class PermissionDatabase extends SqlDatabase {
 
         groups.sort((a, b) => b.level - a.level);
         return groups;
+    }
+
+    async userExists(id) {
+        if (Array.isArray(id)) {
+            if (Util.empty(id)) {
+                return [];
+            }
+
+            const rows = await this.userQueries.existsMultiple.all({
+                    $users: JSON.stringify(id)
+                }),
+                existing = new Set(rows.map(row => row.user));
+
+            return id.map(userId => existing.has(userId));
+        } else {
+            const row = await this.userQueries.exists.get({
+                $user: id
+            });
+
+            return typeof row._data !== "undefined";
+        }
     }
 
     async fetch(id) {

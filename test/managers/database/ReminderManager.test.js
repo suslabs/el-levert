@@ -29,7 +29,7 @@ beforeEach(async () => {
 
     managers = [];
 
-    runtime.client.findUserById = async id => ({
+    runtime.client.findUserById = id => ({
         id,
         username: `name-${id}`,
         send: vi.fn()
@@ -56,10 +56,13 @@ describe("ReminderManager", () => {
         expect(manager.checkMessage("  hello  ")).toBe("hello");
 
         const first = await manager.add("u1", now + 1000, "first", true);
-        const second = await manager.add("u1", now + 500, "second", true);
+        await manager.add("u1", now + 500, "second", true);
         await manager.add("u2", now + 1500, "other", true);
 
         expect(first).toBeInstanceOf(Reminder);
+        expect(await manager.exists("u1")).toBe(true);
+        expect(await manager.exists("ghost")).toBe(false);
+        expect(await manager.exists(["u1", "ghost", "u2"])).toEqual([true, false, true]);
         expect((await manager.list("u1")).map(reminder => reminder.msg)).toEqual(["second", "first"]);
 
         const removed = await manager.remove("u1", 0, true);
@@ -68,6 +71,7 @@ describe("ReminderManager", () => {
 
         expect(await manager.removeAll("missing")).toBe(false);
         expect(await manager.removeAll("u2")).toBe(true);
+        expect(await manager.exists("u2")).toBe(false);
         await expect(manager.add("u6", now - 1, "late", true)).rejects.toThrow("Invalid end time");
     });
 
@@ -79,7 +83,7 @@ describe("ReminderManager", () => {
 
         expect(await manager.remove("nobody", 0, false)).toBeNull();
 
-        manager.list = async () => [new Reminder({ id: 999, user: "ghost", end: now, msg: "ghost" })];
+        manager.list = () => [new Reminder({ id: 999, user: "ghost", end: now, msg: "ghost" })];
         const stale = await manager.remove("ghost", 0, false);
         expect(stale.msg).toBe("ghost");
 
@@ -92,7 +96,7 @@ describe("ReminderManager", () => {
 
         await manager.add("u7", now - 10, "due", false);
         const sendSpy = vi.fn();
-        runtime.client.findUserById = async () => ({
+        runtime.client.findUserById = () => ({
             id: "u7",
             username: "name-u7",
             send: sendSpy
@@ -108,6 +112,7 @@ describe("ReminderManager", () => {
         expect(manager._sendTimer).toBeNull();
 
         const disabled = await createManager(false);
+        expect(await disabled.exists("u7")).toBe(false);
         disabled.startSendLoop();
         expect(disabled._sendTimer).toBeNull();
     });

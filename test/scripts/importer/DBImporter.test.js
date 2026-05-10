@@ -95,4 +95,60 @@ describe("DBImporter", () => {
         expect(data.name).toBe("alias_tag");
         expect(data.aliasName).toBe("target");
     });
+
+    test("fix recalculates quota counts, prunes zero usage, and preserves historical usage", async () => {
+        const liveRuntime = await createRuntime({
+                loadVMs: false
+            }),
+            logger = {
+                info: vi.fn(),
+                warn: vi.fn(),
+                error: vi.fn()
+            };
+
+        try {
+            const importer = new DBImporter(liveRuntime.client.tagManager, logger),
+                alpha = await liveRuntime.client.tagManager.add("alpha", "body", "u1", "text");
+
+            await liveRuntime.client.tagManager.alias(null, alpha, "", {
+                name: "beta",
+                owner: "u1"
+            });
+            await liveRuntime.client.tagManager.add("gamma", "console.log(1)", "u2", "ivm");
+            await liveRuntime.client.tagManager.add("delta", "body", "u3", "text");
+            await liveRuntime.client.tagManager.execute(await liveRuntime.client.tagManager.fetch("alpha"), "");
+            await liveRuntime.client.tagManager.execute(await liveRuntime.client.tagManager.fetch("delta"), "");
+            await liveRuntime.client.tagManager.delete(await liveRuntime.client.tagManager.fetch("delta"));
+
+            await liveRuntime.client.tagManager.tag_db.db.run("DELETE FROM Quotas WHERE 1=1;");
+            await liveRuntime.client.tagManager.tag_db.db.run(
+                "INSERT INTO Quotas (user, quota, count) VALUES ($user, $quota, $count);",
+                {
+                    $user: "ghost",
+                    $quota: 9,
+                    $count: 9
+                }
+            );
+            await liveRuntime.client.tagManager.tag_db.db.run(
+                "INSERT INTO Usage (name, count) VALUES ($name, $count);",
+                {
+                    $name: "orphan",
+                    $count: 5
+                }
+            );
+
+            await importer.fix();
+
+            expect(await liveRuntime.client.tagManager.tag_db.quotaFetch("ghost")).toBeNull();
+            expect(await liveRuntime.client.tagManager.tag_db.quotaCountFetch("u1")).toBe(2);
+            expect(await liveRuntime.client.tagManager.tag_db.quotaCountFetch("u2")).toBe(1);
+            expect(await liveRuntime.client.tagManager.tag_db.quotaCountFetch("u3")).toBeNull();
+            expect(await liveRuntime.client.tagManager.tag_db.usageFetch("alpha")).toBe(1);
+            expect(await liveRuntime.client.tagManager.tag_db.usageFetch("beta")).toBeNull();
+            expect(await liveRuntime.client.tagManager.tag_db.usageFetch("delta")).toBe(1);
+            expect(await liveRuntime.client.tagManager.tag_db.usageFetch("orphan")).toBe(5);
+        } finally {
+            await cleanupRuntime(liveRuntime);
+        }
+    });
 });
