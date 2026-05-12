@@ -166,7 +166,12 @@ class ReminderManager extends DBManager {
         const reminders = await this.listAll(),
             past = reminders.filter(reminder => reminder.isPast(date));
 
-        await Promise.all(past.map(reminder => this.remind_db.remove(reminder)));
+        await this.remind_db.transactionImmediate(async trx => {
+            for (const reminder of past) {
+                await trx.remove(reminder);
+            }
+        });
+
         return past;
     }
 

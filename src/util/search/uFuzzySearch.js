@@ -2,7 +2,6 @@ import uFuzzy from "@leeoniya/ufuzzy";
 
 import Util from "../Util.js";
 import TypeTester from "../TypeTester.js";
-import ArrayUtil from "../ArrayUtil.js";
 
 const uFuzzyOpts = {
     alpha: "a-z"

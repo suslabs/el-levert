@@ -422,14 +422,16 @@ class PermissionManager extends DBManager {
             this.checkName(group.name);
         }
 
-        const res = await this.perm_db.removeGroup(group),
-            removed = res.changes > 0;
+        await this.perm_db.transactionImmediate(async trx => {
+            const res = await trx.removeGroup(group),
+                removed = res.changes > 0;
 
-        if (validate && !removed) {
-            throw new PermissionError("Group doesn't exist", group.name);
-        }
+            if (validate && !removed) {
+                throw new PermissionError("Group doesn't exist", group.name);
+            }
 
-        await this.perm_db.removeByGroup(group);
+            await trx.removeByGroup(group);
+        });
 
         getLogger().info(`Removed group: "${group.name}"`);
         return group;
@@ -487,19 +489,21 @@ class PermissionManager extends DBManager {
             newGroup.setLevel(newLevel);
         }
 
-        const res = await this.perm_db.updateGroup(group, newGroup),
-            updated = res.changes > 0;
+        await this.perm_db.transactionImmediate(async trx => {
+            const res = await trx.updateGroup(group, newGroup),
+                updated = res.changes > 0;
 
-        if (updated) {
-            getLogger().info(`Updated group: "${group.name}" with name: "${newName}", level: ${newLevel}`);
-        } else if (validateProvided) {
-            throw new PermissionError("Group doesn't exist", group.name);
-        }
+            if (updated) {
+                getLogger().info(`Updated group: "${group.name}" with name: "${newName}", level: ${newLevel}`);
+            } else if (validateProvided) {
+                throw new PermissionError("Group doesn't exist", group.name);
+            }
 
-        if (updatedName) {
-            await this.perm_db.transferUsers(group, newGroup);
-            getLogger().info(`Transferred group: "${group.name}" users to: "${newName}".`);
-        }
+            if (updatedName) {
+                await trx.transferUsers(group, newGroup);
+                getLogger().info(`Transferred group: "${group.name}" users to: "${newName}".`);
+            }
+        });
 
         return newGroup;
     }

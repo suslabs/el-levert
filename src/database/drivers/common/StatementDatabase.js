@@ -30,13 +30,13 @@ export default function (base) {
         }
 
         async finalizeAll() {
-            return await ArrayUtil.wipeArray(this.statements, async st => {
-                if (st.finalized) {
+            return await ArrayUtil.wipeArray(this.statements, async statement => {
+                if (statement.finalized) {
                     return;
                 }
 
                 try {
-                    await st.finalize(false);
+                    await statement.finalize(false);
                 } catch (err) {
                     if (err.name !== "DatabaseError") {
                         throw err;

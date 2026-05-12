@@ -19,6 +19,8 @@ class Loader {
         this.options = options;
 
         this.type = options.type ?? "";
+        this.pluralName = options.pluralName ?? "";
+
         this.throwOnFailure = options.throwOnFailure ?? true;
         this.dataField = options.dataField ?? "data";
         this.parentLoader = options.parent ?? null;
@@ -42,6 +44,14 @@ class Loader {
             name = [this.name, type].filter(str => !Util.empty(str)).join(" ");
 
         return capitalized ? Util.capitalize(name) : name;
+    }
+
+    getPluralName(capitalized = false) {
+        if (Util.empty(this.pluralName)) {
+            return Util.empty(this.name) ? "" : `${this.name}s`;
+        }
+
+        return capitalized ? Util.capitalize(this.pluralName) : this.pluralName;
     }
 
     getData(errorIfNotFound = true) {

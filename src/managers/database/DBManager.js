@@ -41,7 +41,7 @@ class DBManager extends Manager {
     }
 
     async unload() {
-        return await this._closeDatabase();
+        return await this._unloadDatabase();
     }
 
     static _dbOptions = {
@@ -67,7 +67,11 @@ class DBManager extends Manager {
     }
 
     async _loadDatabase() {
-        const db = new this._classType(this._dbPath, this._queryDir, DBManager._dbOptions);
+        const db = new this._classType(this._dbPath, this._queryDir, {
+            ...DBManager._dbOptions,
+            logger: getLogger()
+        });
+
         this[this.fieldName] = db;
 
         if (!(await this.checkDatabase())) {
@@ -78,7 +82,7 @@ class DBManager extends Manager {
         getLogger().info(`Successfully loaded ${this.dbName} database.`);
     }
 
-    async _closeDatabase() {
+    async _unloadDatabase() {
         await this[this.fieldName].close();
         delete this[this.fieldName];
         getLogger().info(`Successfully closed ${this.dbName} database.`);

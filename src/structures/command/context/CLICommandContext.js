@@ -1,4 +1,3 @@
-import TypeTester from "../../../util/TypeTester.js";
 import TextCommandContext from "./TextCommandContext.js";
 
 class CLICommandContext extends TextCommandContext {

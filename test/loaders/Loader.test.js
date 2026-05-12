@@ -66,6 +66,8 @@ describe("Merged Branch Coverage", () => {
 
             expect(loader.getName()).toBe("config json file");
             expect(loader.getName(true)).toBe("Config json file");
+            expect(loader.getPluralName()).toBe("configs");
+            expect(new SyncLoader("", null).getPluralName()).toBe("");
             expect(loader.getData()).toEqual({
                 ok: true
             });

@@ -3,6 +3,7 @@ import { EventEmitter } from "node:events";
 import { describe, expect, test, vi } from "vitest";
 
 import DatabaseUtil from "../../../src/util/database/DatabaseUtil.js";
+import DatabaseError from "../../../src/errors/DatabaseError.js";
 
 describe("DatabaseUtil", () => {
     test("registers, removes, and prefixes database events", () => {
@@ -34,5 +35,19 @@ describe("DatabaseUtil", () => {
 
         expect(source.listenerCount("open")).toBe(0);
         expect(DatabaseUtil.getEventId()).toMatch(/^[0-9a-f]{8}$/);
+    });
+
+    test("wraps and routes errors", () => {
+        const target = new EventEmitter();
+        const wrapped = DatabaseUtil.wrapError(new Error("boom"));
+
+        expect(wrapped).toBeInstanceOf(DatabaseError);
+        expect(DatabaseUtil.wrapError(wrapped)).toBe(wrapped);
+
+        expect(() => {
+            DatabaseUtil.checkSync(target, "promiseError", true, wrapped);
+        }).toThrow("boom");
+
+        expect(DatabaseUtil.throwAsync(target, "promiseError", false, () => {}, () => {}, null)).toBe(false);
     });
 });

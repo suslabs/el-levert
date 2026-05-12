@@ -3,7 +3,6 @@ import { EmbedBuilder } from "discord.js";
 import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-import ParserUtil from "../../util/commands/ParserUtil.js";
 import RegexUtil from "../../util/misc/RegexUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 
@@ -137,7 +136,6 @@ class TagFullSearchCommand {
     };
 
     async handler(ctx) {
-
         if (Util.empty(ctx.argsText)) {
             return `${getEmoji("info")} ${this.getArgsHelp("query [all/max_results]")}`;
         }

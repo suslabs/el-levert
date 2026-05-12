@@ -1,9 +1,13 @@
+import path from "node:path";
+
 import SqlDatabase from "./SqlDatabase.js";
+import OpenModes from "./drivers/sqlite/OpenModes.js";
 
 import Tag from "../structures/tag/Tag.js";
 
 import Util from "../util/Util.js";
 import ArrayUtil from "../util/ArrayUtil.js";
+import TypeTester from "../util/TypeTester.js";
 
 function sortTags(tags) {
     const objs = typeof Util.first(tags) !== "string";
@@ -11,11 +15,18 @@ function sortTags(tags) {
 }
 
 class TagDatabase extends SqlDatabase {
-    async _loadQueries() {
-        await this._detectAliasColumn();
-        await this._readQueries();
-        this._rewriteAliasQueries();
-        await this._bindQueries();
+    constructor(dbPath, queryPath, options) {
+        options = TypeTester.isObject(options) ? options : {};
+
+        super(dbPath, queryPath, options);
+
+        this.migrationsPath ??= path.resolve(this.queryPath, "..", "..", "migrations", "tag");
+    }
+
+    async load() {
+        await this.open(OpenModes.OPEN_READWRITE);
+        await this._migrateLegacySchema();
+        return await this._loadDatabase();
     }
 
     async exists(name) {
@@ -292,29 +303,23 @@ class TagDatabase extends SqlDatabase {
         return Array.from(rows);
     }
 
-    async _detectAliasColumn() {
+    async _getTagColumns() {
         const rows = await this.db.all("PRAGMA table_info(Tags);"),
-            columns = Array.from(rows).map(row => row.name);
+            columns = new Set(Array.from(rows).map(row => row.name));
 
-        this._aliasColumn = columns.includes("aliasName") || !columns.includes("hops") ? "aliasName" : "hops";
+        return columns;
     }
 
-    _rewriteAliasQueries() {
-        const legacyQueries = this.queryStrings.legacyQueries;
+    async _migrateLegacySchema() {
+        const columns = await this._getTagColumns();
 
-        if (this._aliasColumn !== "hops") {
-            delete this.queryStrings.legacyQueries;
+        if (!columns.has("hops") || columns.has("aliasName")) {
             return;
         }
 
-        const tagQueries = this.queryStrings.tagQueries;
-
-        for (const [name, query] of Object.entries(tagQueries)) {
-            tagQueries[name] = query.replaceAll(/(?<!\$)\baliasName\b/g, "hops");
-        }
-
-        tagQueries.updateAliases = legacyQueries.updateAliases;
-        delete this.queryStrings.legacyQueries;
+        await this.db.migrate({
+            migrationsPath: this.migrationsPath
+        });
     }
 }
 

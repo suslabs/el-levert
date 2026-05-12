@@ -37,6 +37,10 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+    try {
+        await vi.runAllTimersAsync();
+    } catch (_) {}
+
     vi.useRealTimers();
 
     for (const manager of managers) {
@@ -79,7 +83,9 @@ describe("ReminderManager", () => {
     });
 
     test("covers loop, disabled, and stale-removal paths", async () => {
-        vi.useFakeTimers();
+        vi.useFakeTimers({
+            toFake: ["Date", "setTimeout", "clearTimeout", "setInterval", "clearInterval"]
+        });
 
         const manager = await createManager();
         const now = Date.now();
@@ -118,5 +124,44 @@ describe("ReminderManager", () => {
         expect(await disabled.exists("u7")).toBe(false);
         disabled.startSendLoop();
         expect(disabled._sendTimer).toBeNull();
+    });
+
+    test("rolls back past-reminder cleanup when a later delete fails", async () => {
+        const manager = await createManager();
+        const now = Date.now();
+
+        const first = await manager.add("u1", now - 100, "first", false);
+        const second = await manager.add("u2", now - 50, "second", false);
+
+        const originalRemove = manager.remind_db.remove;
+        let removeCount = 0;
+
+        manager.remind_db.remove = vi.fn(async function (reminder) {
+            removeCount++;
+
+            if (removeCount === 2) {
+                throw new Error("remove failed");
+            }
+
+            return await originalRemove.call(this, reminder);
+        });
+
+        await expect(manager.getPastReminders(now)).rejects.toThrow("remove failed");
+
+        expect(
+            (await manager.listAll()).map(reminder => ({
+                user: reminder.user,
+                msg: reminder.msg
+            }))
+        ).toEqual([
+            {
+                user: first.user,
+                msg: first.msg
+            },
+            {
+                user: second.user,
+                msg: second.msg
+            }
+        ]);
     });
 });

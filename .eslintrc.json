@@ -5,14 +5,7 @@
         "es2023": true
     },
     "extends": "eslint:recommended",
-    "overrides": [
-        {
-            "files": ["./test/**/*.test.js"],
-            "env": {
-                "jest": true
-            }
-        }
-    ],
+    "ignorePatterns": ["test/**"],
     "parserOptions": {
         "requireConfigFile": false,
         "babelOptions": {

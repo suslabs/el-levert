@@ -38,7 +38,7 @@ class CommandLoader extends DirectoryLoader {
 
         this.deleteAllData();
 
-        const n = ArrayUtil.wipeArray(this.commands);
+        const n = Array.isArray(this.commands) ? ArrayUtil.wipeArray(this.commands) : 0;
         delete this.commands;
 
         this.logger?.debug(`Deleted ${n} commands.`);
@@ -54,11 +54,17 @@ class CommandLoader extends DirectoryLoader {
     }
 
     _getCommands() {
-        if (typeof this.commands === "undefined") {
-            const commands = Array.from(this.data.values());
-            this.commands = commands;
+        if (Array.isArray(this.commands)) {
+            return this.commands;
         }
 
+        if (!(this.data instanceof Map)) {
+            this.commands = [];
+            return this.commands;
+        }
+
+        const commands = Array.from(this.data.values());
+        this.commands = commands;
         return this.commands;
     }
 }

@@ -40,7 +40,10 @@ class EventLoader extends DirectoryLoader {
     removeListeners() {
         this.deleteAllData();
 
-        ArrayUtil.wipeArray(this.events, event => event.unregister());
+        if (Array.isArray(this.events)) {
+            ArrayUtil.wipeArray(this.events, event => event.unregister());
+        }
+
         delete this.events;
 
         this.logger?.info("Removed all event listeners.");
@@ -55,11 +58,17 @@ class EventLoader extends DirectoryLoader {
     }
 
     _getEvents() {
-        if (typeof this.events === "undefined") {
-            const events = Array.from(this.data.values());
-            this.events = events;
+        if (Array.isArray(this.events)) {
+            return this.events;
         }
 
+        if (!(this.data instanceof Map)) {
+            this.events = [];
+            return this.events;
+        }
+
+        const events = Array.from(this.data.values());
+        this.events = events;
         return this.events;
     }
 

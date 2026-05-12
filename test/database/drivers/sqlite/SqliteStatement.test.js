@@ -65,12 +65,12 @@ describe("SqliteStatement", () => {
         expect(selectAll._checkFinalizedSync(false)).toBe(true);
         await selectAll.finalize();
         expect(selectAll._checkFinalizedSync(true)).toBe(true);
-
-        await db.finalizeAll();
     });
 
-    test("covers finalized guards and statement-level rollback handling", async () => {
+    test("does not pin pooled root statements and preserves session rollback/finalized guards", async () => {
         const db = createDb("stmt-soft.sqlite", {
+            min: 1,
+            max: 1,
             throwErrors: false,
             autoRollback: true
         });
@@ -78,14 +78,22 @@ describe("SqliteStatement", () => {
         await db.open();
         await db.exec("CREATE TABLE Items (value TEXT UNIQUE) STRICT;");
 
-        const insert = await db.prepare("INSERT INTO Items (value) VALUES (?)");
-        await db.beginTransaction();
+        const pinned = await db.prepare("INSERT INTO Items (value) VALUES (?)");
+        expect(db.pool.pool.borrowed).toBe(0);
+
+        const extraConnection = await db.pool.acquire();
+        extraConnection.release();
+
+        await pinned.finalize();
+
+        const trx = await db.beginTransaction();
+        const insert = await trx.prepare("INSERT INTO Items (value) VALUES (?)");
         await insert.run("x");
         expect(await insert.run("x")).toBeUndefined();
-        expect(db.inTransaction).toBe(false);
+        expect(trx.inTransaction).toBe(false);
         expect((await db.get("SELECT COUNT(*) AS count FROM Items")).count).toBe(0);
+        expect(insert.finalized).toBe(true);
 
-        await insert.finalize();
         expect(await insert.bind("again")).toBeUndefined();
         expect(await insert.reset()).toBeUndefined();
         expect(await insert.run("again")).toBeUndefined();
@@ -96,8 +104,34 @@ describe("SqliteStatement", () => {
 
         expect(insert._checkFinalizedSync(false)).toBe(false);
         expect(() => {
-            db.throwErrors = true;
+            trx.throwErrors = true;
             insert._checkFinalizedSync(false);
         }).toThrow("The statement is finalized");
+    });
+
+    test("normalizes object and array bigint parameters on prepared statements", async () => {
+        const db = createDb("stmt-bigint.sqlite");
+
+        await db.open();
+        await db.exec("CREATE TABLE Items (value INTEGER, alt INTEGER) STRICT;");
+
+        const insert = await db.prepare("INSERT INTO Items (value, alt) VALUES ($value, $alt)");
+        const result = await insert.run({
+            $value: 10n,
+            $alt: [12n][0]
+        });
+        expect(result.changes).toBe(1);
+        await insert.finalize();
+
+        const select = await db.prepare("SELECT value, alt FROM Items LIMIT 1");
+        expect(await select.get()).toMatchObject({
+            value: 10,
+            alt: 12
+        });
+        await select.finalize();
+
+        const failing = await db.prepare("INSERT INTO Items (value, alt) VALUES (?, ?)");
+        await expect(failing.run(1n, 2147483648n)).rejects.toThrow("BigInt parameters");
+        await failing.finalize();
     });
 });

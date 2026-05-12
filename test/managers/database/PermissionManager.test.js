@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { cleanupRuntime, createRuntime } from "../../helpers/runtimeHarness.js";
 
@@ -112,6 +112,25 @@ describe("PermissionManager", () => {
         expect(await manager.userExists(["123", "ghost"])).toEqual([true, false]);
         expect(await manager.groupExists([])).toEqual([]);
         expect(await manager.userExists(["owner-id", "123"])).toEqual([false, true]);
+    });
+
+    test("rolls back group updates when a later manager write fails", async () => {
+        const manager = await createManager();
+        const mods = await manager.addGroup("mods", 5, true);
+
+        await manager.add(mods, "123", true);
+
+        const originalTransferUsers = manager.perm_db.transferUsers;
+        manager.perm_db.transferUsers = vi.fn(async function (group, newGroup) {
+            await originalTransferUsers.call(this, group, newGroup);
+            throw new Error("transfer failed");
+        });
+
+        await expect(manager.updateGroup(mods, "helpers", 6, true)).rejects.toThrow("transfer failed");
+
+        expect(await manager.fetchGroup("mods")).toMatchObject({ name: "mods", level: 5 });
+        expect(await manager.fetchGroup("helpers")).toBeNull();
+        expect((await manager.fetch("123")).map(group => group.name)).toEqual(["mods"]);
     });
 
     test("covers disabled and error paths without mocking the database layer", async () => {

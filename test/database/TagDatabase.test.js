@@ -55,9 +55,7 @@ describe("TagDatabase", () => {
         await db.usageIncrement("plain");
         await db.usageIncrement("plain");
         expect(await db.usageFetch("plain")).toBe(2);
-        expect(await db.usageLeaderboard(5)).toEqual([
-            expect.objectContaining({ name: "plain", count: 2 })
-        ]);
+        expect(await db.usageLeaderboard(5)).toEqual([expect.objectContaining({ name: "plain", count: 2 })]);
 
         expect(await db.fetch("missing")).toBeNull();
         expect(await db.fetch("plain")).toMatchObject({ body: "body", owner: "u1" });
@@ -221,14 +219,13 @@ describe("TagDatabase", () => {
         await db.close();
     });
 
-    test("reads old hops rows and scalarizes alias writes on an unmigrated database", async () => {
+    test("migrates the pre-refactor tag schema and uses the current aliasName queries after load", async () => {
         const db = createDb();
         await db.open(OpenModes.OPEN_RWCREATE);
         await db.db.exec(`
             CREATE TABLE 'Quotas' (
                 'user' TEXT,
                 'quota' REAL,
-                'count' INTEGER,
                 PRIMARY KEY('user')
             ) STRICT;
             CREATE TABLE 'Tags' (
@@ -242,13 +239,11 @@ describe("TagDatabase", () => {
                 'type' INTEGER,
                 PRIMARY KEY('name')
             ) STRICT;
-            CREATE TABLE 'Usage' (
-                'name' TEXT,
-                'count' INTEGER,
-                PRIMARY KEY('name')
-            ) STRICT;
         `);
-        await db.load();
+        await db.db.run("INSERT INTO Quotas VALUES ($user, $quota);", {
+            $user: "user",
+            $quota: 12.5
+        });
 
         await db.db.run("INSERT INTO Tags VALUES ($hops, $name, $body, $owner, $args, 0, 0, 1);", {
             $hops: "legacy,target,final",
@@ -257,31 +252,68 @@ describe("TagDatabase", () => {
             $owner: "user",
             $args: null
         });
+        await db.db.run("INSERT INTO Tags VALUES ($hops, $name, $body, $owner, $args, 0, 0, 1);", {
+            $hops: "plain",
+            $name: "plain",
+            $body: "body",
+            $owner: "user",
+            $args: ""
+        });
+
+        await db.load();
+
+        const tagColumns = Array.from(await db.db.all("PRAGMA table_info(Tags);")).map(row => row.name);
+        const quotaColumns = Array.from(await db.db.all("PRAGMA table_info(Quotas);")).map(row => row.name);
+
+        expect(tagColumns).toContain("aliasName");
+        expect(tagColumns).not.toContain("hops");
+        expect(quotaColumns).toContain("count");
+
+        let raw = await db.db.get("SELECT aliasName FROM Tags WHERE name = $name", {
+            $name: "legacy"
+        });
+        expect(raw.aliasName).toBe("target");
+
+        raw = await db.db.get("SELECT aliasName FROM Tags WHERE name = $name", {
+            $name: "plain"
+        });
+        expect(raw.aliasName).toBeNull();
+
+        raw = await db.db.get("SELECT count FROM Quotas WHERE user = $user", {
+            $user: "user"
+        });
+        expect(raw.count).toBe(2);
+
+        raw = await db.db.get("SELECT count FROM Usage WHERE name = $name", {
+            $name: "legacy"
+        });
+        expect(raw.count).toBe(0);
 
         const legacy = await db.fetch("legacy");
         expect(legacy.aliasName).toBe("target");
         expect(legacy.hops).toEqual(["legacy", "target"]);
+        expect(await db.count("user")).toBe(2);
 
-        const target = new Tag({ name: "new_alias", body: "", owner: "user", aliasName: "target" });
-        await db.add(target);
+        const alias = new Tag({ name: "new_alias", body: "", owner: "user", aliasName: "target" });
+        await db.add(alias);
 
-        let raw = await db.db.get("SELECT hops FROM Tags WHERE name = $name", {
+        raw = await db.db.get("SELECT aliasName FROM Tags WHERE name = $name", {
             $name: "new_alias"
         });
-        expect(raw.hops).toBe("target");
+        expect(raw.aliasName).toBe("target");
         expect(await db.fetch("new_alias")).toMatchObject({ aliasName: "target" });
 
         await db.updateAliases("target", "renamed");
 
-        raw = await db.db.get("SELECT hops FROM Tags WHERE name = $name", {
+        raw = await db.db.get("SELECT aliasName FROM Tags WHERE name = $name", {
             $name: "legacy"
         });
-        expect(raw.hops).toBe("renamed");
+        expect(raw.aliasName).toBe("renamed");
 
-        raw = await db.db.get("SELECT hops FROM Tags WHERE name = $name", {
+        raw = await db.db.get("SELECT aliasName FROM Tags WHERE name = $name", {
             $name: "new_alias"
         });
-        expect(raw.hops).toBe("renamed");
+        expect(raw.aliasName).toBe("renamed");
 
         await db.close();
     });

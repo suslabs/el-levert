@@ -21,10 +21,15 @@ class FileLoader extends Loader {
 
     set path(val) {
         this._path = typeof val === "string" ? path.resolve(projRoot, val) : val;
+        this._filename = typeof val === "string" ? path.parse(val).name : null;
     }
 
     get path() {
         return this._path;
+    }
+
+    get filename() {
+        return this._filename;
     }
 
     load() {

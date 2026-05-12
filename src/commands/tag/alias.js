@@ -43,7 +43,6 @@ class TagAliasCommand {
         }
 
         let t_name = ctx.arg("tagName"),
-            t_args = ctx.arg("tagArgs"),
             a_name = ctx.arg("aliasName"),
             a_args = ctx.arg("aliasArgs");
 

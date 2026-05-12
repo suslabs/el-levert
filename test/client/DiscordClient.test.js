@@ -1,11 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import {
-    ActivityType,
-    ChannelType,
-    DiscordAPIError,
-    PermissionsBitField,
-    RESTJSONErrorCodes
-} from "discord.js";
+import { ActivityType, ChannelType, DiscordAPIError, RESTJSONErrorCodes } from "discord.js";
 
 import DiscordClient from "../../src/client/DiscordClient.js";
 
@@ -73,9 +67,15 @@ describe("DiscordClient", () => {
         thing.id = "123";
 
         expect(client._parseDiscordId(thing, "thing", Thing)).toEqual(["123", thing]);
-        expect(client._parseDiscordId({
-            id: "456"
-        }, "thing", Thing)).toEqual(["456", null]);
+        expect(
+            client._parseDiscordId(
+                {
+                    id: "456"
+                },
+                "thing",
+                Thing
+            )
+        ).toEqual(["456", null]);
         expect(client._parseDiscordId(null, "thing", Thing, false)).toEqual([null, null]);
         expect(() => client._parseDiscordId("", "thing", Thing, true)).toThrow("length = 0");
         expect(() => client._parseDiscordId(1, "thing", Thing, true)).toThrow("Invalid thing ID provided");
@@ -167,18 +167,27 @@ describe("DiscordClient", () => {
 
         client._parseDiscordId = vi
             .fn()
-            .mockReturnValueOnce(["guild-id", {
-                id: "guild-id"
-            }])
+            .mockReturnValueOnce([
+                "guild-id",
+                {
+                    id: "guild-id"
+                }
+            ])
             .mockReturnValueOnce(["guild-id", null])
             .mockReturnValueOnce(["member-id", null])
-            .mockReturnValueOnce(["message-id", {
-                id: "message-id"
-            }])
+            .mockReturnValueOnce([
+                "message-id",
+                {
+                    id: "message-id"
+                }
+            ])
             .mockReturnValueOnce(["user-id", null])
-            .mockReturnValueOnce(["user-id", {
-                id: "user-id"
-            }]);
+            .mockReturnValueOnce([
+                "user-id",
+                {
+                    id: "user-id"
+                }
+            ]);
 
         expect(await client.fetchGuild("guild-id")).toEqual({
             id: "guild-id"
@@ -224,9 +233,11 @@ describe("DiscordClient", () => {
             }
         });
 
-        expect(await client.findUserById({
-            id: "user-id"
-        })).toMatchObject({
+        expect(
+            await client.findUserById({
+                id: "user-id"
+            })
+        ).toMatchObject({
             id: "user-id",
             user: {
                 id: "user-id"
@@ -242,45 +253,60 @@ describe("DiscordClient", () => {
 
         client._parseDiscordId = vi
             .fn()
-            .mockReturnValueOnce(["channel-id", {
-                type: ChannelType.DM,
-                recipientId: "user-1"
-            }])
-            .mockReturnValueOnce(["channel-id", {
-                type: ChannelType.DM,
-                recipientId: "user-2"
-            }])
-            .mockReturnValueOnce(["channel-id", {
-                type: ChannelType.GuildText,
-                guild: "guild-1",
-                memberPermissions: () => ({
-                    has: () => false
-                })
-            }])
+            .mockReturnValueOnce([
+                "channel-id",
+                {
+                    type: ChannelType.DM,
+                    recipientId: "user-1"
+                }
+            ])
+            .mockReturnValueOnce([
+                "channel-id",
+                {
+                    type: ChannelType.DM,
+                    recipientId: "user-2"
+                }
+            ])
+            .mockReturnValueOnce([
+                "channel-id",
+                {
+                    type: ChannelType.GuildText,
+                    guild: "guild-1",
+                    memberPermissions: () => ({
+                        has: () => false
+                    })
+                }
+            ])
             .mockReturnValueOnce(["message-id", null])
             .mockReturnValueOnce(["before-id", null])
             .mockReturnValueOnce(["after-id", null])
             .mockReturnValueOnce(["around-id", null]);
 
-        expect(await client.fetchChannel("channel-id", {
-            checkAccess: true,
-            user_id: "user-1"
-        })).toMatchObject({
+        expect(
+            await client.fetchChannel("channel-id", {
+                checkAccess: true,
+                user_id: "user-1"
+            })
+        ).toMatchObject({
             recipientId: "user-1"
         });
 
-        expect(await client.fetchChannel("channel-id", {
-            checkAccess: true,
-            user_id: "user-1"
-        })).toBeNull();
+        expect(
+            await client.fetchChannel("channel-id", {
+                checkAccess: true,
+                user_id: "user-1"
+            })
+        ).toBeNull();
 
         client.fetchMember = vi.fn().mockResolvedValue({
             guild: "guild-1"
         });
-        expect(await client.fetchChannel("channel-id", {
-            checkAccess: true,
-            user_id: "user-1"
-        })).toBeNull();
+        expect(
+            await client.fetchChannel("channel-id", {
+                checkAccess: true,
+                user_id: "user-1"
+            })
+        ).toBeNull();
 
         client.fetchChannel = vi.fn().mockResolvedValue({
             messages: {
@@ -318,14 +344,20 @@ describe("DiscordClient", () => {
                     members: {
                         fetch: vi.fn().mockResolvedValue(
                             new Map([
-                                ["1", {
-                                    id: "1",
-                                    displayName: "Alpha"
-                                }],
-                                ["2", {
-                                    id: "2",
-                                    displayName: "Alpha"
-                                }]
+                                [
+                                    "1",
+                                    {
+                                        id: "1",
+                                        displayName: "Alpha"
+                                    }
+                                ],
+                                [
+                                    "2",
+                                    {
+                                        id: "2",
+                                        displayName: "Alpha"
+                                    }
+                                ]
                             ])
                         )
                     }
@@ -341,20 +373,28 @@ describe("DiscordClient", () => {
             }
         });
         client.fetchMember = vi.fn().mockResolvedValue(null);
-        expect(await client.findUsers("123456789012345678", {
-            sv_id: "guild",
-            onlyMembers: true
-        })).toEqual([]);
+        expect(
+            await client.findUsers("123456789012345678", {
+                sv_id: "guild",
+                onlyMembers: true
+            })
+        ).toEqual([]);
 
-        expect(await client.findUsers("Alpha", {
-            searchMembers: false
-        })).toEqual([]);
+        expect(
+            await client.findUsers("Alpha", {
+                searchMembers: false
+            })
+        ).toEqual([]);
 
-        const result = await client.findUsers("Alpha", {
-            limit: 1
-        }, {
-            limit: 7
-        });
+        const result = await client.findUsers(
+            "Alpha",
+            {
+                limit: 1
+            },
+            {
+                limit: 7
+            }
+        );
 
         expect(result).toEqual([
             {
@@ -407,10 +447,13 @@ describe("DiscordClient", () => {
         await expect(channelErrClient.fetchChannel("channel-id")).rejects.toThrow("channel failed");
 
         const dmClient = createClient();
-        dmClient._parseDiscordId = vi.fn().mockReturnValue(["channel-id", {
-            type: ChannelType.DM,
-            recipientId: "user-1"
-        }]);
+        dmClient._parseDiscordId = vi.fn().mockReturnValue([
+            "channel-id",
+            {
+                type: ChannelType.DM,
+                recipientId: "user-1"
+            }
+        ]);
         await expect(
             dmClient.fetchChannel("channel-id", {
                 checkAccess: true
@@ -430,13 +473,16 @@ describe("DiscordClient", () => {
         ).rejects.toThrow("Invalid user ID provided");
 
         const guildClient = createClient();
-        guildClient._parseDiscordId = vi.fn().mockReturnValue(["channel-id", {
-            type: ChannelType.GuildText,
-            guild: "guild-1",
-            memberPermissions: () => ({
-                has: () => true
-            })
-        }]);
+        guildClient._parseDiscordId = vi.fn().mockReturnValue([
+            "channel-id",
+            {
+                type: ChannelType.GuildText,
+                guild: "guild-1",
+                memberPermissions: () => ({
+                    has: () => true
+                })
+            }
+        ]);
         guildClient.fetchMember = vi.fn().mockResolvedValueOnce(null);
         expect(
             await guildClient.fetchChannel("channel-id", {
@@ -456,13 +502,16 @@ describe("DiscordClient", () => {
         ).rejects.toThrow("isn't the same as the channel's guild");
 
         const threadClient = createClient();
-        threadClient._parseDiscordId = vi.fn().mockReturnValue(["channel-id", {
-            type: ChannelType.PublicThread,
-            guild: "guild-1",
-            parent: {
-                memberPermissions: () => null
+        threadClient._parseDiscordId = vi.fn().mockReturnValue([
+            "channel-id",
+            {
+                type: ChannelType.PublicThread,
+                guild: "guild-1",
+                parent: {
+                    memberPermissions: () => null
+                }
             }
-        }]);
+        ]);
         threadClient.fetchMember = vi.fn().mockResolvedValueOnce({
             guild: "guild-1"
         });
