@@ -1,5 +1,3 @@
-import { RESTJSONErrorCodes } from "discord.js";
-
 import Handler from "../Handler.js";
 
 import ReplyTracker from "./tracker/ReplyTracker.js";
@@ -11,10 +9,11 @@ import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
+import { isErrorCode } from "../../util/discord/ErrorCodes.js";
 import VMUtil from "../../util/vm/VMUtil.js";
 
-import MessageLimitTypes from "./MessageLimitTypes.js";
-import EmbedCountAreas from "../../util/EmbedCountAreas.js";
+import { MessageLimitTypes } from "./MessageLimitTypes.js";
+import { EmbedCountAreas } from "../../util/EmbedCountAreas.js";
 
 class MessageHandler extends Handler {
     constructor(enabled, hasReplyTracker = true, hasUserTracker = false, options) {
@@ -486,12 +485,11 @@ class MessageHandler extends Handler {
         try {
             return await replyFunc(data);
         } catch (err) {
-            switch (err.code) {
-                case RESTJSONErrorCodes.CannotSendAnEmptyMessage:
-                    return await handleEmptyMessage(handleError);
-                default:
-                    return await handleError(err);
+            if (isErrorCode("emptyMessage", err)) {
+                return await handleEmptyMessage(handleError);
             }
+
+            return await handleError(err);
         }
     }
 

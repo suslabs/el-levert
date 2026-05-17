@@ -4,7 +4,7 @@ import EventObjectLoader from "./EventObjectLoader.js";
 import TypeTester from "../../util/TypeTester.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
 
-import LoadStatus from "../LoadStatus.js";
+import { LoadStatus } from "../LoadStatus.js";
 
 class EventLoader extends DirectoryLoader {
     constructor(dirPath, client, logger, options) {

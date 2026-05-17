@@ -2,10 +2,12 @@ import winston from "winston";
 
 import TypeTester from "../util/TypeTester.js";
 import ArrayUtil from "../util/ArrayUtil.js";
+import { invalidFormats } from "./InvalidFormats.js";
 
 import LoggerError from "../errors/LoggerError.js";
-
-const validFormats = Object.getOwnPropertyNames(winston.format).filter(name => !["length", "combine"].includes(name));
+const validFormats = new Set(
+    Object.getOwnPropertyNames(winston.format).filter(name => !invalidFormats.has(name))
+);
 
 function getFormat(config) {
     if (config == null) {
@@ -23,7 +25,7 @@ function getFormat(config) {
             name = format;
         }
 
-        if (!validFormats.includes(name)) {
+        if (!validFormats.has(name)) {
             throw new LoggerError("Invalid format: " + name, name);
         }
 

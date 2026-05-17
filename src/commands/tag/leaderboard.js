@@ -3,8 +3,8 @@ import { EmbedBuilder } from "discord.js";
 import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import { validLeaderboardTypes } from "./LeaderboardTypes.js";
 
-const leaderboardTypes = ["count", "size", "usage"];
 const defaultLimit = 10,
     maxLimit = 50;
 
@@ -68,7 +68,7 @@ class TagLeaderboardCommand {
         const l_type = ctx.arg("leaderboardType"),
             l_text = ctx.arg("limitText");
 
-        if (!leaderboardTypes.includes(l_type)) {
+        if (!validLeaderboardTypes.has(l_type)) {
             return `${getEmoji("warn")} Invalid leaderboard type.`;
         }
 
@@ -96,5 +96,4 @@ class TagLeaderboardCommand {
         };
     }
 }
-
 export default TagLeaderboardCommand;

@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import "../../../setupGlobals.js";
-import LoadStatus from "../../../src/loaders/LoadStatus.js";
+import { LoadStatus } from "../../../src/loaders/LoadStatus.js";
 import EventObjectLoader from "../../../src/loaders/event/EventObjectLoader.js";
 
 let tempDir;

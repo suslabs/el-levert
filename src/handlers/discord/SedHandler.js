@@ -2,7 +2,7 @@ import RE2 from "re2";
 import { MessageType, EmbedBuilder, bold } from "discord.js";
 
 import MessageHandler from "./MessageHandler.js";
-import MessageLimitTypes from "./MessageLimitTypes.js";
+import { MessageLimitTypes } from "./MessageLimitTypes.js";
 
 import { getClient, getEmoji, getLogger } from "../../LevertClient.js";
 

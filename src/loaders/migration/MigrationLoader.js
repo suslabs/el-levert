@@ -3,7 +3,7 @@ import MigrationFileLoader from "./MigrationFileLoader.js";
 
 import TypeTester from "../../util/TypeTester.js";
 
-import LoadStatus from "../LoadStatus.js";
+import { LoadStatus } from "../LoadStatus.js";
 
 class MigrationLoader extends DirectoryLoader {
     constructor(dirPath, logger, options) {

@@ -2,7 +2,7 @@ import TextLoader from "../TextLoader.js";
 
 import TypeTester from "../../util/TypeTester.js";
 
-import LoadStatus from "../LoadStatus.js";
+import { LoadStatus } from "../LoadStatus.js";
 
 import DatabaseError from "../../errors/DatabaseError.js";
 

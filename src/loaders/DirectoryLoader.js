@@ -9,7 +9,7 @@ import Util from "../util/Util.js";
 import TypeTester from "../util/TypeTester.js";
 import ArrayUtil from "../util/ArrayUtil.js";
 
-import LoadStatus from "./LoadStatus.js";
+import { LoadStatus } from "./LoadStatus.js";
 
 class DirectoryLoader extends Loader {
     static listFilesRecursiveSync(dirPath, maxDepth = Infinity, callback) {

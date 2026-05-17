@@ -15,6 +15,12 @@ import Benchmark from "../../util/misc/Benchmark.js";
 import VMError from "../../errors/VMError.js";
 import VMErrors from "./VMErrors.js";
 
+const vmErrorMessages = new Map(
+    Object.entries(VMErrors)
+        .filter(([name]) => name !== "custom")
+        .map(([, info]) => [info.in, info.out])
+);
+
 function logUsage(code) {
     getLogger().isDebugEnabled() && getLogger().debug(`Running script:${LoggerUtil.formatLog(code)}`);
 }
@@ -176,14 +182,13 @@ class TagVM extends VM {
                 return [this._processReply(err.message), "reply"];
         }
 
-        const find = Object.entries(VMErrors).find(([name, info]) => name !== "custom" && err.message === info.in);
+        const out = vmErrorMessages.get(err.message);
 
-        if (typeof find === "undefined") {
+        if (typeof out === "undefined") {
             throw err;
         } else {
-            const [, info] = find;
-            getLogger().debug(`IVM error: ${info.out}.`);
-            throw new VMError(info.out);
+            getLogger().debug(`IVM error: ${out}.`);
+            throw new VMError(out);
         }
     }
 }

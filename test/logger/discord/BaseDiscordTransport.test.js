@@ -1,10 +1,10 @@
-import { DiscordAPIError } from "discord.js";
+import { DiscordAPIError, RESTJSONErrorCodes } from "discord.js";
 import { describe, expect, test, vi, afterEach } from "vitest";
 import BaseDiscordTransport from "../../../src/logger/discord/BaseDiscordTransport.js";
 
 class TestTransport extends BaseDiscordTransport {
     static $name = "discord.test";
-    static _disableCodes = [12345];
+    static _disableCodes = ["emptyMessage"];
 
     init() {
         this.sent = [];
@@ -59,7 +59,7 @@ describe("BaseDiscordTransport", () => {
     test("disables itself on configured Discord API errors", () => {
         const transport = new TestTransport({});
         const err = Object.create(DiscordAPIError.prototype);
-        err.code = 12345;
+        err.code = RESTJSONErrorCodes.CannotSendAnEmptyMessage;
 
         transport._handleDiscordError(err);
         expect(transport.initialized).toBe(false);

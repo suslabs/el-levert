@@ -4,7 +4,7 @@ import Loader from "./Loader.js";
 
 import TypeTester from "../util/TypeTester.js";
 
-import LoadStatus from "./LoadStatus.js";
+import { LoadStatus } from "./LoadStatus.js";
 
 class FileLoader extends Loader {
     constructor(name, filePath, logger, options) {

@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import "../../setupGlobals.js";
 
 import FileLoader from "../../src/loaders/FileLoader.js";
-import LoadStatus from "../../src/loaders/LoadStatus.js";
+import { LoadStatus } from "../../src/loaders/LoadStatus.js";
 
 describe("FileLoader", () => {
     test("validates file paths in sync and async mode", async () => {

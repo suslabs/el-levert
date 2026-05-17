@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import OCUtil from "../../../src/util/commands/OCUtil.js";
-import OCTypes from "../../../src/util/commands/OCTypes.js";
+import { OCTypes } from "../../../src/util/commands/OCTypes.js";
 
 describe("OCUtil", () => {
     test("parses durations and resolves voltage tiers", () => {

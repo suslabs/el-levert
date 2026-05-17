@@ -2,7 +2,7 @@ import ConfigLoader from "../loaders/config/ConfigLoader.js";
 import ReactionsLoader from "../loaders/config/ReactionsLoader.js";
 import AuthLoader from "../loaders/config/AuthLoader.js";
 
-import LoadStatus from "../loaders/LoadStatus.js";
+import { LoadStatus } from "../loaders/LoadStatus.js";
 
 const loaderConfig = {
     throwOnFailure: false

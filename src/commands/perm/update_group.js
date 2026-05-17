@@ -3,8 +3,7 @@ import { escapeMarkdown } from "discord.js";
 import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-
-const unchangedArgs = ["", "unchanged"];
+import { validUnchangedArgs } from "./UnchangedArgs.js";
 
 class PermUpdateGroupCommand {
     static info = {
@@ -71,7 +70,7 @@ class PermUpdateGroupCommand {
             newLevel = ctx.arg("newLevel"),
             newLevelText = ctx.arg("newLevelText");
 
-        if (unchangedArgs.includes(newName)) {
+        if (validUnchangedArgs.has(newName)) {
             newName = null;
         } else {
             let err;
@@ -82,7 +81,7 @@ class PermUpdateGroupCommand {
             }
         }
 
-        if (unchangedArgs.includes(newLevelText)) {
+        if (validUnchangedArgs.has(newLevelText)) {
             newLevel = null;
         } else {
             let err;
@@ -121,5 +120,4 @@ class PermUpdateGroupCommand {
         return `${getEmoji("ok")} Updated group **${escapeMarkdown(g_name)}**.`;
     }
 }
-
 export default PermUpdateGroupCommand;

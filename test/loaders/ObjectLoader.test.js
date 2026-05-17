@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import "../../setupGlobals.js";
 
 import ObjectLoader from "../../src/loaders/ObjectLoader.js";
-import LoadStatus from "../../src/loaders/LoadStatus.js";
+import { LoadStatus } from "../../src/loaders/LoadStatus.js";
 
 let tempDir;
 let filePath;

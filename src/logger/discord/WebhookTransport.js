@@ -1,4 +1,4 @@
-import { WebhookClient, RESTJSONErrorCodes } from "discord.js";
+import { WebhookClient } from "discord.js";
 
 import BaseDiscordTransport from "./BaseDiscordTransport.js";
 
@@ -39,7 +39,7 @@ class WebhookTransport extends BaseDiscordTransport {
     }
 
     static _urlRegex = /^https?:\/\/[^/]+(?:\/api)?\/webhooks\/(?<id>[A-Za-z0-9]+)\/(?<token>[A-Za-z0-9_-]+)$/i;
-    static _disableCodes = [RESTJSONErrorCodes.InvalidWebhookToken, RESTJSONErrorCodes.UnknownWebhook];
+    static _disableCodes = ["webhookInaccessible"];
 
     _getWebhook(url) {
         if (!Util.nonemptyString(url)) {

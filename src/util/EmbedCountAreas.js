@@ -6,4 +6,6 @@ const EmbedCountAreas = Object.freeze({
     all: "all"
 });
 
-export default EmbedCountAreas;
+const validEmbedCountAreas = new Set(Object.values(EmbedCountAreas).filter(area => area !== EmbedCountAreas.all));
+
+export { EmbedCountAreas, validEmbedCountAreas };

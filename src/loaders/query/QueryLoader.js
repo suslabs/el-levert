@@ -7,7 +7,7 @@ import ArrayUtil from "../../util/ArrayUtil.js";
 import TypeTester from "../../util/TypeTester.js";
 import Util from "../../util/Util.js";
 
-import LoadStatus from "../LoadStatus.js";
+import { LoadStatus } from "../LoadStatus.js";
 
 class QueryLoader extends DirectoryLoader {
     constructor(dirPath, logger, options) {

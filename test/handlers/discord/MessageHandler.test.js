@@ -34,7 +34,7 @@ beforeEach(async () => {
     });
 
     ({ default: MessageHandler } = await import("../../../src/handlers/discord/MessageHandler.js"));
-    ({ default: MessageLimitTypes } = await import("../../../src/handlers/discord/MessageLimitTypes.js"));
+    ({ MessageLimitTypes } = await import("../../../src/handlers/discord/MessageLimitTypes.js"));
     ({ getEmoji } = await import("../../../src/LevertClient.js"));
 });
 

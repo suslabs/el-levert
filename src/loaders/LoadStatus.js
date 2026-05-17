@@ -4,4 +4,4 @@ const LoadStatus = Object.freeze({
     ignore: -1
 });
 
-export default LoadStatus;
+export { LoadStatus };

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import VMHttpErrorTypes from "../../../src/util/vm/VMHttpErrorTypes.js";
+import { VMHttpErrorTypes } from "../../../src/util/vm/VMHttpErrorTypes.js";
 import VMUtil from "../../../src/util/vm/VMUtil.js";
 
 describe("VMUtil", () => {

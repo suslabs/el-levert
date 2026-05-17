@@ -6,6 +6,7 @@ import { EmbedColors, defaultColor } from "./EmbedColors.js";
 import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
+import { isErrorCode } from "../../util/discord/ErrorCodes.js";
 
 import LoggerError from "../../errors/LoggerError.js";
 
@@ -180,7 +181,7 @@ class BaseDiscordTransport extends Transport {
             return;
         }
 
-        if (this.constructor._disableCodes.includes(err.code)) {
+        if (this.constructor._disableCodes.some(category => isErrorCode(category, err))) {
             if (typeof this.getDisabledMessage === "function") {
                 const disabledMessage = this.getDisabledMessage();
                 console.info(disabledMessage);

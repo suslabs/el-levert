@@ -8,7 +8,7 @@ import { getConfig, getLogger } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
 
-import LoadStatus from "../../loaders/LoadStatus.js";
+import { LoadStatus } from "../../loaders/LoadStatus.js";
 
 import CommandError from "../../errors/CommandError.js";
 

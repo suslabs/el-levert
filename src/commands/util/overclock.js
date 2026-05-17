@@ -6,7 +6,7 @@ import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
 import OCUtil from "../../util/commands/OCUtil.js";
 
-import OCTypes from "../../util/commands/OCTypes.js";
+import { OCTypes } from "../../util/commands/OCTypes.js";
 
 import { drawTable } from "../../util/misc/Table.js";
 

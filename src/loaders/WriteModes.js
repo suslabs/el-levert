@@ -3,4 +3,4 @@ const WriteModes = Object.freeze({
     append: "append"
 });
 
-export default WriteModes;
+export { WriteModes };

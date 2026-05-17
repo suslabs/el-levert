@@ -76,6 +76,7 @@ describe("TagManager", () => {
         expect(created).toBe(true);
         expect(alias.isAlias).toBe(true);
         expect(await manager.execute(await manager.fetch("plain_alias"), "ignored")).toBe("alpha beta");
+        expect(await manager.execute(ivmTag, undefined, { extra: 0 })).toBe("tagVM:return args:undefined:script_ivm");
         expect(await manager.execute(ivmTag, "run", { extra: 1 })).toBe("tagVM:return args:run:script_ivm");
         expect(await manager.execute(vm2Tag, "again", { extra: 2 })).toBe("tagVM2:return args:again:script_vm2");
 
@@ -96,7 +97,7 @@ describe("TagManager", () => {
         expect(await manager.tag_db.quotaCountFetch("u1")).toBe(2);
         expect(await manager.tag_db.quotaCountFetch("u9")).toBe(1);
         expect(await manager.tag_db.usageFetch("plain_alias")).toBe(1);
-        expect(await manager.tag_db.usageFetch("script_ivm")).toBe(1);
+        expect(await manager.tag_db.usageFetch("script_ivm")).toBe(2);
         expect(await manager.tag_db.usageFetch("script_vm2")).toBe(1);
         expect(await manager.tag_db.usageFetch("plain")).toBeNull();
         expect(await manager.tag_db.usageFetch("plain_renamed")).toBe(0);
@@ -147,7 +148,7 @@ describe("TagManager", () => {
 
         expect(await manager.count({ length: 1 })).toBe(3);
         expect(await manager.random({ length: 1 })).toMatch(/^(alpha|beta|script)$/);
-        expect(await manager.execute(await manager.fetch("script"), ["bad"])).toBe("tagVM:return args::script");
+        expect(await manager.execute(await manager.fetch("script"), ["bad"])).toBe("tagVM:return args:undefined:script");
     });
 
     test("routes alias usage down the chain until it hits bound args or the final target", async () => {

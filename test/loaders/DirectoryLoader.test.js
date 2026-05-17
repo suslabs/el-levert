@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import "../../setupGlobals.js";
 import DirectoryLoader from "../../src/loaders/DirectoryLoader.js";
 import Loader from "../../src/loaders/Loader.js";
-import LoadStatus from "../../src/loaders/LoadStatus.js";
+import { LoadStatus } from "../../src/loaders/LoadStatus.js";
 
 class DummyFileLoader extends Loader {
     constructor(nameOrPath, filePathOrLogger, loggerOrOptions, maybeOptions) {

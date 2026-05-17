@@ -3,4 +3,4 @@ const CountTypes = Object.freeze({
     lines: "lines"
 });
 
-export default CountTypes;
+export { CountTypes };

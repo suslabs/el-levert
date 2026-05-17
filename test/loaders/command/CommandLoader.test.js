@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import "../../../setupGlobals.js";
 
-import LoadStatus from "../../../src/loaders/LoadStatus.js";
+import { LoadStatus } from "../../../src/loaders/LoadStatus.js";
 import CommandLoader from "../../../src/loaders/command/CommandLoader.js";
 import TextCommand from "../../../src/structures/command/TextCommand.js";
 

@@ -5,7 +5,7 @@ import getRegisterCode from "../../util/vm/getRegisterCode.js";
 import VMUtil from "../../util/vm/VMUtil.js";
 import TypeTester from "../../util/TypeTester.js";
 
-import { FuncTypes, ExecutionTypes } from "./FuncTypes.js";
+import { FuncTypes, validFuncTypes, ExecutionTypes } from "./FuncTypes.js";
 
 import VMError from "../../errors/VMError.js";
 import ExitError from "../../vm/isolated-vm/functionErrors/ExitError.js";
@@ -48,7 +48,7 @@ class VMFunction {
 
         ObjectUtil.setValuesWithDefaults(this, options, this.constructor.defaultValues);
 
-        if (!Object.values(FuncTypes).includes(this.type)) {
+        if (!validFuncTypes.has(this.type)) {
             throw new VMError("Invalid function type provided: " + this.type, this.type);
         }
 

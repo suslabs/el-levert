@@ -153,7 +153,7 @@ const FakeUtil = Object.freeze({
             return tag.body;
         }
 
-        let evalArgs = tag.args;
+        let evalArgs = tag.args ?? "";
 
         if (args != null) {
             args = Array.isArray(args) ? args.join(" ") : String(args);

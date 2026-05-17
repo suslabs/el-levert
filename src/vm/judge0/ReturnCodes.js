@@ -15,4 +15,6 @@ const ReturnCodes = Object.freeze({
     14: "Exec Format Error"
 });
 
-export default ReturnCodes;
+const pendingReturnCodes = new Set([1, 2]);
+
+export { ReturnCodes, pendingReturnCodes };

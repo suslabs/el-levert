@@ -3,6 +3,7 @@ import Handler from "../Handler.js";
 import { getClient, getLogger } from "../../LevertClient.js";
 
 import CLICommandContext from "../../structures/command/context/CLICommandContext.js";
+import { validConsoleLevels } from "./ConsoleLevels.js";
 
 class CLICommandHandler extends Handler {
     static $name = "cliCommandHandler";
@@ -15,7 +16,7 @@ class CLICommandHandler extends Handler {
     }
 
     reply(level, ...data) {
-        if (CLICommandHandler._validConsoleLevels.includes(level)) {
+        if (validConsoleLevels.has(level)) {
             console[level](...data);
         } else {
             console.log(level, ...data);
@@ -69,8 +70,5 @@ Use ${getClient().cliCommandManager.commandPrefix}help to get all available comm
         this.reply("log", out);
         return;
     }
-
-    static _validConsoleLevels = ["debug", "info", "log", "warn", "error"];
 }
-
 export default CLICommandHandler;

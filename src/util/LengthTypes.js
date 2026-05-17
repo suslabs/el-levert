@@ -3,4 +3,4 @@ const LengthTypes = Object.freeze({
     string: "string"
 });
 
-export default LengthTypes;
+export { LengthTypes };

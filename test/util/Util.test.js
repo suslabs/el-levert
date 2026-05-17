@@ -5,8 +5,8 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import Util from "../../src/util/Util.js";
-import LengthTypes from "../../src/util/LengthTypes.js";
-import CountTypes from "../../src/util/CountTypes.js";
+import { LengthTypes } from "../../src/util/LengthTypes.js";
+import { CountTypes } from "../../src/util/CountTypes.js";
 
 let tempDir;
 

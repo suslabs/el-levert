@@ -3,4 +3,4 @@ const EventPrefixes = Object.freeze({
     connection: "con"
 });
 
-export default EventPrefixes;
+export { EventPrefixes };

@@ -1,6 +1,6 @@
 import Util from "../Util.js";
 
-import OCTypes from "./OCTypes.js";
+import { OCTypes } from "./OCTypes.js";
 
 import UtilError from "../../errors/UtilError.js";
 

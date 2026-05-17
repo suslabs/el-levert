@@ -2,7 +2,7 @@ import Util from "../Util.js";
 import TypeTester from "../TypeTester.js";
 import ObjectUtil from "../ObjectUtil.js";
 
-import VMHttpErrorTypes from "./VMHttpErrorTypes.js";
+import { VMHttpErrorTypes } from "./VMHttpErrorTypes.js";
 
 import UtilError from "../../errors/UtilError.js";
 

@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 import EventLoader from "../../../src/loaders/event/EventLoader.js";
 import "../../../setupGlobals.js";
-import LoadStatus from "../../../src/loaders/LoadStatus.js";
+import { LoadStatus } from "../../../src/loaders/LoadStatus.js";
 import DirectoryLoader from "../../../src/loaders/DirectoryLoader.js";
 
 describe("EventLoader", () => {

@@ -2,7 +2,7 @@ import TypeTester from "../util/TypeTester.js";
 
 import Util from "../util/Util.js";
 
-import LoadStatus from "./LoadStatus.js";
+import { LoadStatus } from "./LoadStatus.js";
 
 import LoaderError from "../errors/LoaderError.js";
 

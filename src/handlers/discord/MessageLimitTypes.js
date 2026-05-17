@@ -6,4 +6,4 @@ const MessageLimitTypes = Object.freeze({
     trim: "trim"
 });
 
-export default MessageLimitTypes;
+export { MessageLimitTypes };

@@ -1,7 +1,7 @@
 import { ChannelType, EmbedBuilder, hyperlink } from "discord.js";
 
 import MessageHandler from "./MessageHandler.js";
-import MessageLimitTypes from "./MessageLimitTypes.js";
+import { MessageLimitTypes } from "./MessageLimitTypes.js";
 
 import { getClient, getConfig, getEmoji, getLogger } from "../../LevertClient.js";
 
@@ -9,6 +9,7 @@ import Util from "../../util/Util.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
 import Benchmark from "../../util/misc/Benchmark.js";
+import { ignoredPreviewErrors } from "./PreviewErrorMessages.js";
 
 import HandlerError from "../../errors/HandlerError.js";
 
@@ -165,7 +166,7 @@ class PreviewHandler extends MessageHandler {
 
                 await this.replyWithError(msg, err, "preview", "generating preview");
                 return true;
-            } else if (["Invalid input", "not found"].some(str => err.message.includes(str))) {
+            } else if (ignoredPreviewErrors.some(str => err.message.includes(str))) {
                 Benchmark.stopTiming(timeKey, null);
 
                 logGenerateCancelled(err.message);
@@ -200,5 +201,4 @@ class PreviewHandler extends MessageHandler {
         return true;
     }
 }
-
 export default PreviewHandler;

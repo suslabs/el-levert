@@ -5,4 +5,6 @@ const AssignPropertyTypes = Object.freeze({
     keys: "keys"
 });
 
-export default AssignPropertyTypes;
+const validAssignPropertyTypes = new Set(Object.values(AssignPropertyTypes));
+
+export { AssignPropertyTypes, validAssignPropertyTypes };

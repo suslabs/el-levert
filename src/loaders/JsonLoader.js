@@ -6,8 +6,8 @@ import TextLoader from "./TextLoader.js";
 import Util from "../util/Util.js";
 import TypeTester from "../util/TypeTester.js";
 
-import LoadStatus from "./LoadStatus.js";
-import WriteModes from "./WriteModes.js";
+import { LoadStatus } from "./LoadStatus.js";
+import { WriteModes } from "./WriteModes.js";
 
 class JsonLoader extends TextLoader {
     static ajvOptions = {

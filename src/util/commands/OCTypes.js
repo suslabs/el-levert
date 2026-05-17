@@ -5,4 +5,4 @@ const OCTypes = Object.freeze({
     ebfParallel: "ebf_parallel"
 });
 
-export default OCTypes;
+export { OCTypes };

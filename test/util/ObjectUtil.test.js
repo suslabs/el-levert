@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import ObjectUtil from "../../src/util/ObjectUtil.js";
-import AssignPropertyTypes from "../../src/util/AssignPropertyTypes.js";
+import { AssignPropertyTypes } from "../../src/util/AssignPropertyTypes.js";
 
 describe("ObjectUtil", () => {
     test("filters, clones, assigns, and defines properties", () => {

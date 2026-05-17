@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import Loader from "../../src/loaders/Loader.js";
-import LoadStatus from "../../src/loaders/LoadStatus.js";
+import { LoadStatus } from "../../src/loaders/LoadStatus.js";
 
 class TestLoader extends Loader {
     load() {}

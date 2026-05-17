@@ -2,8 +2,10 @@ import fs from "node:fs/promises";
 
 import TypeTester from "./TypeTester.js";
 
-import LengthTypes from "./LengthTypes.js";
-import CountTypes from "./CountTypes.js";
+import { LengthTypes } from "./LengthTypes.js";
+import { CountTypes } from "./CountTypes.js";
+
+import { truthyStrings, falsyStrings } from "./BoolStrings.js";
 
 import UtilError from "../errors/UtilError.js";
 
@@ -50,9 +52,6 @@ let Util = {
         return Number.parseInt(str, radix);
     },
 
-    truthyStrings: new Set(["true", "yes", "y", "t"]),
-    falsyStrings: new Set(["false", "no", "n", "f"]),
-
     parseBool: (str, defaultValue) => {
         if (typeof str !== "string") {
             return defaultValue ?? null;
@@ -60,9 +59,9 @@ let Util = {
 
         str = str.trim().toLowerCase();
 
-        if (Util.truthyStrings.has(str)) {
+        if (truthyStrings.has(str)) {
             return true;
-        } else if (Util.falsyStrings.has(str)) {
+        } else if (falsyStrings.has(str)) {
             return false;
         } else {
             return defaultValue ?? null;

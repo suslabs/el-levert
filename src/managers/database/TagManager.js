@@ -2,7 +2,8 @@ import DBManager from "./DBManager.js";
 import TagDatabase from "../../database/TagDatabase.js";
 
 import Tag from "../../structures/tag/Tag.js";
-import { TagTypes } from "../../structures/tag/TagTypes.js";
+import { TagTypes, validTagScriptTypes } from "../../structures/tag/TagTypes.js";
+import { scriptContentTypes, fileContentTypes } from "./TagContentTypes.js";
 
 import { getClient, getConfig, getLogger } from "../../LevertClient.js";
 
@@ -199,7 +200,7 @@ class TagManager extends DBManager {
 
         if (type === TagTypes.textType) {
             return tag.body;
-        } else if (TagTypes.scriptTypes.includes(type)) {
+        } else if (validTagScriptTypes.has(type)) {
             return await this._runScriptTag(tag, type, args, values);
         } else {
             throw new TagError("Invalid tag type", type);
@@ -559,7 +560,8 @@ class TagManager extends DBManager {
     }
 
     async dump(full = false, flags) {
-        const flag = Tag.getFlag(flags) || null;
+        const bitFlag = Tag.getFlag(flags),
+            flag = bitFlag.isEmpty() ? null : bitFlag;
 
         if (full) {
             return await this.tag_db.fullDump(flag);
@@ -585,9 +587,8 @@ class TagManager extends DBManager {
             user = null;
         }
 
-        const flag = Tag.getFlag(flags) || null;
-
-        return await this.tag_db.count(user, flag);
+        const flag = Tag.getFlag(flags);
+        return await this.tag_db.count(user, flag.isEmpty() ? null : flag);
     }
 
     async search(query, maxResults = 20, minDist, validate = false) {
@@ -706,7 +707,7 @@ class TagManager extends DBManager {
 
         try {
             ({ attach, body } = await DiscordUtil.fetchAttachment(msg, undefined, {
-                allowedContentTypes: TagManager._fileContentTypes,
+                allowedContentTypes: fileContentTypes,
                 maxSize: this.maxTagSize
             }));
         } catch (err) {
@@ -720,7 +721,7 @@ class TagManager extends DBManager {
         }
 
         if (isFile) {
-            isScript = Util.hasPrefix(TagManager._scriptContentTypes, attach.contentType);
+            isScript = Util.hasPrefix(scriptContentTypes, attach.contentType);
         } else {
             const trimmedArgs = (t_args = t_args?.trimEnd() ?? "");
             body = trimmedArgs + (Util.empty(trimmedArgs) ? "" : " ");
@@ -729,9 +730,6 @@ class TagManager extends DBManager {
 
         return { body, isScript };
     }
-
-    static _scriptContentTypes = ["application/javascript", "text/javascript"];
-    static _fileContentTypes = this._scriptContentTypes.concat(["text/plain"]);
 
     async _addPrepared(tag, db = this.tag_db) {
         await db.add(tag);
@@ -742,7 +740,7 @@ class TagManager extends DBManager {
             })
         );
 
-        getLogger().info(`Added tag: "${tag.name}" with type: ${tag.type}, body:${bodyLogText}`);
+        getLogger().info(`Added tag: "${tag.name}" with type: ${tag.type.toNumber()}, body:${bodyLogText}`);
 
         const tagSize = tag.getSize();
         await this._updateQuota(tag.owner, tagSize, 1, db);
@@ -753,7 +751,7 @@ class TagManager extends DBManager {
 
         const inputValues = {
             tag,
-            args: evalArgs,
+            args: Util.nonemptyString(evalArgs) ? evalArgs : undefined,
             ...values
         };
 
@@ -778,10 +776,7 @@ class TagManager extends DBManager {
             return;
         }
 
-        let [userQuota, userCount] = await Promise.all([
-            db.quotaFetch(user),
-            db.quotaCountFetch(user)
-        ]);
+        let [userQuota, userCount] = await Promise.all([db.quotaFetch(user), db.quotaCountFetch(user)]);
 
         if (userQuota === null || userCount === null) {
             await db.quotaCreate(user);
@@ -823,5 +818,4 @@ class TagManager extends DBManager {
         });
     }
 }
-
 export default TagManager;

@@ -4,9 +4,11 @@ const FuncTypes = Object.freeze({
     syncPromise: "applySyncPromise"
 });
 
+const validFuncTypes = new Set(Object.values(FuncTypes));
+
 const ExecutionTypes = Object.freeze({
     script: "script",
     bot: "bot"
 });
 
-export { FuncTypes, ExecutionTypes };
+export { FuncTypes, validFuncTypes, ExecutionTypes };

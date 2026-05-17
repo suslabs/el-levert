@@ -6,7 +6,7 @@ import configPaths from "../../config/configPaths.json" assert { type: "json" };
 
 import TypeTester from "../../util/TypeTester.js";
 
-import LoadStatus from "../LoadStatus.js";
+import { LoadStatus } from "../LoadStatus.js";
 
 class BaseConfigLoader extends JsonLoader {
     constructor(name, logger, options) {

@@ -9,4 +9,4 @@ const PoolEvents = Object.freeze({
     promiseError: "promiseError"
 });
 
-export default PoolEvents;
+export { PoolEvents };

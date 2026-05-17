@@ -9,7 +9,7 @@ import "../../../setupGlobals.js";
 import QueryLoader from "../../../src/loaders/query/QueryLoader.js";
 import DirectoryLoader from "../../../src/loaders/DirectoryLoader.js";
 
-import LoadStatus from "../../../src/loaders/LoadStatus.js";
+import { LoadStatus } from "../../../src/loaders/LoadStatus.js";
 
 let tempDir;
 

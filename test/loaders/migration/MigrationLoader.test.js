@@ -8,7 +8,7 @@ import "../../../setupGlobals.js";
 
 import MigrationLoader from "../../../src/loaders/migration/MigrationLoader.js";
 
-import LoadStatus from "../../../src/loaders/LoadStatus.js";
+import { LoadStatus } from "../../../src/loaders/LoadStatus.js";
 
 let tempDir;
 

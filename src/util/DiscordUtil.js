@@ -8,10 +8,12 @@ import Util from "./Util.js";
 import TypeTester from "./TypeTester.js";
 import ArrayUtil from "./ArrayUtil.js";
 
-import EmbedCountAreas from "./EmbedCountAreas.js";
-import CountTypes from "./CountTypes.js";
+import { EmbedCountAreas, validEmbedCountAreas } from "./EmbedCountAreas.js";
+import { CountTypes } from "./CountTypes.js";
 
 import UtilError from "../errors/UtilError.js";
+
+const threadChannelTypes = new Set([ChannelType.PublicThread, ChannelType.PrivateThread]);
 
 let DiscordUtil = {
     msgCharLimit: 2000,
@@ -159,7 +161,7 @@ let DiscordUtil = {
             return "DMs";
         }
 
-        const inThread = [ChannelType.PublicThread, ChannelType.PrivateThread].includes(channel.type),
+        const inThread = threadChannelTypes.has(channel.type),
             hasGuild = [currentGuild, channel.guild].every(obj => typeof obj !== "undefined");
 
         const nameFormat = inThread
@@ -306,12 +308,11 @@ let DiscordUtil = {
         let size = 0;
 
         if (countAreas === EmbedCountAreas.all) {
-            countAreas = Object.values(EmbedCountAreas);
-            countAreas.pop();
+            countAreas = Array.from(validEmbedCountAreas);
         } else {
             countAreas = ArrayUtil.guaranteeArray(countAreas);
 
-            if (!countAreas.every(area => Object.values(EmbedCountAreas).includes(area))) {
+            if (!countAreas.every(area => validEmbedCountAreas.has(area))) {
                 throw new UtilError("Invalid count areas", countAreas);
             }
         }

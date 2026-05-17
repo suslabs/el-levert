@@ -2,7 +2,7 @@ import Util from "./Util.js";
 import TypeTester from "./TypeTester.js";
 import ArrayUtil from "./ArrayUtil.js";
 
-import AssignPropertyTypes from "./AssignPropertyTypes.js";
+import { AssignPropertyTypes, validAssignPropertyTypes } from "./AssignPropertyTypes.js";
 
 import UtilError from "../errors/UtilError.js";
 
@@ -65,7 +65,7 @@ const ObjectUtil = Object.freeze({
         } else {
             options = ArrayUtil.guaranteeArray(options);
 
-            if (!options.every(option => Object.values(AssignPropertyTypes).includes(option))) {
+            if (!options.every(option => validAssignPropertyTypes.has(option))) {
                 throw new UtilError("Invalid property options", options);
             }
 

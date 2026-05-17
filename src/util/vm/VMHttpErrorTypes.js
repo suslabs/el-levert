@@ -3,4 +3,4 @@ const VMHttpErrorTypes = Object.freeze({
     value: "value"
 });
 
-export default VMHttpErrorTypes;
+export { VMHttpErrorTypes };

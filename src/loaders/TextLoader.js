@@ -4,8 +4,8 @@ import path from "node:path";
 
 import FileLoader from "./FileLoader.js";
 
-import LoadStatus from "./LoadStatus.js";
-import WriteModes from "./WriteModes.js";
+import { LoadStatus } from "./LoadStatus.js";
+import { WriteModes } from "./WriteModes.js";
 
 import Util from "../util/Util.js";
 import TypeTester from "../util/TypeTester.js";

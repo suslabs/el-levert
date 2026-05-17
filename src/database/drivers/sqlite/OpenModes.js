@@ -7,4 +7,4 @@ const OpenModes = Object.freeze({
     OPEN_RWCREATE: sqlite.OPEN_READWRITE | sqlite.OPEN_CREATE
 });
 
-export default OpenModes;
+export { OpenModes };

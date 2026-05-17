@@ -7,6 +7,7 @@ import TypeTester from "../util/TypeTester.js";
 import ArrayUtil from "../util/ArrayUtil.js";
 import ObjectUtil from "../util/ObjectUtil.js";
 import DiscordUtil from "../util/DiscordUtil.js";
+import { isErrorCode } from "../util/discord/ErrorCodes.js";
 import diceSearch from "../util/search/diceSearch.js";
 
 import ClientError from "../errors/ClientError.js";
@@ -15,7 +16,6 @@ const {
     Client,
 
     DiscordAPIError,
-    RESTJSONErrorCodes,
 
     GatewayIntentBits,
     Partials,
@@ -196,12 +196,11 @@ class DiscordClient {
         const activityType = typeof config.type === "string" ? config.type.trim().toLowerCase() : "",
             activityText = typeof config.text === "string" ? config.text.trim() : "";
 
-        const lowercaseTypes = DiscordClient._validActivityTypes.map(type => type.toLowerCase()),
-            num = lowercaseTypes.indexOf(activityType);
+        const num = DiscordClient._validActivityTypeNames.indexOf(activityType);
 
         if (num === -1) {
             throw new ClientError(
-                `Invalid activity type: ${activityType}. Valid types are: ${DiscordClient._validActivityTypes.join(" ")}`,
+                `Invalid activity type: ${activityType}. Valid types are: ${DiscordClient.this._validActivityTypes.join(" ")}`,
                 activityType
             );
         }
@@ -238,7 +237,7 @@ class DiscordClient {
                 force: !options.cache
             });
         } catch (err) {
-            if (err.code === RESTJSONErrorCodes.UnknownGuild) {
+            if (isErrorCode("unknownGuild", err)) {
                 return null;
             }
 
@@ -270,7 +269,7 @@ class DiscordClient {
                 force: !options.cache
             });
         } catch (err) {
-            if (err.code === RESTJSONErrorCodes.UnknownMember) {
+            if (isErrorCode("unknownMember", err)) {
                 return null;
             }
 
@@ -293,7 +292,7 @@ class DiscordClient {
                     force: !options.cache
                 });
             } catch (err) {
-                if ([RESTJSONErrorCodes.UnknownChannel, RESTJSONErrorCodes.MissingAccess].includes(err.code)) {
+                if (isErrorCode("channelInaccessible", err)) {
                     return null;
                 }
 
@@ -336,7 +335,7 @@ class DiscordClient {
                     });
                 }
 
-                const threadChannel = [ChannelType.PublicThread, ChannelType.PrivateThread].includes(channel.type),
+                const threadChannel = DiscordClient._threadChannelTypes.has(channel.type),
                     perms = (threadChannel ? channel.parent : channel).memberPermissions(member, true);
 
                 if (perms === null || !perms.has(PermissionsBitField.Flags.ViewChannel)) {
@@ -369,7 +368,7 @@ class DiscordClient {
                 force: !options.cache
             });
         } catch (err) {
-            if (err.code === RESTJSONErrorCodes.UnknownMessage) {
+            if (isErrorCode("unknownMessage", err)) {
                 return null;
             }
 
@@ -432,7 +431,7 @@ class DiscordClient {
                 force: !options.cache
             });
         } catch (err) {
-            if (err.code === RESTJSONErrorCodes.UnknownUser) {
+            if (isErrorCode("unknownUser", err)) {
                 return null;
             }
 
@@ -528,10 +527,14 @@ class DiscordClient {
         this.logger?.info(`The bot is online. Logged in as "${this.botUsername}".`);
     }
 
+    static _threadChannelTypes = new Set([ChannelType.PublicThread, ChannelType.PrivateThread]);
+
     static {
         this._validActivityTypes = Object.entries(ActivityType)
             .filter(([key, value]) => !isNaN(key) && value !== "Custom")
             .map(([, value]) => value);
+
+        this._validActivityTypeNames = this._validActivityTypes.map(type => type.toLowerCase());
     }
 
     async _loadEvents() {

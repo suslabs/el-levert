@@ -1,5 +1,3 @@
-import { RESTJSONErrorCodes } from "discord.js";
-
 import BaseDiscordTransport from "./BaseDiscordTransport.js";
 
 import Util from "../../util/Util.js";
@@ -37,7 +35,7 @@ class ChannelTransport extends BaseDiscordTransport {
         return "Disabled channel transport.";
     }
 
-    static _disableCodes = [RESTJSONErrorCodes.CannotSendMessagesInNonTextChannel];
+    static _disableCodes = ["nonTextChannel"];
 
     _getChannel(id) {
         if (!this._hasClient || !Util.nonemptyString(id)) {

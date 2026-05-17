@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import ArrayUtil from "../../src/util/ArrayUtil.js";
-import LengthTypes from "../../src/util/LengthTypes.js";
+import { LengthTypes } from "../../src/util/LengthTypes.js";
 
 describe("ArrayUtil", () => {
     test("supports array creation, aggregation, sorting, and grouping", () => {
