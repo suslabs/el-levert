@@ -7,7 +7,6 @@ import { TagTypes } from "../../src/structures/tag/TagTypes.js";
 
 import DBUpdateModes from "./DBUpdateModes.js";
 import TagDifferenceType from "./TagDifferenceType.js";
-import OpenModes from "../../src/database/drivers/sqlite/OpenModes.js";
 
 import Util from "../../src/util/Util.js";
 import TypeTester from "../../src/util/TypeTester.js";
@@ -19,6 +18,12 @@ import TagCommand from "../../src/commands/tag/tag.js";
 import ImporterError from "../../src/errors/ImporterError.js";
 
 class DBImporter {
+    static maintenanceSql = Object.freeze({
+        deleteQuotas: "DELETE FROM Quotas WHERE 1=1;",
+        insertQuota: "INSERT INTO Quotas (user, quota, count) VALUES ($user, $quota, $count);",
+        pruneUsage: "DELETE FROM Usage WHERE count <= 0;"
+    });
+
     static getDifference(currentTags, importTags, diffTypes = TagDifferenceType.all) {
         if (diffTypes === TagDifferenceType.all) {
             diffTypes = Object.values(TagDifferenceType);
@@ -135,11 +140,7 @@ class DBImporter {
     async fix() {
         await this._fixQuotas();
         await this._fixUsage();
-
-        await this.tagManager.tag_db.close();
-        await this.tagManager.tag_db.open(OpenModes.OPEN_READWRITE);
-        await this.tagManager.tag_db.db.vacuum();
-        await this.tagManager.tag_db._loadQueries();
+        await this.tagManager.tag_db.vacuum();
     }
 
     async purgeOld() {
@@ -171,7 +172,7 @@ class DBImporter {
 
     static _parseTag(data) {
         const { body, isScript } = ParserUtil.parseScript(data.body),
-            type = isScript ? TagTypes.defaultScriptType : TagTypes.textType;
+            type = isScript ? TagTypes.defaults.scriptType : TagTypes.defaults.type;
 
         const tag = new Tag({
             ...data,
@@ -223,12 +224,12 @@ class DBImporter {
         let tags;
 
         {
-            const oldDefault = TagTypes.defaultVersion;
-            TagTypes.defaultVersion = TagTypes.versionTypes[0];
+            const oldDefault = TagTypes.defaults.version;
+            TagTypes.defaults.version = TagTypes.versions.names[0];
 
             tags = data.map(tag => DBImporter._parseTag(tag));
 
-            TagTypes.defaultVersion = oldDefault;
+            TagTypes.defaults.version = oldDefault;
         }
 
         this.tags = tags;
@@ -299,7 +300,7 @@ class DBImporter {
                 return acc;
             }, {});
 
-        await this.tagManager.tag_db.db.run("DELETE FROM Quotas WHERE 1=1;");
+        await this.tagManager.tag_db.db.run(DBImporter.maintenanceSql.deleteQuotas);
 
         let count = 0;
 
@@ -309,7 +310,7 @@ class DBImporter {
             }
 
             await this.tagManager.tag_db.db
-                .run("INSERT INTO Quotas (user, quota, count) VALUES ($user, $quota, $count);", {
+                .run(DBImporter.maintenanceSql.insertQuota, {
                     $user: user,
                     $quota: stats.quota,
                     $count: stats.count
@@ -322,9 +323,8 @@ class DBImporter {
     }
 
     async _fixUsage() {
-        const res = await this.tagManager.tag_db.db.run("DELETE FROM Usage WHERE count <= 0;");
-
-        this.logger.info(`Pruned ${res.changes ?? 0} usage row(s).`);
+        const res = await this.tagManager.tag_db.db.run(DBImporter.maintenanceSql.pruneUsage);
+        this.logger.info(`Pruned ${res.changes} usage row(s).`);
     }
 }
 

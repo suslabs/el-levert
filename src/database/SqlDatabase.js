@@ -1,12 +1,22 @@
 import SqliteDatabase from "./drivers/sqlite/SqliteDatabase.js";
-import QueryLoader from "../loaders/query/QueryLoader.js";
 
-import OpenModes from "./drivers/sqlite/OpenModes.js";
-import LoadStatus from "../loaders/LoadStatus.js";
+import QueryLoader from "../loaders/query/QueryLoader.js";
+import MigrationLoader from "../loaders/migration/MigrationLoader.js";
+
+import { OpenModes } from "./drivers/sqlite/OpenModes.js";
+import { LoadStatus } from "../loaders/LoadStatus.js";
 
 import TypeTester from "../util/TypeTester.js";
 
 class SqlDatabase {
+    static migrationSeedSql = Object.freeze({
+        createTable:
+            "CREATE TABLE IF NOT EXISTS migrations " +
+            "(id INTEGER PRIMARY KEY, name TEXT NOT NULL, up TEXT NOT NULL, down TEXT NOT NULL);",
+        selectIds: "SELECT id FROM migrations;",
+        insertApplied: "INSERT INTO migrations (id, name, up, down) VALUES ($id, $name, $up, $down);"
+    });
+
     constructor(dbPath, queryPath, options) {
         this.dbPath = dbPath;
         this.queryPath = queryPath;
@@ -18,6 +28,10 @@ class SqlDatabase {
 
         this.db = null;
         this._queryLoader = null;
+        this._migrations = new Map();
+
+        this._childSetup = this.setup;
+        this.setup = this._setup.bind(this);
     }
 
     async open(mode) {
@@ -32,6 +46,7 @@ class SqlDatabase {
             delayRelease: this.delayRelease,
 
             loadExtensions: this.loadExtensions,
+            customFunctions: this.customFunctions,
             transactionMode: this.transactionMode
         };
 
@@ -50,6 +65,7 @@ class SqlDatabase {
 
     async create() {
         await this.open(OpenModes.OPEN_RWCREATE);
+        await this.setup("create");
         await this._loadCreateQueries();
 
         for (const query of this._queryLoader.createQueries) {
@@ -59,6 +75,14 @@ class SqlDatabase {
 
     async load() {
         await this.open(OpenModes.OPEN_READWRITE);
+        await this.setup("load");
+        return await this._loadDatabase();
+    }
+
+    async setup() {}
+
+    async reload() {
+        await this._unloadDatabase();
         return await this._loadDatabase();
     }
 
@@ -67,9 +91,15 @@ class SqlDatabase {
         return this.db.migrate(options);
     }
 
+    async vacuum() {
+        await this._unloadDatabase();
+        await this.db.vacuum();
+        return await this._loadDatabase();
+    }
+
     async beginTransaction(mode) {
-        const trxDb = await this.db.beginTransaction(mode);
-        return await this._createScopedDatabase(trxDb);
+        const txDb = await this.db.beginTransaction(mode);
+        return await this._createScopedDatabase(txDb);
     }
 
     commit() {
@@ -81,13 +111,13 @@ class SqlDatabase {
     }
 
     transaction(callback, mode) {
-        return this.db.transaction(async trxDb => {
-            const trx = await this._createScopedDatabase(trxDb);
+        return this.db.transaction(async txDb => {
+            const tx = await this._createScopedDatabase(txDb);
 
             try {
-                return await callback(trx);
+                return await callback(tx);
             } finally {
-                await trx._unloadDatabase();
+                await tx._unloadDatabase();
             }
         }, mode);
     }
@@ -116,6 +146,8 @@ class SqlDatabase {
         this.queryExtension = options.queryExtension ?? ".sql";
         this.queryEncoding = options.queryEncoding ?? "utf8";
 
+        this.migrationsPath = options.migrationsPath;
+
         this.enableWAL = options.enableWAL ?? true;
 
         this.poolMin = options.poolMin ?? 1;
@@ -126,6 +158,7 @@ class SqlDatabase {
         this.delayRelease = options.delayRelease ?? false;
 
         this.loadExtensions = new Set(options.loadExtensions ?? []);
+        this.customFunctions = new Map(options.customFunctions ?? []);
         this.transactionMode = options.transactionMode ?? "immediate";
 
         this.rewriteFunc = typeof options.rewriteQueryStrings === "function" ? options.rewriteQueryStrings : undefined;
@@ -213,6 +246,51 @@ class SqlDatabase {
         return queryLoader.result;
     }
 
+    async _setup(...args) {
+        if (typeof this._childSetup === "function") {
+            return await this._childSetup.apply(this, args);
+        }
+    }
+
+    async _loadMigrations(migrationsPath = this.migrationsPath) {
+        const resolvedPath = migrationsPath != null ? String(migrationsPath) : "";
+
+        if (!this._migrations.has(resolvedPath)) {
+            const loader = new MigrationLoader(resolvedPath, null),
+                [migrations] = await loader.load();
+
+            this._migrations.set(resolvedPath, migrations);
+        }
+
+        return this._migrations.get(resolvedPath);
+    }
+
+    async _seedAppliedMigrations(ids, migrationsPath = this.migrationsPath) {
+        const migrations = await this._loadMigrations(migrationsPath),
+            existing = new Set();
+
+        await this.db.run(SqlDatabase.migrationSeedSql.createTable);
+
+        const rows = await this.db.all(SqlDatabase.migrationSeedSql.selectIds);
+
+        for (const row of Array.from(rows)) {
+            existing.add(row.id);
+        }
+
+        for (const migration of migrations) {
+            if (!ids.includes(migration.id) || existing.has(migration.id)) {
+                continue;
+            }
+
+            await this.db.run(SqlDatabase.migrationSeedSql.insertApplied, {
+                $id: migration.id,
+                $name: migration.name,
+                $up: migration.up,
+                $down: migration.down
+            });
+        }
+    }
+
     _copyScopedOverrides(scoped) {
         for (const key of Object.keys(this)) {
             const value = this[key];
@@ -225,7 +303,6 @@ class SqlDatabase {
 
     async _createScopedDatabase(db) {
         const scoped = new this.constructor(this.dbPath, this.queryPath, this.options);
-
         this._copyScopedOverrides(scoped);
 
         scoped.db = db;

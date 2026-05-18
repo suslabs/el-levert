@@ -57,8 +57,8 @@ class PermAddGroupCommand {
             }
         }
 
-        if (!getClient().permManager.allowed(ctx.perm, level)) {
-            return `${getEmoji("warn")} Can't create a group with a level that is higher than your own. (**${ctx.perm}** < **${level}**)`;
+        if (!getClient().permManager.canManageLevel(ctx.perm, level)) {
+            return `${getEmoji("warn")} Can't create a group with a level that is higher than or equal to your own. (**${ctx.perm}** <= **${level}**)`;
         }
 
         try {

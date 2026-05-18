@@ -81,11 +81,6 @@ class Command extends TextCommand {
         return this._formatSubcmdHelp(subcmds, true);
     }
 
-    createContext(data) {
-        const context = super.createContext(data);
-        return context instanceof CommandContext ? context : new this.constructor.contextClass(context);
-    }
-
     async execute(context, options) {
         context = this.createContext(context);
         options = TypeTester.isObject(options) ? options : {};

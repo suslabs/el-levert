@@ -93,7 +93,7 @@ class Benchmark {
             this._stopSweepLoop();
         }
 
-        if (key in this.data) {
+        if (Object.hasOwn(this.data, key)) {
             delete this.data[key];
             return true;
         }
@@ -229,7 +229,7 @@ class Benchmark {
     static resetCount(name) {
         name = this._formatCountName(name);
 
-        if (name in this.counts) {
+        if (Object.hasOwn(this.counts, name)) {
             this.counts[name] = 0;
             return true;
         }
@@ -240,7 +240,7 @@ class Benchmark {
     static deleteCount(name) {
         name = this._formatCountName(name);
 
-        if (name in this.counts) {
+        if (Object.hasOwn(this.counts, name)) {
             delete this.counts[name];
             this._origCountNames.delete(name);
             this._origCountFuncs.delete(name);

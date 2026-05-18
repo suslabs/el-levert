@@ -64,7 +64,7 @@ class BaseCommand {
                 ])
             );
 
-        const data = Object.fromEntries(keys.map(key => [key, key in infoData ? infoData[key] : this[key]]));
+        const data = Object.fromEntries(keys.map(key => [key, Object.hasOwn(infoData, key) ? infoData[key] : this[key]]));
 
         if (nullable) {
             for (const prop of this.constructor._nullableDataProps.filter(
@@ -181,7 +181,7 @@ class BaseCommand {
 
     static _registerInfoGetters() {
         for (const prop of this.infoClass.dataProps) {
-            if (Object.getOwnPropertyDescriptor(this.prototype, prop) == null) {
+            if (!Object.hasOwn(this.prototype, prop)) {
                 this._registerFunc(this._infoGetter, prop);
             }
         }

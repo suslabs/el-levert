@@ -56,6 +56,18 @@ const ObjectUtil = Object.freeze({
         return Object.assign(target, source, values);
     },
 
+    getBooleanOptions: (options, defaults = {}, objectDefaults = defaults) => {
+        if (typeof defaults === "boolean") {
+            defaults = Object.fromEntries(Object.keys(objectDefaults).map(key => [key, defaults]));
+        }
+
+        if (typeof options === "boolean") {
+            return Object.fromEntries(Object.keys(defaults).map(key => [key, options]));
+        }
+
+        return ObjectUtil.setValuesWithDefaults({}, TypeTester.isObject(options) ? options : defaults, objectDefaults);
+    },
+
     assign: (target, source, options, props) => {
         let _enum, nonenum, both, keys;
 

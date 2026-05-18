@@ -11,6 +11,14 @@ class Reminder {
         msg: ""
     };
 
+    static from(data, nullable = false, ...args) {
+        if (nullable && data === null) {
+            return null;
+        }
+
+        return data instanceof this ? data : new this(data, ...args);
+    }
+
     constructor(data) {
         ObjectUtil.setValuesWithDefaults(this, data, this.constructor.defaultValues);
     }

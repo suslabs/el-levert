@@ -7,6 +7,7 @@
         "test": "vitest run",
         "coverage": "vitest run --coverage",
         "start": "node --experimental-websocket --no-warnings=ExperimentalWarning index.js",
+        "postinstall": "node ./scripts/setup/install-sqlite.cjs",
         "format": "prettier --config .prettierrc --ignore-path .prettierignore --write **/*.{js,cjs,json}",
         "lint": "eslint . --config .eslintrc.json --ignore-path .gitignore --ext .js",
         "importer": "cross-env MOCK_MAP_PATH=\"./scripts/importer/mock/mock-map.json\" node --no-warnings=ExperimentalWarning --loader \"./scripts/mock/mock-loader.js\" ./scripts/importer/importer.js",
@@ -20,7 +21,6 @@
         "discord.js": "^14.26.4",
         "isolated-vm": "^5.0.4",
         "re2": "^1.24.0",
-        "sqlite3": "^5.1.7",
         "generic-pool": "^3.9.0",
         "winston": "^3.19.0"
     },

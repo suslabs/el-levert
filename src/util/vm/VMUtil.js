@@ -6,7 +6,7 @@ import { VMHttpErrorTypes } from "./VMHttpErrorTypes.js";
 
 import UtilError from "../../errors/UtilError.js";
 
-const VMUtil = {
+let VMUtil = {
     resolveObject(path, propertyMap) {
         if (!Util.nonemptyString(path)) {
             throw new UtilError("Can't resolve object, no path provided");
@@ -288,4 +288,5 @@ const VMUtil = {
     VMUtil._spaces = " ".repeat(VMUtil.indentation);
 }
 
+VMUtil = Object.freeze(VMUtil);
 export default VMUtil;

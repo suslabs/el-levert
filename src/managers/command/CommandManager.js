@@ -81,9 +81,7 @@ class CommandManager extends TextCommandManager {
             const exp = getClient().bridgeBotExps;
             this._bridgeBotExps = new Map();
 
-            exp.forEach((value, key) => {
-                this._bridgeBotExps.set(key, this._wrapBridgeBotExp(value));
-            });
+            exp.forEach((value, key) => this._bridgeBotExps.set(key, this._wrapBridgeBotExp(value)));
         } else {
             const exp = getClient().bridgeBotExp;
             this._bridgeBotExp = this._wrapBridgeBotExp(exp);

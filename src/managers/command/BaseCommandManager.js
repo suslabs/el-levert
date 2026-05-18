@@ -191,9 +191,7 @@ class BaseCommandManager extends Manager {
 
             getLogger().warn(`Found ${unbound} orphaned subcommand(s):\n${format}`);
 
-            ArrayUtil.wipeArray(unboundCmds, command => {
-                this.deleteSubcommand(command);
-            });
+            ArrayUtil.wipeArray(unboundCmds, command => this.deleteSubcommand(command));
         }
 
         return bound;

@@ -46,8 +46,8 @@ class PermAddCommand {
 
         if (group === null) {
             return `${getEmoji("warn")} Group **${escapeMarkdown(g_name)}** doesn't exist.`;
-        } else if (!getClient().permManager.allowed(ctx.perm, group.level)) {
-            return `${getEmoji("warn")} Can't add a user to a group with a higher level your own. (**${ctx.perm}** < **${group.level}**)`;
+        } else if (!getClient().permManager.canManageLevel(ctx.perm, group.level)) {
+            return `${getEmoji("warn")} Can't add a user to a group with a level that is higher than or equal to your own. (**${ctx.perm}** <= **${group.level}**)`;
         }
 
         const find = Util.first(await getClient().findUsers(u_name));

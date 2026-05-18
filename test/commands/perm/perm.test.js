@@ -87,7 +87,8 @@ describe("Merged Branch Coverage", () => {
             expect(await run("add_group")).toContain("group_name level");
             expect(await run("add_group bad* 4")).toContain("must consist");
             expect(await run("add_group mods nope")).toContain("Invalid group level");
-            expect(await run("add_group bosses 9")).toContain("higher than your own");
+            expect(await run("add_group admins2 8")).toContain("higher than or equal to your own");
+            expect(await run("add_group bosses 9")).toContain("higher than or equal to your own");
 
             expect(await run("add_group mods 5")).toContain("Added group");
             expect(await run("add_group mods 5")).toContain("already exists");
@@ -103,7 +104,7 @@ describe("Merged Branch Coverage", () => {
             expect(await run("add")).toContain("group_name");
             expect(await run("add bad* alice")).toContain("must consist");
             expect(await run("add missing alice")).toContain("doesn't exist");
-            expect(await run("add bosses alice")).toContain("higher level your own");
+            expect(await run("add bosses alice")).toContain("higher than or equal to your own");
 
             runtime.client.findUsers = async () => [];
             expect(await run("add mods ghost")).toContain("User `ghost` not found");
@@ -186,7 +187,7 @@ describe("Merged Branch Coverage", () => {
             ];
 
             expect(await run("remove missing alice")).toContain("doesn't exist");
-            expect(await run("remove bosses boss")).toContain("higher level than your own");
+            expect(await run("remove bosses boss")).toContain("higher than or equal to your own");
             expect(await run("remove mods nobody")).toContain("is not in group");
             expect(await run("remove mods alice")).toContain("Removed user `alice`");
 
@@ -222,7 +223,7 @@ describe("Merged Branch Coverage", () => {
                 }
             ];
 
-            expect(await run("remove_all boss")).toContain("higher than your own");
+            expect(await run("remove_all boss")).toContain("higher than or equal to your own");
             expect(await run("remove_all alice")).toContain("Removed `alice`");
             expect(await run("remove_all alice")).toContain("doesn't have any permissions");
             expect(await run("remove_all owner", ownerMsg)).toContain("other than being the bot owner");
@@ -235,7 +236,7 @@ describe("Merged Branch Coverage", () => {
             expect(await run("remove_group")).toContain("group_name");
             expect(await run("remove_group bad*")).toContain("must consist");
             expect(await run("remove_group missing")).toContain("doesn't exist");
-            expect(await run("remove_group bosses")).toContain("higher than yours");
+            expect(await run("remove_group bosses")).toContain("higher than or equal to yours");
             expect(await run("remove_group mods")).toContain("Removed group");
 
             await runtime.client.permManager.addGroup("helpers", 4, true);
@@ -253,7 +254,8 @@ describe("Merged Branch Coverage", () => {
             expect(await run("update_group mods bad* 4")).toContain("must consist");
             expect(await run("update_group mods unchanged nope")).toContain("Invalid group level");
             expect(await run("update_group mods unchanged unchanged")).toContain("No group changes provided");
-            expect(await run("update_group mods unchanged 9")).toContain("higher than your own");
+            expect(await run("update_group admins helpers 4")).toContain("higher than or equal to your own");
+            expect(await run("update_group mods unchanged 9")).toContain("higher than or equal to your own");
             expect(await run("update_group mods unchanged 5")).toContain("same level");
             expect(await run("update_group mods helpers 6")).toContain("already exists");
             expect(await run("update_group mods unchanged 6")).toContain("Updated group");

@@ -10,12 +10,12 @@ export default function (base) {
             this.statements = [];
         }
 
-        addStatement(statement) {
-            this.statements.push(statement);
+        addStatement(st) {
+            this.statements.push(st);
         }
 
-        removeStatement(statement) {
-            const [removed] = ArrayUtil.removeItem(this.statements, statement);
+        removeStatement(st) {
+            const [removed] = ArrayUtil.removeItem(this.statements, st);
 
             if (this.throwErrors && !removed) {
                 throw new DatabaseError("Statement not found");
@@ -24,19 +24,19 @@ export default function (base) {
             return removed;
         }
 
-        async finalizeStatement(statement) {
-            this.removeStatement(statement);
-            await statement.finalize(false);
+        async finalizeStatement(st) {
+            this.removeStatement(st);
+            await st.finalize(false);
         }
 
         async finalizeAll() {
-            return await ArrayUtil.wipeArray(this.statements, async statement => {
-                if (statement.finalized) {
+            return await ArrayUtil.wipeArray(this.statements, async st => {
+                if (st.finalized) {
                     return;
                 }
 
                 try {
-                    await statement.finalize(false);
+                    await st.finalize(false);
                 } catch (err) {
                     if (err.name !== "DatabaseError") {
                         throw err;

@@ -9,4 +9,4 @@ const ConnectionEvents = Object.freeze({
     promiseError: "promiseError"
 });
 
-export default ConnectionEvents;
+export { ConnectionEvents };

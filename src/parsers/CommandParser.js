@@ -91,7 +91,7 @@ class CommandParser {
 
         const missingValue = typeof value === "undefined",
             emptyValue = def.useDefaultOnEmpty && Util.empty(value),
-            hasDefaultValue = "defaultValue" in def;
+            hasDefaultValue = Object.hasOwn(def, "defaultValue");
 
         if (hasDefaultValue && (missingValue || emptyValue)) {
             const { defaultValue } = def;
@@ -138,7 +138,7 @@ class CommandParser {
             return from(context, parsed, def);
         } else if (typeof from !== "string") {
             return from;
-        } else if (from in parsed) {
+        } else if (Object.hasOwn(parsed, from)) {
             return parsed[from];
         } else if (from.startsWith("parseResult.")) {
             return this._resolvePath(context.parseResult, from.slice("parseResult.".length));

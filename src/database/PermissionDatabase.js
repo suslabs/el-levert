@@ -6,6 +6,12 @@ import User from "../structures/permission/User.js";
 import Util from "../util/Util.js";
 
 class PermissionDatabase extends SqlDatabase {
+    async setup(mode) {
+        if (mode === "load") {
+            await this._migrateLegacySchema();
+        }
+    }
+
     async groupExists(name) {
         if (Array.isArray(name)) {
             if (Util.empty(name)) {
@@ -138,16 +144,39 @@ class PermissionDatabase extends SqlDatabase {
         });
     }
 
-    async transferUsers(group, newGroup) {
-        return await this.userQueries.transfer.run({
-            $group: group.name,
-            $newGroup: newGroup.name
-        });
-    }
-
     async listUsers() {
         const rows = await this.userQueries.list.all();
         return rows.map(row => new User(row));
+    }
+
+    async _migrateLegacySchema() {
+        const userTable = await this.db.tableDetails("Users");
+
+        if (!userTable.exists) {
+            return;
+        }
+
+        const groupForeignKey = userTable.foreignKeys.find(row => row.table === "Groups" && row.from === "group"),
+            hasCascade = groupForeignKey?.on_update === "CASCADE" && groupForeignKey?.on_delete === "CASCADE";
+
+        let hasUniqueUserGroup = false;
+
+        for (const index of userTable.indexes.filter(row => row.unique === 1)) {
+            const columns = userTable.indexColumns.get(index.name).map(row => row.name);
+
+            if (columns.length === 2 && columns[0] === "user" && columns[1] === "group") {
+                hasUniqueUserGroup = true;
+                break;
+            }
+        }
+
+        if (hasCascade && hasUniqueUserGroup) {
+            return;
+        }
+
+        await this.db.migrate({
+            migrationsPath: this.migrationsPath
+        });
     }
 }
 

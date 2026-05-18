@@ -3,6 +3,7 @@
     "permission": "perm_db.db",
     "reminder": "remind_db.db",
     "queryPath": "./src/database/query",
+    "migrationsPath": "./src/database/migrations",
     "queryExtension": ".sql",
     "queryEncoding": "utf-8"
 }

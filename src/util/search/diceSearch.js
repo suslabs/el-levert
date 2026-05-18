@@ -1,6 +1,7 @@
 import diceDist from "./diceDist.js";
 
 import Util from "../Util.js";
+import ArrayUtil from "../ArrayUtil.js";
 import TypeTester from "../TypeTester.js";
 
 const outputResult = (results, oversized) => ({
@@ -10,7 +11,7 @@ const outputResult = (results, oversized) => ({
 });
 
 function diceSearch(haystack, needle, options) {
-    haystack = Array.isArray(haystack) ? haystack : [];
+    haystack = ArrayUtil.guaranteeArray(haystack, null, true);
     options = TypeTester.isObject(options) ? options : {};
 
     const maxResults = options.maxResults,

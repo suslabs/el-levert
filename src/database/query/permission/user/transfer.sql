@@ -1,1 +1,0 @@
-UPDATE Users SET "group" = $newGroup WHERE "group" = $group;

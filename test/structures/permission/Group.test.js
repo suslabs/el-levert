@@ -9,6 +9,9 @@ describe("Group", () => {
         const matchingUser = new User({ user: "100", group: "mods*", username: "Alex" });
         const otherUser = new User({ user: "200", group: "other", username: "Blake" });
 
+        expect(Group.from(group)).toBe(group);
+        expect(Group.from(null, true)).toBe(null);
+
         group.setUsers([matchingUser, otherUser]);
 
         expect(group.users).toEqual([matchingUser]);

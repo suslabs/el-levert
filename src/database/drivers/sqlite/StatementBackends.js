@@ -1,3 +1,5 @@
+import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
+
 class StatementBackend {
     _finalizeStatement(st, resolve, reject, err, removeEntry, cleanup) {
         st.finalized = true;
@@ -11,69 +13,87 @@ class StatementBackend {
         resolve();
     }
 
-    _resetStatements(rawStatements, resolve) {
-        const resetPromises = Array.from(rawStatements, rawStatement => {
-            return new Promise(resolve1 => {
-                rawStatement.reset(_ => {
-                    resolve1();
-                });
+    _resetStatements(st, rawSts, resolve1, reject1) {
+        const resetPromises = Array.from(rawSts, rawSt => {
+            return new Promise((resolve2, reject2) => {
+                try {
+                    rawSt.reset(err => {
+                        if (st._throwErrorAsync(resolve2, reject2, err)) {
+                            return;
+                        }
+
+                        resolve2();
+                    });
+                } catch (err) {
+                    DatabaseUtil.settleSyncError(st, resolve2, reject2, err);
+                }
             });
         });
 
-        Promise.all(resetPromises).then(_ => {
-            resolve();
-        });
+        Promise.all(resetPromises).then(_ => resolve1()).catch(reject1);
     }
 }
 
 class ConnectionStatementBackend extends StatementBackend {
-    constructor(conn, rawStatement) {
+    constructor(conn, rawSt) {
         super();
 
         this._conn = conn;
-        this._rawStatement = rawStatement;
+        this._rawSt = rawSt;
     }
 
     finalize(st, resolve, reject, removeEntry) {
-        this._rawStatement.finalize(err1 => {
-            this._finalizeStatement(st, resolve, reject, err1, removeEntry, () => {
-                this._rawStatement = null;
-                this._conn.removeStatement(st);
+        try {
+            this._rawSt.finalize(err => {
+                this._finalizeStatement(st, resolve, reject, err, removeEntry, () => {
+                    this._rawSt = null;
+                    this._conn.removeStatement(st);
+                });
             });
-        });
+        } catch (err) {
+            DatabaseUtil.settleSyncError(st, resolve, reject, err);
+        }
     }
 
     bind(st, param, resolve, reject) {
         try {
             param = st._normalizeArgs(this._conn, param);
-        } catch (err1) {
-            st._throwErrorAsync(resolve, reject, err1);
+        } catch (err) {
+            DatabaseUtil.settleSyncError(st, resolve, reject, err);
             return;
         }
 
-        this._rawStatement.bind(...param, err1 => {
-            if (st._throwErrorAsync(resolve, reject, err1)) {
-                return;
-            }
+        try {
+            this._rawSt.bind(...param, err => {
+                if (st._throwErrorAsync(resolve, reject, err)) {
+                    return;
+                }
 
-            resolve();
-        });
+                resolve();
+            });
+        } catch (err) {
+            DatabaseUtil.settleSyncError(st, resolve, reject, err);
+        }
     }
 
-    reset(_statement, resolve, _reject) {
-        this._resetStatements([this._rawStatement], resolve);
+    reset(st, resolve, reject) {
+        this._resetStatements(st, [this._rawSt], resolve, reject);
     }
 
-    getContext(_statement) {
+    getContext(_st) {
         return Promise.resolve({
             conn: this._conn,
-            st: this._rawStatement,
+            st: this._rawSt,
             pooled: false
         });
     }
 
     releaseContext(_context) {
         return Promise.resolve();
+    }
+
+    safeIntegers(_st, enabled) {
+        this._rawSt.safeIntegers(enabled);
     }
 
     getTarget() {
@@ -90,45 +110,65 @@ class PooledStatementBackend extends StatementBackend {
         super();
 
         this._db = db;
-        this._rawStatements = new Map();
+        this._rawSts = new Map();
     }
 
-    finalize(st, resolve, reject, removeEntry) {
-        const finalizePromises = Array.from(this._rawStatements.entries(), ([conn, rawStatement]) => {
-            return new Promise((resolve1, reject1) => {
-                rawStatement.finalize(err1 => {
-                    if (st._throwErrorAsync(resolve1, reject1, err1)) {
-                        return;
-                    }
+    finalize(st, resolve1, reject1, removeEntry) {
+        const finalizePromises = Array.from(this._rawSts.entries(), ([conn, rawSt]) => {
+            return new Promise((resolve2, reject2) => {
+                try {
+                    rawSt.finalize(err => {
+                        if (st._throwErrorAsync(resolve2, reject2, err)) {
+                            return;
+                        }
 
-                    this._rawStatements.delete(conn);
-                    resolve1();
-                });
+                        this._rawSts.delete(conn);
+                        resolve2();
+                    });
+                } catch (err) {
+                    DatabaseUtil.settleSyncError(st, resolve2, reject2, err);
+                }
             });
         });
 
         Promise.all(finalizePromises)
             .then(_ => {
-                this._finalizeStatement(st, resolve, reject, null, removeEntry, () => {});
+                this._finalizeStatement(st, resolve1, reject1, null, removeEntry, () => {});
             })
-            .catch(reject);
+            .catch(reject1);
     }
 
-    bind(_statement, _param, resolve, _reject) {
+    bind(_st, _param, resolve, _reject) {
         resolve();
     }
 
-    reset(_statement, resolve, _reject) {
-        this._resetStatements(this._rawStatements.values(), resolve);
+    safeIntegers(_st, enabled) {
+        for (const rawSt of this._rawSts.values()) {
+            rawSt.safeIntegers(enabled);
+        }
+    }
+
+    reset(st, resolve, reject) {
+        this._resetStatements(st, this._rawSts.values(), resolve, reject);
     }
 
     getContext(st) {
         return this._db._getActiveConnection().then(({ conn, pooled }) => {
-            return this._getRawStatement(st, conn).then(rawStatement => ({
-                conn,
-                st: rawStatement,
-                pooled
-            }));
+            return this._getRawSt(st, conn).then(rawSt => {
+                if (rawSt == null) {
+                    if (pooled) {
+                        return this._db._releaseConnection(conn).then(_ => null);
+                    }
+
+                    return null;
+                }
+
+                return {
+                    conn,
+                    st: rawSt,
+                    pooled
+                };
+            });
         });
     }
 
@@ -140,23 +180,31 @@ class PooledStatementBackend extends StatementBackend {
         return Promise.resolve();
     }
 
-    _getRawStatement(st, conn) {
+    _getRawSt(st, conn) {
         return new Promise((resolve, reject) => {
-            if (this._rawStatements.has(conn)) {
-                resolve(this._rawStatements.get(conn));
+            if (this._rawSts.has(conn)) {
+                resolve(this._rawSts.get(conn));
                 return;
             }
 
-            let rawStatement = null;
+            let rawSt = null;
 
-            rawStatement = conn.db.prepare(st.sql, err1 => {
-                if (conn._throwErrorAsync(resolve, reject, err1)) {
-                    return;
-                }
+            try {
+                rawSt = conn.db.prepare(st.sql, err => {
+                    if (conn._throwErrorAsync(resolve, reject, err, null)) {
+                        return;
+                    }
 
-                this._rawStatements.set(conn, rawStatement);
-                resolve(rawStatement);
-            });
+                    if (st._safeIntegers != null) {
+                        rawSt.safeIntegers(st._safeIntegers);
+                    }
+
+                    this._rawSts.set(conn, rawSt);
+                    resolve(rawSt);
+                });
+            } catch (err) {
+                DatabaseUtil.settleSyncError(st, resolve, reject, err, null);
+            }
         });
     }
 

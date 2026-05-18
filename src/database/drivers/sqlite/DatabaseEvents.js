@@ -8,4 +8,4 @@ const DatabaseEvents = Object.freeze({
     promiseError: "promiseError"
 });
 
-export default DatabaseEvents;
+export { DatabaseEvents };

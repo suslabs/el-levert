@@ -1,4 +1,5 @@
 import Util from "../Util.js";
+import ArrayUtil from "../ArrayUtil.js";
 
 const RegexUtil = Object.freeze({
     _regexEscapeRegex: /[.*+?^${}()|[\]\\]/g,
@@ -24,8 +25,9 @@ const RegexUtil = Object.freeze({
             return null;
         }
 
-        const groups = Object.keys(match.groups).filter(key => typeof match.groups[key] !== "undefined"),
-            foundName = groups.find(key => key.startsWith(name));
+        const foundName = Object.entries(match.groups).find(
+            ([key, value]) => typeof value !== "undefined" && key.startsWith(name)
+        )?.[0];
 
         return foundName && match.groups[foundName];
     },
@@ -41,7 +43,8 @@ const RegexUtil = Object.freeze({
     },
 
     getWordRegex: (words, flags = "gu") => {
-        const validWords = [...new Set([].concat(words ?? []).filter(Util.nonemptyString))];
+        words = ArrayUtil.guaranteeArray(words, null, true);
+        const validWords = [...new Set(words.filter(Util.nonemptyString))];
 
         if (validWords.length < 1) {
             return null;

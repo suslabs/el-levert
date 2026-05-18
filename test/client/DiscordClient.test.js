@@ -248,7 +248,7 @@ describe("DiscordClient", () => {
     test("handles missing ids and access checks while fetching channels and message collections", async () => {
         const client = createClient();
 
-        await expect(client.fetchGuild("id", null)).rejects.toThrow("Invalid options provided");
+        await expect(client.fetchGuild("id", null)).resolves.toBeUndefined();
         await expect(client.findUsers("   ")).rejects.toThrow("No query provided");
 
         client._parseDiscordId = vi
@@ -552,7 +552,8 @@ describe("DiscordClient", () => {
         await expect(messageErrClient.fetchMessage("channel-id", "message-id")).rejects.toThrow("message failed");
 
         const messagesClient = createClient();
-        await expect(messagesClient.fetchMessages("channel-id", null)).rejects.toThrow("Invalid options provided");
+        messagesClient.fetchChannel = vi.fn().mockResolvedValueOnce(null);
+        expect(await messagesClient.fetchMessages("channel-id", null)).toBeNull();
 
         messagesClient.fetchChannel = vi.fn().mockResolvedValueOnce(null);
         expect(await messagesClient.fetchMessages("channel-id")).toBeNull();
@@ -577,7 +578,10 @@ describe("DiscordClient", () => {
     test("covers findUserById and findUsers fallback, validation, and process shutdown branches", async () => {
         const client = createClient();
 
-        await expect(client.findUserById("user-id", null)).rejects.toThrow("Invalid options provided");
+        client.client.users.fetch.mockRejectedValueOnce({
+            code: RESTJSONErrorCodes.UnknownUser
+        });
+        expect(await client.findUserById("user-id", null)).toBeNull();
 
         client.client.users.fetch.mockRejectedValueOnce({
             code: RESTJSONErrorCodes.UnknownUser
@@ -586,8 +590,6 @@ describe("DiscordClient", () => {
 
         client.client.users.fetch.mockRejectedValueOnce(new Error("lookup failed"));
         await expect(client.findUserById("user-id")).rejects.toThrow("lookup failed");
-
-        await expect(client.findUsers("query", null)).rejects.toThrow("Invalid options provided");
 
         client.client.guilds.cache = new Map([
             [
@@ -599,6 +601,7 @@ describe("DiscordClient", () => {
                 }
             ]
         ]);
+        expect(await client.findUsers("query", null)).toEqual([]);
 
         client.fetchMember = vi.fn().mockResolvedValueOnce({
             id: "123456789012345678",

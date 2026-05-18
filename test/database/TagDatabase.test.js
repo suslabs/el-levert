@@ -7,16 +7,20 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import "../../setupGlobals.js";
 
 import TagDatabase from "../../src/database/TagDatabase.js";
-import OpenModes from "../../src/database/drivers/sqlite/OpenModes.js";
+import { OpenModes } from "../../src/database/drivers/sqlite/OpenModes.js";
 import Tag from "../../src/structures/tag/Tag.js";
 
 const queryPath = path.resolve(projRoot, "src/database/query/tag");
+const migrationsPath = path.resolve(projRoot, "src/database/migrations/tag");
 
 let tempDir;
 
 function createDb(filename = "tags.sqlite") {
     const dbPath = path.join(tempDir, filename);
-    return new TagDatabase(dbPath, queryPath, { enableWAL: false });
+    return new TagDatabase(dbPath, queryPath, {
+        enableWAL: false,
+        migrationsPath
+    });
 }
 
 beforeEach(async () => {
@@ -35,8 +39,8 @@ describe("TagDatabase", () => {
 
         await db.quotaCreate("u1");
         await db.quotaCreate("u2");
-        await db.quotaSet("u1", 4.5);
-        await db.quotaSet("u2", 2.5);
+        await db.quotaSizeSet("u1", 4.5);
+        await db.quotaSizeSet("u2", 2.5);
         await db.quotaCountSet("u1", 0);
         await db.quotaCountSet("u2", 0);
 
@@ -51,6 +55,21 @@ describe("TagDatabase", () => {
         await db.add(alias);
         await db.add(script);
         await db.add(legacy);
+
+        let rawType = await db.db.get("SELECT hex(type) AS typeHex FROM Tags WHERE name = $name", {
+            $name: "script1"
+        });
+        expect(rawType).toEqual({
+            typeHex: "03"
+        });
+
+        rawType = await db.db.get("SELECT hex(type) AS typeHex FROM Tags WHERE name = $name", {
+            $name: "legacy"
+        });
+        expect(rawType).toEqual({
+            typeHex: "00"
+        });
+
         expect(await db.usageFetch("plain")).toBe(0);
         await db.usageIncrement("plain");
         await db.usageIncrement("plain");
@@ -111,8 +130,8 @@ describe("TagDatabase", () => {
             expect.objectContaining({ user: "u1", count: 1 })
         ]);
 
-        expect(await db.quotaFetch("missing")).toBeNull();
-        expect(await db.quotaFetch("u1")).toBe(4.5);
+        expect(await db.quotaSizeFetch("missing")).toBeNull();
+        expect(await db.quotaSizeFetch("u1")).toBe(4.5);
         expect(await db.quotaCountFetch("u1")).toBe(1);
         expect(await db.sizeLeaderboard(5)).toEqual([
             expect.objectContaining({ user: "u1", quota: 4.5 }),
@@ -129,6 +148,11 @@ describe("TagDatabase", () => {
         await db.add(new Tag({ name: "plain2", body: "restored", owner: "u2" }));
         expect(await db.usageFetch("plain2")).toBe(2);
 
+        const migrations = await db.db.get(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'migrations';"
+        );
+        expect(typeof migrations._data).toBe("undefined");
+
         await db.open(OpenModes.OPEN_READWRITE);
         await db.close();
     });
@@ -138,6 +162,7 @@ describe("TagDatabase", () => {
         await db.create();
         await db.load();
 
+        await db.quotaCreate("u1");
         await db.add(new Tag({ name: "alpha", body: "body", owner: "u1" }));
         await db.add(new Tag({ name: "beta", body: "body", owner: "u1" }));
 
@@ -178,6 +203,7 @@ describe("TagDatabase", () => {
         await db.create();
         await db.load();
 
+        await db.quotaCreate("user");
         const tag = new Tag({ name: "plain", body: "body", owner: "user" });
         await db.add(tag);
 
@@ -199,6 +225,7 @@ describe("TagDatabase", () => {
         await db.create();
         await db.load();
 
+        await db.quotaCreate("user");
         const target = new Tag({ name: "target", body: "body", owner: "user" });
         const alias = new Tag({ name: "alias", owner: "user" });
         alias.aliasTo(target, "extra");
@@ -314,6 +341,95 @@ describe("TagDatabase", () => {
             $name: "new_alias"
         });
         expect(raw.aliasName).toBe("renamed");
+
+        raw = await db.db.get("SELECT hex(type) AS typeHex FROM Tags WHERE name = $name", {
+            $name: "legacy"
+        });
+        expect(raw).toEqual({
+            typeHex: "01"
+        });
+
+        const migrationRows = Array.from(await db.db.all("SELECT id FROM migrations ORDER BY id ASC;")).map(
+            row => row.id
+        );
+        expect(migrationRows).toEqual([1, 2]);
+
+        await db.close();
+    });
+
+    test("migrates the current integer tag schema to blob storage without treating fresh dbs as migrated", async () => {
+        const db = createDb();
+        await db.open(OpenModes.OPEN_RWCREATE);
+        await db.db.exec(`
+            CREATE TABLE 'Quotas' (
+                'user' TEXT,
+                'quota' REAL,
+                'count' INTEGER,
+                PRIMARY KEY('user')
+            ) STRICT;
+            CREATE TABLE 'Tags' (
+                'aliasName' TEXT DEFAULT NULL,
+                'name' TEXT,
+                'body' TEXT,
+                'owner' TEXT,
+                'args' TEXT DEFAULT NULL,
+                'registered' INTEGER,
+                'lastEdited' INTEGER,
+                'type' INTEGER,
+                PRIMARY KEY('name'),
+                FOREIGN KEY('owner') REFERENCES Quotas('user')
+            ) STRICT;
+            CREATE TABLE 'Usage' (
+                'name' TEXT,
+                'count' INTEGER,
+                PRIMARY KEY('name')
+            ) STRICT;
+        `);
+
+        await db.db.run("INSERT INTO Quotas VALUES ($user, $quota, $count);", {
+            $user: "user",
+            $quota: 2,
+            $count: 1
+        });
+        await db.db.run(
+            "INSERT INTO Tags (aliasName, name, body, owner, args, registered, lastEdited, type) VALUES ($aliasName, $name, $body, $owner, $args, 1, 2, $type);",
+            {
+                $aliasName: null,
+                $name: "scripted",
+                $body: "return 1;",
+                $owner: "user",
+                $args: null,
+                $type: 3
+            }
+        );
+        await db.db.run("INSERT INTO Usage VALUES ($name, $count);", {
+            $name: "scripted",
+            $count: 4
+        });
+
+        await db.load();
+
+        const tagColumns = Array.from(await db.db.all("PRAGMA table_info(Tags);")).map(
+            row => `${row.name}:${row.type}`
+        );
+        expect(tagColumns).toContain("type:BLOB");
+
+        const indexes = Array.from(await db.db.all("PRAGMA index_list(Tags);")).map(row => row.name);
+        expect(indexes).toEqual(
+            expect.arrayContaining(["idx_Tags_owner", "idx_Tags_aliasName", "idx_Tags_type", "idx_Tags_owner_type"])
+        );
+
+        const raw = await db.db.get("SELECT hex(type) AS typeHex FROM Tags WHERE name = $name", {
+            $name: "scripted"
+        });
+        expect(raw).toEqual({
+            typeHex: "03"
+        });
+
+        const migrationRows = Array.from(await db.db.all("SELECT id FROM migrations ORDER BY id ASC;")).map(
+            row => row.id
+        );
+        expect(migrationRows).toEqual([1, 2]);
 
         await db.close();
     });

@@ -51,9 +51,7 @@ class BaseDiscordTransport extends Transport {
     }
 
     log(info, callback) {
-        setImmediate(() => {
-            this.emit("logged", info);
-        });
+        setImmediate(() => this.emit("logged", info));
 
         if (!this.initialized || info?.discord === false) {
             callback();

@@ -11,6 +11,30 @@ import DirectoryLoader from "../../src/loaders/DirectoryLoader.js";
 
 class ExampleSqlDatabase extends SqlDatabase {}
 
+class SetupSqlDatabase extends SqlDatabase {
+    constructor(dbPath, queryPath, options) {
+        const customFunctions = new Map(options?.customFunctions ?? []);
+
+        customFunctions.set("double:1", {
+            name: "double",
+            callback: value => value * 2,
+            argc: 1,
+            deterministic: true
+        });
+
+        super(dbPath, queryPath, {
+            ...options,
+            customFunctions
+        });
+
+        this.setupCalls = [];
+    }
+
+    async setup(mode) {
+        this.setupCalls.push(mode);
+    }
+}
+
 let tempDir;
 let db;
 
@@ -182,5 +206,51 @@ describe("SqlDatabase", () => {
 
         expect(logger.debug).toHaveBeenCalledWith("Loading queries...");
         expect(logger.log).toHaveBeenCalledWith("info", "Loaded queries successfully.");
+    });
+
+    test("runs loader-style setup hooks and auto-registers configured sql functions", async () => {
+        const queryDir = path.join(tempDir, "query-setup");
+        const dbPath = path.join(tempDir, "setup.sqlite");
+
+        await fs.mkdir(queryDir, { recursive: true });
+        await fs.writeFile(path.join(queryDir, "create.sql"), "CREATE TABLE Items (value INTEGER) STRICT;");
+        await fs.writeFile(path.join(queryDir, "insert.sql"), "INSERT INTO Items VALUES ($value);");
+
+        db = new SetupSqlDatabase(dbPath, queryDir, {
+            enableWAL: false,
+            poolMax: 1
+        });
+
+        await db.create();
+        await db.load();
+
+        expect(db.setupCalls).toEqual(["create", "load"]);
+        expect((await db.db.get("SELECT double(21) AS value;")).value).toBe(42);
+    });
+
+    test("reloads prepared queries after vacuum through the public database api", async () => {
+        const queryDir = path.join(tempDir, "query-vacuum");
+        const dbPath = path.join(tempDir, "vacuum.sqlite");
+
+        await fs.mkdir(queryDir, { recursive: true });
+        await fs.writeFile(path.join(queryDir, "create.sql"), "CREATE TABLE Items (value TEXT) STRICT;");
+        await fs.writeFile(path.join(queryDir, "insert.sql"), "INSERT INTO Items VALUES (?);");
+        await fs.writeFile(path.join(queryDir, "fetch.sql"), "SELECT value FROM Items WHERE value = ? LIMIT 1;");
+
+        db = new ExampleSqlDatabase(dbPath, queryDir, {
+            enableWAL: false,
+            poolMax: 1
+        });
+
+        await db.create();
+        await db.load();
+        await db.queries.insert.run("alpha");
+
+        const beforeLoader = db._queryLoader;
+        await db.vacuum();
+
+        expect(db._queryLoader).not.toBeNull();
+        expect(db._queryLoader).not.toBe(beforeLoader);
+        expect((await db.queries.fetch.get("alpha")).value).toBe("alpha");
     });
 });

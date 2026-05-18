@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import "../../../../setupGlobals.js";
 
 import SqliteDatabase from "../../../../src/database/drivers/sqlite/SqliteDatabase.js";
-import PoolEvents from "../../../../src/database/drivers/sqlite/PoolEvents.js";
+import { PoolEvents } from "../../../../src/database/drivers/sqlite/PoolEvents.js";
 
 let tempDir;
 let dbs;

@@ -8,7 +8,7 @@ import User from "../../structures/permission/User.js";
 import { getClient, getConfig, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-import TypeTester from "../../util/TypeTester.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
 
 import PermissionError from "../../errors/PermissionError.js";
 
@@ -174,6 +174,31 @@ class PermissionManager extends DBManager {
         }
     }
 
+    canManageLevel(perm, level, validate = true) {
+        if (!this.enabled) {
+            return true;
+        }
+
+        if (validate && !Number.isInteger(perm)) {
+            throw new PermissionError("Invalid permission level", perm);
+        }
+
+        if (typeof level === "string") {
+            const levelName = level;
+            level = this.getLevels()[levelName];
+
+            if (validate && typeof level === "undefined") {
+                throw new PermissionError("Unknown level name: " + levelName, levelName);
+            }
+        }
+
+        if (validate && !Number.isInteger(level)) {
+            throw new PermissionError("Invalid level", level);
+        }
+
+        return perm > level;
+    }
+
     async fetch(id) {
         if (!this.enabled) {
             return [DisabledGroup];
@@ -325,6 +350,8 @@ class PermissionManager extends DBManager {
     }
 
     async add(group, id, validate = false) {
+        group = Group.from(group, true);
+
         if (group === null) {
             throw new PermissionError("Group doesn't exist");
         }
@@ -343,6 +370,8 @@ class PermissionManager extends DBManager {
     }
 
     async remove(group, id, validate = false) {
+        group = Group.from(group, true);
+
         if (group === null) {
             throw new PermissionError("Group doesn't exist");
         }
@@ -381,22 +410,17 @@ class PermissionManager extends DBManager {
     }
 
     async addGroup(name, level, validate) {
-        validate = TypeTester.isObject(validate) ? validate : (validate ?? false);
-        let validateNew, checkExisting;
+        validate = ObjectUtil.getBooleanOptions(validate, false, {
+            validateNew: true,
+            checkExisting: true
+        });
 
-        if (typeof validate === "boolean") {
-            validateNew = checkExisting = validate;
-        } else {
-            validateNew = validate.validateNew ?? true;
-            checkExisting = validate.checkExisting ?? true;
-        }
-
-        if (validateNew) {
+        if (validate.validateNew) {
             name = this.checkName(name);
             level = this.checkLevel(level, true, false);
         }
 
-        if (checkExisting) {
+        if (validate.checkExisting) {
             const existingGroup = await getClient().permManager.fetchGroup(name);
 
             if (existingGroup !== null) {
@@ -412,6 +436,8 @@ class PermissionManager extends DBManager {
     }
 
     async removeGroup(group, validate = false) {
+        group = Group.from(group, true);
+
         if (group === null) {
             throw new PermissionError("Group doesn't exist");
         }
@@ -422,15 +448,13 @@ class PermissionManager extends DBManager {
             this.checkName(group.name);
         }
 
-        await this.perm_db.transactionImmediate(async trx => {
-            const res = await trx.removeGroup(group),
+        await this.perm_db.transactionImmediate(async tx => {
+            const res = await tx.removeGroup(group),
                 removed = res.changes > 0;
 
             if (validate && !removed) {
                 throw new PermissionError("Group doesn't exist", group.name);
             }
-
-            await trx.removeByGroup(group);
         });
 
         getLogger().info(`Removed group: "${group.name}"`);
@@ -438,21 +462,19 @@ class PermissionManager extends DBManager {
     }
 
     async updateGroup(group, newName, newLevel, validate) {
-        validate = TypeTester.isObject(validate) ? validate : (validate ?? false);
-
-        let validateProvided, validateNew, checkExisting;
-
-        if (typeof validate === "boolean") {
-            validateProvided = validateNew = checkExisting = validate;
-        } else {
-            validateProvided = validate.validateProvided ?? false;
-            validateNew = validate.validateNew ?? true;
-            checkExisting = validate.checkExisting ?? true;
-        }
+        group = Group.from(group, true);
 
         if (group === null) {
             throw new PermissionError("Group doesn't exist");
-        } else if (validateProvided) {
+        }
+
+        validate = ObjectUtil.getBooleanOptions(validate, false, {
+            validateProvided: false,
+            validateNew: true,
+            checkExisting: true
+        });
+
+        if (validate.validateProvided) {
             this.checkName(group.name);
         }
 
@@ -462,15 +484,14 @@ class PermissionManager extends DBManager {
             throw new PermissionError("Can't update group with the same level", group.level);
         }
 
-        let newGroup = new Group(group),
-            updatedName = false;
+        let newGroup = new Group(group);
 
         if (newName != null) {
-            if (validateNew) {
+            if (validate.validateNew) {
                 newName = this.checkName(newName, true, false);
             }
 
-            if (checkExisting) {
+            if (validate.checkExisting) {
                 const existingGroup = await this.fetchGroup(newName);
 
                 if (existingGroup !== null) {
@@ -478,30 +499,25 @@ class PermissionManager extends DBManager {
                 }
             }
 
-            updatedName = newGroup.setName(newName);
+            newGroup.setName(newName);
         }
 
         if (newLevel != null) {
-            if (validateNew) {
+            if (validate.validateNew) {
                 newLevel = this.checkLevel(newLevel, true, false);
             }
 
             newGroup.setLevel(newLevel);
         }
 
-        await this.perm_db.transactionImmediate(async trx => {
-            const res = await trx.updateGroup(group, newGroup),
+        await this.perm_db.transactionImmediate(async tx => {
+            const res = await tx.updateGroup(group, newGroup),
                 updated = res.changes > 0;
 
             if (updated) {
                 getLogger().info(`Updated group: "${group.name}" with name: "${newName}", level: ${newLevel}`);
-            } else if (validateProvided) {
+            } else if (validate.validateProvided) {
                 throw new PermissionError("Group doesn't exist", group.name);
-            }
-
-            if (updatedName) {
-                await trx.transferUsers(group, newGroup);
-                getLogger().info(`Transferred group: "${group.name}" users to: "${newName}".`);
             }
         });
 

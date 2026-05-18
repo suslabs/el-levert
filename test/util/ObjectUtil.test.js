@@ -22,6 +22,13 @@ describe("ObjectUtil", () => {
         expect(typeof target.b).toBe("function");
         expect(target.b()).toBe(5);
         expect(target.c).toEqual([1]);
+        expect(ObjectUtil.getBooleanOptions(true, { a: false, b: false })).toEqual({ a: true, b: true });
+        expect(ObjectUtil.getBooleanOptions(null, { a: false, b: true })).toEqual({ a: false, b: true });
+        expect(ObjectUtil.getBooleanOptions({ a: true }, { a: false, b: false }, { a: false, b: true })).toEqual({
+            a: true,
+            b: true
+        });
+        expect(ObjectUtil.getBooleanOptions(null, false, { a: true, b: true })).toEqual({ a: false, b: false });
 
         const source = {};
         Object.defineProperty(source, "hidden", {
@@ -75,7 +82,7 @@ describe("ObjectUtil", () => {
         expect(sync).toEqual({ b: 2 });
 
         const asyncObj = { a: 1, b: 2 };
-        await expect(ObjectUtil.wipeObject(asyncObj, async key => key === "b")).resolves.toBe(1);
+        await expect(ObjectUtil.wipeObject(asyncObj, key => Promise.resolve(key === "b"))).resolves.toBe(1);
         expect(asyncObj).toEqual({ a: 1 });
 
         const all = { a: 1, b: 2 };

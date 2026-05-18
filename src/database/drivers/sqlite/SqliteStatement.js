@@ -2,7 +2,7 @@ import SqliteResult from "./SqliteResult.js";
 
 import { ConnectionStatementBackend, PooledStatementBackend } from "./StatementBackends.js";
 
-import ConnectionEvents from "./ConnectionEvents.js";
+import { ConnectionEvents } from "./ConnectionEvents.js";
 
 import Util from "../../../util/Util.js";
 import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
@@ -10,18 +10,19 @@ import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
 import DatabaseError from "../../../errors/DatabaseError.js";
 
 class SqliteStatement {
-    constructor(target, sql, defaultParam = [], rawStatement = null) {
+    constructor(target, sql, defaultParam = [], rawSt = null) {
         this.sql = sql;
         this.defaultParam = defaultParam;
 
         this.finalized = false;
+        this._safeIntegers = null;
 
         this._backend = null;
 
-        if (rawStatement == null) {
+        if (rawSt == null) {
             this._backend = new PooledStatementBackend(target);
         } else {
-            this._backend = new ConnectionStatementBackend(target, rawStatement);
+            this._backend = new ConnectionStatementBackend(target, rawSt);
         }
     }
 
@@ -53,6 +54,21 @@ class SqliteStatement {
         });
     }
 
+    safeIntegers(enabled = true) {
+        if (!this._checkFinalizedSync()) {
+            return;
+        }
+
+        this._safeIntegers = enabled;
+
+        try {
+            this._backend.safeIntegers(this, enabled);
+            return this;
+        } catch (err) {
+            return this._throwErrorSync(err);
+        }
+    }
+
     reset() {
         return new Promise((resolve, reject) => {
             if (!this._checkFinalizedAsync(resolve, reject)) {
@@ -82,8 +98,8 @@ class SqliteStatement {
 
             try {
                 eachArgs = context.conn._extractEachArgs(param);
-            } catch (err1) {
-                this._throwErrorAsync(resolve, reject, err1);
+            } catch (err) {
+                DatabaseUtil.settleSyncError(this, resolve, reject, err);
                 return;
             }
 
@@ -94,17 +110,25 @@ class SqliteStatement {
             }
 
             args.push(eachArgs.callback);
-            args.push((err1, nrows) => {
-                if (this._errorRollbackAsync(resolve, reject, err1)) {
+            args.push((err, nrows) => {
+                if (this._errorRollbackAsync(resolve, reject, err)) {
                     return;
                 }
 
-                context.st.reset(_ => {
+                context.st.reset(err2 => {
+                    if (this._throwErrorAsync(resolve, reject, err2)) {
+                        return;
+                    }
+
                     resolve(new SqliteResult(nrows, context.st));
                 });
             });
 
-            context.st.each(...args);
+            try {
+                context.st.each(...args);
+            } catch (err) {
+                DatabaseUtil.settleSyncError(this, resolve, reject, err);
+            }
         });
     }
 
@@ -157,26 +181,24 @@ class SqliteStatement {
             this._backend
                 .getContext(this)
                 .then(context => {
-                    const settle = (fn, value) => {
+                    if (context == null || context.st == null) {
+                        resolve();
+                        return;
+                    }
+
+                    const settle = (fn, value) =>
                         this._backend
                             .releaseContext(context)
-                            .then(_ => {
-                                fn(value);
-                            })
+                            .then(_ => fn(value))
                             .catch(reject);
-                    };
 
                     callback(
                         context,
-                        value => {
-                            settle(resolve, value);
-                        },
-                        err => {
-                            settle(reject, err);
-                        }
+                        value => settle(resolve, value),
+                        err => settle(reject, err)
                     );
                 })
-                .catch(reject)
+                .catch(reject);
         });
     }
 
@@ -198,20 +220,28 @@ class SqliteStatement {
 
             try {
                 args = this._normalizeArgs(context.conn, param);
-            } catch (err1) {
-                this._throwErrorAsync(resolve, reject, err1);
+            } catch (err) {
+                DatabaseUtil.settleSyncError(this, resolve, reject, err);
                 return;
             }
 
-            context.st[method](...args, (err1, data) => {
-                if (this._errorRollbackAsync(resolve, reject, err1)) {
-                    return;
-                }
+            try {
+                context.st[method](...args, (err, data) => {
+                    if (this._errorRollbackAsync(resolve, reject, err)) {
+                        return;
+                    }
 
-                context.st.reset(_ => {
-                    resolve(callback(data, context.st));
+                    context.st.reset(err2 => {
+                        if (this._throwErrorAsync(resolve, reject, err2)) {
+                            return;
+                        }
+
+                        resolve(callback(data, context.st));
+                    });
                 });
-            });
+            } catch (err) {
+                DatabaseUtil.settleSyncError(this, resolve, reject, err);
+            }
         });
     }
 
@@ -221,12 +251,17 @@ class SqliteStatement {
         }
     }
 
+    _throwErrorSync(...args) {
+        return this._backend.getTarget()._throwErrorSync(...args);
+    }
+
     _throwErrorAsync(...args) {
         return this._backend.getTarget()._throwErrorAsync(...args);
     }
 
     _errorRollbackAsync(...args) {
-        return this._backend.getTarget()._errorRollbackAsync(...args);
+        const target = this._backend.getTarget();
+        return target._errorRollbackAsync?.(...args) ?? target._throwErrorAsync(...args);
     }
 }
 

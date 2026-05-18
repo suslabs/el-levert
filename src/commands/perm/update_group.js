@@ -64,6 +64,8 @@ class PermUpdateGroupCommand {
 
         if (group === null) {
             return `${getEmoji("warn")} Group **${escapeMarkdown(g_name)}** doesn't exist.`;
+        } else if (!getClient().permManager.canManageLevel(ctx.perm, group.level)) {
+            return `${getEmoji("warn")} Can't update a group with a level that is higher than or equal to your own. (**${ctx.perm}** <= **${group.level}**)`;
         }
 
         let newName = ctx.arg("newNameText"),
@@ -96,8 +98,8 @@ class PermUpdateGroupCommand {
             return `${getEmoji("warn")} No group changes provided.`;
         }
 
-        if (newLevel !== null && !getClient().permManager.allowed(ctx.perm, newLevel)) {
-            return `${getEmoji("warn")} Can't update a group to have a level that is higher than your own. (**${ctx.perm}** < **${newLevel}**)`;
+        if (newLevel !== null && !getClient().permManager.canManageLevel(ctx.perm, newLevel)) {
+            return `${getEmoji("warn")} Can't update a group to have a level that is higher than or equal to your own. (**${ctx.perm}** <= **${newLevel}**)`;
         }
 
         try {

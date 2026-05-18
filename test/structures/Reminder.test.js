@@ -10,6 +10,8 @@ describe("Reminder", () => {
             msg: "hello *world*"
         });
 
+        expect(Reminder.from(reminder)).toBe(reminder);
+        expect(Reminder.from(null, true)).toBe(null);
         expect(reminder.hasMessage).toBe(true);
         expect(reminder.getData("rem_")).toEqual({
             rem_id: 0,

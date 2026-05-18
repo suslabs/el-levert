@@ -178,11 +178,10 @@ class CommandHandler extends MessageHandler {
             return null;
         }
 
-        return setTimeout(() => {
-            this._sendProcessingReply(context).catch(err => {
-                getLogger().error("Could not send processing reply:", err);
-            });
-        }, this.commandWaitTime);
+        return setTimeout(
+            () => this._sendProcessingReply(context).catch(err => getLogger().error("Could not send processing reply:", err)),
+            this.commandWaitTime
+        );
     }
 
     _stopProcessingTimer(timer) {

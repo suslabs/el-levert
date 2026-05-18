@@ -11,13 +11,17 @@ import Group from "../../src/structures/permission/Group.js";
 import User from "../../src/structures/permission/User.js";
 
 const permissionQueryPath = path.resolve(projRoot, "src/database/query/permission");
+const permissionMigrationsPath = path.resolve(projRoot, "src/database/migrations/permission");
 
 let tempDir;
 let openDatabases;
 
 function createPermissionDb(filename = "permissions.sqlite") {
     const dbPath = path.join(tempDir, filename);
-    return new PermissionDatabase(dbPath, permissionQueryPath, { enableWAL: false });
+    return new PermissionDatabase(dbPath, permissionQueryPath, {
+        enableWAL: false,
+        migrationsPath: permissionMigrationsPath
+    });
 }
 
 async function track(db) {
@@ -65,25 +69,28 @@ describe("PermissionDatabase", () => {
         expect((await db.listGroups()).map(group => group.name)).toEqual(["mod", "member"]);
 
         await db.add(member, user);
+        await expect(db.add(member, user)).rejects.toThrow();
         expect(await db.userExists("42")).toBe(true);
         expect((await db.fetch("42")).map(group => group.name)).toEqual(["member"]);
         expect(await db.listUsers()).toEqual([expect.objectContaining({ id: 1, user: "42", group: "member" })]);
 
-        await db.transferUsers(member, mod);
-        expect((await db.fetch("42")).map(group => group.name)).toEqual(["mod"]);
+        const helper = new Group({ name: "helper", level: 2 });
+        await db.updateGroup(member, helper);
+        expect((await db.fetch("42")).map(group => group.name)).toEqual(["helper"]);
 
         const admin = new Group({ name: "admin", level: 10 });
-        await db.updateGroup(mod, admin);
-        expect(await db.fetchGroup("mod")).toBeNull();
+        await db.updateGroup(helper, admin);
+        expect(await db.fetchGroup("helper")).toBeNull();
         expect(await db.fetchGroup("admin")).toMatchObject({ name: "admin", level: 10 });
+        expect((await db.fetch("42")).map(group => group.name)).toEqual(["admin"]);
 
-        await db.transferUsers(mod, admin);
         await db.add(admin, new User({ user: "99" }));
-        await db.removeByGroup(admin);
+        await db.removeGroup(admin);
         expect(await db.fetch("42")).toBeNull();
         expect(await db.fetch("99")).toBeNull();
         expect(await db.userExists(["42", "99"])).toEqual([false, false]);
 
+        await db.addGroup(member);
         await db.add(member, user);
         await db.remove(member, user);
         expect(await db.fetch("42")).toBeNull();

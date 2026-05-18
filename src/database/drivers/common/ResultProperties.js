@@ -4,6 +4,9 @@ const dataProps = ["data", "info"],
 
 const targetProp = "obj";
 
-const infoDefault = 0;
+const infoDefaults = Object.freeze({
+    lastID: 0,
+    changes: 0
+});
 
-export { dataProps, infoProps, passthroughProps, targetProp, infoDefault };
+export { dataProps, infoProps, passthroughProps, targetProp, infoDefaults };

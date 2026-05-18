@@ -44,6 +44,8 @@ describe("DBManager", () => {
         expect(manager.tag_db).toBeInstanceOf(TagDatabase);
         expect(manager._dbPath).toBe(path.resolve(projRoot, runtime.tempDir, "tag_db.db"));
         expect(manager._queryDir).toBe(path.resolve(projRoot, "src/database/query/tag"));
+        expect(manager._migrationsDir).toBe(path.resolve(projRoot, "src/database/migrations/tag"));
+        expect(manager.tag_db.migrationsPath).toBe(manager._migrationsDir);
 
         await manager.unload();
         expect(manager.tag_db).toBeUndefined();

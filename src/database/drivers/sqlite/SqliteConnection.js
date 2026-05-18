@@ -9,7 +9,7 @@ import StatementDatabase from "../common/StatementDatabase.js";
 import SqliteResult from "./SqliteResult.js";
 import SqliteStatement from "./SqliteStatement.js";
 
-import ConnectionEvents from "./ConnectionEvents.js";
+import { ConnectionEvents } from "./ConnectionEvents.js";
 
 import Util from "../../../util/Util.js";
 import TypeTester from "../../../util/TypeTester.js";
@@ -18,22 +18,30 @@ import RegexUtil from "../../../util/misc/RegexUtil.js";
 
 import DatabaseError from "../../../errors/DatabaseError.js";
 
-const maxSignedInt32 = BigInt(2147483647),
-    minSignedInt32 = BigInt(-2147483648);
-
 class SqliteConnection extends StatementDatabase(EventEmitter) {
     static transactionSql = Object.freeze({
         deferred: "BEGIN DEFERRED TRANSACTION;",
         immediate: "BEGIN IMMEDIATE TRANSACTION;",
         exclusive: "BEGIN EXCLUSIVE TRANSACTION;",
-        createSavepoint: "SAVEPOINT {{ name }};",
-        releaseSavepoint: "RELEASE SAVEPOINT {{ name }};",
-        rollbackToSavepoint: "ROLLBACK TRANSACTION TO SAVEPOINT {{ name }};"
+        createSavepoint: "SAVEPOINT {{name}};",
+        releaseSavepoint: "RELEASE SAVEPOINT {{name}};",
+        rollbackToSavepoint: "ROLLBACK TRANSACTION TO SAVEPOINT {{name}};"
     });
 
     static pragmaSql = Object.freeze({
+        run: "PRAGMA {{pragma}};",
+        tableInfo: "table_info({{tableName}})",
+        tableXInfo: "table_xinfo({{tableName}})",
+        foreignKeyList: "foreign_key_list({{tableName}})",
+        indexList: "index_list({{tableName}})",
+        indexInfo: "index_info({{indexName}})",
+        enableForeignKeys: "foreign_keys=ON",
         enableWALMode: "journal_mode=WAL",
         disableWALMode: "journal_mode=DELETE"
+    });
+
+    static schemaSql = Object.freeze({
+        tableExists: "SELECT name FROM sqlite_master WHERE type = 'table' AND name = $name;"
     });
 
     static commitSql = "COMMIT TRANSACTION;";
@@ -54,7 +62,9 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
 
         this._released = false;
         this._savepointId = 0;
+
         this._loadedExtensions = new Set();
+        this._registeredFunctions = new Set();
 
         this._eventId = DatabaseUtil.getEventId();
         this.eventName = `${this.eventPrefix}:${this._eventId}`;
@@ -66,7 +76,7 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
 
     open() {
         return new Promise((resolve, reject) => {
-            if (!this._checkOpenAsync(resolve, reject, false, "Cannot open connection. The database is open")) {
+            if (!this._checkOpenAsync(resolve, reject, false, "Cannot open connection. The database is already open")) {
                 return;
             }
 
@@ -145,17 +155,21 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
             try {
                 ({ param, callback } = this._extractEachArgs(args));
             } catch (err) {
-                this._throwErrorAsync(resolve, reject, err);
+                DatabaseUtil.settleSyncError(this, resolve, reject, err);
                 return;
             }
 
-            this.db.each(sql, param, callback, (err, nrows) => {
-                if (this._errorRollbackAsync(resolve, reject, err)) {
-                    return;
-                }
+            try {
+                this.db.each(sql, param, callback, (err, nrows) => {
+                    if (this._errorRollbackAsync(resolve, reject, err)) {
+                        return;
+                    }
 
-                resolve(new SqliteResult(nrows, this.db));
-            });
+                    resolve(new SqliteResult(nrows, this.db));
+                });
+            } catch (err) {
+                DatabaseUtil.settleSyncError(this, resolve, reject, err);
+            }
         });
     }
 
@@ -184,21 +198,25 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
             try {
                 param = this._normalizeParams(param);
             } catch (err) {
-                this._throwErrorAsync(resolve, reject, err);
+                DatabaseUtil.settleSyncError(this, resolve, reject, err);
                 return;
             }
 
             let st = null;
 
-            st = this.db.prepare(sql, ...param, err => {
-                if (this._throwErrorAsync(resolve, reject, err)) {
-                    return;
-                }
+            try {
+                st = this.db.prepare(sql, ...param, err => {
+                    if (this._throwErrorAsync(resolve, reject, err)) {
+                        return;
+                    }
 
-                const prepared = new SqliteStatement(this, sql, param, st);
-                this.addStatement(prepared);
-                resolve(prepared);
-            });
+                    const prepared = new SqliteStatement(this, sql, param, st);
+                    this.addStatement(prepared);
+                    resolve(prepared);
+                });
+            } catch (err) {
+                DatabaseUtil.settleSyncError(this, resolve, reject, err);
+            }
         });
     }
 
@@ -228,35 +246,121 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
         });
     }
 
-    pragma(pragma, options = {}) {
-        return this.all(`PRAGMA ${pragma};`).then(rows => {
-            if (!options.simple) {
-                return rows;
-            }
+    createFunction(name, callback, argc = -1, deterministic = false) {
+        if (!this._checkOpenSync()) {
+            return;
+        }
 
-            const firstRow = rows?.[0];
-
-            if (firstRow == null || typeof firstRow !== "object") {
-                return undefined;
-            }
-
-            const firstKey = Object.keys(firstRow)[0];
-            return firstRow[firstKey];
-        });
+        try {
+            this.db.createFunction(name, callback, argc, deterministic);
+            this._registeredFunctions.add(`${name}:${argc}`);
+            return this;
+        } catch (err) {
+            return this._throwErrorSync(err);
+        }
     }
 
-    enableWALMode() {
-        return this.pragma(SqliteConnection.pragmaSql.enableWALMode).then(_ => {
-            this.WALMode = true;
+    defaultSafeIntegers(enabled = true) {
+        if (!this._checkOpenSync()) {
+            return;
+        }
+
+        try {
+            this.db.defaultSafeIntegers(enabled);
+            this.safeIntegers = enabled;
             return this;
-        });
+        } catch (err) {
+            return this._throwErrorSync(err);
+        }
     }
 
-    disableWALMode() {
-        return this.pragma(SqliteConnection.pragmaSql.disableWALMode).then(_ => {
-            this.WALMode = false;
-            return this;
-        });
+    async pragma(pragma, options = {}) {
+        const sql = RegexUtil.templateReplace(SqliteConnection.pragmaSql.run, { pragma });
+        const rows = await this.all(sql);
+
+        if (!options.simple) {
+            return rows;
+        }
+
+        const firstRow = rows?.[0];
+
+        if (firstRow == null || typeof firstRow !== "object") {
+            return undefined;
+        }
+
+        const firstKey = Object.keys(firstRow)[0];
+        return firstRow[firstKey];
+    }
+
+    tableInfo(table) {
+        return this._identifierPragma(SqliteConnection.pragmaSql.tableInfo, "tableName", table, "Table name");
+    }
+
+    tableXInfo(table) {
+        return this._identifierPragma(SqliteConnection.pragmaSql.tableXInfo, "tableName", table, "Table name");
+    }
+
+    foreignKeyList(table) {
+        return this._identifierPragma(SqliteConnection.pragmaSql.foreignKeyList, "tableName", table, "Table name");
+    }
+
+    indexList(table) {
+        return this._identifierPragma(SqliteConnection.pragmaSql.indexList, "tableName", table, "Table name");
+    }
+
+    indexInfo(index) {
+        return this._identifierPragma(SqliteConnection.pragmaSql.indexInfo, "indexName", index, "Index name");
+    }
+
+    async tableExists(table) {
+        const row = await this.get(SqliteConnection.schemaSql.tableExists, { $name: table });
+        return typeof row._data !== "undefined";
+    }
+
+    async tableSchema(table) {
+        const [base, extended] = await Promise.all([this.tableInfo(table), this.tableXInfo(table)]);
+
+        return {
+            base: new Set(base.map(row => row.name)),
+            extended: new Set(extended.map(row => row.name)),
+            baseColumns: new Map(base.map(row => [row.name, row])),
+            extendedColumns: new Map(extended.map(row => [row.name, row]))
+        };
+    }
+
+    async tableDetails(table) {
+        const [exists, schema, foreignKeys, indexes] = await Promise.all([
+            this.tableExists(table),
+            this.tableSchema(table),
+            this.foreignKeyList(table),
+            this.indexList(table)
+        ]);
+
+        const indexColumns = new Map();
+
+        for (const index of indexes) {
+            indexColumns.set(index.name, await this.indexInfo(index.name));
+        }
+
+        return {
+            exists,
+            ...schema,
+            foreignKeys,
+            indexes,
+            indexColumns
+        };
+    }
+
+    async enableWALMode() {
+        await this.pragma(SqliteConnection.pragmaSql.enableWALMode);
+        this.WALMode = true;
+        return this;
+    }
+
+    async disableWALMode() {
+        await this.pragma(SqliteConnection.pragmaSql.disableWALMode);
+        this.WALMode = false;
+        return this;
     }
 
     interrupt() {
@@ -272,13 +376,14 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
         }
     }
 
-    vacuum() {
-        return this.exec(SqliteConnection.vacuumSql).then(_ => this);
+    async vacuum() {
+        await this.exec(SqliteConnection.vacuumSql);
+        return this;
     }
 
-    beginTransaction(mode = this.transactionMode) {
-        if (!this._checkOpenSync() || this.inTransaction) {
-            return Promise.resolve();
+    async beginTransaction(mode = this.transactionMode) {
+        if (!(await this._checkOpenPromise()) || this.inTransaction) {
+            return;
         }
 
         const original = this.throwErrors;
@@ -286,87 +391,104 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
 
         const sql = SqliteConnection.transactionSql[mode] ?? SqliteConnection.transactionSql.immediate;
 
-        return this.exec(sql)
-            .then(_ => {
-                this.inTransaction = true;
-            })
-            .catch(err => {
-                if (original) {
-                    throw err;
-                }
-            })
-            .finally(() => {
-                this.throwErrors = original;
-            });
+        try {
+            await this.exec(sql);
+            this.inTransaction = true;
+        } catch (err) {
+            if (original) {
+                throw err;
+            }
+        } finally {
+            this.throwErrors = original;
+        }
     }
 
-    commit() {
-        if (!this._checkOpenSync() || !this.inTransaction) {
-            return Promise.resolve();
+    async commit() {
+        if (!(await this._checkOpenPromise()) || !this.inTransaction) {
+            return;
         }
 
         const original = this.throwErrors;
         this.throwErrors = true;
 
-        return this.exec(SqliteConnection.commitSql)
-            .then(_ => {
-                this.inTransaction = false;
-                this.throwErrors = original;
-            })
-            .catch(err => {
-                this.throwErrors = original;
+        try {
+            await this.exec(SqliteConnection.commitSql);
+            this.inTransaction = false;
+        } catch (err) {
+            await this.exec(SqliteConnection.rollbackSql).catch(_ => {});
+            this.inTransaction = false;
 
-                return this.exec(SqliteConnection.rollbackSql).then(_ => {
-                    this.inTransaction = false;
-                    return this._throwErrorSync(err);
-                });
-            });
+            if (original) {
+                throw err;
+            }
+        } finally {
+            this.throwErrors = original;
+        }
     }
 
-    rollback() {
-        if (!this._checkOpenSync() || !this.inTransaction) {
-            return Promise.resolve();
+    async rollback() {
+        if (!(await this._checkOpenPromise()) || !this.inTransaction) {
+            return;
         }
 
         const original = this.throwErrors;
         this.throwErrors = true;
 
-        return this.exec(SqliteConnection.rollbackSql)
-            .then(_ => {
-                this.inTransaction = false;
-            })
-            .catch(err => {
-                if (original) {
-                    throw err;
-                }
-            })
-            .finally(() => {
-                this.throwErrors = original;
-            });
+        try {
+            await this.exec(SqliteConnection.rollbackSql);
+            this.inTransaction = false;
+        } catch (err) {
+            if (original) {
+                throw err;
+            }
+        } finally {
+            this.throwErrors = original;
+        }
     }
 
-    createSavepoint(name) {
+    async createSavepoint(name) {
+        const savepoint = this._quoteIdentifier(name, "Savepoint name");
+
+        if (savepoint == null) {
+            return;
+        }
+
         const sql = RegexUtil.templateReplace(SqliteConnection.transactionSql.createSavepoint, {
-            name: DatabaseUtil.quoteIdentifier(name, "Savepoint name")
+            name: savepoint
         });
 
-        return this.exec(sql).then(_ => this);
+        await this.exec(sql);
+        return this;
     }
 
-    releaseSavepoint(name) {
+    async releaseSavepoint(name) {
+        const savepoint = this._quoteIdentifier(name, "Savepoint name");
+
+        if (savepoint == null) {
+            return;
+        }
+
         const sql = RegexUtil.templateReplace(SqliteConnection.transactionSql.releaseSavepoint, {
-            name: DatabaseUtil.quoteIdentifier(name, "Savepoint name")
+            name: savepoint
         });
 
-        return this.exec(sql).then(_ => this);
+        await this.exec(sql);
+        return this;
     }
 
-    rollbackToSavepoint(name) {
+    async rollbackToSavepoint(name) {
+        const savepoint = this._quoteIdentifier(name, "Savepoint name");
+
+        if (savepoint == null) {
+            return;
+        }
+
         const sql = RegexUtil.templateReplace(SqliteConnection.transactionSql.rollbackToSavepoint, {
-            name: DatabaseUtil.quoteIdentifier(name, "Savepoint name")
+            name: savepoint
         });
 
-        return this.exec(sql).then(_ => this);
+        await this.exec(sql);
+        return this;
     }
 
     nextSavepointName() {
@@ -374,105 +496,104 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
         return `el_sqlite_sp_${this._savepointId}`;
     }
 
-    backup(destination, options = {}) {
-        return new Promise((resolve, reject) => {
-            if (!this._checkOpenAsync(resolve, reject)) {
+    async backup(destination, options = {}) {
+        if (!(await this._checkOpenPromise())) {
+            return;
+        }
+
+        const filename = path.resolve(destination);
+
+        const attached = options.attached ?? "main",
+            progress = options.progress ?? null;
+
+        const initialPages = Number.isInteger(options.pages) ? options.pages : 100,
+            retryErrors = Array.isArray(options.retryErrors) ? options.retryErrors : null;
+
+        try {
+            await fs.mkdir(path.dirname(filename), {
+                recursive: true
+            });
+        } catch (err) {
+            return await this._throwErrorPromise(err);
+        }
+
+        const backup = await new Promise((resolve, reject) => {
+            let backupHandle = null;
+
+            try {
+                backupHandle = this.db.backup(filename, "main", attached, true, err => {
+                    if (this._throwErrorAsync(resolve, reject, err, null)) {
+                        return;
+                    }
+
+                    resolve(backupHandle);
+                });
+            } catch (err) {
+                DatabaseUtil.settleSyncError(this, resolve, reject, err, null);
+            }
+        });
+
+        if (backup == null) {
+            return;
+        }
+
+        if (retryErrors != null) {
+            backup.retryErrors = retryErrors;
+        }
+
+        let pages = initialPages;
+
+        const finishBackup = () =>
+            new Promise((resolve, reject) => {
+                backup.finish(err => {
+                    if (this._throwErrorAsync(resolve, reject, err)) {
+                        return;
+                    }
+
+                    resolve({
+                        totalPages: backup.pageCount,
+                        remainingPages: backup.remaining
+                    });
+                });
+            });
+
+        const stepBackup = () =>
+            new Promise((resolve, reject) => {
+                backup.step(pages, err => {
+                    if (this._throwErrorAsync(resolve, reject, err, false)) {
+                        return;
+                    }
+
+                    resolve(true);
+                });
+            });
+
+        while (!backup.completed && !backup.failed) {
+            const stepped = await stepBackup();
+
+            if (!stepped) {
+                await finishBackup().catch(_ => {});
                 return;
             }
 
-            const filename = path.resolve(destination);
-
-            const attached = options.attached ?? "main",
-                progress = options.progress ?? null;
-
-            const initialPages = Number.isInteger(options.pages) ? options.pages : 100,
-                retryErrors = Array.isArray(options.retryErrors) ? options.retryErrors : null;
-
-            fs.mkdir(path.dirname(filename), {
-                recursive: true
-            })
-                .then(_ => {
-                    return new Promise((nextResolve, nextReject) => {
-                        let backup = null;
-
-                        try {
-                            backup = this.db.backup(filename, "main", attached, true, err1 => {
-                                if (err1) {
-                                    nextReject(DatabaseUtil.wrapError(err1));
-                                    return;
-                                }
-
-                                nextResolve(backup);
-                            });
-                        } catch (err1) {
-                            nextReject(DatabaseUtil.wrapError(err1));
-                        }
+            if (typeof progress === "function") {
+                try {
+                    const nextPages = progress({
+                        totalPages: backup.pageCount,
+                        remainingPages: backup.remaining
                     });
-                })
-                .then(backup => {
-                    if (retryErrors != null) {
-                        backup.retryErrors = retryErrors;
+
+                    if (Number.isFinite(nextPages)) {
+                        pages = Math.max(0, Math.round(nextPages));
                     }
+                } catch (err) {
+                    await finishBackup().catch(_ => {});
+                    return await this._throwErrorPromise(err);
+                }
+            }
+        }
 
-                    let pages = initialPages;
-
-                    const finishBackup = callback => {
-                        backup.finish(err1 => {
-                            if (err1) {
-                                callback(DatabaseUtil.wrapError(err1));
-                                return;
-                            }
-
-                            callback(null, {
-                                totalPages: backup.pageCount,
-                                remainingPages: backup.remaining
-                            });
-                        });
-                    };
-
-                    const stepBackup = () => {
-                        if (backup.completed || backup.failed) {
-                            finishBackup((err1, result) => {
-                                if (err1) {
-                                    reject(err1);
-                                    return;
-                                }
-
-                                resolve(result);
-                            });
-                            return;
-                        }
-
-                        backup.step(pages, err1 => {
-                            if (err1) {
-                                finishBackup(_ => reject(DatabaseUtil.wrapError(err1)));
-                                return;
-                            }
-
-                            if (typeof progress === "function") {
-                                try {
-                                    const nextPages = progress({
-                                        totalPages: backup.pageCount,
-                                        remainingPages: backup.remaining
-                                    });
-
-                                    if (Number.isFinite(nextPages)) {
-                                        pages = Math.max(0, Math.round(nextPages));
-                                    }
-                                } catch (err2) {
-                                    finishBackup(_ => reject(DatabaseUtil.wrapError(err2)));
-                                    return;
-                                }
-                            }
-
-                            stepBackup();
-                        });
-                    };
-
-                    stepBackup();
-                })
-                .catch(reject);
-        });
+        return await finishBackup();
     }
 
     _setConfig(config) {
@@ -485,103 +606,64 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
         this.busyTimeout = config.busyTimeout ?? this.busyTimeout ?? null;
 
         this._extensionPaths = new Set(config.loadExtensions ?? this._extensionPaths ?? []);
+        this._customFunctions = new Map(config.customFunctions ?? this._customFunctions ?? []);
+
+        this.safeIntegers = config.safeIntegers ?? this.safeIntegers ?? false;
         this.transactionMode = config.transactionMode ?? this.transactionMode ?? "immediate";
 
+        this.verbose = config.verbose ?? this.verbose ?? false;
         this.throwErrors = config.throwErrors ?? this.throwErrors ?? true;
         this.autoRollback = config.autoRollback ?? this.autoRollback ?? false;
-        this.verbose = config.verbose ?? this.verbose ?? false;
     }
 
-    _checkOpen(expected = true, msg) {
-        const open = this.db != null;
+    _setDatabase(db) {
+        this.db = db;
 
-        if (open === expected) {
-            return true;
+        this._released = false;
+        this._loadedExtensions.clear();
+
+        DatabaseUtil.registerEvents(db, this, ConnectionEvents);
+    }
+
+    async _bootstrap() {
+        if (this.busyTimeout != null) {
+            this.configure("busyTimeout", this.busyTimeout);
         }
 
-        return new DatabaseError(msg ?? "The database is not open");
-    }
-
-    _checkOpenSync(expected, msg) {
-        return DatabaseUtil.checkSync(this, ConnectionEvents.promiseError, this.throwErrors, this._checkOpen(expected, msg));
-    }
-
-    _checkOpenAsync(resolve, reject, expected, msg) {
-        return DatabaseUtil.checkAsync(
-            this,
-            ConnectionEvents.promiseError,
-            this.throwErrors,
-            resolve,
-            reject,
-            this._checkOpen(expected, msg)
-        );
-    }
-
-    _throwErrorSync(err) {
-        return DatabaseUtil.throwSync(this, ConnectionEvents.promiseError, this.throwErrors, err);
-    }
-
-    _throwErrorAsync(resolve, reject, err) {
-        return DatabaseUtil.throwAsync(this, ConnectionEvents.promiseError, this.throwErrors, resolve, reject, err);
-    }
-
-    _errorRollbackAsync(resolve, reject, err) {
-        const wrapped = err ? DatabaseUtil.wrapError(err) : false;
-
-        if (!wrapped) {
-            return false;
+        for (const extensionPath of this._extensionPaths) {
+            await this.loadExtension(extensionPath);
         }
 
-        this.emit(ConnectionEvents.promiseError, wrapped);
-
-        if (this.autoRollback && this.inTransaction) {
-            this.rollback()
-                .then(_ => {
-                    this.emit(ConnectionEvents.autoRollback);
-
-                    if (this.throwErrors) {
-                        reject(wrapped);
-                    } else {
-                        resolve();
-                    }
-                })
-                .catch(reject);
-        } else if (this.throwErrors) {
-            reject(wrapped);
-        } else {
-            resolve();
+        for (const { name, callback, argc, deterministic } of this._customFunctions.values()) {
+            this.createFunction(name, callback, argc, deterministic);
         }
 
-        return true;
+        if (this.safeIntegers) {
+            this.defaultSafeIntegers(true);
+        }
+
+        await this.pragma(SqliteConnection.pragmaSql.enableForeignKeys);
+
+        if (this.WALMode) {
+            await this.pragma(SqliteConnection.pragmaSql.enableWALMode);
+        }
+
+        return this;
+    }
+
+    _deleteDatabase() {
+        if (this.db == null) {
+            return;
+        }
+
+        this.db.configure = _ => {};
+        DatabaseUtil.removeEvents(this.db, this, ConnectionEvents);
+
+        this.db = null;
+        this.inTransaction = false;
     }
 
     _normalizeParam(param) {
-        if (typeof param === "bigint") {
-            if (param < minSignedInt32 || param > maxSignedInt32) {
-                throw new DatabaseError("BigInt parameters are only supported within signed 32-bit integer range");
-            }
-
-            return Number(param);
-        }
-
-        if (Array.isArray(param)) {
-            return param.map(item => this._normalizeParam(item));
-        }
-
-        if (param instanceof Date || Buffer.isBuffer(param) || param == null) {
-            return param;
-        }
-
-        if (typeof param === "object") {
-            const normalized = {};
-
-            for (const [key, value] of Object.entries(param)) {
-                normalized[key] = this._normalizeParam(value);
-            }
-
-            return normalized;
-        }
-
         return param;
     }
 
@@ -598,18 +680,23 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
             try {
                 param = this._normalizeParams(param);
             } catch (err) {
-                this._throwErrorAsync(resolve, reject, err);
+                DatabaseUtil.settleSyncError(this, resolve, reject, err);
                 return;
             }
 
             const _this = this;
-            this.db[method](sql, ...param, function (err, ...args) {
-                if (_this._errorRollbackAsync(resolve, reject, err)) {
-                    return;
-                }
 
-                resolve(callback.call(this, err, ...args));
-            });
+            try {
+                this.db[method](sql, ...param, function (err, ...args) {
+                    if (_this._errorRollbackAsync(resolve, reject, err)) {
+                        return;
+                    }
+
+                    resolve(callback.call(this, err, ...args));
+                });
+            } catch (err) {
+                DatabaseUtil.settleSyncError(this, resolve, reject, err);
+            }
         });
     }
 
@@ -630,43 +717,112 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
         };
     }
 
-    _setDatabase(db) {
-        this.db = db;
-
-        this._released = false;
-        this._loadedExtensions.clear();
-
-        DatabaseUtil.registerEvents(db, this, ConnectionEvents);
+    _quoteIdentifier(name, label) {
+        try {
+            return DatabaseUtil.quoteIdentifier(name, label);
+        } catch (err) {
+            this._throwErrorSync(err);
+        }
     }
 
-    _deleteDatabase() {
-        if (this.db == null) {
+    async _identifierPragma(template, identifierName, identifierValue, label) {
+        const quotedIdentifier = this._quoteIdentifier(identifierValue, label);
+
+        if (quotedIdentifier == null) {
             return;
         }
 
-        this.db.configure = _ => {};
-        DatabaseUtil.removeEvents(this.db, this, ConnectionEvents);
+        const pragma = RegexUtil.templateReplace(template, {
+                [identifierName]: quotedIdentifier
+            }),
+            rows = await this.pragma(pragma);
 
-        this.db = null;
-        this.inTransaction = false;
+        return rows == null ? rows : Array.from(rows);
     }
 
-    _bootstrap() {
-        let chain = Promise.resolve();
+    _checkOpen(expected = true, msg) {
+        const open = this.db != null;
 
-        if (this.busyTimeout != null) {
-            chain = chain.then(_ => this.configure("busyTimeout", this.busyTimeout));
+        if (open === expected) {
+            return true;
         }
 
-        for (const extensionPath of this._extensionPaths) {
-            chain = chain.then(_ => this.loadExtension(extensionPath));
+        return new DatabaseError(msg ?? "The database is not open");
+    }
+
+    _checkOpenSync(expected, msg) {
+        return DatabaseUtil.checkSync(
+            this,
+            ConnectionEvents.promiseError,
+            this.throwErrors,
+            this._checkOpen(expected, msg)
+        );
+    }
+
+    _checkOpenAsync(resolve, reject, expected, msg) {
+        return DatabaseUtil.checkAsync(
+            this,
+            ConnectionEvents.promiseError,
+            this.throwErrors,
+            resolve,
+            reject,
+            this._checkOpen(expected, msg)
+        );
+    }
+
+    async _checkOpenPromise(expected, msg, resolveValue) {
+        return await DatabaseUtil.checkPromise(
+            this,
+            ConnectionEvents.promiseError,
+            this.throwErrors,
+            this._checkOpen(expected, msg),
+            resolveValue
+        );
+    }
+
+    _throwErrorSync(err) {
+        return DatabaseUtil.throwSync(this, ConnectionEvents.promiseError, this.throwErrors, err);
+    }
+
+    _throwErrorAsync(resolve, reject, err, resolveValue) {
+        return DatabaseUtil.throwAsync(
+            this,
+            ConnectionEvents.promiseError,
+            this.throwErrors,
+            resolve,
+            reject,
+            err,
+            resolveValue
+        );
+    }
+
+    _errorRollbackAsync(resolve, reject, err) {
+        if (!err) {
+            return false;
         }
 
-        if (this.WALMode) {
-            chain = chain.then(_ => this.pragma(SqliteConnection.pragmaSql.enableWALMode));
+        if (this.autoRollback && this.inTransaction) {
+            this.rollback()
+                .then(_ => {
+                    this.emit(ConnectionEvents.autoRollback);
+                    this._throwErrorAsync(resolve, reject, err);
+                })
+                .catch(reject);
+        } else {
+            this._throwErrorAsync(resolve, reject, err);
         }
 
-        return chain.then(_ => this);
+        return true;
+    }
+
+    async _throwErrorPromise(err, resolveValue) {
+        return await DatabaseUtil.throwPromise(
+            this,
+            ConnectionEvents.promiseError,
+            this.throwErrors,
+            err,
+            resolveValue
+        );
     }
 }
 

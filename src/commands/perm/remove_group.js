@@ -40,8 +40,8 @@ class PermRemoveGroupCommand {
 
         if (group === null) {
             return `${getEmoji("warn")} Group **${g_name}** doesn't exist.`;
-        } else if (!getClient().permManager.allowed(ctx.perm, group.level)) {
-            return `${getEmoji("warn")} Can't remove a group with a level that is higher than yours. (**${ctx.perm}** < **${group.level}**)`;
+        } else if (!getClient().permManager.canManageLevel(ctx.perm, group.level)) {
+            return `${getEmoji("warn")} Can't remove a group with a level that is higher than or equal to yours. (**${ctx.perm}** <= **${group.level}**)`;
         }
 
         try {

@@ -1,0 +1,4 @@
+[submodule "vendor/node-sqlite3"]
+	path = vendor/node-sqlite3
+	url = https://github.com/Alex31TheDev/node-sqlite3.git
+	branch = master

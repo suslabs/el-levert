@@ -114,19 +114,19 @@ describe("PermissionManager", () => {
         expect(await manager.userExists(["owner-id", "123"])).toEqual([false, true]);
     });
 
-    test("rolls back group updates when a later manager write fails", async () => {
+    test("rolls back group updates when a transactional write fails", async () => {
         const manager = await createManager();
         const mods = await manager.addGroup("mods", 5, true);
 
         await manager.add(mods, "123", true);
 
-        const originalTransferUsers = manager.perm_db.transferUsers;
-        manager.perm_db.transferUsers = vi.fn(async function (group, newGroup) {
-            await originalTransferUsers.call(this, group, newGroup);
-            throw new Error("transfer failed");
+        const originalUpdateGroup = manager.perm_db.updateGroup;
+        manager.perm_db.updateGroup = vi.fn(async function (group, newGroup) {
+            await originalUpdateGroup.call(this, group, newGroup);
+            throw new Error("update failed");
         });
 
-        await expect(manager.updateGroup(mods, "helpers", 6, true)).rejects.toThrow("transfer failed");
+        await expect(manager.updateGroup(mods, "helpers", 6, true)).rejects.toThrow("update failed");
 
         expect(await manager.fetchGroup("mods")).toMatchObject({ name: "mods", level: 5 });
         expect(await manager.fetchGroup("helpers")).toBeNull();

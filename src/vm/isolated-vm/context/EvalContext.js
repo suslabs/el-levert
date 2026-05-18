@@ -353,9 +353,7 @@ class EvalContext {
     }
 
     _disposeVMObjects() {
-        ArrayUtil.wipeArray(this._vmObjects, obj => {
-            this._disposeVMObject(obj);
-        });
+        ArrayUtil.wipeArray(this._vmObjects, obj => this._disposeVMObject(obj));
     }
 
     _disposeScript() {

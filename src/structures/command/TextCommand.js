@@ -134,11 +134,6 @@ class TextCommand extends BaseCommand {
         return this._formatSubcmdHelp(subcmds, discord);
     }
 
-    createContext(data) {
-        const context = super.createContext(data);
-        return context instanceof TextCommandContext ? context : new this.constructor.contextClass(context);
-    }
-
     async execute(context) {
         context = this.createContext(context);
 

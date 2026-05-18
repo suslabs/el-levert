@@ -4,11 +4,10 @@ import genericPool from "generic-pool";
 
 import SqlitePoolConnection from "./SqlitePoolConnection.js";
 
-import PoolEvents from "./PoolEvents.js";
+import { PoolEvents } from "./PoolEvents.js";
 
 import TypeTester from "../../../util/TypeTester.js";
-
-import DatabaseError from "../../../errors/DatabaseError.js";
+import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
 
 class SqlitePool extends EventEmitter {
     constructor(config) {
@@ -41,12 +40,7 @@ class SqlitePool extends EventEmitter {
             this.emit(PoolEvents.acquire, conn);
             return conn;
         } catch (err) {
-            const wrapped = err instanceof DatabaseError ? err : new DatabaseError(err);
-            this.emit(PoolEvents.promiseError, wrapped);
-
-            if (this.throwErrors) {
-                throw wrapped;
-            }
+            return await DatabaseUtil.throwPromise(this, PoolEvents.promiseError, this.throwErrors, err);
         }
     }
 
@@ -68,6 +62,34 @@ class SqlitePool extends EventEmitter {
         this.emit(PoolEvents.clear);
     }
 
+    createFunction(name, callback, argc = -1, deterministic = false) {
+        const key = `${name}:${argc}`;
+
+        this.customFunctions.set(key, {
+            name,
+            callback,
+            argc,
+            deterministic
+        });
+
+        this.config.customFunctions = this.customFunctions;
+
+        for (const conn of this.connections) {
+            conn._setConfig(this._getConnectionConfig());
+            conn.createFunction(name, callback, argc, deterministic);
+        }
+    }
+
+    defaultSafeIntegers(enabled = true) {
+        this.safeIntegers = enabled;
+        this.config.safeIntegers = enabled;
+
+        for (const conn of this.connections) {
+            conn._setConfig(this._getConnectionConfig());
+            conn.defaultSafeIntegers(enabled);
+        }
+    }
+
     _setConfig(config) {
         this.filename = config.filename ?? this.filename ?? "";
         this.mode = config.mode ?? this.mode;
@@ -82,12 +104,15 @@ class SqlitePool extends EventEmitter {
         this.busyTimeout = config.busyTimeout ?? this.busyTimeout ?? null;
         this.delayRelease = config.delayRelease ?? this.delayRelease ?? false;
 
+        this.loadExtensions = new Set(config.loadExtensions ?? this.loadExtensions ?? []);
+        this.customFunctions = new Map(config.customFunctions ?? this.customFunctions ?? []);
+
+        this.safeIntegers = config.safeIntegers ?? this.safeIntegers ?? false;
+        this.transactionMode = config.transactionMode ?? this.transactionMode ?? "immediate";
+
+        this.verbose = config.verbose ?? this.verbose ?? false;
         this.throwErrors = config.throwErrors ?? this.throwErrors ?? true;
         this.autoRollback = config.autoRollback ?? this.autoRollback ?? false;
-        this.verbose = config.verbose ?? this.verbose ?? false;
-
-        this.loadExtensions = new Set(config.loadExtensions ?? this.loadExtensions ?? []);
-        this.transactionMode = config.transactionMode ?? this.transactionMode ?? "immediate";
     }
 
     _setOptions() {
@@ -117,15 +142,17 @@ class SqlitePool extends EventEmitter {
             delayRelease: this.delayRelease,
 
             loadExtensions: this.loadExtensions,
+            customFunctions: this.customFunctions,
+            safeIntegers: this.safeIntegers,
             transactionMode: this.transactionMode,
+
+            verbose: this.verbose,
+            throwErrors: this.throwErrors,
+            autoRollback: this.autoRollback,
 
             filename: this.filename,
             mode: this.mode,
             eventPrefix: this.eventPrefix,
-
-            throwErrors: this.throwErrors,
-            autoRollback: this.autoRollback,
-            verbose: this.verbose,
         };
     }
 

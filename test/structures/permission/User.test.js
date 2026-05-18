@@ -6,6 +6,9 @@ describe("User", () => {
     test("updates identifiers and renders missing usernames", () => {
         const user = new User({ user: "200", group: "other", username: "Blake" });
 
+        expect(User.from(user)).toBe(user);
+        expect(User.from(null, true)).toBe(null);
+
         user.setUsername(null);
         user.setUserId("201");
         user.setGroup("mods*");

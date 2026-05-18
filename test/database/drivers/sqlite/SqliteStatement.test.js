@@ -86,11 +86,11 @@ describe("SqliteStatement", () => {
 
         await pinned.finalize();
 
-        const trx = await db.beginTransaction();
-        const insert = await trx.prepare("INSERT INTO Items (value) VALUES (?)");
+        const tx = await db.beginTransaction();
+        const insert = await tx.prepare("INSERT INTO Items (value) VALUES (?)");
         await insert.run("x");
         expect(await insert.run("x")).toBeUndefined();
-        expect(trx.inTransaction).toBe(false);
+        expect(tx.inTransaction).toBe(false);
         expect((await db.get("SELECT COUNT(*) AS count FROM Items")).count).toBe(0);
         expect(insert.finalized).toBe(true);
 
@@ -101,16 +101,18 @@ describe("SqliteStatement", () => {
         expect(await insert.all("again")).toBeUndefined();
         expect(await insert.each("again")).toBeUndefined();
         expect(await insert.finalize()).toBeUndefined();
+        expect(insert.safeIntegers()).toBeUndefined();
 
         expect(insert._checkFinalizedSync(false)).toBe(false);
         expect(() => {
-            trx.throwErrors = true;
+            tx.throwErrors = true;
             insert._checkFinalizedSync(false);
         }).toThrow("The statement is finalized");
     });
 
-    test("normalizes object and array bigint parameters on prepared statements", async () => {
+    test("supports native bigint parameters and safe integer reads on prepared statements", async () => {
         const db = createDb("stmt-bigint.sqlite");
+        const big = 9223372036854775807n;
 
         await db.open();
         await db.exec("CREATE TABLE Items (value INTEGER, alt INTEGER) STRICT;");
@@ -123,15 +125,31 @@ describe("SqliteStatement", () => {
         expect(result.changes).toBe(1);
         await insert.finalize();
 
+        const insertBig = await db.prepare("INSERT INTO Items (value, alt) VALUES (?, ?)");
+        await insertBig.run(1n, big);
+        await insertBig.finalize();
+
         const select = await db.prepare("SELECT value, alt FROM Items LIMIT 1");
         expect(await select.get()).toMatchObject({
             value: 10,
             alt: 12
         });
+        select.safeIntegers();
+        expect(await select.get()).toMatchObject({
+            value: 10n,
+            alt: 12n
+        });
         await select.finalize();
 
+        const selectBig = await db.prepare("SELECT alt FROM Items WHERE value = ?");
+        selectBig.safeIntegers();
+        expect((await selectBig.get(1n)).alt).toBe(big);
+        await selectBig.finalize();
+
         const failing = await db.prepare("INSERT INTO Items (value, alt) VALUES (?, ?)");
-        await expect(failing.run(1n, 2147483648n)).rejects.toThrow("BigInt parameters");
+        await expect(failing.run(1n, 9223372036854775808n)).rejects.toThrow(
+            "BigInt value is too large to store in SQLite INTEGER"
+        );
         await failing.finalize();
     });
 });

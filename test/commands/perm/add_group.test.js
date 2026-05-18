@@ -29,7 +29,7 @@ describe("perm add_group command", () => {
 
         await expect(executeCommand(command, "add_group", { msg: adminMsg })).resolves.toContain("group_name level");
         await expect(executeCommand(command, "add_group mods 20", { msg: adminMsg })).resolves.toContain(
-            "higher than your own"
+            "higher than or equal to your own"
         );
         await expect(executeCommand(command, "add_group mods 5", { msg: adminMsg })).resolves.toContain("Added group");
         await expect(executeCommand(command, "add_group mods 5", { msg: adminMsg })).resolves.toContain("already exists");

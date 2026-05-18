@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { Buffer } from "node:buffer";
 
 import { cleanupRuntime, createRuntime } from "../../helpers/runtimeHarness.js";
 
 let runtime;
 let Tag;
 let TagTypes;
+let TagBitField;
 
 beforeEach(async () => {
     runtime = await createRuntime({
@@ -14,6 +16,7 @@ beforeEach(async () => {
 
     ({ default: Tag } = await import("../../../src/structures/tag/Tag.js"));
     ({ TagTypes } = await import("../../../src/structures/tag/TagTypes.js"));
+    ({ default: TagBitField } = await import("../../../src/structures/tag/TagBitField.js"));
 });
 
 afterEach(async () => {
@@ -23,24 +26,66 @@ afterEach(async () => {
 
 describe("Tag", () => {
     test("validates flag helpers and tag types", () => {
-        expect(Tag.getFlag("script")).toBeGreaterThan(0);
-        expect(Tag.getFlag([false, "script"])).toBeLessThan(0);
+        expect(Tag.getFlag("script").toNumber()).toBeGreaterThan(0);
+        expect(Tag.getFlag([false, "script"]).toNumber()).toBeLessThan(0);
+        expect(TagBitField.is(Tag.getFlag("script"))).toBe(true);
+        expect(TagBitField.isFilter(Tag.getFlag([false, "script"]))).toBe(true);
+        expect(TagBitField.query(Tag.getFlag([false, "script"]))).toEqual({
+            $flag: -2
+        });
         expect(() => Tag.getFlag("unknown")).toThrow("Unknown flag");
 
         const tag = new Tag({ name: "x", body: "x" });
+        expect(Tag.from(tag)).toBe(tag);
+        expect(Tag.from(null, true)).toBe(null);
         expect(() => tag.setType(["a", "b", "c"])).toThrow("Invalid type");
         expect(() => new Tag({ name: "x", body: "x", type: "unknown" })).toThrow("Unknown type");
         expect(() => tag.setType(["text", "unknown"])).toThrow("Unknown version");
+
+        const numeric = new Tag({ name: "numeric", body: "x", type: 3 });
+        expect(typeof numeric.type).toBe("object");
+        expect(numeric.type.toNumber()).toBe(3);
+        expect(numeric.getData().type).toBe(3);
+        expect(numeric.getData("$").$type).toEqual(Buffer.from([3]));
+
+        const blob = new Tag({ name: "blob", body: "x", type: Buffer.from([6]) });
+        expect(blob.getType()).toBe("vm2");
+        expect(blob.isOld).toBe(true);
+        expect(blob.isVm2).toBe(true);
+        blob.unsetVm2();
+        expect(blob.isVm2).toBe(false);
+        expect(blob.isScript).toBe(true);
+
+        const toggled = new Tag({ name: "toggle", body: "x" });
+        toggled.setVm2();
+        expect(toggled.isScript).toBe(true);
+        expect(toggled.isVm2).toBe(true);
+
+        expect(() => new Tag({ name: "bad", body: "x", type: Buffer.from([4]) })).toThrow("Invalid type");
+        expect(() => new Tag({ name: "wide", body: "x", type: Buffer.from([1, 2]) })).toThrow("Invalid type");
+    });
+
+    test("validates tag bitfield candidates before commit", () => {
+        const type = TagBitField.from(6);
+
+        expect(() => type.set(1, false)).toThrow("Invalid type");
+        expect(type.toNumber()).toBe(6);
+        expect(type.get(1)).toBe(true);
+        expect(type.get(2)).toBe(true);
+
+        expect(() => TagBitField.from(6).setAll([false], 1)).toThrow("Invalid type");
+        expect(() => TagBitField.from(Buffer.from([4]))).toThrow("Invalid type");
+        expect(TagBitField.filter(-2).invert).toBe(true);
     });
 
     test("setType(text) clears script flags", () => {
         const tag = new Tag({ name: "script", body: "return 1", type: "ivm" });
 
         expect(tag.isScript).toBe(true);
-        tag.setType(TagTypes.textType);
+        tag.setType(TagTypes.defaults.type);
 
         expect(tag.isScript).toBe(false);
-        expect(tag.getType()).toBe(TagTypes.textType);
+        expect(tag.getType()).toBe(TagTypes.defaults.type);
     });
 
     test("aliases to script tags are stored as text aliases", () => {
@@ -51,7 +96,7 @@ describe("Tag", () => {
 
         expect(alias.isAlias).toBe(true);
         expect(alias.isScript).toBe(false);
-        expect(alias.getType()).toBe(TagTypes.textType);
+        expect(alias.getType()).toBe(TagTypes.defaults.type);
     });
 
     test("normalizes legacy hops and prefixes serialized fields", () => {
@@ -121,7 +166,7 @@ describe("Tag", () => {
 
         expect(plain.setName("renamed")).toBe(true);
         expect(plain.setOwner("found")).toBe(true);
-        expect(plain.setBody("next", TagTypes.textType)).toBe(true);
+        expect(plain.setBody("next", TagTypes.defaults.type)).toBe(true);
         expect(plain.getSize()).toBeGreaterThan(0);
         expect(await plain.getOwner()).toBe("alice(ally)");
         expect(await plain.getOwner(false)).toEqual({

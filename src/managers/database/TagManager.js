@@ -2,13 +2,14 @@ import DBManager from "./DBManager.js";
 import TagDatabase from "../../database/TagDatabase.js";
 
 import Tag from "../../structures/tag/Tag.js";
-import { TagTypes, validTagScriptTypes } from "../../structures/tag/TagTypes.js";
+import { TagTypes } from "../../structures/tag/TagTypes.js";
 import { scriptContentTypes, fileContentTypes } from "./TagContentTypes.js";
 
 import { getClient, getConfig, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
 import RegexUtil from "../../util/misc/RegexUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
@@ -125,6 +126,8 @@ class TagManager extends DBManager {
     }
 
     async fetchAlias(tag, aliasOriginal = false, validate = false) {
+        tag = Tag.from(tag, true);
+
         if (tag === null) {
             return validate
                 ? null
@@ -191,6 +194,7 @@ class TagManager extends DBManager {
     }
 
     async execute(tag, args, values) {
+        tag = Tag.from(tag, true);
         values = TypeTester.isObject(values) ? values : {};
 
         tag = await this.fetchAlias(tag, true);
@@ -198,9 +202,9 @@ class TagManager extends DBManager {
 
         const type = tag.getType();
 
-        if (type === TagTypes.textType) {
+        if (type === TagTypes.defaults.type) {
             return tag.body;
-        } else if (validTagScriptTypes.has(type)) {
+        } else if (TagTypes.types.validScript.has(type)) {
             return await this._runScriptTag(tag, type, args, values);
         } else {
             throw new TagError("Invalid tag type", type);
@@ -208,24 +212,24 @@ class TagManager extends DBManager {
     }
 
     async add(name, body, owner, type, validate) {
-        validate = TypeTester.isObject(validate) ? validate : (validate ?? null);
+        validate = ObjectUtil.getBooleanOptions(
+            validate,
+            {
+                validateNew: false,
+                checkExisting: true
+            },
+            {
+                validateNew: true,
+                checkExisting: true
+            }
+        );
 
-        let validateNew = false,
-            checkExisting = true;
-
-        if (typeof validate === "boolean") {
-            validateNew = checkExisting = validate;
-        } else if (validate !== null) {
-            validateNew = validate.validateNew ?? true;
-            checkExisting = validate.checkExisting ?? true;
-        }
-
-        if (validateNew) {
+        if (validate.validateNew) {
             name = this.checkName(name);
             body = this.checkBody(body);
         }
 
-        if (checkExisting) {
+        if (validate.checkExisting) {
             const existingTag = await this.fetch(name);
 
             if (existingTag !== null) {
@@ -234,32 +238,29 @@ class TagManager extends DBManager {
         }
 
         const tag = new Tag({ name, body, owner, type });
-        await this.tag_db.transactionImmediate(async trx => {
-            await this._addPrepared(tag, trx);
+        await this.tag_db.transactionImmediate(async tx => {
+            await this._addPrepared(tag, tx);
         });
 
         return tag;
     }
 
     async edit(tag, body, type, validate) {
-        validate = TypeTester.isObject(validate) ? validate : (validate ?? false);
-        let validateProvided, validateNew, checkExisting;
+        tag = Tag.from(tag, true);
 
-        if (typeof validate === "boolean") {
-            validateProvided = validateNew = checkExisting = validate;
-        } else {
-            validateProvided = validate.validateProvided ?? false;
-            validateNew = validate.validateNew ?? true;
-            checkExisting = validate.checkExisting ?? true;
-        }
+        validate = ObjectUtil.getBooleanOptions(validate, false, {
+            validateProvided: false,
+            validateNew: true,
+            checkExisting: true
+        });
 
         if (tag === null) {
             throw new TagError("Tag doesn't exist");
-        } else if (validateProvided) {
+        } else if (validate.validateProvided) {
             this.checkName(tag.name);
         }
 
-        if (validateNew) {
+        if (validate.validateNew) {
             body = this.checkBody(body);
         }
 
@@ -270,23 +271,23 @@ class TagManager extends DBManager {
             type
         });
 
-        if (checkExisting && tag.equivalent(newTag)) {
+        if (validate.checkExisting && tag.equivalent(newTag)) {
             throw new TagError("Can't update tag with the same body", tag);
         }
 
-        await this.tag_db.transactionImmediate(async trx => {
-            const res = await trx.edit(newTag),
+        await this.tag_db.transactionImmediate(async tx => {
+            const res = await tx.edit(newTag),
                 updated = res.changes > 0;
 
             if (updated) {
                 getLogger().info(`Edited tag: "${tag.name}" with type: ${type}, body:${LoggerUtil.formatLog(body)}`);
-            } else if (validateProvided) {
+            } else if (validate.validateProvided) {
                 throw new TagError("Tag doesn't exist", tag.name);
             }
 
             if (updated) {
                 const sizeDiff = newTag.getSize() - tag.getSize();
-                await this._updateQuota(tag.owner, sizeDiff, 0, trx);
+                await this._updateQuota(tag.owner, sizeDiff, 0, tx);
             }
         });
 
@@ -294,16 +295,14 @@ class TagManager extends DBManager {
     }
 
     async updateProps(name, tag, validate) {
-        validate = TypeTester.isObject(validate) ? validate : (validate ?? false);
-        let validateProvided, validateNew, checkExisting;
+        name = TypeTester.isObject(name) ? Tag.from(name) : name;
+        tag = Tag.from(tag);
 
-        if (typeof validate === "boolean") {
-            validateProvided = validateNew = checkExisting = validate;
-        } else {
-            validateProvided = validate.validateProvided ?? false;
-            validateNew = validate.validateNew ?? true;
-            checkExisting = validate.checkExisting ?? true;
-        }
+        validate = ObjectUtil.getBooleanOptions(validate, false, {
+            validateProvided: false,
+            validateNew: true,
+            checkExisting: true
+        });
 
         let oldTag = null;
 
@@ -311,11 +310,11 @@ class TagManager extends DBManager {
             oldTag = name;
             name = oldTag.name;
 
-            if (validateProvided) {
+            if (validate.validateProvided) {
                 this.checkName(name);
             }
         } else {
-            if (validateProvided) {
+            if (validate.validateProvided) {
                 this.checkName(name);
             }
 
@@ -326,16 +325,12 @@ class TagManager extends DBManager {
             }
         }
 
-        if (!(tag instanceof Tag)) {
-            tag = new Tag(tag);
-        }
-
-        if (validateNew) {
+        if (validate.validateNew) {
             this.checkName(tag.name);
             this.checkBody(tag.body);
         }
 
-        if (checkExisting && name !== tag.name) {
+        if (validate.checkExisting && name !== tag.name) {
             const existingTag = await this.fetch(tag.name);
 
             if (existingTag !== null) {
@@ -343,25 +338,29 @@ class TagManager extends DBManager {
             }
         }
 
-        await this.tag_db.transactionImmediate(async trx => {
-            const res = await trx.updateProps(name, tag),
+        await this.tag_db.transactionImmediate(async tx => {
+            if (oldTag.owner !== tag.owner) {
+                await this._updateQuota(tag.owner, 0, 0, tx);
+            }
+
+            const res = await tx.updateProps(name, tag),
                 updated = res.changes > 0;
 
             if (updated) {
                 getLogger().info(`Updated tag: "${oldTag.name}" with data:${LoggerUtil.formatLog(tag.getData())}`);
-            } else if (validateProvided) {
+            } else if (validate.validateProvided) {
                 throw new TagError("Tag doesn't exist", name);
             }
 
-            if (updated && (!validateNew || !oldTag.sameBody(tag) || oldTag.owner !== tag.owner)) {
+            if (updated && (!validate.validateNew || !oldTag.sameBody(tag) || oldTag.owner !== tag.owner)) {
                 const oldSize = oldTag.getSize(),
                     newSize = tag.getSize();
 
                 if (oldTag.owner === tag.owner) {
-                    await this._updateQuota(tag.owner, newSize - oldSize, 0, trx);
+                    await this._updateQuota(tag.owner, newSize - oldSize, 0, tx);
                 } else {
-                    await this._updateQuota(oldTag.owner, -oldSize, -1, trx);
-                    await this._updateQuota(tag.owner, newSize, 1, trx);
+                    await this._updateQuota(oldTag.owner, -oldSize, -1, tx);
+                    await this._updateQuota(tag.owner, newSize, 1, tx);
                 }
             }
         });
@@ -370,22 +369,19 @@ class TagManager extends DBManager {
     }
 
     async alias(tag, aliasTag, args, createOptions, validate) {
-        createOptions = TypeTester.isObject(createOptions) ? createOptions : (createOptions ?? null);
+        tag = Tag.from(tag, true);
+        aliasTag = Tag.from(aliasTag, true);
+        createOptions ??= null;
 
-        validate = TypeTester.isObject(validate) ? validate : (validate ?? false);
-        let validateProvided, validateNew, checkExisting;
-
-        if (typeof validate === "boolean") {
-            validateProvided = validateNew = checkExisting = validate;
-        } else {
-            validateProvided = validate.validateProvided ?? false;
-            validateNew = validate.validateNew ?? true;
-            checkExisting = validate.checkExisting ?? false;
-        }
+        validate = ObjectUtil.getBooleanOptions(validate, false, {
+            validateProvided: false,
+            validateNew: true,
+            checkExisting: false
+        });
 
         if (aliasTag === null) {
             throw new TagError("Alias target doesn't exist");
-        } else if (validateProvided) {
+        } else if (validate.validateProvided) {
             this.checkName(aliasTag.name);
         }
 
@@ -397,12 +393,12 @@ class TagManager extends DBManager {
                 throw new TagError("No info for creating the tag provided");
             }
 
-            validateAliasName = validateNew;
+            validateAliasName = validate.validateNew;
 
             ({ name, owner } = createOptions);
             create = true;
         } else {
-            validateAliasName = validateProvided;
+            validateAliasName = validate.validateProvided;
 
             ({ name, owner } = tag);
             create = false;
@@ -417,17 +413,18 @@ class TagManager extends DBManager {
 
         let sizeDiff = newTag.getSize();
 
-        await this.tag_db.transactionImmediate(async trx => {
+        await this.tag_db.transactionImmediate(async tx => {
             if (create) {
-                if (checkExisting) {
-                    const existingTag = await trx.fetch(newTag.name);
+                if (validate.checkExisting) {
+                    const existingTag = await tx.fetch(newTag.name);
 
                     if (existingTag !== null) {
                         throw new TagError("Tag already exists", existingTag);
                     }
                 }
 
-                await trx.add(newTag);
+                await this._updateQuota(newTag.owner, 0, 0, tx);
+                await tx.add(newTag);
                 getLogger().info(`Created tag: "${newTag.name}" and aliased to: "${aliasTag.name}".`);
             } else {
                 if (tag.equals(newTag)) {
@@ -436,23 +433,25 @@ class TagManager extends DBManager {
 
                 sizeDiff -= tag.getSize();
 
-                const res = await trx.edit(newTag),
+                const res = await tx.edit(newTag),
                     updated = res.changes > 0;
 
                 if (updated) {
                     getLogger().info(`Aliased tag: "${newTag.name}" to: "${aliasTag.name}".`);
-                } else if (validateProvided) {
+                } else if (validate.validateProvided) {
                     throw new TagError("Tag doesn't exist", tag.name);
                 }
             }
 
-            await this._updateQuota(newTag.owner, sizeDiff, create ? 1 : 0, trx);
+            await this._updateQuota(newTag.owner, sizeDiff, create ? 1 : 0, tx);
         });
 
         return [newTag, create];
     }
 
     async chown(tag, newOwner, validate = false) {
+        tag = Tag.from(tag, true);
+
         if (tag === null) {
             throw new TagError("Tag doesn't exist");
         } else if (validate) {
@@ -462,8 +461,12 @@ class TagManager extends DBManager {
         const oldOwner = tag.owner,
             tagSize = tag.getSize();
 
-        await this.tag_db.transactionImmediate(async trx => {
-            const res = await trx.chown(tag, newOwner),
+        await this.tag_db.transactionImmediate(async tx => {
+            if (oldOwner !== newOwner) {
+                await this._updateQuota(newOwner, 0, 0, tx);
+            }
+
+            const res = await tx.chown(tag, newOwner),
                 updated = res.changes > 0;
 
             if (updated) {
@@ -473,8 +476,8 @@ class TagManager extends DBManager {
             }
 
             if (updated && oldOwner !== newOwner) {
-                await this._updateQuota(oldOwner, -tagSize, -1, trx);
-                await this._updateQuota(newOwner, tagSize, 1, trx);
+                await this._updateQuota(oldOwner, -tagSize, -1, tx);
+                await this._updateQuota(newOwner, tagSize, 1, tx);
             }
         });
 
@@ -482,34 +485,31 @@ class TagManager extends DBManager {
     }
 
     async rename(tag, newName, validate) {
-        validate = TypeTester.isObject(validate) ? validate : (validate ?? false);
-        let validateProvided, validateNew, checkExisting;
+        tag = Tag.from(tag, true);
 
-        if (typeof validate === "boolean") {
-            validateProvided = validateNew = checkExisting = validate;
-        } else {
-            validateProvided = validate.validateProvided ?? false;
-            validateNew = validate.validateNew ?? true;
-            checkExisting = validate.checkExisting ?? true;
-        }
+        validate = ObjectUtil.getBooleanOptions(validate, false, {
+            validateProvided: false,
+            validateNew: true,
+            checkExisting: true
+        });
 
         const oldName = tag?.name;
 
         if (tag === null) {
             throw new TagError("Tag doesn't exist");
-        } else if (validateProvided) {
+        } else if (validate.validateProvided) {
             this.checkName(oldName);
         }
 
-        if (validateNew) {
+        if (validate.validateNew) {
             this.checkName(newName);
         }
 
-        if (checkExisting && oldName === newName) {
+        if (validate.checkExisting && oldName === newName) {
             throw new TagError("Can't update tag with the same name", tag);
         }
 
-        if (checkExisting) {
+        if (validate.checkExisting) {
             const existingTag = await this.fetch(newName);
 
             if (existingTag !== null) {
@@ -517,14 +517,14 @@ class TagManager extends DBManager {
             }
         }
 
-        await this.tag_db.transactionImmediate(async trx => {
-            const res = await trx.rename(tag, newName),
+        await this.tag_db.transactionImmediate(async tx => {
+            const res = await tx.rename(tag, newName),
                 updated = res.changes > 0;
 
             if (updated) {
-                await trx.updateAliases(oldName, newName);
+                await tx.updateAliases(oldName, newName);
                 getLogger().info(`Renamed tag: "${oldName}" to: "${newName}"`);
-            } else if (validateProvided) {
+            } else if (validate.validateProvided) {
                 throw new TagError("Tag doesn't exist", tag.name);
             }
         });
@@ -533,6 +533,8 @@ class TagManager extends DBManager {
     }
 
     async delete(tag, validate = false) {
+        tag = Tag.from(tag, true);
+
         if (tag === null) {
             throw new TagError("Tag doesn't exist");
         } else if (validate) {
@@ -541,8 +543,8 @@ class TagManager extends DBManager {
 
         const tagSize = tag.getSize();
 
-        await this.tag_db.transactionImmediate(async trx => {
-            const res = await trx.delete(tag),
+        await this.tag_db.transactionImmediate(async tx => {
+            const res = await tx.delete(tag),
                 updated = res.changes > 0;
 
             if (updated) {
@@ -552,7 +554,7 @@ class TagManager extends DBManager {
             }
 
             if (updated) {
-                await this._updateQuota(tag.owner, -tagSize, -1, trx);
+                await this._updateQuota(tag.owner, -tagSize, -1, tx);
             }
         });
 
@@ -685,7 +687,7 @@ class TagManager extends DBManager {
     }
 
     async getQuota(user) {
-        return await this.tag_db.quotaFetch(user);
+        return await this.tag_db.quotaSizeFetch(user);
     }
 
     async downloadBody(t_args, msg, type) {
@@ -731,8 +733,11 @@ class TagManager extends DBManager {
         return { body, isScript };
     }
 
-    async _addPrepared(tag, db = this.tag_db) {
-        await db.add(tag);
+    async _addPrepared(tag, tx) {
+        tag = Tag.from(tag);
+
+        await this._updateQuota(tag.owner, 0, 0, tx);
+        await tx.add(tag);
 
         const bodyLogText = LoggerUtil.formatLog(
             Util.trimString(tag.body, 300, null, {
@@ -743,10 +748,12 @@ class TagManager extends DBManager {
         getLogger().info(`Added tag: "${tag.name}" with type: ${tag.type.toNumber()}, body:${bodyLogText}`);
 
         const tagSize = tag.getSize();
-        await this._updateQuota(tag.owner, tagSize, 1, db);
+        await this._updateQuota(tag.owner, tagSize, 1, tx);
     }
 
     async _runScriptTag(tag, type, args, values) {
+        tag = Tag.from(tag);
+
         const evalArgs = [args, tag.args].filter(Util.nonemptyString).join(" ");
 
         const inputValues = {
@@ -771,21 +778,23 @@ class TagManager extends DBManager {
         }
     }
 
-    async _updateQuota(user, sizeDiff, countDiff = 0, db = this.tag_db) {
+    async _updateQuota(user, sizeDiff, countDiff, tx) {
+        let userQuota = await tx.quotaFetchAll(user);
+
+        if (userQuota === null) {
+            await tx.quotaCreate(user);
+            userQuota = {
+                quota: 0,
+                count: 0
+            };
+        }
+
         if (sizeDiff === 0 && countDiff === 0) {
             return;
         }
 
-        let [userQuota, userCount] = await Promise.all([db.quotaFetch(user), db.quotaCountFetch(user)]);
-
-        if (userQuota === null || userCount === null) {
-            await db.quotaCreate(user);
-            userQuota = 0;
-            userCount = 0;
-        }
-
-        const newQuota = userQuota + sizeDiff,
-            newCount = userCount + countDiff;
+        const newQuota = userQuota.quota + sizeDiff,
+            newCount = userQuota.count + countDiff;
 
         if (newQuota > this.maxQuota) {
             throw new TagError(`Maximum quota of ${this.maxQuota} kb has been exceeded`, {
@@ -795,26 +804,26 @@ class TagManager extends DBManager {
         }
 
         if (sizeDiff !== 0) {
-            await db.quotaSet(user, newQuota);
+            await tx.quotaSizeSet(user, newQuota);
         }
 
         if (countDiff !== 0) {
-            await db.quotaCountSet(user, newCount);
+            await tx.quotaCountSet(user, newCount);
         }
 
         getLogger().debug(`Updated quota for: ${user} size diff: ${sizeDiff} count diff: ${countDiff}`);
     }
 
     async _incrementUsage(name) {
-        await this.tag_db.transactionImmediate(async trx => {
-            const res = await trx.usageIncrement(name);
+        await this.tag_db.transactionImmediate(async tx => {
+            const res = await tx.usageIncrement(name);
 
             if (res.changes > 0) {
                 return;
             }
 
-            await trx.usageCreate(name);
-            await trx.usageIncrement(name);
+            await tx.usageCreate(name);
+            await tx.usageIncrement(name);
         });
     }
 }

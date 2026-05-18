@@ -6,8 +6,7 @@ import Util from "../../util/Util.js";
 import ParserUtil from "../../util/commands/ParserUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 
-import MessageLimitTypes from "../../handlers/discord/MessageLimitTypes.js";
-
+import { MessageLimitTypes } from "../../handlers/discord/MessageLimitTypes.js";
 import { TagTypes } from "../../structures/tag/TagTypes.js";
 
 const dummyMsg = {
@@ -119,7 +118,7 @@ class TagCommand {
         } else {
             let tagBody = t_args;
 
-            if (TagTypes.scriptTypes.includes(t_type)) {
+            if (TagTypes.types.validScript.has(t_type)) {
                 tagBody = t_body;
             }
 
@@ -129,9 +128,9 @@ class TagCommand {
         let type = null;
 
         if (isScript) {
-            type = TagTypes.scriptTypes.includes(t_type) ? t_type : TagTypes.defaultScriptType;
+            type = TagTypes.types.validScript.has(t_type) ? t_type : TagTypes.defaults.scriptType;
         } else {
-            type = TagTypes.textType;
+            type = TagTypes.defaults.type;
         }
 
         return { body, type, err: null };

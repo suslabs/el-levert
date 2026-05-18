@@ -1,13 +1,28 @@
-import path from "node:path";
+import { Buffer } from "node:buffer";
 
 import SqlDatabase from "./SqlDatabase.js";
-import OpenModes from "./drivers/sqlite/OpenModes.js";
 
 import Tag from "../structures/tag/Tag.js";
+import TagBitField from "../structures/tag/TagBitField.js";
 
 import Util from "../util/Util.js";
 import ArrayUtil from "../util/ArrayUtil.js";
 import TypeTester from "../util/TypeTester.js";
+
+function blobToInt(value) {
+    if (value == null) {
+        return 0;
+    }
+
+    const buffer = Buffer.isBuffer(value) ? value : Buffer.from(value);
+    let out = 0;
+
+    for (let index = 0; index < buffer.length; index++) {
+        out |= buffer[index] << (index * 8);
+    }
+
+    return out;
+}
 
 function sortTags(tags) {
     const objs = typeof Util.first(tags) !== "string";
@@ -18,15 +33,25 @@ class TagDatabase extends SqlDatabase {
     constructor(dbPath, queryPath, options) {
         options = TypeTester.isObject(options) ? options : {};
 
-        super(dbPath, queryPath, options);
+        const customFunctions = new Map();
 
-        this.migrationsPath ??= path.resolve(this.queryPath, "..", "..", "migrations", "tag");
+        customFunctions.set("blob_to_int:1", {
+            name: "blob_to_int",
+            callback: blobToInt,
+            argc: 1,
+            deterministic: true
+        });
+
+        super(dbPath, queryPath, {
+            ...options,
+            customFunctions
+        });
     }
 
-    async load() {
-        await this.open(OpenModes.OPEN_READWRITE);
-        await this._migrateLegacySchema();
-        return await this._loadDatabase();
+    async setup(mode) {
+        if (mode === "load") {
+            await this._migrateLegacySchema();
+        }
     }
 
     async exists(name) {
@@ -88,7 +113,7 @@ class TagDatabase extends SqlDatabase {
     async updateProps(name, tag) {
         const res = await this.tagQueries.updateProps.run({
             $tagName: name,
-            ...tag.getData("$")
+            ...tag.getData("$", true, this.constructor.tagDataProps)
         });
 
         if (res.changes > 0 && name !== tag.name) {
@@ -142,9 +167,7 @@ class TagDatabase extends SqlDatabase {
     }
 
     async dump(flag = null) {
-        const rows = await this.tagQueries.dump.all({
-                $flag: flag
-            }),
+        const rows = await this.tagQueries.dump.all(TagBitField.query(flag)),
             tags = rows.map(row => row.name);
 
         sortTags(tags);
@@ -152,9 +175,7 @@ class TagDatabase extends SqlDatabase {
     }
 
     async fullDump(flag = null) {
-        const rows = await this.tagQueries.fullDump.all({
-                $flag: flag
-            }),
+        const rows = await this.tagQueries.fullDump.all(TagBitField.query(flag)),
             tags = rows.map(row => new Tag(row));
 
         sortTags(tags);
@@ -192,14 +213,35 @@ class TagDatabase extends SqlDatabase {
 
         const res = await this.tagQueries.count.get({
             $user: user,
-            $flag: flag
+            ...TagBitField.query(flag)
         });
 
         return res.count;
     }
 
-    async quotaFetch(user) {
-        const quota = await this.quotaQueries.fetch.get({
+    async quotaFetchAll(user) {
+        const quota = await this.quotaQueries.fetchAll.get({
+            $user: user
+        });
+
+        if (typeof quota._data === "undefined") {
+            return null;
+        }
+
+        return {
+            quota: quota.quota,
+            count: quota.count
+        };
+    }
+
+    async quotaCreate(user) {
+        return await this.quotaQueries.create.run({
+            $user: user
+        });
+    }
+
+    async quotaSizeFetch(user) {
+        const quota = await this.quotaQueries.sizeFetch.get({
             $user: user
         });
 
@@ -210,14 +252,8 @@ class TagDatabase extends SqlDatabase {
         return quota.quota;
     }
 
-    async quotaCreate(user) {
-        return await this.quotaQueries.create.run({
-            $user: user
-        });
-    }
-
-    async quotaSet(user, quota) {
-        return await this.quotaQueries.set.run({
+    async quotaSizeSet(user, quota) {
+        return await this.quotaQueries.sizeSet.run({
             $user: user,
             $quota: quota
         });
@@ -303,23 +339,38 @@ class TagDatabase extends SqlDatabase {
         return Array.from(rows);
     }
 
-    async _getTagColumns() {
-        const rows = await this.db.all("PRAGMA table_info(Tags);"),
-            columns = new Set(Array.from(rows).map(row => row.name));
-
-        return columns;
-    }
-
     async _migrateLegacySchema() {
-        const columns = await this._getTagColumns();
+        const schema = await this.db.tableSchema("Tags");
 
-        if (!columns.has("hops") || columns.has("aliasName")) {
+        if (schema.base.size < 1) {
             return;
         }
 
-        await this.db.migrate({
-            migrationsPath: this.migrationsPath
-        });
+        if (schema.base.has("hops") && !schema.base.has("aliasName")) {
+            await this.db.migrate({
+                migrationsPath: this.migrationsPath
+            });
+
+            return;
+        }
+
+        const typeColumn = schema.baseColumns.get("type");
+
+        const hasBlobType = typeColumn?.type === "BLOB",
+            hasIntegerType = typeColumn?.type === "INTEGER";
+
+        if (schema.base.has("aliasName") && hasIntegerType) {
+            await this._seedAppliedMigrations([1]);
+            await this.db.migrate({
+                migrationsPath: this.migrationsPath
+            });
+
+            return;
+        }
+
+        if (schema.base.has("aliasName") && hasBlobType) {
+            return;
+        }
     }
 }
 

@@ -101,7 +101,7 @@ const TypeTester = Object.freeze({
         }
 
         for (const [name, expected] of Object.entries(requiredProps)) {
-            if (!(name in obj)) {
+            if (!Object.hasOwn(obj, name)) {
                 return false;
             }
 

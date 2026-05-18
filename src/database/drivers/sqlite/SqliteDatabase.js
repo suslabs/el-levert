@@ -8,19 +8,29 @@ import SqliteStatement from "./SqliteStatement.js";
 
 import MigrationLoader from "../../../loaders/migration/MigrationLoader.js";
 
-import PoolEvents from "./PoolEvents.js";
-import ConnectionEvents from "./ConnectionEvents.js";
-import EventPrefixes from "./EventPrefixes.js";
-import DatabaseEvents from "./DatabaseEvents.js";
-import OpenModes from "./OpenModes.js";
+import { PoolEvents } from "./PoolEvents.js";
+import { ConnectionEvents } from "./ConnectionEvents.js";
+import { EventPrefixes } from "./EventPrefixes.js";
+import { DatabaseEvents } from "./DatabaseEvents.js";
+import { OpenModes } from "./OpenModes.js";
 
 import TypeTester from "../../../util/TypeTester.js";
 import Util from "../../../util/Util.js";
 import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
+import RegexUtil from "../../../util/misc/RegexUtil.js";
 
 import DatabaseError from "../../../errors/DatabaseError.js";
 
 class SqliteDatabase extends StatementDatabase(EventEmitter) {
+    static migrationSql = Object.freeze({
+        createTable:
+            "CREATE TABLE IF NOT EXISTS {{tableName}} " +
+            "(id INTEGER PRIMARY KEY, name TEXT NOT NULL, up TEXT NOT NULL, down TEXT NOT NULL)",
+        selectApplied: "SELECT id, name, up, down FROM {{tableName}} ORDER BY id ASC",
+        deleteApplied: "DELETE FROM {{tableName}} WHERE id = $id",
+        insertApplied: "INSERT INTO {{tableName}} (id, name, up, down) VALUES ($id, $name, $up, $down)"
+    });
+
     constructor(filename, mode, config, session) {
         super();
 
@@ -50,52 +60,39 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
     }
 
     open() {
-        return new Promise((resolve, reject) => {
-            if (!this._checkSessionClosedAsync(resolve, reject)) {
-                return;
-            }
-
-            if (
-                !this._checkDatabaseClosedAsync(resolve, reject, `Cannot open database. ${SqliteDatabase._dbOpenMsg}`)
-            ) {
-                return;
-            }
-
-            const pool = new SqlitePool(this._getPoolConfig());
-
-            DatabaseUtil.registerPrefixedEvents(pool, this, EventPrefixes.pool, PoolEvents);
-
-            this.pool = pool;
-            this.db = pool;
-
-            resolve(this);
-        });
-    }
-
-    close() {
-        if (this._isSession()) {
-            return this._dispose();
+        if (
+            !this._checkSessionClosedSync() ||
+            !this._checkDatabaseClosedSync(`Cannot open database. ${SqliteDatabase._dbOpenMsg}`)
+        ) {
+            return;
         }
 
-        return new Promise((resolve, reject) => {
-            if (
-                !this._checkDatabaseOpenAsync(resolve, reject, `Cannot close database. ${SqliteDatabase._dbNotOpenMsg}`)
-            ) {
-                return;
-            }
+        const pool = new SqlitePool(this._getPoolConfig());
 
-            this.finalizeAll()
-                .then(_ => this.pool.close())
-                .then(_ => {
-                    DatabaseUtil.removePrefixedEvents(this.pool, this, EventPrefixes.pool, PoolEvents);
+        DatabaseUtil.registerPrefixedEvents(pool, this, EventPrefixes.pool, PoolEvents);
 
-                    this.pool = null;
-                    this.db = null;
+        this.pool = pool;
+        this.db = pool;
 
-                    resolve();
-                })
-                .catch(reject);
-        });
+        return this;
+    }
+
+    async close() {
+        if (this._inSession) {
+            return await this._dispose();
+        }
+
+        if (!(await this._checkDatabaseOpenPromise(`Cannot close database. ${SqliteDatabase._dbNotOpenMsg}`))) {
+            return;
+        }
+
+        await this.finalizeAll();
+        await this.pool.close();
+
+        DatabaseUtil.removePrefixedEvents(this.pool, this, EventPrefixes.pool, PoolEvents);
+
+        this.pool = null;
+        this.db = null;
     }
 
     configure(...args) {
@@ -103,7 +100,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
             return;
         }
 
-        if (this._isSession()) {
+        if (this._inSession) {
             this._conn.configure(...args);
         } else {
             for (const conn of this.pool.connections) {
@@ -113,7 +110,9 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
 
         if (args[0] === "busyTimeout") {
             this._setBusyTimeout(args[1]);
-            this._applyConfig({ busyTimeout: args[1] });
+            this._applyConfig({
+                busyTimeout: args[1]
+            });
         }
 
         return this;
@@ -140,61 +139,69 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
     }
 
     use(callback) {
-        if (this._isSession()) {
-            return Promise.resolve(callback(this));
+        if (this._inSession) {
+            return callback(this);
+        }
+
+        if (!this._checkDatabaseOpenSync()) {
+            return;
         }
 
         return this._useManagedSession(callback);
     }
 
-    prepare(sql, ...param) {
-        return new Promise((resolve, reject) => {
-            if (!this._checkDatabaseOpenAsync(resolve, reject)) {
-                return;
-            }
-
-            this._prepareStatement(sql, param).then(resolve).catch(reject);
-        });
-    }
-
-    beginTransaction(mode = this.transactionMode) {
-        return new Promise((resolve, reject) => {
-            if (!this._checkDatabaseOpenAsync(resolve, reject)) {
-                return;
-            }
-
-            this._beginTransaction(mode).then(resolve).catch(reject);
-        });
-    }
-
-    commit() {
-        if (!this._isSession()) {
-            return this._rejectRootTransactionMethod(
-                "Cannot commit the pooled root database. Commit the session instead."
-            );
+    async prepare(sql, ...param) {
+        if (!(await this._checkDatabaseOpenPromise())) {
+            return;
         }
 
-        return this._commitTransaction().then(_ => this._finalizeTransactionEnd());
+        return await this._prepareStatement(sql, param);
     }
 
-    rollback() {
-        if (!this._isSession()) {
-            return this._rejectRootTransactionMethod(
-                "Cannot roll back the pooled root database. Roll back the session instead."
-            );
+    async beginTransaction(mode = this.transactionMode) {
+        if (!(await this._checkDatabaseOpenPromise())) {
+            return;
         }
 
-        return this._rollbackTransaction().then(_ => this._finalizeTransactionEnd());
+        return await this._beginTransaction(mode);
     }
 
-    transaction(callback, mode = this.transactionMode) {
-        return new Promise((resolve, reject) => {
-            if (!this._checkDatabaseOpenAsync(resolve, reject)) {
+    async commit() {
+        if (this._inSession) {
+            await this._commitTransaction();
+            return await this._finalizeTransactionEnd();
+        } else {
+            if (!(await this._checkDatabaseOpenPromise())) {
                 return;
             }
 
-            this._runTransaction(callback, mode).then(resolve).catch(reject);
-        });
+            return await this._throwErrorPromise(
+                new DatabaseError("Cannot commit the pooled root database. Commit the session instead.")
+            );
+        }
+    }
+
+    async rollback() {
+        if (this._inSession) {
+            await this._rollbackTransaction();
+            return await this._finalizeTransactionEnd();
+        } else {
+            if (!(await this._checkDatabaseOpenPromise())) {
+                return;
+            }
+
+            return await this._throwErrorPromise(
+                new DatabaseError("Cannot roll back the pooled root database. Roll back the session instead.")
+            );
+        }
+    }
+
+    async transaction(callback, mode = this.transactionMode) {
+        if (!(await this._checkDatabaseOpenPromise())) {
+            return;
+        }
+
+        return await this._runTransaction(callback, mode);
     }
 
     transactionDeferred(callback) {
@@ -209,50 +216,126 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         return this.transaction(callback, "exclusive");
     }
 
-    loadExtension(extensionPath) {
-        return new Promise((resolve, reject) => {
-            const resolved = path.resolve(extensionPath);
-            this._addExtensionPath(resolved);
+    async loadExtension(extensionPath) {
+        const resolved = path.resolve(extensionPath),
+            conn = await this._useConnection(activeConnection => activeConnection.loadExtension(resolved));
 
-            if (!this._checkDatabaseOpenAsync(resolve, reject)) {
-                resolve(this);
-                return;
-            }
+        if (conn == null) {
+            return;
+        }
 
-            this._applyConfig({
-                loadExtensions: this._getExtensionPaths()
-            });
+        this._addExtensionPath(resolved);
 
-            this._useConnection(conn => conn.loadExtension(resolved))
-                .then(_ => resolve(this))
-                .catch(reject);
+        this._applyConfig({
+            loadExtensions: this._getExtensionPaths()
         });
+
+        return this;
+    }
+
+    createFunction(name, callback, argc = -1, deterministic = false) {
+        if (!this._checkDatabaseOpenSync()) {
+            return;
+        }
+
+        const state = this._state,
+            key = `${name}:${argc}`;
+
+        state._customFunctions.set(key, {
+            name,
+            callback,
+            argc,
+            deterministic
+        });
+
+        const target = this._inSession ? this._conn : this.pool;
+        target.createFunction(name, callback, argc, deterministic);
+
+        return this;
+    }
+
+    defaultSafeIntegers(enabled = true) {
+        if (!this._checkDatabaseOpenSync()) {
+            return;
+        }
+
+        this.safeIntegers = enabled;
+        this._state.safeIntegers = enabled;
+
+        this._applyConfig({
+            safeIntegers: enabled
+        });
+
+        const target = this._inSession ? this._conn : this.pool;
+        target.defaultSafeIntegers(enabled);
+
+        return this;
     }
 
     pragma(pragma, options) {
         return this._callConnection("pragma", pragma, options);
     }
 
-    enableWALMode() {
-        return this._useConnection(conn => conn.enableWALMode()).then(_ => {
-            this._setWALMode(true);
-            this._applyConfig({
-                enableWALMode: true
-            });
-
-            return this;
-        });
+    tableInfo(table) {
+        return this._callConnection("tableInfo", table);
     }
 
-    disableWALMode() {
-        return this._useConnection(conn => conn.disableWALMode()).then(_ => {
-            this._setWALMode(false);
-            this._applyConfig({
-                enableWALMode: false
-            });
+    tableXInfo(table) {
+        return this._callConnection("tableXInfo", table);
+    }
 
-            return this;
+    foreignKeyList(table) {
+        return this._callConnection("foreignKeyList", table);
+    }
+
+    indexList(table) {
+        return this._callConnection("indexList", table);
+    }
+
+    indexInfo(index) {
+        return this._callConnection("indexInfo", index);
+    }
+
+    tableExists(table) {
+        return this._callConnection("tableExists", table);
+    }
+
+    tableSchema(table) {
+        return this._callConnection("tableSchema", table);
+    }
+
+    tableDetails(table) {
+        return this._callConnection("tableDetails", table);
+    }
+
+    async enableWALMode() {
+        const conn = await this._useConnection(activeConnection => activeConnection.enableWALMode());
+
+        if (conn == null) {
+            return;
+        }
+
+        this._setWALMode(true);
+        this._applyConfig({
+            enableWALMode: true
         });
+
+        return this;
+    }
+
+    async disableWALMode() {
+        const conn = await this._useConnection(activeConnection => activeConnection.disableWALMode());
+
+        if (conn == null) {
+            return;
+        }
+
+        this._setWALMode(false);
+        this._applyConfig({
+            enableWALMode: false
+        });
+
+        return this;
     }
 
     interrupt() {
@@ -267,30 +350,34 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         return this;
     }
 
-    vacuum() {
-        return this._callConnection("vacuum").then(_ => this);
+    async vacuum() {
+        await this._callConnection("vacuum");
+        return this;
     }
 
     backup(destination, options) {
         return this._callConnection("backup", destination, options);
     }
 
-    migrate({ force, table = "migrations", migrationsPath = "./migrations" } = {}) {
-        const tableName = DatabaseUtil.quoteIdentifier(table, "Migration table name"),
-            sql = this._getMigrationSql(tableName),
-            location = path.resolve(migrationsPath);
+    async migrate({ force, table = "migrations", migrationsPath = "./migrations" } = {}) {
+        const tableName = this._quoteIdentifier(table, "Migration table name");
 
-        return this._getMigrations(location)
-            .then(migrations => {
-                return this.transactionImmediate(trx => {
-                    return this._withMigrationStatements(trx, sql, sts => {
-                        return sts.selectApplied
-                            .all()
-                            .then(appliedRows => this._syncMigrations(trx, sts, migrations, appliedRows, force));
-                    });
-                });
-            })
-            .then(_ => this);
+        if (tableName == null) {
+            return;
+        }
+
+        const sql = this._getMigrationSql(tableName),
+            location = path.resolve(migrationsPath),
+            migrations = await this._getMigrations(location);
+
+        await this.transactionImmediate(async tx => {
+            await this._withMigrationStatements(tx, sql, async sts => {
+                const appliedRows = await sts.selectApplied.all();
+                await this._syncMigrations(tx, sts, migrations, appliedRows, force);
+            });
+        });
+
+        return this;
     }
 
     static _dbOpenMsg = "The database is open";
@@ -308,6 +395,9 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         this.delayRelease = config.delayRelease ?? false;
 
         this._extensionPaths = new Set(Array.from(config.loadExtensions ?? [], item => path.resolve(item)));
+        this._customFunctions = new Map(config.customFunctions ?? []);
+
+        this.safeIntegers = config.safeIntegers ?? false;
         this.transactionMode = config.transactionMode ?? "immediate";
 
         this.verbose = config.verbose ?? false;
@@ -327,6 +417,8 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         this.WALMode = root.WALMode;
         this.busyTimeout = root.busyTimeout;
         this.delayRelease = root.delayRelease;
+        this._customFunctions = root._customFunctions;
+        this.safeIntegers = root.safeIntegers;
         this.transactionMode = root.transactionMode;
     }
 
@@ -344,7 +436,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
 
         const prefixedListeners = new Map();
 
-        for (const event of Object.values(ConnectionEvents)) {
+        for (const event of DatabaseUtil.getEventValues(ConnectionEvents)) {
             const listener = (...args) => target.emit(`${conn.eventName}_${event}`, ...args);
             conn.on(event, listener);
             prefixedListeners.set(event, listener);
@@ -367,62 +459,49 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         this._root._registerConnection(conn, this);
     }
 
-    _releaseConnection(conn, target = this) {
-        const release = () => {
-            const listeners = this._connectionListeners.get(conn);
-            const targetListeners = listeners.get(target);
-
-            for (const [event, listener] of targetListeners.prefixedListeners) {
-                conn.removeListener(event, listener);
-            }
-
-            conn.removeListener(ConnectionEvents.promiseError, targetListeners.promiseErrorListener);
-            listeners.delete(target);
-
-            if (listeners.size === 0) {
-                this._connectionListeners.delete(conn);
-            }
-
-            conn.release();
-        };
-
+    async _releaseConnection(conn, target = this) {
         if (this.delayRelease) {
-            return new Promise(resolve => {
-                setImmediate(() => {
-                    release();
-                    resolve();
-                });
-            });
+            await new Promise(resolve => setImmediate(resolve));
         }
 
-        release();
-        return Promise.resolve();
+        const listeners = this._connectionListeners.get(conn);
+        const targetListeners = listeners.get(target);
+
+        for (const [event, listener] of targetListeners.prefixedListeners) {
+            conn.removeListener(event, listener);
+        }
+
+        conn.removeListener(ConnectionEvents.promiseError, targetListeners.promiseErrorListener);
+        listeners.delete(target);
+
+        if (listeners.size === 0) {
+            this._connectionListeners.delete(conn);
+        }
+
+        conn.release();
     }
 
-    _dispose() {
-        if (!this._isSession() || this._released) {
-            return Promise.resolve();
+    async _dispose() {
+        if (!this._inSession || this._released) {
+            return;
         }
 
         this._released = true;
 
-        return this.finalizeAll()
-            .catch(_ => {})
-            .then(_ => {
-                if (this._conn.inTransaction) {
-                    return this._conn.rollback().catch(_ => {});
-                }
-            })
-            .then(_ => {
-                this._conn.removeListener(ConnectionEvents.autoRollback, this._autoRollbackListener);
-                this._autoRollbackListener = null;
+        await this.finalizeAll().catch(_ => {});
 
-                return this._root._releaseConnection(this._conn, this).then(_ => {
-                    this.db = null;
-                    this._conn = null;
-                    this.inTransaction = false;
-                });
-            });
+        if (this._conn.inTransaction) {
+            await this._conn.rollback().catch(_ => {});
+        }
+
+        this._conn.removeListener(ConnectionEvents.autoRollback, this._autoRollbackListener);
+        this._autoRollbackListener = null;
+
+        await this._root._releaseConnection(this._conn, this);
+
+        this.db = null;
+        this._conn = null;
+        this.inTransaction = false;
     }
 
     _setAutoRollbackHandler() {
@@ -450,81 +529,16 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         this._setAutoRollbackHandler();
     }
 
-    _checkDatabaseClosed(msg) {
-        if (!this._isDatabaseOpen()) {
-            return true;
-        }
-
-        return new DatabaseError(msg ?? SqliteDatabase._dbOpenMsg);
-    }
-
-    _checkDatabaseClosedAsync(resolve, reject, msg) {
-        return DatabaseUtil.checkAsync(
-            this,
-            DatabaseEvents.promiseError,
-            this.throwErrors,
-            resolve,
-            reject,
-            this._checkDatabaseClosed(msg)
-        );
-    }
-
-    _isSession() {
+    get _inSession() {
         return this._root != null;
     }
 
-    _isDatabaseOpen() {
-        if (this._isSession()) {
+    get _open() {
+        if (this._inSession) {
             return this._conn != null && !this._released && this._conn.db != null;
         }
 
         return this.pool !== null;
-    }
-
-    _checkSessionClosedAsync(resolve, reject) {
-        if (!this._isSession()) {
-            return true;
-        }
-
-        const err = new DatabaseError("Cannot open a transaction session");
-        this.emit(DatabaseEvents.promiseError, err);
-
-        if (this.throwErrors) {
-            reject(err);
-        } else {
-            resolve();
-        }
-
-        return false;
-    }
-
-    _checkDatabaseOpen(msg) {
-        if (this._isDatabaseOpen()) {
-            return true;
-        }
-
-        const defaultMsg = this._isSession() ? SqliteDatabase._sessionNotOpenMsg : SqliteDatabase._dbNotOpenMsg;
-        return new DatabaseError(msg ?? defaultMsg);
-    }
-
-    _checkDatabaseOpenSync(msg) {
-        return DatabaseUtil.checkSync(
-            this,
-            DatabaseEvents.promiseError,
-            this.throwErrors,
-            this._checkDatabaseOpen(msg)
-        );
-    }
-
-    _checkDatabaseOpenAsync(resolve, reject, msg) {
-        return DatabaseUtil.checkAsync(
-            this,
-            DatabaseEvents.promiseError,
-            this.throwErrors,
-            resolve,
-            reject,
-            this._checkDatabaseOpen(msg)
-        );
     }
 
     _getPoolConfig() {
@@ -542,6 +556,8 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
             delayRelease: this.delayRelease,
 
             loadExtensions: this._extensionPaths,
+            customFunctions: this._customFunctions,
+            safeIntegers: this.safeIntegers,
             transactionMode: this.transactionMode,
 
             verbose: this.verbose,
@@ -554,34 +570,34 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         };
     }
 
-    _getStateTarget() {
+    get _state() {
         return this._root ?? this;
     }
 
     _applyConfig(config) {
-        this._getStateTarget().pool.applyConfig(config);
+        this._state.pool.applyConfig(config);
     }
 
     _addExtensionPath(resolved) {
-        this._getStateTarget()._extensionPaths.add(resolved);
+        this._state._extensionPaths.add(resolved);
     }
 
     _getExtensionPaths() {
-        return this._getStateTarget()._extensionPaths;
+        return this._state._extensionPaths;
     }
 
     _setWALMode(enabled) {
         this.WALMode = enabled;
-        this._getStateTarget().WALMode = enabled;
+        this._state.WALMode = enabled;
     }
 
     _setBusyTimeout(value) {
         this.busyTimeout = value;
-        this._getStateTarget().busyTimeout = value;
+        this._state.busyTimeout = value;
     }
 
     _getInterruptConnections() {
-        return this._isSession() ? [this._conn] : this.pool.connections;
+        return this._inSession ? [this._conn] : this.pool.connections;
     }
 
     _ownStatement(st) {
@@ -594,199 +610,201 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         return this._ownStatement(new SqliteStatement(this, sql, param));
     }
 
-    _prepareStatement(sql, param) {
-        if (!this._isSession()) {
-            return Promise.resolve(this._createStatement(sql, param));
+    async _prepareStatement(sql, param) {
+        if (!this._inSession) {
+            return this._createStatement(sql, param);
         }
 
-        return this._conn.prepare(sql, ...param).then(st => this._ownStatement(st));
+        const st = await this._conn.prepare(sql, ...param);
+        return this._ownStatement(st);
     }
 
-    _acquireConnection() {
-        return this.pool.acquire().then(conn => {
-            this._registerConnection(conn, this);
-            return conn;
+    async _acquireConnection() {
+        const conn = await this.pool.acquire();
+        this._registerConnection(conn, this);
+        return conn;
+    }
+
+    async _createSession(options = {}) {
+        const conn = await this.pool.acquire();
+
+        return new SqliteDatabase(this.filename, this.mode, this.config, {
+            root: this,
+            conn,
+            options
         });
     }
 
-    _createSession(options = {}) {
-        return this.pool.acquire().then(conn => {
-            return new SqliteDatabase(this.filename, this.mode, this.config, {
-                root: this,
-                conn,
-                options
-            });
-        });
+    async _useManagedSession(callback, options = {}) {
+        const session = await this._createSession(options);
+
+        try {
+            return await callback(session);
+        } finally {
+            await session.close().catch(_ => {});
+        }
     }
 
-    _useManagedSession(callback, options = {}) {
-        return new Promise((resolve, reject) => {
-            if (!this._checkDatabaseOpenAsync(resolve, reject)) {
-                return;
-            }
-
-            this._createSession(options)
-                .then(session => {
-                    Promise.resolve(callback(session))
-                        .then(resolve)
-                        .catch(reject)
-                        .finally(() => {
-                            session.close().catch(_ => {});
-                        });
-                })
-                .catch(reject);
-        });
-    }
-
-    _beginTransaction(mode) {
-        if (!this._isSession()) {
-            return this._createSession({
+    async _beginTransaction(mode) {
+        if (!this._inSession) {
+            const session = await this._createSession({
                 closeOnEnd: true
-            }).then(session => session.beginTransaction(mode));
+            });
+
+            return await session.beginTransaction(mode);
         }
 
         if (this.inTransaction) {
-            return Promise.resolve(this);
-        }
-
-        return this._conn.beginTransaction(mode).then(_ => {
-            this.inTransaction = true;
             return this;
-        });
-    }
-
-    _getActiveConnection() {
-        if (this._isSession()) {
-            return Promise.resolve({
-                conn: this._conn,
-                pooled: false
-            });
         }
 
-        return this._acquireConnection().then(conn => ({
-            conn,
-            pooled: true
-        }));
+        await this._conn.beginTransaction(mode);
+        this.inTransaction = true;
+        return this;
     }
 
-    _useConnection(callback) {
-        return new Promise((resolve, reject) => {
-            if (!this._checkDatabaseOpenAsync(resolve, reject)) {
-                return;
+    async _commitTransaction() {
+        if (!(await this._checkDatabaseOpenPromise()) || !this.inTransaction) {
+            return;
+        }
+
+        await this._conn.commit();
+        this.inTransaction = false;
+        return this;
+    }
+
+    async _rollbackTransaction() {
+        if (!(await this._checkDatabaseOpenPromise()) || !this.inTransaction) {
+            return;
+        }
+
+        await this._conn.rollback();
+        this.inTransaction = false;
+        return this;
+    }
+
+    async _finalizeTransactionEnd() {
+        if (!this._closeOnEnd) {
+            return this;
+        }
+
+        await this._dispose();
+        return this;
+    }
+
+    _syncConnectionFunctions(conn) {
+        for (const entry of this._state._customFunctions.values()) {
+            const key = `${entry.name}:${entry.argc}`;
+
+            if (conn._registeredFunctions.has(key)) {
+                continue;
             }
 
-            this._getActiveConnection()
-                .then(async ({ conn, pooled }) => {
-                    try {
-                        const result = await callback(conn);
+            conn.createFunction(entry.name, entry.callback, entry.argc, entry.deterministic);
+        }
+    }
 
-                        if (pooled) {
-                            await this._releaseConnection(conn);
-                        }
+    async _getActiveConnection() {
+        if (this._inSession) {
+            this._syncConnectionFunctions(this._conn);
 
-                        resolve(result);
-                    } catch (err) {
-                        if (pooled) {
-                            await this._releaseConnection(conn);
-                        }
+            return {
+                conn: this._conn,
+                pooled: false
+            };
+        }
 
-                        reject(err);
-                    }
-                })
-                .catch(reject);
-        });
+        const conn = await this._acquireConnection();
+        this._syncConnectionFunctions(conn);
+
+        return {
+            conn,
+            pooled: true
+        };
+    }
+
+    async _useConnection(callback) {
+        if (!(await this._checkDatabaseOpenPromise())) {
+            return;
+        }
+
+        const { conn, pooled } = await this._getActiveConnection();
+
+        try {
+            const result = await callback(conn);
+
+            if (pooled) {
+                await this._releaseConnection(conn);
+            }
+
+            return result;
+        } catch (err) {
+            if (pooled) {
+                await this._releaseConnection(conn);
+            }
+
+            throw err;
+        }
     }
 
     _callConnection(method, ...args) {
         return this._useConnection(conn => conn[method](...args));
     }
 
-    _runTransaction(callback, mode) {
-        if (!this._isSession()) {
-            return this._useManagedSession(session => session.transaction(callback, mode));
+    async _runSessionTransaction(callback, mode) {
+        try {
+            await this._beginTransaction(mode);
+            const result = await callback(this);
+            await this._commitTransaction();
+            return result;
+        } catch (err) {
+            await this._rollbackTransaction().catch(_ => {});
+            throw err;
+        }
+    }
+
+    async _runNestedTransaction(callback) {
+        const savepoint = this._conn.nextSavepointName();
+
+        try {
+            await this._conn.createSavepoint(savepoint);
+            const result = await callback(this);
+            await this._conn.releaseSavepoint(savepoint);
+            return result;
+        } catch (err) {
+            await this._conn.rollbackToSavepoint(savepoint);
+            await this._conn.releaseSavepoint(savepoint);
+            throw err;
+        }
+    }
+
+    async _runTransaction(callback, mode) {
+        if (!this._inSession) {
+            return await this._useManagedSession(session => session.transaction(callback, mode));
         }
 
         if (!this.inTransaction) {
-            return this._runSessionTransaction(callback, mode);
+            return await this._runSessionTransaction(callback, mode);
         }
 
-        return this._runNestedTransaction(callback);
+        return await this._runNestedTransaction(callback);
     }
 
-    _runSessionTransaction(callback, mode) {
-        return this._beginTransaction(mode)
-            .then(_ => Promise.resolve(callback(this)))
-            .then(result => {
-                return this._commitTransaction().then(_ => result);
-            })
-            .catch(err => {
-                return this._rollbackTransaction()
-                    .catch(_ => {})
-                    .then(_ => {
-                        throw err;
-                    });
-            });
-    }
-
-    _runNestedTransaction(callback) {
-        const savepoint = this._conn.nextSavepointName();
-
-        return this._conn
-            .createSavepoint(savepoint)
-            .then(_ => Promise.resolve(callback(this)))
-            .then(result => {
-                return this._conn.releaseSavepoint(savepoint).then(_ => result);
-            })
-            .catch(err => {
-                return this._conn
-                    .rollbackToSavepoint(savepoint)
-                    .then(_ => this._conn.releaseSavepoint(savepoint))
-                    .then(_ => {
-                        throw err;
-                    });
-            });
-    }
-
-    _commitTransaction() {
-        if (!this._checkDatabaseOpenSync() || !this.inTransaction) {
-            return Promise.resolve();
+    _quoteIdentifier(name, label) {
+        try {
+            return DatabaseUtil.quoteIdentifier(name, label);
+        } catch (err) {
+            this._throwErrorSync(err);
         }
-
-        return this._conn.commit().then(_ => {
-            this.inTransaction = false;
-            return this;
-        });
-    }
-
-    _rollbackTransaction() {
-        if (!this._checkDatabaseOpenSync() || !this.inTransaction) {
-            return Promise.resolve();
-        }
-
-        return this._conn.rollback().then(_ => {
-            this.inTransaction = false;
-            return this;
-        });
-    }
-
-    _finalizeTransactionEnd() {
-        if (!this._closeOnEnd) {
-            return Promise.resolve(this);
-        }
-
-        return this._dispose().then(_ => this);
     }
 
     _getMigrationSql(tableName) {
-        return {
-            createTable:
-                "CREATE TABLE IF NOT EXISTS " +
-                tableName +
-                " (id INTEGER PRIMARY KEY, name TEXT NOT NULL, up TEXT NOT NULL, down TEXT NOT NULL)",
-            selectApplied: "SELECT id, name, up, down FROM " + tableName + " ORDER BY id ASC",
-            deleteApplied: "DELETE FROM " + tableName + " WHERE id = ?",
-            insertApplied: "INSERT INTO " + tableName + " (id, name, up, down) VALUES (?, ?, ?, ?)"
-        };
+        return Object.fromEntries(
+            Object.entries(SqliteDatabase.migrationSql).map(([name, sql]) => [
+                name,
+                RegexUtil.templateReplace(sql, { tableName })
+            ])
+        );
     }
 
     async _getMigrations(location) {
@@ -796,55 +814,46 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         return migrations;
     }
 
-    _finalizeMigrationStatements(sts) {
-        return Promise.all(
+    async _finalizeMigrationStatements(sts) {
+        await Promise.all(
             Object.values(sts)
                 .filter(Boolean)
                 .map(st => st.finalize().catch(_ => {}))
         );
     }
 
-    _withMigrationStatements(trx, sql, callback) {
+    async _withMigrationStatements(tx, sql, callback) {
         const sts = {};
 
-        return trx
-            .prepare(sql.createTable)
-            .then(st => {
-                sts.createTable = st;
-                return sts.createTable.run();
-            })
-            .then(_ => {
-                return trx.prepare(sql.selectApplied);
-            })
-            .then(st => {
-                sts.selectApplied = st;
-                return trx.prepare(sql.deleteApplied);
-            })
-            .then(st => {
-                sts.deleteApplied = st;
-                return trx.prepare(sql.insertApplied);
-            })
-            .then(st => {
-                sts.insertApplied = st;
-                return callback(sts);
-            })
-            .finally(() => {
-                return this._finalizeMigrationStatements(sts);
-            });
+        try {
+            sts.createTable = await tx.prepare(sql.createTable);
+            await sts.createTable.run();
+
+            sts.selectApplied = await tx.prepare(sql.selectApplied);
+            sts.deleteApplied = await tx.prepare(sql.deleteApplied);
+            sts.insertApplied = await tx.prepare(sql.insertApplied);
+
+            return await callback(sts);
+        } finally {
+            await this._finalizeMigrationStatements(sts);
+        }
     }
 
-    _rollbackMigration(trx, sts, migration) {
-        return trx.transactionImmediate(nested => {
-            const rollbackPromise = migration.down ? nested.exec(migration.down) : Promise.resolve();
-            return rollbackPromise.then(_ => sts.deleteApplied.run(migration.id));
+    async _rollbackMigration(tx, sts, migration) {
+        return await tx.transactionImmediate(async nested => {
+            if (migration.down) {
+                await nested.exec(migration.down);
+            }
+
+            await sts.deleteApplied.run({
+                $id: migration.id
+            });
         });
     }
 
-    _rollbackMigrations(trx, sts, migrations, applied, force) {
+    async _rollbackMigrations(tx, sts, migrations, applied, force) {
         const lastMigration = migrations.at(-1),
             previous = Array.from(applied).sort((a, b) => b.id - a.id);
-
-        let chain = Promise.resolve();
 
         for (const migration of previous) {
             const missingFromFiles = !migrations.some(candidate => candidate.id === migration.id),
@@ -855,66 +864,103 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
                 break;
             }
 
-            chain = chain.then(_ => this._rollbackMigration(trx, sts, migration));
+            await this._rollbackMigration(tx, sts, migration);
             applied = applied.filter(item => item.id !== migration.id);
         }
 
-        return chain.then(_ => applied);
+        return applied;
     }
 
-    _applyMigration(trx, sts, migration) {
-        return trx.transactionImmediate(nested => {
-            const applyPromise = migration.up ? nested.exec(migration.up) : Promise.resolve();
+    async _applyMigration(tx, sts, migration) {
+        return await tx.transactionImmediate(async nested => {
+            if (migration.up) {
+                await nested.exec(migration.up);
+            }
 
-            return applyPromise.then(_ =>
-                sts.insertApplied.run(migration.id, migration.name, migration.up, migration.down)
-            );
+            await sts.insertApplied.run({
+                $id: migration.id,
+                $name: migration.name,
+                $up: migration.up,
+                $down: migration.down
+            });
         });
     }
 
-    _applyMigrations(trx, sts, migrations, applied, force, lastMigration) {
+    async _applyMigrations(tx, sts, migrations, applied, force, lastMigration) {
         const lastAppliedId = Util.empty(applied) ? 0 : applied.at(-1).id,
             maxMigrationId = Number.isInteger(force) ? force : lastMigration.id;
-
-        let chain = Promise.resolve();
 
         for (const migration of migrations) {
             if (migration.id <= lastAppliedId || migration.id > maxMigrationId) {
                 continue;
             }
 
-            chain = chain.then(_ => this._applyMigration(trx, sts, migration));
+            await this._applyMigration(tx, sts, migration);
         }
-
-        return chain;
     }
 
-    _syncMigrations(trx, sts, migrations, appliedRows, force) {
-        let applied = Array.from(appliedRows);
+    async _syncMigrations(tx, sts, migrations, appliedRows, force) {
+        const lastMigration = migrations.at(-1),
+            applied = await this._rollbackMigrations(tx, sts, migrations, Array.from(appliedRows), force);
 
-        const lastMigration = migrations.at(-1);
-
-        return this._rollbackMigrations(trx, sts, migrations, applied, force).then(nextApplied => {
-            applied = nextApplied;
-            return this._applyMigrations(trx, sts, migrations, applied, force, lastMigration);
-        });
+        await this._applyMigrations(tx, sts, migrations, applied, force, lastMigration);
     }
 
-    _errorRollbackAsync(resolve, reject, err) {
-        if (!err) {
-            return false;
+    _checkDatabaseClosed(msg) {
+        if (!this._open) {
+            return true;
         }
 
-        err = DatabaseUtil.wrapError(err);
-        this.emit(DatabaseEvents.promiseError, err);
+        return new DatabaseError(msg ?? SqliteDatabase._dbOpenMsg);
+    }
 
-        if (this.throwErrors) {
-            reject(err);
-        } else {
-            resolve();
+    _checkDatabaseClosedSync(msg) {
+        return DatabaseUtil.checkSync(
+            this,
+            DatabaseEvents.promiseError,
+            this.throwErrors,
+            this._checkDatabaseClosed(msg)
+        );
+    }
+
+    _checkSessionClosed() {
+        if (!this._inSession) {
+            return true;
         }
 
-        return true;
+        return new DatabaseError("Cannot open a transaction session");
+    }
+
+    _checkSessionClosedSync() {
+        return DatabaseUtil.checkSync(this, DatabaseEvents.promiseError, this.throwErrors, this._checkSessionClosed());
+    }
+
+    _checkDatabaseOpen(msg) {
+        if (this._open) {
+            return true;
+        }
+
+        const defaultMsg = this._inSession ? SqliteDatabase._sessionNotOpenMsg : SqliteDatabase._dbNotOpenMsg;
+        return new DatabaseError(msg ?? defaultMsg);
+    }
+
+    _checkDatabaseOpenSync(msg) {
+        return DatabaseUtil.checkSync(
+            this,
+            DatabaseEvents.promiseError,
+            this.throwErrors,
+            this._checkDatabaseOpen(msg)
+        );
+    }
+
+    async _checkDatabaseOpenPromise(msg, resolveValue) {
+        return await DatabaseUtil.checkPromise(
+            this,
+            DatabaseEvents.promiseError,
+            this.throwErrors,
+            this._checkDatabaseOpen(msg),
+            resolveValue
+        );
     }
 
     _throwErrorSync(err) {
@@ -925,16 +971,8 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         return DatabaseUtil.throwAsync(this, DatabaseEvents.promiseError, this.throwErrors, resolve, reject, err, this);
     }
 
-    _rejectRootTransactionMethod(msg) {
-        return new Promise((resolve, reject) => {
-            if (!this._checkDatabaseOpenAsync(resolve, reject)) {
-                return;
-            }
-
-            const err = new DatabaseError(msg);
-            this.emit(DatabaseEvents.promiseError, err);
-            reject(err);
-        });
+    async _throwErrorPromise(err, resolveValue = this) {
+        return await DatabaseUtil.throwPromise(this, DatabaseEvents.promiseError, this.throwErrors, err, resolveValue);
     }
 }
 

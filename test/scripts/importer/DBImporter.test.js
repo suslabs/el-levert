@@ -117,6 +117,30 @@ describe("DBImporter", () => {
         await expect(importer.updateDatabase("tags.json", "bad")).rejects.toThrow("Invalid update mode");
     });
 
+    test("fix delegates database refresh to the public vacuum api", async () => {
+        const importer = Object.create(DBImporter.prototype, {
+            _fixQuotas: {
+                value: vi.fn().mockResolvedValue(undefined)
+            },
+            _fixUsage: {
+                value: vi.fn().mockResolvedValue(undefined)
+            },
+            tagManager: {
+                value: {
+                    tag_db: {
+                        vacuum: vi.fn().mockResolvedValue(undefined)
+                    }
+                }
+            }
+        });
+
+        await importer.fix();
+
+        expect(importer._fixQuotas).toHaveBeenCalledTimes(1);
+        expect(importer._fixUsage).toHaveBeenCalledTimes(1);
+        expect(importer.tagManager.tag_db.vacuum).toHaveBeenCalledTimes(1);
+    });
+
     test("fix recalculates quota counts, prunes zero usage, and preserves historical usage", async () => {
         const liveRuntime = await createRuntime({
                 loadVMs: false

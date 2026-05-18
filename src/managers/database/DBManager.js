@@ -49,14 +49,18 @@ class DBManager extends Manager {
         queryEncoding: dbFilenames.queryEncoding
     };
 
+    _resolveScopedPath(base) {
+        return path.resolve(projRoot, base, this.dbName);
+    }
+
     _setPaths() {
         this._dbDir = getConfig().dbPath;
 
         const dbFilename = dbFilenames[this.dbName];
         this._dbPath = path.resolve(projRoot, this._dbDir, dbFilename);
 
-        const queryBase = dbFilenames.queryPath;
-        this._queryDir = path.resolve(projRoot, queryBase, this.dbName);
+        this._queryDir = this._resolveScopedPath(dbFilenames.queryPath);
+        this._migrationsDir = this._resolveScopedPath(dbFilenames.migrationsPath);
     }
 
     async _createDatabase() {
@@ -69,6 +73,7 @@ class DBManager extends Manager {
     async _loadDatabase() {
         const db = new this._classType(this._dbPath, this._queryDir, {
             ...DBManager._dbOptions,
+            migrationsPath: this._migrationsDir,
             logger: getLogger()
         });
 

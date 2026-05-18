@@ -82,7 +82,7 @@ describe("QueryLoader", () => {
         const logger = createLogger();
         const finalizeCalls = [];
         const prepareCalls = [];
-        const statements = [];
+        const sts = [];
 
         await fs.mkdir(tagDir, { recursive: true });
         await fs.writeFile(
@@ -100,17 +100,17 @@ describe("QueryLoader", () => {
             prepare: vi.fn(async sql => {
                 prepareCalls.push(sql);
 
-                const statement = {
+                const st = {
                     finalized: false,
                     sql,
                     finalize: vi.fn(async () => {
-                        statement.finalized = true;
+                        st.finalized = true;
                         finalizeCalls.push(sql);
                     })
                 };
 
-                statements.push(statement);
-                return statement;
+                sts.push(st);
+                return st;
             })
         };
 
@@ -152,9 +152,9 @@ describe("QueryLoader", () => {
             "SELECT hops FROM Tags;",
             "UPDATE Tags SET hops = $hops;"
         ]);
-        expect(queries.tagQueries.fetch).toBe(statements[0]);
-        expect(queries.tagQueries.update).toBe(statements[1]);
-        expect(loader.queryList).toEqual(statements);
+        expect(queries.tagQueries.fetch).toBe(sts[0]);
+        expect(queries.tagQueries.update).toBe(sts[1]);
+        expect(loader.queryList).toEqual(sts);
 
         await loader.deleteQueries();
 

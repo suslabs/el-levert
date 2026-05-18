@@ -115,11 +115,11 @@ class ReminderManager extends DBManager {
 
     async add(user, end, msg, validate = true) {
         if (validate) {
-            msg = this.checkMessage(msg);
-
             if (!Number.isInteger(end) || end < Date.now()) {
                 throw new ReminderError("Invalid end time", end);
             }
+
+            msg = this.checkMessage(msg);
         }
 
         const reminder = new Reminder({ user, end, msg });
@@ -166,9 +166,9 @@ class ReminderManager extends DBManager {
         const reminders = await this.listAll(),
             past = reminders.filter(reminder => reminder.isPast(date));
 
-        await this.remind_db.transactionImmediate(async trx => {
+        await this.remind_db.transactionImmediate(async tx => {
             for (const reminder of past) {
-                await trx.remove(reminder);
+                await tx.remove(reminder);
             }
         });
 
@@ -176,6 +176,12 @@ class ReminderManager extends DBManager {
     }
 
     async sendReminder(reminder) {
+        reminder = Reminder.from(reminder, true);
+
+        if (reminder === null) {
+            return;
+        }
+
         const user = await getClient().findUserById(reminder.user);
 
         if (user === null) {

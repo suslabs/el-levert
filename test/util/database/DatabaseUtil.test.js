@@ -37,9 +37,12 @@ describe("DatabaseUtil", () => {
         expect(DatabaseUtil.getEventId()).toMatch(/^[0-9a-f]{8}$/);
     });
 
-    test("wraps and routes errors", () => {
+    test("wraps and routes errors", async () => {
         const target = new EventEmitter();
+        const errors = [];
         const wrapped = DatabaseUtil.wrapError(new Error("boom"));
+
+        target.on("promiseError", err => errors.push(err.message));
 
         expect(wrapped).toBeInstanceOf(DatabaseError);
         expect(DatabaseUtil.wrapError(wrapped)).toBe(wrapped);
@@ -49,5 +52,54 @@ describe("DatabaseUtil", () => {
         }).toThrow("boom");
 
         expect(DatabaseUtil.throwAsync(target, "promiseError", false, () => {}, () => {}, null)).toBe(false);
+        expect(await DatabaseUtil.throwPromise(target, "promiseError", false, new Error("soft"), "ok")).toBe("ok");
+        await expect(DatabaseUtil.throwPromise(target, "promiseError", true, new Error("hard"))).rejects.toThrow(
+            "hard"
+        );
+        expect(errors).toEqual(["boom", "soft", "hard"]);
+    });
+
+    test("settles sync errors through an object's sync throw guard", () => {
+        const softResolve = vi.fn();
+        const softReject = vi.fn();
+        const hardResolve = vi.fn();
+        const hardReject = vi.fn();
+
+        DatabaseUtil.settleSyncError(
+            {
+                _throwErrorSync: vi.fn()
+            },
+            softResolve,
+            softReject,
+            new Error("soft"),
+            "ok"
+        );
+
+        DatabaseUtil.settleSyncError(
+            {
+                _throwErrorSync: vi.fn(err => {
+                    throw err;
+                })
+            },
+            hardResolve,
+            hardReject,
+            new Error("hard")
+        );
+
+        expect(softResolve).toHaveBeenCalledWith("ok");
+        expect(softReject).not.toHaveBeenCalled();
+        expect(hardResolve).not.toHaveBeenCalled();
+        expect(hardReject).toHaveBeenCalledWith(expect.objectContaining({ message: "hard" }));
+    });
+
+    test("sanitizes SQL fragments through SQLite internals", () => {
+        expect(DatabaseUtil.sanitize("it's fine")).toBe("'it''s fine'");
+        expect(DatabaseUtil.sanitize(null)).toBe("NULL");
+        expect(DatabaseUtil.quoteIdentifier("Items")).toBe('"Items"');
+        expect(DatabaseUtil.quoteIdentifier('weird"name')).toBe('"weird""name"');
+        expect(DatabaseUtil.quoteIdentifier("Items; DROP TABLE Items")).toBe('"Items; DROP TABLE Items"');
+
+        expect(() => DatabaseUtil.quoteIdentifier("")).toThrow("Identifier must be a non-empty string");
+        expect(() => DatabaseUtil.sanitize(1)).toThrow("Argument 0 must be a string or null");
     });
 });

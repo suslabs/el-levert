@@ -79,10 +79,10 @@ class QueryLoader extends DirectoryLoader {
 
             for (const query of Object.keys(strings)) {
                 const queryString = strings[query],
-                    statement = await this.db.prepare(queryString);
+                    st = await this.db.prepare(queryString);
 
-                categoryQueries[query] = statement;
-                this.queryList.push(statement);
+                categoryQueries[query] = st;
+                this.queryList.push(st);
             }
 
             queries[category] = categoryQueries;
@@ -204,9 +204,9 @@ class QueryLoader extends DirectoryLoader {
     }
 
     async _finalizeQueries() {
-        return await ArrayUtil.wipeArray(this.queryList, async statement => {
-            if (!statement.finalized) {
-                await statement.finalize();
+        return await ArrayUtil.wipeArray(this.queryList, async st => {
+            if (!st.finalized) {
+                await st.finalize();
             }
         });
     }

@@ -136,7 +136,7 @@ class DiscordClient {
         const optionsList = TypeTester.isObject(options) ? this.constructor.clientOptions : [];
 
         for (const key of optionsList) {
-            if (!(key in options)) {
+            if (!Object.hasOwn(options, key)) {
                 continue;
             }
 
@@ -200,7 +200,7 @@ class DiscordClient {
 
         if (num === -1) {
             throw new ClientError(
-                `Invalid activity type: ${activityType}. Valid types are: ${DiscordClient.this._validActivityTypes.join(" ")}`,
+                `Invalid activity type: ${activityType}. Valid types are: ${this.constructor._validActivityTypes.join(" ")}`,
                 activityType
             );
         }

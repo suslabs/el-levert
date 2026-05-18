@@ -1,6 +1,6 @@
 import util from "node:util";
 
-import { infoProps, infoDefault } from "./ResultProperties.js";
+import { infoProps, infoDefaults } from "./ResultProperties.js";
 
 class ProxiedResult {
     constructor() {
@@ -20,7 +20,7 @@ class ProxiedResult {
 
     setInfo(info) {
         for (const prop of infoProps) {
-            this.info[prop] = info?.[prop] ?? infoDefault;
+            this.info[prop] = info?.[prop] ?? infoDefaults[prop];
         }
     }
 

@@ -435,9 +435,9 @@ class ReactionHandler extends Handler {
                         return Promise.resolve(undefined);
                     }
 
-                    return Promise.resolve(remove.call(reaction.users, botId)).catch(err => {
-                        getLogger().error("Failed to remove reaction from message:", err);
-                    });
+                    return Promise.resolve(remove.call(reaction.users, botId)).catch(err =>
+                        getLogger().error("Failed to remove reaction from message:", err)
+                    );
                 })
             );
 
