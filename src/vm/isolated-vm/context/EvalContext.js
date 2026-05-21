@@ -1,5 +1,5 @@
 import ivm from "isolated-vm";
-const { Isolate, ExternalCopy } = ivm;
+const { Isolate } = ivm;
 
 import IsolateInspector from "../inspector/IsolateInspector.js";
 
@@ -8,8 +8,11 @@ import FakeTag from "../classes/FakeTag.js";
 import FakeMsg from "../classes/FakeMsg.js";
 import FakeVM from "../classes/FakeVM.js";
 
-import VMFunction from "../../../structures/vm/VMFunction.js";
 import VMErrors from "../VMErrors.js";
+
+import ContextFunctions from "./ContextFunctions.js";
+import EventLoop from "./EventLoop.js";
+import VMObjectRegistry from "./VMObjectRegistry.js";
 
 import Functions from "./Functions.js";
 import globalNames from "./globalNames.json" assert { type: "json" };
@@ -17,7 +20,6 @@ import funcNames from "./funcNames.json" assert { type: "json" };
 
 import Util from "../../../util/Util.js";
 import TypeTester from "../../../util/TypeTester.js";
-import ArrayUtil from "../../../util/ArrayUtil.js";
 import VMUtil from "../../../util/vm/VMUtil.js";
 
 import VMError from "../../../errors/VMError.js";
@@ -29,7 +31,7 @@ class EvalContext {
     static allowPromiseReturn = true;
 
     static initFunctions() {
-        this.functions = this._constructFuncs(Functions, {
+        this.functions = ContextFunctions.fromMaps(Functions, {
             global: globalNames,
             func: funcNames
         });
@@ -48,12 +50,17 @@ class EvalContext {
         const invalidTimeLimit = !Number.isFinite(options.timeLimit) || options.timeLimit <= 0;
         this.timeLimit = invalidTimeLimit ? -1 : Math.round(options.timeLimit);
 
+        this.parent = options.parent ?? null;
+        this.children = new Set();
+        this.parent?.children.add(this);
+
+        this.vmObjects = new VMObjectRegistry();
+
         this.enableInspector = inspectorOptions.enable ?? false;
 
         this._aborter = new AbortController();
         this.abortSignal = this._aborter.signal;
-
-        this._vmObjects = [];
+        this._disposed = false;
     }
 
     get scriptName() {
@@ -79,71 +86,6 @@ class EvalContext {
     get timeRemaining() {
         this._checkIsolate();
         return this.timeLimit > 0 ? Util.clamp(this.timeLimit - this.timeElapsed, 0) : NaN;
-    }
-
-    async setVMObject(name, _class, params, targetProp) {
-        if (!Util.nonemptyString(name)) {
-            throw new VMError("No object name provided");
-        }
-
-        this._checkIsolate();
-
-        let obj, targetObj;
-
-        if (TypeTester.isClass(_class)) {
-            obj = new _class(...params);
-            targetObj = targetProp == null || targetProp === "this" ? obj : obj[targetProp];
-        } else {
-            obj = _class;
-            targetProp = params ?? "this";
-
-            if (obj == null) {
-                throw new VMError(`No data provided for object: ${name}`, { object: name });
-            }
-
-            targetObj = targetProp === "this" ? obj : obj[targetProp];
-        }
-
-        if (typeof targetObj === "undefined") {
-            throw new VMError(`Invalid target property "${targetProp}" on object: ${name}`, {
-                object: name,
-                targetProp
-            });
-        }
-
-        const targetName = `vm${Util.capitalize(name)}`,
-            vmName = globalNames[name];
-
-        if (typeof vmName === "undefined") {
-            throw new VMError("Unknown global object: " + name, { global: name });
-        }
-
-        const vmObj = new ExternalCopy(targetObj);
-        await this._global.set(vmName, vmObj.copyInto());
-
-        this[name] = obj;
-        this[targetName] = vmObj;
-
-        this._vmObjects.push({ name, targetName });
-    }
-
-    deleteVMObject(name, errorIfNotFound = true) {
-        if (!Util.nonemptyString(name)) {
-            throw new VMError("No object name provided");
-        }
-
-        const obj = this._vmObjects.find(obj => obj.name === name);
-
-        if (typeof obj === "undefined") {
-            return errorIfNotFound
-                ? () => {
-                      throw new VMError(`Object ${name} not found`, name);
-                  }
-                : null;
-        }
-
-        this._disposeVMObjects(obj);
-        return obj;
     }
 
     async compileScript(code) {
@@ -177,7 +119,7 @@ class EvalContext {
 
         try {
             if (compileNow) {
-                await this.setVMObject("code", code);
+                await this.vmObjects.set("code", code);
             }
 
             await this.inspector.waitForConnection();
@@ -195,111 +137,77 @@ class EvalContext {
         } finally {
             if (compileNow) {
                 script.release();
-                this.deleteVMObject("code", false);
+                this.vmObjects.delete("code", false);
             }
         }
     }
 
     dispose() {
+        if (this._disposed) {
+            return;
+        }
+
+        this._disposed = true;
         this._aborter.abort();
 
+        this._disposeChildren();
         this._disposeInspector();
-        this._disposeVMObjects();
+        this._disposeEventLoop();
+        this.vmObjects.dispose();
         this._disposeScript();
         this._disposeContext();
         this._disposeIsolate();
+        this._removeFromParent();
+    }
+
+    _checkIsolate() {
+        if (typeof this.isolate === "undefined") {
+            throw new VMError("Isolate not initialized");
+        }
     }
 
     _setupInspector() {
         this.inspector = new IsolateInspector(this.enableInspector, this.inspectorOptions);
     }
 
-    static _constructFunc(objName, funcName, properties) {
-        const funcProperties = {
-            singleContext: false,
-            parent: objName,
-            name: funcName
-        };
-
-        return new VMFunction({
-            ...funcProperties,
-            ...properties
-        });
-    }
-
-    static _constructFuncs(objMap, names) {
-        return Object.entries(objMap).flatMap(([objKey, funcMap]) => {
-            if (!TypeTester.isObject(funcMap)) {
-                throw new VMError("Invalid object map");
-            }
-
-            const objName = names.global[objKey],
-                funcNames = names.func[objKey];
-
-            if (typeof objName === "undefined") {
-                throw new VMError(`Name for object "${objKey}" not found`, objKey);
-            }
-
-            return Object.entries(funcMap).map(([funcKey, props]) => {
-                const funcName = funcNames[funcKey];
-
-                if (typeof funcName === "undefined") {
-                    throw new VMError(`Name for function "${funcKey}" not found`, funcKey);
-                }
-
-                return this._constructFunc(objName, funcName, props);
-            });
-        });
-    }
-
-    async _setGlobal() {
-        const global = this.context.global;
-
-        this._global = global;
-        await global.set("global", global.derefInto());
-
-        this._vmObjects.push({ targetName: "global" });
-    }
-
     async _setInfo() {
-        await this.setVMObject("util", Object, [FakeUtil.getInfo()]);
-    }
-
-    async _setTag(tag, args) {
-        if (tag != null && args != null) {
-            await this.setVMObject("tag", FakeTag, [tag, args], "fixedTag");
-        }
+        await this.vmObjects.set("util", Object, [FakeUtil.getInfo()]);
     }
 
     async _setMsg(msg) {
         if (msg != null) {
-            await this.setVMObject("msg", FakeMsg, [msg], "fixedMsg");
+            await this.vmObjects.set("msg", FakeMsg, [msg], "fixedMsg");
+        }
+    }
+
+    async _setTag(tag, args) {
+        if (tag != null) {
+            await this.vmObjects.set("tag", FakeTag, [tag, args], "fixedTag");
         }
     }
 
     async _setVM() {
-        await this.setVMObject("vm", FakeVM, [this.isolate], "vmProps");
+        await this.vmObjects.set("vm", FakeVM, [this.isolate], "vmProps");
     }
 
     _setPropertyMap() {
         const propertyMap = new Map();
-        propertyMap.set("msg", this.msg);
+        propertyMap.set("msg", this.vmObjects.msg);
 
         this._propertyMap = propertyMap;
     }
 
-    async _registerFuncs() {
-        await Promise.all(EvalContext.functions.map(func => func.register(this, this._propertyMap)));
-    }
-
     async _setupContext(values) {
         const { msg, tag, args } = values;
-
-        this.context = await this.isolate.createContext({
+        const context = await this.isolate.createContext({
             inspector: this.enableInspector
         });
 
-        await this._setGlobal();
+        this.context = context;
+
+        await this.vmObjects.create(context);
+        this.eventLoop = new EventLoop(context);
+        this.eventLoop.setup();
 
         await this._setInfo();
         await this._setMsg(msg);
@@ -307,7 +215,7 @@ class EvalContext {
         await this._setVM();
 
         this._setPropertyMap();
-        await this._registerFuncs();
+        await EvalContext.functions.register(this, this._propertyMap);
     }
 
     async _setupIsolate(values) {
@@ -336,24 +244,21 @@ class EvalContext {
         return script;
     }
 
+    _disposeChildren() {
+        while (this.children.size > 0) {
+            const child = this.children.values().next().value;
+            child.dispose();
+        }
+    }
+
     _disposeInspector() {
         this.inspector.dispose();
         delete this.inspector;
     }
 
-    _disposeVMObject(obj) {
-        if (typeof obj.name !== "undefined") {
-            delete this[obj.name];
-        }
-
-        if (typeof obj.targetName !== "undefined") {
-            this[obj.targetName]?.release();
-            delete this[obj.targetName];
-        }
-    }
-
-    _disposeVMObjects() {
-        ArrayUtil.wipeArray(this._vmObjects, obj => this._disposeVMObject(obj));
+    _disposeEventLoop() {
+        this.eventLoop?.dispose();
+        delete this.eventLoop;
     }
 
     _disposeScript() {
@@ -376,10 +281,9 @@ class EvalContext {
         delete this.isolate;
     }
 
-    _checkIsolate() {
-        if (typeof this.isolate === "undefined") {
-            throw new VMError("Isolate not initialized");
-        }
+    _removeFromParent() {
+        this.parent?.children.delete(this);
+        delete this.parent;
     }
 }
 

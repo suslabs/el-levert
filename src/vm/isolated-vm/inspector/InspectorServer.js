@@ -26,7 +26,7 @@ class InspectorServer {
 
         this.running = false;
 
-        this._inspectorContext = null;
+        this._inspectorContexts = [];
         this._inspectorSocket = null;
     }
 
@@ -45,7 +45,7 @@ class InspectorServer {
     }
 
     get inspectorConnected() {
-        return this._inspectorContext?.inspector.connected ?? false;
+        return this._getContext()?.inspector.connected ?? false;
     }
 
     setup() {
@@ -65,14 +65,6 @@ class InspectorServer {
         this.running = true;
     }
 
-    setContext(context) {
-        if (!this.enabled) {
-            return;
-        }
-
-        this._inspectorContext = context;
-    }
-
     sendReply = msg => {
         if (this._inspectorSocket === null) {
             return;
@@ -82,12 +74,36 @@ class InspectorServer {
         this._inspectorSocket.send(msg);
     };
 
-    executionFinished() {
+    pushContext(context) {
         if (!this.enabled) {
             return;
         }
 
-        this._deleteReferences();
+        this._disconnectInspector();
+        this._inspectorContexts.push(context);
+        this._connectInspector();
+    }
+
+    popContext(context) {
+        if (!this.enabled) {
+            return;
+        }
+
+        this._disconnectInspector();
+
+        const idx = this._inspectorContexts.lastIndexOf(context);
+
+        if (idx !== -1) {
+            this._inspectorContexts.splice(idx, 1);
+        }
+
+        if (this._inspectorContexts.length > 0) {
+            this._connectInspector();
+        } else {
+            this._closeSocket();
+            this._inspectorSocket = null;
+            this.running = false;
+        }
     }
 
     close() {
@@ -105,9 +121,10 @@ class InspectorServer {
         getLogger().debug("Inspector server: Recieved connection.");
         this._inspectorSocket = socket;
 
-        if (this._inspectorContext === null) {
+        if (this._getContext() === null) {
             getLogger().info("No script is running. Disconnecting inspector.");
             this._closeSocket();
+            this._inspectorSocket = null;
 
             return;
         }
@@ -129,7 +146,7 @@ class InspectorServer {
             this.logPackets && getLogger().debug(`Recieved: ${msg}`);
 
             try {
-                this._inspectorContext?.inspector.sendMessage(msg);
+                this._getContext()?.inspector.sendMessage(msg);
             } catch (err) {
                 getLogger().error("Error occured while sending message to inspector:", err);
                 socket.close();
@@ -146,20 +163,28 @@ class InspectorServer {
         this.websocketServer.on("close", this._socketClosed);
     }
 
+    _getContext() {
+        return this._inspectorContexts.at(-1) ?? null;
+    }
+
     _connectInspector() {
-        if (this._inspectorContext === null) {
+        const context = this._getContext();
+
+        if (context === null || this._inspectorSocket === null) {
             return;
         }
 
-        this._inspectorContext.inspector.onConnection();
+        context.inspector.onConnection();
     }
 
     _disconnectInspector() {
-        if (this._inspectorContext === null) {
+        const context = this._getContext();
+
+        if (context === null) {
             return;
         }
 
-        this._inspectorContext.inspector.onDisconnect();
+        context.inspector.onDisconnect();
     }
 
     _closeSocket() {
@@ -178,7 +203,7 @@ class InspectorServer {
         this._disconnectInspector();
         this._closeSocket();
 
-        this._inspectorContext = null;
+        this._inspectorContexts.length = 0;
         this._inspectorSocket = null;
 
         this.running = false;

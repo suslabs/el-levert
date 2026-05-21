@@ -219,19 +219,19 @@ class PermissionManager extends DBManager {
                 checkIds = [],
                 checkIndexes = [];
 
-            for (const [index, userId] of id.entries()) {
+            for (const [idx, userId] of id.entries()) {
                 if (userId === this.owner.user) {
                     continue;
                 }
 
                 checkIds.push(userId);
-                checkIndexes.push(index);
+                checkIndexes.push(idx);
             }
 
             const exists = await this.perm_db.userExists(checkIds);
 
-            for (const [index, existsIndex] of checkIndexes.entries()) {
-                out[existsIndex] = exists[index];
+            for (const [idx, existsIndex] of checkIndexes.entries()) {
+                out[existsIndex] = exists[idx];
             }
 
             return out;
@@ -322,19 +322,19 @@ class PermissionManager extends DBManager {
                 checkNames = [],
                 checkIndexes = [];
 
-            for (const [index, groupName] of name.entries()) {
+            for (const [idx, groupName] of name.entries()) {
                 if (groupName === OwnerGroup.name) {
                     continue;
                 }
 
                 checkNames.push(groupName);
-                checkIndexes.push(index);
+                checkIndexes.push(idx);
             }
 
             const exists = await this.perm_db.groupExists(checkNames);
 
-            for (const [index, existsIndex] of checkIndexes.entries()) {
-                out[existsIndex] = exists[index];
+            for (const [idx, existsIndex] of checkIndexes.entries()) {
+                out[existsIndex] = exists[idx];
             }
 
             return out;

@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import "../../../../setupGlobals.js";
+import net from "node:net";
+import ivm from "isolated-vm";
+import WebSocket, { WebSocketServer } from "ws";
 
 const mocked = vi.hoisted(() => ({
     logger: {
@@ -42,6 +45,139 @@ afterEach(() => {
     }
 });
 
+function getOpenPort() {
+    return new Promise((resolve, reject) => {
+        const server = net.createServer();
+
+        server.on("error", reject);
+        server.listen(0, "127.0.0.1", () => {
+            const { port } = server.address();
+
+            server.close(err => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(port);
+                }
+            });
+        });
+    });
+}
+
+function waitForSocketEvent(socket, event) {
+    return new Promise((resolve, reject) => {
+        socket.once(event, resolve);
+        socket.once("error", reject);
+    });
+}
+
+function createProtocolClient(port) {
+    const socket = new WebSocket(`ws://127.0.0.1:${port}`),
+        pending = new Map(),
+        contexts = [],
+        contextWaiters = [];
+
+    let id = 0;
+
+    socket.on("message", data => {
+        const msg = JSON.parse(data.toString("utf-8"));
+
+        if (msg.id != null) {
+            pending.get(msg.id)?.(msg);
+            pending.delete(msg.id);
+            return;
+        }
+
+        if (msg.method !== "Runtime.executionContextCreated") {
+            return;
+        }
+
+        const context = msg.params.context;
+
+        if (context.name !== "<isolated-vm>") {
+            return;
+        }
+
+        contexts.push(context.id);
+        contextWaiters.shift()?.(context.id);
+    });
+
+    return {
+        socket,
+
+        async open() {
+            await waitForSocketEvent(socket, "open");
+        },
+
+        send(method, params) {
+            const msgId = ++id,
+                msg = {
+                    id: msgId,
+                    method,
+                    params
+                };
+
+            const res = new Promise(resolve => pending.set(msgId, resolve));
+            socket.send(JSON.stringify(msg));
+
+            return res;
+        },
+
+        nextContext() {
+            return contexts.length > 0 ? contexts.shift() : new Promise(resolve => contextWaiters.push(resolve));
+        },
+
+        close() {
+            socket.close();
+        }
+    };
+}
+
+async function createInspectorContext(label, sendReply) {
+    const { default: IsolateInspector } = await import("../../../../src/vm/isolated-vm/inspector/IsolateInspector.js");
+    const isolate = new ivm.Isolate({
+            inspector: true
+        }),
+        context = await isolate.createContext({
+            inspector: true
+        }),
+        inspector = new IsolateInspector(true, {
+            sendReply,
+            connectTimeout: 250
+        });
+
+    await context.global.set("global", context.global.derefInto());
+    await context.eval(`globalThis.__inspectorLabel = ${JSON.stringify(label)}`);
+
+    inspector.create(isolate);
+
+    return {
+        inspector,
+
+        dispose() {
+            inspector.dispose();
+            context.release();
+
+            if (!isolate.isDisposed) {
+                isolate.dispose();
+            }
+        }
+    };
+}
+
+async function evalLabel(client) {
+    await client.send("Runtime.enable");
+
+    const contextId = await client.nextContext(),
+        res = await client.send("Runtime.evaluate", {
+            expression: "globalThis.__inspectorLabel",
+            contextId,
+            returnByValue: true
+        });
+
+    return res.result.result.value;
+}
+
 describe("InspectorServer branch coverage", () => {
     test("builds the inspector url and ignores disabled operations", async () => {
         const { default: InspectorServer } = await import("../../../../src/vm/isolated-vm/inspector/InspectorServer.js");
@@ -51,8 +187,8 @@ describe("InspectorServer branch coverage", () => {
         expect(server.inspectorUrl).toContain("ws=localhost%3A9999");
 
         server.setup();
-        server.setContext({});
-        server.executionFinished();
+        server.pushContext({});
+        server.popContext({});
         server.close();
 
         expect(server.running).toBe(false);
@@ -95,9 +231,11 @@ describe("InspectorServer branch coverage", () => {
             sendMessage: vi.fn()
         };
 
-        server.setContext({
+        const parent = {
             inspector
-        });
+        };
+
+        server.pushContext(parent);
 
         mocked.servers[0].handlers.connection(socket);
         expect(inspector.onConnection).toHaveBeenCalledOnce();
@@ -120,7 +258,30 @@ describe("InspectorServer branch coverage", () => {
 
         expect(inspector.onDisconnect).toHaveBeenCalledTimes(2);
 
-        server.executionFinished();
+        const childInspector = {
+            connected: false,
+            onConnection: vi.fn(() => {
+                childInspector.connected = true;
+            }),
+            onDisconnect: vi.fn(() => {
+                childInspector.connected = false;
+            }),
+            sendMessage: vi.fn()
+        };
+
+        const child = {
+            inspector: childInspector
+        };
+
+        server.pushContext(child);
+        expect(inspector.onDisconnect).toHaveBeenCalledTimes(3);
+        expect(childInspector.onConnection).toHaveBeenCalledOnce();
+
+        server.popContext(child);
+        expect(childInspector.onDisconnect).toHaveBeenCalledOnce();
+        expect(inspector.onConnection).toHaveBeenCalledTimes(2);
+
+        server.popContext(parent);
         expect(server.running).toBe(false);
         expect(server._inspectorSocket).toBeNull();
 
@@ -142,5 +303,43 @@ describe("InspectorServer branch coverage", () => {
 
         server.close();
         expect(mocked.servers[0].close).toHaveBeenCalled();
+    });
+
+    test("routes real inspector protocol messages to the active context", async () => {
+        const { default: InspectorServer } = await import("../../../../src/vm/isolated-vm/inspector/InspectorServer.js");
+
+        const mockWebSocket = globalThis.WebSocket,
+            port = await getOpenPort();
+
+        WebSocket.Server = WebSocketServer;
+        globalThis.WebSocket = WebSocket;
+
+        const server = new InspectorServer(true, port),
+            parent = await createInspectorContext("parent", server.sendReply),
+            child = await createInspectorContext("child", server.sendReply),
+            client = createProtocolClient(port);
+
+        try {
+            server.setup();
+            server.pushContext(parent);
+
+            await client.open();
+            expect(await evalLabel(client)).toBe("parent");
+
+            server.pushContext(child);
+            expect(await evalLabel(client)).toBe("child");
+
+            server.popContext(child);
+            expect(await evalLabel(client)).toBe("parent");
+
+            server.popContext(parent);
+            await waitForSocketEvent(client.socket, "close");
+        } finally {
+            client.close();
+            parent.dispose();
+            child.dispose();
+            server.close();
+            globalThis.WebSocket = mockWebSocket;
+        }
     });
 });

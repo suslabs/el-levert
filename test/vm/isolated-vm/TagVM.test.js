@@ -46,6 +46,7 @@ describe("TagVM", () => {
         expect(context.timeLimit).toBe(50);
         expect(context.enableInspector).toBe(false);
         await expect(context.runScript("vm.timeRemaining() >= 0")).resolves.toEqual([true, null]);
+        await expect(context.vmObjects.set("msg", Object, [{}])).rejects.toThrow("Object msg already exists");
 
         context.dispose();
     });
@@ -71,6 +72,13 @@ describe("TagVM", () => {
         await addTag(runtime, "plain", "alpha body", "user-1", "text");
         await addTag(runtime, "scripted", "tag.name + ':' + (tag.args ?? '')", "user-1", "ivm");
         await addTag(runtime, "scripted_undefined", "String(tag.args === undefined)", "user-1", "ivm");
+        await addTag(
+            runtime,
+            "scripted_timer",
+            "new Promise(resolve => setTimeout(() => resolve(tag.name + ':' + (tag.args ?? '')), 5))",
+            "user-1",
+            "ivm"
+        );
 
         const alias = await runtime.client.tagManager.fetch("plain");
         await runtime.client.tagManager.alias(null, alias, "bound", {
@@ -101,6 +109,10 @@ describe("TagVM", () => {
         await expect(
             vm.runScript("util.executeTag('scripted', ['left', 'right'])", { msg })
         ).resolves.toBe("scripted:left right ");
+
+        await expect(
+            vm.runScript("util.executeTagSafe('scripted_timer', ['left', 'right'])", { msg })
+        ).resolves.toBe("scripted_timer:left right");
 
         await expect(
             vm.runScript("util.executeTag('scripted_undefined')", { msg })

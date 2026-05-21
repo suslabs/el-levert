@@ -680,7 +680,7 @@ class TagManager extends DBManager {
                 const names = leaderboard.map(entry => entry.name),
                     exists = await this.exists(names);
 
-                leaderboard.forEach((entry, index) => (entry.exists = exists[index]));
+                leaderboard.forEach((entry, idx) => (entry.exists = exists[idx]));
         }
 
         return leaderboard;

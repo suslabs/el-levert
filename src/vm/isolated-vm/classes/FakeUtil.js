@@ -143,27 +143,59 @@ const FakeUtil = Object.freeze({
         return new ExternalCopy(users).copyInto();
     },
 
-    /* eslint-disable */
-    executeTag: (name, args) => {
-        const tag = $0.applySyncPromise(undefined, [name]);
+    prepareExecuteTag: async (name, args) => {
+        const tag = await getClient().tagManager.fetch(name);
 
         if (tag === null) {
-            throw new Error(`Tag ${name} doesn't exist`);
-        } else if ((tag.type & 2) === 0) {
-            return tag.body;
+            return null;
         }
 
         let evalArgs = tag.args ?? "";
-
         if (args != null) {
             args = Array.isArray(args) ? args.join(" ") : String(args);
             evalArgs = args + " " + evalArgs;
         }
 
+        return new ExternalCopy({
+            args: evalArgs.length < 1 ? undefined : evalArgs,
+            body: tag.body,
+            isScript: tag.isScript,
+            name: tag.name
+        }).copyInto();
+    },
+
+    executeTagSafeRef: async (msg, name, args) => {
+        const tag = await getClient().tagManager.fetch(name);
+
+        if (tag === null) {
+            throw new Error(`Tag ${name} doesn't exist`);
+        }
+
+        return await getClient().tagManager.execute(tag, args, {
+            msg
+        });
+    },
+
+    /* eslint-disable */
+    executeTag: (name, args) => {
+        const options = {
+            arguments: {
+                copy: true
+            }
+        };
+
+        const tag = $0.applySyncPromise(undefined, [name, args], options);
+
+        if (tag === null) {
+            throw new Error(`Tag ${name} doesn't exist`);
+        } else if (!tag.isScript) {
+            return tag.body;
+        }
+
         const oldTag = globalThis.tag,
             newTag = {
                 name,
-                args: evalArgs.length < 1 ? undefined : evalArgs
+                args: tag.args
             };
 
         try {
@@ -172,6 +204,22 @@ const FakeUtil = Object.freeze({
         } finally {
             globalThis.tag = oldTag;
         }
+    },
+
+    executeTagSafe: async (name, args) => {
+        const options = {
+            arguments: {
+                copy: true
+            }
+        };
+
+        const tag = await $0.applySyncPromise(undefined, [name, args], options);
+
+        if (tag === null) {
+            throw new Error(`Tag ${name} doesn't exist`);
+        }
+
+        return await $1.applySyncPromise(undefined, [name, tag.args], options);
     }
     /* eslint-enable */
 });

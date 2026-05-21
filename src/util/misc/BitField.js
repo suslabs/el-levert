@@ -88,8 +88,8 @@ class BitField {
     }
 
     isEmpty() {
-        for (let index = 0; index < this.buffer.length; index++) {
-            if (this.buffer[index] !== 0) {
+        for (let i = 0; i < this.buffer.length; i++) {
+            if (this.buffer[i] !== 0) {
                 return false;
             }
         }
@@ -110,8 +110,8 @@ class BitField {
             return false;
         }
 
-        for (let index = 0; index < this.buffer.length; index++) {
-            if (this.buffer[index] !== other.buffer[index]) {
+        for (let i = 0; i < this.buffer.length; i++) {
+            if (this.buffer[i] !== other.buffer[i]) {
                 return false;
             }
         }
@@ -126,8 +126,8 @@ class BitField {
     toUnsignedNumber() {
         let value = 0n;
 
-        for (let index = 0; index < this.buffer.length; index++) {
-            value |= BigInt(this.buffer[index]) << BigInt(index * 8);
+        for (let i = 0; i < this.buffer.length; i++) {
+            value |= BigInt(this.buffer[i]) << BigInt(i * 8);
         }
 
         return Number(value);
@@ -212,8 +212,8 @@ class BitField {
         let byteIndex = offset >> 3,
             bitMask = 1 << (offset % 8);
 
-        for (let index = 0; index < array.length; index++) {
-            if (array[index]) {
+        for (let i = 0; i < array.length; i++) {
+            if (array[i]) {
                 this.buffer[byteIndex] |= bitMask;
             } else {
                 this.buffer[byteIndex] &= ~bitMask;

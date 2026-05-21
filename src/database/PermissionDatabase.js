@@ -161,8 +161,8 @@ class PermissionDatabase extends SqlDatabase {
 
         let hasUniqueUserGroup = false;
 
-        for (const index of userTable.indexes.filter(row => row.unique === 1)) {
-            const columns = userTable.indexColumns.get(index.name).map(row => row.name);
+        for (const idx of userTable.indexes.filter(row => row.unique === 1)) {
+            const columns = userTable.indexColumns.get(idx.name).map(row => row.name);
 
             if (columns.length === 2 && columns[0] === "user" && columns[1] === "group") {
                 hasUniqueUserGroup = true;

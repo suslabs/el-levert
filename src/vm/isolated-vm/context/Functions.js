@@ -74,7 +74,15 @@ const Functions = Object.freeze({
         executeTag: {
             ref: FakeUtil.executeTag,
             execution: ExecutionTypes.script,
-            otherRefs: [{ ref: FakeUtil.fetchTag }]
+            otherRefs: [{ ref: FakeUtil.prepareExecuteTag }]
+        },
+        executeTagSafe: {
+            ref: FakeUtil.executeTagSafe,
+            execution: ExecutionTypes.script,
+            otherRefs: [
+                { ref: FakeUtil.prepareExecuteTag },
+                { ref: FakeUtil.executeTagSafeRef, binds: ["path:msg.msg"] }
+            ]
         }
     },
 

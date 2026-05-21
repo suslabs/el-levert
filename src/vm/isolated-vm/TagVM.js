@@ -59,12 +59,14 @@ class TagVM extends VM {
         this.timeLimit = getConfig().timeLimit;
 
         this.enableInspector = getConfig().enableInspector;
+
+        this._contextStack = [];
     }
 
     async runScript(code, values) {
         logUsage(code);
 
-        if (this._inspectorServer?.inspectorConnected) {
+        if (this._inspectorServer?.inspectorConnected && this._contextStack.length === 0) {
             getLogger().info("Can't run script: inspector is already connected.");
             throw new VMError("Inspector is already connected.");
         }
@@ -72,6 +74,7 @@ class TagVM extends VM {
         const timeKey = Benchmark.startTiming(Symbol("vm_script"));
 
         const context = await this._getEvalContext(values);
+        this._pushContext(context);
 
         let out,
             outErr = null;
@@ -80,12 +83,12 @@ class TagVM extends VM {
             [out, outErr] = await context.runScript(code);
         } catch (err) {
             outErr = err;
+        } finally {
+            context.dispose();
+            this._popContext(context);
         }
 
         logFinished(timeKey, this.enableInspector);
-
-        this._inspectorServer?.executionFinished();
-        context.dispose();
 
         let dataType;
         [out, dataType] = outErr ? this._handleScriptError(outErr) : this._handleScriptOuput(out);
@@ -127,11 +130,16 @@ class TagVM extends VM {
         this._inspectorServer = server;
     }
 
+    _getActiveContext() {
+        return this._contextStack.at(-1) ?? null;
+    }
+
     async _getEvalContext(values) {
         const context = new EvalContext(
             {
                 memLimit: this.memLimit,
-                timeLimit: this.timeLimit
+                timeLimit: this.timeLimit,
+                parent: this._getActiveContext()
             },
             {
                 enable: this.enableInspector,
@@ -140,9 +148,22 @@ class TagVM extends VM {
         );
 
         await context.getIsolate(values);
-        this._inspectorServer?.setContext(context);
-
         return context;
+    }
+
+    _pushContext(context) {
+        this._contextStack.push(context);
+        this._inspectorServer?.pushContext(context);
+    }
+
+    _popContext(context) {
+        const idx = this._contextStack.lastIndexOf(context);
+
+        if (idx !== -1) {
+            this._contextStack.splice(idx, 1);
+        }
+
+        this._inspectorServer?.popContext(context);
     }
 
     _handleScriptOuput(out) {
