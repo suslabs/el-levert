@@ -35,8 +35,12 @@ const ObjectUtil = Object.freeze({
         return Object.fromEntries(Object.entries(obj).map(([key, value]) => [value, key]));
     },
 
+    guaranteeObject: (obj, fallback = {}) => {
+        return TypeTester.isObject(obj) ? obj : fallback;
+    },
+
     setValuesWithDefaults: (target, source, defaults = {}) => {
-        source = TypeTester.isObject(source) ? source : {};
+        source = ObjectUtil.guaranteeObject(source);
         const values = {};
 
         for (const key of Object.keys(defaults)) {
@@ -65,7 +69,7 @@ const ObjectUtil = Object.freeze({
             return Object.fromEntries(Object.keys(defaults).map(key => [key, options]));
         }
 
-        return ObjectUtil.setValuesWithDefaults({}, TypeTester.isObject(options) ? options : defaults, objectDefaults);
+        return ObjectUtil.setValuesWithDefaults({}, ObjectUtil.guaranteeObject(options, defaults), objectDefaults);
     },
 
     assign: (target, source, options, props) => {
@@ -75,11 +79,9 @@ const ObjectUtil = Object.freeze({
             options = [AssignPropertyTypes.both];
             both = true;
         } else {
-            options = ArrayUtil.guaranteeArray(options);
-
-            if (!options.every(option => validAssignPropertyTypes.has(option))) {
-                throw new UtilError("Invalid property options", options);
-            }
+            options = ArrayUtil.guaranteeArray(options).map(option =>
+                TypeTester.normalizeEnum(option, validAssignPropertyTypes, "property options", UtilError)
+            );
 
             both = options.includes(AssignPropertyTypes.both);
             keys = options.includes(AssignPropertyTypes.keys);

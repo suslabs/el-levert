@@ -4,7 +4,7 @@ import { EmbedBuilder, TimestampStyles, codeBlock, time, DiscordAPIError } from 
 import { EmbedColors, defaultColor } from "./EmbedColors.js";
 
 import Util from "../../util/Util.js";
-import TypeTester from "../../util/TypeTester.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import { isErrorCode } from "../../util/discord/ErrorCodes.js";
 
@@ -12,7 +12,7 @@ import LoggerError from "../../errors/LoggerError.js";
 
 class BaseDiscordTransport extends Transport {
     constructor(options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
         super(options);
 
         const compName = this.constructor.$name;

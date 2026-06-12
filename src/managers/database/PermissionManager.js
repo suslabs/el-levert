@@ -53,7 +53,7 @@ class PermissionManager extends DBManager {
 
     checkName(name, throwErrors = true, allowOwner = true) {
         let msg, ref;
-        name = typeof name === "string" ? name.trim() : "";
+        name = String(name ?? "").trim();
 
         const ownerName = OwnerGroup.name;
 

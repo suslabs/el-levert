@@ -2,8 +2,12 @@ import DBManager from "./DBManager.js";
 import TagDatabase from "../../database/TagDatabase.js";
 
 import Tag from "../../structures/tag/Tag.js";
+
+import TagVM from "../../vm/isolated-vm/TagVM.js";
+import TagVM2 from "../../vm/vm2/TagVM2.js";
+
 import { TagTypes } from "../../structures/tag/TagTypes.js";
-import { scriptContentTypes, fileContentTypes } from "./TagContentTypes.js";
+import { fileContentTypes, scriptContentTypes } from "./TagContentTypes.js";
 
 import { getClient, getConfig, getLogger } from "../../LevertClient.js";
 
@@ -13,10 +17,6 @@ import ObjectUtil from "../../util/ObjectUtil.js";
 import RegexUtil from "../../util/misc/RegexUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
-
-import TagVM from "../../vm/isolated-vm/TagVM.js";
-import TagVM2 from "../../vm/vm2/TagVM2.js";
-
 import diceSearch from "../../util/search/diceSearch.js";
 import uFuzzySearch from "../../util/search/uFuzzySearch.js";
 
@@ -47,7 +47,7 @@ class TagManager extends DBManager {
 
     checkName(name, throwErrors = true) {
         let msg, ref;
-        name = typeof name === "string" ? name.trim() : "";
+        name = String(name ?? "").trim();
 
         if (Util.empty(name)) {
             msg = "Invalid tag name";
@@ -195,23 +195,27 @@ class TagManager extends DBManager {
 
     async execute(tag, args, values) {
         tag = Tag.from(tag, true);
-        values = TypeTester.isObject(values) ? values : {};
+        values = ObjectUtil.guaranteeObject(values);
 
         tag = await this.fetchAlias(tag, true);
         await this._incrementUsage(tag._usageName ?? tag.name);
 
-        const type = tag.getType();
+        const type = tag.getScriptType();
 
         if (type === TagTypes.defaults.type) {
             return tag.body;
-        } else if (TagTypes.types.validScript.has(type)) {
-            return await this._runScriptTag(tag, type, args, values);
-        } else {
+        }
+
+        if (!TagTypes.types.validScript.has(type)) {
             throw new TagError("Invalid tag type", type);
         }
+
+        return await this._runScriptTag(tag, type, args, values);
     }
 
-    async add(name, body, owner, type, validate) {
+    async add(name, body, owner, meta, validate) {
+        meta = Tag.normalizeMeta(meta);
+
         validate = ObjectUtil.getBooleanOptions(
             validate,
             {
@@ -237,7 +241,8 @@ class TagManager extends DBManager {
             }
         }
 
-        const tag = new Tag({ name, body, owner, type });
+        const tag = new Tag({ name, body, owner, meta });
+
         await this.tag_db.transactionImmediate(async tx => {
             await this._addPrepared(tag, tx);
         });
@@ -245,8 +250,9 @@ class TagManager extends DBManager {
         return tag;
     }
 
-    async edit(tag, body, type, validate) {
+    async edit(tag, body, meta, validate) {
         tag = Tag.from(tag, true);
+        meta = Tag.normalizeMeta(meta);
 
         validate = ObjectUtil.getBooleanOptions(validate, false, {
             validateProvided: false,
@@ -268,7 +274,7 @@ class TagManager extends DBManager {
             name: tag.name,
             owner: tag.owner,
             body,
-            type
+            meta
         });
 
         if (validate.checkExisting && tag.equivalent(newTag)) {
@@ -280,7 +286,9 @@ class TagManager extends DBManager {
                 updated = res.changes > 0;
 
             if (updated) {
-                getLogger().info(`Edited tag: "${tag.name}" with type: ${type}, body:${LoggerUtil.formatLog(body)}`);
+                getLogger().info(
+                    `Edited tag: "${tag.name}" with type: ${newTag.getScriptType()}, body:${LoggerUtil.formatLog(body)}`
+                );
             } else if (validate.validateProvided) {
                 throw new TagError("Tag doesn't exist", tag.name);
             }
@@ -745,7 +753,7 @@ class TagManager extends DBManager {
             })
         );
 
-        getLogger().info(`Added tag: "${tag.name}" with type: ${tag.type.toNumber()}, body:${bodyLogText}`);
+        getLogger().info(`Added tag: "${tag.name}" with type: ${tag.type.toHex()}, body:${bodyLogText}`);
 
         const tagSize = tag.getSize();
         await this._updateQuota(tag.owner, tagSize, 1, tx);
@@ -768,7 +776,9 @@ class TagManager extends DBManager {
                     altName: TagVM.VMname
                 });
 
-                return await ivm.runScript(tag.body, inputValues);
+                return await ivm.runScript(tag.body, inputValues, {
+                    language: tag.getScriptLanguage()
+                });
             case "vm2":
                 const vm2 = getClient().checkComponent("VMs", "tagVM2", {
                     altName: TagVM2.VMname

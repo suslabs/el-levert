@@ -14,7 +14,7 @@ import { EventPrefixes } from "./EventPrefixes.js";
 import { DatabaseEvents } from "./DatabaseEvents.js";
 import { OpenModes } from "./OpenModes.js";
 
-import TypeTester from "../../../util/TypeTester.js";
+import ObjectUtil from "../../../util/ObjectUtil.js";
 import Util from "../../../util/Util.js";
 import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
 import RegexUtil from "../../../util/misc/RegexUtil.js";
@@ -37,14 +37,13 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         this.filename = filename;
         this.mode = mode ?? OpenModes.OPEN_RWCREATE;
 
-        config = TypeTester.isObject(config) ? config : {};
+        config = ObjectUtil.guaranteeObject(config);
         this.config = config;
         this.options = {};
 
         this._setConfig(config);
 
         this.pool = null;
-        this.db = null;
         this.inTransaction = false;
 
         this._root = null;
@@ -68,11 +67,8 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         }
 
         const pool = new SqlitePool(this._getPoolConfig());
-
         DatabaseUtil.registerPrefixedEvents(pool, this, EventPrefixes.pool, PoolEvents);
-
         this.pool = pool;
-        this.db = pool;
 
         return this;
     }
@@ -87,12 +83,10 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         }
 
         await this.finalizeAll();
-        await this.pool.close();
 
+        await this.pool.empty();
         DatabaseUtil.removePrefixedEvents(this.pool, this, EventPrefixes.pool, PoolEvents);
-
         this.pool = null;
-        this.db = null;
     }
 
     configure(...args) {
@@ -220,7 +214,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         const resolved = path.resolve(extensionPath),
             conn = await this._useConnection(activeConnection => activeConnection.loadExtension(resolved));
 
-        if (conn == null) {
+        if (conn === null) {
             return;
         }
 
@@ -311,7 +305,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
     async enableWALMode() {
         const conn = await this._useConnection(activeConnection => activeConnection.enableWALMode());
 
-        if (conn == null) {
+        if (conn === null) {
             return;
         }
 
@@ -326,7 +320,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
     async disableWALMode() {
         const conn = await this._useConnection(activeConnection => activeConnection.disableWALMode());
 
-        if (conn == null) {
+        if (conn === null) {
             return;
         }
 
@@ -362,7 +356,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
     async migrate({ force, table = "migrations", migrationsPath = "./migrations" } = {}) {
         const tableName = this._quoteIdentifier(table, "Migration table name");
 
-        if (tableName == null) {
+        if (tableName === null) {
             return;
         }
 
@@ -429,7 +423,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
     _registerConnection(conn, target) {
         let listeners = this._connectionListeners.get(conn);
 
-        if (listeners == null) {
+        if (typeof listeners === "undefined") {
             listeners = new Map();
             this._connectionListeners.set(conn, listeners);
         }
@@ -452,7 +446,6 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
     }
 
     _setConnection(conn) {
-        this.db = conn;
         this._conn = conn;
         this.inTransaction = conn.inTransaction;
 
@@ -474,7 +467,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         conn.removeListener(ConnectionEvents.promiseError, targetListeners.promiseErrorListener);
         listeners.delete(target);
 
-        if (listeners.size === 0) {
+        if (Util.empty(listeners)) {
             this._connectionListeners.delete(conn);
         }
 
@@ -499,7 +492,6 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
 
         await this._root._releaseConnection(this._conn, this);
 
-        this.db = null;
         this._conn = null;
         this.inTransaction = false;
     }
@@ -517,7 +509,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
     }
 
     _initSession(root, conn, options) {
-        this.options = TypeTester.isObject(options) ? options : {};
+        this.options = ObjectUtil.guaranteeObject(options);
 
         this._setRoot(root);
         this._syncRootState(root);
@@ -530,12 +522,12 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
     }
 
     get _inSession() {
-        return this._root != null;
+        return this._root !== null;
     }
 
     get _open() {
         if (this._inSession) {
-            return this._conn != null && !this._released && this._conn.db != null;
+            return this._conn !== null && !this._released && this._conn.db !== null;
         }
 
         return this.pool !== null;
@@ -601,7 +593,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
     }
 
     _ownStatement(st) {
-        st._owner = this;
+        st.setOwner(this);
         this.addStatement(st);
         return st;
     }
@@ -725,7 +717,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
 
     async _useConnection(callback) {
         if (!(await this._checkDatabaseOpenPromise())) {
-            return;
+            return null;
         }
 
         const { conn, pooled } = await this._getActiveConnection();
@@ -795,6 +787,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
             return DatabaseUtil.quoteIdentifier(name, label);
         } catch (err) {
             this._throwErrorSync(err);
+            return null;
         }
     }
 

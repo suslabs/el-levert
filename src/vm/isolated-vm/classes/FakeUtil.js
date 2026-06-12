@@ -4,9 +4,11 @@ const { ExternalCopy } = ivm;
 import FakeMsg from "./FakeMsg.js";
 import FakeUser from "./FakeUser.js";
 
-import VMErrors from "../VMErrors.js";
+import { VMErrors } from "../VMErrors.js";
 
 import { getClient } from "../../../LevertClient.js";
+
+import Util from "../../../util/Util.js";
 
 const FakeUtil = Object.freeze({
     getInfo: _ => ({
@@ -157,7 +159,7 @@ const FakeUtil = Object.freeze({
         }
 
         return new ExternalCopy({
-            args: evalArgs.length < 1 ? undefined : evalArgs,
+            args: Util.empty(evalArgs) ? undefined : evalArgs,
             body: tag.body,
             isScript: tag.isScript,
             name: tag.name

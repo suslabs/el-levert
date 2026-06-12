@@ -52,7 +52,7 @@ describe("CommandHandler", () => {
     });
 
     test("reports real execution failures through replyWithError", async () => {
-        await runtime.client.tagManager.add("broken", "(", "user-1", "ivm");
+        await runtime.client.tagManager.add("broken", "(", "user-1", { type: "ivm" });
 
         const msg = createDiscordMessage("%tag broken", {
             reply: vi.fn(async data => data)

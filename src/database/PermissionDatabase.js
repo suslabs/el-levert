@@ -4,8 +4,20 @@ import Group from "../structures/permission/Group.js";
 import User from "../structures/permission/User.js";
 
 import Util from "../util/Util.js";
+import ObjectUtil from "../util/ObjectUtil.js";
 
 class PermissionDatabase extends SqlDatabase {
+    constructor(dbPath, queryPath, options) {
+        options = ObjectUtil.guaranteeObject(options);
+
+        const customFunctions = new Map();
+
+        super(dbPath, queryPath, {
+            ...options,
+            customFunctions
+        });
+    }
+
     async setup(mode) {
         if (mode === "load") {
             await this._migrateLegacySchema();

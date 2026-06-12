@@ -15,6 +15,9 @@ describe("ObjectUtil", () => {
         ).toEqual({ A: 2 });
         expect(ObjectUtil.removeUndefinedValues({ a: 1, b: undefined })).toEqual({ a: 1 });
         expect(ObjectUtil.reverseObject({ a: "x", b: "y" })).toEqual({ x: "a", y: "b" });
+        expect(ObjectUtil.guaranteeObject({ a: 1 })).toEqual({ a: 1 });
+        expect(ObjectUtil.guaranteeObject(null)).toEqual({});
+        expect(ObjectUtil.guaranteeObject(null, { fallback: true })).toEqual({ fallback: true });
 
         const target = {};
         ObjectUtil.setValuesWithDefaults(target, { a: 1 }, { a: 3, b: () => 5, c: [1] });

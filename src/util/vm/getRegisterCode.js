@@ -3,6 +3,7 @@ import VMFunction from "../../structures/vm/VMFunction.js";
 import Util from "../Util.js";
 import Codegen from "./Codegen.js";
 import TypeTester from "../TypeTester.js";
+import ObjectUtil from "../ObjectUtil.js";
 
 function objDeclaration(objName) {
     if (Util.empty(objName)) {
@@ -85,9 +86,9 @@ function stringFuncDeclaration(objName, funcName, ret, errName, func) {
 }
 
 function getRegisterCode(options, funcOptions, errorOptions) {
-    options = TypeTester.isObject(options) ? options : {};
-    funcOptions = TypeTester.isObject(funcOptions) ? funcOptions : {};
-    errorOptions = TypeTester.isObject(errorOptions) ? errorOptions : {};
+    options = ObjectUtil.guaranteeObject(options);
+    funcOptions = ObjectUtil.guaranteeObject(funcOptions);
+    errorOptions = ObjectUtil.guaranteeObject(errorOptions);
 
     const { objName, funcName, type } = options;
 

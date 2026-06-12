@@ -1,5 +1,6 @@
 import Molecule from "./Molecule.js";
 
+import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
 
 import { TokenType, TokenNames, TokenOps, Precedence } from "./Tokens.js";
@@ -156,7 +157,7 @@ const Stoik = Object.freeze({
         const out = [],
             opStack = [];
 
-        while (input.length > 0) {
+        while (!Util.empty(input)) {
             const token = input.shift(),
                 [type] = token;
 
@@ -191,7 +192,7 @@ const Stoik = Object.freeze({
             }
         }
 
-        while (opStack.length > 0) {
+        while (!Util.empty(opStack)) {
             out.push(opStack.pop());
         }
 
@@ -207,13 +208,13 @@ const Stoik = Object.freeze({
             throw new StoikError("Invalid input");
         }
 
-        if (input.length < 1) {
+        if (Util.empty(input)) {
             throw new StoikError("Empty input");
         }
 
         const opStack = [];
 
-        while (input.length > 0) {
+        while (!Util.empty(input)) {
             const token = input.shift();
 
             if (token instanceof Molecule) {
@@ -230,13 +231,13 @@ const Stoik = Object.freeze({
                     break;
 
                 default:
-                    if (opStack.length < 1) {
+                    if (Util.empty(opStack)) {
                         throw new StoikError("Unexpected end of input");
                     }
 
                     const right = opStack.pop();
 
-                    if (opStack.length < 1) {
+                    if (Util.empty(opStack)) {
                         throw new StoikError("Unexpected end of input");
                     }
 

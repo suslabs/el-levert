@@ -2,154 +2,202 @@ import { Buffer } from "node:buffer";
 
 import BitField from "../../util/misc/BitField.js";
 
+import { TagTypes } from "./TagTypes.js";
+
+import TypeTester from "../../util/TypeTester.js";
+
 import TagError from "../../errors/TagError.js";
 
 class TagBitField extends BitField {
-    static configure(schema) {
-        this._flagBits = schema.flags.bits;
-        this._validMask = Object.values(this._flagBits).reduce((mask, bit) => mask | (1 << bit), 0);
-
-        this._requirements = schema.flags.entries.flatMap(([name, config]) =>
-            config.requiredFlags.map(required => ({
-                name,
-                bit: config.bit,
-                requiredBit: this._flagBits[required.name],
-                value: required.value
-            }))
-        );
+    static from(data = TagTypes.defaults.flags, options) {
+        data ??= TagTypes.defaults.flags;
+        return super.from(data, options);
     }
 
-    static filter(data = null, invert) {
-        if (typeof data === "string" || Array.isArray(data)) {
-            data = this.fromFlags(data);
-        } else if (typeof data === "number" && data < 0) {
-            invert = true;
-            data = Math.abs(data);
-        } else if (invert == null && data instanceof BitField) {
-            invert = data.invert;
-        }
-
-        return this.from(data, {
-            invert: Boolean(invert)
-        });
-    }
-
-    static fromFlags(names, options = {}) {
-        return this.from(null, options).setFlags(names, true, false);
-    }
-
-    static query(filter = null) {
-        if (filter == null) {
+    static query(data = null) {
+        if (data === null) {
             return {
-                $flag: null
+                $types: JSON.stringify(this._getTypeData().map(type => type.toString("hex")))
             };
         }
 
-        filter = this.filter(filter);
-
-        if (filter.isEmpty()) {
-            return {
-                $flag: null
-            };
-        }
+        const flag = data instanceof TagBitField ? data : this.from(data);
 
         return {
-            $flag: filter.toNumber()
+            $types: JSON.stringify(
+                flag.isEmpty() ? this._getTypeData().map(type => type.toString("hex")) : this._getQueryTypes(flag)
+            )
         };
     }
 
-    static is(value) {
-        return value instanceof this;
+    static filter(names, include = true) {
+        const filter = this.from(new Uint8Array(), {
+            include
+        });
+
+        return filter.setFlags(names);
     }
 
-    static isFilter(value) {
-        return value instanceof this && value.invert;
-    }
+    constructor(data = TagTypes.defaults.flags, options) {
+        data ??= TagTypes.defaults.flags;
+        options = TypeTester.isObject(options) ? options : {};
 
-    constructor(data = null, options = {}) {
-        const ctor = new.target;
+        const include = options.include ?? true;
+        options.grow ??= TagTypes.flags.entries.length;
 
-        if (data instanceof BitField) {
-            options = {
-                ...data._getCloneOptions?.(),
-                invert: data.invert,
-                ...options
-            };
-            data = data.buffer;
+        if (data instanceof Map) {
+            data = TagBitField._getMapData(data);
+        } else if (!ArrayBuffer.isView(data)) {
+            throw new TagError("Invalid type", data);
         }
 
-        super(Uint8Array.of(ctor._coerceByte(data)), {
-            grow: 8,
-            ...options
-        });
+        super(data, options);
+        this.include = include;
+    }
+
+    hasFlag(name) {
+        return this.get(TagBitField._getFlagBit(name));
     }
 
     validate() {
-        this.constructor._validateByte(this.toUnsignedNumber());
-    }
+        this.forEach((set, bit) => {
+            if (set && !TagTypes.flags.bits.has(bit)) {
+                throw new TagError("Invalid type", this.toBuffer());
+            }
+        });
 
-    static _throwInvalid(data) {
-        throw new TagError("Invalid type", data);
-    }
+        for (const [name, flag] of TagTypes.flags.entries) {
+            if (!this.hasFlag(name)) {
+                continue;
+            }
 
-    static _validateBitIndex(bitIndex) {
-        if (!Number.isInteger(bitIndex) || bitIndex < 0) {
-            this._throwInvalid(bitIndex);
+            for (const [requiredName, requiredValue] of Object.entries(flag.requires)) {
+                if (this.hasFlag(requiredName) !== requiredValue) {
+                    throw new TagError(`Flag ${name} requires ${requiredName}`, {
+                        name,
+                        requiredName,
+                        requiredValue
+                    });
+                }
+            }
         }
     }
 
     static _getFlagBit(name, strict = true) {
-        if (typeof name !== "string" || name.length < 1) {
+        if (!TagTypes.flags.valid.has(name)) {
             if (!strict) {
                 return false;
             }
 
-            throw new TagError("Invalid flag");
+            TypeTester.normalizeEnum(name, TagTypes.flags.valid, "flag", TagError, {
+                unknown: "Unknown"
+            });
         }
 
-        const bit = this._flagBits[name];
-
-        if (typeof bit === "undefined") {
-            throw new TagError("Unknown flag: " + name, name);
-        }
-
-        return bit;
+        return TagTypes.flags[name].bit;
     }
 
-    static _coerceByte(data) {
-        if (data == null) {
-            return 0;
-        }
+    static _getMapData(map) {
+        const data = new Uint8Array(Math.ceil(TagTypes.flags.entries.length / 8));
 
-        if (typeof data === "number") {
-            if (Number.isInteger(data) && data >= 0 && data <= 255) {
-                return data;
+        for (const [name, value] of map) {
+            const bit = this._getFlagBit(name);
+
+            if (value) {
+                data[bit >> 3] |= 1 << (bit % 8);
             }
-
-            this._throwInvalid(data);
         }
 
-        if (Buffer.isBuffer(data) || data instanceof Uint8Array) {
-            if (data.length <= 1) {
-                return data[0] ?? 0;
-            }
-
-            this._throwInvalid(data);
-        }
-
-        this._throwInvalid(data);
+        return data;
     }
 
-    static _validateByte(value) {
-        if (!Number.isInteger(value) || value < 0 || value > 255 || (value & ~this._validMask) !== 0) {
-            this._throwInvalid(value);
-        }
+    static _hasBit(data, name) {
+        const bit = this._getFlagBit(name),
+            byte = bit >> 3;
 
-        for (const rule of this._requirements) {
-            if ((value & (1 << rule.bit)) !== 0 && Boolean(value & (1 << rule.requiredBit)) !== rule.value) {
-                this._throwInvalid(value);
+        return byte < data.length && !!(data[byte] & (1 << (bit % 8)));
+    }
+
+    static _validData(data) {
+        for (const [name, flag] of TagTypes.flags.entries) {
+            if (!this._hasBit(data, name)) {
+                continue;
+            }
+
+            for (const [requiredName, requiredValue] of Object.entries(flag.requires)) {
+                if (this._hasBit(data, requiredName) !== requiredValue) {
+                    return false;
+                }
             }
         }
+
+        return true;
+    }
+
+    static _collectTypeData(data, idx, out) {
+        if (idx >= TagTypes.flags.entries.length) {
+            if (this._validData(data)) {
+                out.push(Buffer.from(data));
+            }
+
+            return;
+        }
+
+        const bit = TagTypes.flags.entries[idx][1].bit,
+            byte = bit >> 3,
+            mask = 1 << (bit % 8);
+
+        data[byte] &= ~mask;
+        this._collectTypeData(data, idx + 1, out);
+
+        data[byte] |= mask;
+        this._collectTypeData(data, idx + 1, out);
+    }
+
+    static _getTypeData() {
+        if (Array.isArray(this._typeData)) {
+            return this._typeData;
+        }
+
+        const data = new Uint8Array(Math.ceil(TagTypes.flags.entries.length / 8)),
+            out = [];
+
+        this._collectTypeData(data, 0, out);
+        this._typeData = out;
+
+        return out;
+    }
+
+    static _matchesFilter(type, filter) {
+        for (let i = 0; i < filter.buffer.length; i++) {
+            const masked = (type[i] ?? 0) & filter.buffer[i],
+                matched = filter.include ? masked === filter.buffer[i] : masked === 0;
+
+            if (!matched) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    static _getQueryTypes(filter) {
+        return this._getTypeData()
+            .filter(type => this._matchesFilter(type, filter))
+            .map(type => type.toString("hex"));
+    }
+
+    static _validateBitIndex(bit) {
+        if (!TagTypes.flags.bits.has(bit)) {
+            throw new TagError("Invalid type flag bit", bit);
+        }
+    }
+
+    _getCloneOptions() {
+        return {
+            ...super._getCloneOptions(),
+            include: this.include
+        };
     }
 }
 

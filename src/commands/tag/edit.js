@@ -57,7 +57,7 @@ class TagEditCommand {
         }
 
         let parsed = await this.parentCmd.parseBase(t_args, ctx.msg),
-            { body, type } = parsed;
+            { body, meta } = parsed;
 
         if (parsed.err !== null) {
             return parsed.err;
@@ -73,7 +73,7 @@ class TagEditCommand {
         }
 
         try {
-            await getClient().tagManager.edit(tag, body, type, {
+            await getClient().tagManager.edit(tag, body, meta, {
                 validateNew: false
             });
         } catch (err) {

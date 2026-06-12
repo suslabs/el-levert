@@ -8,11 +8,11 @@ import { LoadStatus } from "./LoadStatus.js";
 import { WriteModes } from "./WriteModes.js";
 
 import Util from "../util/Util.js";
-import TypeTester from "../util/TypeTester.js";
+import ObjectUtil from "../util/ObjectUtil.js";
 
 class TextLoader extends FileLoader {
     constructor(name, filePath, logger, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         super(name, filePath, logger, {
             type: "text_file",

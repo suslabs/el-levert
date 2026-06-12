@@ -1,4 +1,5 @@
 import TypeTester from "../util/TypeTester.js";
+import ObjectUtil from "../util/ObjectUtil.js";
 
 import Util from "../util/Util.js";
 
@@ -15,7 +16,7 @@ class Loader {
         this.name = name ?? "";
         this.logger = logger;
 
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
         this.options = options;
 
         this.type = options.type ?? "";

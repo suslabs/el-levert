@@ -6,7 +6,7 @@ import Loader from "./Loader.js";
 import FileLoader from "./FileLoader.js";
 
 import Util from "../util/Util.js";
-import TypeTester from "../util/TypeTester.js";
+import ObjectUtil from "../util/ObjectUtil.js";
 import ArrayUtil from "../util/ArrayUtil.js";
 
 import { LoadStatus } from "./LoadStatus.js";
@@ -16,7 +16,7 @@ class DirectoryLoader extends Loader {
         const files = [],
             stack = [{ path: dirPath, depth: 1 }];
 
-        while (stack.length) {
+        while (!Util.empty(stack)) {
             const { path: currentDir, depth } = stack.pop(),
                 items = fs.readdirSync(currentDir, { withFileTypes: true });
 
@@ -46,7 +46,7 @@ class DirectoryLoader extends Loader {
         const files = [],
             stack = [{ path: dirPath, depth: 1 }];
 
-        while (stack.length) {
+        while (!Util.empty(stack)) {
             const { path: currentDir, depth } = stack.pop(),
                 items = await fsPromises.readdir(currentDir, { withFileTypes: true });
 
@@ -73,7 +73,7 @@ class DirectoryLoader extends Loader {
     }
 
     constructor(name, dirPath, logger, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         super(name, logger, {
             type: "directory",
@@ -100,7 +100,7 @@ class DirectoryLoader extends Loader {
     }
 
     load(options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         let ok = 0,
             bad = 0;

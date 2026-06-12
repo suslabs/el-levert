@@ -3,7 +3,6 @@ import BaseCommandContext from "./context/BaseCommandContext.js";
 
 import ArrayUtil from "../../util/ArrayUtil.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
-import TypeTester from "../../util/TypeTester.js";
 
 import CommandError from "../../errors/CommandError.js";
 
@@ -44,7 +43,7 @@ class BaseCommand {
                   });
         }
 
-        data = TypeTester.isObject(data) ? data : {};
+        data = ObjectUtil.guaranteeObject(data);
 
         return new this.constructor.contextClass({
             ...data,
@@ -64,7 +63,9 @@ class BaseCommand {
                 ])
             );
 
-        const data = Object.fromEntries(keys.map(key => [key, Object.hasOwn(infoData, key) ? infoData[key] : this[key]]));
+        const data = Object.fromEntries(
+            keys.map(key => [key, Object.hasOwn(infoData, key) ? infoData[key] : this[key]])
+        );
 
         if (nullable) {
             for (const prop of this.constructor._nullableDataProps.filter(

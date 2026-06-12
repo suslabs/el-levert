@@ -1,17 +1,30 @@
 import { escapeMarkdown } from "discord.js";
 
+import { TagTypes } from "../../structures/tag/TagTypes.js";
+import { MessageLimitTypes } from "../../handlers/discord/MessageLimitTypes.js";
+
+import { resolveVMLanguage } from "../../structures/vm/VMLanguages.js";
+
 import { getClient, getEmoji, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import ParserUtil from "../../util/commands/ParserUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 
-import { MessageLimitTypes } from "../../handlers/discord/MessageLimitTypes.js";
-import { TagTypes } from "../../structures/tag/TagTypes.js";
-
 const dummyMsg = {
     attachments: new Map()
 };
+
+function getParsedMeta(parsed, type) {
+    if (!parsed.isScript) {
+        return {};
+    }
+
+    return {
+        type: type ?? TagTypes.defaults.scriptType,
+        language: resolveVMLanguage(parsed.lang, TagTypes.defaults.language)
+    };
+}
 
 async function getPreview(out, msg) {
     let preview = null;
@@ -77,38 +90,51 @@ class TagCommand {
 
     async parseBase(t_args, msg) {
         const [t_type, t_body] = ParserUtil.splitArgs(t_args, true);
+        msg ??= dummyMsg;
 
-        if (msg == null) {
-            msg = dummyMsg;
+        let type = null;
+
+        switch (t_type) {
+            case "script":
+                type = TagTypes.defaults.scriptType;
+                break;
+            default:
+                type = TagTypes.types.validScript.has(t_type) ? t_type : null;
         }
 
-        const hasAttachments = !Util.empty(msg.attachments);
+        const body = type === null ? t_args : t_body,
+            hasAttachments = !Util.empty(msg.attachments);
 
         if (Util.empty(t_args) && !hasAttachments) {
             return {
                 body: null,
-                type: null,
+                meta: null,
                 err: `${getEmoji("warn")} Tag body is empty.`
             };
         }
 
-        let body, isScript;
+        let parsed;
 
         if (hasAttachments) {
             try {
-                ({ body, isScript } = await getClient().tagManager.downloadBody(t_args, msg, "tag"));
+                const downloaded = await getClient().tagManager.downloadBody(t_args, msg, "tag");
+
+                parsed = {
+                    ...downloaded,
+                    meta: getParsedMeta(downloaded, type)
+                };
             } catch (err) {
                 getLogger().error(err);
 
                 return err.name === "TagError"
                     ? {
                           body: null,
-                          type: null,
+                          meta: null,
                           err: `${getEmoji("warn")} ${err.message}.`
                       }
                     : {
                           body: null,
-                          type: null,
+                          meta: null,
                           err: {
                               content: `${getEmoji("error")} Downloading attachment failed:`,
                               ...DiscordUtil.getFileAttach(err.stack, "error.js")
@@ -116,24 +142,15 @@ class TagCommand {
                       };
             }
         } else {
-            let tagBody = t_args;
-
-            if (TagTypes.types.validScript.has(t_type)) {
-                tagBody = t_body;
-            }
-
-            ({ body, isScript } = ParserUtil.parseScript(tagBody));
+            parsed = ParserUtil.parseScript(body);
+            parsed.meta = getParsedMeta(parsed, type);
         }
 
-        let type = null;
-
-        if (isScript) {
-            type = TagTypes.types.validScript.has(t_type) ? t_type : TagTypes.defaults.scriptType;
-        } else {
-            type = TagTypes.defaults.type;
-        }
-
-        return { body, type, err: null };
+        return {
+            body: parsed.body,
+            meta: parsed.meta,
+            err: null
+        };
     }
 
     async handler(ctx) {

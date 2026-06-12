@@ -2,7 +2,7 @@ import uFuzzy from "@leeoniya/ufuzzy";
 
 import Util from "../Util.js";
 import ArrayUtil from "../ArrayUtil.js";
-import TypeTester from "../TypeTester.js";
+import ObjectUtil from "../ObjectUtil.js";
 
 const uFuzzyOpts = {
     alpha: "a-z"
@@ -19,7 +19,7 @@ const outputResult = (results, ranges, oversized, hasInfo) => ({
 
 function uFuzzySearch(haystack, needle, options) {
     haystack = ArrayUtil.guaranteeArray(haystack, null, true);
-    options = TypeTester.isObject(options) ? options : {};
+    options = ObjectUtil.guaranteeObject(options);
 
     const maxResults = options.maxResults,
         searchKey = options.searchKey,
@@ -32,7 +32,7 @@ function uFuzzySearch(haystack, needle, options) {
     const searchHaystack = searchKey == null ? haystack : haystack.map(x => x[searchKey]),
         inds = uf.filter(searchHaystack, needle);
 
-    if (inds === null || inds.length < 1) {
+    if (inds === null || Util.empty(inds)) {
         return outputResult([], [], false);
     }
 

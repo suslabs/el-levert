@@ -2,13 +2,13 @@ import ObjectLoader from "../ObjectLoader.js";
 
 import BotEvent from "../../structures/BotEvent.js";
 
-import TypeTester from "../../util/TypeTester.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
 
 import { LoadStatus } from "../LoadStatus.js";
 
 class EventObjectLoader extends ObjectLoader {
     constructor(filePath, logger, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         super("event", filePath, logger, {
             throwOnFailure: true,

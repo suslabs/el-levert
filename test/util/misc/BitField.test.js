@@ -3,11 +3,11 @@ import { describe, expect, test } from "vitest";
 import "../../../setupGlobals.js";
 
 import BitField from "../../../src/util/misc/BitField.js";
-import UtilError from "../../../src/errors/UtilError.js";
+import BitFieldError from "../../../src/errors/BitFieldError.js";
 
 class ValidatedBitField extends BitField {
     validate() {
-        if (this.toNumber() > 3) {
+        if (this.get(2)) {
             throw new Error("too big");
         }
     }
@@ -15,7 +15,7 @@ class ValidatedBitField extends BitField {
 
 describe("BitField", () => {
     test("sets, clones, compares, serializes, and coerces", () => {
-        const bitfield = new BitField(8, {
+        const bitfield = new BitField(new Uint8Array(1), {
             grow: 16
         });
 
@@ -50,8 +50,8 @@ describe("BitField", () => {
         const clone = bitfield.clone();
         expect(clone).not.toBe(bitfield);
         expect(clone.equals(bitfield)).toBe(true);
+        expect(bitfield.toHex()).toBe("61");
         expect(bitfield.toNumber()).toBe(97);
-        expect(bitfield.toJSON()).toBe(97);
         expect(bitfield.toBuffer()).toEqual(Buffer.from([97]));
 
         clone.set(7, true);
@@ -60,7 +60,7 @@ describe("BitField", () => {
     });
 
     test("validates a candidate before committing mutations", () => {
-        const bitfield = new ValidatedBitField(8, {
+        const bitfield = new ValidatedBitField(new Uint8Array(1), {
             grow: 8
         });
 
@@ -72,11 +72,19 @@ describe("BitField", () => {
         expect(bitfield.toBuffer()).toEqual(Buffer.from([3]));
     });
 
-    test("throws UtilError for generic invalid input", () => {
-        const bitfield = new BitField(8);
+    test("throws BitFieldError for generic invalid input", () => {
+        const bitfield = new BitField(new Uint8Array(1));
+        const bytes = new Uint8Array([1]),
+            shared = new BitField(bytes);
 
-        expect(() => bitfield.set(-1)).toThrow(UtilError);
-        expect(() => bitfield.setAll(null)).toThrow(UtilError);
-        expect(() => bitfield.setFlag("missing")).toThrow(UtilError);
+        bytes[0] = 2;
+        expect(new BitField(97).toBuffer()).toEqual(Buffer.from([97]));
+        expect(new BitField(0x1234).toBuffer()).toEqual(Buffer.from([0x34, 0x12]));
+        expect(new BitField([1, 2]).toBuffer()).toEqual(Buffer.from([1, 2]));
+        expect(shared.toBuffer()).toEqual(Buffer.from([2]));
+        expect(() => new BitField(-1)).toThrow(BitFieldError);
+        expect(() => bitfield.set(-1)).toThrow(BitFieldError);
+        expect(() => bitfield.setAll(null)).toThrow(BitFieldError);
+        expect(() => bitfield.setFlag("missing")).toThrow(BitFieldError);
     });
 });

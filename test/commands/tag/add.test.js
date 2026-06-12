@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { cleanupRuntime, createCommandMessage, createCommandRuntime, getCommand, executeCommand } from "../../helpers/commandHarness.js";
+import {
+    cleanupRuntime,
+    createCommandMessage,
+    createCommandRuntime,
+    getCommand,
+    executeCommand
+} from "../../helpers/commandHarness.js";
 
 let runtime;
 let msg;
@@ -28,5 +34,19 @@ describe("tag add command", () => {
             name: "alpha",
             body: "body"
         });
+
+        await expect(
+            executeCommand(command, "add typed ```ts\nconst value: number = 1;\n```", { msg })
+        ).resolves.toContain("Created tag **typed**");
+        const typed = await runtime.client.tagManager.fetch("typed");
+        expect(typed.getScriptType()).toBe("ivm");
+        expect(typed.getScriptLanguage()).toBe("ts");
+
+        await expect(
+            executeCommand(command, "add literal ts ```ts\nconst value: number = 1;\n```", { msg })
+        ).resolves.toContain("Created tag **literal**");
+        const literal = await runtime.client.tagManager.fetch("literal");
+        expect(literal.getScriptType()).toBe("text");
+        expect(literal.getScriptLanguage()).toBeUndefined();
     });
 });

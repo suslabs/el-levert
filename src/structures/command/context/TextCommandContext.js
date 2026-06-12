@@ -1,5 +1,5 @@
 import ParserUtil from "../../../util/commands/ParserUtil.js";
-import TypeTester from "../../../util/TypeTester.js";
+import ObjectUtil from "../../../util/ObjectUtil.js";
 
 import BaseCommandContext from "./BaseCommandContext.js";
 import CommandParser from "../../../parsers/CommandParser.js";
@@ -28,7 +28,7 @@ class TextCommandContext extends BaseCommandContext {
     }
 
     withArgs(argsText, overrides) {
-        overrides = TypeTester.isObject(overrides) ? overrides : {};
+        overrides = ObjectUtil.guaranteeObject(overrides);
 
         return super.withArgs(argsText, {
             ...overrides,

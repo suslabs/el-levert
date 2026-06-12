@@ -2,6 +2,8 @@ import crypto from "node:crypto";
 
 import sqlite from "sqlite3";
 
+import Util from "../Util.js";
+
 import DatabaseError from "../../errors/DatabaseError.js";
 
 const eventValuesCache = new WeakMap();
@@ -10,7 +12,7 @@ const DatabaseUtil = Object.freeze({
     getEventValues: events => {
         let values = eventValuesCache.get(events);
 
-        if (values == null) {
+        if (typeof values === "undefined") {
             values = Object.freeze(Object.values(events));
             eventValuesCache.set(events, values);
         }
@@ -170,7 +172,7 @@ const DatabaseUtil = Object.freeze({
     },
 
     quoteIdentifier(name, label = "Identifier") {
-        if (typeof name !== "string" || name.length === 0) {
+        if (!Util.nonemptyString(name)) {
             throw new DatabaseError(`${label} must be a non-empty string`);
         }
 

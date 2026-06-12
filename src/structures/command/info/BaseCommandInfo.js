@@ -1,6 +1,5 @@
 import Util from "../../../util/Util.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
-import TypeTester from "../../../util/TypeTester.js";
 import CommandError from "../../../errors/CommandError.js";
 
 class BaseCommandInfo {
@@ -15,8 +14,8 @@ class BaseCommandInfo {
     };
 
     constructor(data, overrides) {
-        data = TypeTester.isObject(data) ? data : {};
-        overrides = TypeTester.isObject(overrides) ? overrides : {};
+        data = ObjectUtil.guaranteeObject(data);
+        overrides = ObjectUtil.guaranteeObject(overrides);
 
         const source = typeof data.toObject === "function" ? data.toObject() : data;
 

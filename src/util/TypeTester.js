@@ -1,3 +1,7 @@
+import Util from "./Util.js";
+import ArrayUtil from "./ArrayUtil.js";
+import ObjectUtil from "./ObjectUtil.js";
+
 import UtilError from "../errors/UtilError.js";
 
 const TypeTester = Object.freeze({
@@ -21,6 +25,10 @@ const TypeTester = Object.freeze({
 
     isPromise: obj => {
         return typeof obj?.then === "function";
+    },
+
+    isRegex: exp => {
+        return TypeTester.isObject(exp) && typeof exp.source === "string" && typeof exp.flags === "string";
     },
 
     className: obj => {
@@ -82,6 +90,121 @@ const TypeTester = Object.freeze({
         } else {
             return args.find(obj => check(getProp(obj)));
         }
+    },
+
+    _normalizeEnumValues(valid) {
+        if (valid instanceof Set) {
+            return valid;
+        } else if (TypeTester.isArray(valid)) {
+            return new Set(valid);
+        } else if (TypeTester.isObject(valid)) {
+            return new Set(Object.values(valid));
+        } else {
+            return new Set();
+        }
+    },
+
+    _missingEnumMessage(input, name, options) {
+        const msg = options.missing ?? options.message ?? false;
+
+        if (typeof msg === "function") {
+            return msg(input);
+        } else if (typeof msg === "boolean") {
+            return msg ? `No ${name} provided` : `Invalid ${name}`;
+        } else {
+            return `${msg} ${name}`;
+        }
+    },
+
+    _unknownEnumMessage(input, name, options) {
+        let msg = options.unknown ?? options.message ?? false;
+
+        if (typeof msg === "function") {
+            return msg(input);
+        } else if (typeof msg === "boolean") {
+            msg = msg ? "Unknown" : "Invalid";
+        }
+
+        const out = `${msg} ${name}`;
+        return options.ref === false ? out : `${out}: ${input}`;
+    },
+
+    _checkEnum(value, valid, options) {
+        const input = value;
+
+        const allowEmpty = options.allowEmpty ?? false;
+
+        if (!allowEmpty && Util.empty(value)) {
+            return {
+                input,
+                state: "missing"
+            };
+        }
+
+        if (typeof options.normalize === "function") {
+            value = options.normalize(value);
+        }
+
+        if (!valid.has(value)) {
+            return {
+                input,
+                state: "unknown"
+            };
+        }
+
+        return {
+            input,
+            value,
+            state: null
+        };
+    },
+
+    _throwEnum(res, name, errorClass, options) {
+        switch (res.state) {
+            case "missing":
+                throw new errorClass(TypeTester._missingEnumMessage(res.input, name, options), res.input);
+            case "unknown":
+                throw new errorClass(TypeTester._unknownEnumMessage(res.input, name, options), res.input);
+        }
+    },
+    normalizeEnum(value, valid, name = "value", errorClass = UtilError, options) {
+        options = ObjectUtil.guaranteeObject(options);
+        valid = TypeTester._normalizeEnumValues(valid);
+
+        const res = TypeTester._checkEnum(value, valid, options);
+        TypeTester._throwEnum(res, name, errorClass, options);
+
+        return res.value;
+    },
+
+    normalizeEnums(values, valid, name = "value", errorClass = UtilError, options) {
+        values = ArrayUtil.guaranteeArray(values);
+
+        options = ObjectUtil.guaranteeObject(options);
+        valid = TypeTester._normalizeEnumValues(valid);
+
+        const collectInvalid = options.collectInvalid ?? false;
+
+        const out = [],
+            invalid = [];
+
+        for (const value of values) {
+            const res = TypeTester._checkEnum(value, valid, options);
+
+            if (res.state === null) {
+                out.push(res.value);
+            } else if (collectInvalid) {
+                invalid.push(res.input);
+            } else {
+                TypeTester._throwEnum(res, name, errorClass, options);
+            }
+        }
+
+        if (!Util.empty(invalid)) {
+            throw new errorClass(TypeTester._unknownEnumMessage(invalid[0], name, options), invalid);
+        }
+
+        return out;
     },
 
     _validProp: (obj, expected) => {

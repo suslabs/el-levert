@@ -30,7 +30,9 @@ class StatementBackend {
             });
         });
 
-        Promise.all(resetPromises).then(_ => resolve1()).catch(reject1);
+        Promise.all(resetPromises)
+            .then(_ => resolve1())
+            .catch(reject1);
     }
 }
 
@@ -155,7 +157,7 @@ class PooledStatementBackend extends StatementBackend {
     getContext(st) {
         return this._db._getActiveConnection().then(({ conn, pooled }) => {
             return this._getRawSt(st, conn).then(rawSt => {
-                if (rawSt == null) {
+                if (rawSt === null) {
                     if (pooled) {
                         return this._db._releaseConnection(conn).then(_ => null);
                     }
@@ -173,7 +175,7 @@ class PooledStatementBackend extends StatementBackend {
     }
 
     releaseContext(context) {
-        if (context != null && context.pooled) {
+        if (context !== null && context.pooled) {
             return this._db._releaseConnection(context.conn);
         }
 
@@ -195,7 +197,7 @@ class PooledStatementBackend extends StatementBackend {
                         return;
                     }
 
-                    if (st._safeIntegers != null) {
+                    if (st._safeIntegers !== null) {
                         rawSt.safeIntegers(st._safeIntegers);
                     }
 

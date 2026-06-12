@@ -21,7 +21,7 @@ const LoggerUtil = Object.freeze({
                     return ` error: ${err.message}`;
                 }
             case "string":
-                if (str.length < 1) {
+                if (Util.empty(str)) {
                     return " none";
                 }
 

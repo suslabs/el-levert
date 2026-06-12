@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { cleanupRuntime, createCommandMessage, createCommandRuntime, getCommand, addAdmin, addTag, executeCommand } from "../../helpers/commandHarness.js";
+import {
+    cleanupRuntime,
+    createCommandMessage,
+    createCommandRuntime,
+    getCommand,
+    addAdmin,
+    addTag,
+    executeCommand
+} from "../../helpers/commandHarness.js";
 import ClientError from "../../../src/errors/ClientError.js";
 import TagError from "../../../src/errors/TagError.js";
 
@@ -28,15 +36,22 @@ describe("tag command", () => {
 
         expect(await command.parseBase("ivm ```js\nreturn 1;\n```", null)).toMatchObject({
             body: "return 1;",
-            type: "ivm",
+            meta: {
+                type: "ivm",
+                language: "js"
+            },
             err: null
         });
 
         await expect(executeCommand(command, "", { msg })).resolves.toContain("add|alias|chown");
         await expect(executeCommand(command, "bad*", { msg })).resolves.toContain("must consist");
 
-        await expect(executeCommand(command, "add alpha body one", { msg })).resolves.toContain("Created tag **alpha**");
-        await expect(executeCommand(command, "add alpine body two", { msg })).resolves.toContain("Created tag **alpine**");
+        await expect(executeCommand(command, "add alpha body one", { msg })).resolves.toContain(
+            "Created tag **alpha**"
+        );
+        await expect(executeCommand(command, "add alpine body two", { msg })).resolves.toContain(
+            "Created tag **alpine**"
+        );
 
         await expect(executeCommand(command, "alpha", { msg })).resolves.toEqual([
             "body one",
@@ -109,17 +124,55 @@ describe("Merged Branch Coverage", () => {
         test("covers parseBase text, empty, and attachment error branches", async () => {
             expect(await command.parseBase("", null)).toMatchObject({
                 body: null,
-                type: null,
+                meta: null,
                 err: ":warning: Tag body is empty."
             });
 
             expect(await command.parseBase("ivm ```js\nreturn 1;\n```", null)).toMatchObject({
                 body: "return 1;",
-                type: "ivm",
+                meta: {
+                    type: "ivm",
+                    language: "js"
+                },
                 err: null
             });
 
-            vi.spyOn(runtime.client.tagManager, "downloadBody").mockRejectedValueOnce(new TagError("Attachment rejected"));
+            expect(await command.parseBase("script ```js\nreturn 2;\n```", null)).toMatchObject({
+                body: "return 2;",
+                meta: {
+                    type: "ivm",
+                    language: "js"
+                },
+                err: null
+            });
+
+            expect(await command.parseBase("```ts\nconst x: number = 1;\n```", null)).toMatchObject({
+                body: "const x: number = 1;",
+                meta: {
+                    type: "ivm",
+                    language: "ts"
+                },
+                err: null
+            });
+
+            expect(await command.parseBase("vm2 ```typescript\nconst x: number = 1;\n```", null)).toMatchObject({
+                body: "const x: number = 1;",
+                meta: {
+                    type: "vm2",
+                    language: "ts"
+                },
+                err: null
+            });
+
+            expect(await command.parseBase("ts ```ts\nconst x: number = 1;\n```", null)).toMatchObject({
+                body: "ts ```ts\nconst x: number = 1;\n```",
+                meta: {},
+                err: null
+            });
+
+            vi.spyOn(runtime.client.tagManager, "downloadBody").mockRejectedValueOnce(
+                new TagError("Attachment rejected")
+            );
             expect(
                 await command.parseBase("ignored", {
                     attachments: new Map([["file", {}]])
@@ -160,11 +213,15 @@ describe("Merged Branch Coverage", () => {
             };
 
             vi.spyOn(runtime.client.tagManager, "fetch").mockResolvedValueOnce(aliasTag);
-            vi.spyOn(runtime.client.tagManager, "fetchAlias").mockRejectedValueOnce(new TagError("Tag recursion detected", ["a", "b"]));
+            vi.spyOn(runtime.client.tagManager, "fetchAlias").mockRejectedValueOnce(
+                new TagError("Tag recursion detected", ["a", "b"])
+            );
             expect(await run("loop")).toContain("Epic recursion fail");
 
             vi.spyOn(runtime.client.tagManager, "fetch").mockResolvedValueOnce(aliasTag);
-            vi.spyOn(runtime.client.tagManager, "fetchAlias").mockRejectedValueOnce(new TagError("Hop not found", "missing"));
+            vi.spyOn(runtime.client.tagManager, "fetchAlias").mockRejectedValueOnce(
+                new TagError("Hop not found", "missing")
+            );
             expect(await run("loop")).toContain("Tag **missing** doesn't exist");
 
             vi.spyOn(runtime.client.tagManager, "fetch").mockResolvedValueOnce(aliasTag);
@@ -203,7 +260,9 @@ describe("Merged Branch Coverage", () => {
             vi.spyOn(runtime.client.tagManager, "fetch").mockResolvedValueOnce(alpha);
             vi.spyOn(runtime.client.tagManager, "execute").mockResolvedValueOnce("https://example.com/watch?v=2");
             vi.spyOn(runtime.client.previewHandler, "canPreview").mockReturnValueOnce(true);
-            vi.spyOn(runtime.client.previewHandler, "generatePreview").mockRejectedValueOnce(new Error("Preview failed"));
+            vi.spyOn(runtime.client.previewHandler, "generatePreview").mockRejectedValueOnce(
+                new Error("Preview failed")
+            );
 
             expect(await run("alpha")).toEqual([
                 "https://example.com/watch?v=2",
@@ -360,9 +419,7 @@ describe("Merged Branch Coverage", () => {
 
             const tag = await runtime.client.tagManager.fetch("alpha");
             vi.spyOn(runtime.client.tagManager, "fetch").mockResolvedValueOnce(tag);
-            vi.spyOn(tag, "getOwner")
-                .mockResolvedValueOnce(null)
-                .mockResolvedValueOnce(null);
+            vi.spyOn(tag, "getOwner").mockResolvedValueOnce(null).mockResolvedValueOnce(null);
             expect(await run("owner alpha", guildMsg)).toContain("Tag owner not found");
 
             vi.spyOn(runtime.client.tagManager, "fetch").mockResolvedValueOnce(tag);
@@ -376,7 +433,9 @@ describe("Merged Branch Coverage", () => {
 
             expect(await run("set_type alpha version new", adminMsg)).toContain("Updated tag **alpha**");
 
-            vi.spyOn(runtime.client.tagManager, "updateProps").mockRejectedValueOnce(new TagError("Update props failed"));
+            vi.spyOn(runtime.client.tagManager, "updateProps").mockRejectedValueOnce(
+                new TagError("Update props failed")
+            );
             expect(await run("set_type alpha text", adminMsg)).toContain("Update props failed");
         });
 
@@ -418,7 +477,7 @@ describe("Merged Branch Coverage", () => {
             });
 
             await addTag(runtime, "alpha", "body");
-            await addTag(runtime, "scripted", "return 1;", "user-1", "ivm");
+            await addTag(runtime, "scripted", "return 1;", "user-1", { type: "ivm" });
 
             expect(await run("count me")).toContain("You have");
             expect(await run("count all")).toContain("There are");
@@ -447,9 +506,12 @@ describe("Merged Branch Coverage", () => {
             expect(await run("search alpha 2")).toContain("Found **2+** similar tags");
 
             vi.spyOn(runtime.client.tagManager, "search").mockResolvedValueOnce({
-                results: Array.from({
-                    length: 41
-                }, (_, i) => `tag-${i}`),
+                results: Array.from(
+                    {
+                        length: 41
+                    },
+                    (_, i) => `tag-${i}`
+                ),
                 other: {
                     oversized: false
                 }
@@ -582,15 +644,21 @@ describe("Merged Branch Coverage", () => {
             });
 
             vi.spyOn(runtime.client.tagManager, "fullSearch").mockResolvedValueOnce({
-                results: Array.from({
-                    length: 17
-                }, (_, i) => ({
-                    name: `tag-${i}`,
-                    body: "alpha beta gamma"
-                })),
-                ranges: Array.from({
-                    length: 17
-                }, () => [0, 5]),
+                results: Array.from(
+                    {
+                        length: 17
+                    },
+                    (_, i) => ({
+                        name: `tag-${i}`,
+                        body: "alpha beta gamma"
+                    })
+                ),
+                ranges: Array.from(
+                    {
+                        length: 17
+                    },
+                    () => [0, 5]
+                ),
                 other: {
                     oversized: false
                 }
@@ -601,15 +669,21 @@ describe("Merged Branch Coverage", () => {
             });
 
             vi.spyOn(runtime.client.tagManager, "fullSearch").mockResolvedValueOnce({
-                results: Array.from({
-                    length: 17
-                }, (_, i) => ({
-                    name: `tag-extra-${i}`,
-                    body: "alpha beta gamma"
-                })),
-                ranges: Array.from({
-                    length: 17
-                }, () => [0, 5]),
+                results: Array.from(
+                    {
+                        length: 17
+                    },
+                    (_, i) => ({
+                        name: `tag-extra-${i}`,
+                        body: "alpha beta gamma"
+                    })
+                ),
+                ranges: Array.from(
+                    {
+                        length: 17
+                    },
+                    () => [0, 5]
+                ),
                 other: {
                     oversized: true
                 }

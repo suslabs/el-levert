@@ -8,6 +8,7 @@ import { getClient, getConfig, getEmoji, getLogger } from "../../LevertClient.js
 
 import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
 import Benchmark from "../../util/misc/Benchmark.js";
@@ -49,7 +50,7 @@ class CommandHandler extends MessageHandler {
     }
 
     async execute(msg, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         if (!getClient().commandManager.isCommand(msg.content, msg)) {
             return false;
@@ -179,13 +180,16 @@ class CommandHandler extends MessageHandler {
         }
 
         return setTimeout(
-            () => this._sendProcessingReply(context).catch(err => getLogger().error("Could not send processing reply:", err)),
+            () =>
+                this._sendProcessingReply(context).catch(err =>
+                    getLogger().error("Could not send processing reply:", err)
+                ),
             this.commandWaitTime
         );
     }
 
     _stopProcessingTimer(timer) {
-        if (timer != null) {
+        if (timer !== null) {
             clearTimeout(timer);
         }
     }

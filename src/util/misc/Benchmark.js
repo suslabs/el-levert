@@ -46,7 +46,7 @@ class Benchmark {
 
         if (save === null) {
             this.timepoints.delete(key);
-            if (this.timepoints.size < 1) {
+            if (Util.empty(this.timepoints)) {
                 this._stopSweepLoop();
             }
             return NaN;
@@ -58,7 +58,7 @@ class Benchmark {
         }
 
         this.timepoints.delete(key);
-        if (this.timepoints.size < 1) {
+        if (Util.empty(this.timepoints)) {
             this._stopSweepLoop();
         }
 
@@ -89,7 +89,7 @@ class Benchmark {
     static deleteTime(key) {
         key = this._formatTimeKey(key);
         this.timepoints.delete(key);
-        if (this.timepoints.size < 1) {
+        if (Util.empty(this.timepoints)) {
             this._stopSweepLoop();
         }
 
@@ -138,7 +138,7 @@ class Benchmark {
     static getSum(...keys) {
         let sumTimes = [];
 
-        if (keys.length > 0) {
+        if (!Util.empty(keys)) {
             sumTimes = keys
                 .map(key => {
                     key = this._formatTimeKey(key);
@@ -161,7 +161,7 @@ class Benchmark {
             format = true;
         }
 
-        let useSum = includeSum.length > 0,
+        let useSum = !Util.empty(includeSum),
             sum;
 
         if (useSum) {
@@ -412,7 +412,7 @@ class Benchmark {
             }
         }
 
-        if (this.timepoints.size < 1) {
+        if (Util.empty(this.timepoints)) {
             this._stopSweepLoop();
         }
     }

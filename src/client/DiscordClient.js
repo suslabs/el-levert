@@ -193,24 +193,28 @@ class DiscordClient {
             throw new ClientError("Invalid activity config");
         }
 
-        const activityType = typeof config.type === "string" ? config.type.trim().toLowerCase() : "",
-            activityText = typeof config.text === "string" ? config.text.trim() : "";
+        let activityType = String(config.type ?? "")
+                .trim()
+                .toLowerCase(),
+            activityText = String(config.text ?? "").trim();
 
-        const num = DiscordClient._validActivityTypeNames.indexOf(activityType);
-
-        if (num === -1) {
-            throw new ClientError(
-                `Invalid activity type: ${activityType}. Valid types are: ${this.constructor._validActivityTypes.join(" ")}`,
-                activityType
-            );
-        }
+        activityType = TypeTester.normalizeEnum(
+            activityType,
+            DiscordClient._validActivityTypeNames,
+            "activity type",
+            ClientError,
+            {
+                message: value =>
+                    `Invalid activity type: ${value}. Valid types are: ${this.constructor._validActivityTypes.join(" ")}`
+            }
+        );
 
         if (Util.empty(activityText)) {
             throw new ClientError("Invalid activity text");
         }
 
         const presence = this.client.user.setActivity(activityText, {
-                type: num
+                type: DiscordClient._validActivityTypeNames.indexOf(activityType)
             }),
             activity = Util.first(presence.activities);
 
@@ -222,7 +226,7 @@ class DiscordClient {
     }
 
     async fetchGuild(sv_id, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
         ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultGuildOptions);
 
         let guild;
@@ -248,7 +252,7 @@ class DiscordClient {
     }
 
     async fetchMember(sv_id, user_id, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
         ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultMemberOptions);
 
         const guild = await this.fetchGuild(sv_id, options);
@@ -280,7 +284,7 @@ class DiscordClient {
     }
 
     async fetchChannel(ch_id, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
         ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultChannelOptions);
 
         let channel;
@@ -335,7 +339,7 @@ class DiscordClient {
                     });
                 }
 
-                const threadChannel = DiscordClient._threadChannelTypes.has(channel.type),
+                const threadChannel = DiscordUtil.isThreadChannel(channel),
                     perms = (threadChannel ? channel.parent : channel).memberPermissions(member, true);
 
                 if (perms === null || !perms.has(PermissionsBitField.Flags.ViewChannel)) {
@@ -347,7 +351,7 @@ class DiscordClient {
     }
 
     async fetchMessage(ch_id, msg_id, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
         ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultMessageOptions);
 
         const channel = await this.fetchChannel(ch_id, options);
@@ -379,7 +383,7 @@ class DiscordClient {
     }
 
     async fetchMessages(ch_id, options, fetchOptions) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
         ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultMessagesOptions);
 
         const channel = await this.fetchChannel(ch_id, options);
@@ -388,7 +392,7 @@ class DiscordClient {
             return null;
         }
 
-        fetchOptions = TypeTester.isObject(fetchOptions) ? fetchOptions : {};
+        fetchOptions = ObjectUtil.guaranteeObject(fetchOptions);
         ObjectUtil.setValuesWithDefaults(fetchOptions, fetchOptions, this.constructor.defaultMessagesFetchOptions);
         fetchOptions.force = !options.cache;
 
@@ -416,7 +420,7 @@ class DiscordClient {
     }
 
     async findUserById(user_id, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
         ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultUserOptions);
 
         let user;
@@ -442,13 +446,13 @@ class DiscordClient {
     }
 
     async findUsers(query, options, fetchOptions) {
-        query = typeof query === "string" ? query.trim() : "";
+        query = String(query ?? "").trim();
 
         if (Util.empty(query)) {
             throw new ClientError("No query provided");
         }
 
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
         ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultUsersOptions);
 
         let guilds = null;
@@ -485,7 +489,7 @@ class DiscordClient {
             return [];
         }
 
-        fetchOptions = TypeTester.isObject(fetchOptions) ? fetchOptions : {};
+        fetchOptions = ObjectUtil.guaranteeObject(fetchOptions);
         ObjectUtil.setValuesWithDefaults(fetchOptions, fetchOptions, this.constructor.defaultUsersFetchOptions);
 
         const allMembers = (
@@ -526,8 +530,6 @@ class DiscordClient {
 
         this.logger?.info(`The bot is online. Logged in as "${this.botUsername}".`);
     }
-
-    static _threadChannelTypes = new Set([ChannelType.PublicThread, ChannelType.PrivateThread]);
 
     static {
         this._validActivityTypes = Object.entries(ActivityType)

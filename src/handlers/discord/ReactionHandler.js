@@ -7,7 +7,7 @@ import { getClient, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
-import TypeTester from "../../util/TypeTester.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
 import RegexUtil from "../../util/misc/RegexUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import Benchmark from "../../util/misc/Benchmark.js";
@@ -107,7 +107,7 @@ class ReactionHandler extends Handler {
 
         const plan = this._getReactionPlan(msg.content);
 
-        if (plan.words.length > 0) {
+        if (!Util.empty(plan.words)) {
             logWordsUsage(msg, plan.words);
         }
 
@@ -136,11 +136,11 @@ class ReactionHandler extends Handler {
         const plan = this._getReactionPlan(msg.content),
             diff = this._getReactionDiff(msg, plan.emojis);
 
-        if (plan.words.length > 0 && diff.added.length > 0) {
+        if (!Util.empty(plan.words) && !Util.empty(diff.added)) {
             logWordsUsage(msg, plan.words);
         }
 
-        if (plan.parens.total > 0 && diff.added.length > 0) {
+        if (plan.parens.total > 0 && !Util.empty(diff.added)) {
             logParensUsage(msg, plan.parens);
         }
 
@@ -203,7 +203,7 @@ class ReactionHandler extends Handler {
                 ),
                 emojis = ReactionHandler._toStringArray(elem.emoji ?? elem.emojis);
 
-            if (words.length < 1 || emojis.length < 1) {
+            if (Util.empty(words) || Util.empty(emojis)) {
                 continue;
             }
 
@@ -230,7 +230,7 @@ class ReactionHandler extends Handler {
         const left = ReactionHandler._toStringArray(parens?.left),
             right = ReactionHandler._toStringArray(parens?.right);
 
-        this.enableParens = left.length > 0 || right.length > 0;
+        this.enableParens = !Util.empty(left) || !Util.empty(right);
         this.parens = { left, right };
     }
 
@@ -239,7 +239,7 @@ class ReactionHandler extends Handler {
     }
 
     _getWordMatches(str) {
-        if (this._wordRegex == null) {
+        if (this._wordRegex === null) {
             return [];
         }
 
@@ -301,7 +301,7 @@ class ReactionHandler extends Handler {
             if (char === "(") {
                 unmatchedLeft.push(i);
             } else if (char === ")") {
-                if (unmatchedLeft.length > 0) {
+                if (!Util.empty(unmatchedLeft)) {
                     unmatchedLeft.pop();
                 } else {
                     unmatchedRight.push(i);
@@ -336,7 +336,7 @@ class ReactionHandler extends Handler {
     }
 
     _getReactionPlan(content, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         const includeWords = options.words ?? true,
             includeParens = options.parens ?? true;
@@ -399,7 +399,7 @@ class ReactionHandler extends Handler {
     }
 
     async _reactWithPlan(msg, plan) {
-        if (plan.emojis.length < 1) {
+        if (Util.empty(plan.emojis)) {
             return false;
         }
 
@@ -413,8 +413,8 @@ class ReactionHandler extends Handler {
     }
 
     async _reactWithDiff(msg, diff) {
-        const hasRemoved = diff.removed.length > 0,
-            hasAdded = diff.added.length > 0;
+        const hasRemoved = !Util.empty(diff.removed),
+            hasAdded = !Util.empty(diff.added);
 
         if (!hasRemoved && !hasAdded) {
             return false;
@@ -484,7 +484,7 @@ class ReactionHandler extends Handler {
             parens: false
         });
 
-        if (plan.words.length < 1) {
+        if (Util.empty(plan.words)) {
             Benchmark.stopTiming(timeKey, null);
             return false;
         }

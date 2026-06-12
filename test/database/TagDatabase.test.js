@@ -48,13 +48,13 @@ describe("TagDatabase", () => {
         const alias = new Tag({ name: "alias", owner: "u1" });
         alias.aliasTo(plain, "extra");
 
-        const script = new Tag({ name: "script1", body: "console.log(1)", owner: "u2", type: "ivm" });
-        const legacy = new Tag({ name: "legacy", body: "old", owner: "u1", type: "old" });
+        const script = new Tag({ name: "script1", body: "console.log(1)", owner: "u2", meta: { type: "ivm" } });
+        const oldie = new Tag({ name: "oldie", body: "old", owner: "u1", meta: { version: "old" } });
 
         await db.add(plain);
         await db.add(alias);
         await db.add(script);
-        await db.add(legacy);
+        await db.add(oldie);
 
         let rawType = await db.db.get("SELECT hex(type) AS typeHex FROM Tags WHERE name = $name", {
             $name: "script1"
@@ -64,7 +64,7 @@ describe("TagDatabase", () => {
         });
 
         rawType = await db.db.get("SELECT hex(type) AS typeHex FROM Tags WHERE name = $name", {
-            $name: "legacy"
+            $name: "oldie"
         });
         expect(rawType).toEqual({
             typeHex: "00"
@@ -79,7 +79,7 @@ describe("TagDatabase", () => {
         expect(await db.fetch("missing")).toBeNull();
         expect(await db.fetch("plain")).toMatchObject({ body: "body", owner: "u1" });
 
-        await db.edit(new Tag({ name: "plain", body: "updated", owner: "u1", type: "text" }));
+        await db.edit(new Tag({ name: "plain", body: "updated", owner: "u1", meta: { type: "text" } }));
         expect(await db.fetch("plain")).toMatchObject({ body: "updated" });
 
         await db.updateProps(
@@ -89,7 +89,7 @@ describe("TagDatabase", () => {
                 body: "moved",
                 owner: "u2",
                 args: "args",
-                type: "vm2"
+                meta: { type: "vm2" }
             })
         );
         expect(await db.fetch("plain")).toBeNull();
@@ -97,9 +97,9 @@ describe("TagDatabase", () => {
         expect(await db.usageFetch("plain")).toBeNull();
         expect(await db.usageFetch("plain2")).toBe(2);
 
-        const fetchedLegacy = await db.fetch("legacy");
-        await db.chown(fetchedLegacy, "u2");
-        expect(await db.fetch("legacy")).toMatchObject({ owner: "u2" });
+        const fetchedOldie = await db.fetch("oldie");
+        await db.chown(fetchedOldie, "u2");
+        expect(await db.fetch("oldie")).toMatchObject({ owner: "u2" });
 
         const fetchedAlias = await db.fetch("alias");
         await db.rename(fetchedAlias, "alias2");
@@ -111,11 +111,11 @@ describe("TagDatabase", () => {
         await db.updateAliases("plain", "plain2");
         expect(await db.fetch("alias2")).toMatchObject({ aliasName: "plain2" });
 
-        expect(await db.dump()).toEqual(["alias2", "legacy", "plain2", "script1"]);
-        expect(await db.dump(Tag.getFlag([false, "script"]))).toEqual(["alias2", "legacy"]);
-        expect((await db.fullDump()).map(tag => tag.name)).toEqual(["alias2", "legacy", "plain2", "script1"]);
+        expect(await db.dump()).toEqual(["alias2", "oldie", "plain2", "script1"]);
+        expect(await db.dump(Tag.getFlag([false, "script"]))).toEqual(["alias2", "oldie"]);
+        expect((await db.fullDump()).map(tag => tag.name)).toEqual(["alias2", "oldie", "plain2", "script1"]);
         expect(await db.searchWithPrefix("pl")).toEqual(["plain2"]);
-        expect((await db.list("u2")).map(tag => tag.name)).toEqual(["legacy", "plain2", "script1"]);
+        expect((await db.list("u2")).map(tag => tag.name)).toEqual(["oldie", "plain2", "script1"]);
 
         await db.quotaCountSet("u1", 1);
         await db.quotaCountSet("u2", 3);
@@ -185,7 +185,7 @@ describe("TagDatabase", () => {
         await db.quotaCountSet("u2", 5);
 
         await db.add(new Tag({ name: "alpha", body: "body", owner: "u1" }));
-        await db.add(new Tag({ name: "script1", body: "console.log(1)", owner: "u1", type: "ivm" }));
+        await db.add(new Tag({ name: "script1", body: "console.log(1)", owner: "u1", meta: { type: "ivm" } }));
         await db.add(new Tag({ name: "beta", body: "body", owner: "u2" }));
 
         expect(await db.count("u1")).toBe(99);
@@ -273,8 +273,8 @@ describe("TagDatabase", () => {
         });
 
         await db.db.run("INSERT INTO Tags VALUES ($hops, $name, $body, $owner, $args, 0, 0, 1);", {
-            $hops: "legacy,target,final",
-            $name: "legacy",
+            $hops: "chain,target,final",
+            $name: "chain",
             $body: "",
             $owner: "user",
             $args: null
@@ -297,7 +297,7 @@ describe("TagDatabase", () => {
         expect(quotaColumns).toContain("count");
 
         let raw = await db.db.get("SELECT aliasName FROM Tags WHERE name = $name", {
-            $name: "legacy"
+            $name: "chain"
         });
         expect(raw.aliasName).toBe("target");
 
@@ -312,13 +312,13 @@ describe("TagDatabase", () => {
         expect(raw.count).toBe(2);
 
         raw = await db.db.get("SELECT count FROM Usage WHERE name = $name", {
-            $name: "legacy"
+            $name: "chain"
         });
         expect(raw.count).toBe(0);
 
-        const legacy = await db.fetch("legacy");
-        expect(legacy.aliasName).toBe("target");
-        expect(legacy.hops).toEqual(["legacy", "target"]);
+        const chain = await db.fetch("chain");
+        expect(chain.aliasName).toBe("target");
+        expect(chain.hops).toEqual(["chain", "target"]);
         expect(await db.count("user")).toBe(2);
 
         const alias = new Tag({ name: "new_alias", body: "", owner: "user", aliasName: "target" });
@@ -333,7 +333,7 @@ describe("TagDatabase", () => {
         await db.updateAliases("target", "renamed");
 
         raw = await db.db.get("SELECT aliasName FROM Tags WHERE name = $name", {
-            $name: "legacy"
+            $name: "chain"
         });
         expect(raw.aliasName).toBe("renamed");
 
@@ -343,7 +343,7 @@ describe("TagDatabase", () => {
         expect(raw.aliasName).toBe("renamed");
 
         raw = await db.db.get("SELECT hex(type) AS typeHex FROM Tags WHERE name = $name", {
-            $name: "legacy"
+            $name: "chain"
         });
         expect(raw).toEqual({
             typeHex: "01"
@@ -418,6 +418,35 @@ describe("TagDatabase", () => {
         expect(indexes).toEqual(
             expect.arrayContaining(["idx_Tags_owner", "idx_Tags_aliasName", "idx_Tags_type", "idx_Tags_owner_type"])
         );
+
+        const indexSql = Array.from(
+            await db.db.all("SELECT sql FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_Tags_%type';")
+        ).map(row => row.sql);
+
+        expect(indexSql).toEqual(
+            expect.arrayContaining([
+                "CREATE INDEX 'idx_Tags_type' ON 'Tags' ('type')",
+                "CREATE INDEX 'idx_Tags_owner_type' ON 'Tags' ('owner', 'type')"
+            ])
+        );
+        expect(indexSql.join("\n")).not.toContain("blob" + "_to_int");
+
+        const dumpSql = (await fs.readFile(path.join(queryPath, "tag/dump.sql"), "utf8")).replace(/;\s*$/, ""),
+            countSql = (await fs.readFile(path.join(queryPath, "tag/count.sql"), "utf8")).replace(/;\s*$/, ""),
+            typePlan = Array.from(
+                await db.db.all(`EXPLAIN QUERY PLAN ${dumpSql}`, {
+                    $types: JSON.stringify(["03"])
+                })
+            ),
+            ownerTypePlan = Array.from(
+                await db.db.all(`EXPLAIN QUERY PLAN ${countSql}`, {
+                    $user: "user",
+                    $types: JSON.stringify(["03"])
+                })
+            );
+
+        expect(typePlan.some(row => row.detail.includes("idx_Tags_type"))).toBe(true);
+        expect(ownerTypePlan.some(row => row.detail.includes("idx_Tags_type"))).toBe(true);
 
         const raw = await db.db.get("SELECT hex(type) AS typeHex FROM Tags WHERE name = $name", {
             $name: "scripted"

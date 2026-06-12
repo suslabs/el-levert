@@ -1,15 +1,17 @@
 import { escapeMarkdown, bold, codeBlock } from "discord.js";
 
+import TagBitField from "./TagBitField.js";
+import { TagTypes } from "./TagTypes.js";
+import { resolveVMLanguage } from "../vm/VMLanguages.js";
+
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
-import FunctionUtil from "../../util/misc/FunctionUtil.js";
+import TypeTester from "../../util/TypeTester.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
-
-import { TagTypes } from "./TagTypes.js";
-import TagBitField from "./TagBitField.js";
+import FunctionUtil from "../../util/misc/FunctionUtil.js";
 
 import TagError from "../../errors/TagError.js";
 
@@ -23,9 +25,10 @@ class Tag {
         body: "",
         owner: this.invalidValues.owner,
         args: "",
-        aliasName: "",
-        type: TagTypes.defaults.type
+        aliasName: ""
     };
+
+    static dataProps = ["aliasName", "name", "body", "owner", "args", "registered", "lastEdited", "type"];
 
     static from(data, nullable = false, ...args) {
         if (nullable && data === null) {
@@ -36,24 +39,41 @@ class Tag {
     }
 
     static getFlag(names) {
-        names = ArrayUtil.guaranteeArray(names);
+        names = ArrayUtil.guaranteeArray(names, null, true);
 
-        let invert = false;
+        let include = true;
 
         if (typeof names[0] === "boolean") {
-            invert = !names[0];
+            include = names[0];
             names.shift();
         }
 
-        return TagBitField.filter(names, invert);
+        names = names.filter(name => !Util.empty(name));
+        return TagBitField.filter(names, include);
+    }
+
+    static normalizeMeta(meta) {
+        if (!TypeTester.isObject(meta)) {
+            throw new TagError("Invalid tag meta", meta);
+        }
+
+        meta = ObjectUtil.setValuesWithDefaults({}, meta, TagTypes.defaults.meta);
+
+        return {
+            version: this._normalizeVersion(meta.version),
+            type: this._normalizeScriptType(meta.type),
+            language: this._normalizeLanguage(meta.language)
+        };
     }
 
     constructor(data) {
-        let aliasName = data?.aliasName;
+        let aliasName = data?.aliasName,
+            type = data?.type,
+            meta = data?.meta;
 
         if (typeof data?.hops === "string") {
             const hopString = data.hops,
-                hops = hopString.split(Tag._hopsSeparator);
+                hops = hopString.split(this.constructor._hopsSeparator);
 
             if (
                 !Util.nonemptyString(aliasName) &&
@@ -71,6 +91,7 @@ class Tag {
 
         if (data != null) {
             delete data.hops;
+            delete data.meta;
         }
 
         ObjectUtil.setValuesWithDefaults(this, data, this.constructor.defaultValues);
@@ -78,18 +99,15 @@ class Tag {
         this.aliasName = aliasName ?? this.aliasName;
         this._fetched = false;
 
-        if (typeof this.type === "string" || Array.isArray(this.type)) {
-            this.setType(this.type);
-        } else {
-            this.type = this.constructor._normalizeType(this.type);
+        this.type = TagBitField.from(type);
+
+        if (meta != null) {
+            this.setMeta(meta);
         }
 
         if (this.isAlias) {
             this.body = this.constructor.defaultValues.body;
-
-            if (this.isScript) {
-                this.setType(TagTypes.defaults.type);
-            }
+            this.setScriptType(TagTypes.defaults.type);
         }
     }
 
@@ -122,11 +140,11 @@ class Tag {
         return true;
     }
 
-    setBody(body, type) {
+    setBody(body, meta) {
         this.body = body ?? this.constructor.defaultValues.body;
 
-        if (type != null) {
-            this.setType(type);
+        if (meta != null) {
+            this.setMeta(meta);
         }
 
         return true;
@@ -143,86 +161,84 @@ class Tag {
         this.args = args ?? this.constructor.defaultValues.args;
 
         this.body = this.constructor.defaultValues.body;
-
-        if (this.isScript) {
-            this.setType(TagTypes.defaults.type);
-        }
-    }
-
-    hasFlag(name) {
-        Tag._getFlag(name);
-        return this.type.get(TagTypes.flags[name].bit);
-    }
-
-    setFlag(name, value = true) {
-        const config = Tag._getFlag(name);
-        value = Boolean(value);
-
-        for (const dependentName of config.clearedDependents[value]) {
-            this.type.setFlag(dependentName, false);
-        }
-
-        if (value) {
-            for (const required of config.requiredFlags) {
-                this.type.setFlag(required.name, required.value);
-            }
-        }
-
-        this.type.setFlag(name, value);
-        return this.type;
+        this.setScriptType(TagTypes.defaults.type);
     }
 
     getVersion() {
-        for (const version of TagTypes.versions.names) {
-            const propName = `is${Util.capitalize(version)}`;
-
-            if (this[propName]) {
-                return version;
-            }
-        }
+        return TagTypes.versions.entries.find(([, version]) => this.type.hasFlag(version.flag) === version.value)?.[0];
     }
 
     setVersion(version) {
-        if (!Util.nonemptyString(version)) {
-            throw new TagError("Invalid version");
-        } else if (!Object.hasOwn(TagTypes.versions, version)) {
-            throw new TagError("Unknown version: " + version, version);
-        }
+        version = this.constructor._normalizeVersion(version);
 
         const config = TagTypes.versions[version];
-        return this.setFlag(config.flag, config.value);
+        this.type.setFlag(config.flag, config.value);
+
+        return this;
     }
 
-    getType() {
-        if (!this.isScript) {
-            return TagTypes.defaults.type;
-        }
-
-        for (const type of TagTypes.types.specialScript) {
-            if (this[`is${Util.capitalize(type)}`]) {
-                return type;
-            }
-        }
-
-        return TagTypes.defaults.scriptType;
+    getScriptType() {
+        return TagTypes.types.entries.find(([, type]) =>
+            type.flags.every(([flag, value]) => this.type.hasFlag(flag) === value)
+        )?.[0];
     }
 
-    setType(type) {
-        const normalized = this.constructor._parseType(type),
-            typeConfig = TagTypes.types[normalized.type];
+    setScriptType(type) {
+        type = this.constructor._normalizeScriptType(type);
 
-        if (typeConfig == null) {
-            throw new TagError("Unknown type: " + normalized.type, normalized.type);
+        const config = TagTypes.types[type],
+            specialFlags = TagTypes.types.specialScript.map(name => TagTypes.types[name].flag).filter(Boolean);
+
+        this.type.setFlags(specialFlags, false);
+
+        if (!config.script) {
+            this.setScriptLanguage(TagTypes.defaults.language);
         }
 
-        this.type = TagBitField.from();
-        this.setVersion(normalized.version);
+        this.type.setFlag("script", config.script);
 
-        for (const [flagName, flagValue] of Object.entries(typeConfig.flags)) {
-            this.setFlag(flagName, flagValue);
+        if (typeof config.flag !== "undefined") {
+            this.type.setFlag(config.flag, true);
         }
 
-        return this.type;
+        return this;
+    }
+
+    getScriptLanguage() {
+        return TagTypes.languages.matches.find(([, language]) =>
+            language.flags.every(([flag, value]) => this.type.hasFlag(flag) === value)
+        )?.[0];
+    }
+
+    setScriptLanguage(language) {
+        language = Tag._normalizeLanguage(language);
+
+        const config = TagTypes.languages[language];
+        this.type.setFlags(TagTypes.languages.flags, false);
+
+        if (typeof config.flag !== "undefined") {
+            this.type.setFlag(config.flag, config.value);
+        }
+
+        return this;
+    }
+
+    getMeta() {
+        return {
+            version: this.getVersion(),
+            type: this.getScriptType(),
+            language: this.getScriptLanguage()
+        };
+    }
+
+    setMeta(meta) {
+        meta = Tag.normalizeMeta(meta);
+
+        this.setVersion(meta.version);
+        this.setScriptType(meta.type);
+        this.setScriptLanguage(meta.language);
+
+        return this;
     }
 
     getData(prefix = "", nullable = true, props = this.constructor.dataProps) {
@@ -230,7 +246,7 @@ class Tag {
             data = ObjectUtil.filterObject(this, key => props.includes(key));
 
         if (props.includes("type")) {
-            data.type = db ? this.type.toBuffer() : this.type.toNumber();
+            data.type = db ? this.type.toBuffer() : this.type.toHex();
         }
 
         if (nullable) {
@@ -248,7 +264,7 @@ class Tag {
     }
 
     async getOwner(username = true, onlyMembers = false, sv_id) {
-        if (Util.empty(this.owner) || this.owner === Tag.invalidValues.owner) {
+        if (Util.empty(this.owner) || this.owner === this.constructor.invalidValues.owner) {
             return username ? "invalid" : null;
         }
 
@@ -315,7 +331,7 @@ class Tag {
             args = this.args.trim();
 
         if (this.isScript) {
-            const formattedType = discord ? bold(this.getType()) : this.getType(),
+            const formattedType = discord ? bold(this.getScriptType()) : this.getScriptType(),
                 header = `Script type is ${formattedType}.`;
 
             return discord
@@ -395,39 +411,52 @@ class Tag {
                 args,
                 ...this.getTimeInfo(false),
                 ...this.getTimeInfo(true),
-                type: this.getType(),
+                type: this.getScriptType(),
+                language: this.getScriptLanguage(),
                 version: this.getVersion(),
-                typeInt: this.type.toNumber()
+                typeData: this.type.toHex()
             };
 
             return info;
         })();
     }
 
-    _setAliasProps(hops, args) {
-        if (Array.isArray(hops) && !Util.empty(hops)) {
-            this._hops = hops;
-            this.aliasName = hops[1] ?? this.constructor.defaultValues.aliasName;
-        }
-
-        const argsList = ArrayUtil.guaranteeArray(args ?? []).filter(arg => !Util.empty(arg));
-        this.args = argsList.join(Tag._argsSeparator);
-
-        this._fetched = true;
-    }
-
-    _setOriginalProps(tag) {
-        this.name = tag.name;
-        this.owner = tag.owner;
-    }
-
-    static dataProps = ["aliasName", "name", "body", "owner", "args", "registered", "lastEdited", "type"];
     static _nullableDataProps = ["aliasName", "args"];
 
     static _hopsSeparator = ",";
     static _argsSeparator = " ";
 
     static _timeProps = ["registered", "lastEdited"];
+
+    static _normalizeMetaValue(value, options) {
+        const { name, valid, unknown, ...enumOptions } = options;
+
+        enumOptions.unknown = unknown ?? true;
+        return TypeTester.normalizeEnum(value, valid, name, TagError, enumOptions);
+    }
+
+    static _normalizeVersion(version) {
+        return this._normalizeMetaValue(version, {
+            name: "version",
+            valid: TagTypes.versions.valid
+        });
+    }
+
+    static _normalizeScriptType(type) {
+        return this._normalizeMetaValue(type, {
+            name: "type",
+            valid: TagTypes.types.valid
+        });
+    }
+
+    static _normalizeLanguage(language) {
+        return this._normalizeMetaValue(language, {
+            name: "language",
+            normalize: resolveVMLanguage,
+            valid: TagTypes.languages.valid,
+            unknown: "Unsupported script"
+        });
+    }
 
     static _setupDefaultValues() {
         const invalidTimes = Object.fromEntries(this._timeProps.map(prop => [prop, 0]));
@@ -436,60 +465,6 @@ class Tag {
         for (const prop of this._timeProps) {
             this.defaultValues[prop] ??= invalidTimes[prop];
         }
-    }
-
-    static _getFlag(name, strict = true) {
-        if (!Util.nonemptyString(name)) {
-            if (!strict) {
-                return false;
-            }
-
-            throw new TagError("Invalid flag");
-        }
-
-        const config = TagTypes.flags[name];
-
-        if (config == null) {
-            throw new TagError("Unknown flag: " + name, name);
-        }
-
-        return config;
-    }
-
-    static _parseType(input) {
-        let type = input,
-            version = TagTypes.defaults.version;
-
-        if (Array.isArray(input)) {
-            if (input.length > 2) {
-                throw new TagError("Invalid type", input);
-            }
-
-            [type, version] = input;
-        } else if (TagTypes.versions.valid.has(input)) {
-            type = TagTypes.defaults.type;
-            version = input;
-        }
-
-        if (!Util.nonemptyString(type)) {
-            throw new TagError("Invalid type");
-        }
-
-        if (!TagTypes.versions.valid.has(version)) {
-            throw new TagError("Unknown version: " + version, version);
-        }
-
-        return { type, version };
-    }
-
-    static _normalizeType(type) {
-        const normalized = type instanceof TagBitField ? type.clone() : TagBitField.from(type);
-
-        if (normalized.invert) {
-            throw new TagError("Invalid type", type);
-        }
-
-        return normalized;
     }
 
     static _setTimeFunc(prop) {
@@ -512,7 +487,7 @@ class Tag {
         const getFunc = (suffix, val) => {
             const funcName = `is${suffix}${Util.capitalize(name)}`,
                 func = function hasFlag() {
-                    return this.hasFlag(flagName) === val;
+                    return this.type.hasFlag(flagName) === val;
                 };
 
             return {
@@ -534,7 +509,13 @@ class Tag {
 
         const setFunc = (prefix, val) => {
             const funcName = `${prefix}set${Util.capitalize(name)}`,
-                func = FunctionUtil.bindArgs(Tag.prototype.setFlag, [flagName, val]);
+                func = FunctionUtil.bindArgs(
+                    function setFlag(flagName, val) {
+                        this.type.setFlag(flagName, val);
+                        return this;
+                    },
+                    [flagName, val]
+                );
 
             return {
                 propName: funcName,
@@ -579,15 +560,32 @@ class Tag {
             }
         }
 
-        for (const [flag, config] of TagTypes.versions.entries) {
-            this._processFlagConfig(flag, "get", [config.flag, config.value]);
-            this._processFlagConfig(flag, "set", [config.flag, config.value]);
+        for (const [version, config] of TagTypes.versions.entries) {
+            this._processFlagConfig(version, "get", [config.flag, config.value]);
+            this._processFlagConfig(version, "set", [config.flag, config.value]);
         }
     }
 
     static {
         this._setupDefaultValues();
         this._registerFlagFuncs();
+    }
+
+    _setAliasProps(hops, args) {
+        if (Array.isArray(hops) && !Util.empty(hops)) {
+            this._hops = hops;
+            this.aliasName = hops[1] ?? this.constructor.defaultValues.aliasName;
+        }
+
+        const argsList = ArrayUtil.guaranteeArray(args ?? []).filter(arg => !Util.empty(arg));
+        this.args = argsList.join(this.constructor._argsSeparator);
+
+        this._fetched = true;
+    }
+
+    _setOriginalProps(tag) {
+        this.name = tag.name;
+        this.owner = tag.owner;
     }
 }
 

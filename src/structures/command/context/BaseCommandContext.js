@@ -1,8 +1,8 @@
-import TypeTester from "../../../util/TypeTester.js";
+import ObjectUtil from "../../../util/ObjectUtil.js";
 
 class BaseCommandContext {
     constructor(data) {
-        data = TypeTester.isObject(data) ? data : {};
+        data = ObjectUtil.guaranteeObject(data);
         this.data = data;
 
         this.options = data.options ?? {};
@@ -28,7 +28,7 @@ class BaseCommandContext {
     }
 
     clone(overrides) {
-        overrides = TypeTester.isObject(overrides) ? overrides : {};
+        overrides = ObjectUtil.guaranteeObject(overrides);
 
         return new this.constructor({
             ...this,
@@ -37,7 +37,7 @@ class BaseCommandContext {
     }
 
     withArgs(argsText, overrides) {
-        overrides = TypeTester.isObject(overrides) ? overrides : {};
+        overrides = ObjectUtil.guaranteeObject(overrides);
 
         return this.clone({
             ...overrides,

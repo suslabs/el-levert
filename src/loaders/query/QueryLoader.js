@@ -5,13 +5,14 @@ import QueryFileLoader from "./QueryFileLoader.js";
 
 import ArrayUtil from "../../util/ArrayUtil.js";
 import TypeTester from "../../util/TypeTester.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
 import Util from "../../util/Util.js";
 
 import { LoadStatus } from "../LoadStatus.js";
 
 class QueryLoader extends DirectoryLoader {
     constructor(dirPath, logger, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         super("query", dirPath, logger, {
             throwOnFailure: true,
@@ -66,7 +67,7 @@ class QueryLoader extends DirectoryLoader {
 
         await this._finalizeQueries();
 
-        if (this.db == null) {
+        if (this.db === null) {
             this.queries = this.queryStrings;
             return this.queries;
         }
@@ -187,7 +188,7 @@ class QueryLoader extends DirectoryLoader {
     }
 
     _rewriteQueries() {
-        if (this.db == null || typeof this.rewriteFunc !== "function") {
+        if (this.db === null || typeof this.rewriteFunc !== "function") {
             return;
         }
 

@@ -62,7 +62,7 @@ class ReminderManager extends DBManager {
         }
 
         let oversized;
-        remMsg = typeof remMsg === "string" ? remMsg.trim() : "";
+        remMsg = String(remMsg ?? "").trim();
 
         if (Util.empty(remMsg)) {
             msg = "Invalid reminder message";

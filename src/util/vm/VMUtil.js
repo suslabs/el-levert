@@ -37,7 +37,7 @@ let VMUtil = {
 
             if (seenPath) {
                 const joinedPath = seenPath.join(".");
-                return `[Circular reference${joinedPath.length < 1 ? "" : `: ${joinedPath}`}]`;
+                return `[Circular reference${Util.empty(joinedPath) ? "" : `: ${joinedPath}`}]`;
             }
 
             pathMap.set(val, path);

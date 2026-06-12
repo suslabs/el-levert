@@ -1,13 +1,13 @@
 import DirectoryLoader from "../DirectoryLoader.js";
 import MigrationFileLoader from "./MigrationFileLoader.js";
 
-import TypeTester from "../../util/TypeTester.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
 
 import { LoadStatus } from "../LoadStatus.js";
 
 class MigrationLoader extends DirectoryLoader {
     constructor(dirPath, logger, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         super("migration", dirPath, logger, {
             throwOnFailure: true,

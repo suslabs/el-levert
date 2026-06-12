@@ -4,6 +4,8 @@ import path from "node:path";
 import getFormat from "./getFormat.js";
 import getGlobalFormat from "./GlobalFormat.js";
 
+import Util from "../util/Util.js";
+
 import LoggerError from "../errors/LoggerError.js";
 
 function getFilePath(logFile, level) {
@@ -71,7 +73,7 @@ function getDefaultMeta(config) {
         ...(config.name == null ? {} : { service: config.name })
     };
 
-    if (Object.keys(meta).length < 1) {
+    if (Util.empty(Object.keys(meta))) {
         return undefined;
     }
 

@@ -1,5 +1,5 @@
 import TextCommandContext from "./TextCommandContext.js";
-import TypeTester from "../../../util/TypeTester.js";
+import ObjectUtil from "../../../util/ObjectUtil.js";
 
 class CommandContext extends TextCommandContext {
     constructor(data) {
@@ -19,14 +19,14 @@ class CommandContext extends TextCommandContext {
     }
 
     async reply(data, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         this.markReplied();
         return await this.handler?.contextReply?.(this, data, options);
     }
 
     async edit(data, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         this.markReplied();
         return await this.handler?.editFromContext?.(this, data, options);

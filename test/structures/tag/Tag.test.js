@@ -25,81 +25,101 @@ afterEach(async () => {
 });
 
 describe("Tag", () => {
-    test("validates flag helpers and tag types", () => {
-        expect(Tag.getFlag("script").toNumber()).toBeGreaterThan(0);
-        expect(Tag.getFlag([false, "script"]).toNumber()).toBeLessThan(0);
-        expect(TagBitField.is(Tag.getFlag("script"))).toBe(true);
-        expect(TagBitField.isFilter(Tag.getFlag([false, "script"]))).toBe(true);
-        expect(TagBitField.query(Tag.getFlag([false, "script"]))).toEqual({
-            $flag: -2
-        });
+    test("bridges tag data to the tag type object", () => {
+        const scriptFilter = Tag.getFlag("script"),
+            excludedScriptFilter = Tag.getFlag([false, "script"]);
+
+        expect(scriptFilter).toBeInstanceOf(TagBitField);
+        expect(scriptFilter.isEmpty()).toBe(false);
+        expect(excludedScriptFilter.include).toBe(false);
         expect(() => Tag.getFlag("unknown")).toThrow("Unknown flag");
 
         const tag = new Tag({ name: "x", body: "x" });
         expect(Tag.from(tag)).toBe(tag);
         expect(Tag.from(null, true)).toBe(null);
-        expect(() => tag.setType(["a", "b", "c"])).toThrow("Invalid type");
-        expect(() => new Tag({ name: "x", body: "x", type: "unknown" })).toThrow("Unknown type");
-        expect(() => tag.setType(["text", "unknown"])).toThrow("Unknown version");
+        expect(Tag.normalizeMeta({ type: "ivm", language: "typescript" })).toEqual({
+            version: "new",
+            type: "ivm",
+            language: "ts"
+        });
+        expect(() => new Tag({ name: "x", body: "x", meta: "unknown" })).toThrow("Invalid tag meta");
+        expect(() => tag.setMeta(null)).toThrow("Invalid tag meta");
+        expect(() => new Tag({ name: "x", body: "x", meta: { type: "unknown" } })).toThrow("Unknown type");
+        expect(() => tag.setMeta({ type: "text", version: "unknown" })).toThrow("Unknown version");
 
-        const numeric = new Tag({ name: "numeric", body: "x", type: 3 });
-        expect(typeof numeric.type).toBe("object");
-        expect(numeric.type.toNumber()).toBe(3);
-        expect(numeric.getData().type).toBe(3);
-        expect(numeric.getData("$").$type).toEqual(Buffer.from([3]));
-
-        const blob = new Tag({ name: "blob", body: "x", type: Buffer.from([6]) });
-        expect(blob.getType()).toBe("vm2");
-        expect(blob.isOld).toBe(true);
-        expect(blob.isVm2).toBe(true);
-        blob.unsetVm2();
-        expect(blob.isVm2).toBe(false);
-        expect(blob.isScript).toBe(true);
-
-        const toggled = new Tag({ name: "toggle", body: "x" });
-        toggled.setVm2();
-        expect(toggled.isScript).toBe(true);
-        expect(toggled.isVm2).toBe(true);
-
-        expect(() => new Tag({ name: "bad", body: "x", type: Buffer.from([4]) })).toThrow("Invalid type");
-        expect(() => new Tag({ name: "wide", body: "x", type: Buffer.from([1, 2]) })).toThrow("Invalid type");
+        const stored = new Tag({ name: "stored", body: "x", type: Buffer.from([3]) });
+        expect(stored.type).toBeInstanceOf(TagBitField);
+        expect(stored.getData().type).toBe("03");
+        expect(stored.getData("$").$type).toEqual(Buffer.from([3]));
     });
 
-    test("validates tag bitfield candidates before commit", () => {
-        const type = TagBitField.from(6);
-
-        expect(() => type.set(1, false)).toThrow("Invalid type");
-        expect(type.toNumber()).toBe(6);
-        expect(type.get(1)).toBe(true);
-        expect(type.get(2)).toBe(true);
-
-        expect(() => TagBitField.from(6).setAll([false], 1)).toThrow("Invalid type");
-        expect(() => TagBitField.from(Buffer.from([4]))).toThrow("Invalid type");
-        expect(TagBitField.filter(-2).invert).toBe(true);
-    });
-
-    test("setType(text) clears script flags", () => {
-        const tag = new Tag({ name: "script", body: "return 1", type: "ivm" });
+    test("delegates script type changes to the tag type object", () => {
+        const tag = new Tag({ name: "script", body: "return 1", meta: { type: "ivm" } });
 
         expect(tag.isScript).toBe(true);
-        tag.setType(TagTypes.defaults.type);
+        tag.setScriptLanguage("ts");
+        expect(tag.getScriptLanguage()).toBe("ts");
+        tag.setScriptType(TagTypes.defaults.type);
 
         expect(tag.isScript).toBe(false);
-        expect(tag.getType()).toBe(TagTypes.defaults.type);
+        expect(tag.getScriptLanguage()).toBeUndefined();
+        expect(tag.getScriptType()).toBe(TagTypes.defaults.type);
+    });
+
+    test("keeps script language and generated accessors in sync", () => {
+        const ts = new Tag({
+            name: "ts",
+            body: "const x: number = 1;",
+            meta: {
+                type: "ivm",
+                language: "ts"
+            }
+        });
+
+        expect(ts.getScriptType()).toBe("ivm");
+        expect(ts.getScriptLanguage()).toBe("ts");
+        expect(ts.isTs).toBe(true);
+        expect(ts.getMeta()).toEqual({
+            version: "new",
+            type: "ivm",
+            language: "ts"
+        });
+
+        ts.setScriptType("vm2");
+        expect(ts.getScriptType()).toBe("vm2");
+        expect(ts.getScriptLanguage()).toBe("ts");
+        expect(ts.isScript).toBe(true);
+        expect(ts.isVm2).toBe(true);
+        ts.unsetVm2();
+        expect(ts.getScriptType()).toBe("ivm");
+        expect(() => ts.setScriptType("bad")).toThrow("Unknown type");
+        expect(ts.getScriptType()).toBe("ivm");
+        expect(ts.getScriptLanguage()).toBe("ts");
+
+        ts.setMeta({
+            type: "ivm",
+            language: "typescript"
+        });
+        expect(ts.getScriptType()).toBe("ivm");
+        expect(ts.getScriptLanguage()).toBe("ts");
+
+        expect(() => ts.setMeta({ type: "ivm", language: "py" })).toThrow("Unsupported script language");
+        expect(() => ts.setMeta({ type: "script" })).toThrow("Unknown type");
+        expect(() => ts.setMeta({ type: "ts" })).toThrow("Unknown type");
     });
 
     test("aliases to script tags are stored as text aliases", () => {
-        const target = new Tag({ name: "target", body: "return 1", type: "ivm" });
-        const alias = new Tag({ name: "alias", type: "ivm" });
+        const target = new Tag({ name: "target", body: "return 1", meta: { type: "ivm" } });
+        const alias = new Tag({ name: "alias", meta: { type: "ivm" } });
 
         alias.aliasTo(target);
 
         expect(alias.isAlias).toBe(true);
         expect(alias.isScript).toBe(false);
-        expect(alias.getType()).toBe(TagTypes.defaults.type);
+        expect(alias.getScriptType()).toBe(TagTypes.defaults.type);
     });
 
-    test("normalizes legacy hops and prefixes serialized fields", () => {
+    test("normalizes hop input and prefixes serialized fields", () => {
         const alias = new Tag({ name: "alias", body: "", hops: "alias,target,final" });
         const plain = new Tag({ name: "plain", body: "body" });
 
@@ -131,7 +151,7 @@ describe("Tag", () => {
         });
     });
 
-    test("reads legacy scalar hops aliases back as aliases", () => {
+    test("reads scalar hop aliases back as aliases", () => {
         const alias = new Tag({ name: "alias", body: "", hops: "target" });
         const bodyTag = new Tag({ name: "plain", body: "body", hops: "plain" });
 
@@ -166,7 +186,7 @@ describe("Tag", () => {
 
         expect(plain.setName("renamed")).toBe(true);
         expect(plain.setOwner("found")).toBe(true);
-        expect(plain.setBody("next", TagTypes.defaults.type)).toBe(true);
+        expect(plain.setBody("next", { type: TagTypes.defaults.type })).toBe(true);
         expect(plain.getSize()).toBeGreaterThan(0);
         expect(await plain.getOwner()).toBe("alice(ally)");
         expect(await plain.getOwner(false)).toEqual({
@@ -192,17 +212,19 @@ describe("Tag", () => {
             expect.objectContaining({
                 name: "renamed",
                 owner: "alice(ally)",
-                type: "text"
+                type: "text",
+                language: undefined,
+                typeData: "01"
             })
         );
 
-        const same = new Tag({ name: "same", body: "next", owner: "found", type: "text" });
-        const alias = new Tag({ name: "alias", aliasName: "renamed", args: "a b", type: "text" });
+        const same = new Tag({ name: "same", body: "next", owner: "found", meta: { type: "text" } });
+        const alias = new Tag({ name: "alias", aliasName: "renamed", args: "a b", meta: { type: "text" } });
         alias._setAliasProps(["alias", "renamed"], ["a", "", "b"]);
         alias._setOriginalProps(plain);
 
         expect(alias.name).toBe("renamed");
-        expect(alias.sameAlias(new Tag({ name: "other", aliasName: "renamed", type: "text" }))).toBe(true);
+        expect(alias.sameAlias(new Tag({ name: "other", aliasName: "renamed", meta: { type: "text" } }))).toBe(true);
         expect(plain.sameBody(same)).toBe(true);
         expect(plain.sameType(same)).toBe(true);
         expect(plain.equivalent(same)).toBe(true);
@@ -210,8 +232,8 @@ describe("Tag", () => {
     });
 
     test("formats script and alias raw output branches", () => {
-        const script = new Tag({ name: "script", body: "console.log(1)", type: "ivm" });
-        script.setType(["ivm", "new"]);
+        const script = new Tag({ name: "script", body: "console.log(1)", meta: { type: "ivm" } });
+        script.setMeta({ type: "ivm", version: "new" });
         expect(script.getVersion()).toBe("new");
         expect(() => script.setVersion("bad")).toThrow("Unknown version");
         expect(script.getRaw()).toContain("Script type is");
@@ -224,7 +246,7 @@ describe("Tag", () => {
             name: "alias",
             aliasName: "target",
             args: "x ".repeat(400),
-            type: "text"
+            meta: { type: "text" }
         });
         expect(alias.getRaw()).toContain("with args");
         expect(alias.getRaw(true)).toMatchObject({ files: expect.any(Array) });

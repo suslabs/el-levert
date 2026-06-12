@@ -1,4 +1,6 @@
-import TagBitField from "./TagBitField.js";
+import { VMLanguages } from "../vm/VMLanguages.js";
+
+import Util from "../../util/Util.js";
 
 let TagTypes = {
     flags: {
@@ -14,6 +16,13 @@ let TagTypes = {
         },
         vm2: {
             bit: 2,
+            accessors: "write",
+            requires: {
+                script: true
+            }
+        },
+        ts: {
+            bit: 3,
             accessors: "write",
             requires: {
                 script: true
@@ -34,28 +43,31 @@ let TagTypes = {
 
     types: {
         text: {
-            script: false,
-            flags: {}
+            script: false
         },
         ivm: {
-            script: true,
-            flags: {
-                script: true
-            }
+            script: true
         },
         vm2: {
             script: true,
-            flags: {
-                script: true,
-                vm2: true
-            }
+            flag: "vm2"
+        }
+    },
+
+    languages: {
+        [VMLanguages.js]: {},
+        [VMLanguages.ts]: {
+            flag: "ts",
+            value: true
         }
     },
 
     defaults: {
         type: "text",
         version: "new",
-        scriptType: "ivm"
+        scriptType: "ivm",
+        language: VMLanguages.js,
+        flags: new Map()
     }
 };
 
@@ -65,76 +77,97 @@ function addEntries(target) {
     return target.entries;
 }
 
-function addAccessGroups(flags) {
-    flags.readonly = [];
-    flags.writable = [];
-
-    for (const [name, config] of flags.entries) {
-        if (config.accessors === "read") {
-            flags.readonly.push(name);
-        } else if (config.accessors === "write") {
-            flags.writable.push(name);
-        }
+function addValidNames(target, key = "") {
+    if (Util.empty(key)) {
+        target.valid = new Set(target.names);
+    } else {
+        target[`valid${Util.capitalize(key)}`] = new Set(target[key]);
     }
 }
 
 function addFlagMetadata(flags) {
     addEntries(flags);
+    addValidNames(flags);
 
-    flags.bits = {};
-    flags.requires = {};
-    flags.dependents = Object.fromEntries(flags.names.map(name => [name, []]));
-
-    for (const [name, config] of flags.entries) {
-        flags.bits[name] = config.bit;
-        flags.requires[name] = Object.entries(config.requires).map(([requiredName, value]) => ({
-            name: requiredName,
-            value
-        }));
-
-        for (const required of flags.requires[name]) {
-            flags.dependents[required.name]?.push({
-                name,
-                value: required.value
-            });
-        }
-    }
-
-    flags.clearedDependents = Object.fromEntries(
-        flags.names.map(name => [
-            name,
-            {
-                false: flags.dependents[name].filter(({ value }) => value !== false).map(({ name }) => name),
-                true: flags.dependents[name].filter(({ value }) => value !== true).map(({ name }) => name)
-            }
-        ])
-    );
-
-    for (const [name, config] of flags.entries) {
-        config.requiredFlags = flags.requires[name];
-        config.clearedDependents = flags.clearedDependents[name];
-    }
-
-    addAccessGroups(flags);
+    flags.bits = new Map(flags.entries.map(([name, flag]) => [flag.bit, name]));
 }
 
 function addVersionMetadata(versions) {
     addEntries(versions);
-    versions.valid = new Set(versions.names);
+    addValidNames(versions);
 }
 
 function addTypeMetadata(types, defaults) {
     addEntries(types);
-    types.script = types.entries.filter(([, config]) => config.script).map(([name]) => name);
-    types.validScript = new Set(types.script);
+    addValidNames(types);
+
+    types.script = types.entries.filter(([, type]) => type.script).map(([name]) => name);
     types.specialScript = types.script.filter(type => type !== defaults.scriptType);
+    addValidNames(types, "script");
+
+    const specialFlags = types.specialScript.map(name => types[name].flag);
+
+    for (const [, type] of types.entries) {
+        type.flags = [["script", type.script]];
+
+        if (type.script) {
+            for (const flag of specialFlags) {
+                type.flags.push([flag, type.flag === flag]);
+            }
+        }
+    }
+}
+
+function addLanguageMetadata(languages) {
+    addEntries(languages);
+    addValidNames(languages);
+
+    languages.flags = languages.entries.map(([, language]) => language.flag).filter(Boolean);
+
+    for (const [, language] of languages.entries) {
+        language.flags = [["script", true]];
+
+        if (typeof language.flag !== "undefined") {
+            language.flags.push([language.flag, language.value]);
+        }
+    }
+
+    languages.matches = [...languages.entries].sort(([, a], [, b]) => b.flags.length - a.flags.length);
+}
+
+function addDefaultMetadata(defaults, versions, types, languages) {
+    const type = types[defaults.type],
+        version = versions[defaults.version],
+        language = languages[defaults.language];
+
+    defaults.meta = {
+        version: defaults.version,
+        type: defaults.type,
+        language: defaults.language
+    };
+
+    const flags = [
+        [version.flag, version.value],
+        ["script", type.script]
+    ];
+
+    if (typeof type.flag !== "undefined") {
+        flags.push([type.flag, true]);
+    }
+
+    if (typeof language.flag !== "undefined") {
+        flags.push([language.flag, language.value]);
+    }
+
+    defaults.flags = new Map(flags);
 }
 
 addFlagMetadata(TagTypes.flags);
 addVersionMetadata(TagTypes.versions);
 addTypeMetadata(TagTypes.types, TagTypes.defaults);
+addLanguageMetadata(TagTypes.languages);
 
-TagBitField.configure(TagTypes);
+addDefaultMetadata(TagTypes.defaults, TagTypes.versions, TagTypes.types, TagTypes.languages);
 
 TagTypes = Object.freeze(TagTypes);
 export { TagTypes };

@@ -1,7 +1,7 @@
 import { getLogger } from "../../../LevertClient.js";
 
 import Util from "../../../util/Util.js";
-import TypeTester from "../../../util/TypeTester.js";
+import ObjectUtil from "../../../util/ObjectUtil.js";
 import VMUtil from "../../../util/vm/VMUtil.js";
 
 import VMError from "../../../errors/VMError.js";
@@ -10,7 +10,7 @@ class IsolateInspector {
     constructor(enabled, options) {
         this.enabled = enabled;
 
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
         this.options = options;
 
         if (enabled && typeof options.sendReply !== "function") {

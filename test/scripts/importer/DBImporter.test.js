@@ -153,14 +153,14 @@ describe("DBImporter", () => {
 
         try {
             const importer = new DBImporter(liveRuntime.client.tagManager, logger),
-                alpha = await liveRuntime.client.tagManager.add("alpha", "body", "u1", "text");
+                alpha = await liveRuntime.client.tagManager.add("alpha", "body", "u1", { type: "text" });
 
             await liveRuntime.client.tagManager.alias(null, alpha, "", {
                 name: "beta",
                 owner: "u1"
             });
-            await liveRuntime.client.tagManager.add("gamma", "console.log(1)", "u2", "ivm");
-            await liveRuntime.client.tagManager.add("delta", "body", "u3", "text");
+            await liveRuntime.client.tagManager.add("gamma", "console.log(1)", "u2", { type: "ivm" });
+            await liveRuntime.client.tagManager.add("delta", "body", "u3", { type: "text" });
             await liveRuntime.client.tagManager.execute(await liveRuntime.client.tagManager.fetch("alpha"), "");
             await liveRuntime.client.tagManager.execute(await liveRuntime.client.tagManager.fetch("delta"), "");
             await liveRuntime.client.tagManager.delete(await liveRuntime.client.tagManager.fetch("delta"));

@@ -1,5 +1,6 @@
 import Util from "../Util.js";
 import TypeTester from "../TypeTester.js";
+import ObjectUtil from "../ObjectUtil.js";
 import ArrayUtil from "../ArrayUtil.js";
 
 const Codegen = {
@@ -220,7 +221,7 @@ const Codegen = {
         name = String(name ?? "").trim();
         args = ArrayUtil.guaranteeArray(args, null, true);
 
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         const cls = options.class ?? false,
             arrow = options.arrow ?? false;

@@ -43,9 +43,28 @@ describe("Util", () => {
         expect(Util.removeStringRange("abcdef", 2, 2)).toBe("abef");
         expect(Util.replaceStringRange("abcdef", "XY", 2, 2)).toBe("abXYef");
         expect(Util.maskRanges("abcdef", [[1, 3]])).toBe("a  def");
-        expect(Util.maskRanges("abcdef", [[4, 6], [1, 3]])).toBe("a  d  ");
-        expect(Util.maskRanges("abcdef", [[1, 4], [3, 5]])).toBe("a    f");
-        expect(Util.maskRanges("abcdef", [[-2, 2], [8, 10]], "_")).toBe("__cdef");
+        expect(
+            Util.maskRanges("abcdef", [
+                [4, 6],
+                [1, 3]
+            ])
+        ).toBe("a  d  ");
+        expect(
+            Util.maskRanges("abcdef", [
+                [1, 4],
+                [3, 5]
+            ])
+        ).toBe("a    f");
+        expect(
+            Util.maskRanges(
+                "abcdef",
+                [
+                    [-2, 2],
+                    [8, 10]
+                ],
+                "_"
+            )
+        ).toBe("__cdef");
         expect(Util.findNthCharacter("a-b-c-d", "-", 3)).toBe(5);
         expect(Util.hasPrefix(["pre", "x"], "prefix")).toBe(true);
     });
@@ -105,6 +124,9 @@ describe("Util", () => {
         expect(Util.smallRound(0.000123, 2)).toBe(0.0001);
         expect(Util.approxEquals(0.1 + 0.2, 0.3, 1e-10)).toBe(true);
         expect(Util.countDigits(-255, 16)).toBe(2);
+        expect(Util.numberToBytes(0x1234)).toEqual(new Uint8Array([0x34, 0x12]));
+        expect(Util.numberToBytes(-1)).toBeNull();
+        expect(Util.bytesToNumber(new Uint8Array([0x34, 0x12]))).toBe(0x1234);
         expect(Util.validUrl("https://example.com/test")).toBe(true);
         expect(() => Util.timeDelta(10n, 42n, 2n)).toThrow("Cannot convert a BigInt value to a number");
         expect(Util.duration(65_000)).toEqual({ second: 65 });

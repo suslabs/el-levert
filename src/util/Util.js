@@ -1,11 +1,12 @@
 import fs from "node:fs/promises";
 
-import TypeTester from "./TypeTester.js";
-
 import { LengthTypes } from "./LengthTypes.js";
 import { CountTypes } from "./CountTypes.js";
 
 import { truthyStrings, falsyStrings } from "./BoolStrings.js";
+
+import TypeTester from "./TypeTester.js";
+import ObjectUtil from "./ObjectUtil.js";
 
 import UtilError from "../errors/UtilError.js";
 
@@ -233,7 +234,7 @@ let Util = {
 
         const content = str.slice(leading.length, str.length - trailing.length);
 
-        if (content.length < 1) {
+        if (Util.empty(content)) {
             return str;
         } else {
             return leading + content[0].toUpperCase() + content.slice(1) + trailing;
@@ -258,7 +259,7 @@ let Util = {
     },
 
     hasDuplicates: (str, sep = "") => {
-        if (str.length < 1) {
+        if (Util.empty(str)) {
             return false;
         }
 
@@ -267,7 +268,7 @@ let Util = {
     },
 
     unique: (str, sep = "") => {
-        if (str.length < 1) {
+        if (Util.empty(str)) {
             return str;
         }
 
@@ -383,10 +384,6 @@ let Util = {
     },
 
     _countFunc: countType => {
-        if (!Util.nonemptyString(countType)) {
-            throw new UtilError("No count type provided");
-        }
-
         switch (countType) {
             case CountTypes.chars:
                 return Util.countChars;
@@ -431,7 +428,7 @@ let Util = {
             return str;
         }
 
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         const tight = options.tight ?? false,
             showDiff = options.showDiff ?? false;
@@ -546,10 +543,6 @@ let Util = {
     },
 
     _lengthFunc: lengthType => {
-        if (!Util.nonemptyString(lengthType)) {
-            throw new UtilError("No length type provided");
-        }
-
         switch (lengthType) {
             case LengthTypes.array:
                 return Util.length;
@@ -564,7 +557,7 @@ let Util = {
     },
 
     nonemptyString: str => {
-        return typeof str === "string" && str.length > 0;
+        return typeof str === "string" && !Util.empty(str);
     },
 
     empty: val => {
@@ -662,6 +655,33 @@ let Util = {
         return Math.floor(log) + 1;
     },
 
+    numberToBytes: num => {
+        if (!Number.isSafeInteger(num) || num < 0) {
+            return null;
+        }
+
+        const bytes = new Uint8Array(num === 0 ? 0 : Math.ceil(Util.countDigits(num, 2) / 8));
+
+        for (let i = 0; i < bytes.length; i++) {
+            bytes[i] = num % 0x100;
+            num = Math.floor(num / 0x100);
+        }
+
+        return bytes;
+    },
+
+    bytesToNumber: bytes => {
+        let num = 0,
+            place = 1;
+
+        for (let i = 0; i < bytes.length; i++) {
+            num += bytes[i] * place;
+            place *= 0x100;
+        }
+
+        return num;
+    },
+
     urlRegex: /(\S*?):\/\/(?:([^/.]+)\.)?([^/.]+)\.([^/\s]+)\/?(\S*)?/,
 
     validUrl: url => {
@@ -687,7 +707,7 @@ let Util = {
     },
 
     duration: (delta, options) => {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         const format = options.format ?? false,
             largestOnly = options.largestOnly ?? false,

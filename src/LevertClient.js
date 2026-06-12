@@ -95,8 +95,8 @@ class LevertClient extends DiscordClient {
     }
 
     loadComponents(groupName, barrel, ctorArgs, options) {
-        ctorArgs = TypeTester.isObject(ctorArgs) ? ctorArgs : {};
-        options = TypeTester.isObject(options) ? options : {};
+        ctorArgs = ObjectUtil.guaranteeObject(ctorArgs);
+        options = ObjectUtil.guaranteeObject(options);
 
         const showLogMessages = options.showLogMessages ?? true,
             showLoadingMessages = options.showLoadingMessages ?? true;
@@ -241,7 +241,7 @@ class LevertClient extends DiscordClient {
     }
 
     unloadComponents(groupName, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         const showLogMessages = options.showLogMessages ?? true,
             showUnloadingMessages = options.showUnloadingMessages ?? true;
@@ -302,7 +302,7 @@ class LevertClient extends DiscordClient {
     }
 
     checkComponent(groupName, compName, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         const throwErrors = options.throwErrors ?? true,
             msgName = options.altName ?? compName;
@@ -498,7 +498,7 @@ class LevertClient extends DiscordClient {
     }
 
     _getCompsName(groupName, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
         let collectionName = options.pluralName;
 
         if (typeof collectionName === "undefined") {

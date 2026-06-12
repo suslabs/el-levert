@@ -11,7 +11,6 @@ import TagDifferenceType from "./TagDifferenceType.js";
 import Util from "../../src/util/Util.js";
 import TypeTester from "../../src/util/TypeTester.js";
 import ArrayUtil from "../../src/util/ArrayUtil.js";
-import ParserUtil from "../../src/util/commands/ParserUtil.js";
 
 import TagCommand from "../../src/commands/tag/tag.js";
 
@@ -83,7 +82,7 @@ class DBImporter {
     }
 
     async updateDatabase(path, mode = DBUpdateModes.overwrite) {
-        path = typeof path === "string" ? path.trim() : "";
+        path = String(path ?? "").trim();
 
         if (Util.empty(path)) {
             throw new ImporterError("No import path provided");
@@ -171,16 +170,10 @@ class DBImporter {
     };
 
     static _parseTag(data) {
-        const { body, isScript } = ParserUtil.parseScript(data.body),
-            type = isScript ? TagTypes.defaults.scriptType : TagTypes.defaults.type;
-
-        const tag = new Tag({
+        return new Tag({
             ...data,
-            body,
-            type
+            ...Tag.parseScript(data.body)
         });
-
-        return tag;
     }
 
     _validTag(data) {

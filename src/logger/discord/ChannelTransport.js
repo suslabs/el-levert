@@ -1,7 +1,7 @@
 import BaseDiscordTransport from "./BaseDiscordTransport.js";
 
 import Util from "../../util/Util.js";
-import TypeTester from "../../util/TypeTester.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
 
 import LoggerError from "../../errors/LoggerError.js";
 
@@ -9,7 +9,7 @@ class ChannelTransport extends BaseDiscordTransport {
     static $name = "discord.channel";
 
     constructor(options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         super({
             sendInterval: 2 / Util.durationSeconds.milli,

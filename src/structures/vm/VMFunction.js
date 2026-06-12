@@ -38,7 +38,7 @@ class VMFunction {
     };
 
     constructor(options, propertyMap) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         if (typeof options.name !== "string") {
             throw new VMError("VM function must have a name");
@@ -48,9 +48,9 @@ class VMFunction {
 
         ObjectUtil.setValuesWithDefaults(this, options, this.constructor.defaultValues);
 
-        if (!validFuncTypes.has(this.type)) {
-            throw new VMError("Invalid function type provided: " + this.type, this.type);
-        }
+        this.type = TypeTester.normalizeEnum(this.type, validFuncTypes, "function type", VMError, {
+            message: value => "Invalid function type provided: " + value
+        });
 
         switch (this.execution) {
             case ExecutionTypes.bot:

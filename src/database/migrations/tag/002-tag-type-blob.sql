@@ -36,8 +36,8 @@ ALTER TABLE Tags_new RENAME TO Tags;
 
 CREATE INDEX 'idx_Tags_owner' ON 'Tags' ('owner');
 CREATE INDEX 'idx_Tags_aliasName' ON 'Tags' ('aliasName');
-CREATE INDEX 'idx_Tags_type' ON 'Tags' (blob_to_int(type));
-CREATE INDEX 'idx_Tags_owner_type' ON 'Tags' ('owner', blob_to_int(type));
+CREATE INDEX 'idx_Tags_type' ON 'Tags' ('type');
+CREATE INDEX 'idx_Tags_owner_type' ON 'Tags' ('owner', 'type');
 CREATE INDEX 'idx_Quotas_quota' ON 'Quotas' ('quota');
 CREATE INDEX 'idx_Quotas_count' ON 'Quotas' ('count');
 CREATE INDEX 'idx_Usage_count_name' ON 'Usage' ('count', 'name');

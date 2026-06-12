@@ -1,5 +1,3 @@
-import { Buffer } from "node:buffer";
-
 import SqlDatabase from "./SqlDatabase.js";
 
 import Tag from "../structures/tag/Tag.js";
@@ -7,22 +5,7 @@ import TagBitField from "../structures/tag/TagBitField.js";
 
 import Util from "../util/Util.js";
 import ArrayUtil from "../util/ArrayUtil.js";
-import TypeTester from "../util/TypeTester.js";
-
-function blobToInt(value) {
-    if (value == null) {
-        return 0;
-    }
-
-    const buffer = Buffer.isBuffer(value) ? value : Buffer.from(value);
-    let out = 0;
-
-    for (let index = 0; index < buffer.length; index++) {
-        out |= buffer[index] << (index * 8);
-    }
-
-    return out;
-}
+import ObjectUtil from "../util/ObjectUtil.js";
 
 function sortTags(tags) {
     const objs = typeof Util.first(tags) !== "string";
@@ -31,16 +14,9 @@ function sortTags(tags) {
 
 class TagDatabase extends SqlDatabase {
     constructor(dbPath, queryPath, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         const customFunctions = new Map();
-
-        customFunctions.set("blob_to_int:1", {
-            name: "blob_to_int",
-            callback: blobToInt,
-            argc: 1,
-            deterministic: true
-        });
 
         super(dbPath, queryPath, {
             ...options,
@@ -342,7 +318,7 @@ class TagDatabase extends SqlDatabase {
     async _migrateLegacySchema() {
         const schema = await this.db.tableSchema("Tags");
 
-        if (schema.base.size < 1) {
+        if (Util.empty(schema.base)) {
             return;
         }
 

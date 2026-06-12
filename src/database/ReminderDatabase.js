@@ -3,8 +3,20 @@ import SqlDatabase from "./SqlDatabase.js";
 import Reminder from "../structures/Reminder.js";
 
 import Util from "../util/Util.js";
+import ObjectUtil from "../util/ObjectUtil.js";
 
 class ReminderDatabase extends SqlDatabase {
+    constructor(dbPath, queryPath, options) {
+        options = ObjectUtil.guaranteeObject(options);
+
+        const customFunctions = new Map();
+
+        super(dbPath, queryPath, {
+            ...options,
+            customFunctions
+        });
+    }
+
     async exists(user) {
         if (Array.isArray(user)) {
             if (Util.empty(user)) {

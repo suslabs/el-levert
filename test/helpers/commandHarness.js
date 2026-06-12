@@ -97,8 +97,8 @@ async function addAdmin(runtime, userId = "admin-user", groupName = "admins", le
     return group;
 }
 
-function addTag(runtime, name, body, owner = "user-1", type = "text", options = undefined) {
-    return runtime.client.tagManager.add(name, body, owner, type, options);
+function addTag(runtime, name, body, owner = "user-1", meta = { type: "text" }, options = undefined) {
+    return runtime.client.tagManager.add(name, body, owner, meta, options);
 }
 
 async function createInputDirectory(runtime, dirName, files) {

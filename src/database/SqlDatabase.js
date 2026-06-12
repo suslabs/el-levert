@@ -7,6 +7,7 @@ import { OpenModes } from "./drivers/sqlite/OpenModes.js";
 import { LoadStatus } from "../loaders/LoadStatus.js";
 
 import TypeTester from "../util/TypeTester.js";
+import ObjectUtil from "../util/ObjectUtil.js";
 
 class SqlDatabase {
     static migrationSeedSql = Object.freeze({
@@ -21,7 +22,7 @@ class SqlDatabase {
         this.dbPath = dbPath;
         this.queryPath = queryPath;
 
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
         this.options = options;
 
         this._setOptions(options);
@@ -253,7 +254,7 @@ class SqlDatabase {
     }
 
     async _loadMigrations(migrationsPath = this.migrationsPath) {
-        const resolvedPath = migrationsPath != null ? String(migrationsPath) : "";
+        const resolvedPath = String(migrationsPath ?? "");
 
         if (!this._migrations.has(resolvedPath)) {
             const loader = new MigrationLoader(resolvedPath, null),

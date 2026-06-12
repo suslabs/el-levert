@@ -4,7 +4,7 @@ import Ajv from "ajv";
 import TextLoader from "./TextLoader.js";
 
 import Util from "../util/Util.js";
-import TypeTester from "../util/TypeTester.js";
+import ObjectUtil from "../util/ObjectUtil.js";
 
 import { LoadStatus } from "./LoadStatus.js";
 import { WriteModes } from "./WriteModes.js";
@@ -15,7 +15,7 @@ class JsonLoader extends TextLoader {
     };
 
     constructor(name, filePath, logger, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         super(name, filePath, logger, {
             type: "json_file",
@@ -42,7 +42,7 @@ class JsonLoader extends TextLoader {
     }
 
     stringifyData(data, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         const stringify = options.stringify ?? this.customStringify,
             replacer = options.replacer ?? this.replacer,
@@ -72,7 +72,7 @@ class JsonLoader extends TextLoader {
     }
 
     write(data, options, mode = WriteModes.replace) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         if (mode === WriteModes.append) {
             return this.append(data, options);

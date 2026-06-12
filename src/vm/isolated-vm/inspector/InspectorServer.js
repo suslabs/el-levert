@@ -3,7 +3,9 @@
 import { URL, URLSearchParams } from "node:url";
 
 import { getLogger } from "../../../LevertClient.js";
-import TypeTester from "../../../util/TypeTester.js";
+
+import Util from "../../../util/Util.js";
+import ObjectUtil from "../../../util/ObjectUtil.js";
 
 import getCloseReason from "../../../util/misc/wsCloseReason.js";
 
@@ -19,7 +21,7 @@ class InspectorServer {
         this.enabled = enabled;
         this.port = port;
 
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
         this.options = options;
 
         this.logPackets = options.logPackets ?? false;
@@ -97,7 +99,7 @@ class InspectorServer {
             this._inspectorContexts.splice(idx, 1);
         }
 
-        if (this._inspectorContexts.length > 0) {
+        if (!Util.empty(this._inspectorContexts)) {
             this._connectInspector();
         } else {
             this._closeSocket();

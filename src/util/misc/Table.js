@@ -1,6 +1,7 @@
 import Util from "../Util.js";
 import ArrayUtil from "../ArrayUtil.js";
 import TypeTester from "../TypeTester.js";
+import ObjectUtil from "../ObjectUtil.js";
 
 import UtilError from "../../errors/UtilError.js";
 
@@ -190,7 +191,7 @@ class Table {
     static defaultStyle = "light";
 
     constructor(columns, rows, style, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         this.columns = columns ?? {};
         this.rows = rows ?? {};
@@ -214,13 +215,8 @@ class Table {
                 : this.customChars;
         }
 
-        const charset = charsets[this.style];
-
-        return typeof charset === "undefined"
-            ? (() => {
-                  throw new UtilError("Invalid style: " + this.style, this.style);
-              })()
-            : charset;
+        this.style = TypeTester.normalizeEnum(this.style, Object.keys(charsets), "style", UtilError);
+        return charsets[this.style];
     }
 
     get columnIds() {

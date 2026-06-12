@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import "../../../setupGlobals.js";
 
 import VMError from "../../../src/errors/VMError.js";
-import VMErrors from "../../../src/vm/isolated-vm/VMErrors.js";
+import { VMErrors } from "../../../src/vm/isolated-vm/VMErrors.js";
 import { createDiscordChannel, createDiscordMessage, createDiscordUser } from "../../helpers/discordStubs.js";
 import { addTag } from "../../helpers/commandHarness.js";
 import { cleanupRuntime, createRuntime } from "../../helpers/runtimeHarness.js";
@@ -36,6 +36,9 @@ describe("TagVM", () => {
         const msg = createDiscordMessage("hello");
 
         await expect(vm.runScript("1 + 1", { msg })).resolves.toBe("2");
+        await expect(vm.runScript("const value: number = 2; value + 1", { msg }, { language: "ts" })).resolves.toBe(
+            "3"
+        );
         await expect(vm.runScript("({ alpha: 1, beta: [2, 3] })", { msg })).resolves.toBe('{"alpha":1,"beta":[2,3]}');
 
         const context = await vm._getEvalContext({
@@ -69,15 +72,15 @@ describe("TagVM", () => {
     test("bridges util tag helpers through the vm with real tag data", async () => {
         const msg = createDiscordMessage("hello");
 
-        await addTag(runtime, "plain", "alpha body", "user-1", "text");
-        await addTag(runtime, "scripted", "tag.name + ':' + (tag.args ?? '')", "user-1", "ivm");
-        await addTag(runtime, "scripted_undefined", "String(tag.args === undefined)", "user-1", "ivm");
+        await addTag(runtime, "plain", "alpha body", "user-1", { type: "text" });
+        await addTag(runtime, "scripted", "tag.name + ':' + (tag.args ?? '')", "user-1", { type: "ivm" });
+        await addTag(runtime, "scripted_undefined", "String(tag.args === undefined)", "user-1", { type: "ivm" });
         await addTag(
             runtime,
             "scripted_timer",
             "new Promise(resolve => setTimeout(() => resolve(tag.name + ':' + (tag.args ?? '')), 5))",
             "user-1",
-            "ivm"
+            { type: "ivm" }
         );
 
         const alias = await runtime.client.tagManager.fetch("plain");
@@ -86,41 +89,40 @@ describe("TagVM", () => {
             owner: "user-1"
         });
 
-        await expect(
-            vm.runScript("(async () => (await util.fetchTag('plain')).body)()", { msg })
-        ).resolves.toBe("alpha body");
+        await expect(vm.runScript("(async () => (await util.fetchTag('plain')).body)()", { msg })).resolves.toBe(
+            "alpha body"
+        );
+
+        await expect(vm.runScript("(async () => (await util.fetchTag('scripted')).type)()", { msg })).resolves.toBe(
+            "3"
+        );
 
         await expect(
-            vm.runScript("(async () => (await util.fetchTag('scripted')).type)()", { msg })
-        ).resolves.toBe("3");
-
-        await expect(
-            vm.runScript("(async () => (await util.fetchTag('plain_alias')).name + ':' + (await util.fetchTag('plain_alias')).body)()", { msg })
+            vm.runScript(
+                "(async () => (await util.fetchTag('plain_alias')).name + ':' + (await util.fetchTag('plain_alias')).body)()",
+                { msg }
+            )
         ).resolves.toBe("plain_alias:alpha body");
 
         await expect(
-            vm.runScript("(async () => (await util.dumpTags(true)).find(tag => tag.name === 'scripted').type)()", { msg })
+            vm.runScript("(async () => (await util.dumpTags(true)).find(tag => tag.name === 'scripted').type)()", {
+                msg
+            })
         ).resolves.toBe("3");
 
-        await expect(
-            vm.runScript("util.executeTag('plain')", { msg })
-        ).resolves.toBe("alpha body");
+        await expect(vm.runScript("util.executeTag('plain')", { msg })).resolves.toBe("alpha body");
 
-        await expect(
-            vm.runScript("util.executeTag('scripted', ['left', 'right'])", { msg })
-        ).resolves.toBe("scripted:left right ");
+        await expect(vm.runScript("util.executeTag('scripted', ['left', 'right'])", { msg })).resolves.toBe(
+            "scripted:left right "
+        );
 
-        await expect(
-            vm.runScript("util.executeTagSafe('scripted_timer', ['left', 'right'])", { msg })
-        ).resolves.toBe("scripted_timer:left right");
+        await expect(vm.runScript("util.executeTagSafe('scripted_timer', ['left', 'right'])", { msg })).resolves.toBe(
+            "scripted_timer:left right"
+        );
 
-        await expect(
-            vm.runScript("util.executeTag('scripted_undefined')", { msg })
-        ).resolves.toBe("true");
+        await expect(vm.runScript("util.executeTag('scripted_undefined')", { msg })).resolves.toBe("true");
 
-        await expect(
-            vm.runScript("util.executeTag('missing')", { msg })
-        ).rejects.toThrow("Tag missing doesn't exist");
+        await expect(vm.runScript("util.executeTag('missing')", { msg })).rejects.toThrow("Tag missing doesn't exist");
     });
 
     test("bridges util message and user helpers through the vm", async () => {
@@ -196,21 +198,33 @@ describe("TagVM", () => {
         ];
 
         await expect(
-            vm.runScript("(async () => (await util.fetchMessage('user-1', 'fallback-default', 'channel-hit', 'msg-1')).content)()", { msg })
+            vm.runScript(
+                "(async () => (await util.fetchMessage('user-1', 'fallback-default', 'channel-hit', 'msg-1')).content)()",
+                { msg }
+            )
         ).resolves.toBe("fetched body");
 
         await expect(
-            vm.runScript("(async () => (await util.fetchMessage('user-1', 'fallback-default', null, 'msg-1')).content)()", { msg })
+            vm.runScript(
+                "(async () => (await util.fetchMessage('user-1', 'fallback-default', null, 'msg-1')).content)()",
+                { msg }
+            )
         ).resolves.toBe("fetched body");
 
         runtime.client.fetchMessage = async () => null;
 
         await expect(
-            vm.runScript("(async () => (await util.fetchMessage('user-1', 'fallback-default', null, 'msg-1')) === null)()", { msg })
+            vm.runScript(
+                "(async () => (await util.fetchMessage('user-1', 'fallback-default', null, 'msg-1')) === null)()",
+                { msg }
+            )
         ).resolves.toBe("true");
 
         await expect(
-            vm.runScript("(async () => (await util.fetchMessages('user-1', 'fallback-default', 'missing-channel', {})).map(msg => msg.content).join(','))()", { msg })
+            vm.runScript(
+                "(async () => (await util.fetchMessages('user-1', 'fallback-default', 'missing-channel', {})).map(msg => msg.content).join(','))()",
+                { msg }
+            )
         ).resolves.toBe("fallback-1,fallback-2");
 
         await expect(
@@ -218,7 +232,10 @@ describe("TagVM", () => {
         ).resolves.toBe("global-abc");
 
         await expect(
-            vm.runScript("(async () => (await util.findUsers('alpha'))[0].displayName + ':' + (await util.findUsers('alpha'))[0].roles[0])()", { msg })
+            vm.runScript(
+                "(async () => (await util.findUsers('alpha'))[0].displayName + ':' + (await util.findUsers('alpha'))[0].roles[0])()",
+                { msg }
+            )
         ).resolves.toBe("display-alpha:role-1");
     });
 
@@ -241,7 +258,7 @@ describe("TagVM", () => {
             files: expect.any(Array)
         });
 
-        expect(vm._processReply("{\"content\":\"plain\"}")).toEqual({
+        expect(vm._processReply('{"content":"plain"}')).toEqual({
             content: "plain"
         });
 

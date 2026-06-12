@@ -6,7 +6,7 @@ import CommandInfo from "./info/CommandInfo.js";
 import CommandContext from "./context/CommandContext.js";
 
 import ArrayUtil from "../../util/ArrayUtil.js";
-import TypeTester from "../../util/TypeTester.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
 
 class Command extends TextCommand {
     static infoClass = CommandInfo;
@@ -83,7 +83,7 @@ class Command extends TextCommand {
 
     async execute(context, options) {
         context = this.createContext(context);
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         const perm = context.perm ?? (await Command._getPermLevel(context.message, options)),
             canExecute = this.canExecute(perm);
@@ -100,7 +100,7 @@ class Command extends TextCommand {
     }
 
     static async _getPermLevel(msg, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
         const { asLevel, asUser } = options;
 
         if (asLevel != null) {

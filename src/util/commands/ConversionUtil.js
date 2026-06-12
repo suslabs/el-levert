@@ -1,5 +1,6 @@
 import Util from "../Util.js";
 import ArrayUtil from "../ArrayUtil.js";
+import TypeTester from "../TypeTester.js";
 import OCUtil from "./OCUtil.js";
 
 import UtilError from "../../errors/UtilError.js";
@@ -26,17 +27,20 @@ let ConversionUtil = {
             throw new UtilError("No output units provided");
         }
 
+        inUnit = TypeTester.normalizeEnum(inUnit, ConversionUtil.validUnits, "input unit", UtilError, {
+            ref: false
+        });
+
+        outUnits = TypeTester.normalizeEnums(outUnits, ConversionUtil.validUnits, "output units", UtilError, {
+            collectInvalid: true,
+            ref: false
+        });
+
         const inCount = ConversionUtil.factors[inUnit],
             inSuffix = ConversionUtil._suffixes[inUnit];
 
         const outCounts = outUnits.map(unit => ConversionUtil.factors[unit]),
             outSuffixes = outUnits.map(unit => ConversionUtil._suffixes[unit]);
-
-        if (typeof inCount === "undefined") {
-            throw new UtilError("Invalid input unit", inUnit);
-        } else if (outCounts.some(c => typeof c === "undefined")) {
-            throw new UtilError("Invalid output units", outUnits);
-        }
 
         const normVal = inVal * inCount,
             outVals = outCounts.map((count, i) => {

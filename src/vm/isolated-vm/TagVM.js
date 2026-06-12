@@ -8,18 +8,15 @@ import { getConfig, getLogger } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
-import VMUtil from "../../util/vm/VMUtil.js";
+
 import LoggerUtil from "../../util/LoggerUtil.js";
 import Benchmark from "../../util/misc/Benchmark.js";
 
-import VMError from "../../errors/VMError.js";
-import VMErrors from "./VMErrors.js";
+import VMUtil from "../../util/vm/VMUtil.js";
+import { transpileScript } from "../../util/vm/transpileScript.js";
 
-const vmErrorMessages = new Map(
-    Object.entries(VMErrors)
-        .filter(([name]) => name !== "custom")
-        .map(([, info]) => [info.in, info.out])
-);
+import VMError from "../../errors/VMError.js";
+import { VMErrors, vmErrorMessages } from "./VMErrors.js";
 
 function logUsage(code) {
     getLogger().isDebugEnabled() && getLogger().debug(`Running script:${LoggerUtil.formatLog(code)}`);
@@ -63,10 +60,11 @@ class TagVM extends VM {
         this._contextStack = [];
     }
 
-    async runScript(code, values) {
+    async runScript(code, values, options) {
+        code = transpileScript(code, options);
         logUsage(code);
 
-        if (this._inspectorServer?.inspectorConnected && this._contextStack.length === 0) {
+        if (this._inspectorServer?.inspectorConnected && Util.empty(this._contextStack)) {
             getLogger().info("Can't run script: inspector is already connected.");
             throw new VMError("Inspector is already connected.");
         }

@@ -26,9 +26,9 @@ CREATE INDEX 'idx_Tags_owner' ON 'Tags' ('owner');
 ---
 CREATE INDEX 'idx_Tags_aliasName' ON 'Tags' ('aliasName');
 ---
-CREATE INDEX 'idx_Tags_type' ON 'Tags' (blob_to_int(type));
+CREATE INDEX 'idx_Tags_type' ON 'Tags' ('type');
 ---
-CREATE INDEX 'idx_Tags_owner_type' ON 'Tags' ('owner', blob_to_int(type));
+CREATE INDEX 'idx_Tags_owner_type' ON 'Tags' ('owner', 'type');
 ---
 CREATE TABLE 'Usage' (
     'name' TEXT,

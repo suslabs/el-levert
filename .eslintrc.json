@@ -31,6 +31,17 @@
         "no-case-declarations": "off",
         "no-empty": "off",
         "eqeqeq": ["error", "always", { "null": "ignore" }],
+        "no-restricted-syntax": [
+            "error",
+            {
+                "selector": "BinaryExpression[operator='==='] > Identifier[name='undefined']",
+                "message": "Use typeof checks instead of undefined comparisons."
+            },
+            {
+                "selector": "BinaryExpression[operator='!=='] > Identifier[name='undefined']",
+                "message": "Use typeof checks instead of undefined comparisons."
+            }
+        ],
         "curly": ["error", "all"],
         "no-template-curly-in-string": "warn",
         "object-shorthand": ["warn", "properties"],

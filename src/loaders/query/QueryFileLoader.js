@@ -1,10 +1,10 @@
 import TextLoader from "../TextLoader.js";
 
-import TypeTester from "../../util/TypeTester.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
 
 class QueryFileLoader extends TextLoader {
     constructor(filePath, logger, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         super("query", filePath, logger, {
             throwOnFailure: true,

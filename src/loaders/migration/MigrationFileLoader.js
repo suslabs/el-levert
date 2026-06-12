@@ -1,6 +1,6 @@
 import TextLoader from "../TextLoader.js";
 
-import TypeTester from "../../util/TypeTester.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
 
 import { LoadStatus } from "../LoadStatus.js";
 
@@ -10,7 +10,7 @@ class MigrationFileLoader extends TextLoader {
     static filenameRegex = /^(\d+)[.-](.*?)$/;
 
     constructor(filePath, logger, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         super("migration", filePath, logger, {
             throwOnFailure: true,

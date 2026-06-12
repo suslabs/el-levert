@@ -12,7 +12,7 @@ import SqliteStatement from "./SqliteStatement.js";
 import { ConnectionEvents } from "./ConnectionEvents.js";
 
 import Util from "../../../util/Util.js";
-import TypeTester from "../../../util/TypeTester.js";
+import ObjectUtil from "../../../util/ObjectUtil.js";
 import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
 import RegexUtil from "../../../util/misc/RegexUtil.js";
 
@@ -52,12 +52,12 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
     constructor(config, db = null) {
         super();
 
-        config = TypeTester.isObject(config) ? config : {};
+        config = ObjectUtil.guaranteeObject(config);
         this.config = config;
 
         this._setConfig(config);
+        this._setDatabase(db);
 
-        this.db = null;
         this.inTransaction = false;
 
         this._released = false;
@@ -68,10 +68,6 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
 
         this._eventId = DatabaseUtil.getEventId();
         this.eventName = `${this.eventPrefix}:${this._eventId}`;
-
-        if (db != null) {
-            this._setDatabase(db);
-        }
     }
 
     open() {
@@ -284,7 +280,7 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
 
         const firstRow = rows?.[0];
 
-        if (firstRow == null || typeof firstRow !== "object") {
+        if (typeof firstRow === "undefined" || typeof firstRow !== "object") {
             return undefined;
         }
 
@@ -449,7 +445,7 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
     async createSavepoint(name) {
         const savepoint = this._quoteIdentifier(name, "Savepoint name");
 
-        if (savepoint == null) {
+        if (savepoint === null) {
             return;
         }
 
@@ -464,7 +460,7 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
     async releaseSavepoint(name) {
         const savepoint = this._quoteIdentifier(name, "Savepoint name");
 
-        if (savepoint == null) {
+        if (savepoint === null) {
             return;
         }
 
@@ -479,7 +475,7 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
     async rollbackToSavepoint(name) {
         const savepoint = this._quoteIdentifier(name, "Savepoint name");
 
-        if (savepoint == null) {
+        if (savepoint === null) {
             return;
         }
 
@@ -533,11 +529,11 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
             }
         });
 
-        if (backup == null) {
+        if (backup === null) {
             return;
         }
 
-        if (retryErrors != null) {
+        if (retryErrors !== null) {
             backup.retryErrors = retryErrors;
         }
 
@@ -616,8 +612,12 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
         this.autoRollback = config.autoRollback ?? this.autoRollback ?? false;
     }
 
-    _setDatabase(db) {
+    _setDatabase(db = null) {
         this.db = db;
+
+        if (db === null) {
+            return;
+        }
 
         this._released = false;
         this._loadedExtensions.clear();
@@ -626,7 +626,7 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
     }
 
     async _bootstrap() {
-        if (this.busyTimeout != null) {
+        if (this.busyTimeout !== null) {
             this.configure("busyTimeout", this.busyTimeout);
         }
 
@@ -652,7 +652,7 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
     }
 
     _deleteDatabase() {
-        if (this.db == null) {
+        if (this.db === null) {
             return;
         }
 
@@ -722,13 +722,14 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
             return DatabaseUtil.quoteIdentifier(name, label);
         } catch (err) {
             this._throwErrorSync(err);
+            return null;
         }
     }
 
     async _identifierPragma(template, identifierName, identifierValue, label) {
         const quotedIdentifier = this._quoteIdentifier(identifierValue, label);
 
-        if (quotedIdentifier == null) {
+        if (quotedIdentifier === null) {
             return;
         }
 
@@ -737,11 +738,11 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
             }),
             rows = await this.pragma(pragma);
 
-        return rows == null ? rows : Array.from(rows);
+        return typeof rows === "undefined" ? rows : Array.from(rows);
     }
 
     _checkOpen(expected = true, msg) {
-        const open = this.db != null;
+        const open = this.db !== null;
 
         if (open === expected) {
             return true;

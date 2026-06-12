@@ -5,9 +5,8 @@ import ArrayUtil from "../util/ArrayUtil.js";
 import { invalidFormats } from "./InvalidFormats.js";
 
 import LoggerError from "../errors/LoggerError.js";
-const validFormats = new Set(
-    Object.getOwnPropertyNames(winston.format).filter(name => !invalidFormats.has(name))
-);
+
+const validFormats = new Set(Object.getOwnPropertyNames(winston.format).filter(name => !invalidFormats.has(name)));
 
 function getFormat(config) {
     if (config == null) {
@@ -25,10 +24,7 @@ function getFormat(config) {
             name = format;
         }
 
-        if (!validFormats.has(name)) {
-            throw new LoggerError("Invalid format: " + name, name);
-        }
-
+        name = TypeTester.normalizeEnum(name, validFormats, "format", LoggerError);
         return winston.format[name](opts);
     });
 

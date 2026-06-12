@@ -3,57 +3,58 @@ import { describe, expect, test } from "vitest";
 import { TagTypes } from "../../../src/structures/tag/TagTypes.js";
 
 describe("TagTypes", () => {
-    test("derives flag metadata from the flag schema", () => {
-        expect(TagTypes.flags.entries).toEqual([
-            ["new", TagTypes.flags.new],
-            ["script", TagTypes.flags.script],
-            ["vm2", TagTypes.flags.vm2]
-        ]);
-        expect(TagTypes.flags.names).toEqual(["new", "script", "vm2"]);
-        expect(TagTypes.flags.bits).toEqual({
-            new: 0,
-            script: 1,
-            vm2: 2
+    test("holds compact tag type definitions and derived names", () => {
+        expect(TagTypes.types.text).toEqual({ script: false, flags: [["script", false]] });
+        expect(TagTypes.types.ivm).toEqual({
+            script: true,
+            flags: [
+                ["script", true],
+                ["vm2", false]
+            ]
+        });
+        expect(TagTypes.types.vm2).toEqual({
+            script: true,
+            flag: "vm2",
+            flags: [
+                ["script", true],
+                ["vm2", true]
+            ]
         });
 
-        expect(TagTypes.flags.dependents.script).toEqual([
-            {
-                name: "vm2",
-                value: true
-            }
-        ]);
-        expect(TagTypes.flags.requires.vm2).toEqual([
-            {
-                name: "script",
-                value: true
-            }
-        ]);
-        expect(TagTypes.flags.clearedDependents.script).toEqual({
-            false: ["vm2"],
-            true: []
-        });
-        expect(TagTypes.flags.vm2.requiredFlags).toBe(TagTypes.flags.requires.vm2);
-        expect(TagTypes.flags.script.clearedDependents).toBe(TagTypes.flags.clearedDependents.script);
-        expect(TagTypes.flags.readonly).toEqual(["script"]);
-        expect(TagTypes.flags.writable).toEqual(["vm2"]);
-    });
-
-    test("derives version and type metadata from their schemas", () => {
-        expect(TagTypes.versions.entries).toEqual([
-            ["old", TagTypes.versions.old],
-            ["new", TagTypes.versions.new]
-        ]);
-        expect(TagTypes.versions.names).toEqual(["old", "new"]);
-        expect(TagTypes.versions.valid.has(TagTypes.defaults.version)).toBe(true);
-
-        expect(TagTypes.types.entries).toEqual([
-            ["text", TagTypes.types.text],
-            ["ivm", TagTypes.types.ivm],
-            ["vm2", TagTypes.types.vm2]
-        ]);
         expect(TagTypes.types.names).toEqual(["text", "ivm", "vm2"]);
         expect(TagTypes.types.script).toEqual(["ivm", "vm2"]);
-        expect(TagTypes.types.validScript.has(TagTypes.defaults.scriptType)).toBe(true);
         expect(TagTypes.types.specialScript).toEqual(["vm2"]);
+        expect(TagTypes.types.validScript).toEqual(new Set(["ivm", "vm2"]));
+
+        expect(TagTypes.languages.js).toEqual({ flags: [["script", true]] });
+        expect(TagTypes.languages.ts).toEqual({
+            flag: "ts",
+            value: true,
+            flags: [
+                ["script", true],
+                ["ts", true]
+            ]
+        });
+        expect(TagTypes.languages.flags).toEqual(["ts"]);
+        expect(TagTypes.languages.matches.map(([name]) => name)).toEqual(["ts", "js"]);
+    });
+
+    test("defines requirements and default flags in one place", () => {
+        expect(TagTypes.flags.ts.requires).toEqual({ script: true });
+        expect(TagTypes.flags.vm2.requires).toEqual({ script: true });
+        expect(TagTypes.flags.bits.get(TagTypes.flags.script.bit)).toBe("script");
+
+        expect(TagTypes.defaults.flags).toEqual(
+            new Map([
+                ["new", true],
+                ["script", false]
+            ])
+        );
+        expect(TagTypes.defaults.meta).toEqual({
+            version: "new",
+            type: "text",
+            language: "js"
+        });
+        expect(Object.isFrozen(TagTypes)).toBe(true);
     });
 });

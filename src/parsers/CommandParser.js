@@ -1,12 +1,13 @@
 import ParserUtil from "../util/commands/ParserUtil.js";
 import Util from "../util/Util.js";
 import TypeTester from "../util/TypeTester.js";
+import ObjectUtil from "../util/ObjectUtil.js";
 
 import ParserError from "../errors/ParserError.js";
 
 class CommandParser {
     constructor(context) {
-        context = TypeTester.isObject(context) ? context : {};
+        context = ObjectUtil.guaranteeObject(context);
         this.context = context;
     }
 
@@ -29,7 +30,7 @@ class CommandParser {
     }
 
     parseArgument(def, parsed) {
-        parsed = TypeTester.isObject(parsed) ? parsed : {};
+        parsed = ObjectUtil.guaranteeObject(parsed);
 
         if (!TypeTester.isObject(def)) {
             throw new ParserError("Invalid command argument definition", {
@@ -98,7 +99,7 @@ class CommandParser {
             value = typeof defaultValue === "function" ? defaultValue(this.context, parsed, def) : defaultValue;
         }
 
-        if (def.transform != null) {
+        if (typeof def.transform !== "undefined") {
             value = this.constructor._applyTransform(value, def.transform, this.context, parsed, def);
         }
 

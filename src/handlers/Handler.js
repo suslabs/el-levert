@@ -1,7 +1,7 @@
 import { getConfig } from "../LevertClient.js";
 
 import Util from "../util/Util.js";
-import TypeTester from "../util/TypeTester.js";
+import ObjectUtil from "../util/ObjectUtil.js";
 
 import HandlerError from "../errors/HandlerError.js";
 
@@ -17,16 +17,16 @@ class Handler {
 
         this.enabled = enabled;
 
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
         this.options = options;
 
         this.priority ??= options.priority ?? 0;
 
-        const minResponseTime = options.minResponseTime == null ? getConfig().minResponseTime : options.minResponseTime,
+        const minResponseTime = options.minResponseTime ?? getConfig().minResponseTime,
             invalidResponseTime = !Number.isFinite(minResponseTime) || minResponseTime <= 0;
         this.minResponseTime = invalidResponseTime ? -1 : Math.round(minResponseTime);
 
-        const globalTimeLimit = options.globalTimeLimit == null ? getConfig().globalTimeLimit : options.globalTimeLimit,
+        const globalTimeLimit = options.globalTimeLimit ?? getConfig().globalTimeLimit,
             invalidTimeLimit = !Number.isFinite(globalTimeLimit) || globalTimeLimit <= 0;
         this.globalTimeLimit = invalidTimeLimit ? -1 : Math.round(globalTimeLimit);
 

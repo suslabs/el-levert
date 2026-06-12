@@ -8,6 +8,7 @@ import Util from "../../../util/Util.js";
 import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
 
 import DatabaseError from "../../../errors/DatabaseError.js";
+import { nil } from "ajv";
 
 class SqliteStatement {
     constructor(target, sql, defaultParam = [], rawSt = null) {
@@ -18,8 +19,9 @@ class SqliteStatement {
         this._safeIntegers = null;
 
         this._backend = null;
+        this._owner = null;
 
-        if (rawSt == null) {
+        if (rawSt === null) {
             this._backend = new PooledStatementBackend(target);
         } else {
             this._backend = new ConnectionStatementBackend(target, rawSt);
@@ -67,6 +69,10 @@ class SqliteStatement {
         } catch (err) {
             return this._throwErrorSync(err);
         }
+    }
+
+    setOwner(owner = null) {
+        this._owner = owner;
     }
 
     reset() {
@@ -140,7 +146,7 @@ class SqliteStatement {
     }
 
     get _throwErrors() {
-        return this._owner?.throwErrors ?? this._backend.getTarget().throwErrors;
+        return this._owner === null ? this._backend.getTarget().throwErrors : this._owner.throwErrors;
     }
 
     _checkFinalized(expected = false, msg) {
@@ -181,7 +187,7 @@ class SqliteStatement {
             this._backend
                 .getContext(this)
                 .then(context => {
-                    if (context == null || context.st == null) {
+                    if (context === null || context.st === null) {
                         resolve();
                         return;
                     }
@@ -246,8 +252,9 @@ class SqliteStatement {
     }
 
     _removeOwner(removeEntry) {
-        if (removeEntry && this._owner != null) {
+        if (removeEntry && this._owner !== null) {
             this._owner.removeStatement(this);
+            this.setOwner();
         }
     }
 

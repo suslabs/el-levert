@@ -8,7 +8,7 @@ import FakeAxios from "./classes/FakeAxios.js";
 import { getConfig, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-import TypeTester from "../../util/TypeTester.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
 import VMUtil from "../../util/vm/VMUtil.js";
 
 const defaultVMOptions = {
@@ -61,7 +61,7 @@ class TagVM2 extends VM {
     }
 
     getContext(values) {
-        values = TypeTester.isObject(values) ? values : {};
+        values = ObjectUtil.guaranteeObject(values);
         const { msg, args } = values;
 
         const vmObjects = {

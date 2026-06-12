@@ -47,7 +47,7 @@ class TagAddCommand {
         }
 
         let parsed = await this.parentCmd.parseBase(t_args, ctx.msg),
-            { body, type } = parsed;
+            { body, meta } = parsed;
 
         if (parsed.err !== null) {
             return parsed.err;
@@ -63,7 +63,7 @@ class TagAddCommand {
         }
 
         try {
-            await getClient().tagManager.add(t_name, body, ctx.msg.author.id, type, {
+            await getClient().tagManager.add(t_name, body, ctx.msg.author.id, meta, {
                 validateNew: false
             });
         } catch (err) {

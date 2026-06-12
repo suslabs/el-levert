@@ -38,7 +38,6 @@ class TagMassAddCommand {
     };
 
     async handler(ctx) {
-
         if (Util.empty(ctx.argsText)) {
             return `${getEmoji("info")} ${this.getArgsHelp("tag_prefix owner input_dir")}`;
         }
@@ -71,9 +70,18 @@ class TagMassAddCommand {
                     contents = await fs.readFile(filePath, "utf8");
 
                 getClient().tagManager.checkBody(contents);
-                await getClient().tagManager.add(tagName, contents, owner, {
-                    checkNew: false
-                });
+
+                await getClient().tagManager.add(
+                    tagName,
+                    contents,
+                    owner,
+                    {
+                        type: "text"
+                    },
+                    {
+                        checkNew: false
+                    }
+                );
 
                 out.push(`Added file: ${file.name} as tag: ${tagName}`);
             } catch (err) {

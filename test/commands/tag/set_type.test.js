@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import { addAdmin, addTag, cleanupRuntime, createCommandMessage, createCommandRuntime, getCommand, executeCommand } from "../../helpers/commandHarness.js";
+import {
+    addAdmin,
+    addTag,
+    cleanupRuntime,
+    createCommandMessage,
+    createCommandRuntime,
+    getCommand,
+    executeCommand
+} from "../../helpers/commandHarness.js";
 
 let runtime;
 let msg;
@@ -52,13 +60,19 @@ describe("Merged Branch Coverage", () => {
     });
 
     describe("tag set_type command branches", () => {
-        test("covers help, command-name rejection, missing tags, and type/version failures", async () => {
+        test("covers help, command-name rejection, missing tags, and flag/value failures", async () => {
             const command = getCommand(runtime, "tag");
 
-            await expect(executeCommand(command, "set_type", { msg })).resolves.toContain("name (version/type)");
-            await expect(executeCommand(command, "set_type list version old", { msg })).resolves.toContain("is a __command__");
-            await expect(executeCommand(command, "set_type bad@name version old", { msg })).resolves.toContain("must consist");
-            await expect(executeCommand(command, "set_type missing version old", { msg })).resolves.toContain("doesn't exist");
+            await expect(executeCommand(command, "set_type", { msg })).resolves.toContain("name flag [value]");
+            await expect(executeCommand(command, "set_type list version old", { msg })).resolves.toContain(
+                "is a __command__"
+            );
+            await expect(executeCommand(command, "set_type bad@name version old", { msg })).resolves.toContain(
+                "must consist"
+            );
+            await expect(executeCommand(command, "set_type missing version old", { msg })).resolves.toContain(
+                "doesn't exist"
+            );
             await expect(executeCommand(command, "set_type alpha nonsense", { msg })).rejects.toThrow("Unknown type");
 
             const originalUpdateProps = runtime.client.tagManager.updateProps.bind(runtime.client.tagManager);
@@ -68,11 +82,21 @@ describe("Merged Branch Coverage", () => {
                 throw err;
             };
 
-            await expect(executeCommand(command, "set_type alpha version old", { msg })).resolves.toContain("Update blocked");
+            await expect(executeCommand(command, "set_type alpha version old", { msg })).resolves.toContain(
+                "Update blocked"
+            );
 
             runtime.client.tagManager.updateProps = originalUpdateProps;
             await expect(executeCommand(command, "set_type alpha vm2", { msg })).resolves.toContain("Updated tag");
-            expect((await runtime.client.tagManager.fetch("alpha")).getType()).toBe("vm2");
+            expect((await runtime.client.tagManager.fetch("alpha")).getScriptType()).toBe("vm2");
+
+            await expect(executeCommand(command, "set_type alpha script ts", { msg })).resolves.toContain(
+                "Updated tag"
+            );
+            expect((await runtime.client.tagManager.fetch("alpha")).getScriptType()).toBe("ivm");
+            expect((await runtime.client.tagManager.fetch("alpha")).getScriptLanguage()).toBe("ts");
+
+            await expect(executeCommand(command, "set_type alpha ts", { msg })).rejects.toThrow("Unknown type");
         });
     });
 });

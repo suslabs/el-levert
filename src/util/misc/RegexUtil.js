@@ -1,5 +1,6 @@
 import Util from "../Util.js";
 import ArrayUtil from "../ArrayUtil.js";
+import TypeTester from "../TypeTester.js";
 
 const RegexUtil = Object.freeze({
     _regexEscapeRegex: /[.*+?^${}()|[\]\\]/g,
@@ -21,7 +22,7 @@ const RegexUtil = Object.freeze({
     },
 
     firstGroup: (match, name) => {
-        if (!match || match.groups == null) {
+        if (!match || typeof match.groups === "undefined") {
             return null;
         }
 
@@ -46,7 +47,7 @@ const RegexUtil = Object.freeze({
         words = ArrayUtil.guaranteeArray(words, null, true);
         const validWords = [...new Set(words.filter(Util.nonemptyString))];
 
-        if (validWords.length < 1) {
+        if (Util.empty(validWords)) {
             return null;
         }
 
@@ -59,9 +60,9 @@ const RegexUtil = Object.freeze({
     },
 
     getMergedRegex: exps => {
-        exps = Array.isArray(exps) ? exps.filter(exp => exp instanceof RegExp) : [];
+        exps = Array.isArray(exps) ? exps.filter(TypeTester.isRegex) : [];
 
-        if (exps.length < 1) {
+        if (Util.empty(exps)) {
             return null;
         }
 
@@ -74,7 +75,7 @@ const RegexUtil = Object.freeze({
     },
 
     multipleReplace: (str, ...rules) => {
-        if (rules.length < 1) {
+        if (Util.empty(rules)) {
             return str;
         }
 

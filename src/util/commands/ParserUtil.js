@@ -1,13 +1,14 @@
 import Util from "../Util.js";
 import TypeTester from "../TypeTester.js";
+import ObjectUtil from "../ObjectUtil.js";
 import ArrayUtil from "../ArrayUtil.js";
 import RegexUtil from "../misc/RegexUtil.js";
 import DiscordUtil from "../DiscordUtil.js";
 
 const ParserUtil = Object.freeze({
     splitArgs: (str, lowercase = false, options) => {
-        str = typeof str === "string" ? str : String(str ?? "");
-        options = TypeTester.isObject(options) ? options : {};
+        str = String(str ?? "");
+        options = ObjectUtil.guaranteeObject(options);
 
         let multipleLowercase = Array.isArray(lowercase);
 
@@ -94,7 +95,7 @@ const ParserUtil = Object.freeze({
 
     _parseScriptResult: (body, isScript = false, lang = "") => ({ body, isScript, lang }),
     parseScript: script => {
-        script = typeof script === "string" ? script : String(script ?? "");
+        script = String(script ?? "");
         const match = script.match(DiscordUtil.parseScriptRegex);
 
         if (!match) {

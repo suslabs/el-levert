@@ -8,8 +8,6 @@ import FakeTag from "../classes/FakeTag.js";
 import FakeMsg from "../classes/FakeMsg.js";
 import FakeVM from "../classes/FakeVM.js";
 
-import VMErrors from "../VMErrors.js";
-
 import ContextFunctions from "./ContextFunctions.js";
 import EventLoop from "./EventLoop.js";
 import VMObjectRegistry from "./VMObjectRegistry.js";
@@ -19,10 +17,11 @@ import globalNames from "./globalNames.json" assert { type: "json" };
 import funcNames from "./funcNames.json" assert { type: "json" };
 
 import Util from "../../../util/Util.js";
-import TypeTester from "../../../util/TypeTester.js";
+import ObjectUtil from "../../../util/ObjectUtil.js";
 import VMUtil from "../../../util/vm/VMUtil.js";
 
 import VMError from "../../../errors/VMError.js";
+import { VMErrors } from "../VMErrors.js";
 
 class EvalContext {
     static filename = "script.js";
@@ -38,10 +37,10 @@ class EvalContext {
     }
 
     constructor(options, inspectorOptions) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
         this.options = options;
 
-        inspectorOptions = TypeTester.isObject(inspectorOptions) ? inspectorOptions : {};
+        inspectorOptions = ObjectUtil.guaranteeObject(inspectorOptions);
         this.inspectorOptions = inspectorOptions;
 
         const invalidMemLimit = !Number.isFinite(options.memLimit) || options.memLimit <= 0;
@@ -68,7 +67,7 @@ class EvalContext {
     }
 
     async getIsolate(values) {
-        values = TypeTester.isObject(values) ? values : {};
+        values = ObjectUtil.guaranteeObject(values);
 
         if (typeof this.isolate === "undefined") {
             this._setupInspector();
@@ -245,7 +244,7 @@ class EvalContext {
     }
 
     _disposeChildren() {
-        while (this.children.size > 0) {
+        while (!Util.empty(this.children)) {
             const child = this.children.values().next().value;
             child.dispose();
         }

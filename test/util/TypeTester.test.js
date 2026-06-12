@@ -53,4 +53,49 @@ describe("TypeTester", () => {
         ).toBe(true);
         expect(TypeTester.validateProps({ id: "1" }, { id: "number" })).toBe(false);
     });
+
+    test("normalizes enum values with custom errors and normalizers", () => {
+        class CustomError extends Error {
+            constructor(message, ref) {
+                super(message);
+                this.ref = ref;
+            }
+        }
+
+        const values = Object.freeze({
+            ok: "ok",
+            yes: "yes"
+        });
+
+        expect(
+            TypeTester.normalizeEnum("YES", values, "choice", CustomError, {
+                normalize: value => value.toLowerCase()
+            })
+        ).toBe("yes");
+
+        expect(TypeTester.normalizeEnum("ok", ["ok", "yes"], "choice")).toBe("ok");
+
+        expect(() => TypeTester.normalizeEnum("", values, "choice", CustomError)).toThrow("Invalid choice");
+        expect(() =>
+            TypeTester.normalizeEnum("", values, "choice", CustomError, {
+                missing: true
+            })
+        ).toThrow("No choice provided");
+
+        expect(() =>
+            TypeTester.normalizeEnum("no", values, "choice", CustomError, {
+                unknown: "Bad"
+            })
+        ).toThrow("Bad choice: no");
+
+        expect(() => TypeTester.normalizeEnum("no", values, "choice")).toThrow("Invalid choice: no");
+        expect(TypeTester.normalizeEnums(["ok", "yes"], values, "choice")).toEqual(["ok", "yes"]);
+
+        expect(() =>
+            TypeTester.normalizeEnums(["ok", "no"], values, "choice", CustomError, {
+                collectInvalid: true,
+                unknown: "Bad"
+            })
+        ).toThrow("Bad choice: no");
+    });
 });

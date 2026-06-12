@@ -7,6 +7,7 @@ import { getConfig, getEmoji, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import { isErrorCode } from "../../util/discord/ErrorCodes.js";
@@ -34,7 +35,7 @@ class MessageHandler extends Handler {
 
         const { replies } = this.replyTracker.getData(msg);
 
-        if (!Array.isArray(replies) || replies.length <= 0) {
+        if (!Array.isArray(replies) || Util.empty(replies)) {
             return null;
         }
 
@@ -42,7 +43,7 @@ class MessageHandler extends Handler {
     }
 
     async reply(msg, data, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
         const out = this._getOutput(data, options);
 
         let msgReply = null;
@@ -113,7 +114,7 @@ class MessageHandler extends Handler {
             return await this.reply(msg, data, options);
         }
 
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
         const out = this._getOutput(data, options);
 
         if (Array.isArray(out)) {
@@ -291,7 +292,7 @@ class MessageHandler extends Handler {
     }
 
     _applyLimits(data, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         const useConfig = options.useConfigLimits ?? this.useConfigLimits;
 

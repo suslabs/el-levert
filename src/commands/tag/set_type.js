@@ -1,5 +1,7 @@
 import { escapeMarkdown } from "discord.js";
 
+import { TagTypes } from "../../structures/tag/TagTypes.js";
+
 import { getClient, getEmoji } from "../../LevertClient.js";
 
 class TagSetTypeCommand {
@@ -21,14 +23,14 @@ class TagSetTypeCommand {
                 index: 1
             },
             {
-                name: "type",
+                name: "flag",
                 from: "tagArgs",
                 parser: "split",
                 index: 0,
                 lowercase: [true, true]
             },
             {
-                name: "version",
+                name: "value",
                 from: "tagArgs",
                 parser: "split",
                 index: 1,
@@ -38,9 +40,8 @@ class TagSetTypeCommand {
     };
 
     async handler(ctx) {
-
         if (ctx.argsText.length < 2) {
-            return `${getEmoji("info")} ${this.getArgsHelp("name (version/type)")}`;
+            return `${getEmoji("info")} ${this.getArgsHelp("name flag [value]")}`;
         }
 
         let t_name = ctx.arg("tagName");
@@ -58,9 +59,8 @@ class TagSetTypeCommand {
             }
         }
 
-        let type = ctx.arg("type"),
-            version = ctx.arg("version"),
-            setVersion = type === "version";
+        let flag = ctx.arg("flag"),
+            value = ctx.arg("value");
 
         const tag = await getClient().tagManager.fetch(t_name);
 
@@ -68,11 +68,22 @@ class TagSetTypeCommand {
             return `${getEmoji("warn")} Tag **${escapeMarkdown(t_name)}** doesn't exist.`;
         }
 
-        if (setVersion) {
-            tag.setVersion(version);
-        } else {
-            tag.setType(type);
+        const meta = tag.getMeta();
+
+        switch (flag) {
+            case "version":
+                meta.version = value;
+                break;
+            case "script":
+                meta.type = TagTypes.defaults.scriptType;
+                meta.language = value || meta.language;
+                break;
+            default:
+                meta.type = flag;
+                meta.language = value || meta.language;
         }
+
+        tag.setMeta(meta);
 
         try {
             await getClient().tagManager.updateProps(t_name, tag, {

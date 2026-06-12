@@ -1,29 +1,46 @@
 import { Buffer } from "node:buffer";
 
-import TypeTester from "../TypeTester.js";
+import Util from "../Util.js";
+import ObjectUtil from "../ObjectUtil.js";
 import ArrayUtil from "../ArrayUtil.js";
+import TypeTester from "../TypeTester.js";
 
-import UtilError from "../../errors/UtilError.js";
-
-function bitsToBytes(numberOfBits) {
-    return (numberOfBits >> 3) + Number(numberOfBits % 8 !== 0);
-}
+import BitFieldError from "../../errors/BitFieldError.js";
 
 class BitField {
-    static from(data = 0, options = {}) {
-        return data instanceof this && Object.keys(options).length < 1 ? data.clone() : new this(data, options);
+    static from(bits = 0, options = {}) {
+        return bits instanceof this && Util.empty(Object.keys(options)) ? bits : new this(bits, options);
     }
 
-    constructor(data = 0, options) {
-        options = TypeTester.isObject(options) ? options : {};
+    static toUint8Array(bits) {
+        if (typeof bits === "number") {
+            const bytes = Util.numberToBytes(bits);
+
+            if (bytes === null) {
+                throw new BitFieldError("Invalid bitfield data", bits);
+            }
+
+            return bytes;
+        } else if (TypeTester.isArray(bits)) {
+            return ArrayBuffer.isView(bits)
+                ? new Uint8Array(bits.buffer, bits.byteOffset, bits.byteLength)
+                : Uint8Array.from(bits);
+        } else {
+            throw new BitFieldError("Invalid bitfield data", bits);
+        }
+    }
+
+    constructor(bits = 0, options) {
+        bits ??= 0;
+        options = ObjectUtil.guaranteeObject(options);
         this.options = options;
 
         this._childValidate = this.validate;
         this.validate = this._validate.bind(this);
 
-        this.grow = options.grow ? (Number.isFinite(options.grow) ? bitsToBytes(options.grow) : options.grow) : 0;
-        this.invert = options.invert ?? false;
-        this.buffer = new Uint8Array(typeof data === "number" ? bitsToBytes(data) : (data ?? 0));
+        const grow = options.grow ?? 0;
+        this.grow = Number.isFinite(grow) ? Math.ceil(grow / 8) : grow;
+        this.buffer = this.constructor.toUint8Array(bits);
 
         this.validate();
     }
@@ -39,16 +56,16 @@ class BitField {
 
     set(bitIndex, value = true) {
         this.constructor._validateBitIndex(bitIndex);
-        return this._commitMutation(copy => copy._setBit(bitIndex, value));
+        return this._commitMutation(bitfield => bitfield._setBit(bitIndex, value));
     }
 
     setAll(array, offset = 0) {
         if (array == null || typeof array.length !== "number") {
-            throw new UtilError("Invalid bit array", array);
+            throw new BitFieldError("Invalid bit array", array);
         }
 
         this.constructor._validateBitIndex(offset);
-        return this._commitMutation(copy => copy._setAllBits(array, offset));
+        return this._commitMutation(bitfield => bitfield._setAllBits(array, offset));
     }
 
     setFlag(name, value = true, strict = true) {
@@ -64,11 +81,20 @@ class BitField {
     setFlags(names, value = true, strict = true) {
         names = ArrayUtil.guaranteeArray(names);
 
-        for (const name of names) {
-            this.setFlag(name, value, strict);
+        if (Util.empty(names)) {
+            return this;
         }
 
-        return this;
+        return this._commitMutation(bitfield => {
+            for (const name of names) {
+                const bit = bitfield.constructor._getFlagBit(name, strict);
+
+                if (bit !== false) {
+                    bitfield.constructor._validateBitIndex(bit);
+                    bitfield._setBit(bit, value);
+                }
+            }
+        });
     }
 
     forEach(callbackfn, start = 0, end = this.buffer.length * 8) {
@@ -123,27 +149,12 @@ class BitField {
         return Buffer.from(this.buffer);
     }
 
-    toUnsignedNumber() {
-        let value = 0n;
-
-        for (let i = 0; i < this.buffer.length; i++) {
-            value |= BigInt(this.buffer[i]) << BigInt(i * 8);
-        }
-
-        return Number(value);
+    toHex() {
+        return Buffer.from(this.buffer.buffer, this.buffer.byteOffset, this.buffer.byteLength).toString("hex");
     }
 
     toNumber() {
-        const out = this.toUnsignedNumber();
-        return this.invert ? -out : out;
-    }
-
-    valueOf() {
-        return this.toNumber();
-    }
-
-    toJSON() {
-        return this.toNumber();
+        return Util.bytesToNumber(this.buffer);
     }
 
     validate() {}
@@ -153,29 +164,75 @@ class BitField {
             return false;
         }
 
-        throw new UtilError("Named bits are not configured", name);
+        throw new BitFieldError("Named bits are not configured", name);
     }
 
     static _validateBitIndex(bitIndex) {
         if (!Number.isInteger(bitIndex) || bitIndex < 0) {
-            throw new UtilError("Invalid bit index", bitIndex);
+            throw new BitFieldError("Invalid bit index", bitIndex);
         }
     }
 
     _getCloneOptions() {
         return {
-            grow: Number.isFinite(this.grow) ? this.grow << 3 : this.grow,
-            invert: this.invert
+            grow: Number.isFinite(this.grow) ? this.grow * 8 : this.grow
         };
     }
 
+    _startMutation() {
+        this._mutation = {
+            buffer: this.buffer,
+            bytes: new Map()
+        };
+
+        return this._mutation;
+    }
+
+    _finishMutation() {
+        delete this._mutation;
+    }
+
+    _rollbackMutation(mutation) {
+        this.buffer = mutation.buffer;
+
+        for (const [byteIndex, byte] of mutation.bytes) {
+            this.buffer[byteIndex] = byte;
+        }
+
+        delete this._mutation;
+    }
+
     _commitMutation(callback) {
-        const copy = this.clone();
-        callback(copy);
-        copy.validate();
-        this.buffer = copy.buffer;
-        this.invert = copy.invert;
+        const mutation = this._startMutation();
+
+        try {
+            callback(this);
+            this.validate();
+            this._finishMutation();
+        } catch (err) {
+            this._rollbackMutation(mutation);
+            throw err;
+        }
+
         return this;
+    }
+
+    _recordByte(byteIndex) {
+        const mutation = this._mutation;
+
+        if (typeof mutation !== "undefined" && !mutation.bytes.has(byteIndex)) {
+            mutation.bytes.set(byteIndex, this.buffer[byteIndex]);
+        }
+    }
+
+    _growBuffer(newLength) {
+        if (newLength > this.grow || newLength <= this.buffer.length) {
+            return;
+        }
+
+        const newBuffer = new Uint8Array(newLength);
+        newBuffer.set(this.buffer);
+        this.buffer = newBuffer;
     }
 
     _setBit(bitIndex, value = true) {
@@ -185,34 +242,32 @@ class BitField {
             if (byteIndex >= this.buffer.length) {
                 const newLength = Math.max(byteIndex + 1, Math.min(2 * this.buffer.length, this.grow));
 
-                if (newLength <= this.grow) {
-                    const newBuffer = new Uint8Array(newLength);
-                    newBuffer.set(this.buffer);
-                    this.buffer = newBuffer;
-                }
+                this._growBuffer(newLength);
             }
 
             if (byteIndex < this.buffer.length) {
+                this._recordByte(byteIndex);
                 this.buffer[byteIndex] |= 1 << (bitIndex % 8);
             }
         } else if (byteIndex < this.buffer.length) {
+            this._recordByte(byteIndex);
             this.buffer[byteIndex] &= ~(1 << (bitIndex % 8));
         }
     }
 
     _setAllBits(array, offset = 0) {
-        const targetLength = Math.min(bitsToBytes(offset + array.length), this.grow);
+        const targetLength = Math.min(Math.ceil((offset + array.length) / 8), this.grow);
 
         if (this.buffer.length < targetLength) {
-            const newBuffer = new Uint8Array(targetLength);
-            newBuffer.set(this.buffer);
-            this.buffer = newBuffer;
+            this._growBuffer(targetLength);
         }
 
         let byteIndex = offset >> 3,
             bitMask = 1 << (offset % 8);
 
         for (let i = 0; i < array.length; i++) {
+            this._recordByte(byteIndex);
+
             if (array[i]) {
                 this.buffer[byteIndex] |= bitMask;
             } else {

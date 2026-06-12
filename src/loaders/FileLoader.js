@@ -2,13 +2,13 @@ import path from "node:path";
 
 import Loader from "./Loader.js";
 
-import TypeTester from "../util/TypeTester.js";
+import ObjectUtil from "../util/ObjectUtil.js";
 
 import { LoadStatus } from "./LoadStatus.js";
 
 class FileLoader extends Loader {
     constructor(name, filePath, logger, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         super(name, logger, {
             type: "file",

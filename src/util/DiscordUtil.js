@@ -6,6 +6,7 @@ import { EmbedBuilder, ChannelType, AttachmentBuilder } from "discord.js";
 
 import Util from "./Util.js";
 import TypeTester from "./TypeTester.js";
+import ObjectUtil from "./ObjectUtil.js";
 import ArrayUtil from "./ArrayUtil.js";
 
 import { EmbedCountAreas, validEmbedCountAreas } from "./EmbedCountAreas.js";
@@ -156,12 +157,17 @@ let DiscordUtil = {
         return new Date(timestamp + DiscordUtil.discordEpoch);
     },
 
+    isThreadChannel: channel => {
+        const type = TypeTester.isObject(channel) ? channel.type : channel;
+        return threadChannelTypes.has(type);
+    },
+
     formatChannelName: (channel, currentGuild) => {
         if (channel.type === ChannelType.DM) {
             return "DMs";
         }
 
-        const inThread = threadChannelTypes.has(channel.type),
+        const inThread = DiscordUtil.isThreadChannel(channel),
             hasGuild = [currentGuild, channel.guild].every(obj => typeof obj !== "undefined");
 
         const nameFormat = inThread
@@ -180,7 +186,7 @@ let DiscordUtil = {
     },
 
     stringifyEmbed: (embed, options) => {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         const useHeaders = options.headers ?? false,
             includeURLs = options.urls ?? true;
@@ -291,7 +297,7 @@ let DiscordUtil = {
     },
 
     getEmbedSize: (embed, options) => {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         let countType = options.count ?? CountTypes.chars,
             countAreas = options.areas ?? EmbedCountAreas.all,
@@ -310,11 +316,9 @@ let DiscordUtil = {
         if (countAreas === EmbedCountAreas.all) {
             countAreas = Array.from(validEmbedCountAreas);
         } else {
-            countAreas = ArrayUtil.guaranteeArray(countAreas);
-
-            if (!countAreas.every(area => validEmbedCountAreas.has(area))) {
-                throw new UtilError("Invalid count areas", countAreas);
-            }
+            countAreas = ArrayUtil.guaranteeArray(countAreas).map(area =>
+                TypeTester.normalizeEnum(area, validEmbedCountAreas, "count areas", UtilError)
+            );
         }
 
         const hasContent = countAreas.includes(EmbedCountAreas.content),
@@ -375,7 +379,7 @@ let DiscordUtil = {
             return false;
         }
 
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         let count = 0;
 
@@ -435,7 +439,7 @@ let DiscordUtil = {
                     const part = str.slice(i, i + length);
 
                     if (part === pattern) {
-                        const hasContentAfter = part.trim().length > 0;
+                        const hasContentAfter = !Util.empty(part.trim());
 
                         if (hasContentAfter) {
                             stack[stack.length - 1] === pattern ? stack.pop() : stack.push(pattern);
@@ -465,7 +469,7 @@ let DiscordUtil = {
     },
 
     trimEmbed(embed, charLimit, lineLimit, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         const embedData = DiscordUtil.getEmbedData(embed);
 
@@ -502,7 +506,7 @@ let DiscordUtil = {
     },
 
     fetchAttachment: async (msg, responseType = "text", options) => {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         const ctypes = [].concat(options.allowedContentType ?? [], options.allowedContentTypes ?? []);
 
@@ -527,9 +531,9 @@ let DiscordUtil = {
         if (!Util.empty(extensions)) {
             if (attachInfo == null || Util.empty(attachInfo.ext)) {
                 throw new UtilError("Extension can only be validated for attachment URLs");
-            } else if (!extensions.includes(attachInfo.ext)) {
-                throw new UtilError("Invalid file extension: " + attachInfo.ext, attachInfo.ext);
             }
+
+            TypeTester.normalizeEnum(attachInfo.ext, extensions, "file extension", UtilError);
         }
 
         if (!Util.empty(ctypePrefs)) {

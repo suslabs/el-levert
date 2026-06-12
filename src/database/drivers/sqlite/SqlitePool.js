@@ -6,14 +6,14 @@ import SqlitePoolConnection from "./SqlitePoolConnection.js";
 
 import { PoolEvents } from "./PoolEvents.js";
 
-import TypeTester from "../../../util/TypeTester.js";
+import ObjectUtil from "../../../util/ObjectUtil.js";
 import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
 
 class SqlitePool extends EventEmitter {
     constructor(config) {
         super();
 
-        config = TypeTester.isObject(config) ? config : {};
+        config = ObjectUtil.guaranteeObject(config);
         this.config = config;
 
         this._setConfig(config);
@@ -23,7 +23,7 @@ class SqlitePool extends EventEmitter {
     }
 
     applyConfig(config) {
-        config = TypeTester.isObject(config) ? config : {};
+        config = ObjectUtil.guaranteeObject(config);
 
         this._setConfig(config);
         this._setOptions();
@@ -54,7 +54,7 @@ class SqlitePool extends EventEmitter {
         return this.pool.destroy(connection);
     }
 
-    async close() {
+    async empty() {
         await this.pool.drain();
         this.emit(PoolEvents.drain);
 
@@ -152,7 +152,7 @@ class SqlitePool extends EventEmitter {
 
             filename: this.filename,
             mode: this.mode,
-            eventPrefix: this.eventPrefix,
+            eventPrefix: this.eventPrefix
         };
     }
 
@@ -171,7 +171,7 @@ class SqlitePool extends EventEmitter {
             },
 
             validate: conn => {
-                return conn.db != null;
+                return conn.db !== null;
             }
         };
     }

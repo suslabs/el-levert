@@ -1,5 +1,6 @@
 import Util from "../Util.js";
 import TypeTester from "../TypeTester.js";
+import ObjectUtil from "../ObjectUtil.js";
 
 import UtilError from "../../errors/UtilError.js";
 
@@ -28,7 +29,7 @@ const CallstackUtil = Object.freeze({
     },
 
     getCallInfo: options => {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         const minDepth = options.depth ?? 0,
             excludeFunctions = options.excludeFunctions ?? [];
@@ -47,7 +48,11 @@ const CallstackUtil = Object.freeze({
 
         const site = stack.find(site => {
             const fileName = site.getFileName();
-            return typeof fileName === "string" && fileName.startsWith(projRootUrl) && !excludeFunctions.includes(site.getFunctionName());
+            return (
+                typeof fileName === "string" &&
+                fileName.startsWith(projRootUrl) &&
+                !excludeFunctions.includes(site.getFunctionName())
+            );
         });
 
         if (typeof site === "undefined") {

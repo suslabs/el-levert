@@ -1,14 +1,14 @@
 import DirectoryLoader from "../DirectoryLoader.js";
 import CommandObjectLoader from "./CommandObjectLoader.js";
 
-import TypeTester from "../../util/TypeTester.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
 
 import { LoadStatus } from "../LoadStatus.js";
 
 class CommandLoader extends DirectoryLoader {
     constructor(dirPath, logger, options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         super("command", dirPath, logger, {
             throwOnFailure: false,
