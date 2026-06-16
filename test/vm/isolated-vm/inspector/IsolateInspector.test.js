@@ -21,7 +21,6 @@ vi.mock("../../../../src/util/vm/VMUtil.js", () => ({
     }
 }));
 
-
 afterEach(() => {
     vi.restoreAllMocks();
     vi.useRealTimers();

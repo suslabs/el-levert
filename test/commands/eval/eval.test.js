@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import { cleanupRuntime, createCommandMessage, createCommandRuntime, getCommand, executeCommand } from "../../helpers/commandHarness.js";
+import {
+    cleanupRuntime,
+    createCommandMessage,
+    createCommandRuntime,
+    getCommand,
+    executeCommand
+} from "../../helpers/commandHarness.js";
 
 let runtime;
 
@@ -139,7 +145,9 @@ describe("Merged Branch Coverage", () => {
                 throw err;
             };
 
-            await expect(executeCommand(command, "```js\n1 + 1\n```", { msg: createCommandMessage("%eval") })).resolves.toEqual([
+            await expect(
+                executeCommand(command, "```js\n1 + 1\n```", { msg: createCommandMessage("%eval") })
+            ).resolves.toEqual([
                 ":no_entry_sign: Stopped.",
                 {
                     type: "options",
@@ -172,7 +180,9 @@ describe("Merged Branch Coverage", () => {
                 throw err;
             };
 
-            await expect(executeCommand(cCommand, "```c\nbad\n```", { msg })).resolves.toContain("Bad stream\nBad code");
+            await expect(executeCommand(cCommand, "```c\nbad\n```", { msg })).resolves.toContain(
+                "Bad stream\nBad code"
+            );
 
             runtime.client.externalVM.runScript = async () => {
                 const err = new Error("service unavailable");
@@ -183,7 +193,9 @@ describe("Merged Branch Coverage", () => {
             await expect(executeCommand(cCommand, "```c\nbad\n```", { msg })).resolves.toContain("Unexpected token");
 
             runtime.client.externalVM.runScript = async () => [{}, 1];
-            await expect(executeCommand(cCommand, "```c\nbad\n```", { msg })).resolves.toBe(":no_entry_sign: General error.");
+            await expect(executeCommand(cCommand, "```c\nbad\n```", { msg })).resolves.toBe(
+                ":no_entry_sign: General error."
+            );
 
             runtime.client.externalVM.runScript = async () => [
                 {

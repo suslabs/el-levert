@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { addAdmin, cleanupRuntime, createCommandMessage, createCommandRuntime, getCommand, executeCommand } from "../../helpers/commandHarness.js";
+import {
+    addAdmin,
+    cleanupRuntime,
+    createCommandMessage,
+    createCommandRuntime,
+    getCommand,
+    executeCommand
+} from "../../helpers/commandHarness.js";
 import PermissionError from "../../../src/errors/PermissionError.js";
 
 let runtime;
@@ -93,7 +100,9 @@ describe("Merged Branch Coverage", () => {
             expect(await run("add_group mods 5")).toContain("Added group");
             expect(await run("add_group mods 5")).toContain("already exists");
 
-            vi.spyOn(runtime.client.permManager, "addGroup").mockRejectedValueOnce(new PermissionError("Manager failed"));
+            vi.spyOn(runtime.client.permManager, "addGroup").mockRejectedValueOnce(
+                new PermissionError("Manager failed")
+            );
             expect(await run("add_group helpers 4")).toContain("Manager failed");
         });
 
@@ -240,7 +249,9 @@ describe("Merged Branch Coverage", () => {
             expect(await run("remove_group mods")).toContain("Removed group");
 
             await runtime.client.permManager.addGroup("helpers", 4, true);
-            vi.spyOn(runtime.client.permManager, "removeGroup").mockRejectedValueOnce(new PermissionError("Delete failed"));
+            vi.spyOn(runtime.client.permManager, "removeGroup").mockRejectedValueOnce(
+                new PermissionError("Delete failed")
+            );
             expect(await run("remove_group helpers")).toContain("Delete failed");
         });
 
@@ -261,7 +272,9 @@ describe("Merged Branch Coverage", () => {
             expect(await run("update_group mods unchanged 6")).toContain("Updated group");
 
             await runtime.client.permManager.addGroup("writers", 3, true);
-            vi.spyOn(runtime.client.permManager, "updateGroup").mockRejectedValueOnce(new PermissionError("Update failed"));
+            vi.spyOn(runtime.client.permManager, "updateGroup").mockRejectedValueOnce(
+                new PermissionError("Update failed")
+            );
             expect(await run("update_group writers scribes 4")).toContain("Update failed");
         });
     });

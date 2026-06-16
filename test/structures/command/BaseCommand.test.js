@@ -14,11 +14,13 @@ describe("BaseCommand", () => {
         expect(() => new TestBaseCommand({})).toThrow("Command must have a name");
         expect(
             () =>
-                new (class extends BaseCommand {} )({
+                new (class extends BaseCommand {})({
                     name: "ping"
                 })
         ).toThrow("Command must have a handler function");
-        expect(() => new TestBaseCommand({ name: "sub", subcommand: true })).toThrow("Subcommands must have a parent command");
+        expect(() => new TestBaseCommand({ name: "sub", subcommand: true })).toThrow(
+            "Subcommands must have a parent command"
+        );
     });
 
     test("manages subcommands, names, equality, and data projection", async () => {

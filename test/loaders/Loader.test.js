@@ -71,7 +71,9 @@ describe("Merged Branch Coverage", () => {
             expect(loader.getData()).toEqual({
                 ok: true
             });
-            expect(() => new SyncLoader("config", null, { dataField: "missing" }).getData()).toThrow("Data field not found");
+            expect(() => new SyncLoader("config", null, { dataField: "missing" }).getData()).toThrow(
+                "Data field not found"
+            );
         });
 
         test("handles failure modes with thrown errors and logger fallback", () => {
@@ -87,9 +89,12 @@ describe("Merged Branch Coverage", () => {
             });
 
             expect(silentLoader.failure("Failed softly.")).toBe(LoadStatus.failed);
-            expect(logger.log).toHaveBeenCalledWith("error", expect.objectContaining({
-                message: "Failed softly"
-            }));
+            expect(logger.log).toHaveBeenCalledWith(
+                "error",
+                expect.objectContaining({
+                    message: "Failed softly"
+                })
+            );
 
             const err = new Error("boom");
             expect(silentLoader.failure(err, "While loading", "warn")).toBe(LoadStatus.failed);
@@ -155,20 +160,32 @@ describe("Merged Branch Coverage", () => {
 
             const ignoredWriter = new SyncLoader("config", logger);
             ignoredWriter.getIgnoredMessage = () => "Skipped write.";
-            expect(ignoredWriter.write({
-                ok: true
-            }, LoadStatus.ignore)).toBe(LoadStatus.ignore);
+            expect(
+                ignoredWriter.write(
+                    {
+                        ok: true
+                    },
+                    LoadStatus.ignore
+                )
+            ).toBe(LoadStatus.ignore);
             expect(logger.log).toHaveBeenCalledWith("debug", "Skipped write.");
 
             const failedWriter = new SyncLoader("config", logger);
-            expect(failedWriter.write({
-                ok: true
-            }, LoadStatus.failed)).toBe(LoadStatus.failed);
+            expect(
+                failedWriter.write(
+                    {
+                        ok: true
+                    },
+                    LoadStatus.failed
+                )
+            ).toBe(LoadStatus.failed);
 
             const asyncLoader = new AsyncLoader("config", logger);
-            await expect(asyncLoader.write({
-                async: true
-            })).resolves.toBe(LoadStatus.successful);
+            await expect(
+                asyncLoader.write({
+                    async: true
+                })
+            ).resolves.toBe(LoadStatus.successful);
 
             const nullWriter = new SyncLoader("config", logger, {
                 throwOnFailure: false

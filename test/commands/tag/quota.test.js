@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import { addTag, cleanupRuntime, createCommandMessage, createCommandRuntime, getCommand, executeCommand } from "../../helpers/commandHarness.js";
+import {
+    addTag,
+    cleanupRuntime,
+    createCommandMessage,
+    createCommandRuntime,
+    getCommand,
+    executeCommand
+} from "../../helpers/commandHarness.js";
 
 let runtime;
 let msg;
@@ -47,7 +54,9 @@ describe("Merged Branch Coverage", () => {
             await addTag(runtime, "alpha", "body one", msg.author.id);
             runtime.client.tagManager.getQuota = async () => 0;
 
-            await expect(executeCommand(command, "quota", { msg })).resolves.toContain("aren't using any of the available storage");
+            await expect(executeCommand(command, "quota", { msg })).resolves.toContain(
+                "aren't using any of the available storage"
+            );
         });
     });
 });

@@ -186,9 +186,7 @@ describe("ReactionHandler with multiple reacts", () => {
     });
 
     test("keeps repeated word hits in source order before batching unique emojis", () => {
-        vi.spyOn(Math, "random")
-            .mockReturnValueOnce(0)
-            .mockReturnValueOnce(0.999999);
+        vi.spyOn(Math, "random").mockReturnValueOnce(0).mockReturnValueOnce(0.999999);
 
         const plan = handler._getReactionPlan("rabbit leveret rabbit");
         expect(plan.words).toEqual(["rabbit", "leveret"]);
@@ -196,9 +194,7 @@ describe("ReactionHandler with multiple reacts", () => {
     });
 
     test("reacts from repeated matches and ignores code-blocked words", async () => {
-        vi.spyOn(Math, "random")
-            .mockReturnValueOnce(0)
-            .mockReturnValueOnce(0.999999);
+        vi.spyOn(Math, "random").mockReturnValueOnce(0).mockReturnValueOnce(0.999999);
 
         const msg = createReactingMessage("rabbit `rabbit` leveret rabbit");
 

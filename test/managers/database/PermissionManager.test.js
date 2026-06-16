@@ -28,9 +28,8 @@ beforeEach(async () => {
     });
 
     PermissionManager = (await import("../../../src/managers/database/PermissionManager.js")).default;
-    ({ DisabledGroup, OwnerGroup, OwnerUser } = await import(
-        "../../../src/structures/permission/PermissionDefaults.js"
-    ));
+    ({ DisabledGroup, OwnerGroup, OwnerUser } =
+        await import("../../../src/structures/permission/PermissionDefaults.js"));
 
     managers = [];
 

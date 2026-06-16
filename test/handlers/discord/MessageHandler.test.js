@@ -149,7 +149,6 @@ describe("MessageHandler", () => {
         });
     });
 
-
     test("routes replies across reply and send helpers while tracking arrays", async () => {
         const handler = createHandler();
         handler.hasReplyTracker = true;

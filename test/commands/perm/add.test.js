@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { addAdmin, cleanupRuntime, createCommandMessage, createCommandRuntime, getCommand, executeCommand } from "../../helpers/commandHarness.js";
+import {
+    addAdmin,
+    cleanupRuntime,
+    createCommandMessage,
+    createCommandRuntime,
+    getCommand,
+    executeCommand
+} from "../../helpers/commandHarness.js";
 
 let runtime;
 let adminMsg;

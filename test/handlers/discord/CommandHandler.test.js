@@ -207,7 +207,7 @@ describe("CommandHandler", () => {
             content: ":hourglass_flowing_sand: Processing command..."
         });
         expect(editSpy).toHaveBeenCalledWith({
-            content: ':no_entry_sign: Timed out executing command **slow-timeout**.'
+            content: ":no_entry_sign: Timed out executing command **slow-timeout**."
         });
     });
 

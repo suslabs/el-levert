@@ -161,12 +161,15 @@ describe("Merged Branch Coverage", () => {
                 createdTimestamp: 1000
             });
 
-            const previewMsg = createDiscordMessage("https://discord.com/channels/@me/123456789012345678/123456789012345678", {
-                author: {
-                    id: "9",
-                    username: "Caller"
+            const previewMsg = createDiscordMessage(
+                "https://discord.com/channels/@me/123456789012345678/123456789012345678",
+                {
+                    author: {
+                        id: "9",
+                        username: "Caller"
+                    }
                 }
-            });
+            );
 
             const embed = await handler.generatePreview(previewMsg, previewMsg.content);
             expect(embed.data.description).toContain("Video");
@@ -174,7 +177,9 @@ describe("Merged Branch Coverage", () => {
         });
 
         test("replies with warning messages for handled preview errors", async () => {
-            const msg = createDiscordMessage("https://discord.com/channels/123456789012345678/123456789012345678/123456789012345678");
+            const msg = createDiscordMessage(
+                "https://discord.com/channels/123456789012345678/123456789012345678/123456789012345678"
+            );
 
             vi.spyOn(handler, "generatePreview").mockRejectedValue(new HandlerError("Preview access denied"));
 

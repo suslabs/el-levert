@@ -105,7 +105,9 @@ describe("Merged Branch Coverage", () => {
             });
 
             vi.spyOn(fsPromises, "writeFile").mockRejectedValueOnce(new Error("async write failed"));
-            vi.spyOn(fsPromises, "unlink").mockRejectedValueOnce(Object.assign(new Error("unlink failed"), { code: "EPERM" }));
+            vi.spyOn(fsPromises, "unlink").mockRejectedValueOnce(
+                Object.assign(new Error("unlink failed"), { code: "EPERM" })
+            );
 
             await expect(asyncLoader.write("gamma")).resolves.toBe(LoadStatus.failed);
             expect(logger.error).toHaveBeenCalledWith(

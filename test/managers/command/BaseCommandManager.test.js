@@ -129,9 +129,7 @@ describe("Merged Branch Coverage", () => {
             matches: other => other === name,
             equivalent: other => other.name === name,
             subcmdOf: (parent, subName) =>
-                command.subcommand &&
-                (command.parentCmd?.name ?? command.parent) === parent.name &&
-                subName === name,
+                command.subcommand && (command.parentCmd?.name ?? command.parent) === parent.name && subName === name,
             addSubcommand: vi.fn(subcmd => {
                 command.subcmds.push(subcmd);
                 subcmd.bound = true;

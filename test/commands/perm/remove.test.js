@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { addAdmin, cleanupRuntime, createCommandMessage, createCommandRuntime, getCommand, executeCommand } from "../../helpers/commandHarness.js";
+import {
+    addAdmin,
+    cleanupRuntime,
+    createCommandMessage,
+    createCommandRuntime,
+    getCommand,
+    executeCommand
+} from "../../helpers/commandHarness.js";
 
 let runtime;
 let adminMsg;
@@ -30,7 +37,11 @@ describe("perm remove command", () => {
     test("removes users from groups through the real permission manager", async () => {
         const command = getCommand(runtime, "perm");
 
-        await expect(executeCommand(command, "remove mods alice", { msg: adminMsg })).resolves.toContain("Removed user");
-        await expect(executeCommand(command, "remove mods alice", { msg: adminMsg })).resolves.toContain("is not in group");
+        await expect(executeCommand(command, "remove mods alice", { msg: adminMsg })).resolves.toContain(
+            "Removed user"
+        );
+        await expect(executeCommand(command, "remove mods alice", { msg: adminMsg })).resolves.toContain(
+            "is not in group"
+        );
     });
 });

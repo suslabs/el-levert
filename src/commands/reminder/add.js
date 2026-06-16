@@ -68,7 +68,12 @@ class ReminderAddCommand {
         let reminder;
 
         try {
-            reminder = await getClient().reminderManager.add(ctx.msg.author.id, new Date(parsedDate).getTime(), message, false);
+            reminder = await getClient().reminderManager.add(
+                ctx.msg.author.id,
+                new Date(parsedDate).getTime(),
+                message,
+                false
+            );
         } catch (err) {
             if (err.name !== "ReminderError") {
                 throw err;

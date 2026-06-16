@@ -28,7 +28,6 @@ class TagSearchCommand {
     };
 
     async handler(ctx) {
-
         if (Util.empty(ctx.argsText)) {
             return `${getEmoji("info")} ${this.getArgsHelp("name [all/max_results]")}`;
         }

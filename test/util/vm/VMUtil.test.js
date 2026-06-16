@@ -179,14 +179,10 @@ describe("VMUtil", () => {
         });
 
         expect(
-            VMUtil.getResponseData(
-                null,
-                new Error("offline"),
-                {
-                    errorType: VMHttpErrorTypes.value,
-                    url: "https://example.com/start"
-                }
-            )
+            VMUtil.getResponseData(null, new Error("offline"), {
+                errorType: VMHttpErrorTypes.value,
+                url: "https://example.com/start"
+            })
         ).toEqual({
             status: -1,
             statusText: "offline",

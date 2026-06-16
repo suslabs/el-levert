@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { cleanupRuntime, createCommandRuntime, getCliCommand, executeCliCommand } from "../../helpers/commandHarness.js";
+import {
+    cleanupRuntime,
+    createCommandRuntime,
+    getCliCommand,
+    executeCliCommand
+} from "../../helpers/commandHarness.js";
 
 let runtime;
 

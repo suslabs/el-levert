@@ -21,7 +21,6 @@ class TagRawCommand {
     };
 
     async handler(ctx) {
-
         if (Util.empty(ctx.argsText)) {
             return `${getEmoji("info")} ${this.getArgsHelp("name")}`;
         }

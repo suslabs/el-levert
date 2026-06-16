@@ -17,4 +17,3 @@ class GuildMember {
 }
 
 export { GuildMember };
-

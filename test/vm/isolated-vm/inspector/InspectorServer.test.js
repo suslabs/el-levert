@@ -180,7 +180,8 @@ async function evalLabel(client) {
 
 describe("InspectorServer branch coverage", () => {
     test("builds the inspector url and ignores disabled operations", async () => {
-        const { default: InspectorServer } = await import("../../../../src/vm/isolated-vm/inspector/InspectorServer.js");
+        const { default: InspectorServer } =
+            await import("../../../../src/vm/isolated-vm/inspector/InspectorServer.js");
 
         const server = new InspectorServer(false, 9999);
 
@@ -195,7 +196,8 @@ describe("InspectorServer branch coverage", () => {
     });
 
     test("binds websocket events, relays messages, and cleans up connections", async () => {
-        const { default: InspectorServer } = await import("../../../../src/vm/isolated-vm/inspector/InspectorServer.js");
+        const { default: InspectorServer } =
+            await import("../../../../src/vm/isolated-vm/inspector/InspectorServer.js");
 
         const server = new InspectorServer(true, 9230, {
             logPackets: true
@@ -240,8 +242,8 @@ describe("InspectorServer branch coverage", () => {
         mocked.servers[0].handlers.connection(socket);
         expect(inspector.onConnection).toHaveBeenCalledOnce();
 
-        socket.handlers.message(Buffer.from("{\"id\":1}"));
-        expect(inspector.sendMessage).toHaveBeenCalledWith("{\"id\":1}");
+        socket.handlers.message(Buffer.from('{"id":1}'));
+        expect(inspector.sendMessage).toHaveBeenCalledWith('{"id":1}');
 
         server.sendReply("reply");
         expect(socket.send).toHaveBeenCalledWith("reply");
@@ -250,7 +252,7 @@ describe("InspectorServer branch coverage", () => {
             throw new Error("dispatch failed");
         });
 
-        socket.handlers.message(Buffer.from("{\"id\":2}"));
+        socket.handlers.message(Buffer.from('{"id":2}'));
         expect(socket.close).toHaveBeenCalledTimes(2);
 
         socket.handlers.error(new Error("socket error"));
@@ -306,7 +308,8 @@ describe("InspectorServer branch coverage", () => {
     });
 
     test("routes real inspector protocol messages to the active context", async () => {
-        const { default: InspectorServer } = await import("../../../../src/vm/isolated-vm/inspector/InspectorServer.js");
+        const { default: InspectorServer } =
+            await import("../../../../src/vm/isolated-vm/inspector/InspectorServer.js");
 
         const mockWebSocket = globalThis.WebSocket,
             port = await getOpenPort();

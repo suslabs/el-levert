@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import { cleanupRuntime, createCommandMessage, createCommandRuntime, getCommand, executeCommand } from "../../helpers/commandHarness.js";
+import {
+    cleanupRuntime,
+    createCommandMessage,
+    createCommandRuntime,
+    getCommand,
+    executeCommand
+} from "../../helpers/commandHarness.js";
 
 let runtime;
 let msg;
@@ -21,8 +27,12 @@ describe("reminder add command", () => {
 
         await expect(executeCommand(command, "add", { msg })).resolves.toContain('date "message"');
         await expect(executeCommand(command, 'add nonsense "Pay rent"', { msg })).resolves.toContain("Invalid date");
-        await expect(executeCommand(command, 'add in 1 hour ""', { msg })).resolves.toContain("Invalid reminder message");
-        await expect(executeCommand(command, 'add in 1 hour "Pay rent"', { msg })).resolves.toContain("You will be reminded");
+        await expect(executeCommand(command, 'add in 1 hour ""', { msg })).resolves.toContain(
+            "Invalid reminder message"
+        );
+        await expect(executeCommand(command, 'add in 1 hour "Pay rent"', { msg })).resolves.toContain(
+            "You will be reminded"
+        );
     });
 });
 
@@ -51,7 +61,9 @@ describe("Merged Branch Coverage", () => {
             const command = getCommand(runtime, "reminder");
             const originalAdd = runtime.client.reminderManager.add.bind(runtime.client.reminderManager);
 
-            await expect(executeCommand(command, 'add 1 hour "say \\"hi\\""', { msg })).resolves.toContain("You will be reminded");
+            await expect(executeCommand(command, 'add 1 hour "say \\"hi\\""', { msg })).resolves.toContain(
+                "You will be reminded"
+            );
 
             const savedReminder = await runtime.client.reminderManager.list(msg.author.id);
             expect(savedReminder.at(0).msg).toBe('say "hi"');
@@ -62,7 +74,9 @@ describe("Merged Branch Coverage", () => {
                 throw err;
             };
 
-            await expect(executeCommand(command, 'add tomorrow "late"', { msg })).resolves.toContain("time in the past");
+            await expect(executeCommand(command, 'add tomorrow "late"', { msg })).resolves.toContain(
+                "time in the past"
+            );
 
             runtime.client.reminderManager.add = async () => {
                 const err = new Error("Custom reminder failure");
@@ -70,7 +84,9 @@ describe("Merged Branch Coverage", () => {
                 throw err;
             };
 
-            await expect(executeCommand(command, 'add tomorrow "late"', { msg })).resolves.toContain("Custom reminder failure");
+            await expect(executeCommand(command, 'add tomorrow "late"', { msg })).resolves.toContain(
+                "Custom reminder failure"
+            );
 
             runtime.client.reminderManager.add = async () => {
                 throw new Error("unexpected");

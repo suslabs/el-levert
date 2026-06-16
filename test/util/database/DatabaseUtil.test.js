@@ -51,7 +51,16 @@ describe("DatabaseUtil", () => {
             DatabaseUtil.checkSync(target, "promiseError", true, wrapped);
         }).toThrow("boom");
 
-        expect(DatabaseUtil.throwAsync(target, "promiseError", false, () => {}, () => {}, null)).toBe(false);
+        expect(
+            DatabaseUtil.throwAsync(
+                target,
+                "promiseError",
+                false,
+                () => {},
+                () => {},
+                null
+            )
+        ).toBe(false);
         expect(await DatabaseUtil.throwPromise(target, "promiseError", false, new Error("soft"), "ok")).toBe("ok");
         await expect(DatabaseUtil.throwPromise(target, "promiseError", true, new Error("hard"))).rejects.toThrow(
             "hard"

@@ -148,20 +148,14 @@ describe("QueryLoader", () => {
                 update: "UPDATE Tags SET hops = $hops;"
             }
         });
-        expect(prepareCalls).toEqual([
-            "SELECT hops FROM Tags;",
-            "UPDATE Tags SET hops = $hops;"
-        ]);
+        expect(prepareCalls).toEqual(["SELECT hops FROM Tags;", "UPDATE Tags SET hops = $hops;"]);
         expect(queries.tagQueries.fetch).toBe(sts[0]);
         expect(queries.tagQueries.update).toBe(sts[1]);
         expect(loader.queryList).toEqual(sts);
 
         await loader.deleteQueries();
 
-        expect(finalizeCalls).toEqual([
-            "SELECT hops FROM Tags;",
-            "UPDATE Tags SET hops = $hops;"
-        ]);
+        expect(finalizeCalls).toEqual(["SELECT hops FROM Tags;", "UPDATE Tags SET hops = $hops;"]);
         expect(logger.debug).toHaveBeenCalledWith("Deleting queries...");
         expect(logger.debug).toHaveBeenCalledWith("Deleted 2 queries.");
         expect(loader.queries).toBeUndefined();

@@ -61,12 +61,4 @@ const Events = {
     Error: "error"
 };
 
-export {
-    RESTJSONErrorCodes,
-    GatewayIntentBits,
-    Partials,
-    ActivityType,
-    ChannelType,
-    MessageType,
-    Events
-};
+export { RESTJSONErrorCodes, GatewayIntentBits, Partials, ActivityType, ChannelType, MessageType, Events };

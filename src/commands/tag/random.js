@@ -23,7 +23,6 @@ class TagRandomCommand {
     };
 
     async handler(ctx) {
-
         if (Util.empty(ctx.argsText)) {
             return `${getEmoji("info")} ${this.getArgsHelp("prefix")}`;
         }
@@ -46,9 +45,7 @@ class TagRandomCommand {
             return `${getEmoji("warn")} **No** tags matching the prefix were found.`;
         }
 
-        const tagContext = this.parentCmd.createContext(
-            ctx.withArgs([name, t_args].filter(Boolean).join(" "))
-        );
+        const tagContext = this.parentCmd.createContext(ctx.withArgs([name, t_args].filter(Boolean).join(" ")));
 
         return await this.parentCmd.handler(tagContext);
     }
