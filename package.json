@@ -3,6 +3,9 @@
     "main": "index.js",
     "type": "module",
     "private": true,
+    "engines": {
+        "node": ">=20 <22"
+    },
     "scripts": {
         "test": "vitest run",
         "coverage": "vitest run --coverage",

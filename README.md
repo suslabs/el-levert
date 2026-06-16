@@ -35,6 +35,13 @@
   <a href="#amogus">Amogus</a>
 </div>
 
+> [!WARNING]
+> This project only supports **Node.js 20.x and 21.x**.
+>
+> **Node.js 21.7.3 is the final supported version.**
+>
+> Node.js 22 and newer are not supported.
+
 # Features
 
 - Tags
@@ -43,6 +50,15 @@
 - Reminders
 - Message previews
 - ...and more!
+
+## Updating the bot
+
+Run the following commands to update the bot with the latest code:
+
+```bash
+git fetch origin
+git reset --soft origin/main
+```
 
 # TODO
 
