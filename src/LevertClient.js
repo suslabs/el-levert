@@ -47,12 +47,27 @@ class LevertClient extends DiscordClient {
 
         this.version = version;
         this.setConfigs(configs);
+
+        this._lifecycle = {
+            startLock: false,
+            stopLock: false,
+            restartLock: false
+        };
+
         this._setStopped();
 
         this.components = new Map();
-
         this.logger = null;
+
         this._setupLogger();
+    }
+
+    get started() {
+        return this._started;
+    }
+
+    get startedAt() {
+        return this._startedAt;
     }
 
     get uptime() {
@@ -339,101 +354,44 @@ class LevertClient extends DiscordClient {
     }
 
     async start() {
-        Benchmark.startTiming("__t1__1");
-
-        if (this.started) {
-            throw new ClientError("The bot can only be started once");
+        if (this._isLifecycleLocked() || this.started) {
+            return;
         }
 
-        this.logger.info("Starting bot...");
+        this._setLifecycleLock("start", true);
 
-        this._setOtherConfigs();
-
-        await this._loadManagers();
-        this._loadHandlers();
-
-        await this._loadEvents();
-
-        await ModuleUtil.resolveBarrel(VMs);
-        this._loadVMs();
-
-        await this.login(token, true);
-
-        await this._setActivityFromConfig();
-        this.reminderManager.startSendLoop();
-
-        if (this.config.enableGlobalHandler) {
-            registerGlobalErrorHandler(this.logger);
+        try {
+            return await this._startBot();
+        } finally {
+            this._setLifecycleLock("start", false);
         }
-
-        this._setStarted();
-        this._addDiscordTransports();
-
-        const time = this._logStartedTime();
-        this._setupInputManager();
-
-        return time;
     }
 
     async stop(kill = false) {
-        Benchmark.startTiming("__t1__1");
-
-        if (!this.started) {
-            throw new ClientError("The bot can't be stopped if it hasn't been started once");
+        if (this._isLifecycleLocked() || !this.started) {
+            return;
         }
 
-        this._disableInputManager();
+        this._setLifecycleLock("stop", true);
 
-        this.logger.info("Stopping bot...");
-        this._removeDiscordTransports();
-
-        if (this.config.enableGlobalHandler) {
-            removeGlobalErrorHandler();
+        try {
+            return await this._stopBot(kill);
+        } finally {
+            this._setLifecycleLock("stop", false);
         }
-
-        this._unloadEvents();
-
-        this._unloadHandlers();
-        await this._unloadManagers();
-
-        this._unloadVMs();
-
-        this.logout(kill);
-        this._setStopped();
-
-        return this._logStoppedTime();
     }
 
     async restart(configs) {
-        Benchmark.startTiming("__t1__2");
-
-        if (!this.started) {
-            throw new ClientError("The bot can't be restarted if it hasn't been started once");
+        if (this._isLifecycleLocked() || !this.started) {
+            return;
         }
 
-        this.logger.info("Restarting bot...");
-        this.silenceDiscordTransports(true);
+        this._setLifecycleLock("restart", true);
 
-        await this.stop();
-        this.buildClient();
-
-        switch (typeof configs) {
-            case "object":
-                this.setConfigs(configs);
-                break;
-            case "function":
-                const obj = await configs();
-                this.setConfigs(obj);
-
-                break;
-        }
-
-        await this.start();
-
-        if (this.config.enableCliCommands) {
-            return Benchmark.stopTiming("__t1__2");
-        } else {
-            return this._logRestartedTime();
+        try {
+            return await this._restartBot(configs);
+        } finally {
+            this._setLifecycleLock("restart", false);
         }
     }
 
@@ -450,18 +408,19 @@ class LevertClient extends DiscordClient {
     }
 
     _setStarted() {
-        this.started = true;
-        this.startedAt = Date.now();
+        this._started = true;
+        this._startedAt = Date.now();
     }
 
     _setStopped() {
-        this.started = false;
-        this.startedAt = -1;
+        this._started = false;
+        this._startedAt = -1;
     }
 
     _setOtherConfigs() {
         delete this.bridgeBotExp;
         delete this.bridgeBotExps;
+
         this.useBridgeBot = this.config.useBridgeBot ?? false;
         this.individualBridgeBotFormats = this.config.individualBridgeBotFormats ?? false;
 
@@ -738,6 +697,118 @@ class LevertClient extends DiscordClient {
         const time = Benchmark.stopTiming("__t1__2");
         this.logger.info(`Bot restarted in ${Util.formatNumber(time)} ms.`);
         return time;
+    }
+
+    _isLifecycleLocked() {
+        return Object.values(this._lifecycle).some(Boolean);
+    }
+
+    _setLifecycleLock(name, locked) {
+        name = String(name ?? "").trim();
+        const key = `${name}Lock`;
+
+        if (typeof this._lifecycle[key] === "boolean") {
+            this._lifecycle[key] = Boolean(locked);
+        }
+    }
+
+    async _startBot() {
+        Benchmark.startTiming("__t1__1");
+
+        if (this.started) {
+            throw new ClientError("The bot can only be started once");
+        }
+
+        this.logger.info("Starting bot...");
+
+        this._setOtherConfigs();
+
+        await this._loadManagers();
+        this._loadHandlers();
+
+        await this._loadEvents();
+
+        await ModuleUtil.resolveBarrel(VMs);
+        this._loadVMs();
+
+        await this.login(token, true);
+
+        await this._setActivityFromConfig();
+        this.reminderManager.startSendLoop();
+
+        if (this.config.enableGlobalHandler) {
+            registerGlobalErrorHandler(this.logger);
+        }
+
+        this._setStarted();
+        this._addDiscordTransports();
+
+        const time = this._logStartedTime();
+        this._setupInputManager();
+
+        return time;
+    }
+
+    async _stopBot(kill = false) {
+        Benchmark.startTiming("__t1__1");
+
+        if (!this.started) {
+            throw new ClientError("The bot can't be stopped if it hasn't been started once");
+        }
+
+        this._disableInputManager();
+
+        this.logger.info("Stopping bot...");
+        this._removeDiscordTransports();
+
+        if (this.config.enableGlobalHandler) {
+            removeGlobalErrorHandler();
+        }
+
+        this._unloadEvents();
+
+        this._unloadHandlers();
+        await this._unloadManagers();
+
+        this._unloadVMs();
+
+        this.logout(kill);
+        this._setStopped();
+
+        return this._logStoppedTime();
+    }
+
+    async _restartBot(configs) {
+        Benchmark.startTiming("__t1__2");
+
+        if (!this.started) {
+            throw new ClientError("The bot can't be restarted if it hasn't been started once");
+        }
+
+        this.logger.info("Restarting bot...");
+        this.silenceDiscordTransports(true);
+
+        await this._stopBot();
+        this.buildClient();
+
+        switch (typeof configs) {
+            case "object":
+                this.setConfigs(configs);
+                break;
+            case "function":
+                const obj = await configs();
+                this.setConfigs(obj);
+
+                break;
+        }
+
+        await this._startBot();
+
+        if (this.config.enableCliCommands) {
+            return Benchmark.stopTiming("__t1__2");
+        } else {
+            return this._logRestartedTime();
+        }
     }
 
     onKill() {

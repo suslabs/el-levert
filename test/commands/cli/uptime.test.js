@@ -16,7 +16,7 @@ beforeEach(async () => {
             enableCliCommands: true
         }
     });
-    runtime.client.startedAt = Date.UTC(2026, 0, 1, 0, 0, 0);
+    runtime.client._startedAt = Date.UTC(2026, 0, 1, 0, 0, 0);
 });
 
 afterEach(async () => {

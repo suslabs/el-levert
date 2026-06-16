@@ -40,6 +40,41 @@ describe("init", () => {
         expect(startSpy).toHaveBeenCalledOnce();
     });
 
+    test("registers pm2 shutdown handlers that stop the running client", async () => {
+        vi.resetModules();
+        await import("../setupGlobals.js");
+        const { LevertClient } = await import("../src/LevertClient.js");
+
+        const onHandlers = {};
+        const onSpy = vi.spyOn(process, "on").mockImplementation((event, handler) => {
+            onHandlers[event] = handler;
+            return process;
+        });
+        vi.spyOn(process, "removeListener").mockImplementation(() => process);
+        const exitSpy = vi.spyOn(process, "exit").mockImplementation(code => code);
+
+        const stopSpy = vi.spyOn(LevertClient.prototype, "stop").mockImplementation(function () {
+            this._setStopped();
+            return Promise.resolve();
+        });
+        vi.spyOn(LevertClient.prototype, "start").mockImplementation(function () {
+            this._setStarted();
+            return Promise.resolve();
+        });
+
+        const { default: init } = await import("../src/init.js");
+
+        await expect(init()).resolves.toBeUndefined();
+        expect(onSpy).toHaveBeenCalledWith("SIGINT", expect.any(Function));
+        expect(onSpy).toHaveBeenCalledWith("SIGTERM", expect.any(Function));
+        expect(onSpy).toHaveBeenCalledWith("message", expect.any(Function));
+
+        await onHandlers.SIGTERM();
+
+        expect(stopSpy).toHaveBeenCalledOnce();
+        expect(exitSpy).toHaveBeenCalledWith(143);
+    });
+
     test("exits with status 1 when real config loading fails", async () => {
         globalThis.projRoot = tempRoot;
         globalThis.projRootUrl = pathToFileURL(tempRoot).href;
