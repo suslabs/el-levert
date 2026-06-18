@@ -24,30 +24,34 @@ function ensureSubmodule() {
     run("git", ["submodule", "update", "--init", "--recursive", "--", "vendor/node-sqlite3"]);
 }
 
-function runNpm(args, options = {}) {
-    const npmPath = process.env.npm_execpath;
+function runNpm(cwd, args, options = {}) {
+    const npmPath = process.env.npm_execpath,
+        runOptions = { cwd, ...options };
 
     if (typeof npmPath === "string" && npmPath.length > 0) {
-        run(process.execPath, [npmPath, ...args], {
-            ...options
-        });
-
+        run(process.execPath, [npmPath, ...args], runOptions);
         return;
     }
 
-    run("npm", args, options);
+    run("npm", args, runOptions);
 }
 
-function prepareSubmodule() {
-    runNpm(["ci"], {
-        cwd: submodulePath
-    });
+function compileSubmodule() {
+    runNpm(submodulePath, ["ci", "--build-from-source"]);
 }
 
-function installFork() {
-    runNpm(["install", "--no-save", "--no-package-lock", "--build-from-source", "./vendor/node-sqlite3"]);
+function linkSubmodule() {
+    const targetPath = path.join(repoRoot, "node_modules", "sqlite3");
+
+    try {
+        fs.rmSync(targetPath, { recursive: true, force: true });
+    } catch (err) {}
+
+    fs.symlinkSync(submodulePath, targetPath, process.platform === "win32" ? "junction" : "dir");
 }
 
 ensureSubmodule();
-prepareSubmodule();
-installFork();
+compileSubmodule();
+linkSubmodule();
+
+console.log("\n✓ SQLite submodule linked successfully.");
