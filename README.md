@@ -41,6 +41,8 @@
 > **Node.js 21.7.3 is the final supported version.**
 >
 > Node.js 22 and newer are not supported.
+>
+> Use Node.js 20.19.6 if you plan on enabling the inspector features.
 
 # Features
 

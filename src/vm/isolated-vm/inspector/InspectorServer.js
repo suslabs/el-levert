@@ -1,6 +1,6 @@
-/* global WebSocket */
-
 import { URL, URLSearchParams } from "node:url";
+
+import WebSocket from "ws";
 
 import { getLogger } from "../../../LevertClient.js";
 
@@ -92,7 +92,6 @@ class InspectorServer {
         }
 
         this._disconnectInspector();
-
         const idx = this._inspectorContexts.lastIndexOf(context);
 
         if (idx !== -1) {

@@ -82,8 +82,8 @@ class TagVM extends VM {
         } catch (err) {
             outErr = err;
         } finally {
-            context.dispose();
             this._popContext(context);
+            context.dispose();
         }
 
         logFinished(timeKey, this.enableInspector);

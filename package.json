@@ -9,7 +9,7 @@
     "scripts": {
         "test": "vitest run",
         "coverage": "vitest run --coverage",
-        "start": "node --experimental-websocket --no-warnings=ExperimentalWarning index.js",
+        "start": "node --no-warnings=ExperimentalWarning index.js",
         "postinstall": "node ./scripts/setup/install-sqlite.cjs",
         "format": "prettier --config .prettierrc --ignore-path .prettierignore --write **/*.{js,cjs,json}",
         "lint": "eslint . --config .eslintrc.json --ignore-path .gitignore --ext .js,.cjs",
@@ -22,11 +22,12 @@
         "axios": "^1.16.0",
         "chrono-node": "^2.9.1",
         "discord.js": "^14.26.4",
+        "generic-pool": "^3.9.0",
         "isolated-vm": "^5.0.4",
         "re2": "^1.25.0",
-        "generic-pool": "^3.9.0",
         "typescript": "^6.0.3",
-        "winston": "^3.19.0"
+        "winston": "^3.19.0",
+        "ws": "^8.21.0"
     },
     "optionalDependencies": {
         "vm2": "^3.11.5"
