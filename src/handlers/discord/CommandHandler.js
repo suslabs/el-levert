@@ -76,7 +76,7 @@ class CommandHandler extends MessageHandler {
                     parseResult: parsed,
                     message: msg,
                     handler: this,
-                    isEdit: options.isEdit ?? false
+                    isEdit: options.isEdit
                 })
             );
 
@@ -122,10 +122,11 @@ class CommandHandler extends MessageHandler {
         const timeKey = Benchmark.startTiming(Symbol("command_execute"));
 
         try {
-            outRes = await Util.runWithTimeout(() => cmd.execute(context), timeoutError, this.globalTimeLimit);
+            outRes = await this._runCommandWithTimeout(cmd, context, timeoutError);
         } catch (err) {
             outErr = err;
         } finally {
+            context.setDisableTimeoutHook();
             this._stopProcessingTimer(timer);
         }
 
@@ -172,6 +173,12 @@ class CommandHandler extends MessageHandler {
 
         logCommandOutput(cmd, output);
         await this.contextReply(context, output, options);
+    }
+
+    async _runCommandWithTimeout(cmd, context, timeoutError) {
+        return await Util.runWithTimeout(() => cmd.execute(context), timeoutError, this.globalTimeLimit, {
+            timeoutControls: ({ clearTimer }) => context.setDisableTimeoutHook(clearTimer)
+        });
     }
 
     _startProcessingTimer(context) {

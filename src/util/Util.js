@@ -120,18 +120,19 @@ let Util = {
         return new Promise(resolve => setTimeout(resolve, ms));
     },
 
-    runWithTimeout: (callback, timeoutError, timeout = 10000) => {
+    runWithTimeout: (callback, timeoutError, timeout = 10000, options) => {
         if (typeof callback !== "function") {
             throw new UtilError("Callback function required");
         }
-
-        timeout = Util.clamp(timeout, 0);
 
         if (typeof timeoutError === "string") {
             timeoutError = new Error(timeoutError);
         } else if (!(timeoutError instanceof Error)) {
             timeoutError = new UtilError("Operation timed out");
         }
+
+        timeout = Util.clamp(timeout, 0);
+        options = ObjectUtil.guaranteeObject(options);
 
         const res = callback();
 
@@ -145,6 +146,14 @@ let Util = {
             clearTimeout(_timeout);
             _timeout = null;
         };
+
+        const timeoutData = {
+            clearTimer
+        };
+
+        if (typeof options.timeoutControls === "function") {
+            options.timeoutControls(timeoutData);
+        }
 
         const timeoutPromise = new Promise((_, reject) => {
             _timeout = setTimeout(() => reject(timeoutError), timeout);

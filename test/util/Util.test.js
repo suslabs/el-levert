@@ -178,4 +178,28 @@ describe("Util", () => {
             )
         ).toBe("fail");
     });
+
+    test("allows timeout timers to be cleared externally", async () => {
+        let timeoutData = null;
+
+        await expect(
+            Util.runWithTimeout(
+                () =>
+                    new Promise(resolve => {
+                        setTimeout(() => {
+                            timeoutData.clearTimer();
+                        }, 2);
+
+                        setTimeout(() => resolve("late"), 20);
+                    }),
+                "Too slow",
+                5,
+                {
+                    timeoutControls: data => {
+                        timeoutData = data;
+                    }
+                }
+            )
+        ).resolves.toBe("late");
+    });
 });

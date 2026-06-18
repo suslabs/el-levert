@@ -206,7 +206,16 @@ class TagCommand {
         let out;
 
         try {
-            out = await getClient().tagManager.execute(tag, t_args, { msg: ctx.msg });
+            out = await getClient().tagManager.execute(
+                tag,
+                t_args,
+                {
+                    msg: ctx.msg
+                },
+                {
+                    commandContext: ctx
+                }
+            );
         } catch (err) {
             switch (err.name) {
                 case "TagError":

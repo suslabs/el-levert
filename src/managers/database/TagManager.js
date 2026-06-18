@@ -193,9 +193,11 @@ class TagManager extends DBManager {
         return lastTag;
     }
 
-    async execute(tag, args, values) {
+    async execute(tag, args, values, options) {
         tag = Tag.from(tag, true);
+
         values = ObjectUtil.guaranteeObject(values);
+        options = ObjectUtil.guaranteeObject(options);
 
         tag = await this.fetchAlias(tag, true);
         await this._incrementUsage(tag._usageName ?? tag.name);
@@ -210,7 +212,7 @@ class TagManager extends DBManager {
             throw new TagError("Invalid tag type", type);
         }
 
-        return await this._runScriptTag(tag, type, args, values);
+        return await this._runScriptTag(tag, type, args, values, options);
     }
 
     async add(name, body, owner, meta, validate) {
@@ -759,7 +761,7 @@ class TagManager extends DBManager {
         await this._updateQuota(tag.owner, tagSize, 1, tx);
     }
 
-    async _runScriptTag(tag, type, args, values) {
+    async _runScriptTag(tag, type, args, values, options) {
         tag = Tag.from(tag);
 
         const evalArgs = [args, tag.args].filter(Util.nonemptyString).join(" ");
@@ -777,6 +779,7 @@ class TagManager extends DBManager {
                 });
 
                 return await ivm.runScript(tag.body, inputValues, {
+                    ...options,
                     language: tag.getScriptLanguage()
                 });
             case "vm2":

@@ -211,6 +211,43 @@ describe("CommandHandler", () => {
         });
     });
 
+    test("does not time out inspector-backed script commands after they disable the watchdog", async () => {
+        handler.commandWaitTime = 1;
+        handler.globalTimeLimit = 5;
+
+        const deleteSpy = vi.fn(async () => undefined);
+        const editSpy = vi.fn(async data => ({
+            id: "reply-1",
+            content: typeof data === "string" ? data : data.content,
+            edit: editSpy,
+            delete: deleteSpy
+        }));
+        const msg = createDiscordMessage("%eval ```js\n1 + 1\n```", {
+            reply: vi.fn(async data => ({
+                id: "reply-1",
+                content: typeof data === "string" ? data : data.content,
+                edit: editSpy,
+                delete: deleteSpy
+            }))
+        });
+
+        runtime.client.tagVM.runScript = async (_, values, options) => {
+            await new Promise(resolve => setTimeout(resolve, 2));
+            options.commandContext.disableTimeout();
+            await new Promise(resolve => setTimeout(resolve, 20));
+
+            return "debugged";
+        };
+
+        expect(await handler.execute(msg)).toBe(true);
+        expect(msg.reply).toHaveBeenCalledWith({
+            content: ":hourglass_flowing_sand: Processing command..."
+        });
+        expect(editSpy).toHaveBeenCalledWith({
+            content: "debugged"
+        });
+    });
+
     test("resubmit reruns edited commands and removes prior tracked replies", async () => {
         const firstDeleteSpy = vi.fn(async () => undefined);
         const secondDeleteSpy = vi.fn(async () => undefined);

@@ -153,7 +153,15 @@ class EvalCommand {
         let out = null;
 
         try {
-            out = await getClient().tagVM.runScript(body, { msg: ctx.msg });
+            out = await getClient().tagVM.runScript(
+                body,
+                {
+                    msg: ctx.msg
+                },
+                {
+                    commandContext: ctx
+                }
+            );
         } catch (err) {
             if (err.name !== "VMError") {
                 throw err;

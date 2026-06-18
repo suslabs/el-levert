@@ -17,23 +17,34 @@ class BaseCommandContext {
         this.parseResult = data.parseResult ?? null;
 
         this.isEdit = data.isEdit ?? false;
-        this.replied = data.replied ?? false;
-        this.processingReplySent = data.processingReplySent ?? false;
+
+        this.replied = false;
+        this.processingReplySent = false;
+        this.timeoutDisabled = false;
 
         for (const [key, value] of Object.entries(data)) {
             if (!(key in this)) {
                 this[key] = value;
             }
         }
+
+        this._disableTimeoutHook = null;
     }
 
     clone(overrides) {
         overrides = ObjectUtil.guaranteeObject(overrides);
 
-        return new this.constructor({
+        const context = new this.constructor({
             ...this,
             ...overrides
         });
+
+        context.replied = this.replied;
+        context.processingReplySent = this.processingReplySent;
+        context.timeoutDisabled = this.timeoutDisabled;
+        context._disableTimeoutHook = this._disableTimeoutHook;
+
+        return context;
     }
 
     withArgs(argsText, overrides) {
@@ -47,6 +58,22 @@ class BaseCommandContext {
 
     markReplied() {
         this.replied = true;
+        return this;
+    }
+
+    setDisableTimeoutHook(hook = null) {
+        this._disableTimeoutHook = typeof hook === "function" ? hook : null;
+        return this;
+    }
+
+    disableTimeout() {
+        if (this.timeoutDisabled) {
+            return this;
+        }
+
+        this.timeoutDisabled = true;
+        this._disableTimeoutHook?.();
+
         return this;
     }
 }

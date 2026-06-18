@@ -6,6 +6,7 @@ import InspectorServer from "./inspector/InspectorServer.js";
 import { getConfig, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
 import TypeTester from "../../util/TypeTester.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 
@@ -61,8 +62,15 @@ class TagVM extends VM {
     }
 
     async runScript(code, values, options) {
+        values = ObjectUtil.guaranteeObject(values);
+        options = ObjectUtil.guaranteeObject(options);
+
         code = transpileScript(code, options);
         logUsage(code);
+
+        if (this.enableInspector) {
+            options.commandContext?.disableTimeout();
+        }
 
         if (this._inspectorServer?.inspectorConnected && Util.empty(this._contextStack)) {
             getLogger().info("Can't run script: inspector is already connected.");
