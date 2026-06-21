@@ -20,17 +20,20 @@
     "reminderSendInterval": 10,
     "maxTagNameLength": 32,
     "tagNameRegex": "^[A-Za-z0-9\\-_]+$",
-    "maxTagSize": 100,
+    "maxTagSize": 500,
     "maxQuota": 1024,
     "memLimit": 250,
-    "timeLimit": 15,
+    "timeLimit": 30,
     "otherMemLimit": 50,
     "otherTimeLimit": 15,
     "enableInspector": true,
+<<<<<<< Updated upstream
     "enableUserInspector": false,
     "inspectorConnectTimeout": 60,
     "userInspectorConnectTimeout": 30,
     "userInspectorActionTimeout": 300,
+=======
+>>>>>>> Stashed changes
     "inspectorPort": 8080,
     "maxGroupNameLength": 16,
     "tagModeratorLevel": 1,
