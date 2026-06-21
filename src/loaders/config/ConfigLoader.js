@@ -25,6 +25,13 @@ class ConfigLoader extends BaseConfigLoader {
         );
         config.globalTimeLimit = Math.round(config.globalTimeLimit / Util.durationSeconds.milli);
         config.commandWaitTime = Math.round((config.commandWaitTime ?? 0) / Util.durationSeconds.milli);
+        config.inspectorConnectTimeout = Math.round((config.inspectorConnectTimeout ?? 0) / Util.durationSeconds.milli);
+        config.userInspectorConnectTimeout = Math.round(
+            (config.userInspectorConnectTimeout ?? 0) / Util.durationSeconds.milli
+        );
+        config.userInspectorActionTimeout = Math.round(
+            (config.userInspectorActionTimeout ?? 0) / Util.durationSeconds.milli
+        );
 
         config.timeLimit = Math.round(config.timeLimit / Util.durationSeconds.milli);
         config.otherTimeLimit = Math.round(config.otherTimeLimit / Util.durationSeconds.milli);

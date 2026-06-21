@@ -273,6 +273,83 @@ describe("Merged Branch Coverage", () => {
             ]);
         });
 
+        test("uses the explicit debug prefix in user inspector mode and edits the attach reply", async () => {
+            await cleanupRuntime(runtime);
+            runtime = await createCommandRuntime({
+                loadVMs: false,
+                loadHandlers: true,
+                config: {
+                    enableInspector: true,
+                    enableUserInspector: true
+                }
+            });
+
+            command = getCommand(runtime, "tag");
+            await addTag(runtime, "alpha", "body");
+
+            runtime.client.tagVM = {
+                enableUserInspector: true
+            };
+
+            const editSpy = vi.fn(async data => ({
+                content: typeof data === "string" ? data : data.content,
+                delete: async () => undefined,
+                edit: editSpy,
+                id: "reply-1"
+            }));
+            const msg = createCommandMessage("%tag debug alpha", {
+                author: {
+                    id: "user-1",
+                    username: "alex"
+                },
+                reply: vi.fn(async data => ({
+                    content: typeof data === "string" ? data : data.content,
+                    delete: async () => undefined,
+                    edit: editSpy,
+                    id: "reply-1"
+                }))
+            });
+            const handler = {
+                contextReply: async (_ctx, data) =>
+                    await msg.reply(typeof data === "string" ? { content: data } : data),
+                editFromContext: async (_ctx, data) =>
+                    await editSpy(typeof data === "string" ? { content: data } : data)
+            };
+
+            vi.spyOn(runtime.client.tagManager, "execute").mockImplementationOnce(
+                async (_tag, _args, _values, options) => {
+                    await options.onInspectorReady({
+                        devtoolsUrl: "devtools://debug",
+                        launchConfig: {
+                            request: "attach",
+                            type: "node",
+                            websocketAddress: "ws://127.0.0.1:8080/uuid"
+                        },
+                        listUrl: "http://127.0.0.1:8080/uuid/json/list",
+                        uuid: "uuid",
+                        websocketUrl: "ws://127.0.0.1:8080/uuid"
+                    });
+
+                    return "debug-tag-result";
+                }
+            );
+
+            await expect(
+                executeCommand(command, "debug alpha", {
+                    handler,
+                    msg
+                })
+            ).resolves.toBeUndefined();
+
+            expect(msg.reply).toHaveBeenCalledTimes(1);
+            expect(msg.reply.mock.calls[0][0].content ?? msg.reply.mock.calls[0][0]).toContain(
+                "ws://127.0.0.1:8080/uuid"
+            );
+            expect(editSpy).toHaveBeenCalledWith({
+                content: "debug-tag-result"
+            });
+        });
+
         test("covers add and alias validation, ownership, success, and manager failures", async () => {
             expect(await run("add")).toContain("name body");
             expect(await run("add delete body")).toContain("is a __command__");

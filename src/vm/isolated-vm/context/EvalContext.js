@@ -56,6 +56,7 @@ class EvalContext {
         this.vmObjects = new VMObjectRegistry();
 
         this.enableInspector = inspectorOptions.enable ?? false;
+        this.inspectorSession = inspectorOptions.inspectorSession ?? null;
 
         this._aborter = new AbortController();
         this.abortSignal = this._aborter.signal;

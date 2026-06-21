@@ -28,128 +28,111 @@ beforeEach(async () => {
 
 afterEach(async () => {
     for (const db of dbs) {
-        if (db.db != null) {
+        if (db?.db != null) {
             await db.close();
         }
     }
 
-    await fs.rm(tempDir, { recursive: true, force: true });
+    await fs.rm(tempDir, {
+        recursive: true,
+        force: true
+    });
 });
 
 describe("SqliteStatement", () => {
-    test("binds, resets, executes, queries, and finalizes real prepared statements", async () => {
-        const db = createDb("stmt.sqlite");
-
-        await db.open();
-        await db.exec("CREATE TABLE Items (id INTEGER PRIMARY KEY, value TEXT UNIQUE) STRICT;");
-
-        const insert = await db.prepare("INSERT INTO Items (value) VALUES (?)");
-        await insert.bind("alpha");
-        await insert.run();
-        await insert.reset();
-        await insert.run("beta");
-
-        const selectOne = await db.prepare("SELECT value FROM Items WHERE value = ?");
-        expect((await selectOne.get("alpha")).value).toBe("alpha");
-
-        const selectAll = await db.prepare("SELECT value FROM Items ORDER BY value");
-        expect((await selectAll.all()).map(row => row.value)).toEqual(["alpha", "beta"]);
-
-        await db.finalizeStatement(selectOne);
-        expect(selectOne.finalized).toBe(true);
-
-        await insert.finalize();
-        expect(insert.finalized).toBe(true);
-        expect(db.statements.includes(insert)).toBe(false);
-
-        expect(selectAll._checkFinalizedSync(false)).toBe(true);
-        await selectAll.finalize();
-        expect(selectAll._checkFinalizedSync(true)).toBe(true);
-    });
-
-    test("does not pin pooled root statements and preserves session rollback/finalized guards", async () => {
-        const db = createDb("stmt-soft.sqlite", {
+    test("keeps root statement containers unbound while child connections own bound copies", async () => {
+        const db = createDb("stmt-root.sqlite", {
             min: 1,
-            max: 1,
-            throwErrors: false,
-            autoRollback: true
+            max: 2
         });
 
         await db.open();
         await db.exec("CREATE TABLE Items (value TEXT UNIQUE) STRICT;");
 
-        const pinned = await db.prepare("INSERT INTO Items (value) VALUES (?)");
+        const insert = await db.prepare("INSERT INTO Items (value) VALUES (?)"),
+            fetch = await db.prepare("SELECT value FROM Items WHERE value = ? LIMIT 1;");
+
+        expect(db.statements).toEqual([insert, fetch]);
+        expect(insert._statements.size).toBe(1);
+
+        await insert.run("alpha");
+        await insert.run("beta");
+
+        expect(insert._statements.size).toBe(1);
+        expect((await fetch.get("alpha")).value).toBe("alpha");
         expect(db.pool.pool.borrowed).toBe(0);
 
-        const extraConnection = await db.pool.acquire();
-        extraConnection.release();
+        const tx1 = await db.beginTransaction("immediate"),
+            tx2 = await db.beginTransaction("deferred"),
+            txInsert1 = await tx1.bindStatement(insert),
+            txInsert2 = await tx2.bindStatement(insert);
 
-        await pinned.finalize();
+        expect(txInsert1).not.toBe(txInsert2);
+        expect(txInsert1._conn).toBe(tx1.db);
+        expect(txInsert2._conn).toBe(tx2.db);
+        expect(insert._statements.size).toBe(2);
 
-        const tx = await db.beginTransaction();
-        const insert = await tx.prepare("INSERT INTO Items (value) VALUES (?)");
-        await insert.run("x");
-        expect(await insert.run("x")).toBeUndefined();
-        expect(tx.inTransaction).toBe(false);
-        expect((await db.get("SELECT COUNT(*) AS count FROM Items")).count).toBe(0);
-        expect(insert.finalized).toBe(true);
+        await txInsert1.run("gamma");
+        await tx1.commit();
 
-        expect(await insert.bind("again")).toBeUndefined();
-        expect(await insert.reset()).toBeUndefined();
-        expect(await insert.run("again")).toBeUndefined();
-        expect(await insert.get("again")).toBeUndefined();
-        expect(await insert.all("again")).toBeUndefined();
-        expect(await insert.each("again")).toBeUndefined();
-        expect(await insert.finalize()).toBeUndefined();
-        expect(insert.safeIntegers()).toBeUndefined();
+        await txInsert2.run("delta");
+        await tx2.rollback();
 
-        expect(insert._checkFinalizedSync(false)).toBe(false);
-        expect(() => {
-            tx.throwErrors = true;
-            insert._checkFinalizedSync(false);
-        }).toThrow("The statement is finalized");
+        expect((await db.all("SELECT value FROM Items ORDER BY value")).map(row => row.value)).toEqual([
+            "alpha",
+            "beta",
+            "gamma"
+        ]);
     });
 
-    test("supports native bigint parameters and safe integer reads on prepared statements", async () => {
+    test("finalizes root copies across child connections and auto-finalizes session-local statements", async () => {
+        const db = createDb("stmt-finalize.sqlite", {
+            min: 1,
+            max: 2
+        });
+
+        await db.open();
+        await db.exec("CREATE TABLE Items (value TEXT UNIQUE) STRICT;");
+
+        const insert = await db.prepare("INSERT INTO Items (value) VALUES (?)");
+        await insert.run("alpha");
+
+        const tx = await db.beginTransaction(),
+            txInsert = await tx.bindStatement(insert),
+            local = await tx.prepare("INSERT INTO Items (value) VALUES (?)");
+
+        await txInsert.run("beta");
+        await local.run("gamma");
+
+        await insert.finalize();
+
+        expect(insert.finalized).toBe(true);
+        expect(txInsert.finalized).toBe(true);
+        expect(db.statements.includes(insert)).toBe(false);
+
+        await tx.rollback();
+        expect(local.finalized).toBe(true);
+        expect((await db.all("SELECT value FROM Items ORDER BY value")).map(row => row.value)).toEqual(["alpha"]);
+    });
+
+    test("supports bigint params and safe integer reads on root containers and bound child copies", async () => {
         const db = createDb("stmt-bigint.sqlite");
         const big = 9223372036854775807n;
 
         await db.open();
         await db.exec("CREATE TABLE Items (value INTEGER, alt INTEGER) STRICT;");
 
-        const insert = await db.prepare("INSERT INTO Items (value, alt) VALUES ($value, $alt)");
-        const result = await insert.run({
-            $value: 10n,
-            $alt: [12n][0]
-        });
-        expect(result.changes).toBe(1);
-        await insert.finalize();
+        const insert = await db.prepare("INSERT INTO Items (value, alt) VALUES (?, ?)");
+        await insert.run(1n, big);
 
-        const insertBig = await db.prepare("INSERT INTO Items (value, alt) VALUES (?, ?)");
-        await insertBig.run(1n, big);
-        await insertBig.finalize();
-
-        const select = await db.prepare("SELECT value, alt FROM Items LIMIT 1");
-        expect(await select.get()).toMatchObject({
-            value: 10,
-            alt: 12
-        });
+        const select = await db.prepare("SELECT alt FROM Items WHERE value = ?");
         select.safeIntegers();
-        expect(await select.get()).toMatchObject({
-            value: 10n,
-            alt: 12n
-        });
-        await select.finalize();
+        expect((await select.get(1n)).alt).toBe(big);
 
-        const selectBig = await db.prepare("SELECT alt FROM Items WHERE value = ?");
-        selectBig.safeIntegers();
-        expect((await selectBig.get(1n)).alt).toBe(big);
-        await selectBig.finalize();
+        const tx = await db.beginTransaction(),
+            txSelect = await tx.bindStatement(select);
 
-        const failing = await db.prepare("INSERT INTO Items (value, alt) VALUES (?, ?)");
-        await expect(failing.run(1n, 9223372036854775808n)).rejects.toThrow(
-            "BigInt value is too large to store in SQLite INTEGER"
-        );
-        await failing.finalize();
+        expect((await txSelect.get(1n)).alt).toBe(big);
+        await tx.rollback();
     });
 });

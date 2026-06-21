@@ -4,6 +4,7 @@ import ArrayUtil from "../../util/ArrayUtil.js";
 import Util from "../../util/Util.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import ParserUtil from "../../util/commands/ParserUtil.js";
+import getInspectorAttachOutput from "../../util/vm/getInspectorAttachOutput.js";
 
 async function evalBase(args, msg) {
     let body = "";
@@ -143,7 +144,19 @@ class EvalCommand {
     }
 
     async handler(ctx) {
-        const parsed = await this.evalBase(ctx.argsText, ctx.msg),
+        let debug = false,
+            argsText = ctx.argsText;
+
+        if (getClient().tagVM?.enableUserInspector) {
+            const [flag, rest] = ParserUtil.splitArgs(ctx.argsText, true);
+
+            if (flag === "debug") {
+                debug = true;
+                argsText = rest;
+            }
+        }
+
+        const parsed = await this.evalBase(argsText, ctx.msg),
             body = parsed.body;
 
         if (parsed.err !== null) {
@@ -153,21 +166,43 @@ class EvalCommand {
         let out = null;
 
         try {
-            out = await getClient().tagVM.runScript(
-                body,
-                {
-                    msg: ctx.msg
-                },
-                {
-                    commandContext: ctx
-                }
-            );
+            if (debug) {
+                out = await getClient().tagVM.runScript(
+                    body,
+                    {
+                        msg: ctx.msg
+                    },
+                    {
+                        commandContext: ctx,
+                        enableInspector: true,
+                        inspectorSourceUrl: "file:///eval.js",
+                        inspectorTitle: `eval inspector [${ctx.msg.author.id}]`,
+                        onInspectorReady: async info => await ctx.reply(getInspectorAttachOutput(info))
+                    }
+                );
+
+                await ctx.edit(out, {
+                    useConfigLimits: true
+                });
+
+                return;
+            }
+
+            out = await getClient().tagVM.runScript(body, { msg: ctx.msg }, { commandContext: ctx });
         } catch (err) {
             if (err.name !== "VMError") {
                 throw err;
             }
 
             out = `${getEmoji("error")} ${err.message}.`;
+
+            if (debug) {
+                await ctx.edit(out, {
+                    useConfigLimits: true
+                });
+
+                return;
+            }
         }
 
         return [

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
     cleanupRuntime,
     createCommandMessage,
@@ -154,6 +154,69 @@ describe("Merged Branch Coverage", () => {
                     useConfigLimits: true
                 }
             ]);
+        });
+
+        test("uses the explicit debug prefix in user inspector mode and edits the attach reply", async () => {
+            await cleanupRuntime(runtime);
+            runtime = await createCommandRuntime({
+                loadVMs: false,
+                config: {
+                    enableEval: true,
+                    enableInspector: true,
+                    enableUserInspector: true
+                }
+            });
+
+            runtime.client.tagVM = {
+                enableUserInspector: true,
+                runScript: async (_body, _values, options) => {
+                    await options.onInspectorReady({
+                        devtoolsUrl: "devtools://debug",
+                        launchConfig: {
+                            request: "attach",
+                            type: "node",
+                            websocketAddress: "ws://127.0.0.1:8080/uuid"
+                        },
+                        listUrl: "http://127.0.0.1:8080/uuid/json/list",
+                        uuid: "uuid",
+                        websocketUrl: "ws://127.0.0.1:8080/uuid"
+                    });
+
+                    return "debug-result";
+                }
+            };
+
+            const command = getCommand(runtime, "eval");
+            const editSpy = vi.fn(async data => ({
+                content: typeof data === "string" ? data : data.content,
+                delete: async () => undefined,
+                edit: editSpy,
+                id: "reply-1"
+            }));
+            const msg = createCommandMessage("%eval debug ```js\n1 + 1\n```", {
+                reply: vi.fn(async data => ({
+                    content: typeof data === "string" ? data : data.content,
+                    delete: async () => undefined,
+                    edit: editSpy,
+                    id: "reply-1"
+                }))
+            });
+            const handler = {
+                contextReply: async (_ctx, data) =>
+                    await msg.reply(typeof data === "string" ? { content: data } : data),
+                editFromContext: async (_ctx, data) =>
+                    await editSpy(typeof data === "string" ? { content: data } : data)
+            };
+
+            await expect(executeCommand(command, "debug ```js\n1 + 1\n```", { handler, msg })).resolves.toBeUndefined();
+
+            expect(msg.reply).toHaveBeenCalledTimes(1);
+            expect(msg.reply.mock.calls[0][0].content ?? msg.reply.mock.calls[0][0]).toContain(
+                "ws://127.0.0.1:8080/uuid"
+            );
+            expect(editSpy).toHaveBeenCalledWith({
+                content: "debug-result"
+            });
         });
 
         test("formats alternate eval outputs and vm2 execution branches", async () => {

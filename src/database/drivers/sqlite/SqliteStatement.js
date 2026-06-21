@@ -1,30 +1,69 @@
 import SqliteResult from "./SqliteResult.js";
 
-import { ConnectionStatementBackend, PooledStatementBackend } from "./StatementBackends.js";
-
 import { ConnectionEvents } from "./ConnectionEvents.js";
 
 import Util from "../../../util/Util.js";
 import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
 
 import DatabaseError from "../../../errors/DatabaseError.js";
-import { nil } from "ajv";
 
 class SqliteStatement {
-    constructor(target, sql, defaultParam = [], rawSt = null) {
+    static _stFinalizedMsg = "The statement is finalized";
+    static _stNotFinalizedMsg = "The statement is not finalized";
+
+    constructor(conn, sql, defaultParam = [], rawSt, options = {}) {
         this.sql = sql;
         this.defaultParam = defaultParam;
 
         this.finalized = false;
         this._safeIntegers = null;
 
-        this._backend = null;
-        this._owner = null;
+        this._conn = conn;
+        this._rawSt = rawSt;
+        this._template = options.template ?? null;
+    }
 
-        if (rawSt === null) {
-            this._backend = new PooledStatementBackend(target);
-        } else {
-            this._backend = new ConnectionStatementBackend(target, rawSt);
+    bind(...param) {
+        return new Promise((resolve, reject) => {
+            if (!this._checkFinalizedAsync(resolve, reject)) {
+                return;
+            }
+
+            this.defaultParam = param;
+
+            try {
+                param = this._normalizeArgs(param);
+            } catch (err) {
+                DatabaseUtil.settleSyncError(this, resolve, reject, err);
+                return;
+            }
+
+            try {
+                this._rawSt.bind(...param, err => {
+                    if (this._throwErrorAsync(resolve, reject, err)) {
+                        return;
+                    }
+
+                    resolve();
+                });
+            } catch (err) {
+                DatabaseUtil.settleSyncError(this, resolve, reject, err);
+            }
+        });
+    }
+
+    safeIntegers(enabled = true) {
+        if (!this._checkFinalizedSync()) {
+            return;
+        }
+
+        this._safeIntegers = enabled;
+
+        try {
+            this._rawSt.safeIntegers(enabled);
+            return this;
+        } catch (err) {
+            return this._throwErrorSync(err);
         }
     }
 
@@ -41,38 +80,27 @@ class SqliteStatement {
                 return;
             }
 
-            this._backend.finalize(this, resolve, reject, removeEntry);
-        });
-    }
+            try {
+                this._rawSt.finalize(err => {
+                    this.finalized = true;
+                    this._template?._removeStatement(this._conn, this);
 
-    bind(...param) {
-        return new Promise((resolve, reject) => {
-            if (!this._checkFinalizedAsync(resolve, reject)) {
-                return;
+                    if (removeEntry) {
+                        this._conn.removeStatement(this);
+                    }
+
+                    this._rawSt = null;
+
+                    if (this._throwErrorAsync(resolve, reject, err)) {
+                        return;
+                    }
+
+                    resolve();
+                });
+            } catch (err) {
+                DatabaseUtil.settleSyncError(this, resolve, reject, err);
             }
-
-            this.defaultParam = param;
-            this._backend.bind(this, param, resolve, reject);
         });
-    }
-
-    safeIntegers(enabled = true) {
-        if (!this._checkFinalizedSync()) {
-            return;
-        }
-
-        this._safeIntegers = enabled;
-
-        try {
-            this._backend.safeIntegers(this, enabled);
-            return this;
-        } catch (err) {
-            return this._throwErrorSync(err);
-        }
-    }
-
-    setOwner(owner = null) {
-        this._owner = owner;
     }
 
     reset() {
@@ -81,12 +109,22 @@ class SqliteStatement {
                 return;
             }
 
-            this._backend.reset(this, resolve, reject);
+            try {
+                this._rawSt.reset(err => {
+                    if (this._throwErrorAsync(resolve, reject, err)) {
+                        return;
+                    }
+
+                    resolve();
+                });
+            } catch (err) {
+                DatabaseUtil.settleSyncError(this, resolve, reject, err);
+            }
         });
     }
 
     run(...param) {
-        return this._executeStatement("run", param, (_err, st) => new SqliteResult(undefined, st));
+        return this._executeStatement("run", param, (_data, st) => new SqliteResult(undefined, st));
     }
 
     get(...param) {
@@ -98,18 +136,22 @@ class SqliteStatement {
     }
 
     each(...param) {
-        return this._useContext((context, resolve, reject) => {
+        return new Promise((resolve, reject) => {
+            if (!this._checkFinalizedAsync(resolve, reject)) {
+                return;
+            }
+
             let eachArgs,
                 args = [];
 
             try {
-                eachArgs = context.conn._extractEachArgs(param);
+                eachArgs = this._conn._extractEachArgs(param);
             } catch (err) {
                 DatabaseUtil.settleSyncError(this, resolve, reject, err);
                 return;
             }
 
-            const normalized = this._normalizeArgs(context.conn, eachArgs.param, true);
+            const normalized = this._normalizeArgs(eachArgs.param, true);
 
             if (normalized !== null) {
                 args.push(normalized);
@@ -121,32 +163,21 @@ class SqliteStatement {
                     return;
                 }
 
-                context.st.reset(err2 => {
+                this._rawSt.reset(err2 => {
                     if (this._throwErrorAsync(resolve, reject, err2)) {
                         return;
                     }
 
-                    resolve(new SqliteResult(nrows, context.st));
+                    resolve(new SqliteResult(nrows, this._rawSt));
                 });
             });
 
             try {
-                context.st.each(...args);
+                this._rawSt.each(...args);
             } catch (err) {
                 DatabaseUtil.settleSyncError(this, resolve, reject, err);
             }
         });
-    }
-
-    static _stFinalizedMsg = "The statement is finalized";
-    static _stNotFinalizedMsg = "The statement is not finalized";
-
-    get _conn() {
-        return this._backend.getConnection();
-    }
-
-    get _throwErrors() {
-        return this._owner === null ? this._backend.getTarget().throwErrors : this._owner.throwErrors;
     }
 
     _checkFinalized(expected = false, msg) {
@@ -160,55 +191,25 @@ class SqliteStatement {
 
     _checkFinalizedSync(expected, msg) {
         return DatabaseUtil.checkSync(
-            this._backend.getTarget(),
+            this._conn,
             ConnectionEvents.promiseError,
-            this._throwErrors,
+            this._conn.throwErrors,
             this._checkFinalized(expected, msg)
         );
     }
 
     _checkFinalizedAsync(resolve, reject, expected, msg) {
         return DatabaseUtil.checkAsync(
-            this._backend.getTarget(),
+            this._conn,
             ConnectionEvents.promiseError,
-            this._throwErrors,
+            this._conn.throwErrors,
             resolve,
             reject,
             this._checkFinalized(expected, msg)
         );
     }
 
-    _useContext(callback) {
-        return new Promise((resolve, reject) => {
-            if (!this._checkFinalizedAsync(resolve, reject)) {
-                return;
-            }
-
-            this._backend
-                .getContext(this)
-                .then(context => {
-                    if (context === null || context.st === null) {
-                        resolve();
-                        return;
-                    }
-
-                    const settle = (fn, value) =>
-                        this._backend
-                            .releaseContext(context)
-                            .then(_ => fn(value))
-                            .catch(reject);
-
-                    callback(
-                        context,
-                        value => settle(resolve, value),
-                        err => settle(reject, err)
-                    );
-                })
-                .catch(reject);
-        });
-    }
-
-    _normalizeArgs(conn, args, eachMode = false) {
+    _normalizeArgs(args, eachMode = false) {
         if (Util.empty(args)) {
             args = this.defaultParam;
         }
@@ -217,32 +218,36 @@ class SqliteStatement {
             return null;
         }
 
-        return args.map(arg => conn._normalizeParam(arg));
+        return args.map(arg => this._conn._normalizeParam(arg));
     }
 
     _executeStatement(method, param, callback) {
-        return this._useContext((context, resolve, reject) => {
+        return new Promise((resolve, reject) => {
+            if (!this._checkFinalizedAsync(resolve, reject)) {
+                return;
+            }
+
             let args;
 
             try {
-                args = this._normalizeArgs(context.conn, param);
+                args = this._normalizeArgs(param);
             } catch (err) {
                 DatabaseUtil.settleSyncError(this, resolve, reject, err);
                 return;
             }
 
             try {
-                context.st[method](...args, (err, data) => {
+                this._rawSt[method](...args, (err, data) => {
                     if (this._errorRollbackAsync(resolve, reject, err)) {
                         return;
                     }
 
-                    context.st.reset(err2 => {
+                    this._rawSt.reset(err2 => {
                         if (this._throwErrorAsync(resolve, reject, err2)) {
                             return;
                         }
 
-                        resolve(callback(data, context.st));
+                        resolve(callback(data, this._rawSt));
                     });
                 });
             } catch (err) {
@@ -251,24 +256,16 @@ class SqliteStatement {
         });
     }
 
-    _removeOwner(removeEntry) {
-        if (removeEntry && this._owner !== null) {
-            this._owner.removeStatement(this);
-            this.setOwner();
-        }
-    }
-
     _throwErrorSync(...args) {
-        return this._backend.getTarget()._throwErrorSync(...args);
+        return this._conn._throwErrorSync(...args);
     }
 
     _throwErrorAsync(...args) {
-        return this._backend.getTarget()._throwErrorAsync(...args);
+        return this._conn._throwErrorAsync(...args);
     }
 
     _errorRollbackAsync(...args) {
-        const target = this._backend.getTarget();
-        return target._errorRollbackAsync?.(...args) ?? target._throwErrorAsync(...args);
+        return this._conn._errorRollbackAsync(...args);
     }
 }
 

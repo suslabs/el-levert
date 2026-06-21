@@ -4,7 +4,7 @@ import EventEmitter from "node:events";
 import StatementDatabase from "../common/StatementDatabase.js";
 
 import SqlitePool from "./SqlitePool.js";
-import SqliteStatement from "./SqliteStatement.js";
+import SqliteStatementContainer from "./SqliteStatementContainer.js";
 
 import MigrationLoader from "../../../loaders/migration/MigrationLoader.js";
 
@@ -31,6 +31,10 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         insertApplied: "INSERT INTO {{tableName}} (id, name, up, down) VALUES ($id, $name, $up, $down)"
     });
 
+    static _dbOpenMsg = "The database is open";
+    static _dbNotOpenMsg = "The database is not open";
+    static _sessionNotOpenMsg = "The database session is not open";
+
     constructor(filename, mode, config, session) {
         super();
 
@@ -50,12 +54,18 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         this._conn = null;
 
         this._released = false;
+        this._closeOnEnd = false;
         this._autoRollbackListener = null;
         this._connectionListeners = new WeakMap();
+        this._sessionStatements = new Set();
 
         if (session != null) {
             this._initSession(session.root, session.conn, session.options);
         }
+    }
+
+    get db() {
+        return this._inSession ? this._conn : this.pool;
     }
 
     open() {
@@ -104,9 +114,12 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
 
         if (args[0] === "busyTimeout") {
             this._setBusyTimeout(args[1]);
-            this._applyConfig({
-                busyTimeout: args[1]
-            });
+
+            if (!this._inSession) {
+                this._applyConfig({
+                    busyTimeout: args[1]
+                });
+            }
         }
 
         return this;
@@ -149,7 +162,20 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
             return;
         }
 
-        return await this._prepareStatement(sql, param);
+        if (this._inSession) {
+            const st = await this._conn.prepare(sql, ...param);
+            return this._trackSessionStatement(st);
+        }
+
+        return await this._prepareStatementContainer(sql, param);
+    }
+
+    async bindStatement(st) {
+        if (!this._inSession || !(st instanceof SqliteStatementContainer)) {
+            return st;
+        }
+
+        return await st.bindToConnection(this._conn);
     }
 
     async beginTransaction(mode = this.transactionMode) {
@@ -164,30 +190,30 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         if (this._inSession) {
             await this._commitTransaction();
             return await this._finalizeTransactionEnd();
-        } else {
-            if (!(await this._checkDatabaseOpenPromise())) {
-                return;
-            }
-
-            return await this._throwErrorPromise(
-                new DatabaseError("Cannot commit the pooled root database. Commit the session instead.")
-            );
         }
+
+        if (!(await this._checkDatabaseOpenPromise())) {
+            return;
+        }
+
+        return await this._throwErrorPromise(
+            new DatabaseError("Cannot commit the pooled root database. Commit the session instead.")
+        );
     }
 
     async rollback() {
         if (this._inSession) {
             await this._rollbackTransaction();
             return await this._finalizeTransactionEnd();
-        } else {
-            if (!(await this._checkDatabaseOpenPromise())) {
-                return;
-            }
-
-            return await this._throwErrorPromise(
-                new DatabaseError("Cannot roll back the pooled root database. Roll back the session instead.")
-            );
         }
+
+        if (!(await this._checkDatabaseOpenPromise())) {
+            return;
+        }
+
+        return await this._throwErrorPromise(
+            new DatabaseError("Cannot roll back the pooled root database. Roll back the session instead.")
+        );
     }
 
     async transaction(callback, mode = this.transactionMode) {
@@ -211,15 +237,20 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
     }
 
     async loadExtension(extensionPath) {
-        const resolved = path.resolve(extensionPath),
-            conn = await this._useConnection(activeConnection => activeConnection.loadExtension(resolved));
+        const resolved = path.resolve(extensionPath);
+
+        if (this._inSession) {
+            await this._conn.loadExtension(resolved);
+            return this;
+        }
+
+        const conn = await this._useConnection(activeConnection => activeConnection.loadExtension(resolved));
 
         if (conn === null) {
             return;
         }
 
         this._addExtensionPath(resolved);
-
         this._applyConfig({
             loadExtensions: this._getExtensionPaths()
         });
@@ -232,18 +263,23 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
             return;
         }
 
-        const state = this._state,
-            key = `${name}:${argc}`;
+        if (this._inSession) {
+            this._conn.createFunction(name, callback, argc, deterministic);
+            return this;
+        }
 
-        state._customFunctions.set(key, {
+        const key = `${name}:${argc}`;
+
+        this._customFunctions.set(key, {
             name,
             callback,
             argc,
             deterministic
         });
 
-        const target = this._inSession ? this._conn : this.pool;
-        target.createFunction(name, callback, argc, deterministic);
+        for (const conn of this.pool.connections) {
+            conn.createFunction(name, callback, argc, deterministic);
+        }
 
         return this;
     }
@@ -253,6 +289,12 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
             return;
         }
 
+        if (this._inSession) {
+            this.safeIntegers = enabled;
+            this._conn.defaultSafeIntegers(enabled);
+            return this;
+        }
+
         this.safeIntegers = enabled;
         this._state.safeIntegers = enabled;
 
@@ -260,8 +302,9 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
             safeIntegers: enabled
         });
 
-        const target = this._inSession ? this._conn : this.pool;
-        target.defaultSafeIntegers(enabled);
+        for (const conn of this.pool.connections) {
+            conn.defaultSafeIntegers(enabled);
+        }
 
         return this;
     }
@@ -310,9 +353,12 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         }
 
         this._setWALMode(true);
-        this._applyConfig({
-            enableWALMode: true
-        });
+
+        if (!this._inSession) {
+            this._applyConfig({
+                enableWALMode: true
+            });
+        }
 
         return this;
     }
@@ -325,9 +371,12 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         }
 
         this._setWALMode(false);
-        this._applyConfig({
-            enableWALMode: false
-        });
+
+        if (!this._inSession) {
+            this._applyConfig({
+                enableWALMode: false
+            });
+        }
 
         return this;
     }
@@ -373,10 +422,6 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
 
         return this;
     }
-
-    static _dbOpenMsg = "The database is open";
-    static _dbNotOpenMsg = "The database is not open";
-    static _sessionNotOpenMsg = "The database session is not open";
 
     _setConfig(config) {
         this.WALMode = config.enableWALMode ?? false;
@@ -457,17 +502,19 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
             await new Promise(resolve => setImmediate(resolve));
         }
 
-        const listeners = this._connectionListeners.get(conn);
-        const targetListeners = listeners.get(target);
+        const listeners = this._connectionListeners.get(conn),
+            targetListeners = listeners?.get(target);
 
-        for (const [event, listener] of targetListeners.prefixedListeners) {
-            conn.removeListener(event, listener);
+        if (targetListeners != null) {
+            for (const [event, listener] of targetListeners.prefixedListeners) {
+                conn.removeListener(event, listener);
+            }
+
+            conn.removeListener(ConnectionEvents.promiseError, targetListeners.promiseErrorListener);
+            listeners.delete(target);
         }
 
-        conn.removeListener(ConnectionEvents.promiseError, targetListeners.promiseErrorListener);
-        listeners.delete(target);
-
-        if (Util.empty(listeners)) {
+        if (listeners != null && Util.empty(listeners)) {
             this._connectionListeners.delete(conn);
         }
 
@@ -481,7 +528,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
 
         this._released = true;
 
-        await this.finalizeAll().catch(_ => {});
+        await this._finalizeSessionStatements().catch(_ => {});
 
         if (this._conn.inTransaction) {
             await this._conn.rollback().catch(_ => {});
@@ -492,8 +539,19 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
 
         await this._root._releaseConnection(this._conn, this);
 
+        this._sessionStatements.clear();
         this._conn = null;
         this.inTransaction = false;
+    }
+
+    async _finalizeSessionStatements() {
+        for (const st of this._sessionStatements) {
+            if (st.finalized) {
+                continue;
+            }
+
+            await st.finalize().catch(_ => {});
+        }
     }
 
     _setAutoRollbackHandler() {
@@ -515,7 +573,6 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         this._syncRootState(root);
 
         this._setOptions(this.options);
-
         this._setConnection(conn);
 
         this._setAutoRollbackHandler();
@@ -592,39 +649,67 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         return this._inSession ? [this._conn] : this.pool.connections;
     }
 
-    _ownStatement(st) {
-        st.setOwner(this);
+    async _prepareStatementContainer(sql, param) {
+        const st = new SqliteStatementContainer(this, sql, param);
         this.addStatement(st);
+
+        for (const conn of this.pool.connections) {
+            await st.bindToConnection(conn);
+        }
+
         return st;
     }
 
-    _createStatement(sql, param) {
-        return this._ownStatement(new SqliteStatement(this, sql, param));
+    _trackSessionStatement(st) {
+        this._sessionStatements.add(st);
+        return st;
     }
 
-    async _prepareStatement(sql, param) {
-        if (!this._inSession) {
-            return this._createStatement(sql, param);
-        }
+    _syncConnectionFunctions(conn) {
+        for (const entry of this._state._customFunctions.values()) {
+            const key = `${entry.name}:${entry.argc}`;
 
-        const st = await this._conn.prepare(sql, ...param);
-        return this._ownStatement(st);
+            if (conn._registeredFunctions.has(key)) {
+                continue;
+            }
+
+            conn.createFunction(entry.name, entry.callback, entry.argc, entry.deterministic);
+        }
+    }
+
+    async _syncConnectionStatements(conn) {
+        for (const st of this._state.statements) {
+            if (st.finalized || !(st instanceof SqliteStatementContainer)) {
+                continue;
+            }
+
+            await st.bindToConnection(conn);
+        }
+    }
+
+    async _syncConnectionState(conn) {
+        this._syncConnectionFunctions(conn);
+        await this._syncConnectionStatements(conn);
     }
 
     async _acquireConnection() {
         const conn = await this.pool.acquire();
         this._registerConnection(conn, this);
+        await this._syncConnectionState(conn);
         return conn;
     }
 
     async _createSession(options = {}) {
-        const conn = await this.pool.acquire();
+        const conn = await this.pool.acquire(),
+            session = new SqliteDatabase(this.filename, this.mode, this.config, {
+                root: this,
+                conn,
+                options
+            });
 
-        return new SqliteDatabase(this.filename, this.mode, this.config, {
-            root: this,
-            conn,
-            options
-        });
+        await this._syncConnectionState(conn);
+
+        return session;
     }
 
     async _useManagedSession(callback, options = {}) {
@@ -684,54 +769,23 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         return this;
     }
 
-    _syncConnectionFunctions(conn) {
-        for (const entry of this._state._customFunctions.values()) {
-            const key = `${entry.name}:${entry.argc}`;
-
-            if (conn._registeredFunctions.has(key)) {
-                continue;
-            }
-
-            conn.createFunction(entry.name, entry.callback, entry.argc, entry.deterministic);
-        }
-    }
-
-    async _getActiveConnection() {
-        if (this._inSession) {
-            this._syncConnectionFunctions(this._conn);
-
-            return {
-                conn: this._conn,
-                pooled: false
-            };
-        }
-
-        const conn = await this._acquireConnection();
-        this._syncConnectionFunctions(conn);
-
-        return {
-            conn,
-            pooled: true
-        };
-    }
-
     async _useConnection(callback) {
         if (!(await this._checkDatabaseOpenPromise())) {
             return null;
         }
 
-        const { conn, pooled } = await this._getActiveConnection();
+        const conn = this._inSession ? this._conn : await this._acquireConnection();
 
         try {
             const result = await callback(conn);
 
-            if (pooled) {
+            if (!this._inSession) {
                 await this._releaseConnection(conn);
             }
 
             return result;
         } catch (err) {
-            if (pooled) {
+            if (!this._inSession) {
                 await this._releaseConnection(conn);
             }
 
@@ -741,6 +795,13 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
 
     _callConnection(method, ...args) {
         return this._useConnection(conn => conn[method](...args));
+    }
+
+    async _useStatementContainer(container, callback) {
+        return await this._useConnection(async conn => {
+            const st = await container.bindToConnection(conn);
+            return await callback(st);
+        });
     }
 
     async _runSessionTransaction(callback, mode) {

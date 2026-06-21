@@ -4,6 +4,7 @@ import "../../../setupGlobals.js";
 
 import VMError from "../../../src/errors/VMError.js";
 import { VMErrors } from "../../../src/vm/isolated-vm/VMErrors.js";
+import { InspectorModes } from "../../../src/vm/isolated-vm/inspector/InspectorModes.js";
 import { createDiscordChannel, createDiscordMessage, createDiscordUser } from "../../helpers/discordStubs.js";
 import { addTag } from "../../helpers/commandHarness.js";
 import { cleanupRuntime, createRuntime } from "../../helpers/runtimeHarness.js";
@@ -61,7 +62,10 @@ describe("TagVM", () => {
             content: "hello from vm"
         });
 
+        vm.enableInspector = true;
+        vm.inspectorMode = InspectorModes.console;
         vm._inspectorServer = {
+            getConsoleSession: () => null,
             inspectorConnected: true
         };
 
@@ -94,7 +98,7 @@ describe("TagVM", () => {
         );
 
         await expect(vm.runScript("(async () => (await util.fetchTag('scripted')).type)()", { msg })).resolves.toBe(
-            "3"
+            "03"
         );
 
         await expect(
@@ -108,7 +112,7 @@ describe("TagVM", () => {
             vm.runScript("(async () => (await util.dumpTags(true)).find(tag => tag.name === 'scripted').type)()", {
                 msg
             })
-        ).resolves.toBe("3");
+        ).resolves.toBe("03");
 
         await expect(vm.runScript("util.executeTag('plain')", { msg })).resolves.toBe("alpha body");
 

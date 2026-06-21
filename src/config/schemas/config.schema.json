@@ -88,6 +88,18 @@
         "enableInspector": {
             "type": "boolean"
         },
+        "enableUserInspector": {
+            "type": "boolean"
+        },
+        "inspectorConnectTimeout": {
+            "type": "number"
+        },
+        "userInspectorConnectTimeout": {
+            "type": "number"
+        },
+        "userInspectorActionTimeout": {
+            "type": "number"
+        },
         "inspectorPort": {
             "type": "number"
         },
@@ -218,6 +230,10 @@
         "otherMemLimit",
         "otherTimeLimit",
         "enableInspector",
+        "enableUserInspector",
+        "inspectorConnectTimeout",
+        "userInspectorConnectTimeout",
+        "userInspectorActionTimeout",
         "inspectorPort",
         "maxGroupNameLength",
         "tagModeratorLevel",

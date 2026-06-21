@@ -7,6 +7,8 @@ import { vi } from "vitest";
 const repoRoot = path.resolve(import.meta.dirname, "../..");
 
 function buildDefaultConfig(tempDir, overrides = {}) {
+    const inspectorPort = overrides.inspectorPort ?? Math.floor(10000 + Math.random() * 50000);
+
     return {
         dbPath: tempDir,
         commandsPath: path.join(repoRoot, "src/commands"),
@@ -51,6 +53,11 @@ function buildDefaultConfig(tempDir, overrides = {}) {
         otherTimeLimit: 2,
         commandWaitTime: 3000,
         enableInspector: false,
+        enableUserInspector: false,
+        inspectorConnectTimeout: 60000,
+        userInspectorConnectTimeout: 30000,
+        userInspectorActionTimeout: 300000,
+        inspectorPort,
         outCharLimit: 1900,
         outLineLimit: 30,
         embedCharLimit: 5900,

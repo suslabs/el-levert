@@ -186,34 +186,11 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
     }
 
     prepare(sql, ...param) {
-        return new Promise((resolve, reject) => {
-            if (!this._checkOpenAsync(resolve, reject)) {
-                return;
-            }
+        return this._prepareStatement(sql, param);
+    }
 
-            try {
-                param = this._normalizeParams(param);
-            } catch (err) {
-                DatabaseUtil.settleSyncError(this, resolve, reject, err);
-                return;
-            }
-
-            let st = null;
-
-            try {
-                st = this.db.prepare(sql, ...param, err => {
-                    if (this._throwErrorAsync(resolve, reject, err)) {
-                        return;
-                    }
-
-                    const prepared = new SqliteStatement(this, sql, param, st);
-                    this.addStatement(prepared);
-                    resolve(prepared);
-                });
-            } catch (err) {
-                DatabaseUtil.settleSyncError(this, resolve, reject, err);
-            }
-        });
+    prepareTemplate(sql, defaultParam = [], template = null) {
+        return this._prepareStatement(sql, defaultParam, template);
     }
 
     loadExtension(extensionPath) {
@@ -669,6 +646,40 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
 
     _normalizeParams(params) {
         return params.map(param => this._normalizeParam(param));
+    }
+
+    _prepareStatement(sql, defaultParam, template = null) {
+        return new Promise((resolve, reject) => {
+            if (!this._checkOpenAsync(resolve, reject)) {
+                return;
+            }
+
+            try {
+                defaultParam = this._normalizeParams(defaultParam);
+            } catch (err) {
+                DatabaseUtil.settleSyncError(this, resolve, reject, err);
+                return;
+            }
+
+            let rawSt = null;
+
+            try {
+                rawSt = this.db.prepare(sql, ...defaultParam, err => {
+                    if (this._throwErrorAsync(resolve, reject, err)) {
+                        return;
+                    }
+
+                    const prepared = new SqliteStatement(this, sql, defaultParam, rawSt, {
+                        template
+                    });
+
+                    this.addStatement(prepared);
+                    resolve(prepared);
+                });
+            } catch (err) {
+                DatabaseUtil.settleSyncError(this, resolve, reject, err);
+            }
+        });
     }
 
     _executeSql(method, sql, param, callback) {

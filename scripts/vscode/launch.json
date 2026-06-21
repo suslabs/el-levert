@@ -10,31 +10,13 @@
             "skipFiles": ["<node_internals>/**"]
         },
         {
-            "name": "Launch ProxyServ",
-            "type": "node",
-            "request": "launch",
-            "program": "${workspaceFolder}/scripts/vscode/proxyserv.cjs",
-            "cwd": "${workspaceFolder}",
-            "skipFiles": ["<node_internals>/**"],
-            "console": "integratedTerminal",
-            "internalConsoleOptions": "neverOpen",
-            "noDebug": true
-        },
-        {
             "name": "Attach to Remote",
             "type": "node",
             "request": "attach",
             "address": "127.0.0.1",
             "localRoot": "${workspaceFolder}",
-            "port": 9229,
+            "port": 8080,
             "skipFiles": ["<node_internals>/**"]
-        }
-    ],
-    "compounds": [
-        {
-            "name": "Debug with Proxy",
-            "configurations": ["Debug", "Launch ProxyServ"],
-            "stopAll": true
         }
     ]
 }

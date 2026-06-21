@@ -2,6 +2,7 @@ import VM from "../VM.js";
 
 import EvalContext from "./context/EvalContext.js";
 import InspectorServer from "./inspector/InspectorServer.js";
+import { InspectorModes } from "./inspector/InspectorModes.js";
 
 import { getConfig, getLogger } from "../../LevertClient.js";
 
@@ -57,6 +58,8 @@ class TagVM extends VM {
         this.timeLimit = getConfig().timeLimit;
 
         this.enableInspector = getConfig().enableInspector;
+        this.enableUserInspector = this.enableInspector && (getConfig().enableUserInspector ?? false);
+        this.inspectorMode = this._getInspectorMode();
 
         this._contextStack = [];
     }
@@ -68,33 +71,51 @@ class TagVM extends VM {
         code = transpileScript(code, options);
         logUsage(code);
 
-        if (this.enableInspector) {
+        const inspectorInfo = this._getInspectorInfo(values, options);
+
+        if (inspectorInfo.enable) {
             options.commandContext?.disableTimeout();
         }
 
-        if (this._inspectorServer?.inspectorConnected && Util.empty(this._contextStack)) {
+        if (
+            inspectorInfo.mode === InspectorModes.console &&
+            this._inspectorServer?.inspectorConnected &&
+            Util.empty(this._contextStack)
+        ) {
             getLogger().info("Can't run script: inspector is already connected.");
             throw new VMError("Inspector is already connected.");
         }
 
         const timeKey = Benchmark.startTiming(Symbol("vm_script"));
 
-        const context = await this._getEvalContext(values);
-        this._pushContext(context);
-
         let out,
-            outErr = null;
+            outErr = null,
+            context = null,
+            pushed = false;
 
         try {
+            context = await this._getEvalContext(values, inspectorInfo);
+            this._pushContext(context);
+            pushed = true;
+
+            if (inspectorInfo.createdSession) {
+                await options.onInspectorReady?.(this._inspectorServer?.getSessionInfo(inspectorInfo.session));
+            }
+
             [out, outErr] = await context.runScript(code);
         } catch (err) {
             outErr = err;
         } finally {
-            this._popContext(context);
-            context.dispose();
+            if (pushed) {
+                this._popContext(context);
+            } else if (inspectorInfo.createdSession) {
+                this._inspectorServer?.onSessionEmpty(inspectorInfo.session);
+            }
+
+            context?.dispose();
         }
 
-        logFinished(timeKey, this.enableInspector);
+        logFinished(timeKey, inspectorInfo.enable);
 
         let dataType;
         [out, dataType] = outErr ? this._handleScriptError(outErr) : this._handleScriptOuput(out);
@@ -127,7 +148,9 @@ class TagVM extends VM {
         const inspectorPort = getConfig().inspectorPort;
 
         const options = {
-            logPackets: TagVM.logInspectorPackets
+            logPackets: TagVM.logInspectorPackets,
+            mode: this.inspectorMode,
+            userInspectorActionTimeout: getConfig().userInspectorActionTimeout
         };
 
         const server = new InspectorServer(this.enableInspector, inspectorPort, options);
@@ -140,7 +163,13 @@ class TagVM extends VM {
         return this._contextStack.at(-1) ?? null;
     }
 
-    async _getEvalContext(values) {
+    async _getEvalContext(values, inspectorInfo) {
+        inspectorInfo = ObjectUtil.guaranteeObject(inspectorInfo, {
+            connectTimeout: 0,
+            enable: false,
+            session: null
+        });
+
         const context = new EvalContext(
             {
                 memLimit: this.memLimit,
@@ -148,8 +177,10 @@ class TagVM extends VM {
                 parent: this._getActiveContext()
             },
             {
-                enable: this.enableInspector,
-                sendReply: this._inspectorServer?.sendReply
+                connectTimeout: inspectorInfo.connectTimeout,
+                enable: inspectorInfo.enable,
+                inspectorSession: inspectorInfo.session,
+                sendReply: inspectorInfo.session?.sendReply
             }
         );
 
@@ -159,7 +190,7 @@ class TagVM extends VM {
 
     _pushContext(context) {
         this._contextStack.push(context);
-        this._inspectorServer?.pushContext(context);
+        context.inspectorSession?.pushContext(context);
     }
 
     _popContext(context) {
@@ -169,7 +200,77 @@ class TagVM extends VM {
             this._contextStack.splice(idx, 1);
         }
 
-        this._inspectorServer?.popContext(context);
+        context.inspectorSession?.popContext(context);
+    }
+
+    _getInspectorMode() {
+        if (!this.enableInspector) {
+            return InspectorModes.off;
+        }
+
+        return this.enableUserInspector ? InspectorModes.user : InspectorModes.console;
+    }
+
+    _getInspectorInfo(values, options) {
+        values = ObjectUtil.guaranteeObject(values);
+        options = ObjectUtil.guaranteeObject(options);
+
+        const parent = this._getActiveContext(),
+            parentSession = parent?.inspectorSession ?? null;
+
+        if (parentSession !== null) {
+            return {
+                connectTimeout: parent.inspector.connectTimeout,
+                createdSession: false,
+                enable: true,
+                mode: parentSession.mode,
+                session: parentSession
+            };
+        }
+
+        switch (this.inspectorMode) {
+            case InspectorModes.console:
+                return {
+                    connectTimeout: getConfig().inspectorConnectTimeout,
+                    createdSession: false,
+                    enable: true,
+                    mode: InspectorModes.console,
+                    session: this._inspectorServer?.getConsoleSession() ?? null
+                };
+            case InspectorModes.user:
+                if (!options.enableInspector) {
+                    break;
+                }
+
+                return {
+                    connectTimeout: getConfig().userInspectorConnectTimeout,
+                    createdSession: true,
+                    enable: true,
+                    mode: InspectorModes.user,
+                    session: this._createUserInspectorSession(values, options)
+                };
+        }
+
+        return {
+            connectTimeout: 0,
+            createdSession: false,
+            enable: false,
+            mode: InspectorModes.off,
+            session: null
+        };
+    }
+
+    _createUserInspectorSession(values, options) {
+        values = ObjectUtil.guaranteeObject(values);
+        options = ObjectUtil.guaranteeObject(options);
+
+        const userId = options.commandContext?.msg?.author?.id ?? values.msg?.author?.id ?? null;
+
+        return this._inspectorServer.createUserSession({
+            title: options.inspectorTitle,
+            url: options.inspectorSourceUrl,
+            userId
+        });
     }
 
     _handleScriptOuput(out) {

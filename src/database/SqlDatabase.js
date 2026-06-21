@@ -6,7 +6,6 @@ import MigrationLoader from "../loaders/migration/MigrationLoader.js";
 import { OpenModes } from "./drivers/sqlite/OpenModes.js";
 import { LoadStatus } from "../loaders/LoadStatus.js";
 
-import TypeTester from "../util/TypeTester.js";
 import ObjectUtil from "../util/ObjectUtil.js";
 
 class SqlDatabase {
@@ -29,29 +28,34 @@ class SqlDatabase {
 
         this.db = null;
         this._queryLoader = null;
+        this._queryRoot = null;
         this._migrations = new Map();
+        this._loadedCategories = new Set();
 
         this._childSetup = this.setup;
         this.setup = this._setup.bind(this);
     }
 
     async open(mode) {
+        if (this.db !== null) {
+            return;
+        }
+
         const dbConfig = {
-            enableWALMode: this.enableWAL,
+                enableWALMode: this.enableWAL,
 
-            min: this.poolMin,
-            max: this.poolMax,
+                min: this.poolMin,
+                max: this.poolMax,
 
-            acquireTimeout: this.acquireTimeout,
-            busyTimeout: this.busyTimeout,
-            delayRelease: this.delayRelease,
+                acquireTimeout: this.acquireTimeout,
+                busyTimeout: this.busyTimeout,
+                delayRelease: this.delayRelease,
 
-            loadExtensions: this.loadExtensions,
-            customFunctions: this.customFunctions,
-            transactionMode: this.transactionMode
-        };
-
-        const db = this.db ?? new SqliteDatabase(this.dbPath, mode, dbConfig);
+                loadExtensions: this.loadExtensions,
+                customFunctions: this.customFunctions,
+                transactionMode: this.transactionMode
+            },
+            db = new SqliteDatabase(this.dbPath, mode, dbConfig);
 
         try {
             await db.open();
@@ -80,6 +84,10 @@ class SqlDatabase {
         return await this._loadDatabase();
     }
 
+    async prepare(sql, ...param) {
+        return await this.db.prepare(sql, ...param);
+    }
+
     async setup() {}
 
     async reload() {
@@ -103,12 +111,24 @@ class SqlDatabase {
         return await this._createScopedDatabase(txDb);
     }
 
-    commit() {
-        return this.db.commit();
+    async commit() {
+        const res = await this.db.commit();
+
+        if (this._queryRoot !== null) {
+            this._unloadScopedDatabase();
+        }
+
+        return res;
     }
 
-    rollback() {
-        return this.db.rollback();
+    async rollback() {
+        const res = await this.db.rollback();
+
+        if (this._queryRoot !== null) {
+            this._unloadScopedDatabase();
+        }
+
+        return res;
     }
 
     transaction(callback, mode) {
@@ -118,7 +138,7 @@ class SqlDatabase {
             try {
                 return await callback(tx);
             } finally {
-                await tx._unloadDatabase();
+                tx._unloadScopedDatabase();
             }
         }, mode);
     }
@@ -136,6 +156,17 @@ class SqlDatabase {
     }
 
     async close() {
+        if (this._queryRoot !== null) {
+            this._unloadScopedDatabase();
+
+            if (this.db !== null) {
+                await this.db.close();
+            }
+
+            this.db = null;
+            return;
+        }
+
         await this._unloadDatabase();
         await this.db.close();
         this.db = null;
@@ -200,6 +231,7 @@ class SqlDatabase {
         }
 
         this._queryLoader = queryLoader;
+
         const [, status] = await queryLoader.load();
 
         if (status === LoadStatus.failed) {
@@ -210,17 +242,26 @@ class SqlDatabase {
     }
 
     _assignQueries(queries) {
-        Object.assign(this, queries);
+        this._deleteLoadedQueries();
+
+        for (const [category, value] of Object.entries(queries)) {
+            this[category] = value;
+            this._loadedCategories.add(category);
+        }
     }
 
     async _loadDatabase() {
+        if (this._queryRoot !== null) {
+            return await this._loadScopedDatabase();
+        }
+
         const queryLoader =
             this._queryLoader ??
             new QueryLoader(
                 this.queryPath,
                 this.logger,
                 this._getQueryLoaderOptions({
-                    db: this.db,
+                    db: this,
                     rewriteQueryStrings: this.rewriteFunc,
                     loadCreate: false,
                     loadQueries: true
@@ -229,7 +270,7 @@ class SqlDatabase {
 
         if (this._queryLoader !== null) {
             this._setQueryLoaderOptions(queryLoader, {
-                db: this.db,
+                db: this,
                 rewriteQueryStrings: this.rewriteFunc,
                 loadCreate: false,
                 loadQueries: true
@@ -237,6 +278,7 @@ class SqlDatabase {
         }
 
         this._queryLoader = queryLoader;
+
         const [queries, status] = await queryLoader.load();
 
         if (status === LoadStatus.failed) {
@@ -245,6 +287,29 @@ class SqlDatabase {
 
         this._assignQueries(queries);
         return queryLoader.result;
+    }
+
+    async _loadScopedDatabase() {
+        const root = this._queryRoot;
+
+        if (!root?._queryLoader?.loaded) {
+            return null;
+        }
+
+        const queries = {};
+
+        for (const [categoryName, categoryQueries] of Object.entries(root._queryLoader.queries)) {
+            const scopedQueries = {};
+
+            for (const [queryName, st] of Object.entries(categoryQueries)) {
+                scopedQueries[queryName] = await this.db.bindStatement(st);
+            }
+
+            queries[categoryName] = scopedQueries;
+        }
+
+        this._assignQueries(queries);
+        return queries;
     }
 
     async _setup(...args) {
@@ -307,24 +372,38 @@ class SqlDatabase {
         this._copyScopedOverrides(scoped);
 
         scoped.db = db;
+        scoped._queryRoot = this._getQueryRoot();
+
         await scoped._loadDatabase();
 
         return scoped;
     }
 
-    _deleteLoadedQueries() {
-        if (!TypeTester.isObject(this._queryLoader?.queries)) {
-            return;
-        }
+    _getQueryRoot() {
+        return this._queryRoot ?? this;
+    }
 
-        for (const category of Object.keys(this._queryLoader.queries)) {
+    _deleteLoadedQueries() {
+        for (const category of this._loadedCategories) {
             delete this[category];
         }
+
+        this._loadedCategories.clear();
+    }
+
+    _unloadScopedDatabase() {
+        this._deleteLoadedQueries();
     }
 
     async _unloadDatabase() {
+        if (this._queryRoot !== null) {
+            this._unloadScopedDatabase();
+            return;
+        }
+
         if (!this._queryLoader?.loaded) {
             this._queryLoader = null;
+            this._deleteLoadedQueries();
             return;
         }
 

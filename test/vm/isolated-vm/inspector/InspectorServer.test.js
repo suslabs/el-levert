@@ -1,52 +1,28 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
+
 import "../../../../setupGlobals.js";
+
 import net from "node:net";
+
 import ivm from "isolated-vm";
-import WebSocket, { WebSocketServer } from "ws";
+import WebSocket from "ws";
+
+import { InspectorModes } from "../../../../src/vm/isolated-vm/inspector/InspectorModes.js";
 
 const mocked = vi.hoisted(() => ({
     logger: {
         debug: vi.fn(),
         error: vi.fn(),
         info: vi.fn()
-    },
-    servers: []
+    }
 }));
 
 vi.mock("../../../../src/LevertClient.js", () => ({
     getLogger: () => mocked.logger
 }));
 
-globalThis.WebSocket = {
-    CLOSED: 3,
-    Server: class {
-        constructor(options) {
-            this.options = options;
-            this.handlers = {};
-            this.close = vi.fn(() => {
-                this.handlers.close?.();
-            });
-
-            mocked.servers.push(this);
-        }
-
-        on(name, listener) {
-            this.handlers[name] = listener;
-        }
-    }
-};
-
-afterEach(() => {
-    vi.restoreAllMocks();
-    mocked.servers.length = 0;
-
-    for (const method of Object.values(mocked.logger)) {
-        method.mockReset();
-    }
-});
-
-function getOpenPort() {
-    return new Promise((resolve, reject) => {
+async function getOpenPort() {
+    return await new Promise((resolve, reject) => {
         const server = net.createServer();
 
         server.on("error", reject);
@@ -64,6 +40,22 @@ function getOpenPort() {
     });
 }
 
+async function waitForServer(url) {
+    for (let i = 0; i < 50; i++) {
+        try {
+            const res = await fetch(url);
+
+            if (res.status < 500) {
+                return;
+            }
+        } catch {}
+
+        await new Promise(resolve => setTimeout(resolve, 20));
+    }
+
+    throw new Error("Inspector server did not start in time");
+}
+
 function waitForSocketEvent(socket, event) {
     return new Promise((resolve, reject) => {
         socket.once(event, resolve);
@@ -71,8 +63,8 @@ function waitForSocketEvent(socket, event) {
     });
 }
 
-function createProtocolClient(port) {
-    const socket = new WebSocket(`ws://127.0.0.1:${port}`),
+function createProtocolClient(url) {
+    const socket = new WebSocket(url),
         pending = new Map(),
         contexts = [],
         contextWaiters = [];
@@ -109,6 +101,14 @@ function createProtocolClient(port) {
             await waitForSocketEvent(socket, "open");
         },
 
+        close() {
+            socket.close();
+        },
+
+        nextContext() {
+            return contexts.length > 0 ? contexts.shift() : new Promise(resolve => contextWaiters.push(resolve));
+        },
+
         send(method, params) {
             const msgId = ++id,
                 msg = {
@@ -121,16 +121,21 @@ function createProtocolClient(port) {
             socket.send(JSON.stringify(msg));
 
             return res;
-        },
-
-        nextContext() {
-            return contexts.length > 0 ? contexts.shift() : new Promise(resolve => contextWaiters.push(resolve));
-        },
-
-        close() {
-            socket.close();
         }
     };
+}
+
+async function evalLabel(client) {
+    await client.send("Runtime.enable");
+
+    const contextId = await client.nextContext(),
+        res = await client.send("Runtime.evaluate", {
+            contextId,
+            expression: "globalThis.__inspectorLabel",
+            returnByValue: true
+        });
+
+    return res.result.result.value;
 }
 
 async function createInspectorContext(label, sendReply) {
@@ -142,8 +147,8 @@ async function createInspectorContext(label, sendReply) {
             inspector: true
         }),
         inspector = new IsolateInspector(true, {
-            sendReply,
-            connectTimeout: 250
+            connectTimeout: 250,
+            sendReply
         });
 
     await context.global.set("global", context.global.derefInto());
@@ -165,184 +170,161 @@ async function createInspectorContext(label, sendReply) {
     };
 }
 
-async function evalLabel(client) {
-    await client.send("Runtime.enable");
+afterEach(() => {
+    vi.restoreAllMocks();
 
-    const contextId = await client.nextContext(),
-        res = await client.send("Runtime.evaluate", {
-            expression: "globalThis.__inspectorLabel",
-            contextId,
-            returnByValue: true
-        });
+    for (const method of Object.values(mocked.logger)) {
+        method.mockReset();
+    }
+});
 
-    return res.result.result.value;
-}
-
-describe("InspectorServer branch coverage", () => {
-    test("builds the inspector url and ignores disabled operations", async () => {
+describe("InspectorServer", () => {
+    test("publishes root node inspector metadata in console mode and routes protocol traffic", async () => {
         const { default: InspectorServer } =
-            await import("../../../../src/vm/isolated-vm/inspector/InspectorServer.js");
-
-        const server = new InspectorServer(false, 9999);
-
-        expect(server.inspectorUrl).toContain("ws=localhost%3A9999");
+                await import("../../../../src/vm/isolated-vm/inspector/InspectorServer.js"),
+            port = await getOpenPort(),
+            server = new InspectorServer(true, port, {
+                mode: InspectorModes.console
+            }),
+            baseUrl = `http://127.0.0.1:${port}`;
 
         server.setup();
-        server.pushContext({});
-        server.popContext({});
-        server.close();
+        await waitForServer(`${baseUrl}/json/version`);
 
-        expect(server.running).toBe(false);
-    });
-
-    test("binds websocket events, relays messages, and cleans up connections", async () => {
-        const { default: InspectorServer } =
-            await import("../../../../src/vm/isolated-vm/inspector/InspectorServer.js");
-
-        const server = new InspectorServer(true, 9230, {
-            logPackets: true
-        });
-
-        server.setup();
-
-        expect(server.running).toBe(true);
-        expect(mocked.servers).toHaveLength(1);
-
-        const socket = {
-            close: vi.fn(),
-            on: vi.fn((name, listener) => {
-                socket.handlers[name] = listener;
-            }),
-            readyState: 1,
-            send: vi.fn(),
-            handlers: {}
-        };
-
-        mocked.servers[0].handlers.connection(socket);
-
-        expect(socket.close).toHaveBeenCalledOnce();
-
-        const inspector = {
-            connected: false,
-            onConnection: vi.fn(() => {
-                inspector.connected = true;
-            }),
-            onDisconnect: vi.fn(() => {
-                inspector.connected = false;
-            }),
-            sendMessage: vi.fn()
-        };
-
-        const parent = {
-            inspector
-        };
-
-        server.pushContext(parent);
-
-        mocked.servers[0].handlers.connection(socket);
-        expect(inspector.onConnection).toHaveBeenCalledOnce();
-
-        socket.handlers.message(Buffer.from('{"id":1}'));
-        expect(inspector.sendMessage).toHaveBeenCalledWith('{"id":1}');
-
-        server.sendReply("reply");
-        expect(socket.send).toHaveBeenCalledWith("reply");
-
-        inspector.sendMessage.mockImplementationOnce(() => {
-            throw new Error("dispatch failed");
-        });
-
-        socket.handlers.message(Buffer.from('{"id":2}'));
-        expect(socket.close).toHaveBeenCalledTimes(2);
-
-        socket.handlers.error(new Error("socket error"));
-        socket.handlers.close(1000);
-
-        expect(inspector.onDisconnect).toHaveBeenCalledTimes(2);
-
-        const childInspector = {
-            connected: false,
-            onConnection: vi.fn(() => {
-                childInspector.connected = true;
-            }),
-            onDisconnect: vi.fn(() => {
-                childInspector.connected = false;
-            }),
-            sendMessage: vi.fn()
-        };
-
-        const child = {
-            inspector: childInspector
-        };
-
-        server.pushContext(child);
-        expect(inspector.onDisconnect).toHaveBeenCalledTimes(3);
-        expect(childInspector.onConnection).toHaveBeenCalledOnce();
-
-        server.popContext(child);
-        expect(childInspector.onDisconnect).toHaveBeenCalledOnce();
-        expect(inspector.onConnection).toHaveBeenCalledTimes(2);
-
-        server.popContext(parent);
-        expect(server.running).toBe(false);
-        expect(server._inspectorSocket).toBeNull();
-
-        const openSocket = {
-            close: vi.fn(),
-            readyState: 1
-        };
-
-        server._inspectorSocket = openSocket;
-        server._closeSocket();
-        expect(openSocket.close).toHaveBeenCalledOnce();
-
-        server._inspectorSocket = {
-            close: vi.fn(),
-            readyState: WebSocket.CLOSED
-        };
-
-        server._closeSocket();
-
-        server.close();
-        expect(mocked.servers[0].close).toHaveBeenCalled();
-    });
-
-    test("routes real inspector protocol messages to the active context", async () => {
-        const { default: InspectorServer } =
-            await import("../../../../src/vm/isolated-vm/inspector/InspectorServer.js");
-
-        const mockWebSocket = globalThis.WebSocket,
-            port = await getOpenPort();
-
-        WebSocket.Server = WebSocketServer;
-        globalThis.WebSocket = WebSocket;
-
-        const server = new InspectorServer(true, port),
-            parent = await createInspectorContext("parent", server.sendReply),
-            child = await createInspectorContext("child", server.sendReply),
-            client = createProtocolClient(port);
+        const session = server.getConsoleSession(),
+            inspectorContext = await createInspectorContext("console", session.sendReply);
 
         try {
-            server.setup();
-            server.pushContext(parent);
+            session.pushContext(inspectorContext);
 
-            await client.open();
-            expect(await evalLabel(client)).toBe("parent");
+            const versionRes = await fetch(`${baseUrl}/json/version`),
+                listRes = await fetch(`${baseUrl}/json/list`),
+                version = await versionRes.json(),
+                list = await listRes.json();
 
-            server.pushContext(child);
-            expect(await evalLabel(client)).toBe("child");
+            expect(version).toMatchObject({
+                Browser: `node.js/${process.version}`,
+                "Protocol-Version": "1.1"
+            });
 
-            server.popContext(child);
-            expect(await evalLabel(client)).toBe("parent");
+            expect(list).toHaveLength(1);
+            expect(list[0]).toMatchObject({
+                id: session.uuid,
+                type: "node"
+            });
+            expect(list[0].webSocketDebuggerUrl).toContain(`/${session.uuid}`);
+            expect(server.inspectorUrl).toContain(`localhost%3A${port}%2F${session.uuid}`);
 
-            server.popContext(parent);
-            await waitForSocketEvent(client.socket, "close");
+            const client = createProtocolClient(list[0].webSocketDebuggerUrl);
+
+            try {
+                await client.open();
+                expect(await evalLabel(client)).toBe("console");
+            } finally {
+                client.close();
+            }
         } finally {
-            client.close();
-            parent.dispose();
-            child.dispose();
+            session.popContext(inspectorContext);
+            inspectorContext.dispose();
             server.close();
-            globalThis.WebSocket = mockWebSocket;
+        }
+    });
+
+    test("scopes user inspector discovery to per-session uuid paths", async () => {
+        const { default: InspectorServer } =
+                await import("../../../../src/vm/isolated-vm/inspector/InspectorServer.js"),
+            port = await getOpenPort(),
+            server = new InspectorServer(true, port, {
+                mode: InspectorModes.user
+            }),
+            baseUrl = `http://127.0.0.1:${port}`;
+
+        server.setup();
+        await waitForServer(baseUrl);
+
+        const sessionA = server.createUserSession({
+                title: "user-a",
+                userId: "user-a"
+            }),
+            sessionB = server.createUserSession({
+                title: "user-b",
+                userId: "user-b"
+            }),
+            contextA = await createInspectorContext("alpha", sessionA.sendReply),
+            contextB = await createInspectorContext("beta", sessionB.sendReply);
+
+        try {
+            sessionA.pushContext(contextA);
+            sessionB.pushContext(contextB);
+
+            const rootRes = await fetch(`${baseUrl}/json/list`);
+            expect(rootRes.status).toBe(404);
+
+            const listARes = await fetch(`${baseUrl}/${sessionA.uuid}/json/list`),
+                listBRes = await fetch(`${baseUrl}/${sessionB.uuid}/json/list`),
+                listA = await listARes.json(),
+                listB = await listBRes.json();
+
+            expect(listA).toHaveLength(1);
+            expect(listB).toHaveLength(1);
+
+            expect(listA[0].id).toBe(sessionA.uuid);
+            expect(listB[0].id).toBe(sessionB.uuid);
+
+            expect(JSON.stringify(listA)).not.toContain(sessionB.uuid);
+            expect(JSON.stringify(listB)).not.toContain(sessionA.uuid);
+
+            const client = createProtocolClient(listA[0].webSocketDebuggerUrl);
+
+            try {
+                await client.open();
+                expect(await evalLabel(client)).toBe("alpha");
+            } finally {
+                client.close();
+            }
+
+            await expect(
+                fetch(`${baseUrl}/missing-session/json/list`).then(async res => ({
+                    body: await res.text(),
+                    status: res.status
+                }))
+            ).resolves.toMatchObject({
+                body: "404 Not Found",
+                status: 404
+            });
+        } finally {
+            sessionA.popContext(contextA);
+            sessionB.popContext(contextB);
+
+            contextA.dispose();
+            contextB.dispose();
+
+            server.close();
+        }
+    });
+
+    test("rejects a second active user session for the same user", async () => {
+        const { default: InspectorServer } =
+                await import("../../../../src/vm/isolated-vm/inspector/InspectorServer.js"),
+            port = await getOpenPort(),
+            server = new InspectorServer(true, port, {
+                mode: InspectorModes.user
+            });
+
+        server.setup();
+
+        try {
+            server.createUserSession({
+                userId: "user-a"
+            });
+
+            expect(() =>
+                server.createUserSession({
+                    userId: "user-a"
+                })
+            ).toThrow("User already has an active inspector session.");
+        } finally {
+            server.close();
         }
     });
 });

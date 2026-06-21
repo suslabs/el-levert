@@ -237,7 +237,14 @@ Example:
 
 <img src="./assets/firefox_jeZ2rL701m.png" alt="reactions">
 
-When the `enableInspector` config option is set, the Chrome inspector can be used to debug tag scripts. The link will be printed to the console and scripts will wait for the inspector to be connected before executing. When you are done debugging, closing the inspector tab will let the script finish normally.
+When `enableInspector` is enabled and `enableUserInspector` is disabled, the console inspector operates in single-session mode. A DevTools link is printed to the console, scripts wait for the inspector to connect before executing, and the inspector server can be attached to via VS Code.
+
+When both `enableInspector` and `enableUserInspector` are enabled, inspector use becomes explicit per command:
+
+- `%eval debug \```js ... ````
+- `%t debug (tag_name) [tag_args]`
+
+The reply provides connection details for DevTools, JSON endpoints, and VS Code configurations (`launch.json`). In this mode, debug sessions are strictly isolated using UUID-scoped endpoints to prevent shared access.
 
 ### 2. `vm2` / NodeJS API
 

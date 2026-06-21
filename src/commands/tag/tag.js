@@ -8,8 +8,10 @@ import { resolveVMLanguage } from "../../structures/vm/VMLanguages.js";
 import { getClient, getEmoji, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import TypeTester from "../../util/TypeTester.js";
 import ParserUtil from "../../util/commands/ParserUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
+import getInspectorAttachOutput from "../../util/vm/getInspectorAttachOutput.js";
 
 const dummyMsg = {
     attachments: new Map()
@@ -47,6 +49,20 @@ async function getPreview(out, msg) {
     }
 
     return previewMsg;
+}
+
+function getReplyData(out) {
+    let options = null;
+
+    if (Array.isArray(out) && !Util.empty(out)) {
+        const obj = Util.last(out);
+
+        if (TypeTester.isObject(obj) && obj.type === "options") {
+            options = out.pop();
+        }
+    }
+
+    return [Array.isArray(out) && Util.single(out) ? Util.first(out) : out, options ?? undefined];
 }
 
 class TagCommand {
@@ -159,7 +175,17 @@ class TagCommand {
         }
 
         let t_name = ctx.arg("tagName"),
-            t_args = ctx.arg("tagArgs");
+            t_args = ctx.arg("tagArgs"),
+            debug = false;
+
+        if (getClient().tagVM?.enableUserInspector && t_name === "debug") {
+            debug = true;
+            [t_name, t_args] = ParserUtil.splitArgs(t_args, true);
+
+            if (Util.empty(t_name)) {
+                return `${getEmoji("info")} ${this.getSubcmdHelp()} **debug** \`tag_name [tag_args]\``;
+            }
+        }
 
         {
             let err;
@@ -203,7 +229,8 @@ class TagCommand {
             }
         }
 
-        let out;
+        let errored = false,
+            out;
 
         try {
             out = await getClient().tagManager.execute(
@@ -213,21 +240,33 @@ class TagCommand {
                     msg: ctx.msg
                 },
                 {
-                    commandContext: ctx
+                    commandContext: ctx,
+                    enableInspector: debug,
+                    inspectorSourceUrl: `file:///tags/${tag.name}.js`,
+                    inspectorTitle: `tag inspector [${tag.name}]`,
+                    onInspectorReady: debug ? async info => await ctx.reply(getInspectorAttachOutput(info)) : undefined
                 }
             );
         } catch (err) {
             switch (err.name) {
                 case "TagError":
-                    return `${getEmoji("warn")} ${err.message}.`;
+                    errored = true;
+                    out = `${getEmoji("warn")} ${err.message}.`;
+                    break;
                 case "ClientError":
-                    return `${getEmoji("error")} Can't execute script tag. ${err.message}.`;
+                    errored = true;
+                    out = `${getEmoji("error")} Can't execute script tag. ${err.message}.`;
+                    break;
                 default:
                     throw err;
             }
         }
 
-        return getClient().previewHandler.canPreview(out)
+        if (errored && !debug) {
+            return out;
+        }
+
+        const replyOut = getClient().previewHandler.canPreview(out)
             ? [
                   await getPreview(out, ctx.msg),
                   {
@@ -242,6 +281,13 @@ class TagCommand {
                       useConfigLimits: true
                   }
               ];
+
+        if (!debug) {
+            return replyOut;
+        }
+
+        const [editOut, editOptions] = getReplyData(replyOut);
+        await ctx.edit(editOut, editOptions);
     }
 }
 

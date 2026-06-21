@@ -15,6 +15,9 @@ describe("ConfigLoader", () => {
             embedLineLimit: -1,
             minResponseTime: 5500,
             globalTimeLimit: 2200,
+            inspectorConnectTimeout: 2000,
+            userInspectorConnectTimeout: 3000,
+            userInspectorActionTimeout: 4000,
             timeLimit: 800,
             otherTimeLimit: 1200,
             reminderSendInterval: 3000
@@ -29,6 +32,9 @@ describe("ConfigLoader", () => {
         expect(config.embedLineLimit).toBe(0);
         expect(config.minResponseTime).toBe(10000);
         expect(config.globalTimeLimit).toBe(2200000);
+        expect(config.inspectorConnectTimeout).toBe(2000000);
+        expect(config.userInspectorConnectTimeout).toBe(3000000);
+        expect(config.userInspectorActionTimeout).toBe(4000000);
         expect(config.timeLimit).toBe(800000);
         expect(config.otherTimeLimit).toBe(1200000);
         expect(config.reminderSendInterval).toBe(3000000);
@@ -47,6 +53,9 @@ describe("ConfigLoader", () => {
             embedLineLimit: 10,
             minResponseTime: 10000,
             globalTimeLimit: 1000,
+            inspectorConnectTimeout: 1000,
+            userInspectorConnectTimeout: 1000,
+            userInspectorActionTimeout: 1000,
             timeLimit: 1000,
             otherTimeLimit: 1000,
             reminderSendInterval: 1000,
