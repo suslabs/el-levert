@@ -241,11 +241,34 @@ let VMUtil = {
             return;
         }
 
-        let stackFrames = err.stack.split("\n"),
-            msgLine;
+        const lines = err.stack.split("\n");
 
-        [msgLine, ...stackFrames] = stackFrames;
-        stackFrames = stackFrames.map(frame => frame.trim());
+        let msgLineCount = 1;
+
+        try {
+            const errString = String(err);
+
+            if (err.stack.startsWith(errString)) {
+                msgLineCount = errString.split("\n").length;
+            } else {
+                const firstFrameIdx = lines.findIndex(line => line.trim().startsWith("at "));
+
+                if (firstFrameIdx !== -1) {
+                    msgLineCount = firstFrameIdx;
+                }
+            }
+        } catch (e) {
+            const firstFrameIdx = lines.findIndex(line => line.trim().startsWith("at "));
+
+            if (firstFrameIdx !== -1) {
+                msgLineCount = firstFrameIdx;
+            }
+        }
+
+        msgLineCount = Util.clamp(msgLineCount, 1, lines.length);
+
+        let msgLine = lines.slice(0, msgLineCount).join("\n"),
+            stackFrames = lines.slice(msgLineCount).map(frame => frame.trim());
 
         const res = cb(msgLine, stackFrames) ?? true;
 
@@ -258,8 +281,19 @@ let VMUtil = {
         const formattedFrames = stackFrames.map(frame => VMUtil._spaces + frame),
             newStack = msgLine + "\n" + formattedFrames.join("\n");
 
-        delete err.stack;
-        err.stack = newStack;
+        try {
+            delete err.stack;
+            Object.defineProperty(err, "stack", {
+                value: newStack,
+                configurable: true,
+                writable: true,
+                enumerable: false
+            });
+        } catch (err1) {
+            try {
+                err.stack = newStack;
+            } catch (err2) {}
+        }
     },
 
     _ivmBoundary: "(<isolated-vm boundary>)",

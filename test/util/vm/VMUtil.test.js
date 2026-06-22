@@ -239,4 +239,78 @@ describe("VMUtil", () => {
         VMUtil.sockWrite(defaultPacketSocket, null, { ok: true });
         expect(defaultPacketSocket.value).toBe('{"ok":true,"packetType":"unknown"}\n');
     });
+
+    test("extensively tests rewriteIVMStackTrace and its edge cases", () => {
+        const errBasic = new Error("boom");
+        errBasic.stack = "Error: boom\n    at first (file.js:1:1)\n    at (<isolated-vm boundary>)\n    at hidden (file.js:2:1)";
+        VMUtil.rewriteIVMStackTrace(errBasic);
+        expect(errBasic.stack).toBe("Error: boom\n    at first (file.js:1:1)\n    at (<isolated-vm boundary>)");
+
+        const errNoBoundary = new Error("boom");
+        errNoBoundary.stack = "Error: boom\n    at first (file.js:1:1)\n    at second (file.js:2:1)";
+        const originalStack = errNoBoundary.stack;
+        VMUtil.rewriteIVMStackTrace(errNoBoundary);
+        expect(errNoBoundary.stack).toBe(originalStack);
+
+        const errMultiLine = new Error("first line\nsecond line\nthird line");
+        errMultiLine.stack = "Error: first line\nsecond line\nthird line\n    at first (file.js:1:1)\n    at (<isolated-vm boundary>)\n    at hidden (file.js:2:1)";
+        VMUtil.rewriteIVMStackTrace(errMultiLine);
+        expect(errMultiLine.stack).toBe("Error: first line\nsecond line\nthird line\n    at first (file.js:1:1)\n    at (<isolated-vm boundary>)");
+
+        const errWithProps = new Error("boom");
+        errWithProps.code = "ERR_CODE";
+        errWithProps.customField = { x: 1 };
+        errWithProps.stack = "Error: boom\n    at first (file.js:1:1)\n    at (<isolated-vm boundary>)\n    at hidden (file.js:2:1)";
+        VMUtil.rewriteIVMStackTrace(errWithProps);
+        expect(errWithProps.name).toBe("Error");
+        expect(errWithProps.message).toBe("boom");
+        expect(errWithProps.code).toBe("ERR_CODE");
+        expect(errWithProps.customField).toEqual({ x: 1 });
+        expect(errWithProps.stack).toBe("Error: boom\n    at first (file.js:1:1)\n    at (<isolated-vm boundary>)");
+
+        const frozenErr = new Error("boom");
+        frozenErr.stack = "Error: boom\n    at first (file.js:1:1)\n    at (<isolated-vm boundary>)\n    at hidden (file.js:2:1)";
+        Object.freeze(frozenErr);
+        expect(() => VMUtil.rewriteIVMStackTrace(frozenErr)).not.toThrow();
+
+        const nonConfigurableErr = new Error("boom");
+        Object.defineProperty(nonConfigurableErr, "stack", {
+            value: "Error: boom\n    at first (file.js:1:1)\n    at (<isolated-vm boundary>)\n    at hidden (file.js:2:1)",
+            configurable: false,
+            writable: true,
+            enumerable: false
+        });
+        expect(() => VMUtil.rewriteIVMStackTrace(nonConfigurableErr)).not.toThrow();
+        expect(nonConfigurableErr.stack).toBe("Error: boom\n    at first (file.js:1:1)\n    at (<isolated-vm boundary>)");
+
+        const nonWritableErr = new Error("boom");
+        Object.defineProperty(nonWritableErr, "stack", {
+            value: "Error: boom\n    at first (file.js:1:1)\n    at (<isolated-vm boundary>)\n    at hidden (file.js:2:1)",
+            configurable: true,
+            writable: false,
+            enumerable: false
+        });
+        expect(() => VMUtil.rewriteIVMStackTrace(nonWritableErr)).not.toThrow();
+        expect(nonWritableErr.stack).toBe("Error: boom\n    at first (file.js:1:1)\n    at (<isolated-vm boundary>)");
+
+        const readOnlyErr = new Error("boom");
+        Object.defineProperty(readOnlyErr, "stack", {
+            value: "Error: boom\n    at first (file.js:1:1)\n    at (<isolated-vm boundary>)\n    at hidden (file.js:2:1)",
+            configurable: false,
+            writable: false,
+            enumerable: false
+        });
+        expect(() => VMUtil.rewriteIVMStackTrace(readOnlyErr)).not.toThrow();
+
+        const errMismatch = new Error("original message");
+        errMismatch.stack = "Error: original message\nline 2\n    at first (file.js:1:1)\n    at (<isolated-vm boundary>)\n    at hidden (file.js:2:1)";
+        errMismatch.message = "new message";
+        VMUtil.rewriteIVMStackTrace(errMismatch);
+        expect(errMismatch.stack).toBe("Error: original message\nline 2\n    at first (file.js:1:1)\n    at (<isolated-vm boundary>)");
+
+        const errNoFrames = new Error("message\nline 2");
+        errNoFrames.stack = "Error: message\nline 2";
+        VMUtil.rewriteIVMStackTrace(errNoFrames);
+        expect(errNoFrames.stack).toBe("Error: message\nline 2");
+    });
 });
