@@ -81,6 +81,9 @@ class TagMassAddCommand {
                     },
                     {
                         checkNew: false
+                    },
+                    {
+                        actor: ctx.msg.author.id
                     }
                 );
 

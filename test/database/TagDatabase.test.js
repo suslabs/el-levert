@@ -352,7 +352,7 @@ describe("TagDatabase", () => {
         const migrationRows = Array.from(await db.db.all("SELECT id FROM migrations ORDER BY id ASC;")).map(
             row => row.id
         );
-        expect(migrationRows).toEqual([1, 2]);
+        expect(migrationRows).toEqual([1, 2, 3]);
 
         await db.close();
     });
@@ -458,7 +458,7 @@ describe("TagDatabase", () => {
         const migrationRows = Array.from(await db.db.all("SELECT id FROM migrations ORDER BY id ASC;")).map(
             row => row.id
         );
-        expect(migrationRows).toEqual([1, 2]);
+        expect(migrationRows).toEqual([1, 2, 3]);
 
         await db.close();
     });

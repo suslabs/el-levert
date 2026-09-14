@@ -1,4 +1,5 @@
 import SqlDatabase from "./SqlDatabase.js";
+import RevisionStore from "./revision/RevisionStore.js";
 
 import Tag from "../structures/tag/Tag.js";
 import TagBitField from "../structures/tag/TagBitField.js";
@@ -63,8 +64,16 @@ class TagDatabase extends SqlDatabase {
         return new Tag(row);
     }
 
-    async add(tag) {
-        tag.setRegistered();
+    getRevisionStore() {
+        return new RevisionStore(this);
+    }
+
+    async add(tag, options) {
+        options = ObjectUtil.guaranteeObject(options);
+
+        if (options.setRegistered ?? true) {
+            tag.setRegistered();
+        }
 
         const res = await this.tagQueries.add.run({
             ...tag.getData("$", true, ["aliasName", "name", "body", "owner", "args", "registered", "type"])
@@ -134,6 +143,14 @@ class TagDatabase extends SqlDatabase {
             $name: name,
             $newName: newName
         });
+    }
+
+    async fetchAliases(name) {
+        const rows = await this.tagQueries.fetchAliases.all({
+            $name: name
+        });
+
+        return Array.from(rows).map(row => new Tag(row));
     }
 
     async delete(tag) {
@@ -345,6 +362,15 @@ class TagDatabase extends SqlDatabase {
         }
 
         if (schema.base.has("aliasName") && hasBlobType) {
+            const revisionSubjects = await this.db.tableDetails("RevisionSubjects");
+
+            if (!revisionSubjects.exists) {
+                await this._seedAppliedMigrations([1, 2]);
+                await this.db.migrate({
+                    migrationsPath: this.migrationsPath
+                });
+            }
+
             return;
         }
     }

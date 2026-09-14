@@ -75,9 +75,17 @@ class TagEditCommand {
         }
 
         try {
-            await getClient().tagManager.edit(tag, body, meta, {
-                validateNew: false
-            });
+            await getClient().tagManager.edit(
+                tag,
+                body,
+                meta,
+                {
+                    validateNew: false
+                },
+                {
+                    actor: ctx.msg.author.id
+                }
+            );
         } catch (err) {
             if (err.name !== "TagError") {
                 throw err;

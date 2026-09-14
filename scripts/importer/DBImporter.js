@@ -255,10 +255,12 @@ class DBImporter {
                 importTag = importTags.get(name);
 
             if (typeof currentTag === "undefined") {
-                await this.tagManager
-                    ._addPrepared(importTag)
-                    .then(() => count++)
-                    .catch(err => this.logger.error(`Error occured while adding "${name}":`, err));
+                await this.tagManager.tag_db.transactionImmediate(async tx => {
+                    await this.tagManager
+                        ._addPrepared(importTag, tx, {})
+                        .then(() => count++)
+                        .catch(err => this.logger.error(`Error occured while adding "${name}":`, err));
+                });
             }
         }
 

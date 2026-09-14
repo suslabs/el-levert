@@ -65,9 +65,18 @@ class TagAddCommand {
         }
 
         try {
-            await getClient().tagManager.add(t_name, body, ctx.msg.author.id, meta, {
-                validateNew: false
-            });
+            await getClient().tagManager.add(
+                t_name,
+                body,
+                ctx.msg.author.id,
+                meta,
+                {
+                    validateNew: false
+                },
+                {
+                    actor: ctx.msg.author.id
+                }
+            );
         } catch (err) {
             if (err.name !== "TagError") {
                 throw err;

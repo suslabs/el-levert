@@ -43,7 +43,7 @@ describe("tag command", () => {
             err: null
         });
 
-        await expect(executeCommand(command, "", { msg })).resolves.toContain("add|alias|chown");
+        await expect(executeCommand(command, "", { msg })).resolves.toContain("add|alias|audit|chown");
         await expect(executeCommand(command, "bad*", { msg })).resolves.toContain("must consist");
 
         await expect(executeCommand(command, "add alpha body one", { msg })).resolves.toContain(
@@ -176,9 +176,7 @@ describe("Merged Branch Coverage", () => {
                 err: null
             });
 
-            expect(
-                await command.parseBase("https://cdn.discordapp.com/attachments/1/2/file.png", null)
-            ).toMatchObject({
+            expect(await command.parseBase("https://cdn.discordapp.com/attachments/1/2/file.png", null)).toMatchObject({
                 body: "https://cdn.discordapp.com/attachments/1/2/file.png",
                 meta: {},
                 attachment: true,
@@ -233,7 +231,7 @@ describe("Merged Branch Coverage", () => {
         test("covers the main tag handler for missing tags, alias failures, execution failures, and preview branches", async () => {
             await addTag(runtime, "alpha", "body one");
 
-            expect(await run("")).toContain("add|alias|chown");
+            expect(await run("")).toContain("add|alias|audit|chown");
             expect(await run("bad*")).toContain("must consist");
 
             const missing = await run("alpah");

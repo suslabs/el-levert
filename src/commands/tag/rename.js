@@ -63,9 +63,16 @@ class TagRenameCommand {
         }
 
         try {
-            await getClient().tagManager.rename(tag, n_name, {
-                validateNew: false
-            });
+            await getClient().tagManager.rename(
+                tag,
+                n_name,
+                {
+                    validateNew: false
+                },
+                {
+                    actor: ctx.msg.author.id
+                }
+            );
         } catch (err) {
             if (err.name !== "TagError") {
                 throw err;

@@ -80,6 +80,7 @@ class TagCommand {
         subcommands: [
             "add",
             "alias",
+            "audit",
             "chown",
             "count",
             "delete",
@@ -93,6 +94,7 @@ class TagCommand {
             "quota",
             "random",
             "raw",
+            "revert",
             "rename",
             "search",
             "set_type"

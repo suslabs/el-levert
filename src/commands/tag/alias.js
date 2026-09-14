@@ -85,9 +85,18 @@ class TagAliasCommand {
         let created = false;
 
         try {
-            [, created] = await getClient().tagManager.alias(tag, a_tag, a_args, createOptions, {
-                validateNew: false
-            });
+            [, created] = await getClient().tagManager.alias(
+                tag,
+                a_tag,
+                a_args,
+                createOptions,
+                {
+                    validateNew: false
+                },
+                {
+                    actor: ctx.msg.author.id
+                }
+            );
         } catch (err) {
             if (err.name !== "TagError") {
                 throw err;

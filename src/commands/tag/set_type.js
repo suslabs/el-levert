@@ -86,10 +86,17 @@ class TagSetTypeCommand {
         tag.setMeta(meta);
 
         try {
-            await getClient().tagManager.updateProps(t_name, tag, {
-                validateNew: false,
-                checkExisting: false
-            });
+            await getClient().tagManager.updateProps(
+                t_name,
+                tag,
+                {
+                    validateNew: false,
+                    checkExisting: false
+                },
+                {
+                    actor: ctx.msg.author.id
+                }
+            );
         } catch (err) {
             if (err.name !== "TagError") {
                 throw err;

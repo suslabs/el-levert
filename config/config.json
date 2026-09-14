@@ -29,7 +29,7 @@
     "timeLimit": 15,
     "otherMemLimit": 50,
     "otherTimeLimit": 15,
-    "enableInspector": true,
+    "enableInspector": false,
     "enableUserInspector": false,
     "inspectorConnectTimeout": 60,
     "userInspectorConnectTimeout": 30,

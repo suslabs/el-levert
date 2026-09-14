@@ -68,7 +68,9 @@ class TagChownCommand {
         }
 
         try {
-            await getClient().tagManager.chown(tag, find.user.id);
+            await getClient().tagManager.chown(tag, find.user.id, false, {
+                actor: ctx.msg.author.id
+            });
         } catch (err) {
             if (err.name !== "TagError") {
                 throw err;

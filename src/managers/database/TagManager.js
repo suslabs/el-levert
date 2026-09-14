@@ -1,4 +1,5 @@
 import DBManager from "./DBManager.js";
+import TagRevisionManager from "./revision/TagRevisionManager.js";
 import TagDatabase from "../../database/TagDatabase.js";
 
 import Tag from "../../structures/tag/Tag.js";
@@ -7,6 +8,7 @@ import TagVM from "../../vm/isolated-vm/TagVM.js";
 import TagVM2 from "../../vm/vm2/TagVM2.js";
 
 import { TagTypes } from "../../structures/tag/TagTypes.js";
+import { RevisionOperationTypes } from "../../structures/revision/RevisionOperationTypes.js";
 import { fileContentTypes, scriptContentTypes } from "./TagContentTypes.js";
 
 import { getClient, getConfig, getLogger } from "../../LevertClient.js";
@@ -38,6 +40,8 @@ class TagManager extends DBManager {
 
         this.maxTagNameLength = getConfig().maxTagNameLength;
         this.tagNameRegex = new RegExp(getConfig().tagNameRegex);
+
+        this.revisions = new TagRevisionManager(this);
     }
 
     isTagName(name) {
@@ -215,8 +219,9 @@ class TagManager extends DBManager {
         return await this._runScriptTag(tag, type, args, values, options);
     }
 
-    async add(name, body, owner, meta, validate) {
+    async add(name, body, owner, meta, validate, options) {
         meta = Tag.normalizeMeta(meta);
+        options = ObjectUtil.guaranteeObject(options);
 
         validate = ObjectUtil.getBooleanOptions(
             validate,
@@ -246,15 +251,16 @@ class TagManager extends DBManager {
         const tag = new Tag({ name, body, owner, meta });
 
         await this.tag_db.transactionImmediate(async tx => {
-            await this._addPrepared(tag, tx);
+            await this._addPrepared(tag, tx, this._getRevisionOptions(options, owner));
         });
 
         return tag;
     }
 
-    async edit(tag, body, meta, validate) {
+    async edit(tag, body, meta, validate, options) {
         tag = Tag.from(tag, true);
         meta = Tag.normalizeMeta(meta);
+        options = ObjectUtil.guaranteeObject(options);
 
         validate = ObjectUtil.getBooleanOptions(validate, false, {
             validateProvided: false,
@@ -298,15 +304,17 @@ class TagManager extends DBManager {
             if (updated) {
                 const sizeDiff = newTag.getSize() - tag.getSize();
                 await this._updateQuota(tag.owner, sizeDiff, 0, tx);
+                await this.revisions.recordUpdate(tag, newTag, tx, this._getRevisionOptions(options, tag.owner));
             }
         });
 
         return newTag;
     }
 
-    async updateProps(name, tag, validate) {
+    async updateProps(name, tag, validate, options) {
         name = TypeTester.isObject(name) ? Tag.from(name) : name;
         tag = Tag.from(tag);
+        options = ObjectUtil.guaranteeObject(options);
 
         validate = ObjectUtil.getBooleanOptions(validate, false, {
             validateProvided: false,
@@ -373,15 +381,20 @@ class TagManager extends DBManager {
                     await this._updateQuota(tag.owner, newSize, 1, tx);
                 }
             }
+
+            if (updated) {
+                await this.revisions.recordUpdate(oldTag, tag, tx, this._getRevisionOptions(options, oldTag.owner));
+            }
         });
 
         return tag;
     }
 
-    async alias(tag, aliasTag, args, createOptions, validate) {
+    async alias(tag, aliasTag, args, createOptions, validate, options) {
         tag = Tag.from(tag, true);
         aliasTag = Tag.from(aliasTag, true);
         createOptions ??= null;
+        options = ObjectUtil.guaranteeObject(options);
 
         validate = ObjectUtil.getBooleanOptions(validate, false, {
             validateProvided: false,
@@ -435,6 +448,7 @@ class TagManager extends DBManager {
 
                 await this._updateQuota(newTag.owner, 0, 0, tx);
                 await tx.add(newTag);
+                await this.revisions.recordCreate(newTag, tx, this._getRevisionOptions(options, newTag.owner));
                 getLogger().info(`Created tag: "${newTag.name}" and aliased to: "${aliasTag.name}".`);
             } else {
                 if (tag.equals(newTag)) {
@@ -451,6 +465,10 @@ class TagManager extends DBManager {
                 } else if (validate.validateProvided) {
                     throw new TagError("Tag doesn't exist", tag.name);
                 }
+
+                if (updated) {
+                    await this.revisions.recordUpdate(tag, newTag, tx, this._getRevisionOptions(options, tag.owner));
+                }
             }
 
             await this._updateQuota(newTag.owner, sizeDiff, create ? 1 : 0, tx);
@@ -459,8 +477,9 @@ class TagManager extends DBManager {
         return [newTag, create];
     }
 
-    async chown(tag, newOwner, validate = false) {
+    async chown(tag, newOwner, validate = false, options) {
         tag = Tag.from(tag, true);
+        options = ObjectUtil.guaranteeObject(options);
 
         if (tag === null) {
             throw new TagError("Tag doesn't exist");
@@ -468,7 +487,8 @@ class TagManager extends DBManager {
             this.checkName(tag.name);
         }
 
-        const oldOwner = tag.owner,
+        const oldTag = this._cloneTag(tag),
+            oldOwner = tag.owner,
             tagSize = tag.getSize();
 
         await this.tag_db.transactionImmediate(async tx => {
@@ -489,13 +509,18 @@ class TagManager extends DBManager {
                 await this._updateQuota(oldOwner, -tagSize, -1, tx);
                 await this._updateQuota(newOwner, tagSize, 1, tx);
             }
+
+            if (updated) {
+                await this.revisions.recordUpdate(oldTag, tag, tx, this._getRevisionOptions(options, oldOwner));
+            }
         });
 
         return tag;
     }
 
-    async rename(tag, newName, validate) {
+    async rename(tag, newName, validate, options) {
         tag = Tag.from(tag, true);
+        options = ObjectUtil.guaranteeObject(options);
 
         validate = ObjectUtil.getBooleanOptions(validate, false, {
             validateProvided: false,
@@ -528,11 +553,29 @@ class TagManager extends DBManager {
         }
 
         await this.tag_db.transactionImmediate(async tx => {
+            const oldTag = this._cloneTag(tag),
+                aliasesBefore = await tx.fetchAliases(oldName);
+
             const res = await tx.rename(tag, newName),
                 updated = res.changes > 0;
 
             if (updated) {
                 await tx.updateAliases(oldName, newName);
+
+                const aliasesAfter = await tx.fetchAliases(newName),
+                    aliasesByName = this.constructor.getNameMap(aliasesBefore),
+                    revisionOptions = this._getRevisionOptions(options, oldTag.owner);
+
+                await this.revisions.recordUpdate(oldTag, tag, tx, revisionOptions);
+
+                for (const aliasAfter of aliasesAfter) {
+                    const aliasBefore = aliasesByName.get(aliasAfter.name);
+
+                    if (aliasBefore != null) {
+                        await this.revisions.recordUpdate(aliasBefore, aliasAfter, tx, revisionOptions);
+                    }
+                }
+
                 getLogger().info(`Renamed tag: "${oldName}" to: "${newName}"`);
             } else if (validate.validateProvided) {
                 throw new TagError("Tag doesn't exist", tag.name);
@@ -542,8 +585,9 @@ class TagManager extends DBManager {
         return tag;
     }
 
-    async delete(tag, validate = false) {
+    async delete(tag, validate = false, options) {
         tag = Tag.from(tag, true);
+        options = ObjectUtil.guaranteeObject(options);
 
         if (tag === null) {
             throw new TagError("Tag doesn't exist");
@@ -565,10 +609,82 @@ class TagManager extends DBManager {
 
             if (updated) {
                 await this._updateQuota(tag.owner, -tagSize, -1, tx);
+                await this.revisions.recordDelete(tag, tx, this._getRevisionOptions(options, tag.owner));
             }
         });
 
         return tag;
+    }
+
+    async audit(options) {
+        options = ObjectUtil.guaranteeObject(options);
+        return await this.revisions.list(options);
+    }
+
+    async auditDetail(id) {
+        return await this.revisions.getDetail(id);
+    }
+
+    async revert(name, revisionId, actor, options) {
+        options = ObjectUtil.guaranteeObject(options);
+
+        const mod = options.mod ?? false;
+
+        name = this.checkName(name);
+
+        return await this.tag_db.transactionImmediate(async tx => {
+            const subject = await this.revisions.findSubject(name, tx);
+
+            if (subject === null) {
+                throw new TagError("Tag revision history doesn't exist", name);
+            }
+
+            const latest = await this.revisions.fetchLatest(subject, tx);
+
+            if (latest === null) {
+                throw new TagError("Tag revision history doesn't exist", name);
+            }
+
+            const target = revisionId == null ? latest : await this.revisions.fetchRevision(revisionId, tx);
+
+            if (target === null || target.subjectId !== subject.id) {
+                throw new TagError("Revision doesn't exist", revisionId);
+            } else if (!mod && target.id !== latest.id) {
+                throw new TagError("Only moderators can revert to a specific revision");
+            }
+
+            const previous = revisionId == null ? await this.revisions.fetchPrevious(target, tx) : target,
+                restored = this._getRevertedTag(subject, target, previous, tx),
+                reverted = await this.revisions.countRevertsOf(target, tx);
+
+            if (!mod) {
+                if (reverted > 0) {
+                    throw new TagError("This tag edit has already been reverted");
+                }
+
+                this.revisions.validateUserRevert(actor, subject, latest, previous, restored);
+            }
+
+            const current = await tx.fetch(subject.key.name),
+                applied = await this._applyRevert(current, restored, tx),
+                revisionOptions = this._getRevisionOptions(
+                    {
+                        ...options,
+                        revertOf: target.id,
+                        restores: restored === null ? null : (previous?.id ?? target.id)
+                    },
+                    actor
+                );
+
+            await this.revisions.recordRevert(subject, restored, applied.changed, tx, revisionOptions);
+
+            for (const aliasUpdate of applied.aliasUpdates) {
+                await this.revisions.recordUpdate(aliasUpdate.before, aliasUpdate.after, tx, revisionOptions);
+            }
+
+            getLogger().info(`Reverted tag: "${name}" to revision: ${target.id}`);
+            return restored;
+        });
     }
 
     async dump(full = false, flags) {
@@ -774,11 +890,144 @@ class TagManager extends DBManager {
         });
     }
 
-    async _addPrepared(tag, tx) {
+    _getRevisionOptions(options, fallbackActor) {
+        options = ObjectUtil.guaranteeObject(options);
+
+        return ObjectUtil.removeUndefinedValues({
+            actor: options.actor ?? fallbackActor,
+            revertOf: options.revertOf,
+            restores: options.restores,
+            reason: options.reason
+        });
+    }
+
+    _cloneTag(tag) {
+        const data = tag.getData();
+        data.type = tag.type.toBuffer();
+
+        return new Tag(data);
+    }
+
+    _getRevertedTag(subject, target, previous, tx) {
+        if (target.operation === RevisionOperationTypes.create && previous === null) {
+            return null;
+        }
+
+        return this.revisions.makeTag(subject, previous ?? target);
+    }
+
+    async _updateTagWithQuota(current, restored, tx) {
+        const oldSize = current.getSize(),
+            newSize = restored.getSize();
+
+        restored.setLastEdited();
+
+        if (current.owner !== restored.owner) {
+            await this._updateQuota(restored.owner, 0, 0, tx);
+        }
+
+        const res = await tx.updateProps(current.name, restored);
+
+        if (res.changes < 1) {
+            throw new TagError("Tag doesn't exist", current.name);
+        }
+
+        if (current.owner === restored.owner) {
+            await this._updateQuota(restored.owner, newSize - oldSize, 0, tx);
+        } else {
+            await this._updateQuota(current.owner, -oldSize, -1, tx);
+            await this._updateQuota(restored.owner, newSize, 1, tx);
+        }
+
+        const aliasUpdates = [];
+
+        if (current.name !== restored.name) {
+            const aliasesBefore = await tx.fetchAliases(current.name);
+
+            await tx.updateAliases(current.name, restored.name);
+
+            const aliasesAfter = await tx.fetchAliases(restored.name),
+                aliasesByName = this.constructor.getNameMap(aliasesBefore);
+
+            for (const aliasAfter of aliasesAfter) {
+                const aliasBefore = aliasesByName.get(aliasAfter.name);
+
+                if (aliasBefore != null) {
+                    aliasUpdates.push({
+                        before: aliasBefore,
+                        after: aliasAfter
+                    });
+                }
+            }
+        }
+
+        return aliasUpdates;
+    }
+
+    async _createRevertedTag(restored, tx) {
+        const existing = await tx.fetch(restored.name);
+
+        if (existing !== null) {
+            throw new TagError("Tag already exists", existing);
+        }
+
+        restored.setLastEdited();
+        await this._updateQuota(restored.owner, 0, 0, tx);
+        await tx.add(restored, {
+            setRegistered: false
+        });
+        await this._updateQuota(restored.owner, restored.getSize(), 1, tx);
+    }
+
+    async _deleteRevertedTag(current, tx) {
+        if (current === null) {
+            return;
+        }
+
+        const res = await tx.delete(current);
+
+        if (res.changes < 1) {
+            throw new TagError("Tag doesn't exist", current.name);
+        }
+
+        await this._updateQuota(current.owner, -current.getSize(), -1, tx);
+    }
+
+    async _applyRevert(current, restored, tx) {
+        if (restored === null) {
+            await this._deleteRevertedTag(current, tx);
+            return {
+                changed: current === null ? [] : Object.keys(this.revisions.spec.getSnapshot(current.getData())),
+                aliasUpdates: []
+            };
+        }
+
+        if (current === null) {
+            await this._createRevertedTag(restored, tx);
+            return {
+                changed: Object.keys(this.revisions.spec.getSnapshot(restored.getData())),
+                aliasUpdates: []
+            };
+        }
+
+        const before = this.revisions.spec.getSnapshot(current.getData()),
+            after = this.revisions.spec.getSnapshot(restored.getData()),
+            changed = Object.keys(this.revisions._manager(tx).diff(before, after));
+
+        const aliasUpdates = await this._updateTagWithQuota(current, restored, tx);
+
+        return {
+            changed,
+            aliasUpdates
+        };
+    }
+
+    async _addPrepared(tag, tx, revisionOptions) {
         tag = Tag.from(tag);
 
         await this._updateQuota(tag.owner, 0, 0, tx);
         await tx.add(tag);
+        await this.revisions.recordCreate(tag, tx, revisionOptions);
 
         const bodyLogText = LoggerUtil.formatLog(
             Util.trimString(tag.body, 300, null, {
