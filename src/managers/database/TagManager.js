@@ -16,6 +16,7 @@ import { getClient, getConfig, getLogger } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
+import ArrayUtil from "../../util/ArrayUtil.js";
 import RegexUtil from "../../util/misc/RegexUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
@@ -700,8 +701,7 @@ class TagManager extends DBManager {
 
     async list(user) {
         const tags = await this.tag_db.list(user),
-            newTags = tags.filter(tag => !tag.isOld),
-            oldTags = tags.filter(tag => tag.isOld);
+            [newTags, oldTags] = ArrayUtil.split(tags, tag => tag.isOld);
 
         return {
             count: tags.length,

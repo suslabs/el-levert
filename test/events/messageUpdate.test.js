@@ -9,7 +9,7 @@ beforeEach(async () => {
         loadManagers: false,
         loadVMs: false
     });
-    runtime.client.messageProcessor = {
+    runtime.client.messageDispatcher = {
         processEdit: vi.fn()
     };
 });
@@ -19,11 +19,11 @@ afterEach(async () => {
 });
 
 describe("messageUpdate event", () => {
-    test("passes updated messages to the real client message processor", async () => {
+    test("passes updated messages to the real client message dispatcher", async () => {
         const event = (await import("../../src/events/messageUpdate.js")).default;
         const msg = { id: "1" };
 
         await event.listener({}, msg);
-        expect(runtime.client.messageProcessor.processEdit).toHaveBeenCalledWith(msg);
+        expect(runtime.client.messageDispatcher.processEdit).toHaveBeenCalledWith(msg);
     });
 });

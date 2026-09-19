@@ -17,6 +17,52 @@ describe("ArrayUtil", () => {
         expect(ArrayUtil.hasDuplicates([{ id: 1 }, { id: 2 }, { id: 1 }], "id")).toBe(true);
         expect(ArrayUtil.sameElements([1, 2], [2, 1], false)).toBe(true);
         expect(ArrayUtil.sort(["10", "2", "1"])).toEqual(["1", "2", "10"]);
+        expect(ArrayUtil.groupBy([1, 2, 3], value => (value % 2 === 0 ? "even" : "odd"))).toEqual({
+            odd: [1, 3],
+            even: [2]
+        });
+        expect(
+            ArrayUtil.groupBy(
+                [
+                    { category: "fruit", name: "apple" },
+                    { category: "vegetable", name: "carrot" },
+                    { category: "fruit", name: "banana" }
+                ],
+                "category"
+            )
+        ).toEqual({
+            fruit: [
+                { category: "fruit", name: "apple" },
+                { category: "fruit", name: "banana" }
+            ],
+            vegetable: [{ category: "vegetable", name: "carrot" }]
+        });
+        expect(ArrayUtil.groupBy(["a", "b", "c"], (_, i) => i % 2)).toEqual({
+            0: ["a", "c"],
+            1: ["b"]
+        });
+        expect(Object.getPrototypeOf(ArrayUtil.groupBy([1], () => "toString"))).toBeNull();
+        expect(ArrayUtil.groupBy(["item"], () => "toString").toString).toEqual(["item"]);
+        expect(Object.getPrototypeOf(ArrayUtil.groupBy([]))).toBeNull();
+        expect(ArrayUtil.groupBy(["x", "y", "x"])).toEqual({
+            x: ["x", "x"],
+            y: ["y"]
+        });
+
+        {
+            const mapGroups = ArrayUtil.groupByMap([1, 2, 3], value => value % 2 === 0);
+            expect(mapGroups instanceof Map).toBe(true);
+            expect(mapGroups.get(false)).toEqual([1, 3]);
+            expect(mapGroups.get(true)).toEqual([2]);
+
+            const mapByProp = ArrayUtil.groupByMap([{ k: "a" }, { k: "b" }, { k: "a" }], "k");
+            expect(mapByProp.get("a")).toEqual([{ k: "a" }, { k: "a" }]);
+            expect(mapByProp.get("b")).toEqual([{ k: "b" }]);
+
+            const objKey = { id: 1 },
+                mapByObj = ArrayUtil.groupByMap(["val"], () => objKey);
+            expect(mapByObj.get(objKey)).toEqual(["val"]);
+        }
         expect(ArrayUtil.split([1, 2, 3], value => value % 2)).toEqual([[2], [1, 3]]);
         expect(ArrayUtil.zip([1, 2], ["a", "b", "c"])).toEqual([
             [1, "a"],

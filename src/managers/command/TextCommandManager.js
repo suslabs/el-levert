@@ -6,6 +6,7 @@ import TextCommand from "../../structures/command/TextCommand.js";
 import CommandParser from "../../parsers/command/CommandParser.js";
 
 import Util from "../../util/Util.js";
+import ArrayUtil from "../../util/ArrayUtil.js";
 
 import categoryNames from "./categoryNames.json" assert { type: "json" };
 
@@ -67,12 +68,7 @@ class TextCommandManager extends BaseCommandManager {
 
     _categorizeCommands(sort, ...etc) {
         const allowedCmds = this.getCommands(...etc),
-            categories = new Map();
-
-        for (const command of allowedCmds) {
-            const list = categories.get(command.category) ?? [];
-            categories.set(command.category, list.concat(command));
-        }
+            categories = ArrayUtil.groupByMap(allowedCmds, "category");
 
         if (!sort) {
             return categories;

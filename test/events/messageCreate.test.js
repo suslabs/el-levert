@@ -9,7 +9,7 @@ beforeEach(async () => {
         loadManagers: false,
         loadVMs: false
     });
-    runtime.client.messageProcessor = {
+    runtime.client.messageDispatcher = {
         processCreate: vi.fn()
     };
 });
@@ -19,11 +19,11 @@ afterEach(async () => {
 });
 
 describe("messageCreate event", () => {
-    test("passes messages to the real client message processor", async () => {
+    test("passes messages to the real client message dispatcher", async () => {
         const event = (await import("../../src/events/messageCreate.js")).default;
         const msg = { id: "1" };
 
         await event.listener(msg);
-        expect(runtime.client.messageProcessor.processCreate).toHaveBeenCalledWith(msg);
+        expect(runtime.client.messageDispatcher.processCreate).toHaveBeenCalledWith(msg);
     });
 });

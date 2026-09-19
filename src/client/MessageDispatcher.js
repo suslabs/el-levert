@@ -1,4 +1,4 @@
-class MessageProcessor {
+class MessageDispatcher {
     constructor(client) {
         this.client = client;
 
@@ -34,4 +34,4 @@ class MessageProcessor {
     }
 }
 
-export default MessageProcessor;
+export default MessageDispatcher;

@@ -204,7 +204,7 @@ async function loadRuntimeHandlers(client, Handlers, config, reactions) {
         }
     );
 
-    client._loadMessageProcessor();
+    client._loadMessageDispatcher();
 }
 
 async function createRuntime(options = {}) {

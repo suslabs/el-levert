@@ -16,7 +16,7 @@ import wrapEvent from "./client/wrapEvent.js";
 import executeAllHandlers from "./client/executeAllHandlers.js";
 import { registerGlobalErrorHandler, removeGlobalErrorHandler } from "./client/GlobalErrorHandler.js";
 
-import MessageProcessor from "./client/MessageProcessor.js";
+import MessageDispatcher from "./client/MessageDispatcher.js";
 
 import Util from "./util/Util.js";
 import TypeTester from "./util/TypeTester.js";
@@ -512,18 +512,18 @@ class LevertClient extends DiscordClient {
         }
     }
 
-    _loadMessageProcessor() {
+    _loadMessageDispatcher() {
         this._executeAllHandlers = executeAllHandlers.bind(undefined, this);
-        this.messageProcessor = new MessageProcessor(this);
+        this.messageDispatcher = new MessageDispatcher(this);
 
-        this.logger.info("Loaded MessageProcessor.");
+        this.logger.info("Loaded MessageDispatcher.");
     }
 
-    _unloadMessageProcessor() {
+    _unloadMessageDispatcher() {
         delete this._executeAllHandlers;
-        delete this.messageProcessor;
+        delete this.messageDispatcher;
 
-        this.logger.info("Unloaded MessageProcessor.");
+        this.logger.info("Unloaded MessageDispatcher.");
     }
 
     _loadHandlers() {
@@ -545,7 +545,7 @@ class LevertClient extends DiscordClient {
             }
         );
 
-        this._loadMessageProcessor();
+        this._loadMessageDispatcher();
     }
 
     _unloadHandlers() {
@@ -553,7 +553,7 @@ class LevertClient extends DiscordClient {
             showUnloadingMessages: false
         });
 
-        this._unloadMessageProcessor();
+        this._unloadMessageDispatcher();
     }
 
     async _loadManagers() {

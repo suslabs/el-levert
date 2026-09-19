@@ -153,6 +153,43 @@ const ArrayUtil = Object.freeze({
         });
     },
 
+    groupBy: (array, callback) => {
+        const getValue = ArrayUtil._valueFunc(callback),
+            groups = Object.create(null);
+
+        let i = 0;
+
+        for (const item of array) {
+            const key = getValue(item, i++);
+
+            groups[key] ??= [];
+            groups[key].push(item);
+        }
+
+        return groups;
+    },
+
+    groupByMap: (array, callback) => {
+        const getValue = ArrayUtil._valueFunc(callback),
+            groups = new Map();
+
+        let i = 0;
+
+        for (const item of array) {
+            const key = getValue(item, i++);
+            let group = groups.get(key);
+
+            if (typeof group === "undefined") {
+                group = [];
+                groups.set(key, group);
+            }
+
+            group.push(item);
+        }
+
+        return groups;
+    },
+
     split: (array, callback) => {
         return array.reduce(
             (acc, item, i) => {

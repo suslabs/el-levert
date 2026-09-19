@@ -1,4 +1,5 @@
 import Util from "../../../util/Util.js";
+import ArrayUtil from "../../../util/ArrayUtil.js";
 
 class CommandParseSession {
     constructor(context) {
@@ -34,20 +35,22 @@ class CommandParseSession {
     }
 
     applyNamedIssues() {
-        for (const issue of this.issues) {
-            const name = issue.ref?.name;
+        const namedIssues = this.issues.filter(issue => typeof issue.ref?.name === "string");
 
-            if (typeof name !== "string") {
-                continue;
-            }
+        if (Util.empty(namedIssues)) {
+            return;
+        }
 
+        const grouped = ArrayUtil.groupBy(namedIssues, issue => issue.ref.name);
+
+        for (const [name, issues] of Object.entries(grouped)) {
             const result = this.results.get(name);
 
             if (typeof result === "undefined") {
                 continue;
             }
 
-            result.issues.push(issue);
+            result.issues.push(...issues);
             result.valid = false;
         }
     }

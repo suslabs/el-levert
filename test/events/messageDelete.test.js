@@ -9,7 +9,7 @@ beforeEach(async () => {
         loadManagers: false,
         loadVMs: false
     });
-    runtime.client.messageProcessor = {
+    runtime.client.messageDispatcher = {
         processDelete: vi.fn()
     };
 });
@@ -19,11 +19,11 @@ afterEach(async () => {
 });
 
 describe("messageDelete event", () => {
-    test("passes messages to the real client message processor", async () => {
+    test("passes messages to the real client message dispatcher", async () => {
         const event = (await import("../../src/events/messageDelete.js")).default;
         const msg = { id: "1" };
 
         await event.listener(msg);
-        expect(runtime.client.messageProcessor.processDelete).toHaveBeenCalledWith(msg);
+        expect(runtime.client.messageDispatcher.processDelete).toHaveBeenCalledWith(msg);
     });
 });

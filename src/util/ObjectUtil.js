@@ -35,6 +35,10 @@ const ObjectUtil = Object.freeze({
         return Object.fromEntries(Object.entries(obj).map(([key, value]) => [value, key]));
     },
 
+    groupBy: (items, callback) => {
+        return ArrayUtil.groupBy(items, callback);
+    },
+
     guaranteeObject: (obj, fallback = {}) => {
         return TypeTester.isObject(obj) ? obj : fallback;
     },

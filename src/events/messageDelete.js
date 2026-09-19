@@ -5,6 +5,6 @@ import { getClient } from "../LevertClient.js";
 export default {
     name: Events.MessageDelete,
     listener: msg => {
-        return getClient().messageProcessor.processDelete(msg);
+        return getClient().messageDispatcher.processDelete(msg);
     }
 };

@@ -10,6 +10,7 @@ import { getClient, getConfig, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
+import ArrayUtil from "../../util/ArrayUtil.js";
 
 import PermissionError from "../../errors/PermissionError.js";
 
@@ -633,10 +634,11 @@ class PermissionManager extends DBManager {
             return null;
         }
 
-        const users = await this.listUsers(fetchUsernames);
+        const users = await this.listUsers(fetchUsernames),
+            usersByGroup = ArrayUtil.groupBy(users, "group");
 
         for (const group of groups) {
-            group.setUsers(users);
+            group.setUsers(usersByGroup[group.name] ?? []);
         }
 
         return groups;

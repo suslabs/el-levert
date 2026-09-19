@@ -15,6 +15,15 @@ describe("ObjectUtil", () => {
         ).toEqual({ A: 2 });
         expect(ObjectUtil.removeUndefinedValues({ a: 1, b: undefined })).toEqual({ a: 1 });
         expect(ObjectUtil.reverseObject({ a: "x", b: "y" })).toEqual({ x: "a", y: "b" });
+        expect(ObjectUtil.groupBy([1, 2, 3], x => (x % 2 === 0 ? "even" : "odd"))).toEqual({
+            odd: [1, 3],
+            even: [2]
+        });
+        expect(ObjectUtil.groupBy([{ type: "a" }, { type: "b" }], "type")).toEqual({
+            a: [{ type: "a" }],
+            b: [{ type: "b" }]
+        });
+        expect(Object.getPrototypeOf(ObjectUtil.groupBy([], () => "k"))).toBeNull();
         expect(ObjectUtil.guaranteeObject({ a: 1 })).toEqual({ a: 1 });
         expect(ObjectUtil.guaranteeObject(null)).toEqual({});
         expect(ObjectUtil.guaranteeObject(null, { fallback: true })).toEqual({ fallback: true });

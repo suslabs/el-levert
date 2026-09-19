@@ -403,5 +403,15 @@ describe("Merged Branch Coverage", () => {
                 isScript: false
             });
         });
+
+        test("lists and partitions tags into new and old with split", async () => {
+            const manager = await createManager();
+            await manager.add("tag-new", "body 1", "u1", { type: "text" });
+
+            const res = await manager.list("u1");
+            expect(res.count).toBe(1);
+            expect(res.newTags.map(t => t.name)).toEqual(["tag-new"]);
+            expect(res.oldTags).toEqual([]);
+        });
     });
 });
