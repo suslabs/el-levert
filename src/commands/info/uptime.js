@@ -5,6 +5,7 @@ import Util from "../../util/Util.js";
 class UptimeCommand {
     static info = {
         name: "uptime",
+        description: "Show how long the bot has been running.",
         category: "info"
     };
 

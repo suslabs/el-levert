@@ -1,4 +1,7 @@
+import path from "node:path";
+
 import SqlDatabase from "./SqlDatabase.js";
+import RevisionStore from "./revision/RevisionStore.js";
 
 import Group from "../structures/permission/Group.js";
 import User from "../structures/permission/User.js";
@@ -14,7 +17,13 @@ class PermissionDatabase extends SqlDatabase {
 
         super(dbPath, queryPath, {
             ...options,
-            customFunctions
+            customFunctions,
+            additionalQueryPaths: options.additionalQueryPaths ?? [path.resolve(queryPath, "..", "revision")],
+            additionalMigrationsPath:
+                options.additionalMigrationsPath ??
+                (typeof options.migrationsPath === "string"
+                    ? path.resolve(options.migrationsPath, "..", "revision")
+                    : null)
         });
     }
 
@@ -22,6 +31,10 @@ class PermissionDatabase extends SqlDatabase {
         if (mode === "load") {
             await this._migrateLegacySchema();
         }
+    }
+
+    getRevisionStore() {
+        return new RevisionStore(this);
     }
 
     async groupExists(name) {
@@ -128,6 +141,22 @@ class PermissionDatabase extends SqlDatabase {
         }
 
         return rows.map(row => new Group(row));
+    }
+
+    async fetchUsersByGroup(name) {
+        const rows = await this.userQueries.fetchByGroup.all({
+            $name: name
+        });
+
+        return Array.from(rows).map(row => new User(row));
+    }
+
+    async fetchUsersByUser(user) {
+        const rows = await this.userQueries.fetchByUser.all({
+            $user: user
+        });
+
+        return Array.from(rows).map(row => new User(row));
     }
 
     async add(group, user) {

@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import SqlDatabase from "./SqlDatabase.js";
 import RevisionStore from "./revision/RevisionStore.js";
 
@@ -21,7 +23,13 @@ class TagDatabase extends SqlDatabase {
 
         super(dbPath, queryPath, {
             ...options,
-            customFunctions
+            customFunctions,
+            additionalQueryPaths: options.additionalQueryPaths ?? [path.resolve(queryPath, "..", "revision")],
+            additionalMigrationsPath:
+                options.additionalMigrationsPath ??
+                (typeof options.migrationsPath === "string"
+                    ? path.resolve(options.migrationsPath, "..", "revision")
+                    : null)
         });
     }
 
@@ -362,15 +370,6 @@ class TagDatabase extends SqlDatabase {
         }
 
         if (schema.base.has("aliasName") && hasBlobType) {
-            const revisionSubjects = await this.db.tableDetails("RevisionSubjects");
-
-            if (!revisionSubjects.exists) {
-                await this._seedAppliedMigrations([1, 2]);
-                await this.db.migrate({
-                    migrationsPath: this.migrationsPath
-                });
-            }
-
             return;
         }
     }

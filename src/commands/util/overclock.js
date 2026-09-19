@@ -135,6 +135,7 @@ function codeblock(str) {
 class OverclockCommand {
     static info = {
         name: "overclock",
+        description: "Calculate overclocking requirements.",
         aliases: ["oc"],
         category: "util",
         arguments: [

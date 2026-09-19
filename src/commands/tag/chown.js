@@ -7,6 +7,7 @@ import Util from "../../util/Util.js";
 class TagChownCommand {
     static info = {
         name: "chown",
+        description: "Change a tag's owner.",
         aliases: ["transfer"],
         parent: "tag",
         subcommand: true,

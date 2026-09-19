@@ -5,6 +5,7 @@ import Util from "../../util/Util.js";
 class PermRemoveAllCommand {
     static info = {
         name: "remove_all",
+        description: "Remove a user from every permission group.",
         aliases: ["take"],
         parent: "perm",
         subcommand: true,
@@ -30,7 +31,9 @@ class PermRemoveAllCommand {
         if (typeof find === "undefined") {
             if (getClient().permManager.isOwner(ctx.msg.author.id)) {
                 let out = `${getEmoji("warn")} User \`${u_name}\` not found. Tried removing by verbatim input: \`${u_name}\``,
-                    removed = await getClient().permManager.removeAll(u_name);
+                    removed = await getClient().permManager.removeAll(u_name, {
+                        actor: ctx.msg.author.id
+                    });
 
                 if (!removed) {
                     out += "\nUser doesn't have any permissions.";
@@ -51,7 +54,9 @@ class PermRemoveAllCommand {
             return `${getEmoji("warn")} Can't remove permissions of a user (\`${find.user.username}\` \`${find.user.id}\`) with a level higher than or equal to your own. (**${ctx.perm}** <= **${theirLevel}**)`;
         }
 
-        const removed = await getClient().permManager.removeAll(find.user.id);
+        const removed = await getClient().permManager.removeAll(find.user.id, {
+            actor: ctx.msg.author.id
+        });
 
         if (!removed) {
             const out = `${getEmoji("info")} User \`${find.user.username}\` (\`${find.user.id}\`) doesn't have any permissions`,

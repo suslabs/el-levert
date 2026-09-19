@@ -10,6 +10,7 @@ function codeblock(str) {
 class ConvertCommand {
     static info = {
         name: "convert",
+        description: "Convert a value between units.",
         aliases: ["c"],
         category: "util",
         arguments: [

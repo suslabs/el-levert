@@ -7,6 +7,7 @@ import Util from "../../util/Util.js";
 class TagOwnerCommand {
     static info = {
         name: "owner",
+        description: "Show a tag's owner.",
         aliases: ["author"],
         parent: "tag",
         subcommand: true,

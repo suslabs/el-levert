@@ -6,6 +6,7 @@ import MigrationLoader from "../loaders/migration/MigrationLoader.js";
 import { OpenModes } from "./drivers/sqlite/OpenModes.js";
 import { LoadStatus } from "../loaders/LoadStatus.js";
 
+import Util from "../util/Util.js";
 import ObjectUtil from "../util/ObjectUtil.js";
 
 class SqlDatabase {
@@ -28,6 +29,8 @@ class SqlDatabase {
 
         this.db = null;
         this._queryLoader = null;
+        this._additionalQueryLoaders = [];
+        this._createQueries = [];
         this._queryRoot = null;
         this._migrations = new Map();
         this._loadedCategories = new Set();
@@ -73,7 +76,7 @@ class SqlDatabase {
         await this.setup("create");
         await this._loadCreateQueries();
 
-        for (const query of this._queryLoader.createQueries) {
+        for (const query of this._createQueries) {
             await this.db.run(query);
         }
     }
@@ -179,6 +182,8 @@ class SqlDatabase {
         this.queryEncoding = options.queryEncoding ?? "utf8";
 
         this.migrationsPath = options.migrationsPath;
+        this.additionalQueryPaths = options.additionalQueryPaths ?? [];
+        this.additionalMigrationsPath = options.additionalMigrationsPath ?? null;
 
         this.enableWAL = options.enableWAL ?? true;
 
@@ -211,6 +216,31 @@ class SqlDatabase {
         queryLoader.loadQueries = options.loadQueries ?? queryLoader.loadQueries;
     }
 
+    _getAdditionalQueryLoaders(options) {
+        options = ObjectUtil.guaranteeObject(options);
+
+        if (Util.empty(this._additionalQueryLoaders)) {
+            this._additionalQueryLoaders = this.additionalQueryPaths.map(
+                queryPath =>
+                    new QueryLoader(
+                        queryPath,
+                        this.logger,
+                        this._getQueryLoaderOptions({
+                            loadCreate: options.loadCreate,
+                            loadQueries: options.loadQueries,
+                            db: options.db
+                        })
+                    )
+            );
+        }
+
+        for (const queryLoader of this._additionalQueryLoaders) {
+            this._setQueryLoaderOptions(queryLoader, options);
+        }
+
+        return this._additionalQueryLoaders;
+    }
+
     async _loadCreateQueries() {
         const queryLoader =
             this._queryLoader ??
@@ -232,12 +262,23 @@ class SqlDatabase {
 
         this._queryLoader = queryLoader;
 
-        const [, status] = await queryLoader.load();
+        const loaders = [
+            queryLoader,
+            ...this._getAdditionalQueryLoaders({
+                loadCreate: true,
+                loadQueries: false
+            })
+        ];
 
-        if (status === LoadStatus.failed) {
-            return null;
+        for (const loader of loaders) {
+            const [, status] = await loader.load();
+
+            if (status === LoadStatus.failed) {
+                return null;
+            }
         }
 
+        this._createQueries = loaders.flatMap(loader => loader.createQueries);
         return queryLoader.result;
     }
 
@@ -279,11 +320,25 @@ class SqlDatabase {
 
         this._queryLoader = queryLoader;
 
-        const [queries, status] = await queryLoader.load();
+        const loaders = [
+            queryLoader,
+            ...this._getAdditionalQueryLoaders({
+                db: this,
+                rewriteQueryStrings: this.rewriteFunc,
+                loadCreate: false,
+                loadQueries: true
+            })
+        ];
 
-        if (status === LoadStatus.failed) {
-            return null;
+        for (const loader of loaders) {
+            const [, status] = await loader.load();
+
+            if (status === LoadStatus.failed) {
+                return null;
+            }
         }
+
+        const queries = Object.assign({}, ...loaders.map(loader => loader.queries));
 
         this._assignQueries(queries);
         return queryLoader.result;
@@ -297,15 +352,18 @@ class SqlDatabase {
         }
 
         const queries = {};
+        const loaders = [root._queryLoader, ...root._additionalQueryLoaders];
 
-        for (const [categoryName, categoryQueries] of Object.entries(root._queryLoader.queries)) {
-            const scopedQueries = {};
+        for (const loader of loaders) {
+            for (const [categoryName, categoryQueries] of Object.entries(loader.queries)) {
+                const scopedQueries = {};
 
-            for (const [queryName, st] of Object.entries(categoryQueries)) {
-                scopedQueries[queryName] = await this.db.bindStatement(st);
+                for (const [queryName, st] of Object.entries(categoryQueries)) {
+                    scopedQueries[queryName] = await this.db.bindStatement(st);
+                }
+
+                queries[categoryName] = scopedQueries;
             }
-
-            queries[categoryName] = scopedQueries;
         }
 
         this._assignQueries(queries);
@@ -314,7 +372,14 @@ class SqlDatabase {
 
     async _setup(...args) {
         if (typeof this._childSetup === "function") {
-            return await this._childSetup.apply(this, args);
+            await this._childSetup.apply(this, args);
+        }
+
+        if (args[0] === "load" && this.additionalMigrationsPath !== null) {
+            await this.db.migrate({
+                migrationsPath: this.additionalMigrationsPath,
+                table: "revision_migrations"
+            });
         }
     }
 
@@ -408,9 +473,15 @@ class SqlDatabase {
         }
 
         this._deleteLoadedQueries();
-        await this._queryLoader.deleteQueries();
+        const loaders = [this._queryLoader, ...this._additionalQueryLoaders];
+
+        for (const loader of loaders) {
+            await loader.deleteQueries();
+        }
 
         this._queryLoader = null;
+        this._additionalQueryLoaders = [];
+        this._createQueries = [];
     }
 }
 

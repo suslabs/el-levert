@@ -5,6 +5,7 @@ import Util from "../../util/Util.js";
 class TagQuotaCommand {
     static info = {
         name: "quota",
+        description: "Show your tag quota usage.",
         parent: "tag",
         subcommand: true
     };

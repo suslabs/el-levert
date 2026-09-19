@@ -3,6 +3,7 @@ import { getClient, getEmoji } from "../../LevertClient.js";
 class StopCommand {
     static info = {
         name: "stop",
+        description: "Stop the bot.",
         ownerOnly: true,
         category: "owner-only"
     };

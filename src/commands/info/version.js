@@ -3,6 +3,7 @@ import { getClient, getEmoji } from "../../LevertClient.js";
 class VersionCommand {
     static info = {
         name: "version",
+        description: "Show the current bot version.",
         category: "info"
     };
 

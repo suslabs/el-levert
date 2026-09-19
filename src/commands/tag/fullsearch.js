@@ -111,6 +111,7 @@ const defaultResultLimit = 8,
 class TagFullSearchCommand {
     static info = {
         name: "fullsearch",
+        description: "Search the bodies of tags for matching text.",
         aliases: ["query"],
         parent: "tag",
         subcommand: true,

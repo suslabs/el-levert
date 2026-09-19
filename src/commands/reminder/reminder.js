@@ -3,6 +3,7 @@ import { getConfig, getEmoji } from "../../LevertClient.js";
 class ReminderCommand {
     static info = {
         name: "reminder",
+        description: "Manage personal reminders.",
         aliases: ["r"],
         subcommands: ["add", "list", "remove", "remove_all"]
     };

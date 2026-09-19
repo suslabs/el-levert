@@ -161,6 +161,7 @@ If reactions are enabled, the file defines the bracket reactions and the word-tr
 
 - Discord text commands with a configurable prefix
 - Tags with aliases, quotas, search, raw dump, ownership, and script support
+- Snapshot-based tag and permission audit history with revision reversion
 - JavaScript eval, optional `vm2`, optional other languages, and inspector debugging
 - Permission groups with configurable levels
 - Reminders delivered by DM
@@ -262,6 +263,23 @@ Main actions:
 - `alias (name) (target) [args]` creates an alias-style tag
 - `chown (name) (new_owner)` transfers ownership
 - `set_type (name) (type|version)` changes script metadata for moderators
+- `audit [tag_name] [revision_id] [--options]` shows recent tag changes or a full revision diff for moderators
+- `revert (name) [revision_id]` restores a previous tag state. Tag owners can revert their own latest edit once within one hour; moderators can restore arbitrary revisions.
+
+Examples:
+
+- `%tag audit example` lists recent revisions for `example`
+- `%tag audit example 42` shows the before/after diff for revision `42`
+- `%tag audit --operation update --limit 20` lists recent tag updates
+
+Tag audit options:
+
+- `--user` or `--actor` filters by the user who made the change
+- `--operation` or `--op` filters by `import`, `create`, `update`, `delete`, or `revert`
+- `--from` and `--to` filter by a date or time range
+- `--page` and `--limit` control pagination
+
+Audit results are shown in a compact paginated embed. Providing a revision ID shows the tracked fields before and after that change. `--from` and `--to` accept natural-language dates and times.
 
 What users should know:
 
@@ -341,6 +359,26 @@ Main actions:
 - `add_group (group_name) (level)` creates a group
 - `remove_group (group_name)` deletes a group
 - `update_group (group_name) [new_name/unchanged] [new_level/unchanged]` updates a group
+- `audit [subject] [revision_id] [--options]` shows permission group and membership changes or a full revision diff for permission admins
+- `revert group (group_name) [revision_id]` restores a group revision for permission admins
+- `revert membership (user_id/group_name) [revision_id]` restores a membership revision for permission admins
+
+Examples:
+
+- `%perm audit moderators` lists revisions for the `moderators` group
+- `%perm audit moderators 12345` shows the before/after diff for revision `12345`
+- `%perm audit user-id/moderators` lists revisions for one membership
+- `%perm audit --target permission_group --operation update` lists group updates
+
+Permission audit options:
+
+- `--user` or `--actor` filters by the administrator who made the change
+- `--operation` or `--op` filters by `import`, `create`, `update`, `delete`, or `revert`
+- `--target` filters by `permission_group` or `permission_user`
+- `--from` and `--to` filter by a date or time range
+- `--page` and `--limit` control pagination
+
+Audit results show who changed a group or membership, when it happened, and which fields changed.
 
 What users should know:
 

@@ -49,21 +49,31 @@ afterEach(async () => {
 });
 
 describe("tag audit command", () => {
+    test("exposes command usage through the standard help arguments", async () => {
+        const help = await run("audit help");
+        const usage = await run("audit");
+
+        expect(help).toContain("View recent tag revisions");
+        expect(usage).toContain("[tag_name] [revision_id] [--options]");
+    });
+
     test("shows compact audit entries and revision details", async () => {
         expect(await run("add alpha one", userMsg)).toContain("Created tag **alpha**");
         expect(await run("edit alpha two", userMsg)).toContain("Edited tag **alpha**");
 
         const audit = await run("audit alpha --limit 5");
-        expect(audit).toContain("Tag audit page **1**");
-        expect(audit).toContain("update **alpha**");
-        expect(audit).toContain("user-1");
+        expect(audit.content).toContain("Tag audit page **1**");
+        expect(audit.embeds).toHaveLength(1);
+        expect(audit.embeds[0].data.description).toContain("**update** alpha");
+        expect(audit.embeds[0].data.description).toContain("user-1");
 
-        const revisionId = Number(audit.match(/#(\d+)/)[1]),
+        const revisionId = Number(audit.embeds[0].data.description.match(/#(\d+)/)[1]),
             detail = await run(`audit alpha ${revisionId}`);
 
-        expect(detail).toContain(`Revision **#${revisionId}**`);
-        expect(detail).toContain("Operation:");
-        expect(detail).toContain("body:");
+        expect(detail.content).toContain(`Revision **#${revisionId}**`);
+        expect(detail.embeds).toHaveLength(1);
+        expect(detail.embeds[0].data.description).toContain("Operation:");
+        expect(detail.embeds[0].data.fields[0].name).toBe("body");
     });
 
     test("handles empty audit pages", async () => {

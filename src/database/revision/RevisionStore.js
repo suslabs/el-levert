@@ -9,7 +9,7 @@ class RevisionStore {
     }
 
     async createSubject(target, key, staticSnapshot) {
-        const res = await this.database.revisionQueries.createSubject.run({
+        const res = await this.database.subjectQueries.create.run({
             $target: target,
             $key: this.constructor._json(key),
             $staticSnapshot: this.constructor._json(staticSnapshot),
@@ -20,7 +20,7 @@ class RevisionStore {
     }
 
     async fetchSubjectById(id) {
-        const row = await this.database.revisionQueries.fetchSubjectById.get({
+        const row = await this.database.subjectQueries.fetchById.get({
             $id: id
         });
 
@@ -28,7 +28,7 @@ class RevisionStore {
     }
 
     async fetchSubject(target, key) {
-        const row = await this.database.revisionQueries.fetchSubject.get({
+        const row = await this.database.subjectQueries.fetch.get({
             $target: target,
             $key: this.constructor._json(key)
         });
@@ -37,7 +37,7 @@ class RevisionStore {
     }
 
     async fetchSubjectByRevisionKey(target, key) {
-        const row = await this.database.revisionQueries.fetchSubjectByRevisionKey.get({
+        const row = await this.database.subjectQueries.fetchByRevisionKey.get({
             $target: target,
             $key: this.constructor._json(key)
         });
@@ -46,7 +46,7 @@ class RevisionStore {
     }
 
     async updateSubjectKey(subject, key) {
-        const res = await this.database.revisionQueries.updateSubjectKey.run({
+        const res = await this.database.subjectQueries.updateKey.run({
             $id: subject.id,
             $key: this.constructor._json(key)
         });
@@ -55,14 +55,14 @@ class RevisionStore {
     }
 
     async markSubjectDeleted(subject, deleted = Date.now()) {
-        return await this.database.revisionQueries.markSubjectDeleted.run({
+        return await this.database.subjectQueries.markDeleted.run({
             $id: subject.id,
             $deleted: deleted
         });
     }
 
     async restoreSubject(subject, key) {
-        return await this.database.revisionQueries.restoreSubject.run({
+        return await this.database.subjectQueries.restore.run({
             $id: subject.id,
             $key: this.constructor._json(key)
         });

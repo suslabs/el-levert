@@ -3,6 +3,7 @@ import { getConfig } from "../../LevertClient.js";
 class CEvalCommand {
     static info = {
         name: "c",
+        description: "Evaluate C code.",
         parent: "eval",
         subcommand: true
     };

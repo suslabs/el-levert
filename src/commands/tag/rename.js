@@ -7,6 +7,7 @@ import Util from "../../util/Util.js";
 class TagRenameCommand {
     static info = {
         name: "rename",
+        description: "Rename a tag.",
         parent: "tag",
         subcommand: true,
         arguments: [

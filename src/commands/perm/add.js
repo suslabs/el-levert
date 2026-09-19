@@ -7,6 +7,7 @@ import Util from "../../util/Util.js";
 class PermAddCommand {
     static info = {
         name: "add",
+        description: "Add a user to a permission group.",
         aliases: ["give"],
         parent: "perm",
         subcommand: true,
@@ -59,7 +60,9 @@ class PermAddCommand {
         }
 
         try {
-            await getClient().permManager.add(group, find.user.id);
+            await getClient().permManager.add(group, find.user.id, false, {
+                actor: ctx.msg.author.id
+            });
         } catch (err) {
             if (err.name !== "PermissionError") {
                 throw err;

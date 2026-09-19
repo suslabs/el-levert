@@ -9,6 +9,7 @@ class TagRevertCommand {
         name: "revert",
         parent: "tag",
         subcommand: true,
+        description: "Restore a tag to a previous revision.",
         arguments: [
             {
                 name: "tagName",

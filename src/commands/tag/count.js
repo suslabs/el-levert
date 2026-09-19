@@ -5,6 +5,7 @@ import Util from "../../util/Util.js";
 class TagCountCommand {
     static info = {
         name: "count",
+        description: "Count the registered tags.",
         parent: "tag",
         subcommand: true,
         arguments: [

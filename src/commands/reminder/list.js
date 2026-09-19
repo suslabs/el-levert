@@ -10,6 +10,7 @@ function formatReminders(reminders) {
 class ReminderListCommand {
     static info = {
         name: "list",
+        description: "List your reminders.",
         aliases: ["all"],
         parent: "reminder",
         subcommand: true

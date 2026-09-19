@@ -7,6 +7,7 @@ import Util from "../../util/Util.js";
 class TagEditCommand {
     static info = {
         name: "edit",
+        description: "Edit a tag's body and properties.",
         parent: "tag",
         subcommand: true,
         arguments: [

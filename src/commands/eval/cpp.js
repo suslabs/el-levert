@@ -3,6 +3,7 @@ import { getConfig } from "../../LevertClient.js";
 class CppEvalCommand {
     static info = {
         name: "cpp",
+        description: "Evaluate C++ code.",
         parent: "eval",
         subcommand: true
     };

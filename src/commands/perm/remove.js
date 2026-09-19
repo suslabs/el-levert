@@ -7,6 +7,7 @@ import Util from "../../util/Util.js";
 class PermRemoveCommand {
     static info = {
         name: "remove",
+        description: "Remove a user from a permission group.",
         parent: "perm",
         subcommand: true,
         allowed: "admin",
@@ -58,7 +59,9 @@ class PermRemoveCommand {
         let removed = false;
 
         try {
-            removed = await getClient().permManager.remove(group, find.user.id);
+            removed = await getClient().permManager.remove(group, find.user.id, false, {
+                actor: ctx.msg.author.id
+            });
         } catch (err) {
             if (err.name !== "PermissionError") {
                 throw err;

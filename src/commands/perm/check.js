@@ -20,6 +20,7 @@ function codeblock(str) {
 class PermCheckCommand {
     static info = {
         name: "check",
+        description: "Show a user's permission groups.",
         parent: "perm",
         subcommand: true,
         arguments: [

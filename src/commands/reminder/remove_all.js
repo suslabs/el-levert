@@ -3,6 +3,7 @@ import { getClient, getEmoji } from "../../LevertClient.js";
 class ReminderRemoveAllCommand {
     static info = {
         name: "remove_all",
+        description: "Remove all of your reminders.",
         aliases: ["delete_all"],
         parent: "reminder",
         subcommand: true

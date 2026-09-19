@@ -10,6 +10,7 @@ function formatTagList(tags) {
 class TagListCommand {
     static info = {
         name: "list",
+        description: "List tags owned by a user.",
         parent: "tag",
         subcommand: true,
         arguments: [

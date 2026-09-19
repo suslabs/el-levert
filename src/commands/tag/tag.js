@@ -63,6 +63,7 @@ function getReplyData(out) {
 class TagCommand {
     static info = {
         name: "tag",
+        description: "Create, manage, and execute tags.",
         aliases: ["t"],
         arguments: [
             {

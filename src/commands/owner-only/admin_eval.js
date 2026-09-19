@@ -8,6 +8,7 @@ import VMUtil from "../../util/vm/VMUtil.js";
 class AdminEvalCommand {
     static info = {
         name: "admin_eval",
+        description: "Evaluate administrative JavaScript code.",
         ownerOnly: true,
         category: "owner-only"
     };

@@ -9,6 +9,7 @@ const messageRegex = /(.+?)\s*(?:(?:(['"`])((?:[^\2\\]|\\.)*?)\2)|$)/;
 class ReminderAddCommand {
     static info = {
         name: "add",
+        description: "Create a reminder.",
         aliases: ["set", "create"],
         parent: "reminder",
         subcommand: true,

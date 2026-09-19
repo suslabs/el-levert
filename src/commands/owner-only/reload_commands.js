@@ -3,6 +3,7 @@ import { getClient, getEmoji } from "../../LevertClient.js";
 class ReloadCommandsCommand {
     static info = {
         name: "reload_commands",
+        description: "Reload the bot commands.",
         ownerOnly: true,
         category: "owner-only"
     };

@@ -7,6 +7,7 @@ import Util from "../../util/Util.js";
 class TagRawCommand {
     static info = {
         name: "raw",
+        description: "Show a tag without executing it.",
         aliases: ["code"],
         parent: "tag",
         subcommand: true,

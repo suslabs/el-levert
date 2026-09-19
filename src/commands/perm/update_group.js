@@ -8,6 +8,7 @@ import { validUnchangedArgs } from "./UnchangedArgs.js";
 class PermUpdateGroupCommand {
     static info = {
         name: "update_group",
+        description: "Update a permission group's name or level.",
         aliases: ["edit", "edit_group"],
         parent: "perm",
         subcommand: true,
@@ -103,9 +104,17 @@ class PermUpdateGroupCommand {
         }
 
         try {
-            await getClient().permManager.updateGroup(group, newName, newLevel, {
-                validateNew: false
-            });
+            await getClient().permManager.updateGroup(
+                group,
+                newName,
+                newLevel,
+                {
+                    validateNew: false
+                },
+                {
+                    actor: ctx.msg.author.id
+                }
+            );
         } catch (err) {
             if (err.name !== "PermissionError") {
                 throw err;

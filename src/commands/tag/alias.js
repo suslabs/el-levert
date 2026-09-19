@@ -7,6 +7,7 @@ import Util from "../../util/Util.js";
 class TagAliasCommand {
     static info = {
         name: "alias",
+        description: "Create or update a tag alias.",
         parent: "tag",
         subcommand: true,
         arguments: [

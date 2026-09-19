@@ -1,55 +1,9 @@
-import chrono from "chrono-node";
-import { escapeMarkdown, codeBlock } from "discord.js";
+import * as chrono from "chrono-node";
 
 import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-import DiscordUtil from "../../util/DiscordUtil.js";
-
-function formatDate(time) {
-    return new Date(time).toUTCString();
-}
-
-function formatActor(actor) {
-    return Util.empty(actor) ? "system" : actor;
-}
-
-function formatChanged(revision) {
-    return Util.empty(revision.changed) ? "none" : revision.changed.join(", ");
-}
-
-function formatRevisionLine(revision) {
-    const tagName = escapeMarkdown(revision.key.name ?? "unknown"),
-        actor = formatActor(revision.actor);
-
-    return `#${revision.id} ${revision.operation} **${tagName}** by \`${actor}\` at ${formatDate(revision.created)} - ${formatChanged(revision)}`;
-}
-
-function formatValue(value) {
-    if (value === null) {
-        return "<missing>";
-    } else if (typeof value === "undefined") {
-        return "<unset>";
-    } else if (typeof value === "string") {
-        return Util.trimString(value, 300, 5, {
-            showDiff: true
-        });
-    }
-
-    return JSON.stringify(value);
-}
-
-function formatDiff(diff) {
-    const entries = Object.entries(diff);
-
-    if (Util.empty(entries)) {
-        return "No tracked fields changed.";
-    }
-
-    return entries
-        .map(([field, value]) => `${field}:\n- ${formatValue(value.before)}\n+ ${formatValue(value.after)}`)
-        .join("\n\n");
-}
+import RevisionAuditUtil from "../../util/commands/RevisionAuditUtil.js";
 
 function parseTime(value) {
     if (Util.empty(value)) {
@@ -65,6 +19,7 @@ class TagAuditCommand {
         parent: "tag",
         subcommand: true,
         allowed: "mod",
+        description: "View recent tag revisions or inspect the complete change to one revision.",
         arguments: [
             {
                 name: "tagName",
@@ -111,6 +66,10 @@ class TagAuditCommand {
     };
 
     async handler(ctx) {
+        if (Util.empty(ctx.argsText)) {
+            return `${getEmoji("info")} ${this.getArgsHelp("[tag_name] [revision_id] [--options]")}`;
+        }
+
         const revisionId = ctx.arg("revisionId"),
             tagName = ctx.arg("tagName");
 
@@ -138,9 +97,17 @@ class TagAuditCommand {
         }
 
         const header = `${getEmoji("info")} Tag audit page **${page}**:`,
-            lines = revisions.map(formatRevisionLine);
+            embed = RevisionAuditUtil.createListEmbed(
+                revisions,
+                "Tag audit",
+                page,
+                revision => revision.key.name ?? "unknown"
+            );
 
-        return [header].concat(lines).join("\n");
+        return {
+            content: header,
+            embeds: [embed]
+        };
     }
 
     async _detail(revisionId) {
@@ -156,26 +123,15 @@ class TagAuditCommand {
             return `${getEmoji("warn")} ${err.message}.`;
         }
 
-        const { revision, diff } = detail,
-            tagName = escapeMarkdown(revision.key.name ?? "unknown"),
-            content = [
-                `${getEmoji("info")} Revision **#${revision.id}** for **${tagName}**`,
-                `Operation: \`${revision.operation}\``,
-                `Actor: \`${formatActor(revision.actor)}\``,
-                `Created: ${formatDate(revision.created)}`,
-                `Changed: ${formatChanged(revision)}`,
-                "",
-                formatDiff(diff)
-            ].join("\n");
+        const response = RevisionAuditUtil.createDetailResponse(detail, {
+            filePrefix: "tag-revision",
+            label: detail.label ?? detail.revision.key.name ?? "unknown"
+        });
 
-        if (content.length > 1800) {
-            return {
-                content: `${getEmoji("info")} Revision **#${revision.id}** for **${tagName}**:`,
-                ...DiscordUtil.getFileAttach(content, `tag-revision-${revision.id}.txt`)
-            };
-        }
-
-        return codeBlock(content);
+        return {
+            ...response,
+            content: `${getEmoji("info")} ${response.content}`
+        };
     }
 }
 

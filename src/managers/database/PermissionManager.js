@@ -1,4 +1,5 @@
 import DBManager from "./DBManager.js";
+import PermissionRevisionManager from "./revision/PermissionRevisionManager.js";
 import PermissionDatabase from "../../database/PermissionDatabase.js";
 
 import { DisabledGroup, OwnerGroup, OwnerUser } from "../../structures/permission/PermissionDefaults.js";
@@ -22,6 +23,7 @@ class PermissionManager extends DBManager {
         this.maxGroupNameLength = getConfig().maxGroupNameLength;
 
         this.owner = getClient().owner;
+        this.revisions = new PermissionRevisionManager(this);
 
         this.setLevels({
             disabledLevel: DisabledGroup.level,
@@ -349,7 +351,8 @@ class PermissionManager extends DBManager {
         return await this.perm_db.groupExists(name);
     }
 
-    async add(group, id, validate = false) {
+    async add(group, id, validate = false, options) {
+        options = ObjectUtil.guaranteeObject(options);
         group = Group.from(group, true);
 
         if (group === null) {
@@ -363,13 +366,21 @@ class PermissionManager extends DBManager {
         }
 
         const user = new User({ user: id });
-        await this.perm_db.add(group, user);
+
+        await this.perm_db.transactionImmediate(async tx => {
+            const res = await tx.add(group, user);
+
+            if (res.changes > 0) {
+                await this.revisions.recordUserCreate(group, user, tx, this._revisionOptions(options));
+            }
+        });
 
         getLogger().info(`Added user: ${id} to group: "${group}".`);
         return user;
     }
 
-    async remove(group, id, validate = false) {
+    async remove(group, id, validate = false, options) {
+        options = ObjectUtil.guaranteeObject(options);
         group = Group.from(group, true);
 
         if (group === null) {
@@ -384,8 +395,16 @@ class PermissionManager extends DBManager {
 
         const user = new User({ user: id });
 
-        const res = await this.perm_db.remove(group, user),
-            removed = res.changes > 0;
+        const removed = await this.perm_db.transactionImmediate(async tx => {
+            const res = await tx.remove(group, user),
+                removed = res.changes > 0;
+
+            if (removed) {
+                await this.revisions.recordUserDelete(group, user, tx, this._revisionOptions(options));
+            }
+
+            return removed;
+        });
 
         if (removed) {
             getLogger().info(`Removed user: ${id} from group: "${group}".`);
@@ -399,17 +418,32 @@ class PermissionManager extends DBManager {
         return removed;
     }
 
-    async removeAll(id) {
+    async removeAll(id, options) {
+        options = ObjectUtil.guaranteeObject(options);
         const user = new User({ user: id });
 
-        const res = await this.perm_db.removeAll(user),
-            removed = res.changes > 0;
+        const removed = await this.perm_db.transactionImmediate(async tx => {
+            const groups = await tx.fetchUsersByUser(user.user),
+                res = await tx.removeAll(user),
+                removed = res.changes > 0;
+
+            if (removed) {
+                for (const groupUser of groups) {
+                    const group = await tx.fetchGroup(groupUser.group);
+
+                    await this.revisions.recordUserDelete(group, groupUser, tx, this._revisionOptions(options));
+                }
+            }
+
+            return removed;
+        });
 
         getLogger().info(`Removed permissions for user: ${id}`);
         return removed;
     }
 
-    async addGroup(name, level, validate) {
+    async addGroup(name, level, validate, options) {
+        options = ObjectUtil.guaranteeObject(options);
         validate = ObjectUtil.getBooleanOptions(validate, false, {
             validateNew: true,
             checkExisting: true
@@ -429,13 +463,21 @@ class PermissionManager extends DBManager {
         }
 
         const group = new Group({ name, level });
-        await this.perm_db.addGroup(group);
+
+        await this.perm_db.transactionImmediate(async tx => {
+            const res = await tx.addGroup(group);
+
+            if (res.changes > 0) {
+                await this.revisions.recordGroupCreate(group, tx, this._revisionOptions(options));
+            }
+        });
 
         getLogger().info(`Added group: "${name}" with level: ${level}`);
         return group;
     }
 
-    async removeGroup(group, validate = false) {
+    async removeGroup(group, validate = false, options) {
+        options = ObjectUtil.guaranteeObject(options);
         group = Group.from(group, true);
 
         if (group === null) {
@@ -449,11 +491,20 @@ class PermissionManager extends DBManager {
         }
 
         await this.perm_db.transactionImmediate(async tx => {
-            const res = await tx.removeGroup(group),
+            const users = await tx.fetchUsersByGroup(group.name),
+                res = await tx.removeGroup(group),
                 removed = res.changes > 0;
 
             if (validate && !removed) {
                 throw new PermissionError("Group doesn't exist", group.name);
+            }
+
+            if (removed) {
+                for (const user of users) {
+                    await this.revisions.recordUserDelete(group, user, tx, this._revisionOptions(options));
+                }
+
+                await this.revisions.recordGroupDelete(group, tx, this._revisionOptions(options));
             }
         });
 
@@ -461,7 +512,8 @@ class PermissionManager extends DBManager {
         return group;
     }
 
-    async updateGroup(group, newName, newLevel, validate) {
+    async updateGroup(group, newName, newLevel, validate, options) {
+        options = ObjectUtil.guaranteeObject(options);
         group = Group.from(group, true);
 
         if (group === null) {
@@ -511,11 +563,25 @@ class PermissionManager extends DBManager {
         }
 
         await this.perm_db.transactionImmediate(async tx => {
-            const res = await tx.updateGroup(group, newGroup),
+            const users = newName === null ? [] : await tx.fetchUsersByGroup(group.name),
+                res = await tx.updateGroup(group, newGroup),
                 updated = res.changes > 0;
 
             if (updated) {
                 getLogger().info(`Updated group: "${group.name}" with name: "${newName}", level: ${newLevel}`);
+
+                await this.revisions.recordGroupUpdate(group, newGroup, tx, this._revisionOptions(options));
+
+                if (newName !== null) {
+                    for (const user of users) {
+                        const renamedUser = new User({
+                            ...user.getData(),
+                            group: newName
+                        });
+
+                        await this.revisions.recordUserUpdate(user, renamedUser, tx, this._revisionOptions(options));
+                    }
+                }
             } else if (validate.validateProvided) {
                 throw new PermissionError("Group doesn't exist", group.name);
             }
@@ -574,6 +640,165 @@ class PermissionManager extends DBManager {
         }
 
         return groups;
+    }
+
+    async audit(options) {
+        options = ObjectUtil.guaranteeObject(options);
+        return await this.revisions.list(options);
+    }
+
+    async auditDetail(id) {
+        return await this.revisions.getDetail(id);
+    }
+
+    async revert(targetData, revisionId, actor, options) {
+        options = ObjectUtil.guaranteeObject(options);
+
+        return await this.perm_db.transactionImmediate(async tx => {
+            targetData = ObjectUtil.guaranteeObject(targetData);
+
+            const subject =
+                    targetData.target === PermissionRevisionManager.userTarget
+                        ? await this.revisions.findUserSubject(targetData.user, targetData.group, tx)
+                        : await this.revisions.findGroupSubject(targetData.name, tx),
+                latest = subject === null ? null : await this.revisions.fetchLatest(subject, tx),
+                revision = revisionId == null ? latest : await this.revisions.fetchRevision(revisionId, tx);
+
+            if (subject === null || latest === null || revision === null) {
+                throw new PermissionError("Revision doesn't exist", revisionId);
+            }
+
+            if (revision.subjectId !== subject.id || revision.target !== subject.target) {
+                throw new PermissionError("Revision doesn't exist", revisionId);
+            }
+
+            const target = revision.target,
+                restored =
+                    target === PermissionRevisionManager.groupTarget
+                        ? this.revisions.makeGroup(subject, revision, tx)
+                        : this.revisions.makeUser(subject, revision, tx);
+
+            let applied;
+
+            if (revision.target === PermissionRevisionManager.groupTarget) {
+                applied = await this._revertGroup(subject, restored, tx, this._revisionOptions({ ...options, actor }));
+            } else {
+                applied = await this._revertUser(subject, restored, tx);
+            }
+
+            const changed = Object.keys(this.revisions.getDiff(target, applied.before, applied.after, tx));
+
+            await this.revisions.recordRevert(
+                target,
+                subject,
+                restored === null ? null : restored.getData(),
+                changed,
+                tx,
+                this._revisionOptions({
+                    ...options,
+                    actor,
+                    revertOf: revision.id,
+                    restores: restored === null ? null : revision.id
+                })
+            );
+
+            return restored;
+        });
+    }
+
+    _revisionOptions(options) {
+        options = ObjectUtil.guaranteeObject(options);
+
+        return ObjectUtil.removeUndefinedValues({
+            actor: options.actor,
+            revertOf: options.revertOf,
+            restores: options.restores,
+            reason: options.reason
+        });
+    }
+
+    async _revertGroup(subject, restored, tx, options) {
+        const current = await tx.fetchGroup(subject.key.name);
+
+        if (restored === null) {
+            if (current !== null) {
+                const users = await tx.fetchUsersByGroup(current.name),
+                    res = await tx.removeGroup(current);
+
+                if (res.changes > 0) {
+                    for (const user of users) {
+                        await this.revisions.recordUserDelete(current, user, tx, options);
+                    }
+                }
+            }
+
+            return {
+                before: current?.getData() ?? null,
+                after: null
+            };
+        }
+
+        if (current === null) {
+            await tx.addGroup(restored);
+
+            return {
+                before: null,
+                after: restored.getData()
+            };
+        }
+
+        const users = restored.name === current.name ? [] : await tx.fetchUsersByGroup(current.name);
+        await tx.updateGroup(current, restored);
+
+        if (restored.name !== current.name) {
+            for (const user of users) {
+                const renamedUser = new User({
+                    ...user.getData(),
+                    group: restored.name
+                });
+
+                await this.revisions.recordUserUpdate(user, renamedUser, tx, options);
+            }
+        }
+
+        return {
+            before: current.getData(),
+            after: restored.getData()
+        };
+    }
+
+    async _revertUser(subject, restored, tx) {
+        const current = await tx.fetchUsersByUser(subject.key.user),
+            currentUser = current.find(user => user.group === subject.key.group),
+            group = await tx.fetchGroup(restored?.group ?? subject.key.group);
+
+        if (restored === null) {
+            if (typeof currentUser !== "undefined") {
+                await tx.remove(group, currentUser);
+            }
+
+            return {
+                before: currentUser?.getData() ?? null,
+                after: null
+            };
+        }
+
+        if (group === null) {
+            throw new PermissionError("Group doesn't exist", restored.group);
+        }
+
+        if (typeof currentUser === "undefined") {
+            await tx.add(group, restored);
+        } else if (currentUser.group !== restored.group) {
+            const currentGroup = await tx.fetchGroup(currentUser.group);
+            await tx.remove(currentGroup, currentUser);
+            await tx.add(group, restored);
+        }
+
+        return {
+            before: currentUser?.getData() ?? null,
+            after: restored.getData()
+        };
     }
 
     static _groupNameRegex = /^[A-Za-z0-9\-_]+$/;

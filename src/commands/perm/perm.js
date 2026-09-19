@@ -3,8 +3,20 @@ import { getConfig, getEmoji } from "../../LevertClient.js";
 class PermCommand {
     static info = {
         name: "perm",
+        description: "Manage users, groups, and permission levels.",
         aliases: ["p"],
-        subcommands: ["add", "remove", "remove_all", "list", "add_group", "remove_group", "update_group", "check"]
+        subcommands: [
+            "add",
+            "remove",
+            "remove_all",
+            "list",
+            "add_group",
+            "remove_group",
+            "update_group",
+            "check",
+            "audit",
+            "revert"
+        ]
     };
 
     load() {

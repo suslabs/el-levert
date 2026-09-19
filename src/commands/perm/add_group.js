@@ -7,6 +7,7 @@ import Util from "../../util/Util.js";
 class PermAddGroupCommand {
     static info = {
         name: "add_group",
+        description: "Create a permission group.",
         aliases: ["create", "create_group"],
         parent: "perm",
         subcommand: true,
@@ -62,9 +63,16 @@ class PermAddGroupCommand {
         }
 
         try {
-            await getClient().permManager.addGroup(g_name, level, {
-                validateNew: false
-            });
+            await getClient().permManager.addGroup(
+                g_name,
+                level,
+                {
+                    validateNew: false
+                },
+                {
+                    actor: ctx.msg.author.id
+                }
+            );
         } catch (err) {
             if (err.name !== "PermissionError") {
                 throw err;

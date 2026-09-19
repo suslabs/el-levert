@@ -47,6 +47,22 @@ function makeSchemaProperties(fields) {
     return Object.fromEntries(fields.map(field => [field.name, makeFieldRule(field)]));
 }
 
+function makeGroupProperties(fields) {
+    return Object.fromEntries(
+        fields.map(field => [
+            field.name,
+            field.type === "object"
+                ? {
+                      kind: "group",
+                      properties: makeGroupProperties(field.fields)
+                  }
+                : {
+                      type: field.type
+                  }
+        ])
+    );
+}
+
 function makeCliFieldName(prefix, name) {
     return Util.nonemptyString(prefix) ? prefix + Util.capitalize(name) : name;
 }
@@ -149,9 +165,9 @@ const EmulationCommandUtil = Object.freeze({
 
     getTagCliArguments: () => getCliFields(Tag.emulatableFields, "tag"),
 
-    getMessageGroupProperties: () => makeSchemaProperties(DiscordClient.emulatableMessageFields),
+    getMessageGroupProperties: () => makeGroupProperties(DiscordClient.emulatableMessageFields),
 
-    getTagGroupProperties: () => makeSchemaProperties(Tag.emulatableFields),
+    getTagGroupProperties: () => makeGroupProperties(Tag.emulatableFields),
 
     getMessageSchema: () => ({
         type: "object",

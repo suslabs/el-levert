@@ -7,6 +7,7 @@ import Util from "../../util/Util.js";
 class TagAddCommand {
     static info = {
         name: "add",
+        description: "Create a tag.",
         aliases: ["create"],
         parent: "tag",
         subcommand: true,

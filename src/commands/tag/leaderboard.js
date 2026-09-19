@@ -43,6 +43,7 @@ function formatLeaderboard(leaderboard, type) {
 class TagLeaderboardCommand {
     static info = {
         name: "leaderboard",
+        description: "Show tag usage, count, or quota leaderboards.",
         parent: "tag",
         subcommand: true,
         arguments: [

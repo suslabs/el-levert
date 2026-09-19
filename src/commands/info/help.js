@@ -3,6 +3,7 @@ import { getClient, getEmoji } from "../../LevertClient.js";
 class HelpCommand {
     static info = {
         name: "help",
+        description: "Show the available commands.",
         category: "info"
     };
 

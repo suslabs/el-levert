@@ -72,6 +72,7 @@ function codeblock(str) {
 class StoikCommand {
     static info = {
         name: "stoik",
+        description: "Compare two values using the Stoik calculation.",
         category: "util",
         arguments: [
             {

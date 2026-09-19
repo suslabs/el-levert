@@ -6,6 +6,7 @@ import DiscordUtil from "../../util/DiscordUtil.js";
 class TagDumpCommand {
     static info = {
         name: "dump",
+        description: "List all registered tags.",
         aliases: ["all", "list_all"],
         parent: "tag",
         subcommand: true,

@@ -9,6 +9,7 @@ import FileUtil from "../../util/misc/FileUtil.js";
 class TagMassAddCommand {
     static info = {
         name: "massadd",
+        description: "Create tags from files in a directory.",
         parent: "tag",
         subcommand: true,
         ownerOnly: true,

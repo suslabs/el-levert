@@ -7,6 +7,7 @@ import { getClient, getEmoji } from "../../LevertClient.js";
 class TagSetTypeCommand {
     static info = {
         name: "set_type",
+        description: "Change a tag's type or script settings.",
         parent: "tag",
         subcommand: true,
         allowed: "mod",

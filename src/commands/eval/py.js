@@ -3,6 +3,7 @@ import { getConfig } from "../../LevertClient.js";
 class PythonEvalCommand {
     static info = {
         name: "py",
+        description: "Evaluate Python code.",
         parent: "eval",
         subcommand: true
     };

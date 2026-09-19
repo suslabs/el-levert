@@ -6,6 +6,7 @@ import Benchmark from "../../util/misc/Benchmark.js";
 class PingCommand {
     static info = {
         name: "ping",
+        description: "Check whether the bot is responding.",
         aliases: ["p"],
         category: "info"
     };

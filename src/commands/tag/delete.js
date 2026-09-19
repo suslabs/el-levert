@@ -7,6 +7,7 @@ import Util from "../../util/Util.js";
 class TagDeleteCommand {
     static info = {
         name: "delete",
+        description: "Delete a tag.",
         aliases: ["remove"],
         parent: "tag",
         subcommand: true,

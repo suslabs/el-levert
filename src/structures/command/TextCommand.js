@@ -106,7 +106,13 @@ class TextCommand extends BaseCommand {
             return false;
         }
 
-        return context.argsText.split(" ").some(part => this.helpArgs.includes(part));
+        const [firstArg, rest] = PositionalCommandReader.split(context.argsText);
+
+        if (firstArg === "usage") {
+            return Util.empty(rest);
+        }
+
+        return this.helpArgs.includes(firstArg);
     }
 
     getHelpText(discord = false) {
@@ -146,10 +152,6 @@ class TextCommand extends BaseCommand {
     async execute(context) {
         context = this.createContext(context);
 
-        if (this.isHelpCall(context)) {
-            return this.getHelpText();
-        }
-
         if (!this.subcommand) {
             const [subName, subArgs] = PositionalCommandReader.split(context.argsText),
                 subCmd = this.getSubcmd(subName);
@@ -161,6 +163,10 @@ class TextCommand extends BaseCommand {
                     })
                 );
             }
+        }
+
+        if (this.isHelpCall(context)) {
+            return this.getHelpText();
         }
 
         return await super.execute(context);

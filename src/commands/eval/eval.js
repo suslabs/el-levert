@@ -137,6 +137,7 @@ const altLangNames = {
 class EvalCommand {
     static info = {
         name: "eval",
+        description: "Evaluate code using one of the configured languages.",
         aliases: ["e", "exec"],
         subcommands: ["c", "cpp", "py", "vm2", "langs"],
         arguments: [

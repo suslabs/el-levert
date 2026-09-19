@@ -5,6 +5,7 @@ import Util from "../../util/Util.js";
 class TagRandomCommand {
     static info = {
         name: "random",
+        description: "Execute a randomly selected tag.",
         aliases: ["rand", "r"],
         parent: "tag",
         subcommand: true,

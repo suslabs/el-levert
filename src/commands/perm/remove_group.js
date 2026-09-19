@@ -7,6 +7,7 @@ import Util from "../../util/Util.js";
 class PermRemoveGroupCommand {
     static info = {
         name: "remove_group",
+        description: "Delete a permission group.",
         aliases: ["delete", "delete_group"],
         parent: "perm",
         subcommand: true,
@@ -45,7 +46,9 @@ class PermRemoveGroupCommand {
         }
 
         try {
-            await getClient().permManager.removeGroup(group);
+            await getClient().permManager.removeGroup(group, false, {
+                actor: ctx.msg.author.id
+            });
         } catch (err) {
             if (err.name !== "PermissionError") {
                 throw err;

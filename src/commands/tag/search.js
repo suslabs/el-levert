@@ -8,6 +8,7 @@ const defaultResultLimit = 20;
 class TagSearchCommand {
     static info = {
         name: "search",
+        description: "Find tags by name.",
         aliases: ["find"],
         parent: "tag",
         subcommand: true,

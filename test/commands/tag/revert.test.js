@@ -49,6 +49,14 @@ afterEach(async () => {
 });
 
 describe("tag revert command", () => {
+    test("exposes command usage through the standard help arguments", async () => {
+        const help = await run("revert -h");
+        const usage = await run("revert");
+
+        expect(help).toContain("Restore a tag to a previous revision");
+        expect(usage).toContain("name [revision_id]");
+    });
+
     test("lets users revert their latest edit once", async () => {
         expect(await run("add alpha one")).toContain("Created tag **alpha**");
         expect(await run("edit alpha two")).toContain("Edited tag **alpha**");
@@ -64,7 +72,7 @@ describe("tag revert command", () => {
         expect(await run("edit alpha two")).toContain("Edited tag **alpha**");
 
         const audit = await run("audit alpha", adminMsg),
-            revisionId = Number(audit.match(/#(\d+)/)[1]);
+            revisionId = Number(audit.embeds[0].data.description.match(/#(\d+)/)[1]);
 
         expect(await run("edit alpha three")).toContain("Edited tag **alpha**");
         expect(await run(`revert alpha ${revisionId}`, adminMsg)).toContain("Reverted tag **alpha**");

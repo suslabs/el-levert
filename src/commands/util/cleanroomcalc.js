@@ -34,6 +34,7 @@ function parseDimensions(argsText) {
 class CleanroomCalcCommand {
     static info = {
         name: "cleanroomcalc",
+        description: "Calculate cleanroom construction requirements.",
         aliases: ["crc"],
         category: "util",
         arguments: [

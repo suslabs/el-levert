@@ -8,6 +8,7 @@ import DiscordUtil from "../../util/DiscordUtil.js";
 class RestartCommand {
     static info = {
         name: "restart",
+        description: "Restart the bot.",
         aliases: ["reload"],
         ownerOnly: true,
         category: "owner-only"

@@ -12,6 +12,7 @@ function codeblock(str) {
 class TagInfoCommand {
     static info = {
         name: "info",
+        description: "Show information about a tag.",
         aliases: ["data"],
         parent: "tag",
         subcommand: true,

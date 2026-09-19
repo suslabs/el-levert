@@ -3,6 +3,7 @@ import { getClient, getConfig } from "../../LevertClient.js";
 class Vm2EvalCommand {
     static info = {
         name: "vm2",
+        description: "Evaluate JavaScript code in the VM2 runtime.",
         parent: "eval",
         subcommand: true
     };
