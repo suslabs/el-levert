@@ -221,7 +221,7 @@ class OptionCommandReader extends BaseCommandReader {
     }
 
     _getPrefixSpellings(spelling) {
-        return this._getExactSpellings(spelling).map(value => `${value}=`);
+        return this._getExactSpellings(spelling).flatMap(value => [`${value}=`, `${value}:`]);
     }
 }
 

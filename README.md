@@ -418,7 +418,8 @@ What users should know:
 These are general-purpose helper commands for calculations and lookups.
 
 - `convert (value) (from_unit) (to_unit) [more_units...]` converts between supported units and shows the conversion chain
-- `overclock` / `oc` calculates overclock results for the supported modes
+- `overclock` / `oc` / `oceu` calculates overclock results. The first positional argument may select `standard`, `ebf`, `lcr`, `ce`, or `macerator`; `standard` is the default when omitted. Recipe values follow the mode. Modifiers include `--tape`, `--subtick`, `--rates`, and `--voltage`.
+- OCEU behavior is based on [Horde-Of-Greg/oceu](https://github.com/Horde-Of-Greg/oceu).
 - `cleanroomcalc` / `crc` takes dimensions such as `5x5x5` and returns the required cleanroom materials
 - `stoik` checks whether a chemical equation is balanced. Use `Reactants -> Products`
 

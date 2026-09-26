@@ -1,0 +1,181 @@
+{
+    "basic_positional": {
+        "argsText": "hello world",
+        "remainingText": "hello world",
+        "argsIndex": 1,
+        "valid": true,
+        "results": {
+            "first": {
+                "name": "first",
+                "input": "hello",
+                "value": "hello",
+                "valid": true,
+                "issues": []
+            },
+            "second": {
+                "name": "second",
+                "input": "hello",
+                "value": "hello",
+                "valid": true,
+                "issues": []
+            }
+        },
+        "issues": []
+    },
+    "options": {
+        "argsText": "hello --debug --user 123 --title \"hello world\" remaining text",
+        "remainingText": "hello    remaining text",
+        "argsIndex": 3,
+        "valid": true,
+        "results": {
+            "debug": {
+                "name": "debug",
+                "input": "true",
+                "value": true,
+                "valid": true,
+                "issues": []
+            },
+            "user": {
+                "name": "user",
+                "input": "123",
+                "value": 123,
+                "valid": true,
+                "issues": []
+            },
+            "title": {
+                "name": "title",
+                "input": {
+                    "value": "hello world",
+                    "quote": "\""
+                },
+                "value": "hello world",
+                "valid": true,
+                "issues": []
+            },
+            "rest": {
+                "name": "rest",
+                "input": "hello    remaining text",
+                "value": "hello    remaining text",
+                "valid": true,
+                "issues": []
+            }
+        },
+        "issues": []
+    },
+    "list": {
+        "argsText": "10 20 30",
+        "remainingText": "10 20 30",
+        "argsIndex": 0,
+        "valid": true,
+        "results": {
+            "nums": {
+                "name": "nums",
+                "input": ["10", "20", "30"],
+                "value": [10, 20, 30],
+                "valid": true,
+                "issues": []
+            }
+        },
+        "issues": []
+    },
+    "match": {
+        "argsText": "9876-abc",
+        "remainingText": "9876-abc",
+        "argsIndex": 0,
+        "valid": true,
+        "results": {
+            "id": {
+                "name": "id",
+                "input": "9876",
+                "value": "9876",
+                "valid": true,
+                "issues": []
+            }
+        },
+        "issues": []
+    },
+    "group": {
+        "argsText": "25 John",
+        "remainingText": "25 John",
+        "argsIndex": 0,
+        "valid": false,
+        "results": {
+            "info_age": {
+                "name": "info_age",
+                "input": "25 John",
+                "value": null,
+                "valid": false,
+                "issues": [
+                    {
+                        "code": "invalid_integer",
+                        "message": "Invalid integer",
+                        "ref": {
+                            "input": "25 John",
+                            "value": null
+                        }
+                    }
+                ]
+            },
+            "info_name": {
+                "name": "info_name",
+                "input": "25 John",
+                "value": "25 John",
+                "valid": true,
+                "issues": []
+            },
+            "info": {
+                "name": "info",
+                "input": {
+                    "age": null,
+                    "name": "25 John"
+                },
+                "value": {
+                    "age": null,
+                    "name": "25 John"
+                },
+                "valid": true,
+                "issues": []
+            }
+        },
+        "issues": []
+    },
+    "validation_failure": {
+        "argsText": "5",
+        "remainingText": "5",
+        "argsIndex": 1,
+        "valid": false,
+        "results": {
+            "num": {
+                "name": "num",
+                "input": "5",
+                "value": 5,
+                "valid": false,
+                "issues": [
+                    {
+                        "code": "min",
+                        "message": "Value must be at least 10",
+                        "ref": {
+                            "input": "5",
+                            "value": 5
+                        }
+                    }
+                ]
+            }
+        },
+        "issues": []
+    },
+    "unclosed_quote": {
+        "argsText": "hello \"world",
+        "remainingText": "hello \"world",
+        "argsIndex": 0,
+        "valid": false,
+        "results": {},
+        "issues": [
+            {
+                "code": "unclosed_quote",
+                "message": "Unclosed quote",
+                "ref": {}
+            }
+        ]
+    }
+}

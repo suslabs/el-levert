@@ -2,213 +2,294 @@ import { EmbedBuilder } from "discord.js";
 
 import { getEmoji } from "../../LevertClient.js";
 
+import { OverclockingValues } from "../../structures/OverclockingValues.js";
+
 import Util from "../../util/Util.js";
-import TypeTester from "../../util/TypeTester.js";
-import OCUtil from "../../util/commands/OCUtil.js";
+import Overclocking from "../../util/commands/Overclocking.js";
+import OverclockingModes from "../../util/commands/OverclockingModes.js";
 
-import { OCTypes } from "../../util/commands/OCTypes.js";
-
-import { drawTable } from "../../util/misc/Table.js";
+import OverclockArgumentParser from "../../util/commands/OverclockArgumentParser.js";
 
 import ParserError from "../../errors/ParserError.js";
+import OCError from "../../errors/OCError.js";
 
-function getErrorText(cmd) {
-    return `${getEmoji("warn")} Invalid arguments specified. Must be:
-${cmd.getArgsHelp("<EU> <duration> [base chance] [chance bonus] {parallel} {amperage}")}
+function codeblock(str) {
+    return `\`\`\`lua\n${str}\`\`\``;
+}
 
-- \`<>\` Required for basic overclocking
-- \`[]\` Required for chance calculations
-- \`{}\` Required for parallel calculations
-- Use \`-\` to skip arguments
+function getUsageText(cmd) {
+    return `${getEmoji("warn")} Invalid arguments specified. Use:
+${cmd.getArgsHelp("[mode] <EU> <duration> [base chance] [chance bonus] [parallel] [amperage]")}
 
-For EBF calculations, use:
-${cmd.getArgsHelp("ebf <EU> <duration> <recipe heat> <coil heat> {parallel} {amperage}")}`;
+EBF mode:
+${cmd.getArgsHelp("ebf <EU> <duration> <recipe heat> <coil heat> [parallel] [amperage]")}
+
+Modes: ${OverclockArgumentParser.modes.join(", ")}
+Default mode: ${OverclockingModes.standard}.
+Use \`-\` to skip an optional positional argument.`;
 }
 
 function formatFieldName(name) {
-    return name.replace(/^base_/, "").replaceAll(/_/g, " ");
+    return Util.camelCaseToWords(name).replaceAll(/_/g, " ");
 }
 
 function getParserErrorText(cmd, err) {
     switch (err.ref?.reason) {
         case "missing_args":
-            return getErrorText(cmd);
+            return `${getEmoji("warn")} Missing required argument: **${formatFieldName(err.ref.field)}**.\n\n${getUsageText(cmd)}`;
+        case "invalid_mode":
+            return `${getEmoji("warn")} Invalid recipe mode: \`${err.ref.mode}\`.\n\n${getUsageText(cmd)}`;
         case "invalid_value":
-            return `${getEmoji("warn")} Invalid ${formatFieldName(err.ref.field)}: \`${err.ref.input}\`.
-${getErrorText(cmd)}`;
+            return `${getEmoji("warn")} Invalid **${formatFieldName(err.ref.field)}**: \`${err.ref.input}\`.\n\n${getUsageText(cmd)}`;
         default:
-            return getErrorText(cmd);
+            return getUsageText(cmd);
     }
 }
 
-const bounds = {
-    base_eu: [1, Infinity],
-    base_duration: [1, Infinity],
-    base_chance: [0, 100],
-    base_chance_bonus: [0, 100],
-    base_recipe_heat: [1, Infinity],
-    base_coil_heat: [1, Infinity],
-    base_parallel: [0, Infinity],
-    amperage: [1, Infinity]
-};
-
-const recipeFieldIndexes = {
-    recipe: {
-        base_eu: 0,
-        base_duration: 1,
-        base_chance: 2,
-        base_chance_bonus: 3,
-        base_parallel: 4,
-        amperage: 5
-    },
-    ebf: {
-        base_eu: 1,
-        base_duration: 2,
-        base_recipe_heat: 3,
-        base_coil_heat: 4,
-        base_parallel: 5,
-        amperage: 6
+function getCalculationErrorText(err) {
+    switch (err.ref?.reason) {
+        case "invalid_voltage":
+            return `${getEmoji("warn")} Invalid voltage specified: \`${err.ref.voltage}\`. Valid voltages are: **${OverclockingValues.voltageNames.join("**, **")}**.`;
+        case "ce_no_uev":
+            return `${getEmoji("warn")} Nomifactory CE does not have UEV+ voltage; voltages in Nomifactory cap to MAX (same as UHV).`;
+        case "no_voltage_match":
+        case "no_output":
+            return `${getEmoji("warn")} Could not calculate. No supported voltage tier matches the input EU: \`${err.ref.eu}\`.`;
+        default:
+            return `${getEmoji("warn")} ${err.message}.`;
     }
-};
+}
 
-function parseInput(split) {
-    const args = split.map(value => (value === "-" ? null : value));
+function resolveVoltage(ctx) {
+    const directVoltage = ctx.arg("voltage");
 
-    if (args.length < 2) {
-        throw new ParserError("Overclock input requires at least EU and duration", {
-            reason: "missing_args",
-            args,
-            argCount: args.length
-        });
+    if (Util.nonemptyString(directVoltage)) {
+        return directVoltage;
     }
 
-    let recipe = null;
-    let inputIndexes = null;
-
-    if (args[0] === "ebf") {
-        inputIndexes = recipeFieldIndexes.ebf;
-        const ocType = args[5] ? OCTypes.ebfParallel : OCTypes.ebf;
-
-        recipe = {
-            base_eu: Util.parseInt(args[1]),
-            base_duration: OCUtil.parseDuration(args[2]),
-            base_recipe_heat: Util.parseInt(args[3]),
-            base_coil_heat: Util.parseInt(args[4]),
-            base_parallel: Util.parseInt(args[5], 10, 0),
-            amperage: Util.parseInt(args[6], 10, 1),
-            oc_type: ocType
-        };
-    } else {
-        inputIndexes = recipeFieldIndexes.recipe;
-        const ocType = args[4] ? OCTypes.parallel : OCTypes.recipe;
-
-        recipe = {
-            base_eu: Util.parseInt(args[0]),
-            base_duration: OCUtil.parseDuration(args[1]),
-            base_chance: Number.parseFloat(args[2] ?? 0),
-            base_chance_bonus: Number.parseFloat(args[3] ?? 0),
-            base_parallel: Util.parseInt(args[4], 10, 0),
-            amperage: Util.parseInt(args[5], 10, 2),
-            oc_type: ocType
-        };
-    }
-
-    for (const [field, range] of Object.entries(bounds)) {
-        if (TypeTester.outOfRange(field, ...range, recipe)) {
-            throw new ParserError("Overclock input value out of range", {
-                reason: "invalid_value",
-                field,
-                input: args[inputIndexes[field]],
-                value: recipe[field],
-                bounds: range
-            });
+    for (const name of OverclockingValues.voltageNames) {
+        if (ctx.arg(name.toLowerCase()) === true) {
+            return name;
         }
     }
 
-    return recipe;
+    return null;
 }
 
-function codeblock(str) {
-    return `\`\`\`lua\n${str}\`\`\``;
+function buildConfig(recipe, ctx) {
+    const subtick = ctx.arg("subtick") === true,
+        inputAmount = ctx.arg("input"),
+        outputAmount = ctx.arg("output");
+
+    return {
+        ...recipe,
+        tape: ctx.arg("tape") === true,
+        subtick,
+        extra: ctx.arg("extra") === true,
+        tick: ctx.arg("tick") === true,
+        rf: ctx.arg("rf") === true,
+        rates: ctx.arg("rates") === true || inputAmount != null || outputAmount != null,
+        text: ctx.arg("text") === true,
+        auto: ctx.arg("auto") === true,
+        voltage: resolveVoltage(ctx),
+        timeMultiplier: ctx.arg("time") ?? 1,
+        euMultiplier: ctx.arg("eu") ?? 1,
+        count: ctx.arg("count") ?? 1,
+        inputAmount,
+        outputAmount,
+        hasParallel: recipe.parallel != null || subtick
+    };
+}
+
+function renderOutput(oc) {
+    if (oc.auto) {
+        return JSON.stringify(oc.outputs);
+    }
+
+    const table = oc.generateTable();
+
+    if (oc.text) {
+        return codeblock(table);
+    }
+
+    const header = `${getEmoji("info")} Input: **${Util.formatNumber(oc.eu, 3)} EU/t** for **${Overclocking.formatDuration(oc.duration)}**`;
+
+    let footer = oc.isCe
+        ? "Applicable for GTCE,\ntiers adjusted for actual machine tier,\nUse a 4A CEF and a MAX energy hatch for MAX"
+        : "Applicable for NFu,\ntiers adjusted for actual machine tier";
+
+    if (oc.hasParallel) {
+        footer += `\n\nFor parallelization, it is assumed that you are running ${oc.amperage}A of the specified tier.\nManually specify the amperage if it differs.`;
+    }
+
+    const embed = new EmbedBuilder().setFooter({ text: footer }).setDescription(codeblock(table));
+
+    return {
+        content: header,
+        embeds: [embed]
+    };
 }
 
 class OverclockCommand {
     static info = {
         name: "overclock",
         description: "Calculate overclocking requirements.",
-        aliases: ["oc"],
+        usage:
+            "[mode] <eu> <duration> [chance] [chance_bonus] [parallel] [amperage]\n" +
+            "ebf <eu> <duration> <recipe_heat> <coil_heat> [parallel] [amperage]\n\n" +
+            `Modes: ${OverclockArgumentParser.modes.join(", ")}\n` +
+            `Default mode: ${OverclockingModes.standard}.\n` +
+            "Modifiers: --tape, --subtick, --extra, --rf\n" +
+            "Output: --voltage, --rates, --input, --output, --count, --tick, --text, --auto, --bulk.",
+        aliases: ["oc", "oceu"],
+        helpArgs: ["help", "-help", "-h", "--help", "usage"],
         category: "util",
         arguments: [
             {
+                name: "tape",
+                kind: "option",
+                type: "boolean"
+            },
+            {
+                name: "subtick",
+                kind: "option",
+                type: "boolean"
+            },
+            {
+                name: "extra",
+                kind: "option",
+                type: "boolean"
+            },
+            {
+                name: "tick",
+                kind: "option",
+                type: "boolean"
+            },
+            {
+                name: "rf",
+                kind: "option",
+                type: "boolean"
+            },
+            {
+                name: "rates",
+                kind: "option",
+                type: "boolean"
+            },
+            {
+                name: "text",
+                kind: "option",
+                type: "boolean"
+            },
+            {
+                name: "auto",
+                kind: "option",
+                type: "boolean"
+            },
+            {
+                name: "bulk",
+                kind: "option",
+                type: "boolean"
+            },
+            {
+                name: "voltage",
+                kind: "option",
+                type: "string"
+            },
+            {
+                name: "time",
+                kind: "option",
+                type: "number"
+            },
+            {
+                name: "eu",
+                kind: "option",
+                type: "number"
+            },
+            {
+                name: "count",
+                kind: "option",
+                type: "integer"
+            },
+            {
+                name: "input",
+                kind: "option",
+                type: "number"
+            },
+            {
+                name: "output",
+                kind: "option",
+                type: "number"
+            },
+            ...OverclockingValues.voltageNames.map(name => ({
+                name: name.toLowerCase(),
+                kind: "option",
+                type: "boolean"
+            })),
+            {
                 name: "parts",
                 kind: "list"
+            },
+            {
+                name: "recipes",
+                kind: "rest"
             }
         ]
     };
 
     handler(ctx) {
-        const parts = ctx.arg("parts");
+        const parts = ctx.arg("parts"),
+            recipes = ctx.arg("recipes");
 
         if (Util.empty(parts)) {
-            return getErrorText(this);
+            return getUsageText(this);
         }
 
+        if (ctx.arg("bulk") === true) {
+            return this._runBulk(recipes, ctx);
+        }
+
+        return this._runRecipe(parts, ctx);
+    }
+
+    _runRecipe(input, ctx) {
         let recipe;
 
         try {
-            recipe = parseInput(parts);
+            recipe = new OverclockArgumentParser().parse(input);
         } catch (err) {
-            if (err.name !== "ParserError") {
+            if (!(err instanceof ParserError)) {
                 throw err;
             }
 
             return getParserErrorText(this, err);
         }
 
-        const outputs = OCUtil.overclock(recipe);
+        let oc;
 
-        if (Util.empty(outputs)) {
-            return `${getEmoji("warn")} Could not calculate. No voltage matches the input EU.`;
+        try {
+            oc = new Overclocking(buildConfig(recipe, ctx));
+        } catch (err) {
+            if (!(err instanceof OCError)) {
+                throw err;
+            }
+
+            return getCalculationErrorText(err);
         }
 
-        const hasParallel = recipe.oc_type.includes("parallel"),
-            hasChance = outputs.findIndex(row => Boolean(row.chance)) !== -1;
+        return renderOutput(oc);
+    }
 
-        const header = `${getEmoji("info")} Input: **${recipe.base_eu} EU/t** for **${OCUtil.formatDuration(recipe.base_duration)}**`;
+    _runBulk(input, ctx) {
+        const lines = input.split(/\r?\n/).filter(line => !Util.empty(line.trim())),
+            outputs = [];
 
-        const columns = {
-                eu: "EU/t",
-                time: "Time",
-                tier: "Voltage",
-                ...(hasChance ? { chance: "Chance" } : {}),
-                ...(hasParallel ? { parallel: "Parallel" } : {})
-            },
-            rows = {
-                eu: outputs.map(row => Util.formatNumber(row.eu, 3) + " EU/t"),
-                time: outputs.map(row => OCUtil.formatDuration(row.time)),
-                tier: outputs.map(row => OCUtil.getTierName(row.tier)),
-                ...(hasChance ? { chance: outputs.map(row => Util.round(row.chance, 3) + "%") } : {}),
-                ...(hasParallel ? { parallel: outputs.map(row => row.parallel + "x") } : {})
-            };
-
-        const table = drawTable(columns, rows, "light", {
-            sideLines: false
-        });
-
-        let footer = `Applicable for NFu, tiers adjusted for actual machine tier,
-for all options and syntax see ${this.getArgsHelp()}.`;
-
-        if (hasParallel) {
-            footer += `\n\nFor parallelization, it is assumed that you are running 1A of the specified tier.
-Manually specify the amperage if it differs.`;
+        for (let i = 0; i < lines.length; i++) {
+            const lineContext = ctx.withArgs(lines[i]),
+                result = this._runRecipe(lineContext.arg("parts"), ctx);
+            outputs.push(`Recipe ${i + 1}:\n${typeof result === "string" ? result : JSON.stringify(result)}`);
         }
 
-        const embed = new EmbedBuilder().setFooter({ text: footer }).setDescription(codeblock(table));
-
-        return {
-            content: header,
-            embeds: [embed]
-        };
+        return outputs.join("\n\n");
     }
 }
 

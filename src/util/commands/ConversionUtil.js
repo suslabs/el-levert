@@ -1,7 +1,8 @@
+import { OverclockingValues } from "../../structures/OverclockingValues.js";
+
 import Util from "../Util.js";
 import ArrayUtil from "../ArrayUtil.js";
 import TypeTester from "../TypeTester.js";
-import OCUtil from "./OCUtil.js";
 
 import UtilError from "../../errors/UtilError.js";
 
@@ -63,16 +64,18 @@ let ConversionUtil = {
 
 {
     const factors = Object.fromEntries(
-        OCUtil.voltageNames.map((name, idx) => [
+        OverclockingValues.voltageNames.map((name, idx) => [
             name.toLowerCase(),
-            ConversionUtil.factors.eu * OCUtil.BASE_EU * Math.pow(OCUtil.EU_MULT, idx)
+            ConversionUtil.factors.eu * OverclockingValues.baseEu * Math.pow(OverclockingValues.euMultiplier, idx)
         ])
     );
     Object.assign(ConversionUtil.factors, factors);
 
     ConversionUtil.validUnits = Object.keys(ConversionUtil.factors);
 
-    const suffixes = Object.fromEntries(OCUtil.voltageNames.map((name, idx) => [name.toLowerCase(), `A ${name}`]));
+    const suffixes = Object.fromEntries(
+        OverclockingValues.voltageNames.map((name, idx) => [name.toLowerCase(), `A ${name}`])
+    );
     Object.assign(ConversionUtil._suffixes, suffixes);
 }
 
