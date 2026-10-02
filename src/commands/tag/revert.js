@@ -1,6 +1,6 @@
 import { escapeMarkdown } from "discord.js";
 
-import { getClient, getEmoji } from "../../LevertClient.js";
+import { getClient, getConfig, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 
@@ -25,6 +25,10 @@ class TagRevertCommand {
             }
         ]
     };
+
+    load() {
+        return getConfig().enableAuditLog;
+    }
 
     async handler(ctx) {
         if (Util.empty(ctx.argsText)) {

@@ -1,8 +1,7 @@
-import { parseDate } from "chrono-node";
-
 import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import DateUtil from "../../util/commands/DateUtil.js";
 
 const messageRegex = /(.+?)\s*(?:(?:(['"`])((?:[^\2\\]|\\.)*?)\2)|$)/;
 
@@ -48,13 +47,10 @@ class ReminderAddCommand {
             return `${getEmoji("info")} ${this.getArgsHelp('date "message"')}`;
         }
 
-        let parsedDate = parseDate(date);
+        const parsedDate = DateUtil.parse(date);
 
-        if (!parsedDate) {
-            parsedDate = parseDate(`in ${date}`);
-            if (!parsedDate) {
-                return `${getEmoji("warn")} Invalid date: \`${date}\`.`;
-            }
+        if (parsedDate === null) {
+            return `${getEmoji("warn")} Invalid date: \`${date}\`.`;
         }
 
         let message = ctx.arg("message"),
@@ -76,12 +72,7 @@ class ReminderAddCommand {
         let reminder;
 
         try {
-            reminder = await getClient().reminderManager.add(
-                ctx.msg.author.id,
-                new Date(parsedDate).getTime(),
-                message,
-                false
-            );
+            reminder = await getClient().reminderManager.add(ctx.msg.author.id, parsedDate, message, false);
         } catch (err) {
             if (err.name !== "ReminderError") {
                 throw err;

@@ -15,6 +15,7 @@ class PermCommand {
             "update_group",
             "check",
             "audit",
+            "audit_clear",
             "revert"
         ]
     };

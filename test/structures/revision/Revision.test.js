@@ -26,6 +26,15 @@ describe("revision structures", () => {
         });
     });
 
+    test("initializes default values including unknown actor", () => {
+        const revision = new Revision();
+
+        expect(revision.actor).toBe("unknown");
+        expect(revision.changed).toEqual([]);
+        expect(revision.key).toEqual({});
+        expect(revision.snapshot).toBeNull();
+    });
+
     test("normalizes revision subjects and target specs", () => {
         const subject = new RevisionSubject({
             id: 3,

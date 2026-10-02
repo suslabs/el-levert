@@ -1,6 +1,6 @@
 import { escapeMarkdown } from "discord.js";
 
-import { getClient, getEmoji } from "../../LevertClient.js";
+import { getClient, getConfig, getEmoji } from "../../LevertClient.js";
 
 import PermissionRevisionTargets from "../../managers/database/revision/PermissionRevisionTargets.js";
 
@@ -28,6 +28,10 @@ class PermRevertCommand {
             }
         ]
     };
+
+    load() {
+        return getConfig().enableAuditLog;
+    }
 
     async handler(ctx) {
         if (Util.empty(ctx.argsText)) {

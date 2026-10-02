@@ -5,6 +5,8 @@ import RevisionTargetSpec from "../../../structures/revision/RevisionTargetSpec.
 import Group from "../../../structures/permission/Group.js";
 import User from "../../../structures/permission/User.js";
 
+import { getConfig } from "../../../LevertClient.js";
+
 import Util from "../../../util/Util.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
 
@@ -32,6 +34,10 @@ class PermissionRevisionManager {
             [this.constructor.groupTarget, this.groupSpec],
             [this.constructor.userTarget, this.userSpec]
         ]);
+    }
+
+    get enabled() {
+        return getConfig()?.enableAuditLog ?? true;
     }
 
     async recordGroupCreate(group, tx, options) {
@@ -119,6 +125,32 @@ class PermissionRevisionManager {
         });
     }
 
+    async clear(options, tx = this.permissionManager.perm_db) {
+        options = ObjectUtil.guaranteeObject(options);
+
+        if (Util.nonemptyString(options.subject)) {
+            const parts = options.subject.split("/"),
+                subject =
+                    parts.length === 2
+                        ? await this.findUserSubject(parts[0], parts[1], tx)
+                        : await this.findGroupSubject(options.subject, tx),
+                target = parts.length === 2 ? this.constructor.userTarget : this.constructor.groupTarget;
+
+            options = {
+                ...options,
+                subjectId: subject?.id ?? -1
+            };
+
+            const manager = this._manager(this.specs.get(target), tx);
+            return (await manager.clear(options)).changes;
+        }
+
+        const groupResult = await this._manager(this.groupSpec, tx).clear(options),
+            userResult = await this._manager(this.userSpec, tx).clear(options);
+
+        return groupResult.changes + userResult.changes;
+    }
+
     async getDetail(id, tx = this.permissionManager.perm_db) {
         const revision = await this.fetchRevision(id, tx),
             spec = revision === null ? null : this.specs.get(revision.target);
@@ -155,7 +187,11 @@ class PermissionRevisionManager {
     }
 
     getDiff(target, before, after, tx = this.permissionManager.perm_db) {
-        return this._manager(this._getSpec(target), tx).diff(before, after);
+        const manager = this._manager(this._getSpec(target), tx),
+            beforeSnapshot = before === null ? null : manager.getSnapshot(before),
+            afterSnapshot = after === null ? null : manager.getSnapshot(after);
+
+        return manager.diff(beforeSnapshot, afterSnapshot);
     }
 
     _getSpec(target) {

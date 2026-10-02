@@ -1,8 +1,8 @@
 -- up
 CREATE TABLE IF NOT EXISTS 'RevisionSubjects' (
     'id' INTEGER PRIMARY KEY AUTOINCREMENT,
-    'target' TEXT NOT NULL,
-    'key' TEXT NOT NULL,
+    'target' TEXT NOT NULL CHECK (trim(target) != ''),
+    'key' TEXT NOT NULL CHECK (trim(key) != ''),
     'staticSnapshot' TEXT NOT NULL DEFAULT '{}',
     'active' INTEGER NOT NULL DEFAULT 1,
     'deleted' INTEGER DEFAULT NULL,
@@ -14,13 +14,13 @@ CREATE INDEX IF NOT EXISTS 'idx_RevisionSubjects_target_active' ON 'RevisionSubj
 
 CREATE TABLE IF NOT EXISTS 'Revisions' (
     'id' INTEGER PRIMARY KEY AUTOINCREMENT,
-    'target' TEXT NOT NULL,
+    'target' TEXT NOT NULL CHECK (trim(target) != ''),
     'subjectId' INTEGER NOT NULL,
-    'operation' TEXT NOT NULL,
-    'actor' TEXT DEFAULT NULL,
+    'operation' TEXT NOT NULL CHECK (trim(operation) != ''),
+    'actor' TEXT NOT NULL CHECK (trim(actor) != ''),
     'created' INTEGER NOT NULL,
-    'key' TEXT NOT NULL,
-    'changed' TEXT NOT NULL DEFAULT '[]',
+    'key' TEXT NOT NULL CHECK (trim(key) != ''),
+    'changed' TEXT NOT NULL CHECK (trim(changed) != '' AND changed != '[]'),
     'snapshot' TEXT DEFAULT NULL,
     'revertOf' INTEGER DEFAULT NULL,
     'restores' INTEGER DEFAULT NULL,

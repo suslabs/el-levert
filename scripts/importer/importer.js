@@ -26,6 +26,7 @@ Options:
   -a, --amend        Amend existing tags
   -x, --fix          Automatically fix DB issues
   -1, --purge-old    Purge old tags
+  -l, --audit        Write tag revisions to the audit log
 `.trim(),
     usage = "See npm run importer --help for usage.";
 
@@ -49,6 +50,10 @@ const argsOptions = {
     "purge-old": {
         type: "boolean",
         short: "1"
+    },
+    audit: {
+        type: "boolean",
+        short: "l"
     }
 };
 
@@ -90,7 +95,8 @@ function getInputValues(args) {
     let jsonPath = values["json-path"]?.trim() ?? "",
         amend = values.amend ?? false,
         fix = values.fix ?? false,
-        purgeOld = args.values["purge-old"] ?? false;
+        purgeOld = args.values["purge-old"] ?? false,
+        audit = values.audit ?? false;
 
     if (Util.empty(jsonPath)) {
         if (!fix && !purgeOld) {
@@ -112,7 +118,8 @@ function getInputValues(args) {
         jsonPath,
         amend,
         fix,
-        purgeOld
+        purgeOld,
+        audit
     };
 }
 
@@ -134,8 +141,8 @@ async function loadConfig() {
         .finally(() => configLogger.close());
 }
 
-function loadClient(config, logger) {
-    return new LevertClient(config, logger);
+function loadClient(config, logger, options) {
+    return new LevertClient(config, logger, options);
 }
 
 async function loadTagManager() {
@@ -162,7 +169,9 @@ async function loadTagManager() {
         logger = setupLogger(loggerName, config.importLogFile);
 
     // eslint-disable-next-line unused-imports/no-unused-vars
-    const client = loadClient(config, logger),
+    const client = loadClient(config, logger, {
+            enableAuditLog: input.audit
+        }),
         tagManager = await loadTagManager();
 
     const importer = new DBImporter(tagManager, logger);

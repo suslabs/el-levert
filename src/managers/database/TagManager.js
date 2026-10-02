@@ -626,7 +626,18 @@ class TagManager extends DBManager {
         return await this.revisions.getDetail(id);
     }
 
+    async clearAudit(options) {
+        return await this.tag_db.transactionImmediate(async tx => {
+            const result = await this.revisions.clear(options, tx);
+            return result.changes;
+        });
+    }
+
     async revert(name, revisionId, actor, options) {
+        if (!this.revisions.enabled) {
+            throw new TagError("Tag revisions are disabled");
+        }
+
         options = ObjectUtil.guaranteeObject(options);
 
         const mod = options.mod ?? false;
@@ -667,15 +678,20 @@ class TagManager extends DBManager {
             }
 
             const current = await tx.fetch(subject.key.name),
-                applied = await this._applyRevert(current, restored, tx),
-                revisionOptions = this._getRevisionOptions(
-                    {
-                        ...options,
-                        revertOf: target.id,
-                        restores: restored === null ? null : (previous?.id ?? target.id)
-                    },
-                    actor
-                );
+                applied = await this._applyRevert(current, restored, tx);
+
+            if (Util.empty(applied.changed)) {
+                throw new TagError("Tag is already in the requested state", name);
+            }
+
+            const revisionOptions = this._getRevisionOptions(
+                {
+                    ...options,
+                    revertOf: target.id,
+                    restores: restored === null ? null : (previous?.id ?? target.id)
+                },
+                actor
+            );
 
             await this.revisions.recordRevert(subject, restored, applied.changed, tx, revisionOptions);
 

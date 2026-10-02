@@ -1,9 +1,9 @@
 -- up
 CREATE TABLE 'Tags_new' (
-    'aliasName' TEXT DEFAULT NULL,
-    'name' TEXT,
+    'aliasName' TEXT DEFAULT NULL CHECK (aliasName IS NULL OR trim(aliasName) != ''),
+    'name' TEXT NOT NULL CHECK (trim(name) != ''),
     'body' TEXT,
-    'owner' TEXT,
+    'owner' TEXT NOT NULL CHECK (trim(owner) != ''),
     'args' TEXT DEFAULT NULL,
     'registered' INTEGER,
     'lastEdited' INTEGER,

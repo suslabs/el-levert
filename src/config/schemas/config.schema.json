@@ -136,10 +136,19 @@
         "enableVM2": {
             "type": "boolean"
         },
+        "allowLocalhostRequests": {
+            "type": "boolean"
+        },
+        "allowFilesystemRequests": {
+            "type": "boolean"
+        },
         "enablePermissions": {
             "type": "boolean"
         },
         "enableReminders": {
+            "type": "boolean"
+        },
+        "enableAuditLog": {
             "type": "boolean"
         },
         "enableGlobalHandler": {
@@ -255,8 +264,11 @@
         "enableEval",
         "enableOtherLangs",
         "enableVM2",
+        "allowLocalhostRequests",
+        "allowFilesystemRequests",
         "enablePermissions",
         "enableReminders",
+        "enableAuditLog",
         "enableGlobalHandler",
         "wrapEvents",
         "setActivity",

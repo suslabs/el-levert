@@ -1,7 +1,11 @@
 import Revision from "../../structures/revision/Revision.js";
 import RevisionSubject from "../../structures/revision/RevisionSubject.js";
 
+import Util from "../../util/Util.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
+import ArrayUtil from "../../util/ArrayUtil.js";
+
+import RevisionError from "../../errors/RevisionError.js";
 
 class RevisionStore {
     constructor(database) {
@@ -71,14 +75,25 @@ class RevisionStore {
     async addRevision(data) {
         data = ObjectUtil.guaranteeObject(data);
 
+        const rawActor = typeof data.actor === "string" ? data.actor.trim() : "",
+            actor = Util.empty(rawActor) ? "unknown" : rawActor;
+
+        const changed = ArrayUtil.guaranteeArray(data.changed, null, true)
+            .map(field => (typeof field === "string" ? field.trim() : field))
+            .filter(field => Util.nonemptyString(field));
+
+        if (Util.empty(changed)) {
+            throw new RevisionError("Revision changed fields cannot be empty");
+        }
+
         const res = await this.database.revisionQueries.add.run({
             $target: data.target,
             $subjectId: data.subjectId,
             $operation: data.operation,
-            $actor: data.actor ?? null,
+            $actor: actor,
             $created: data.created ?? Date.now(),
             $key: this.constructor._json(data.key),
-            $changed: this.constructor._json(data.changed ?? []),
+            $changed: this.constructor._json(changed),
             $snapshot: data.snapshot === null ? null : this.constructor._json(data.snapshot),
             $revertOf: data.revertOf ?? null,
             $restores: data.restores ?? null,
@@ -131,6 +146,20 @@ class RevisionStore {
         });
 
         return Array.from(rows).map(row => new Revision(row));
+    }
+
+    async clear(target, options) {
+        options = ObjectUtil.guaranteeObject(options);
+
+        return await this.database.revisionQueries.clear.run({
+            $target: target,
+            $subjectId: options.subjectId ?? null,
+            $id: options.id ?? null,
+            $fromId: options.fromId ?? null,
+            $toId: options.toId ?? null,
+            $from: options.from ?? null,
+            $to: options.to ?? null
+        });
     }
 
     async countRevertsOf(revision) {

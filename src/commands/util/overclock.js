@@ -130,6 +130,48 @@ function renderOutput(oc) {
     };
 }
 
+function runRecipe(cmd, input, ctx) {
+    let recipe;
+
+    try {
+        recipe = new OverclockArgumentParser().parse(input);
+    } catch (err) {
+        if (!(err instanceof ParserError)) {
+            throw err;
+        }
+
+        return getParserErrorText(cmd, err);
+    }
+
+    let oc;
+
+    try {
+        oc = new Overclocking(buildConfig(recipe, ctx));
+    } catch (err) {
+        if (!(err instanceof OCError)) {
+            throw err;
+        }
+
+        return getCalculationErrorText(err);
+    }
+
+    return renderOutput(oc);
+}
+
+function runBulk(cmd, input, ctx) {
+    const lines = input.split(/\r?\n/).filter(line => !Util.empty(line.trim())),
+        outputs = [];
+
+    for (let i = 0; i < lines.length; i++) {
+        const lineContext = ctx.withArgs(lines[i]),
+            result = runRecipe(cmd, lineContext.arg("parts"), ctx);
+
+        outputs.push(`Recipe ${i + 1}:\n${typeof result === "string" ? result : JSON.stringify(result)}`);
+    }
+
+    return outputs.join("\n\n");
+}
+
 class OverclockCommand {
     static info = {
         name: "overclock",
@@ -245,51 +287,10 @@ class OverclockCommand {
         }
 
         if (ctx.arg("bulk") === true) {
-            return this._runBulk(recipes, ctx);
+            return runBulk(this, recipes, ctx);
         }
 
-        return this._runRecipe(parts, ctx);
-    }
-
-    _runRecipe(input, ctx) {
-        let recipe;
-
-        try {
-            recipe = new OverclockArgumentParser().parse(input);
-        } catch (err) {
-            if (!(err instanceof ParserError)) {
-                throw err;
-            }
-
-            return getParserErrorText(this, err);
-        }
-
-        let oc;
-
-        try {
-            oc = new Overclocking(buildConfig(recipe, ctx));
-        } catch (err) {
-            if (!(err instanceof OCError)) {
-                throw err;
-            }
-
-            return getCalculationErrorText(err);
-        }
-
-        return renderOutput(oc);
-    }
-
-    _runBulk(input, ctx) {
-        const lines = input.split(/\r?\n/).filter(line => !Util.empty(line.trim())),
-            outputs = [];
-
-        for (let i = 0; i < lines.length; i++) {
-            const lineContext = ctx.withArgs(lines[i]),
-                result = this._runRecipe(lineContext.arg("parts"), ctx);
-            outputs.push(`Recipe ${i + 1}:\n${typeof result === "string" ? result : JSON.stringify(result)}`);
-        }
-
-        return outputs.join("\n\n");
+        return runRecipe(this, parts, ctx);
     }
 }
 

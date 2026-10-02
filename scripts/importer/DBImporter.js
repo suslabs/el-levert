@@ -23,6 +23,8 @@ class DBImporter {
         pruneUsage: "DELETE FROM Usage WHERE count <= 0;"
     });
 
+    static actor = "importer";
+
     static getDifference(currentTags, importTags, diffTypes = TagDifferenceType.all) {
         if (diffTypes === TagDifferenceType.all) {
             diffTypes = Object.values(TagDifferenceType);
@@ -155,7 +157,7 @@ class DBImporter {
 
         for (const tag of oldTags) {
             await this.tagManager
-                .delete(tag)
+                .delete(tag, false, { actor: this.constructor.actor })
                 .then(() => count++)
                 .catch(err => this.logger.error(`Error occured while deleting "${tag.name}":`, err));
         }
@@ -238,7 +240,7 @@ class DBImporter {
 
             if (!currTag.equals(importTag)) {
                 await this.tagManager
-                    .updateProps(currTag, importTag)
+                    .updateProps(currTag, importTag, false, { actor: this.constructor.actor })
                     .then(() => count++)
                     .catch(err => this.logger.error(`Error occured while updating "${name}":`, err));
             }
@@ -257,7 +259,7 @@ class DBImporter {
             if (typeof currentTag === "undefined") {
                 await this.tagManager.tag_db.transactionImmediate(async tx => {
                     await this.tagManager
-                        ._addPrepared(importTag, tx, {})
+                        ._addPrepared(importTag, tx, { actor: this.constructor.actor })
                         .then(() => count++)
                         .catch(err => this.logger.error(`Error occured while adding "${name}":`, err));
                 });
@@ -274,7 +276,7 @@ class DBImporter {
             const oldTag = currentTags.get(name);
 
             await this.tagManager
-                .delete(oldTag)
+                .delete(oldTag, false, { actor: this.constructor.actor })
                 .then(() => count++)
                 .catch(err => this.logger.error(`Error occured while deleting "${name}":`, err));
         }

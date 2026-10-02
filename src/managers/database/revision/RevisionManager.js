@@ -1,5 +1,7 @@
 import { RevisionOperationTypes } from "../../../structures/revision/RevisionOperationTypes.js";
 
+import { getConfig } from "../../../LevertClient.js";
+
 import Util from "../../../util/Util.js";
 import ArrayUtil from "../../../util/ArrayUtil.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
@@ -8,6 +10,10 @@ class RevisionManager {
     constructor(spec, store) {
         this.spec = spec;
         this.store = store;
+    }
+
+    get enabled() {
+        return getConfig()?.enableAuditLog ?? true;
     }
 
     getKey(data) {
@@ -74,6 +80,10 @@ class RevisionManager {
     }
 
     async recordCreate(data, options) {
+        if (!this.enabled) {
+            return null;
+        }
+
         options = ObjectUtil.guaranteeObject(options);
 
         const subject = await this.ensureSubject(data),
@@ -86,6 +96,10 @@ class RevisionManager {
     }
 
     async recordUpdate(before, after, options) {
+        if (!this.enabled) {
+            return null;
+        }
+
         options = ObjectUtil.guaranteeObject(options);
 
         const subject = await this.ensureSubject(before),
@@ -108,6 +122,10 @@ class RevisionManager {
     }
 
     async recordDelete(data, options) {
+        if (!this.enabled) {
+            return null;
+        }
+
         options = ObjectUtil.guaranteeObject(options);
 
         const subject = await this.ensureSubject(data),
@@ -120,6 +138,10 @@ class RevisionManager {
     }
 
     async recordRevert(subject, snapshot, changed, options) {
+        if (!this.enabled) {
+            return null;
+        }
+
         options = ObjectUtil.guaranteeObject(options);
 
         if (snapshot === null) {
@@ -129,6 +151,11 @@ class RevisionManager {
         }
 
         return await this._addRevision(subject, RevisionOperationTypes.revert, snapshot, changed, options);
+    }
+
+    async clear(options) {
+        options = ObjectUtil.guaranteeObject(options);
+        return await this.store.clear(this.spec.target, options);
     }
 
     _snapshotKey(snapshot) {

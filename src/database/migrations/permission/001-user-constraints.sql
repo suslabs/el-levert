@@ -1,8 +1,8 @@
 -- up
 CREATE TABLE 'Users_new' (
     'id' INTEGER,
-    'user' TEXT,
-    'group' TEXT,
+    'user' TEXT NOT NULL CHECK (trim(user) != ''),
+    'group' TEXT NOT NULL CHECK (trim("group") != ''),
     PRIMARY KEY('id' AUTOINCREMENT),
     UNIQUE('user', 'group'),
     FOREIGN KEY('group') REFERENCES Groups('name') ON UPDATE CASCADE ON DELETE CASCADE

@@ -210,4 +210,51 @@ describe("DBImporter", () => {
             await cleanupRuntime(liveRuntime);
         }
     });
+
+    test("importer mocks disable audit logging by default and record revisions when enabled", async () => {
+        const liveRuntime = await createRuntime({
+                loadVMs: false,
+                config: {
+                    enableAuditLog: false
+                }
+            }),
+            logger = {
+                info: vi.fn(),
+                warn: vi.fn(),
+                error: vi.fn()
+            };
+
+        try {
+            const importer = new DBImporter(liveRuntime.client.tagManager, logger);
+
+            await liveRuntime.client.tagManager.add("imported_one", "body", "u1", { type: "text" });
+
+            expect(await liveRuntime.client.tagManager.revisions.findSubject("imported_one")).toBeNull();
+            expect(await liveRuntime.client.tagManager.audit({ name: "imported_one" })).toHaveLength(0);
+
+            liveRuntime.client.config.enableAuditLog = true;
+
+            await liveRuntime.client.tagManager.add("imported_two", "body", "u1", { type: "text" });
+
+            const revisions = await liveRuntime.client.tagManager.audit({ name: "imported_two" });
+            expect(revisions).toHaveLength(1);
+            expect(revisions[0].actor).toBe("u1");
+        } finally {
+            await cleanupRuntime(liveRuntime);
+        }
+    });
+
+    test("FakeClient defaults enableAuditLog to false and accepts options override", async () => {
+        const { LevertClient, _resetClient } = await import("../../../scripts/importer/mock/FakeClient.js");
+
+        _resetClient();
+        const client1 = new LevertClient({ test: 1 }, {});
+        expect(client1.config.enableAuditLog).toBe(false);
+
+        _resetClient();
+        const client2 = new LevertClient({ test: 1 }, {}, { enableAuditLog: true });
+        expect(client2.config.enableAuditLog).toBe(true);
+
+        _resetClient();
+    });
 });

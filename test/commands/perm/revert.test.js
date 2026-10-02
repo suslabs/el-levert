@@ -72,5 +72,16 @@ describe("permission revert command", () => {
             "Reverted permission subject"
         );
         expect(await runtime.client.permManager.isInGroup("moderators", "alice-id")).toBeTruthy();
+        expect(await run(`revert membership alice-id/moderators ${membershipRevision}`)).toContain(
+            "already in the requested state"
+        );
+    });
+
+    test("disallows permission revert when enableAuditLog is false", async () => {
+        runtime.client.config.enableAuditLog = false;
+
+        await expect(
+            runtime.client.permManager.revert({ target: "group", name: "moderators" }, 1, "admin-user")
+        ).rejects.toThrow("Permission revisions are disabled");
     });
 });

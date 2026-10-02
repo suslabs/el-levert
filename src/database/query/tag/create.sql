@@ -1,5 +1,5 @@
 CREATE TABLE 'Quotas' (
-    'user' TEXT,
+    'user' TEXT NOT NULL CHECK (trim(user) != ''),
     'quota' REAL,
     'count' INTEGER,
     PRIMARY KEY('user')
@@ -10,10 +10,10 @@ CREATE INDEX 'idx_Quotas_quota' ON 'Quotas' ('quota');
 CREATE INDEX 'idx_Quotas_count' ON 'Quotas' ('count');
 ---
 CREATE TABLE 'Tags' (
-    'aliasName' TEXT DEFAULT NULL,
-    'name' TEXT,
+    'aliasName' TEXT DEFAULT NULL CHECK (aliasName IS NULL OR trim(aliasName) != ''),
+    'name' TEXT NOT NULL CHECK (trim(name) != ''),
     'body' TEXT,
-    'owner' TEXT,
+    'owner' TEXT NOT NULL CHECK (trim(owner) != ''),
     'args' TEXT DEFAULT NULL,
     'registered' INTEGER,
     'lastEdited' INTEGER,
@@ -31,7 +31,7 @@ CREATE INDEX 'idx_Tags_type' ON 'Tags' ('type');
 CREATE INDEX 'idx_Tags_owner_type' ON 'Tags' ('owner', 'type');
 ---
 CREATE TABLE 'Usage' (
-    'name' TEXT,
+    'name' TEXT NOT NULL CHECK (trim(name) != ''),
     'count' INTEGER,
     PRIMARY KEY('name')
 ) STRICT;

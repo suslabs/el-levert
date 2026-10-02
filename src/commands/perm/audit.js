@@ -1,19 +1,9 @@
-import * as chrono from "chrono-node";
-
-import { getClient, getEmoji } from "../../LevertClient.js";
+import { getClient, getConfig, getEmoji } from "../../LevertClient.js";
 
 import PermissionRevisionTargets from "../../managers/database/revision/PermissionRevisionTargets.js";
 
 import Util from "../../util/Util.js";
 import RevisionAuditUtil from "../../util/commands/RevisionAuditUtil.js";
-
-function parseTime(value) {
-    if (Util.empty(value)) {
-        return null;
-    }
-
-    return chrono.parseDate(value)?.getTime() ?? null;
-}
 
 function getLabel(revision) {
     switch (revision.target) {
@@ -26,25 +16,38 @@ function getLabel(revision) {
     }
 }
 
+async function getDetail(revisionId) {
+    let detail;
+
+    try {
+        detail = await getClient().permManager.auditDetail(revisionId);
+    } catch (err) {
+        if (err.name !== "PermissionError") {
+            throw err;
+        }
+
+        return `${getEmoji("warn")} ${err.message}.`;
+    }
+
+    const response = RevisionAuditUtil.createDetailResponse(detail, {
+        filePrefix: "permission-revision",
+        label: detail.label ?? getLabel(detail.revision)
+    });
+
+    return {
+        ...response,
+        content: `${getEmoji("info")} ${response.content}`
+    };
+}
+
 class PermAuditCommand {
     static info = {
         name: "audit",
         parent: "perm",
         subcommand: true,
         allowed: "admin",
-        description: "View permission revisions or inspect the complete change to one revision.",
+        description: "View permission revisions or inspect one revision.",
         arguments: [
-            {
-                name: "subject",
-                kind: "positional",
-                index: 0
-            },
-            {
-                name: "revisionId",
-                kind: "positional",
-                index: 1,
-                type: "integer"
-            },
             {
                 name: "user",
                 kind: "option",
@@ -78,30 +81,56 @@ class PermAuditCommand {
                 name: "limit",
                 kind: "option",
                 type: "integer"
+            },
+            {
+                name: "subject",
+                kind: "positional",
+                index: 0
+            },
+            {
+                name: "scopeArgs",
+                kind: "rest"
             }
         ]
     };
+
+    load() {
+        return getConfig().enableAuditLog;
+    }
 
     async handler(ctx) {
         if (Util.empty(ctx.argsText)) {
             return `${getEmoji("info")} ${this.getArgsHelp("[subject] [revision_id] [--options]")}`;
         }
 
-        const revisionId = ctx.arg("revisionId");
+        const subject = ctx.arg("subject");
 
-        if (revisionId != null) {
-            return await this._detail(revisionId);
+        if (!Util.empty(ctx.arg("scopeArgs"))) {
+            const detailId = RevisionAuditUtil.parseRevisionId(ctx.arg("scopeArgs"));
+
+            if (detailId === null) {
+                return `${getEmoji("warn")} Invalid revision ID: \`${ctx.arg("scopeArgs")}\`.`;
+            }
+
+            return await getDetail(detailId);
+        }
+
+        const dates = RevisionAuditUtil.parseDateRange(ctx.arg("from"), ctx.arg("to"));
+
+        if (dates.error) {
+            return `${getEmoji("warn")} ${dates.error}`;
         }
 
         const limit = Util.clamp(ctx.arg("limit") ?? 10, 1, 20),
             page = Util.clamp(ctx.arg("page") ?? 1, 1),
+            { from, to } = dates,
             revisions = await getClient().permManager.audit({
-                subject: ctx.arg("subject"),
+                subject,
                 target: ctx.arg("target") ?? null,
                 actor: ctx.arg("user") ?? null,
                 operation: ctx.arg("operation") ?? null,
-                from: parseTime(ctx.arg("from")),
-                to: parseTime(ctx.arg("to")),
+                from,
+                to,
                 limit,
                 offset: (page - 1) * limit
             });
@@ -116,30 +145,6 @@ class PermAuditCommand {
         return {
             content: header,
             embeds: [embed]
-        };
-    }
-
-    async _detail(revisionId) {
-        let detail;
-
-        try {
-            detail = await getClient().permManager.auditDetail(revisionId);
-        } catch (err) {
-            if (err.name !== "PermissionError") {
-                throw err;
-            }
-
-            return `${getEmoji("warn")} ${err.message}.`;
-        }
-
-        const response = RevisionAuditUtil.createDetailResponse(detail, {
-            filePrefix: "permission-revision",
-            label: detail.label ?? getLabel(detail.revision)
-        });
-
-        return {
-            ...response,
-            content: `${getEmoji("info")} ${response.content}`
         };
     }
 }

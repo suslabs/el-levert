@@ -6,6 +6,8 @@ import RevisionTargetSpec from "../../../structures/revision/RevisionTargetSpec.
 import { RevisionOperationTypes } from "../../../structures/revision/RevisionOperationTypes.js";
 import Tag from "../../../structures/tag/Tag.js";
 
+import { getConfig } from "../../../LevertClient.js";
+
 import Util from "../../../util/Util.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
 
@@ -28,6 +30,10 @@ class TagRevisionManager {
             decode: this.constructor.decodeValue,
             label: key => key.name
         });
+    }
+
+    get enabled() {
+        return getConfig()?.enableAuditLog ?? true;
     }
 
     static encodeValue(field, value) {
@@ -112,6 +118,20 @@ class TagRevisionManager {
             ...options,
             subjectId
         });
+    }
+
+    async clear(options, tx = this.tagManager.tag_db) {
+        options = ObjectUtil.guaranteeObject(options);
+
+        if (Util.nonemptyString(options.subject)) {
+            const subject = await this.findSubject(options.subject, tx);
+            options = {
+                ...options,
+                subjectId: subject?.id ?? -1
+            };
+        }
+
+        return await this._manager(tx).clear(options);
     }
 
     async getDetail(id, tx = this.tagManager.tag_db) {

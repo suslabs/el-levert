@@ -82,6 +82,7 @@ class TagCommand {
             "add",
             "alias",
             "audit",
+            "audit_clear",
             "chown",
             "count",
             "delete",

@@ -112,5 +112,32 @@ describe("TagRevisionManager", () => {
         });
 
         expect((await manager.fetch("alpha")).body).toBe("two");
+
+        await expect(
+            manager.revert("alpha", editRevision.id, "mod", {
+                actor: "mod",
+                mod: true
+            })
+        ).rejects.toThrow("already in the requested state");
+    });
+
+    test("does not record revisions and disallows revert when enableAuditLog is false", async () => {
+        const liveRuntime = await createRuntime({
+                loadVMs: false,
+                config: {
+                    enableAuditLog: false
+                }
+            }),
+            manager = liveRuntime.client.tagManager;
+
+        try {
+            await manager.add("disabled_rev", "one", "u1", { type: "text" });
+            expect(await manager.revisions.findSubject("disabled_rev")).toBeNull();
+            expect(await manager.audit({ name: "disabled_rev" })).toHaveLength(0);
+
+            await expect(manager.revert("disabled_rev", 1, "u1")).rejects.toThrow("Tag revisions are disabled");
+        } finally {
+            await cleanupRuntime(liveRuntime);
+        }
     });
 });

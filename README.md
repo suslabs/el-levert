@@ -264,6 +264,7 @@ Main actions:
 - `chown (name) (new_owner)` transfers ownership
 - `set_type (name) (type|version)` changes script metadata for moderators
 - `audit [tag_name] [revision_id] [--options]` shows recent tag changes or a full revision diff for moderators
+- `audit_clear [tag_name] [revision_id] [end_revision_id] [--options]` clears tag audit history for the bot owner
 - `revert (name) [revision_id]` restores a previous tag state. Tag owners can revert their own latest edit once within one hour; moderators can restore arbitrary revisions.
 
 Examples:
@@ -271,6 +272,10 @@ Examples:
 - `%tag audit example` lists recent revisions for `example`
 - `%tag audit example 42` shows the before/after diff for revision `42`
 - `%tag audit --operation update --limit 20` lists recent tag updates
+- `%tag audit_clear` clears all tag audit history (bot owner only)
+- `%tag audit_clear example` clears history for one tag
+- `%tag audit_clear example 42 45` clears an inclusive revision-ID range for one tag
+- `%tag audit_clear example --from "last week" --to "yesterday"` clears a date range for one tag
 
 Tag audit options:
 
@@ -360,6 +365,7 @@ Main actions:
 - `remove_group (group_name)` deletes a group
 - `update_group (group_name) [new_name/unchanged] [new_level/unchanged]` updates a group
 - `audit [subject] [revision_id] [--options]` shows permission group and membership changes or a full revision diff for permission admins
+- `audit_clear [subject] [revision_id] [end_revision_id] [--options]` clears permission audit history for the bot owner
 - `revert group (group_name) [revision_id]` restores a group revision for permission admins
 - `revert membership (user_id/group_name) [revision_id]` restores a membership revision for permission admins
 
@@ -369,6 +375,10 @@ Examples:
 - `%perm audit moderators 12345` shows the before/after diff for revision `12345`
 - `%perm audit user-id/moderators` lists revisions for one membership
 - `%perm audit --target permission_group --operation update` lists group updates
+- `%perm audit_clear` clears all permission audit history (bot owner only)
+- `%perm audit_clear moderators` clears history for one group or membership
+- `%perm audit_clear moderators 42 45` clears an inclusive revision-ID range for one subject
+- `%perm audit_clear --from "last week" --to "yesterday"` clears a date range
 
 Permission audit options:
 

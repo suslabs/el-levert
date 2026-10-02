@@ -1,16 +1,30 @@
-import * as chrono from "chrono-node";
-
-import { getClient, getEmoji } from "../../LevertClient.js";
+import { getClient, getConfig, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import RevisionAuditUtil from "../../util/commands/RevisionAuditUtil.js";
 
-function parseTime(value) {
-    if (Util.empty(value)) {
-        return null;
+async function getDetail(revisionId) {
+    let detail;
+
+    try {
+        detail = await getClient().tagManager.auditDetail(revisionId);
+    } catch (err) {
+        if (err.name !== "TagError") {
+            throw err;
+        }
+
+        return `${getEmoji("warn")} ${err.message}.`;
     }
 
-    return chrono.parseDate(value)?.getTime() ?? null;
+    const response = RevisionAuditUtil.createDetailResponse(detail, {
+        filePrefix: "tag-revision",
+        label: detail.label ?? detail.revision.key.name ?? "unknown"
+    });
+
+    return {
+        ...response,
+        content: `${getEmoji("info")} ${response.content}`
+    };
 }
 
 class TagAuditCommand {
@@ -19,20 +33,8 @@ class TagAuditCommand {
         parent: "tag",
         subcommand: true,
         allowed: "mod",
-        description: "View recent tag revisions or inspect the complete change to one revision.",
+        description: "View tag revisions or inspect one revision.",
         arguments: [
-            {
-                name: "tagName",
-                kind: "positional",
-                index: 0,
-                lowercase: true
-            },
-            {
-                name: "revisionId",
-                kind: "positional",
-                index: 1,
-                type: "integer"
-            },
             {
                 name: "user",
                 kind: "option",
@@ -61,26 +63,50 @@ class TagAuditCommand {
                 name: "limit",
                 kind: "option",
                 type: "integer"
+            },
+            {
+                name: "tagName",
+                kind: "positional",
+                index: 0,
+                lowercase: true
+            },
+            {
+                name: "scopeArgs",
+                kind: "rest"
             }
         ]
     };
+
+    load() {
+        return getConfig().enableAuditLog;
+    }
 
     async handler(ctx) {
         if (Util.empty(ctx.argsText)) {
             return `${getEmoji("info")} ${this.getArgsHelp("[tag_name] [revision_id] [--options]")}`;
         }
 
-        const revisionId = ctx.arg("revisionId"),
-            tagName = ctx.arg("tagName");
+        const tagName = ctx.arg("tagName");
 
-        if (revisionId != null) {
-            return await this._detail(revisionId);
+        if (!Util.empty(ctx.arg("scopeArgs"))) {
+            const detailId = RevisionAuditUtil.parseRevisionId(ctx.arg("scopeArgs"));
+
+            if (detailId === null) {
+                return `${getEmoji("warn")} Invalid revision ID: \`${ctx.arg("scopeArgs")}\`.`;
+            }
+
+            return await getDetail(detailId);
+        }
+
+        const dates = RevisionAuditUtil.parseDateRange(ctx.arg("from"), ctx.arg("to"));
+
+        if (dates.error) {
+            return `${getEmoji("warn")} ${dates.error}`;
         }
 
         const limit = Util.clamp(ctx.arg("limit") ?? 10, 1, 20),
             page = Util.clamp(ctx.arg("page") ?? 1, 1),
-            from = parseTime(ctx.arg("from")),
-            to = parseTime(ctx.arg("to"));
+            { from, to } = dates;
 
         const revisions = await getClient().tagManager.audit({
             name: tagName,
@@ -107,30 +133,6 @@ class TagAuditCommand {
         return {
             content: header,
             embeds: [embed]
-        };
-    }
-
-    async _detail(revisionId) {
-        let detail;
-
-        try {
-            detail = await getClient().tagManager.auditDetail(revisionId);
-        } catch (err) {
-            if (err.name !== "TagError") {
-                throw err;
-            }
-
-            return `${getEmoji("warn")} ${err.message}.`;
-        }
-
-        const response = RevisionAuditUtil.createDetailResponse(detail, {
-            filePrefix: "tag-revision",
-            label: detail.label ?? detail.revision.key.name ?? "unknown"
-        });
-
-        return {
-            ...response,
-            content: `${getEmoji("info")} ${response.content}`
         };
     }
 }

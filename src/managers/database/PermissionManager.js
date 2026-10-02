@@ -199,7 +199,7 @@ class PermissionManager extends DBManager {
             throw new PermissionError("Invalid level", level);
         }
 
-        return perm > level;
+        return perm >= this._ownerLevel || perm > level;
     }
 
     async fetch(id) {
@@ -653,7 +653,15 @@ class PermissionManager extends DBManager {
         return await this.revisions.getDetail(id);
     }
 
+    async clearAudit(options) {
+        return await this.perm_db.transactionImmediate(async tx => await this.revisions.clear(options, tx));
+    }
+
     async revert(targetData, revisionId, actor, options) {
+        if (!this.revisions.enabled) {
+            throw new PermissionError("Permission revisions are disabled");
+        }
+
         options = ObjectUtil.guaranteeObject(options);
 
         return await this.perm_db.transactionImmediate(async tx => {
@@ -689,6 +697,10 @@ class PermissionManager extends DBManager {
             }
 
             const changed = Object.keys(this.revisions.getDiff(target, applied.before, applied.after, tx));
+
+            if (Util.empty(changed)) {
+                throw new PermissionError("Permission is already in the requested state");
+            }
 
             await this.revisions.recordRevert(
                 target,

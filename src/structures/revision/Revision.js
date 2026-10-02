@@ -6,7 +6,7 @@ class Revision {
         target: "",
         subjectId: 0,
         operation: "",
-        actor: "",
+        actor: "unknown",
         created: 0,
         key: {},
         changed: [],
@@ -59,7 +59,7 @@ class Revision {
         "reason"
     ];
 
-    static _nullableDataProps = ["actor", "snapshot", "revertOf", "restores", "reason"];
+    static _nullableDataProps = ["snapshot", "revertOf", "restores", "reason"];
 
     static _parseJson(value, fallback) {
         if (typeof value !== "string") {

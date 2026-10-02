@@ -13,6 +13,7 @@ let runtime;
 let command;
 let userMsg;
 let adminMsg;
+let ownerMsg;
 
 async function run(args, msg = adminMsg) {
     return await executeCommand(command, args, {
@@ -42,6 +43,13 @@ beforeEach(async () => {
             username: "admin"
         }
     });
+
+    ownerMsg = createCommandMessage("%tag", {
+        author: {
+            id: "owner-id",
+            username: "owner"
+        }
+    });
 });
 
 afterEach(async () => {
@@ -53,7 +61,7 @@ describe("tag audit command", () => {
         const help = await run("audit help");
         const usage = await run("audit");
 
-        expect(help).toContain("View recent tag revisions");
+        expect(help).toContain("View tag revisions");
         expect(usage).toContain("[tag_name] [revision_id] [--options]");
     });
 
@@ -78,5 +86,52 @@ describe("tag audit command", () => {
 
     test("handles empty audit pages", async () => {
         expect(await run("audit missing --limit 5")).toContain("Found **no** tag revisions");
+    });
+
+    test("only lets the owner clear tag audit history", async () => {
+        await run("add alpha one", userMsg);
+
+        expect(await run("audit_clear")).toContain("Only the bot owner");
+        expect(await run("audit-clear", ownerMsg)).toContain("Cleared 1 tag audit revision");
+        expect(await run("audit alpha --limit 5")).toContain("Found **no** tag revisions");
+    });
+
+    test("clears a tag by revision range and date scope", async () => {
+        await run("add alpha one", userMsg);
+        await run("edit alpha two", userMsg);
+
+        const audit = await run("audit alpha --limit 5"),
+            ids = audit.embeds[0].data.description.match(/#(\d+)/g).map(value => Number(value.slice(1)));
+
+        expect(await run(`audit_clear alpha ${ids[0]} ${ids[1]}`, ownerMsg)).toContain("Cleared 2 tag audit revisions");
+        expect(await run("audit alpha --limit 5")).toContain("Found **no** tag revisions");
+
+        await run("add beta one", userMsg);
+        expect(await run('audit_clear beta --from "2000-01-01" --to "2100-01-01"', ownerMsg)).toContain(
+            "Cleared 1 tag audit revision"
+        );
+        expect(await run("audit beta --limit 5")).toContain("Found **no** tag revisions");
+    });
+
+    test("does not register audit, audit_clear, or revert subcommands when enableAuditLog is false", async () => {
+        const disabledRuntime = await createCommandRuntime({
+                loadHandlers: true,
+                config: {
+                    enableAuditLog: false
+                }
+            }),
+            disabledCmd = getCommand(disabledRuntime, "tag");
+
+        try {
+            const subcmds = disabledCmd.getSubcmds().map(cmd => cmd.name);
+            expect(subcmds).not.toContain("audit");
+            expect(subcmds).not.toContain("audit_clear");
+            expect(subcmds).not.toContain("revert");
+            expect(disabledCmd.getSubcmd("audit")).toBeNull();
+            expect(disabledCmd.getSubcmd("audit_clear")).toBeNull();
+            expect(disabledCmd.getSubcmd("revert")).toBeNull();
+        } finally {
+            await cleanupRuntime(disabledRuntime);
+        }
     });
 });

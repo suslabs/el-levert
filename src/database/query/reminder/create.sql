@@ -1,8 +1,8 @@
 CREATE TABLE 'Reminders' (
     'id' INTEGER,
-    'user' TEXT,
+    'user' TEXT NOT NULL CHECK (trim(user) != ''),
     'end' INTEGER,
-    'msg' TEXT,
+    'msg' TEXT NOT NULL CHECK (trim(msg) != ''),
     PRIMARY KEY('id' AUTOINCREMENT)
 ) STRICT;
 ---
