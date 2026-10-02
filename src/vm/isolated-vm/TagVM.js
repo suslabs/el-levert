@@ -1,6 +1,8 @@
 import VM from "../VM.js";
 
 import EvalContext from "./context/EvalContext.js";
+import { initFakeAxios, resetFakeAxios } from "./classes/FakeHttp.js";
+
 import InspectorServer from "./inspector/InspectorServer.js";
 import { InspectorModes } from "./inspector/InspectorModes.js";
 
@@ -60,6 +62,9 @@ class TagVM extends VM {
         this.enableInspector = getConfig().enableInspector;
         this.enableUserInspector = this.enableInspector && (getConfig().enableUserInspector ?? false);
         this.inspectorMode = this._getInspectorMode();
+
+        this.allowLocalhostRequests = getConfig()?.allowLocalhostRequests ?? false;
+        this.allowFilesystemRequests = getConfig()?.allowFilesystemRequests ?? false;
 
         this._contextStack = [];
     }
@@ -125,11 +130,18 @@ class TagVM extends VM {
     }
 
     load() {
+        initFakeAxios({
+            allowLocalhostRequests: this.allowLocalhostRequests,
+            allowFilesystemRequests: this.allowFilesystemRequests
+        });
+
         EvalContext.initFunctions();
         this._setupInspectorServer();
     }
 
     unload() {
+        resetFakeAxios();
+
         if (typeof this._inspectorServer !== "undefined") {
             this._inspectorServer.close();
             delete this._inspectorServer;

@@ -11,13 +11,11 @@ const { ExternalCopy } = ivm;
 
 import { getLogger } from "../../../LevertClient.js";
 
-import VMUtil from "../../../util/vm/VMUtil.js";
 import TypeTester from "../../../util/TypeTester.js";
+import ObjectUtil from "../../../util/ObjectUtil.js";
+import VMUtil from "../../../util/vm/VMUtil.js";
 
 import VMError from "../../../errors/VMError.js";
-
-const allowLocalhostRequests = false,
-    allowFilesystemRequests = false;
 
 function createBlocklist() {
     const blocklist = new net.BlockList();
@@ -164,7 +162,12 @@ async function fsAdapter(req) {
     }
 }
 
-function createFakeAxios() {
+function createFakeAxios(options) {
+    options = ObjectUtil.guaranteeObject(options);
+
+    const allowLocalhostRequests = options.allowLocalhostRequests ?? false,
+        allowFilesystemRequests = options.allowFilesystemRequests ?? false;
+
     const config = {};
 
     if (!allowLocalhostRequests) {
@@ -212,10 +215,27 @@ function createFakeAxios() {
     return client;
 }
 
-const fakeAxios = createFakeAxios();
+let fakeAxios = null;
+
+function initFakeAxios(options) {
+    fakeAxios ??= createFakeAxios(options);
+    return fakeAxios;
+}
+
+function resetFakeAxios() {
+    fakeAxios = null;
+}
 
 const FakeHttp = Object.freeze({
+    get client() {
+        return fakeAxios;
+    },
+
     request: async (context, data) => {
+        if (fakeAxios === null) {
+            throw new VMError("HTTP client is not initialized");
+        }
+
         const reqConfig = VMUtil.makeRequestConfig(data, context);
 
         let res = null,
@@ -239,4 +259,4 @@ const FakeHttp = Object.freeze({
     }
 });
 
-export default FakeHttp;
+export { FakeHttp, initFakeAxios, resetFakeAxios };

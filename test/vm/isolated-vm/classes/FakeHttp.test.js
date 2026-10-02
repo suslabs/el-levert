@@ -10,8 +10,7 @@ vi.mock("../../../../src/LevertClient.js", () => {
             info: () => {},
             warn: () => {}
         }),
-        getClient: () => null,
-        getConfig: () => null
+        getClient: () => null
     };
 });
 
@@ -32,7 +31,7 @@ vi.mock("isolated-vm", () => {
     };
 });
 
-import FakeHttp from "../../../../src/vm/isolated-vm/classes/FakeHttp.js";
+import { FakeHttp, initFakeAxios, resetFakeAxios } from "../../../../src/vm/isolated-vm/classes/FakeHttp.js";
 
 describe("FakeHttp security checks", () => {
     let lookupSpy;
@@ -41,6 +40,8 @@ describe("FakeHttp security checks", () => {
     const originalConnect = net.Socket.prototype.connect;
 
     beforeEach(() => {
+        resetFakeAxios();
+        initFakeAxios();
         lookupSpy = vi.spyOn(dns, "lookup");
         socketConnectSpy = vi.spyOn(net.Socket.prototype, "connect");
 
@@ -240,5 +241,53 @@ describe("FakeHttp security checks", () => {
 
         expect(res.error).toBeDefined();
         expect(res.error.message).toContain("Connection allowed");
+    });
+
+    test("is null before initialization and throws if not initialized", async () => {
+        resetFakeAxios();
+        expect(FakeHttp.client).toBeNull();
+        await expect(FakeHttp.request(undefined, { url: "http://example.com" })).rejects.toThrow(
+            "HTTP client is not initialized"
+        );
+
+        const client = initFakeAxios();
+        expect(client).not.toBeNull();
+        expect(FakeHttp.client).toBe(client);
+        expect(initFakeAxios()).toBe(client);
+
+        resetFakeAxios();
+        expect(FakeHttp.client).toBeNull();
+    });
+
+    test("allows localhost requests when allowLocalhostRequests is true", async () => {
+        resetFakeAxios();
+        initFakeAxios({
+            allowLocalhostRequests: true,
+            allowFilesystemRequests: false
+        });
+
+        const res = await FakeHttp.request(undefined, {
+            url: "http://127.0.0.1",
+            errorType: "value"
+        });
+
+        expect(res.error).toBeDefined();
+        expect(res.error.message).not.toContain("Access to local/private IP addresses is blocked");
+    });
+
+    test("allows filesystem requests when allowFilesystemRequests is true", async () => {
+        resetFakeAxios();
+        initFakeAxios({
+            allowLocalhostRequests: false,
+            allowFilesystemRequests: true
+        });
+
+        const res = await FakeHttp.request(undefined, {
+            url: "file:///C:/does_not_exist_test_file.txt",
+            errorType: "value"
+        });
+
+        expect(res.error).toBeDefined();
+        expect(res.error.message).toContain("File not found or unreadable");
     });
 });

@@ -2,7 +2,7 @@ import { FuncTypes, ExecutionTypes } from "../../../structures/vm/FuncTypes.js";
 
 import FakeMsg from "../classes/FakeMsg.js";
 import FakeUtil from "../classes/FakeUtil.js";
-import FakeHttp from "../classes/FakeHttp.js";
+import { FakeHttp } from "../classes/FakeHttp.js";
 import FakeVM from "../classes/FakeVM.js";
 
 import ManevraError from "../functionErrors/ManevraError.js";
