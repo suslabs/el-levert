@@ -45,9 +45,9 @@ const RegexUtil = Object.freeze({
 
     getWordRegex: (words, flags = "gu") => {
         words = ArrayUtil.guaranteeArray(words, null, true);
-        const validWords = [...new Set(words.filter(word => typeof word === "string" && word.length > 0))];
+        const validWords = [...new Set(words.filter(word => typeof word === "string" && !Util.empty(word)))];
 
-        if (validWords.length < 1) {
+        if (Util.empty(validWords)) {
             return null;
         }
 
@@ -69,7 +69,7 @@ const RegexUtil = Object.freeze({
         const regexCtor = exps[0].constructor;
 
         const expText = `(?:${exps.map(exp => exp.source).join(")|(?:")})`,
-            expFlags = Util.unique(exps.map(exp => exp.flags));
+            expFlags = Util.unique(exps.map(exp => exp.flags).join(""));
 
         return new regexCtor(expText, expFlags);
     },
@@ -90,7 +90,7 @@ const RegexUtil = Object.freeze({
 
             for (const match of str.matchAll(globalRegex)) {
                 const start = match.index,
-                    end = match.index + match.length;
+                    end = match.index + match[0].length;
 
                 matchInfo.push({ regex, replacement, match, start, end });
             }

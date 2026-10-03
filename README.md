@@ -111,7 +111,7 @@ Important groups of settings:
 - Discord text interface: `cmdPrefix`
 - CLI interface: `enableCliCommands`, `cliCmdPrefix`
 - WebSocket interface: `enableWebsocket`, `websocketPort`
-- Eval modes: `enableEval`, `enableVM2`, `enableOtherLangs`
+- Eval modes and script network access: `enableEval`, `enableVM2`, `enableOtherLangs`, `allowLocalhostRequests`, `allowFilesystemRequests`
 - Inspector and debugging: `enableInspector`, `enableUserInspector`, timeout and port settings
 - Tags and quotas: `maxTagNameLength`, `tagNameRegex`, `maxTagSize`, `maxQuota`
 - Reply and output limits: `outCharLimit`, `outLineLimit`, `embedCharLimit`, `embedLineLimit`
@@ -155,6 +155,8 @@ If reactions are enabled, the file defines the bracket reactions and the word-tr
 - If `enableEval` is off, eval commands are not available.
 - If `enableVM2` is off, VM2 eval and VM2 tag execution are not available.
 - If `enableOtherLangs` is off, `c`, `cpp`, and `py` eval modes are not available.
+- If `allowLocalhostRequests` is off (the default), script HTTP requests (`request` / `fetch`) cannot connect to localhost, loopback, or private network IP addresses.
+- If `allowFilesystemRequests` is off (the default), script HTTP requests cannot access local files through `file://` URLs.
 - If inspector support is off, debug flows described in this README are not available.
 
 # Features
@@ -625,6 +627,7 @@ Main differences:
 - `util.fetchMessage(ch_id | null, msg_id)` allows fetching a single message
 - `util.fetchMessages` accepts message fetch options
 - `util.findUserById` allows fetching a user that is not necessarily in the same server as the bot
+- Script HTTP requests (`request` / `fetch`) block localhost/private IP addresses and `file://` URLs by default unless `allowLocalhostRequests` or `allowFilesystemRequests` is enabled in `config/config.json`
 
 Output rules:
 
@@ -713,15 +716,18 @@ Importer usage:
 
 ```bash
 npm run importer -- --help
-npm run importer -- --json-path "path-to-tags.json"
-npm run importer -- --json-path "path-to-tags.json" --amend
+npm run importer -- --path "path-to-tags.json"
+npm run importer -- --path "path-to-tags.db" --owners owner1 owner2
+npm run importer -- --path "path-to-tags.json" --amend
 npm run importer -- --fix
 npm run importer -- --purge-old
 ```
 
 What each mode does:
 
-- `--json-path` imports a JSON tag dump
+- `-p, --path` imports a tags file (`.json` or `.db` / SQLite database)
+- `-j, --json-path` legacy path alias for importing a JSON tag dump
+- `-o, --owners` filters imported tags to only specified owner IDs (`--owners owner1 owner2`)
 - `--amend` updates existing tags instead of treating them as conflicts
 - `--fix` checks and repairs database issues
 - `--purge-old` removes old imported tags

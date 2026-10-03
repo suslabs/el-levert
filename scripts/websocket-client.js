@@ -1,7 +1,11 @@
 import { readFileSync } from "node:fs";
 import readline from "node:readline";
 
+import yargs from "yargs";
+import { hideBin } from "yargs/helpers";
+
 import GatewayClient from "./GatewayClient.js";
+
 import Util from "../src/util/Util.js";
 
 let config;
@@ -171,7 +175,14 @@ function startRepl(client) {
 }
 
 async function main() {
-    const args = process.argv.slice(2);
+    const argv = yargs(hideBin(process.argv))
+        .usage("Usage: node ./scripts/websocket-client.js [operation] [args...]")
+        .alias("help", "h")
+        .help("help")
+        .version(false)
+        .parseSync();
+
+    const args = argv._.map(String);
 
     if (!Util.empty(args)) {
         const op = args[0],

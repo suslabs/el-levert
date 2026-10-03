@@ -21,7 +21,7 @@ describe("RegexUtil", () => {
         expect("cleveret rabbit".match(RegexUtil.getWordRegex(["leveret", "rabbit"]))).toEqual(["rabbit"]);
         expect(RegexUtil.getMergedRegex([/cat/g, /dog/i]).source).toContain("cat");
         expect(RegexUtil.multipleReplace("abc123", [/[a-z]+/, "letters"], [/\d+/, value => `[${value}]`])).toBe(
-            "lettersbc[123]23"
+            "letters[123]"
         );
         expect(RegexUtil.templateReplace("Hi {{ name }} and \\{{ skip }}", { name: "Alex" })).toBe(
             "Hi Alex and \\{{ skip }}"

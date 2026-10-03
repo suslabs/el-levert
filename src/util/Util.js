@@ -219,6 +219,10 @@ let Util = {
         return str.replace(/\s+/g, "");
     },
 
+    splitChars: str => {
+        return [...str];
+    },
+
     _leadingSpacesRegex: /^\s*/,
     _trailingSpacesRegex: /\s*$/,
     capitalize: str => {
@@ -542,6 +546,10 @@ let Util = {
     },
 
     hasPrefix: (prefixes, str) => {
+        if (typeof str !== "string") {
+            return false;
+        }
+
         prefixes = Array.isArray(prefixes) ? prefixes : [prefixes];
         return prefixes.some(prefix => str.startsWith(prefix));
     },
@@ -711,15 +719,17 @@ let Util = {
         if ([typeof d1, typeof d2].includes("bigint")) {
             t1 = BigInt(t1);
             t2 = BigInt(t2);
-
             div = BigInt(div);
+
+            const dt = (t2 - t1) / div;
+            return dt < 0n ? -dt : dt;
         } else {
             t1 = Number(t1);
             t2 = Number(t2);
-        }
 
-        const dt = (t2 - t1) / div;
-        return Math.round(Math.abs(dt));
+            const dt = (t2 - t1) / div;
+            return Math.round(Math.abs(dt));
+        }
     },
 
     duration: (delta, options) => {

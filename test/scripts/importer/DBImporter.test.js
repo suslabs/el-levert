@@ -1,3 +1,8 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
+import sqlite from "sqlite3";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { cleanupRuntime, createRuntime } from "../../helpers/runtimeHarness.js";
@@ -256,5 +261,83 @@ describe("DBImporter", () => {
         expect(client2.config.enableAuditLog).toBe(true);
 
         _resetClient();
+    });
+
+    test("loads tags from SQLite .db file and filters by owners", async () => {
+        const tempDbPath = path.join(os.tmpdir(), `importer_test_${Date.now()}.db`),
+            db = new sqlite.Database(tempDbPath);
+
+        await new Promise((resolve, reject) => {
+            db.serialize(() => {
+                db.run("CREATE TABLE Tags (owner NOT NULL, name NOT NULL, body NOT NULL, alias INTEGER);", err => {
+                    if (err) return reject(err);
+                });
+                db.run(
+                    "INSERT INTO Tags (owner, name, body, alias) VALUES ('u1', 'regular_tag', 'hello world', null);",
+                    err => {
+                        if (err) return reject(err);
+                    }
+                );
+                db.run(
+                    "INSERT INTO Tags (owner, name, body, alias) VALUES ('u2', 'alias_tag', 'regular_tag', 1);",
+                    err => {
+                        if (err) return reject(err);
+                    }
+                );
+                db.run(
+                    "INSERT INTO Tags (owner, name, body, alias) VALUES ('u3', 'other_tag', 'some body', 0);",
+                    err => {
+                        if (err) return reject(err);
+                    }
+                );
+                db.close(err => {
+                    if (err) return reject(err);
+                    resolve();
+                });
+            });
+        });
+
+        try {
+            const importer = createImporter();
+
+            const allTags = await importer._loadTags(tempDbPath);
+            expect(allTags).toHaveLength(3);
+
+            const regTag = allTags.find(tag => tag.name === "regular_tag");
+            expect(regTag.owner).toBe("u1");
+            expect(regTag.body).toBe("hello world");
+            expect(regTag.isAlias).toBe(false);
+
+            const aliasTag = allTags.find(tag => tag.name === "alias_tag");
+            expect(aliasTag.owner).toBe("u2");
+            expect(aliasTag.aliasName).toBe("regular_tag");
+            expect(aliasTag.isAlias).toBe(true);
+
+            const filteredTags = await importer._loadTags(tempDbPath, { owners: ["u1", "u2"] });
+            expect(filteredTags).toHaveLength(2);
+            expect(filteredTags.map(tag => tag.name).sort()).toEqual(["alias_tag", "regular_tag"]);
+
+            const singleOwnerTags = await importer._loadTags(tempDbPath, { owners: "u3" });
+            expect(singleOwnerTags).toHaveLength(1);
+            expect(singleOwnerTags[0].name).toBe("other_tag");
+        } finally {
+            try {
+                fs.unlinkSync(tempDbPath);
+            } catch (err) {}
+        }
+    });
+
+    test("reads from leveret backup bot.db file if it exists", async () => {
+        const backupPath = "D:\\BACKUPS\\Lisan al-Gaib\\leveret\\leveret_8-17-2025 - Copy\\data\\bot.db";
+
+        if (!fs.existsSync(backupPath)) {
+            return;
+        }
+
+        const importer = createImporter();
+        const tags = await importer._loadTags(backupPath, { owners: ["291628364777652226"] });
+
+        expect(tags.length).toBeGreaterThan(0);
+        expect(tags.every(tag => tag.owner === "291628364777652226")).toBe(true);
     });
 });

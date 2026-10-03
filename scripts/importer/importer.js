@@ -1,5 +1,7 @@
 import path from "node:path";
-import { parseArgs as nodeParseArgs } from "node:util";
+
+import yargs from "yargs";
+import { hideBin } from "yargs/helpers";
 
 import "../../setupGlobals.js";
 
@@ -7,100 +9,84 @@ import createLogger from "../../src/logger/createLogger.js";
 import getDefaultLoggerConfig from "../../src/logger/DefaultLoggerConfig.js";
 
 import ConfigLoader from "../../src/loaders/config/ConfigLoader.js";
-
-import { LevertClient } from "./mock/FakeClient.js";
 import TagManager from "../../src/managers/database/TagManager.js";
 
 import DBImporter from "./DBImporter.js";
 import DBUpdateModes from "./DBUpdateModes.js";
 
+import { LevertClient } from "./mock/FakeClient.js";
+
 import Util from "../../src/util/Util.js";
-
-const help = `
-Usage:
-  npm run importer [options]
-
-Options:
-  -h, --help         Show this help message
-  -j, --json-path    Path to the tags JSON file
-  -a, --amend        Amend existing tags
-  -x, --fix          Automatically fix DB issues
-  -1, --purge-old    Purge old tags
-  -l, --audit        Write tag revisions to the audit log
-`.trim(),
-    usage = "See npm run importer --help for usage.";
-
-const argsOptions = {
-    help: {
-        type: "boolean",
-        short: "h"
-    },
-    amend: {
-        type: "boolean",
-        short: "a"
-    },
-    "json-path": {
-        type: "string",
-        short: "i"
-    },
-    fix: {
-        type: "boolean",
-        short: "x"
-    },
-    "purge-old": {
-        type: "boolean",
-        short: "1"
-    },
-    audit: {
-        type: "boolean",
-        short: "l"
-    }
-};
+import ArrayUtil from "../../src/util/ArrayUtil.js";
 
 function parseArgs() {
-    let args = null;
-
-    try {
-        args = nodeParseArgs({
-            options: argsOptions,
-            args: process.argv.slice(2)
-        });
-    } catch (err) {
-        if (!err.code?.startsWith("ERR_PARSE")) {
-            throw err;
-        }
-
-        console.error(`ERROR: ${err.message}.`);
-        console.log(usage);
-
-        return null;
-    }
-
-    return args;
+    return yargs(hideBin(process.argv))
+        .usage("Usage: npm run importer [options]")
+        .options({
+            path: {
+                alias: "p",
+                type: "string",
+                describe: "Path to the tags file (.json or .db)"
+            },
+            "json-path": {
+                alias: "j",
+                type: "string",
+                describe: "Path to the tags JSON file (legacy alias)"
+            },
+            owners: {
+                alias: "o",
+                type: "array",
+                string: true,
+                describe: "Owner ID(s) to import"
+            },
+            amend: {
+                alias: "a",
+                type: "boolean",
+                default: false,
+                describe: "Amend existing tags"
+            },
+            fix: {
+                alias: "x",
+                type: "boolean",
+                default: false,
+                describe: "Automatically fix DB issues"
+            },
+            "purge-old": {
+                alias: "1",
+                type: "boolean",
+                default: false,
+                describe: "Purge old tags"
+            },
+            audit: {
+                alias: "l",
+                type: "boolean",
+                default: false,
+                describe: "Write tag revisions to the audit log"
+            }
+        })
+        .alias("help", "h")
+        .help("help")
+        .version(false)
+        .strict()
+        .parseSync();
 }
 
-function getInputValues(args) {
-    if (args === null) {
+function getInputValues(argv) {
+    if (argv == null) {
         return null;
     }
 
-    const values = args.values,
-        argsNames = Object.keys(values);
+    let targetPath = argv.path ?? argv["json-path"] ?? "",
+        amend = argv.amend ?? false,
+        fix = argv.fix ?? false,
+        purgeOld = argv["purge-old"] ?? false,
+        audit = argv.audit ?? false;
 
-    if (Util.empty(argsNames) || values.help) {
-        console.log(help);
-        return null;
-    }
+    targetPath = targetPath.trim();
 
-    let jsonPath = values["json-path"]?.trim() ?? "",
-        amend = values.amend ?? false,
-        fix = values.fix ?? false,
-        purgeOld = args.values["purge-old"] ?? false,
-        audit = values.audit ?? false;
-
-    if (Util.empty(jsonPath)) {
+    if (Util.empty(targetPath)) {
         if (!fix && !purgeOld) {
-            console.log(help);
+            yargs(hideBin(process.argv)).showHelp();
             return null;
         }
 
@@ -110,12 +96,26 @@ function getInputValues(args) {
             fix = false;
         }
     } else {
-        jsonPath = path.resolve(jsonPath);
+        targetPath = path.resolve(targetPath);
         fix = purgeOld = false;
     }
 
+    let ownerIds = null;
+
+    if (argv.owners != null) {
+        ownerIds = ArrayUtil.guaranteeArray(argv.owners)
+            .flatMap(item => String(item).split(","))
+            .map(id => id.trim())
+            .filter(id => !Util.empty(id));
+
+        if (Util.empty(ownerIds)) {
+            ownerIds = null;
+        }
+    }
+
     return {
-        jsonPath,
+        path: targetPath,
+        owners: ownerIds,
         amend,
         fix,
         purgeOld,
@@ -176,9 +176,11 @@ async function loadTagManager() {
 
     const importer = new DBImporter(tagManager, logger);
 
-    if (!Util.empty(input.jsonPath)) {
+    if (!Util.empty(input.path)) {
         const updateMode = Object.values(DBUpdateModes)[Number(input.amend)];
-        await importer.updateDatabase(input.jsonPath, updateMode);
+        await importer.updateDatabase(input.path, updateMode, {
+            owners: input.owners
+        });
     } else if (input.fix) {
         await importer.fix();
     } else if (input.purgeOld) {

@@ -1,3 +1,7 @@
+import path from "node:path";
+
+import sqlite from "sqlite3";
+
 import JsonLoader from "../../src/loaders/JsonLoader.js";
 
 import TagManager from "../../src/managers/database/TagManager.js";
@@ -11,6 +15,7 @@ import TagDifferenceType from "./TagDifferenceType.js";
 import Util from "../../src/util/Util.js";
 import TypeTester from "../../src/util/TypeTester.js";
 import ArrayUtil from "../../src/util/ArrayUtil.js";
+import ObjectUtil from "../../src/util/ObjectUtil.js";
 
 import TagCommand from "../../src/commands/tag/tag.js";
 
@@ -78,12 +83,17 @@ class DBImporter {
         return diff;
     }
 
-    constructor(tagManager, logger) {
+    constructor(tagManager, logger, options = {}) {
+        options = ObjectUtil.guaranteeObject(options);
+
         this.logger = logger;
         this.tagManager = tagManager;
+        this.options = options;
     }
 
-    async updateDatabase(path, mode = DBUpdateModes.overwrite) {
+    async updateDatabase(path, mode = DBUpdateModes.overwrite, options = {}) {
+        options = ObjectUtil.guaranteeObject(options);
+
         path = String(path ?? "").trim();
 
         if (Util.empty(path)) {
@@ -94,7 +104,9 @@ class DBImporter {
             throw new ImporterError("Invalid update mode: " + mode, mode);
         }
 
-        let importTags = await this._loadTags(path),
+        const owners = options.owners ?? this.options.owners ?? null;
+
+        let importTags = await this._loadTags(path, { owners }),
             currentTags = await this.tagManager.dump(true);
 
         let diffTypes = [];
@@ -178,6 +190,39 @@ class DBImporter {
         });
     }
 
+    _loadSqliteTags(dbPath) {
+        return new Promise((resolve, reject) => {
+            const db = new sqlite.Database(dbPath, sqlite.OPEN_READONLY, err => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+
+                db.all("SELECT owner, name, body, alias FROM Tags;", (queryErr, rows) => {
+                    db.close(closeErr => {
+                        if (queryErr || closeErr) {
+                            reject(queryErr ?? closeErr);
+                            return;
+                        }
+
+                        const tags = rows.map(row => {
+                            const isAlias = Boolean(row.alias);
+
+                            return {
+                                owner: String(row.owner ?? ""),
+                                name: String(row.name ?? ""),
+                                body: isAlias ? "" : String(row.body ?? ""),
+                                aliasName: isAlias ? String(row.body ?? "") : ""
+                            };
+                        });
+
+                        resolve(tags);
+                    });
+                });
+            });
+        });
+    }
+
     _validTag(data) {
         if (!TypeTester.validateProps(data, DBImporter._requiredTagProps)) {
             return false;
@@ -209,10 +254,28 @@ class DBImporter {
         return true;
     }
 
-    async _loadTags(path) {
-        const loader = new JsonLoader("tags", path, this.logger);
+    async _loadTags(filePath, options = {}) {
+        options = ObjectUtil.guaranteeObject(options);
 
-        let [data] = await loader.load();
+        const ext = path.extname(filePath).toLowerCase(),
+            isDb = ext === ".db" || ext === ".sqlite";
+
+        let data;
+
+        if (isDb) {
+            data = await this._loadSqliteTags(filePath);
+        } else {
+            const loader = new JsonLoader("tags", filePath, this.logger);
+            [data] = await loader.load();
+        }
+
+        const owners = options.owners ?? null;
+
+        if (owners !== null) {
+            const ownerSet = new Set(ArrayUtil.guaranteeArray(owners).map(String));
+            data = data.filter(item => ownerSet.has(String(item.owner)));
+        }
+
         data = data.filter(data => this._validTag(data));
         data = ArrayUtil.unique(data, "name");
 
@@ -229,6 +292,21 @@ class DBImporter {
 
         this.tags = tags;
         return tags;
+    }
+
+    async _deleteTags(deletedTags, currentTags) {
+        let count = 0;
+
+        for (const name of deletedTags) {
+            const oldTag = currentTags.get(name);
+
+            await this.tagManager
+                .delete(oldTag, false, { actor: this.constructor.actor })
+                .then(() => count++)
+                .catch(err => this.logger.error(`Error occured while deleting "${name}":`, err));
+        }
+
+        return count;
     }
 
     async _updateTags(existingTags, importTags, currentTags) {
@@ -264,21 +342,6 @@ class DBImporter {
                         .catch(err => this.logger.error(`Error occured while adding "${name}":`, err));
                 });
             }
-        }
-
-        return count;
-    }
-
-    async _deleteTags(deletedTags, currentTags) {
-        let count = 0;
-
-        for (const name of deletedTags) {
-            const oldTag = currentTags.get(name);
-
-            await this.tagManager
-                .delete(oldTag, false, { actor: this.constructor.actor })
-                .then(() => count++)
-                .catch(err => this.logger.error(`Error occured while deleting "${name}":`, err));
         }
 
         return count;

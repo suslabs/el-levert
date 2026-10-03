@@ -13,7 +13,7 @@ const Stoik = Object.freeze({
             throw new StoikError("Invalid equation");
         }
 
-        const tokens = equation.split(""),
+        const tokens = Util.splitChars(equation),
             res = [];
 
         let idx = 0,

@@ -127,6 +127,10 @@ const ObjectUtil = Object.freeze({
     },
 
     shallowClone: (obj, options = AssignPropertyTypes.keys) => {
+        if (Array.isArray(obj)) {
+            return [...obj];
+        }
+
         const clone = Object.create(Object.getPrototypeOf(obj));
         return ObjectUtil.assign(clone, obj, options);
     },

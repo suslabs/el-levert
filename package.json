@@ -26,7 +26,8 @@
         "re2": "^1.25.0",
         "typescript": "^6.0.3",
         "winston": "^3.19.0",
-        "ws": "^8.21.0"
+        "ws": "^8.21.0",
+        "yargs": "^18.2.0"
     },
     "optionalDependencies": {
         "vm2": "^3.11.5"

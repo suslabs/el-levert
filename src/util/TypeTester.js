@@ -18,6 +18,8 @@ const TypeTester = Object.freeze({
             return false;
         } else if (obj.toString().startsWith("class")) {
             return true;
+        } else if (!obj.prototype) {
+            return false;
         } else {
             return Object.getOwnPropertyNames(obj.prototype).length > 1;
         }
@@ -35,14 +37,21 @@ const TypeTester = Object.freeze({
         if (obj == null) {
             return "";
         } else if (typeof obj === "function") {
-            obj = obj.prototype;
-        }
+            if (obj.name) {
+                return obj.name;
+            }
 
-        return obj.constructor.name;
+            obj = obj.prototype;
+            if (obj == null) {
+                return "Function";
+            }
+        } else {
+            return obj.constructor?.name ?? "";
+        }
     },
 
     charType: char => {
-        if (char?.length !== 1) {
+        if (typeof char !== "string" || char.length !== 1) {
             return "invalid";
         }
 

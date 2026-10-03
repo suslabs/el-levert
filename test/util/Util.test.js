@@ -24,6 +24,7 @@ describe("Util", () => {
         expect(Util.formatNumber(1e25, 2)).toContain("e");
         expect(Util.splitAt("alpha beta")).toEqual(["alpha", " beta"]);
         expect(Util.stripSpaces(" a \n b ")).toBe("ab");
+        expect(Util.splitChars("hello")).toEqual(["h", "e", "l", "l", "o"]);
         expect(Util.capitalize("  hello  ")).toBe("  Hello  ");
         expect(Util.camelCaseToKebab("channelLastMessageId")).toBe("channel-last-message-id");
         expect(Util.camelCaseToWords("helloWorld")).toBe("hello world");
@@ -118,7 +119,7 @@ describe("Util", () => {
         expect(Util.numberToBytes(-1)).toBeNull();
         expect(Util.bytesToNumber(new Uint8Array([0x34, 0x12]))).toBe(0x1234);
         expect(Util.validUrl("https://example.com/test")).toBe(true);
-        expect(() => Util.timeDelta(10n, 42n, 2n)).toThrow("Cannot convert a BigInt value to a number");
+        expect(Util.timeDelta(10n, 42n, 2n)).toBe(16n);
         expect(Util.duration(65_000)).toEqual({ second: 65 });
         expect(Util.duration(65_000, 5)).toEqual({ second: 65 });
         expect(Util.duration(65_000, { largestOnly: true, format: true })).toBe("65 seconds");

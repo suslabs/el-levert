@@ -1,6 +1,10 @@
 import { readFileSync } from "node:fs";
 
+import yargs from "yargs";
+import { hideBin } from "yargs/helpers";
+
 import GatewayClient from "./GatewayClient.js";
+
 import Util from "../src/util/Util.js";
 import FileUtil from "../src/util/misc/FileUtil.js";
 
@@ -17,14 +21,17 @@ try {
 const port = config.websocketPort ?? 8081,
     url = `ws://localhost:${port}`;
 
-const args = process.argv.slice(2);
+const argv = yargs(hideBin(process.argv))
+    .usage("Usage: node ./scripts/vscode-debug.js <file> [payload]")
+    .demandCommand(1, "Error: No file path specified.")
+    .alias("help", "h")
+    .help("help")
+    .version(false)
+    .parseSync();
 
-if (Util.empty(args)) {
-    console.error("Error: No file path specified.");
-    process.exit(1);
-}
+const [filePathArg, payloadArg] = argv._.map(String),
+    filePath = FileUtil.resolve(filePathArg);
 
-const filePath = FileUtil.resolve(args[0]);
 let fileContent;
 
 try {
@@ -38,11 +45,11 @@ const sourceUrl = FileUtil.toFileUrl(filePath);
 
 let extraData = {};
 
-if (typeof args[1] === "string") {
+if (Util.nonemptyString(payloadArg)) {
     try {
-        extraData = JSON.parse(args[1]);
+        extraData = JSON.parse(payloadArg);
     } catch (err) {
-        console.error(`Error parsing debug payload "${args[1]}":`, err.message);
+        console.error(`Error parsing debug payload "${payloadArg}":`, err.message);
         process.exit(1);
     }
 }

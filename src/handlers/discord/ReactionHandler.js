@@ -160,9 +160,9 @@ class ReactionHandler extends Handler {
     }
 
     static _faceRegex = (() => {
-        const [symEscaped, letEscaped] = ArrayUtil.split(this.emojiEyeChars.split(""), c => /[a-zA-Z]/.test(c)).map(
-                chars => RegexUtil.escapeCharClass(chars.join(""))
-            ),
+        const [symEscaped, letEscaped] = ArrayUtil.split(Util.splitChars(this.emojiEyeChars), c =>
+                /[a-zA-Z]/.test(c)
+            ).map(chars => RegexUtil.escapeCharClass(chars.join(""))),
             noseEscaped = RegexUtil.escapeCharClass(this.emojiNoseChars);
 
         return new RegExp(

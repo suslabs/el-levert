@@ -23,7 +23,10 @@ const FunctionUtil = Object.freeze({
         }
 
         const args = match[1];
-        return args.split(", ").map(arg => arg.trim());
+        return args
+            .split(",")
+            .map(arg => arg.trim())
+            .filter(Boolean);
     },
 
     getArgumentPositions: (func, names) => {

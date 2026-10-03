@@ -505,12 +505,17 @@ let DiscordUtil = {
         return embedData;
     },
 
-    fetchAttachment: async (msg, responseType = "text", options) => {
-        options = ObjectUtil.guaranteeObject(options);
+    _fetchAttachmentDefaults: {
+        allowedContentType: [],
+        allowedContentTypes: [],
+        maxSize: Infinity
+    },
+    fetchAttachment: async (msg, responseType = "text", options = {}) => {
+        options = ObjectUtil.setValuesWithDefaults({}, options, DiscordUtil._fetchAttachmentDefaults);
 
-        const ctypes = [].concat(options.allowedContentType ?? [], options.allowedContentTypes ?? []);
+        const ctypes = [].concat(options.allowedContentType, options.allowedContentTypes);
 
-        const maxSizeKb = Math.round(options.maxSize ?? Infinity),
+        const maxSizeKb = Math.round(options.maxSize),
             maxSize = maxSizeKb * Util.dataBytes.kilobyte;
 
         const maxSizeError = attachSize =>
