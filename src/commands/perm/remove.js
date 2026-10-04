@@ -52,8 +52,15 @@ class PermRemoveCommand {
 
         if (group === null) {
             return `${getEmoji("warn")} Group **${escapeMarkdown(g_name)}** doesn't exist.`;
-        } else if (!getClient().permManager.canManageLevel(ctx.perm, group.level)) {
-            return `${getEmoji("warn")} Can't remove user \`${find.user.username}\` (\`${find.user.id}\`) from a group with a level that is higher than or equal to your own. (**${group.level}** >= **${ctx.perm}**)`;
+        }
+
+        {
+            const action = `remove user \`${find.user.username}\` (\`${find.user.id}\`) from a group`,
+                err = this.parentCmd.checkLevel(ctx, group.level, action);
+
+            if (err !== null) {
+                return err;
+            }
         }
 
         let removed = false;

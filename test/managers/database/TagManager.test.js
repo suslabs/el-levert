@@ -189,6 +189,12 @@ describe("TagManager", () => {
         expect(await manager.tag_db.usageFetch("direct")).toBe(0);
         expect(await manager.tag_db.usageFetch("bound")).toBe(2);
         expect(await manager.tag_db.usageFetch("passthrough")).toBe(0);
+
+        const defaultResolved = await manager.fetchAlias(passthrough),
+            targetResolved = await manager.fetchAlias(passthrough, false);
+
+        expect(defaultResolved.name).toBe("passthrough");
+        expect(targetResolved.name).toBe("target");
     });
 
     test("covers validation and stale-row error paths against the real database", async () => {
@@ -249,7 +255,8 @@ describe("TagManager", () => {
             )
         ).resolves.toEqual({
             body: "plain file",
-            isScript: false
+            isScript: false,
+            isBinary: false
         });
 
         await expect(
@@ -264,7 +271,8 @@ describe("TagManager", () => {
             )
         ).resolves.toEqual({
             body: "console.log(1);",
-            isScript: true
+            isScript: true,
+            isBinary: false
         });
 
         await expect(
@@ -400,7 +408,8 @@ describe("Merged Branch Coverage", () => {
 
             expect(out).toEqual({
                 body: "prefix https://example.com/file.png",
-                isScript: false
+                isScript: false,
+                isBinary: false
             });
         });
 
@@ -412,6 +421,55 @@ describe("Merged Branch Coverage", () => {
             expect(res.count).toBe(1);
             expect(res.newTags.map(t => t.name)).toEqual(["tag-new"]);
             expect(res.oldTags).toEqual([]);
+        });
+
+        test("supports binary tags, hide/unhide operations, and quota limits", async () => {
+            const manager = await createManager();
+            const binData = new Uint8Array([10, 20, 30, 40]);
+
+            const binTag = await manager.add("mybin", binData, "u1", { type: "binary" });
+            expect(binTag.isBinary).toBe(true);
+            expect(binTag.isHidden).toBe(true);
+
+            await expect(manager.execute(binTag)).rejects.toThrow(
+                "Tag is a binary tag and the content cannot be displayed"
+            );
+
+            const fetchedBin = await manager.fetch("mybin");
+            expect(fetchedBin.isBinary).toBe(true);
+            expect(fetchedBin.body).toBeInstanceOf(Uint8Array);
+            expect(Array.from(fetchedBin.body)).toEqual([10, 20, 30, 40]);
+
+            const fullSearch = await manager.fullSearch("30");
+            expect(fullSearch.results.find(t => t.name === "mybin")).toBeUndefined();
+
+            const searchRes = await manager.search("mybin");
+            expect(searchRes.results).not.toContain("mybin");
+
+            await expect(manager.unhide(binTag)).rejects.toThrow("Binary tags cannot be unhidden");
+
+            const textTag = await manager.add("mytext", "searchable content", "u1", { type: "text" });
+            expect(textTag.isHidden).toBe(false);
+
+            let textSearch = await manager.search("mytext");
+            expect(textSearch.results).toContain("mytext");
+
+            await manager.hide(textTag);
+            expect((await manager.fetch("mytext")).isHidden).toBe(true);
+
+            textSearch = await manager.search("mytext");
+            expect(textSearch.results).not.toContain("mytext");
+
+            await manager.unhide(textTag);
+            expect((await manager.fetch("mytext")).isHidden).toBe(false);
+
+            textSearch = await manager.search("mytext");
+            expect(textSearch.results).toContain("mytext");
+
+            manager.maxTagCount = 2;
+            await expect(manager.add("overflow", "third tag", "u1", { type: "text" })).rejects.toThrow(
+                "Maximum tag count quota of 2 has been exceeded"
+            );
         });
     });
 });

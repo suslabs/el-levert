@@ -67,9 +67,12 @@ class TagAliasCommand {
 
         const tag = await getClient().tagManager.fetch(t_name);
 
-        if (tag !== null && tag.owner !== ctx.msg.author.id && !getClient().permManager.allowed(ctx.perm, "mod")) {
-            const owner = await tag.getOwner();
-            return `${getEmoji("warn")} You can only edit your own tags.${owner === "not found" ? " Tag owner not found." : ` The tag is owned by \`${owner}\`.`}`;
+        {
+            const err = await this.parentCmd.checkOwner(tag, ctx, "edit");
+
+            if (err !== null) {
+                return err;
+            }
         }
 
         const a_tag = await getClient().tagManager.fetch(a_name);

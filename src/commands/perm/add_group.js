@@ -58,8 +58,12 @@ class PermAddGroupCommand {
             }
         }
 
-        if (!getClient().permManager.canManageLevel(ctx.perm, level)) {
-            return `${getEmoji("warn")} Can't create a group with a level that is higher than or equal to your own. (**${ctx.perm}** <= **${level}**)`;
+        {
+            const err = this.parentCmd.checkLevel(ctx, level, "create a group");
+
+            if (err !== null) {
+                return err;
+            }
         }
 
         try {

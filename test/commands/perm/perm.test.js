@@ -277,5 +277,26 @@ describe("Merged Branch Coverage", () => {
             );
             expect(await run("update_group writers scribes 4")).toContain("Update failed");
         });
+
+        test("checkLevel helper handles valid, null, and forbidden levels with options", () => {
+            const command = getCommand(runtime, "perm"),
+                ctx = { perm: 5 };
+
+            expect(command.checkLevel(ctx, null, "do action")).toBeNull();
+            expect(command.checkLevel(ctx, 4, "do action")).toBeNull();
+
+            const defaultErr = command.checkLevel(ctx, 5, "manage");
+            expect(defaultErr).toContain(
+                "Can't manage with a level that is higher than or equal to your own. (**5** <= **5**)"
+            );
+
+            const customErr = command.checkLevel(ctx, 6, "remove", {
+                pronoun: "yours",
+                connector: "at"
+            });
+            expect(customErr).toContain(
+                "Can't remove at a level that is higher than or equal to yours. (**5** <= **6**)"
+            );
+        });
     });
 });

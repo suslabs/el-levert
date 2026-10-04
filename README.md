@@ -113,7 +113,7 @@ Important groups of settings:
 - WebSocket interface: `enableWebsocket`, `websocketPort`
 - Eval modes and script network access: `enableEval`, `enableVM2`, `enableOtherLangs`, `allowLocalhostRequests`, `allowFilesystemRequests`
 - Inspector and debugging: `enableInspector`, `enableUserInspector`, timeout and port settings
-- Tags and quotas: `maxTagNameLength`, `tagNameRegex`, `maxTagSize`, `maxQuota`
+- Tags and quotas: `maxTagNameLength`, `tagNameRegex`, `maxTagSize` (per-tag limits for `text`, `script`, and `binary`), `maxQuota`, `maxTagCount`
 - Reply and output limits: `outCharLimit`, `outLineLimit`, `embedCharLimit`, `embedLineLimit`
 - Major features: `enablePreviews`, `enableSed`, `enablePermissions`, `enableReminders`
 - Logging and file paths: log files, log level, database path, command paths, Discord log settings
@@ -251,6 +251,8 @@ Main actions:
 - `edit (name) [new_body]` replaces a tag's body
 - `delete (name)` removes a tag
 - `rename (name) (new_name)` renames a tag
+- `hide (name)` hides a tag from search, suggestions, and fullsearch
+- `unhide (name)` unhides a hidden tag (binary tags cannot be unhidden)
 - `raw (name)` shows the stored body exactly as saved
 - `info (name) [raw]` shows stored tag details for moderators
 - `owner (name)` shows the owner
@@ -334,6 +336,7 @@ Tag body input:
 - Starting the body with `vm2` creates a `vm2` script tag.
 - An attached image is stored as an image URL tag.
 - An attached text file is stored as script content.
+- An attached binary file (MIME `application/octet-stream` or extension `.bin`) is stored as a binary tag. Binary tags cannot be executed directly, are hidden by default, and can be retrieved via `raw`, `fetch`, or `dump`.
 - For `add` and `edit`, admins can also give a local file path instead of inline body text. Absolute paths and `file://` URLs must exist. Relative paths are only treated as files when the file exists.
 - If a saved tag uses a Discord-hosted attachment URL, the bot warns that the media can disappear if the original source message is deleted.
 

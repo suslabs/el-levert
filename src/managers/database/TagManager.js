@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import DBManager from "./DBManager.js";
 import TagRevisionManager from "./revision/TagRevisionManager.js";
 import FakeTagRegistry from "./FakeTagRegistry.js";
@@ -10,7 +12,7 @@ import TagVM2 from "../../vm/vm2/TagVM2.js";
 
 import { TagTypes } from "../../structures/tag/TagTypes.js";
 import { RevisionOperationTypes } from "../../structures/revision/RevisionOperationTypes.js";
-import { fileContentTypes, scriptContentTypes } from "./TagContentTypes.js";
+import { fileContentTypes, scriptContentTypes, binaryContentTypes, binaryExtensions } from "./TagContentTypes.js";
 
 import { getClient, getConfig, getLogger } from "../../LevertClient.js";
 
@@ -37,8 +39,9 @@ class TagManager extends DBManager {
     constructor(enabled) {
         super(enabled, "tag", "tag_db", TagDatabase);
 
-        this.maxQuota = getConfig().maxQuota;
         this.maxTagSize = getConfig().maxTagSize;
+        this.maxQuota = getConfig().maxQuota ?? this.maxTagSize.text + this.maxTagSize.script + this.maxTagSize.binary;
+        this.maxTagCount = getConfig().maxTagCount;
 
         this.maxTagNameLength = getConfig().maxTagNameLength;
         this.tagNameRegex = new RegExp(getConfig().tagNameRegex);
@@ -80,12 +83,19 @@ class TagManager extends DBManager {
         }
     }
 
-    checkBody(body, throwErrors = true) {
+    checkBody(body, throwErrors = true, isBinary = false) {
         let msg, ref;
-        body = String(body).trim();
 
-        if (Util.empty(body)) {
-            msg = "Tag body is empty";
+        if (isBinary) {
+            if (!ArrayBuffer.isView(body) || body.byteLength === 0) {
+                msg = "Tag body is empty";
+            }
+        } else {
+            body = String(body ?? "").trim();
+
+            if (Util.empty(body)) {
+                msg = "Tag body is empty";
+            }
         }
 
         const errored = typeof msg !== "undefined";
@@ -142,65 +152,59 @@ class TagManager extends DBManager {
             : tag;
     }
 
-    async fetchAlias(tag, aliasOriginal = false, validate = false) {
+    async fetchAlias(tag, options = true) {
+        options = typeof options === "boolean" ? { aliasOriginal: options } : ObjectUtil.guaranteeObject(options);
+
+        const aliasOriginal = options.aliasOriginal ?? true;
+
         tag = Tag.from(tag, true);
 
         if (tag === null) {
-            return validate
-                ? null
-                : (() => {
-                      throw new TagError("Tag doesn't exist");
-                  })();
+            throw new TagError("Tag doesn't exist");
         } else if (!tag.isAlias || tag._fetched) {
             return tag;
-        } else if (validate) {
-            this.checkName(tag.name);
         }
 
-        const hops = [],
-            args = [];
+        const rows = await this.tag_db.fetchAlias(tag.aliasName, Tag._argsSeparator);
 
-        let lastTag = tag,
-            usageName = null;
+        if (Util.empty(rows)) {
+            throw new TagError("Hop not found", tag.aliasName);
+        }
 
-        while (lastTag !== null) {
-            const hop = lastTag.name;
+        let usageName = Util.nonemptyString(tag.args) ? tag.name : null,
+            hops = [tag.name];
 
-            if (validate) {
-                this.checkName(hop);
-            }
+        for (const row of rows) {
+            const hop = row.name;
 
             if (hops.includes(hop)) {
-                const recursionHops = hops.concat(hop);
-                throw new TagError("Tag recursion detected", recursionHops);
+                throw new TagError("Tag recursion detected", hops.concat(hop));
             }
 
             hops.push(hop);
 
-            if (usageName === null && !(lastTag.isAlias && Util.empty(lastTag.args))) {
+            if (usageName === null && (row.aliasName === null || Util.nonemptyString(row.args))) {
                 usageName = hop;
-            }
-
-            args.push(lastTag.args);
-
-            if (!lastTag.isAlias) {
-                break;
-            }
-
-            const aliasName = lastTag.aliasName;
-
-            if (validate) {
-                this.checkName(aliasName);
-            }
-
-            lastTag = await this.fetch(aliasName);
-
-            if (lastTag === null) {
-                throw new TagError("Hop not found", aliasName);
             }
         }
 
-        lastTag._setAliasProps(hops, args);
+        const lastRow = Util.last(rows);
+
+        if (lastRow.aliasName !== null) {
+            if (hops.includes(lastRow.aliasName)) {
+                throw new TagError("Tag recursion detected", hops.concat(lastRow.aliasName));
+            }
+
+            throw new TagError("Hop not found", lastRow.aliasName);
+        }
+
+        const lastTag = new Tag(lastRow);
+
+        const collectedArgs = [tag.args, lastRow.collectedArgs]
+            .filter(arg => Util.nonemptyString(arg))
+            .join(Tag._argsSeparator);
+
+        lastTag._setAliasProps(hops, collectedArgs);
         lastTag._usageName = usageName;
 
         if (aliasOriginal) {
@@ -216,7 +220,11 @@ class TagManager extends DBManager {
         values = ObjectUtil.guaranteeObject(values);
         options = ObjectUtil.guaranteeObject(options);
 
-        tag = await this.fetchAlias(tag, true);
+        tag = await this.fetchAlias(tag);
+
+        if (tag.isBinary) {
+            throw new TagError("Tag is a binary tag and the content cannot be displayed");
+        }
 
         const usageName = tag._usageName ?? tag.name;
 
@@ -245,6 +253,8 @@ class TagManager extends DBManager {
         meta = Tag.normalizeMeta(meta);
         options = ObjectUtil.guaranteeObject(options);
 
+        const isBinary = meta.type === "binary";
+
         validate = ObjectUtil.getBooleanOptions(
             validate,
             {
@@ -259,7 +269,7 @@ class TagManager extends DBManager {
 
         if (validate.validateNew) {
             name = this.checkName(name);
-            body = this.checkBody(body);
+            body = this.checkBody(body, true, isBinary);
         }
 
         if (validate.checkExisting) {
@@ -299,8 +309,10 @@ class TagManager extends DBManager {
 
         meta = Tag.normalizeMeta(meta);
 
+        const isBinary = meta.type === "binary";
+
         if (validate.validateNew) {
-            body = this.checkBody(body);
+            body = this.checkBody(body, true, isBinary);
         }
 
         const newTag = new Tag({
@@ -309,6 +321,21 @@ class TagManager extends DBManager {
             body,
             meta
         });
+
+        const newSize = newTag.getSize(),
+            typeLimit = newTag.isBinary
+                ? this.maxTagSize.binary
+                : newTag.isScript
+                  ? this.maxTagSize.script
+                  : this.maxTagSize.text;
+
+        if (newSize > typeLimit) {
+            const typeName = newTag.isBinary ? "Binary tag" : newTag.isScript ? "Script tag" : "Tag";
+            throw new TagError(`${typeName}s can take up at most ${typeLimit} kb`, {
+                size: newSize,
+                limit: typeLimit
+            });
+        }
 
         if (validate.checkExisting && tag.equivalent(newTag)) {
             throw new TagError("Can't update tag with the same body", tag);
@@ -370,7 +397,22 @@ class TagManager extends DBManager {
 
         if (validate.validateNew) {
             this.checkName(tag.name);
-            this.checkBody(tag.body);
+            this.checkBody(tag.body, true, tag.isBinary);
+        }
+
+        const newTagSize = tag.getSize(),
+            typeLimit = tag.isBinary
+                ? this.maxTagSize.binary
+                : tag.isScript
+                  ? this.maxTagSize.script
+                  : this.maxTagSize.text;
+
+        if (newTagSize > typeLimit) {
+            const typeName = tag.isBinary ? "Binary tag" : tag.isScript ? "Script tag" : "Tag";
+            throw new TagError(`${typeName}s can take up at most ${typeLimit} kb`, {
+                size: newTagSize,
+                limit: typeLimit
+            });
         }
 
         if (validate.checkExisting && name !== tag.name) {
@@ -647,6 +689,86 @@ class TagManager extends DBManager {
         return tag;
     }
 
+    async hide(tag, validate = false, options) {
+        tag = Tag.from(tag, true);
+        options = ObjectUtil.guaranteeObject(options);
+
+        if (tag === null) {
+            throw new TagError("Tag doesn't exist");
+        } else if (tag.isFake) {
+            throw new TagError("Cannot edit tag", tag.name);
+        } else if (validate) {
+            this.checkName(tag.name);
+        }
+
+        if (tag.isHidden) {
+            throw new TagError("Tag is already hidden", tag.name);
+        }
+
+        const oldTag = this._cloneTag(tag);
+        tag.setHidden();
+        tag.setLastEdited();
+
+        await this.tag_db.transactionImmediate(async tx => {
+            const res = await tx.edit(tag),
+                updated = res.changes > 0;
+
+            if (updated) {
+                getLogger().info(`Hid tag: "${tag.name}".`);
+            } else if (validate) {
+                throw new TagError("Tag doesn't exist", tag.name);
+            }
+
+            if (updated) {
+                await this.revisions.recordUpdate(oldTag, tag, tx, this._getRevisionOptions(options, tag.owner));
+            }
+        });
+
+        return tag;
+    }
+
+    async unhide(tag, validate = false, options) {
+        tag = Tag.from(tag, true);
+        options = ObjectUtil.guaranteeObject(options);
+
+        if (tag === null) {
+            throw new TagError("Tag doesn't exist");
+        } else if (tag.isFake) {
+            throw new TagError("Cannot edit tag", tag.name);
+        } else if (validate) {
+            this.checkName(tag.name);
+        }
+
+        if (tag.isBinary) {
+            throw new TagError("Binary tags cannot be unhidden", tag.name);
+        }
+
+        if (!tag.isHidden) {
+            throw new TagError("Tag is not hidden", tag.name);
+        }
+
+        const oldTag = this._cloneTag(tag);
+        tag.unsetHidden();
+        tag.setLastEdited();
+
+        await this.tag_db.transactionImmediate(async tx => {
+            const res = await tx.edit(tag),
+                updated = res.changes > 0;
+
+            if (updated) {
+                getLogger().info(`Unhid tag: "${tag.name}".`);
+            } else if (validate) {
+                throw new TagError("Tag doesn't exist", tag.name);
+            }
+
+            if (updated) {
+                await this.revisions.recordUpdate(oldTag, tag, tx, this._getRevisionOptions(options, tag.owner));
+            }
+        });
+
+        return tag;
+    }
+
     async audit(options) {
         options = ObjectUtil.guaranteeObject(options);
         return await this.revisions.list(options);
@@ -770,7 +892,7 @@ class TagManager extends DBManager {
             this.checkName(query);
         }
 
-        const tags = await this.dump();
+        const tags = await this.dump(false, [false, "hidden"]);
 
         return diceSearch(tags, query, {
             maxResults,
@@ -779,7 +901,7 @@ class TagManager extends DBManager {
     }
 
     async fullSearch(query, maxResults = 20) {
-        let tags = await this.dump(true, [false, "script"]);
+        let tags = await this.dump(true, [false, "script", "hidden"]);
 
         tags = tags
             .filter(tag => !tag.isAlias)
@@ -863,7 +985,7 @@ class TagManager extends DBManager {
     }
 
     async downloadBody(t_args, msg, type) {
-        let name, attach, body;
+        let name;
 
         switch (type) {
             case "tag":
@@ -876,33 +998,54 @@ class TagManager extends DBManager {
                 throw new TagError("Invalid body type:" + type, type);
         }
 
+        const attach = msg.file ?? msg.attachments?.at(0);
         let isFile = true,
-            isScript = false;
+            isScript = false,
+            isBinary = false,
+            body;
 
-        try {
-            ({ attach, body } = await DiscordUtil.fetchAttachment(msg, undefined, {
-                allowedContentTypes: fileContentTypes,
-                maxSize: this.maxTagSize
-            }));
-        } catch (err) {
-            if (Util.hasPrefix(["Message doesn't have", "Invalid content type"], err.message)) {
-                isFile = false;
-            } else if (err.message?.startsWith("The attachment can take up at most")) {
-                throw new TagError(`${Util.capitalize(name)}s can take up at most ${this.maxTagSize} kb`, err.ref);
-            } else {
-                throw err;
+        if (attach == null && !Util.nonemptyString(msg.fileUrl)) {
+            isFile = false;
+        } else {
+            const contentType = (attach?.contentType ?? "").split(";")[0].trim().toLowerCase(),
+                url = msg.fileUrl ?? attach?.url,
+                attachInfo = msg.attachInfo ?? DiscordUtil.parseAttachmentUrl(url ?? ""),
+                ext = (attachInfo?.ext ?? (attach?.name ? path.extname(attach.name) : "")).toLowerCase();
+
+            isBinary = type === "tag" && binaryContentTypes.includes(contentType) && binaryExtensions.includes(ext);
+            isScript = Util.hasPrefix(scriptContentTypes, contentType);
+
+            const maxSize = isBinary
+                ? this.maxTagSize.binary
+                : isScript
+                  ? this.maxTagSize.script
+                  : this.maxTagSize.text;
+
+            try {
+                const res = await DiscordUtil.fetchAttachment(msg, isBinary ? "arraybuffer" : "text", {
+                    allowedContentTypes: fileContentTypes,
+                    maxSize
+                });
+                body = isBinary ? new Uint8Array(res.body) : res.body;
+            } catch (err) {
+                if (Util.hasPrefix(["Message doesn't have", "Invalid content type"], err.message)) {
+                    isFile = false;
+                } else if (err.message?.startsWith("The attachment can take up at most")) {
+                    const typeLabel = isBinary ? "Binary tag" : isScript ? "Script" : Util.capitalize(name);
+                    throw new TagError(`${typeLabel}s can take up at most ${maxSize} kb`, err.ref);
+                } else {
+                    throw err;
+                }
             }
         }
 
-        if (isFile) {
-            isScript = Util.hasPrefix(scriptContentTypes, attach.contentType);
-        } else {
+        if (!isFile) {
             const trimmedArgs = (t_args = t_args?.trimEnd() ?? "");
             body = trimmedArgs + (Util.empty(trimmedArgs) ? "" : " ");
-            body += msg.attachments.map(at => at.url).join(" ");
+            body += (msg.attachments ?? []).map(at => at.url).join(" ");
         }
 
-        return { body, isScript };
+        return { body, isScript, isBinary };
     }
 
     emulateTag(options) {
@@ -1083,7 +1226,21 @@ class TagManager extends DBManager {
 
         getLogger().info(`Added tag: "${tag.name}" with type: ${tag.type.toHex()}, body:${bodyLogText}`);
 
-        const tagSize = tag.getSize();
+        const tagSize = tag.getSize(),
+            typeLimit = tag.isBinary
+                ? this.maxTagSize.binary
+                : tag.isScript
+                  ? this.maxTagSize.script
+                  : this.maxTagSize.text;
+
+        if (tagSize > typeLimit) {
+            const typeName = tag.isBinary ? "Binary tag" : tag.isScript ? "Script tag" : "Tag";
+            throw new TagError(`${typeName}s can take up at most ${typeLimit} kb`, {
+                size: tagSize,
+                limit: typeLimit
+            });
+        }
+
         await this._updateQuota(tag.owner, tagSize, 1, tx);
     }
 
@@ -1139,6 +1296,13 @@ class TagManager extends DBManager {
             throw new TagError(`Maximum quota of ${this.maxQuota} kb has been exceeded`, {
                 quota: newQuota,
                 maxQuota: this.maxQuota
+            });
+        }
+
+        if (typeof this.maxTagCount === "number" && newCount > this.maxTagCount) {
+            throw new TagError(`Maximum tag count quota of ${this.maxTagCount} has been exceeded`, {
+                count: newCount,
+                maxTagCount: this.maxTagCount
             });
         }
 

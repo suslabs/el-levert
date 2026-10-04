@@ -52,9 +52,12 @@ class TagEditCommand {
             return `${getEmoji("warn")} Tag **${escapeMarkdown(t_name)}** doesn't exist.`;
         }
 
-        if (tag.owner !== ctx.msg.author.id && !getClient().permManager.allowed(ctx.perm, "mod")) {
-            const owner = await tag.getOwner();
-            return `${getEmoji("warn")} You can only edit your own tags.${owner === "not found" ? " Tag owner not found." : ` The tag is owned by \`${owner}\`.`}`;
+        {
+            const err = await this.parentCmd.checkOwner(tag, ctx, this.name);
+
+            if (err !== null) {
+                return err;
+            }
         }
 
         let parsed = await this.parentCmd.parseBase(t_args, ctx.msg, {
@@ -68,15 +71,17 @@ class TagEditCommand {
 
         {
             let err;
-            [body, err] = getClient().tagManager.checkBody(body, false);
+            [body, err] = getClient().tagManager.checkBody(body, false, meta?.type === "binary");
 
             if (err !== null) {
                 return `${getEmoji("warn")} ${err}.`;
             }
         }
 
+        let newTag;
+
         try {
-            await getClient().tagManager.edit(
+            newTag = await getClient().tagManager.edit(
                 tag,
                 body,
                 meta,
@@ -95,7 +100,7 @@ class TagEditCommand {
             return `${getEmoji("warn")} ${err.message}.`;
         }
 
-        let out = `${getEmoji("ok")} Edited tag **${escapeMarkdown(t_name)}**.`;
+        let out = `${getEmoji("ok")} Edited ${this.parentCmd.formatTagType(newTag)} **${escapeMarkdown(t_name)}**.`;
 
         if (attachment) {
             out += `\n${this.parentCmd.attachmentWarning}`;

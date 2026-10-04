@@ -63,6 +63,7 @@ class TagCommand {
             "dump",
             "edit",
             "fullsearch",
+            "hide",
             "info",
             "leaderboard",
             "list",
@@ -75,7 +76,8 @@ class TagCommand {
             "rename",
             "search",
             "set_type",
-            "stream"
+            "stream",
+            "unhide"
         ]
     };
 
@@ -95,6 +97,9 @@ class TagCommand {
         switch (t_type) {
             case "script":
                 type = TagTypes.defaults.scriptType;
+                break;
+            case "binary":
+                type = "binary";
                 break;
             default:
                 type = TagTypes.types.validScript.has(t_type) ? t_type : null;
@@ -170,7 +175,9 @@ class TagCommand {
                 : Tag.parseTagBody(parsedBody.body, type);
         }
 
-        const attachment = hasAttachments || !Util.empty(DiscordUtil.findAttachmentUrls(parsed.body));
+        const attachment =
+            hasAttachments ||
+            (typeof parsed.body === "string" && !Util.empty(DiscordUtil.findAttachmentUrls(parsed.body)));
 
         return {
             body: parsed.body,
@@ -178,6 +185,19 @@ class TagCommand {
             attachment,
             err: null
         };
+    }
+
+    async checkOwner(tag, ctx, action) {
+        if (tag === null) {
+            return null;
+        }
+
+        if (tag.owner !== ctx.msg.author.id && !getClient().permManager.allowed(ctx.perm, "mod")) {
+            const owner = await tag.getOwner();
+            return `${getEmoji("warn")} You can only ${action} your own tags.${owner === "not found" ? " Tag owner not found." : ` The tag is owned by \`${owner}\`.`}`;
+        }
+
+        return null;
     }
 
     async handler(ctx) {
@@ -225,7 +245,7 @@ class TagCommand {
 
         if (tag.isAlias) {
             try {
-                tag = await getClient().tagManager.fetchAlias(tag, true);
+                tag = await getClient().tagManager.fetchAlias(tag);
             } catch (err) {
                 return this.formatError(err);
             }
@@ -266,6 +286,16 @@ class TagCommand {
 
         const [editOut, editOptions] = getReplyData(replyOut);
         await ctx.edit(editOut, editOptions);
+    }
+
+    formatTagType(tag) {
+        if (tag.isBinary) {
+            return "binary tag";
+        } else if (tag.isScript) {
+            return "script tag";
+        } else {
+            return "tag";
+        }
     }
 
     formatError(err) {

@@ -1,1 +1,1 @@
-UPDATE Tags SET aliasName = $aliasName, body = $body, args = $args, lastEdited = $lastEdited, type = $type WHERE name = $name;
+UPDATE Tags SET aliasName = $aliasName, body = $body, bin = $bin, args = $args, lastEdited = $lastEdited, type = $type WHERE name = $name;

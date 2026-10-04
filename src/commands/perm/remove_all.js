@@ -47,8 +47,13 @@ class PermRemoveAllCommand {
 
         const theirLevel = await getClient().permManager.maxLevel(find.user.id);
 
-        if (!getClient().permManager.canManageLevel(ctx.perm, theirLevel)) {
-            return `${getEmoji("warn")} Can't remove permissions of a user (\`${find.user.username}\` \`${find.user.id}\`) with a level higher than or equal to your own. (**${ctx.perm}** <= **${theirLevel}**)`;
+        {
+            const action = `remove permissions of a user (\`${find.user.username}\` \`${find.user.id}\`)`,
+                err = this.parentCmd.checkLevel(ctx, theirLevel, action);
+
+            if (err !== null) {
+                return err;
+            }
         }
 
         const removed = await getClient().permManager.removeAll(find.user.id, {

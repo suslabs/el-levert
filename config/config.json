@@ -23,8 +23,13 @@
     "reminderSendInterval": 10,
     "maxTagNameLength": 32,
     "tagNameRegex": "^[A-Za-z0-9\\-_]+$",
-    "maxTagSize": 100,
+    "maxTagSize": {
+        "text": 100,
+        "script": 100,
+        "binary": 100
+    },
     "maxQuota": 1024,
+    "maxTagCount": 10000,
     "memLimit": 250,
     "timeLimit": 15,
     "otherMemLimit": 50,

@@ -1,10 +1,22 @@
 const TagContentTypes = Object.freeze({
     scriptJavascript: "application/javascript",
     scriptTextJavascript: "text/javascript",
-    plainText: "text/plain"
+    plainText: "text/plain",
+    binaryOctetStream: "application/octet-stream"
 });
 
 const scriptContentTypes = [TagContentTypes.scriptJavascript, TagContentTypes.scriptTextJavascript],
-    fileContentTypes = scriptContentTypes.concat([TagContentTypes.plainText]);
+    textContentTypes = [TagContentTypes.plainText],
+    binaryContentTypes = [TagContentTypes.binaryOctetStream];
 
-export { TagContentTypes, scriptContentTypes, fileContentTypes };
+const binaryExtensions = ["", ".bin"],
+    fileContentTypes = scriptContentTypes.concat(textContentTypes, binaryContentTypes);
+
+export {
+    TagContentTypes,
+    scriptContentTypes,
+    textContentTypes,
+    binaryContentTypes,
+    binaryExtensions,
+    fileContentTypes
+};

@@ -1,5 +1,6 @@
 import { getClient } from "../../../LevertClient.js";
 
+import ObjectUtil from "../../../util/ObjectUtil.js";
 import DiscordUtil from "../../../util/DiscordUtil.js";
 import VMUtil from "../../../util/vm/VMUtil.js";
 
@@ -24,7 +25,11 @@ const FakeUtil = Object.freeze({
         return func();
     },
 
-    fetchTag: async name => {
+    fetchTag: async (name, options) => {
+        options = typeof options === "boolean" ? { aliasOriginal: options } : ObjectUtil.guaranteeObject(options);
+
+        const aliasOriginal = options.aliasOriginal ?? false;
+
         let tag = await getClient().tagManager.fetch(name);
 
         if (tag === null) {
@@ -32,7 +37,7 @@ const FakeUtil = Object.freeze({
         }
 
         if (tag.isAlias) {
-            tag = await getClient().tagManager.fetchAlias(tag);
+            tag = await getClient().tagManager.fetchAlias(tag, aliasOriginal);
         }
 
         return tag;

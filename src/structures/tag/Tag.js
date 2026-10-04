@@ -1,3 +1,5 @@
+import { Buffer } from "node:buffer";
+
 import { escapeMarkdown, bold, codeBlock } from "discord.js";
 
 import TagBitField from "./TagBitField.js";
@@ -26,12 +28,13 @@ class Tag {
     static defaultValues = {
         name: "",
         body: "",
+        bin: null,
         owner: this.invalidValues.owner,
         args: "",
         aliasName: ""
     };
 
-    static dataProps = ["aliasName", "name", "body", "owner", "args", "registered", "lastEdited", "type"];
+    static dataProps = ["aliasName", "name", "body", "bin", "owner", "args", "registered", "lastEdited", "type"];
 
     static emulatableFields = Object.freeze([
         Object.freeze({
@@ -45,6 +48,10 @@ class Tag {
         Object.freeze({
             name: "body",
             type: "string"
+        }),
+        Object.freeze({
+            name: "bin",
+            type: "object"
         }),
         Object.freeze({
             name: "owner",
@@ -101,6 +108,12 @@ class Tag {
     }
 
     static getParsedMeta(parsed, type) {
+        if (parsed?.isBinary || type === "binary") {
+            return {
+                type: "binary"
+            };
+        }
+
         if (!parsed.isScript) {
             return {};
         }
@@ -159,8 +172,14 @@ class Tag {
             this.setMeta(meta);
         }
 
+        if (this.isBinary) {
+            this.bin = Buffer.from(this.bin ?? this.body ?? []);
+            this.body = new Uint8Array(this.bin.buffer, this.bin.byteOffset, this.bin.byteLength);
+        }
+
         if (this.isAlias) {
             this.body = this.constructor.defaultValues.body;
+            this.bin = null;
             this.setScriptType(TagTypes.defaults.type);
         }
     }
@@ -201,6 +220,13 @@ class Tag {
             this.setMeta(meta);
         }
 
+        if (this.isBinary) {
+            this.bin = Buffer.from(this.bin ?? this.body ?? []);
+            this.body = new Uint8Array(this.bin.buffer, this.bin.byteOffset, this.bin.byteLength);
+        } else {
+            this.bin = null;
+        }
+
         return true;
     }
 
@@ -215,6 +241,7 @@ class Tag {
         this.args = args ?? this.constructor.defaultValues.args;
 
         this.body = this.constructor.defaultValues.body;
+        this.bin = null;
         this.setScriptType(TagTypes.defaults.type);
     }
 
@@ -241,7 +268,7 @@ class Tag {
         type = this.constructor._normalizeScriptType(type);
 
         const config = TagTypes.types[type],
-            specialFlags = TagTypes.types.specialScript.map(name => TagTypes.types[name].flag).filter(Boolean);
+            specialFlags = TagTypes.types.entries.map(([, t]) => t.flag).filter(Boolean);
 
         this.type.setFlags(specialFlags, false);
 
@@ -251,11 +278,33 @@ class Tag {
 
         this.type.setFlag("script", config.script);
 
+        if (type === "binary") {
+            this.type.setFlag("hidden", true);
+        }
+
         if (typeof config.flag !== "undefined") {
             this.type.setFlag(config.flag, true);
         }
 
+        if (type === "binary") {
+            this.bin = Buffer.from(this.bin ?? this.body ?? []);
+            this.body = new Uint8Array(this.bin.buffer, this.bin.byteOffset, this.bin.byteLength);
+        } else if (this.bin != null) {
+            this.bin = null;
+            if (typeof this.body !== "string") {
+                this.body = this.constructor.defaultValues.body;
+            }
+        }
+
         return this;
+    }
+
+    getType() {
+        return this.getScriptType();
+    }
+
+    setType(type) {
+        return this.setScriptType(type);
     }
 
     getScriptLanguage() {
@@ -303,6 +352,22 @@ class Tag {
             data.type = db ? this.type.toBuffer() : this.type.toHex();
         }
 
+        if (this.isBinary) {
+            if (props.includes("body")) {
+                data.body = db ? null : this.body instanceof Uint8Array ? this.body : new Uint8Array(this.bin ?? []);
+            }
+
+            if (props.includes("bin")) {
+                data.bin = db
+                    ? (this.bin ?? Buffer.from(this.body ?? []))
+                    : this.body instanceof Uint8Array
+                      ? this.body
+                      : new Uint8Array(this.bin ?? []);
+            }
+        } else if (props.includes("bin")) {
+            data.bin = null;
+        }
+
         if (nullable) {
             for (const prop of this.constructor._nullableDataProps.filter(prop => props.includes(prop))) {
                 data[prop] ||= null;
@@ -313,7 +378,14 @@ class Tag {
     }
 
     getSize() {
-        const sizes = [this.body, this.args].map(str => Util.utf8ByteLength(str));
+        if (this.isBinary) {
+            const binSize = this.bin?.byteLength ?? this.body?.byteLength ?? 0,
+                argsSize = Util.utf8ByteLength(this.args ?? "");
+
+            return (binSize + argsSize) / Util.dataBytes.kilobyte;
+        }
+
+        const sizes = [typeof this.body === "string" ? this.body : "", this.args].map(str => Util.utf8ByteLength(str));
         return ArrayUtil.sum(sizes) / Util.dataBytes.kilobyte;
     }
 
@@ -357,10 +429,25 @@ class Tag {
             format += ")";
         }
 
+        if (this.isHidden) {
+            format += " (hidden)";
+        }
+
         return format;
     }
 
     sameBody(tag) {
+        if (this.isBinary || tag.isBinary) {
+            if (this.isBinary !== tag.isBinary) {
+                return false;
+            }
+
+            const buf1 = Buffer.from(this.bin ?? this.body ?? []),
+                buf2 = Buffer.from(tag.bin ?? tag.body ?? []);
+
+            return buf1.equals(buf2) && this.args === tag.args;
+        }
+
         return this.body === tag.body && this.args === tag.args;
     }
 
@@ -381,6 +468,10 @@ class Tag {
     }
 
     getRaw(discord = false) {
+        if (this.isBinary) {
+            return discord ? DiscordUtil.getFileAttach(this.body, `${this.name}.bin`) : this.body;
+        }
+
         const body = this.body.trim(),
             args = this.args.trim();
 
@@ -448,9 +539,11 @@ class Tag {
 
         return (async () => {
             const aliasName = this.isAlias ? this.aliasName : "none",
-                body = Util.empty(this.body)
-                    ? "empty"
-                    : Util.trimString(this.body, bodyLimit, null, { showDiff: true }),
+                body = this.isBinary
+                    ? `[binary data: ${this.body?.byteLength ?? 0} bytes]`
+                    : Util.empty(this.body)
+                      ? "empty"
+                      : Util.trimString(this.body, bodyLimit, null, { showDiff: true }),
                 args = Util.empty(this.args) ? "none" : Util.trimString(this.args, bodyLimit, null, { showDiff: true });
 
             const info = {
@@ -460,6 +553,8 @@ class Tag {
                 aliasName,
                 body,
                 isScript: this.isScript,
+                isBinary: this.isBinary,
+                isHidden: this.isHidden,
                 owner: await this.getOwner(),
                 ownerId: this.owner,
                 args,
@@ -475,7 +570,7 @@ class Tag {
         })();
     }
 
-    static _nullableDataProps = ["aliasName", "args"];
+    static _nullableDataProps = ["aliasName", "args", "bin"];
 
     static _hopsSeparator = ",";
     static _argsSeparator = " ";

@@ -13,6 +13,7 @@ CREATE TABLE 'Tags' (
     'aliasName' TEXT DEFAULT NULL CHECK (aliasName IS NULL OR trim(aliasName) != ''),
     'name' TEXT NOT NULL CHECK (trim(name) != ''),
     'body' TEXT,
+    'bin' BLOB DEFAULT NULL,
     'owner' TEXT NOT NULL CHECK (trim(owner) != ''),
     'args' TEXT DEFAULT NULL,
     'registered' INTEGER,

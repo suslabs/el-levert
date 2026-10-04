@@ -58,15 +58,17 @@ class TagAddCommand {
 
         {
             let err;
-            [body, err] = getClient().tagManager.checkBody(body, false);
+            [body, err] = getClient().tagManager.checkBody(body, false, meta?.type === "binary");
 
             if (err !== null) {
                 return `${getEmoji("warn")} ${err}.`;
             }
         }
 
+        let tag;
+
         try {
-            await getClient().tagManager.add(
+            tag = await getClient().tagManager.add(
                 t_name,
                 body,
                 ctx.msg.author.id,
@@ -85,8 +87,8 @@ class TagAddCommand {
 
             switch (err.message) {
                 case "Tag already exists":
-                    const tag = err.ref,
-                        owner = await tag.getOwner();
+                    const existingTag = err.ref,
+                        owner = await existingTag.getOwner();
 
                     return `${getEmoji("warn")} Tag **${escapeMarkdown(t_name)}** already exists,${owner === "not found" ? " tag owner not found." : ` and is owned by \`${owner}\`.`}`;
                 default:
@@ -94,7 +96,7 @@ class TagAddCommand {
             }
         }
 
-        let out = `${getEmoji("ok")} Created tag **${escapeMarkdown(t_name)}**.`;
+        let out = `${getEmoji("ok")} Created ${this.parentCmd.formatTagType(tag)} **${escapeMarkdown(t_name)}**.`;
 
         if (attachment) {
             out += `\n${this.parentCmd.attachmentWarning}`;

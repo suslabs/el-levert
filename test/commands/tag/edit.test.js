@@ -50,7 +50,9 @@ describe("tag edit command", () => {
         await fs.writeFile(filePath, "const value: number = 1;\nreturn value;");
         await addAdmin(runtime, msg.author.id);
 
-        await expect(executeCommand(command, `edit alpha ${filePath}`, { msg })).resolves.toContain("Edited tag");
+        await expect(executeCommand(command, `edit alpha ${filePath}`, { msg })).resolves.toContain(
+            "Edited script tag"
+        );
 
         const alpha = await runtime.client.tagManager.fetch("alpha");
 

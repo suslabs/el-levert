@@ -28,4 +28,14 @@ describe("tag search command", () => {
         expect(out).toContain("similar tag");
         expect(out).toContain("alpha");
     });
+
+    test("does not return hidden tags in search", async () => {
+        const command = getCommand(runtime, "tag");
+
+        const alpha = await runtime.client.tagManager.fetch("alpha");
+        await runtime.client.tagManager.hide(alpha);
+
+        const out = await executeCommand(command, "search alpha 2");
+        expect(out).toContain("Found **no** similar tags");
+    });
 });

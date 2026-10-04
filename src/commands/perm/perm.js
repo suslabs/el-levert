@@ -1,4 +1,6 @@
-import { getConfig, getEmoji } from "../../LevertClient.js";
+import { getClient, getConfig, getEmoji } from "../../LevertClient.js";
+
+import ObjectUtil from "../../util/ObjectUtil.js";
 
 class PermCommand {
     static info = {
@@ -22,6 +24,23 @@ class PermCommand {
 
     load() {
         return getConfig().enablePermissions;
+    }
+
+    checkLevel(ctx, level, action, options) {
+        if (level == null) {
+            return null;
+        }
+
+        options = ObjectUtil.guaranteeObject(options);
+
+        const pronoun = options.pronoun ?? "your own",
+            connector = options.connector ?? "with";
+
+        if (!getClient().permManager.canManageLevel(ctx.perm, level)) {
+            return `${getEmoji("warn")} Can't ${action} ${connector} a level that is higher than or equal to ${pronoun}. (**${ctx.perm}** <= **${level}**)`;
+        }
+
+        return null;
     }
 
     handler(ctx) {

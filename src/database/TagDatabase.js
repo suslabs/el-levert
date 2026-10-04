@@ -16,6 +16,8 @@ function sortTags(tags) {
 }
 
 class TagDatabase extends SqlDatabase {
+    static tagDataProps = ["aliasName", "name", "body", "bin", "owner", "args", "registered", "lastEdited", "type"];
+
     constructor(dbPath, queryPath, options) {
         options = ObjectUtil.guaranteeObject(options);
 
@@ -72,6 +74,15 @@ class TagDatabase extends SqlDatabase {
         return new Tag(row);
     }
 
+    async fetchAlias(name, separator = Tag._argsSeparator) {
+        const rows = await this.tagQueries.fetchAlias.all({
+            $name: name,
+            $separator: separator
+        });
+
+        return rows._data ?? [];
+    }
+
     getRevisionStore() {
         return new RevisionStore(this);
     }
@@ -84,7 +95,7 @@ class TagDatabase extends SqlDatabase {
         }
 
         const res = await this.tagQueries.add.run({
-            ...tag.getData("$", true, ["aliasName", "name", "body", "owner", "args", "registered", "type"])
+            ...tag.getData("$", true, ["aliasName", "name", "body", "bin", "owner", "args", "registered", "type"])
         });
 
         if (res.changes > 0) {
@@ -99,7 +110,7 @@ class TagDatabase extends SqlDatabase {
         tag.setLastEdited();
 
         return await this.tagQueries.edit.run({
-            ...tag.getData("$", true, ["aliasName", "name", "body", "args", "lastEdited", "type"])
+            ...tag.getData("$", true, ["aliasName", "name", "body", "bin", "args", "lastEdited", "type"])
         });
     }
 
@@ -370,6 +381,13 @@ class TagDatabase extends SqlDatabase {
         }
 
         if (schema.base.has("aliasName") && hasBlobType) {
+            if (!schema.base.has("bin")) {
+                await this._seedAppliedMigrations([1, 2]);
+                await this.db.migrate({
+                    migrationsPath: this.migrationsPath
+                });
+            }
+
             return;
         }
     }

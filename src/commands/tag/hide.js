@@ -4,11 +4,10 @@ import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 
-class TagChownCommand {
+class TagHideCommand {
     static info = {
-        name: "chown",
-        description: "Change a tag's owner.",
-        aliases: ["transfer"],
+        name: "hide",
+        description: "Hide a tag.",
         parent: "tag",
         subcommand: true,
         arguments: [
@@ -17,22 +16,16 @@ class TagChownCommand {
                 kind: "positional",
                 index: 0,
                 lowercase: true
-            },
-            {
-                name: "ownerText",
-                kind: "positional",
-                index: 1
             }
         ]
     };
 
     async handler(ctx) {
         if (Util.empty(ctx.argsText)) {
-            return `${getEmoji("info")} ${this.getArgsHelp("name new_owner")}`;
+            return `${getEmoji("info")} ${this.getArgsHelp("name")}`;
         }
 
-        let t_name = ctx.arg("tagName"),
-            t_args = ctx.arg("ownerText");
+        let t_name = ctx.arg("tagName");
 
         if (this.matchesSubcmd(t_name)) {
             return `${getEmoji("invalid")} **${escapeMarkdown(t_name)}** is a __command__, not a __tag__. You can't manipulate commands.`;
@@ -47,16 +40,6 @@ class TagChownCommand {
             }
         }
 
-        if (Util.empty(t_args)) {
-            return `${getEmoji("warn")} Invalid target user. You must specifically mention the target user.`;
-        }
-
-        const find = Util.first(await getClient().findUsers(t_args));
-
-        if (typeof find === "undefined") {
-            return `${getEmoji("warn")} User \`${t_args}\` not found.`;
-        }
-
         const tag = await getClient().tagManager.fetch(t_name);
 
         if (tag === null) {
@@ -64,7 +47,7 @@ class TagChownCommand {
         }
 
         {
-            const err = await this.parentCmd.checkOwner(tag, ctx, "edit");
+            const err = await this.parentCmd.checkOwner(tag, ctx, this.name);
 
             if (err !== null) {
                 return err;
@@ -72,7 +55,7 @@ class TagChownCommand {
         }
 
         try {
-            await getClient().tagManager.chown(tag, find.user.id, false, {
+            await getClient().tagManager.hide(tag, false, {
                 actor: ctx.msg.author.id
             });
         } catch (err) {
@@ -83,8 +66,8 @@ class TagChownCommand {
             return `${getEmoji("warn")} ${err.message}.`;
         }
 
-        return `${getEmoji("ok")} Transferred tag **${escapeMarkdown(t_name)}** to \`${find.user.username}\`.`;
+        return `${getEmoji("ok")} Hid tag **${escapeMarkdown(t_name)}**.`;
     }
 }
 
-export default TagChownCommand;
+export default TagHideCommand;

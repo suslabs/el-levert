@@ -47,9 +47,12 @@ class TagDeleteCommand {
             return `${getEmoji("warn")} Tag **${escapeMarkdown(t_name)}** doesn't exist.`;
         }
 
-        if (tag.owner !== ctx.msg.author.id && !getClient().permManager.allowed(ctx.perm, "mod")) {
-            const owner = await tag.getOwner();
-            return `${getEmoji("warn")} You can only delete your own tags.${owner === "not found" ? " Tag owner not found." : ` The tag is owned by \`${owner}\`.`}`;
+        {
+            const err = await this.parentCmd.checkOwner(tag, ctx, this.name);
+
+            if (err !== null) {
+                return err;
+            }
         }
 
         try {

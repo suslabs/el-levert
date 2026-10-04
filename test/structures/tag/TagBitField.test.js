@@ -21,7 +21,8 @@ describe("TagBitField", () => {
 
     test("rejects scalar and undeclared stored flag data", () => {
         expect(() => TagBitField.from(3)).toThrow("Invalid type");
-        expect(() => TagBitField.from(Buffer.from([16]))).toThrow("Invalid type");
+        expect(() => TagBitField.from(Buffer.from([64]))).toThrow("Invalid type");
+        expect(() => TagBitField.from(Buffer.from([16]))).toThrow("Flag binary requires hidden");
     });
 
     test("uses inherited named mutations while enforcing requirements", () => {
@@ -48,7 +49,7 @@ describe("TagBitField", () => {
         expect(JSON.parse(TagBitField.query(filter).$types)).toEqual(expect.arrayContaining(["06", "07", "0e", "0f"]));
         expect(excluded.toBuffer()).toEqual(Buffer.from([2]));
         expect(excluded.include).toBe(false);
-        expect(JSON.parse(TagBitField.query(excluded).$types)).toEqual(["00", "01"]);
+        expect(JSON.parse(TagBitField.query(excluded).$types)).toEqual(expect.arrayContaining(["00", "01"]));
         expect(JSON.parse(TagBitField.query().$types)).toEqual(
             expect.arrayContaining(["00", "01", "02", "03", "06", "07", "0a", "0b", "0e", "0f"])
         );

@@ -77,9 +77,25 @@
             "type": "string"
         },
         "maxTagSize": {
-            "type": "number"
+            "type": "object",
+            "properties": {
+                "text": {
+                    "type": "number"
+                },
+                "script": {
+                    "type": "number"
+                },
+                "binary": {
+                    "type": "number"
+                }
+            },
+            "required": ["text", "script", "binary"],
+            "additionalProperties": false
         },
         "maxQuota": {
+            "type": "number"
+        },
+        "maxTagCount": {
             "type": "number"
         },
         "memLimit": {
@@ -246,6 +262,7 @@
         "tagNameRegex",
         "maxTagSize",
         "maxQuota",
+        "maxTagCount",
         "memLimit",
         "timeLimit",
         "otherMemLimit",

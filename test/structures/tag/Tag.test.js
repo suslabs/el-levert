@@ -258,4 +258,59 @@ describe("Tag", () => {
         expect(() => alias.aliasTo(null)).toThrow("No target tag provided");
         expect(() => alias.setVersion("")).toThrow("Invalid version");
     });
+
+    test("supports binary tags and hidden flags", async () => {
+        const binBytes = new Uint8Array([1, 2, 3, 4, 5]),
+            binaryTag = new Tag({
+                name: "bindata",
+                body: binBytes,
+                meta: { type: "binary" }
+            });
+
+        expect(binaryTag.isBinary).toBe(true);
+        expect(binaryTag.isHidden).toBe(true);
+        expect(binaryTag.isScript).toBe(false);
+        expect(binaryTag.getScriptType()).toBe("binary");
+        expect(binaryTag.body).toBeInstanceOf(Uint8Array);
+        expect(Array.from(binaryTag.body)).toEqual([1, 2, 3, 4, 5]);
+        expect(binaryTag.format()).toBe("bindata (hidden)");
+        expect(binaryTag.getSize()).toBe(5 / 1024);
+
+        const raw = binaryTag.getRaw(true);
+        expect(raw.files).toHaveLength(1);
+        expect(raw.files[0].attachment).toEqual(Buffer.from(binBytes));
+        expect(raw.files[0].name).toBe("bindata.bin");
+
+        const dataDb = binaryTag.getData("$");
+        expect(dataDb.$body).toBeNull();
+        expect(dataDb.$bin).toBeInstanceOf(Buffer);
+
+        const dataJson = binaryTag.getData();
+        expect(dataJson.body).toBeInstanceOf(Uint8Array);
+
+        const info = await binaryTag.getInfo();
+        expect(info.isBinary).toBe(true);
+        expect(info.isHidden).toBe(true);
+        expect(info.type).toBe("binary");
+        expect(info.body).toContain("[binary data: 5 bytes]");
+
+        const otherBinary = new Tag({
+            name: "other",
+            body: new Uint8Array([1, 2, 3, 4, 5]),
+            meta: { type: "binary" }
+        });
+        expect(binaryTag.sameBody(otherBinary)).toBe(true);
+
+        const textTag = new Tag({ name: "hello", body: "world" });
+        expect(textTag.isHidden).toBe(false);
+        expect(textTag.format()).toBe("hello");
+
+        textTag.setHidden();
+        expect(textTag.isHidden).toBe(true);
+        expect(textTag.format()).toBe("hello (hidden)");
+
+        textTag.unsetHidden();
+        expect(textTag.isHidden).toBe(false);
+        expect(textTag.format()).toBe("hello");
+    });
 });

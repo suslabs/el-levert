@@ -9,9 +9,8 @@ import { createDiscordMessage } from "../../helpers/discordStubs.js";
 
 describe("Test canvaskitloader execution with isolateGlobals", () => {
     let runtime, vm, msg;
-    const cycdrawRoot = "d:/projects/nodejs/cycdraw";
-    const gifencRoot = "d:/projects/nodejs/gifenc";
-
+    const cycdrawRoot = "d:/projects/cycdraw";
+    
     beforeAll(async () => {
         runtime = await createRuntime({
             loadManagers: true,
@@ -20,14 +19,15 @@ describe("Test canvaskitloader execution with isolateGlobals", () => {
                 enableEval: true,
                 enableInspector: false,
                 memLimit: 128,
-                timeLimit: 30000
+                timeLimit: 30000,
+                maxTagSize: { text: 1024, script: 1024, binary: 1024 }
             }
         });
         vm = runtime.client.tagVM;
         msg = createDiscordMessage("%sort");
         const loaderCode = fs.readFileSync(path.join(cycdrawRoot, "canvaskit/canvaskitloader.js"), "utf8");
         const cycdrawCode = fs.readFileSync(path.join(cycdrawRoot, "canvaskit/cycdraw.js"), "utf8");
-        const gifencCode = fs.readFileSync(path.join(gifencRoot, "dist/index.js"), "utf8");
+        const gifencCode = await (await fetch("https://cdn.jsdelivr.net/npm/gifenc@1.0.3/dist/gifenc.js")).text();
 
         const tagOwner = "883072834790916137";
         await addTag(runtime, "canvaskitloader", loaderCode, tagOwner, { type: "ivm" });
@@ -52,7 +52,9 @@ describe("Test canvaskitloader execution with isolateGlobals", () => {
         "shell",
         "bitonic",
         "bubble iso",
-        "quick phase"
+        "--size 20 bubble iso",
+        "quick --size 30",
+        "quick circle"
     ];
 
     for (const testCase of testCases) {

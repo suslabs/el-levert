@@ -65,6 +65,21 @@ describe("tag command", () => {
         expect(missing).toContain("doesn't exist");
         expect(missing).toContain("Did you mean:");
     });
+
+    test("handles binary and script tag creation and blocks binary execution", async () => {
+        const command = getCommand(runtime, "tag");
+
+        const scriptOut = await executeCommand(command, "add myscript ```js\nreturn 42;\n```", { msg });
+        expect(scriptOut).toContain("Created script tag **myscript**");
+
+        await runtime.client.tagManager.add("mybintag", new Uint8Array([1, 2, 3]), msg.author.id, { type: "binary" });
+
+        const execOut = await executeCommand(command, "mybintag", { msg });
+        expect(execOut).toContain("Tag is a binary tag and the content cannot be displayed");
+
+        const missing = await executeCommand(command, "mybinta", { msg });
+        expect(missing).not.toContain("mybintag");
+    });
 });
 
 describe("Merged Branch Coverage", () => {
@@ -801,6 +816,31 @@ describe("Merged Branch Coverage", () => {
 
             expect(out.content).toContain("Found **17+** matching tags");
             expect(out.files).toHaveLength(1);
+        });
+
+        test("checkOwner helper handles null tag, matching owner, mod, and forbidden users", async () => {
+            const command = getCommand(runtime, "tag"),
+                tag = await addTag(runtime, "checktag", "body", "user-1"),
+                ctx = {
+                    msg: { author: { id: "user-1" } },
+                    perm: 0
+                };
+
+            expect(await command.checkOwner(null, ctx, "edit")).toBeNull();
+            expect(await command.checkOwner(tag, ctx, "edit")).toBeNull();
+
+            const otherCtx = {
+                msg: { author: { id: "user-2" } },
+                perm: 0
+            };
+            const err = await command.checkOwner(tag, otherCtx, "delete");
+            expect(err).toContain("You can only delete your own tags");
+
+            const modCtx = {
+                msg: { author: { id: "user-2" } },
+                perm: 10
+            };
+            expect(await command.checkOwner(tag, modCtx)).toBeNull();
         });
     });
 });

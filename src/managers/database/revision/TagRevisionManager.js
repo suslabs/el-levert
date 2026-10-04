@@ -24,7 +24,7 @@ class TagRevisionManager {
             target: this.constructor.target,
             key: ["name"],
             staticFields: ["registered"],
-            trackedFields: ["aliasName", "name", "body", "owner", "args", "type"],
+            trackedFields: ["aliasName", "name", "body", "bin", "owner", "args", "type"],
             liveFields: ["lastEdited"],
             encode: this.constructor.encodeValue,
             decode: this.constructor.decodeValue,
@@ -46,6 +46,12 @@ class TagRevisionManager {
                 }
 
                 return value;
+            case "bin":
+                if (ArrayBuffer.isView(value)) {
+                    return Buffer.from(value.buffer, value.byteOffset, value.byteLength).toString("base64");
+                }
+
+                return value;
             default:
                 return value;
         }
@@ -55,6 +61,8 @@ class TagRevisionManager {
         switch (field) {
             case "type":
                 return Buffer.from(value ?? "00", "hex");
+            case "bin":
+                return value == null ? null : Buffer.from(value, "base64");
             default:
                 return value ?? Tag.defaultValues[field] ?? value;
         }

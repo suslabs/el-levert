@@ -109,6 +109,20 @@ describe("TagVM", () => {
                 "(async () => (await util.fetchTag('plain_alias')).name + ':' + (await util.fetchTag('plain_alias')).body)()",
                 { msg }
             )
+        ).resolves.toBe("plain:alpha body");
+
+        await expect(
+            vm.runScript(
+                "(async () => (await util.fetchTag('plain_alias', true)).name + ':' + (await util.fetchTag('plain_alias', true)).body)()",
+                { msg }
+            )
+        ).resolves.toBe("plain_alias:alpha body");
+
+        await expect(
+            vm.runScript(
+                "(async () => (await util.fetchTag('plain_alias', { aliasOriginal: true })).name + ':' + (await util.fetchTag('plain_alias', { aliasOriginal: true })).body)()",
+                { msg }
+            )
         ).resolves.toBe("plain_alias:alpha body");
 
         await expect(

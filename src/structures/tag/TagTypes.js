@@ -27,6 +27,19 @@ let TagTypes = {
             requires: {
                 script: true
             }
+        },
+        binary: {
+            bit: 4,
+            accessors: "read",
+            requires: {
+                hidden: true,
+                script: false
+            }
+        },
+        hidden: {
+            bit: 5,
+            accessors: "write",
+            requires: {}
         }
     },
 
@@ -44,6 +57,10 @@ let TagTypes = {
     types: {
         text: {
             script: false
+        },
+        binary: {
+            script: false,
+            flag: "binary"
         },
         ivm: {
             script: true
@@ -105,15 +122,13 @@ function addTypeMetadata(types, defaults) {
     types.specialScript = types.script.filter(type => type !== defaults.scriptType);
     addValidNames(types, "script");
 
-    const specialFlags = types.specialScript.map(name => types[name].flag);
+    const specialFlags = types.entries.map(([, type]) => type.flag).filter(Boolean);
 
     for (const [, type] of types.entries) {
         type.flags = [["script", type.script]];
 
-        if (type.script) {
-            for (const flag of specialFlags) {
-                type.flags.push([flag, type.flag === flag]);
-            }
+        for (const flag of specialFlags) {
+            type.flags.push([flag, type.flag === flag]);
         }
     }
 }

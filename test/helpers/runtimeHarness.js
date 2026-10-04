@@ -49,7 +49,12 @@ function buildDefaultConfig(tempDir, overrides = {}) {
         tagModeratorLevel: 5,
         permissionAdminLevel: 8,
         maxQuota: 10000,
-        maxTagSize: 8,
+        maxTagCount: 1000,
+        maxTagSize: {
+            text: 8,
+            script: 8,
+            binary: 8
+        },
         maxTagNameLength: 32,
         tagNameRegex: "^[A-Za-z0-9\\-_]+$",
         reminderSendInterval: 10,

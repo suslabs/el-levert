@@ -9,6 +9,7 @@ import { VMErrors } from "../VMErrors.js";
 import { getClient } from "../../../LevertClient.js";
 
 import Util from "../../../util/Util.js";
+import ObjectUtil from "../../../util/ObjectUtil.js";
 
 const FakeUtil = Object.freeze({
     getInfo: _ => ({
@@ -40,7 +41,11 @@ const FakeUtil = Object.freeze({
         });
     },
 
-    fetchTag: async name => {
+    fetchTag: async (name, options) => {
+        options = typeof options === "boolean" ? { aliasOriginal: options } : ObjectUtil.guaranteeObject(options);
+
+        const aliasOriginal = options.aliasOriginal ?? false;
+
         const [, err] = getClient().tagManager.checkName(name, false);
 
         if (err !== null) {
@@ -52,7 +57,7 @@ const FakeUtil = Object.freeze({
         if (tag === null) {
             return null;
         } else if (tag.isAlias) {
-            tag = await getClient().tagManager.fetchAlias(tag, true);
+            tag = await getClient().tagManager.fetchAlias(tag, aliasOriginal);
         }
 
         const data = tag.getData();

@@ -41,7 +41,7 @@ describe("tag add command", () => {
 
         await expect(
             executeCommand(command, "add typed ```ts\nconst value: number = 1;\n```", { msg })
-        ).resolves.toContain("Created tag **typed**");
+        ).resolves.toContain("Created script tag **typed**");
         const typed = await runtime.client.tagManager.fetch("typed");
         expect(typed.getScriptType()).toBe("ivm");
         expect(typed.getScriptLanguage()).toBe("ts");
@@ -71,7 +71,7 @@ describe("tag add command", () => {
         await addAdmin(runtime, msg.author.id);
 
         await expect(executeCommand(command, `add alpha ${filePath}`, { msg })).resolves.toContain(
-            "Created tag **alpha**"
+            "Created script tag **alpha**"
         );
 
         const alpha = await runtime.client.tagManager.fetch("alpha");
