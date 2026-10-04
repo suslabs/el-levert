@@ -1,9 +1,9 @@
 import Overclocking from "./Overclocking.js";
 import OverclockingModes, { modeNames, validModes } from "./OverclockingModes.js";
 
-import Util from "../Util.js";
+import Util from "../../Util.js";
 
-import ParserError from "../../errors/ParserError.js";
+import ParserError from "../../../errors/ParserError.js";
 
 class OverclockArgumentParser {
     static modes = modeNames;

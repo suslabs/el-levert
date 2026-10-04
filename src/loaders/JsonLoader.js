@@ -254,7 +254,7 @@ class JsonLoader extends TextLoader {
 
             if (!valid) {
                 let errMessage = "Validation failed";
-                errMessage += error == null ? "." : ":\n" + JsonLoader._formatValidationErrors(error);
+                errMessage += error == null ? "." : `:\n${JsonLoader._formatValidationErrors(error)}`;
 
                 return this.failure(errMessage);
             }

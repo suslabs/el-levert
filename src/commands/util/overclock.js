@@ -5,10 +5,9 @@ import { getEmoji } from "../../LevertClient.js";
 import { OverclockingValues } from "../../structures/OverclockingValues.js";
 
 import Util from "../../util/Util.js";
-import Overclocking from "../../util/commands/Overclocking.js";
-import OverclockingModes from "../../util/commands/OverclockingModes.js";
-
-import OverclockArgumentParser from "../../util/commands/OverclockArgumentParser.js";
+import Overclocking from "../../util/commands/overclocking/Overclocking.js";
+import OverclockingModes from "../../util/commands/overclocking/OverclockingModes.js";
+import OverclockArgumentParser from "../../util/commands/overclocking/OverclockArgumentParser.js";
 
 import ParserError from "../../errors/ParserError.js";
 import OCError from "../../errors/OCError.js";
@@ -176,13 +175,13 @@ class OverclockCommand {
     static info = {
         name: "overclock",
         description: "Calculate overclocking requirements.",
-        usage:
-            "[mode] <eu> <duration> [chance] [chance_bonus] [parallel] [amperage]\n" +
-            "ebf <eu> <duration> <recipe_heat> <coil_heat> [parallel] [amperage]\n\n" +
-            `Modes: ${OverclockArgumentParser.modes.join(", ")}\n` +
-            `Default mode: ${OverclockingModes.standard}.\n` +
-            "Modifiers: --tape, --subtick, --extra, --rf\n" +
-            "Output: --voltage, --rates, --input, --output, --count, --tick, --text, --auto, --bulk.",
+        usage: `[mode] <eu> <duration> [chance] [chance_bonus] [parallel] [amperage]
+ebf <eu> <duration> <recipe_heat> <coil_heat> [parallel] [amperage]
+
+Modes: ${OverclockArgumentParser.modes.join(", ")}
+Default mode: ${OverclockingModes.standard}.
+Modifiers: --tape, --subtick, --extra, --rf
+Output: --voltage, --rates, --input, --output, --count, --tick, --text, --auto, --bulk.`,
         aliases: ["oc", "oceu"],
         helpArgs: ["help", "-help", "-h", "--help", "usage"],
         category: "util",

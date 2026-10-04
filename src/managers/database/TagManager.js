@@ -1,5 +1,6 @@
 import DBManager from "./DBManager.js";
 import TagRevisionManager from "./revision/TagRevisionManager.js";
+import FakeTagRegistry from "./FakeTagRegistry.js";
 import TagDatabase from "../../database/TagDatabase.js";
 
 import Tag from "../../structures/tag/Tag.js";
@@ -109,8 +110,15 @@ class TagManager extends DBManager {
             if (Util.empty(name)) {
                 return [];
             }
+
+            const dbExists = await this.tag_db.exists(name);
+            return name.map((tagName, i) => FakeTagRegistry.has(tagName) || dbExists[i]);
         } else if (validate) {
             name = this.checkName(name);
+        }
+
+        if (FakeTagRegistry.has(name)) {
+            return true;
         }
 
         return await this.tag_db.exists(name);
@@ -119,6 +127,10 @@ class TagManager extends DBManager {
     async fetch(name, validate = false) {
         if (validate) {
             this.checkName(name);
+        }
+
+        if (FakeTagRegistry.has(name)) {
+            return FakeTagRegistry.fetch(name);
         }
 
         const tag = await this.tag_db.fetch(name);
@@ -205,7 +217,16 @@ class TagManager extends DBManager {
         options = ObjectUtil.guaranteeObject(options);
 
         tag = await this.fetchAlias(tag, true);
-        await this._incrementUsage(tag._usageName ?? tag.name);
+
+        const usageName = tag._usageName ?? tag.name;
+
+        if (!FakeTagRegistry.has(usageName)) {
+            await this._incrementUsage(usageName);
+        }
+
+        if (tag.isFake) {
+            return await FakeTagRegistry.execute(tag, args, values, options);
+        }
 
         const type = tag.getScriptType();
 
@@ -260,7 +281,6 @@ class TagManager extends DBManager {
 
     async edit(tag, body, meta, validate, options) {
         tag = Tag.from(tag, true);
-        meta = Tag.normalizeMeta(meta);
         options = ObjectUtil.guaranteeObject(options);
 
         validate = ObjectUtil.getBooleanOptions(validate, false, {
@@ -271,9 +291,13 @@ class TagManager extends DBManager {
 
         if (tag === null) {
             throw new TagError("Tag doesn't exist");
+        } else if (tag.isFake) {
+            throw new TagError("Cannot edit tag", tag.name);
         } else if (validate.validateProvided) {
             this.checkName(tag.name);
         }
+
+        meta = Tag.normalizeMeta(meta);
 
         if (validate.validateNew) {
             body = this.checkBody(body);
@@ -484,6 +508,8 @@ class TagManager extends DBManager {
 
         if (tag === null) {
             throw new TagError("Tag doesn't exist");
+        } else if (tag.isFake) {
+            throw new TagError("Cannot transfer ownership of tag", tag.name);
         } else if (validate) {
             this.checkName(tag.name);
         }
@@ -533,6 +559,8 @@ class TagManager extends DBManager {
 
         if (tag === null) {
             throw new TagError("Tag doesn't exist");
+        } else if (tag.isFake) {
+            throw new TagError("Cannot rename tag", tag.name);
         } else if (validate.validateProvided) {
             this.checkName(oldName);
         }
@@ -592,6 +620,8 @@ class TagManager extends DBManager {
 
         if (tag === null) {
             throw new TagError("Tag doesn't exist");
+        } else if (tag.isFake) {
+            throw new TagError("Cannot delete tag", tag.name);
         } else if (validate) {
             this.checkName(tag.name);
         }

@@ -1,4 +1,4 @@
-import OverclockingModes from "../util/commands/OverclockingModes.js";
+import OverclockingModes from "../util/commands/overclocking/OverclockingModes.js";
 
 const voltageNames = Object.freeze([
     "ULV",

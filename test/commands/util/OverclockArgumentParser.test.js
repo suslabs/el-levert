@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import OverclockArgumentParser from "../../../src/util/commands/OverclockArgumentParser.js";
+import OverclockArgumentParser from "../../../src/util/commands/overclocking/OverclockArgumentParser.js";
 
 import ParserError from "../../../src/errors/ParserError.js";
 

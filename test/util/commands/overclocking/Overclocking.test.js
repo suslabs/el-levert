@@ -1,12 +1,12 @@
 import { describe, expect, test } from "vitest";
 
-import Overclocking from "../../../src/util/commands/Overclocking.js";
+import Overclocking from "../../../../src/util/commands/overclocking/Overclocking.js";
 
-import OverclockingModes from "../../../src/util/commands/OverclockingModes.js";
+import OverclockingModes from "../../../../src/util/commands/overclocking/OverclockingModes.js";
 
-import { OverclockingValues } from "../../../src/structures/OverclockingValues.js";
+import { OverclockingValues } from "../../../../src/structures/OverclockingValues.js";
 
-import OCError from "../../../src/errors/OCError.js";
+import OCError from "../../../../src/errors/OCError.js";
 
 describe("Overclocking", () => {
     describe("static utilities", () => {

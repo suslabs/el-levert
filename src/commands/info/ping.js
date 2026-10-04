@@ -26,9 +26,9 @@ class PingCommand {
             serverWarn = serverLatency > 100 ? ` ${getEmoji("warn")}` : "";
 
         await ctx.edit(
-            `${getEmoji("ok")} Pong!\n` +
-                `**Total latency:** \`${totalLatency}ms\`${totalWarn}\n` +
-                `**Server latency:** \`${serverLatency}ms\`${serverWarn}`
+            `${getEmoji("ok")} Pong!
+**Total latency:** \`${totalLatency}ms\`${totalWarn}
+**Server latency:** \`${serverLatency}ms\`${serverWarn}`
         );
     }
 }

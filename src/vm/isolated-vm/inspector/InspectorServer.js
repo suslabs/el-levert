@@ -62,7 +62,7 @@ class InspectorServer {
                 title: `el-levert[${process.pid}]`
             });
 
-            getLogger().info("## Inspector:\n" + this.inspectorUrl);
+            getLogger().info(`## Inspector:\n${this.inspectorUrl}`);
         }
 
         this.httpServer.listen(this.port);

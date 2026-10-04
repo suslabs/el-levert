@@ -162,7 +162,7 @@ If reactions are enabled, the file defines the bracket reactions and the word-tr
 # Features
 
 - Discord text commands with a configurable prefix
-- Tags with aliases, quotas, search, raw dump, ownership, and script support
+- Tags with pipelines and streaming, aliases, quotas, search, raw dump, ownership, and script support
 - Snapshot-based tag and permission audit history with revision reversion
 - JavaScript eval, optional `vm2`, optional other languages, and inspector debugging
 - Permission groups with configurable levels
@@ -268,6 +268,7 @@ Main actions:
 - `audit [tag_name] [revision_id] [--options]` shows recent tag changes or a full revision diff for moderators
 - `audit_clear [tag_name] [revision_id] [end_revision_id] [--options]` clears tag audit history for the bot owner
 - `revert (name) [revision_id]` restores a previous tag state. Tag owners can revert their own latest edit once within one hour; moderators can restore arbitrary revisions.
+- `stream (pipeline)` (or `pipe`) executes a pipeline of tags and stream operators
 
 Examples:
 
@@ -278,6 +279,10 @@ Examples:
 - `%tag audit_clear example` clears history for one tag
 - `%tag audit_clear example 42 45` clears an inclusive revision-ID range for one tag
 - `%tag audit_clear example --from "last week" --to "yesterday"` clears a date range for one tag
+- `%tag stream source_tag > upper` runs `source_tag` and converts the result to uppercase
+- `%tag stream echo hello world | upper` pipes echoed text through the `upper` operator
+- `%tag stream source_tag | echo prefix $ suffix` uses `$` to interpolate piped input
+- `%tag alias shout stream echo_tag $ | upper` creates an alias tag using a pipeline
 
 Tag audit options:
 
@@ -287,6 +292,33 @@ Tag audit options:
 - `--page` and `--limit` control pagination
 
 Audit results are shown in a compact paginated embed. Providing a revision ID shows the tracked fields before and after that change. `--from` and `--to` accept natural-language dates and times.
+
+Tag stream / pipeline:
+
+`%tag stream (step1) > (step2) > ... > (stepN)`
+`%tag pipe (step1) | (step2) | ... | (stepN)`
+
+Executes a sequence of steps chained together, passing the output of each step into the next. Both `>` and `|` can be used as step delimiters. Up to 30 steps are supported in a single pipeline.
+
+Each step can be the name of an existing tag or a built-in stream operator.
+
+Argument handling and the `$` placeholder:
+
+- If a step's arguments contain `$`, `$` is replaced by the piped output from the previous step (for example, `source_tag | echo prefix $ suffix`).
+- If a step does not contain `$`, the piped output is prepended to the step's arguments.
+- Quotes (`"..."` or `'...'`) keep delimiters like `>` and `|` within arguments from splitting the pipeline.
+- Tags can alias to `stream` pipelines (for example, `%tag alias shout stream echo_tag $ | upper`), which allows calling `%t shout custom_input`.
+
+Stream operators:
+
+- `echo [text]`: Outputs the specified text or forwards the piped input. When `text` contains `$`, it replaces `$` with the piped input.
+- `unembed [url]`: Extracts and stringifies text from embeds. Accepts JSON embed objects/arrays as input, a Discord message URL in arguments or input, or extracts embeds from the current or referenced message.
+- `unescape`: Removes backslash escape characters (for example, `\*` to `*` or `\_` to `_`).
+- `trim`: Trims leading and trailing whitespace from the input.
+- `lower`: Converts text to lowercase.
+- `upper`: Converts text to uppercase.
+- `head [count / -n count]`: Returns the first `n` lines of input (defaults to 10 lines).
+- `tail [count / -n count]`: Returns the last `n` lines of input (defaults to 10 lines).
 
 What users should know:
 

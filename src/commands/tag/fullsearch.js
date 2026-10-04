@@ -180,7 +180,7 @@ class TagFullSearchCommand {
 
         if (results.length > 2 * defaultResultLimit) {
             return {
-                content: header + "\n",
+                content: `${header}\n`,
                 ...DiscordUtil.getFileAttach(
                     formatSearchResults(this, results, ranges, defaultContext, false),
                     "results.txt"

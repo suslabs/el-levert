@@ -1,13 +1,13 @@
 import OverclockingModes, { validModes } from "./OverclockingModes.js";
 
-import { OverclockingValues, modeValues, tiers, tierByName } from "../../structures/OverclockingValues.js";
+import { OverclockingValues, modeValues, tiers, tierByName } from "../../../structures/OverclockingValues.js";
 
-import Util from "../Util.js";
-import TypeTester from "../TypeTester.js";
-import ObjectUtil from "../ObjectUtil.js";
-import { drawTable } from "../misc/Table.js";
+import Util from "../../Util.js";
+import TypeTester from "../../TypeTester.js";
+import ObjectUtil from "../../ObjectUtil.js";
+import { drawTable } from "../../misc/Table.js";
 
-import OCError from "../../errors/OCError.js";
+import OCError from "../../../errors/OCError.js";
 
 class Overclocking {
     static defaultValues = Object.freeze({

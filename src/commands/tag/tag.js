@@ -20,32 +20,6 @@ const dummyMsg = {
     attachments: new Map()
 };
 
-const tagAttachmentWarning =
-    "**Heads-up! Discord-hosted images disappear if the original message that provided them is deleted.**";
-
-async function getPreview(out, msg) {
-    let preview = null;
-
-    try {
-        preview = await getClient().previewHandler.generatePreview(msg, out);
-    } catch (err) {
-        getLogger().error("Preview gen failed:", err);
-    }
-
-    if (preview === null) {
-        return out;
-    }
-
-    const previewMsg = { embeds: [preview] },
-        cleanOut = getClient().previewHandler.removeLink(out);
-
-    if (!Util.empty(cleanOut)) {
-        previewMsg.content = cleanOut;
-    }
-
-    return previewMsg;
-}
-
 function getReplyData(out) {
     let options = null;
 
@@ -93,17 +67,20 @@ class TagCommand {
             "leaderboard",
             "list",
             "owner",
+            "pipe",
             "quota",
             "random",
             "raw",
             "revert",
             "rename",
             "search",
-            "set_type"
+            "set_type",
+            "stream"
         ]
     };
 
-    attachmentWarning = tagAttachmentWarning;
+    attachmentWarning =
+        "**Heads-up! Discord-hosted images disappear if the original message that provided them is deleted.**";
 
     async parseBase(t_args, msg, options) {
         options = ObjectUtil.guaranteeObject(options);
@@ -250,18 +227,7 @@ class TagCommand {
             try {
                 tag = await getClient().tagManager.fetchAlias(tag, true);
             } catch (err) {
-                if (err.name !== "TagError") {
-                    throw err;
-                }
-
-                switch (err.message) {
-                    case "Tag recursion detected":
-                        return `${getEmoji("warn")} Epic recursion fail: **${err.ref.map(name => escapeMarkdown(name)).join("** -> **")}**`;
-                    case "Hop not found":
-                        return `${getEmoji("warn")} Tag **${err.ref}** doesn't exist.`;
-                    default:
-                        return `${getEmoji("warn")} ${err.message}.`;
-                }
+                return this.formatError(err);
             }
         }
 
@@ -284,39 +250,15 @@ class TagCommand {
                 }
             );
         } catch (err) {
-            switch (err.name) {
-                case "TagError":
-                    errored = true;
-                    out = `${getEmoji("warn")} ${err.message}.`;
-                    break;
-                case "ClientError":
-                    errored = true;
-                    out = `${getEmoji("error")} Can't execute script tag. ${err.message}.`;
-                    break;
-                default:
-                    throw err;
-            }
+            errored = true;
+            out = this.formatError(err);
         }
 
         if (errored && !debug) {
             return out;
         }
 
-        const replyOut = getClient().previewHandler.canPreview(out)
-            ? [
-                  await getPreview(out, ctx.msg),
-                  {
-                      type: "options",
-                      limitType: MessageLimitTypes.none
-                  }
-              ]
-            : [
-                  out,
-                  {
-                      type: "options",
-                      useConfigLimits: true
-                  }
-              ];
+        const replyOut = await this.formatReply(out, ctx.msg);
 
         if (!debug) {
             return replyOut;
@@ -324,6 +266,67 @@ class TagCommand {
 
         const [editOut, editOptions] = getReplyData(replyOut);
         await ctx.edit(editOut, editOptions);
+    }
+
+    formatError(err) {
+        switch (err.name) {
+            case "TagError":
+                switch (err.message) {
+                    case "Tag recursion detected":
+                        return `${getEmoji("warn")} Epic recursion fail: **${err.ref.map(name => escapeMarkdown(name)).join("** -> **")}**`;
+                    case "Hop not found":
+                        return `${getEmoji("warn")} Tag **${escapeMarkdown(err.ref)}** doesn't exist.`;
+                    default:
+                        return `${getEmoji("warn")} ${err.message}.`;
+                }
+            case "ClientError":
+                return `${getEmoji("error")} Can't execute script tag. ${err.message}.`;
+            default:
+                throw err;
+        }
+    }
+
+    async getPreview(out, msg) {
+        let preview = null;
+
+        try {
+            preview = await getClient().previewHandler.generatePreview(msg, out);
+        } catch (err) {
+            getLogger().error("Preview gen failed:", err);
+        }
+
+        if (preview === null) {
+            return out;
+        }
+
+        const previewMsg = { embeds: [preview] },
+            cleanOut = getClient().previewHandler.removeLink(out);
+
+        if (!Util.empty(cleanOut)) {
+            previewMsg.content = cleanOut;
+        }
+
+        return previewMsg;
+    }
+
+    async formatReply(out, msg) {
+        if (getClient().previewHandler?.canPreview(out)) {
+            return [
+                await this.getPreview(out, msg),
+                {
+                    type: "options",
+                    limitType: MessageLimitTypes.none
+                }
+            ];
+        }
+
+        return [
+            out,
+            {
+                type: "options",
+                useConfigLimits: true
+            }
+        ];
     }
 }
 
