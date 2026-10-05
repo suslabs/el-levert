@@ -99,6 +99,10 @@ class TagRevisionManager {
         return await tx.getRevisionStore().fetchRevision(id);
     }
 
+    async fetchRevisionByIndex(subject, subjectIndex, tx = this.tagManager.tag_db) {
+        return await tx.getRevisionStore().fetchRevisionBySubjectIndex(this.spec.target, subject.id, subjectIndex);
+    }
+
     async fetchLatest(subject, tx = this.tagManager.tag_db) {
         return await tx.getRevisionStore().fetchLatest(this.spec.target, subject.id);
     }
@@ -142,15 +146,31 @@ class TagRevisionManager {
         return await this._manager(tx).clear(options);
     }
 
-    async getDetail(id, tx = this.tagManager.tag_db) {
-        const revision = await this.fetchRevision(id, tx);
+    async getDetail(id, tagName, tx = this.tagManager.tag_db) {
+        let revision = null,
+            subject = null;
+
+        if (Util.nonemptyString(tagName)) {
+            subject = await this.findSubject(tagName, tx);
+
+            if (subject !== null) {
+                revision = await this.fetchRevisionByIndex(subject, id, tx);
+            }
+        }
+
+        if (revision === null) {
+            revision = await this.fetchRevision(id, tx);
+        }
 
         if (revision === null || revision.target !== this.spec.target) {
             throw new TagError("Revision doesn't exist", id);
         }
 
-        const subject = await tx.getRevisionStore().fetchSubjectById(revision.subjectId),
-            previous = await this.fetchPrevious(revision, tx),
+        if (subject === null) {
+            subject = await tx.getRevisionStore().fetchSubjectById(revision.subjectId);
+        }
+
+        const previous = await this.fetchPrevious(revision, tx),
             manager = this._manager(tx),
             before = previous === null ? null : manager.restoreSnapshot(subject, previous),
             after = revision.snapshot === null ? null : manager.restoreSnapshot(subject, revision),
@@ -184,6 +204,8 @@ class TagRevisionManager {
             throw new TagError("This tag edit has already been reverted");
         } else if (snapshot?.owner !== actor) {
             throw new TagError("You can only revert your own tags");
+        } else if (latest.actor !== actor) {
+            throw new TagError("You can only revert your own actions");
         } else if (Date.now() - latest.created > this.constructor.revertAgeLimit) {
             throw new TagError("This tag edit is too old to revert");
         }

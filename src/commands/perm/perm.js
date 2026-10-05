@@ -5,8 +5,10 @@ import ObjectUtil from "../../util/ObjectUtil.js";
 class PermCommand {
     static info = {
         name: "perm",
-        description: "Manage users, groups, and permission levels.",
         aliases: ["p"],
+        args: "<subcommand> [args]",
+        description: "Manage users, groups, and permission levels.",
+        usage: "- <subcommand>: Permission management operation to execute.",
         subcommands: [
             "add",
             "remove",
@@ -21,6 +23,13 @@ class PermCommand {
             "revert"
         ]
     };
+
+    static unchangedArgs = Object.freeze({
+        empty: "",
+        unchanged: "unchanged"
+    });
+
+    static validUnchangedArgs = new Set(Object.values(this.unchangedArgs));
 
     load() {
         return getConfig().enablePermissions;
@@ -41,6 +50,10 @@ class PermCommand {
         }
 
         return null;
+    }
+
+    isUnchanged(arg) {
+        return this.constructor.validUnchangedArgs.has(arg);
     }
 
     handler(ctx) {

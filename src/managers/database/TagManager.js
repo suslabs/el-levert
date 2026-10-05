@@ -2,10 +2,10 @@ import path from "node:path";
 
 import DBManager from "./DBManager.js";
 import TagRevisionManager from "./revision/TagRevisionManager.js";
-import FakeTagRegistry from "./FakeTagRegistry.js";
 import TagDatabase from "../../database/TagDatabase.js";
 
 import Tag from "../../structures/tag/Tag.js";
+import FakeTagRegistry from "./FakeTagRegistry.js";
 
 import TagVM from "../../vm/isolated-vm/TagVM.js";
 import TagVM2 from "../../vm/vm2/TagVM2.js";
@@ -165,6 +165,20 @@ class TagManager extends DBManager {
             return tag;
         }
 
+        if (FakeTagRegistry.has(tag.aliasName)) {
+            const fakeTag = FakeTagRegistry.fetch(tag.aliasName),
+                hops = [tag.name, fakeTag.name];
+
+            fakeTag._setAliasProps(hops, tag.args ?? "", aliasOriginal);
+            fakeTag._usageName = Util.nonemptyString(tag.args) ? tag.name : fakeTag.name;
+
+            if (aliasOriginal) {
+                fakeTag._setOriginalProps(tag);
+            }
+
+            return fakeTag;
+        }
+
         const rows = await this.tag_db.fetchAlias(tag.aliasName, Tag._argsSeparator);
 
         if (Util.empty(rows)) {
@@ -195,6 +209,24 @@ class TagManager extends DBManager {
                 throw new TagError("Tag recursion detected", hops.concat(lastRow.aliasName));
             }
 
+            if (FakeTagRegistry.has(lastRow.aliasName)) {
+                const fakeTag = FakeTagRegistry.fetch(lastRow.aliasName);
+                hops.push(fakeTag.name);
+
+                const collectedArgs = [tag.args, lastRow.collectedArgs]
+                    .filter(arg => Util.nonemptyString(arg))
+                    .join(Tag._argsSeparator);
+
+                fakeTag._setAliasProps(hops, collectedArgs, aliasOriginal);
+                fakeTag._usageName = usageName ?? fakeTag.name;
+
+                if (aliasOriginal) {
+                    fakeTag._setOriginalProps(tag);
+                }
+
+                return fakeTag;
+            }
+
             throw new TagError("Hop not found", lastRow.aliasName);
         }
 
@@ -204,7 +236,7 @@ class TagManager extends DBManager {
             .filter(arg => Util.nonemptyString(arg))
             .join(Tag._argsSeparator);
 
-        lastTag._setAliasProps(hops, collectedArgs);
+        lastTag._setAliasProps(hops, collectedArgs, aliasOriginal);
         lastTag._usageName = usageName;
 
         if (aliasOriginal) {
@@ -273,6 +305,10 @@ class TagManager extends DBManager {
         }
 
         if (validate.checkExisting) {
+            if (FakeTagRegistry.has(name)) {
+                throw new TagError("Cannot manipulate command", name);
+            }
+
             const existingTag = await this.fetch(name);
 
             if (existingTag !== null) {
@@ -774,8 +810,8 @@ class TagManager extends DBManager {
         return await this.revisions.list(options);
     }
 
-    async auditDetail(id) {
-        return await this.revisions.getDetail(id);
+    async auditDetail(id, tagName) {
+        return await this.revisions.getDetail(id, tagName);
     }
 
     async clearAudit(options) {
@@ -809,7 +845,17 @@ class TagManager extends DBManager {
                 throw new TagError("Tag revision history doesn't exist", name);
             }
 
-            const target = revisionId == null ? latest : await this.revisions.fetchRevision(revisionId, tx);
+            let target;
+
+            if (revisionId == null) {
+                target = latest;
+            } else {
+                target = await this.revisions.fetchRevisionByIndex(subject, revisionId, tx);
+
+                if (target === null) {
+                    target = await this.revisions.fetchRevision(revisionId, tx);
+                }
+            }
 
             if (target === null || target.subjectId !== subject.id) {
                 throw new TagError("Revision doesn't exist", revisionId);
@@ -851,7 +897,15 @@ class TagManager extends DBManager {
                 await this.revisions.recordUpdate(aliasUpdate.before, aliasUpdate.after, tx, revisionOptions);
             }
 
-            getLogger().info(`Reverted tag: "${name}" to revision: ${target.id}`);
+            if (restored !== null) {
+                restored._targetRevision = target;
+                restored._currentTag = current;
+                restored._previousRevision = previous;
+            }
+
+            getLogger().info(
+                `Reverted tag: "${name}" to revision: ${previous?.subjectIndex ?? target.subjectIndex ?? target.id}`
+            );
             return restored;
         });
     }
@@ -1106,6 +1160,14 @@ class TagManager extends DBManager {
     }
 
     async _updateTagWithQuota(current, restored, tx) {
+        if (current.name !== restored.name) {
+            const existing = await tx.fetch(restored.name);
+
+            if (existing !== null) {
+                throw new TagError("Tag already exists", existing);
+            }
+        }
+
         const oldSize = current.getSize(),
             newSize = restored.getSize();
 

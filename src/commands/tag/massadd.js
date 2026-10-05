@@ -9,10 +9,16 @@ import FileUtil from "../../util/misc/FileUtil.js";
 class TagMassAddCommand {
     static info = {
         name: "massadd",
-        description: "Create tags from files in a directory.",
         parent: "tag",
         subcommand: true,
         ownerOnly: true,
+        args: "<tag_prefix> <owner> <input_dir>",
+        description:
+            "Batch import tags from files within a directory on the local host under a given prefix and owner. Bot owner only.",
+        usage: "- <tag_prefix>: Common prefix prepended to created tag names.\n- <owner>: User ID or mention to assign tag ownership to.\n- <input_dir>: Host filesystem directory containing files to import.",
+        parser: {
+            requireArgs: true
+        },
         arguments: [
             {
                 name: "tagPrefix",
@@ -40,10 +46,6 @@ class TagMassAddCommand {
     };
 
     async handler(ctx) {
-        if (Util.empty(ctx.argsText)) {
-            return `${getEmoji("info")} ${this.getArgsHelp("tag_prefix owner input_dir")}`;
-        }
-
         let tagPrefix = ctx.arg("tagPrefix"),
             owner = ctx.arg("owner"),
             inputDir = ctx.arg("inputDir");

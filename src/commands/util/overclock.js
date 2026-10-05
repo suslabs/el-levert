@@ -174,15 +174,51 @@ function runBulk(cmd, input, ctx) {
 class OverclockCommand {
     static info = {
         name: "overclock",
-        description: "Calculate overclocking requirements.",
-        usage: `[mode] <eu> <duration> [chance] [chance_bonus] [parallel] [amperage]
-ebf <eu> <duration> <recipe_heat> <coil_heat> [parallel] [amperage]
-
-Modes: ${OverclockArgumentParser.modes.join(", ")}
-Default mode: ${OverclockingModes.standard}.
-Modifiers: --tape, --subtick, --extra, --rf
-Output: --voltage, --rates, --input, --output, --count, --tick, --text, --auto, --bulk.`,
         aliases: ["oc", "oceu"],
+        args: "[mode] <eu> <duration> [chance] [chance_bonus] [parallel] [amperage] [--options]",
+        description: `Calculates GT recipe overclocking, voltage requirements, duration, and parallel throughput.
+
+Syntax:
+  %oc [mode] <EU> <duration> [base_chance] [chance_bonus] [parallel] [amperage] [--options]
+  %oc ebf <EU> <duration> <recipe_heat> <coil_heat> [parallel] [amperage] [--options]
+
+Note: <> marks required arguments, [] marks optional arguments. Use '-' to skip an argument.
+
+Modes:
+  standard: Normal overclocking (2x speed, 4x power). Default mode.
+  ebf: Electric Blast Furnace mode; calculates heat difference overclocking.
+  lcr: Large Chemical Reactor / perfect overclocking (4x speed, 4x power).
+  ce: Emulates GTCE overclocking (2.8x speed, chance doubling per overclock).
+  macerator: GTCE macerator mode with special chanced output handling.
+
+Examples:
+  %oc 120 20
+  %oc 480 30s 100 10 4 2 --iv
+  %oc ebf 1920 60.3s 3600 5200 4 1
+  %oc lcr 2000 15s --rates --subtick`,
+        usage: `- [mode]: Processing mode (standard, ebf, lcr, ce, macerator).
+- <eu>: EU/t recipe cost.
+- <duration>: Recipe time in seconds or ticks (e.g. 20, 30s).
+- [base_chance]: Base chanced output percentage (1-100).
+- [chance_bonus]: Tier chance increase percentage.
+- [parallel]: Number of parallel operations.
+- [amperage]: Available amperage (default: 1).
+- <recipe_heat>: Required heat for EBF mode.
+- <coil_heat>: Available coil heat for EBF mode.
+- --tape: Maintenance/config hatch boost (0.9x duration).
+- --subtick: Subtick overclocking (doubles parallel after reaching 1t).
+- --extra: Outputs extra high-tier voltages (UHV through MAX).
+- --rf: Treats input EU as RF cost (divides by 4).
+- --time <multiplier>: Multiplies recipe duration by a factor.
+- --eu <multiplier>: Multiplies recipe EU/t cost by a factor.
+- --voltage, --<tier>: Filters output table to specified voltage tier.
+- --rates: Displays item production rates (recipes/s) in the table.
+- --input, --output <number>: Multiplies input/output rate by a factor.
+- --count <number>: Sets recipe batch count.
+- --tick: Displays recipe durations in ticks only.
+- --text: Outputs formatted plain text table instead of rich embed.
+- --auto: Automatically selects optimal voltage tier.
+- --bulk: Calculates multiple recipes at once, one recipe per line.`,
         helpArgs: ["help", "-help", "-h", "--help", "usage"],
         category: "util",
         arguments: [

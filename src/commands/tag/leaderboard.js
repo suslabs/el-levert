@@ -43,9 +43,16 @@ function formatLeaderboard(leaderboard, type) {
 class TagLeaderboardCommand {
     static info = {
         name: "leaderboard",
-        description: "Show tag usage, count, or quota leaderboards.",
+        aliases: ["lb"],
         parent: "tag",
         subcommand: true,
+        args: "<count|size|usage> [limit]",
+        description:
+            "Show rankings for tags by count of tags owned per user, total storage size consumed in KB, or execution usage count.",
+        usage: "- <count|size|usage>: Ranking metric to display.\n- [limit]: Number of leaderboard entries to show (max 50).",
+        parser: {
+            requireArgs: true
+        },
         arguments: [
             {
                 name: "leaderboardType",
@@ -62,10 +69,6 @@ class TagLeaderboardCommand {
     };
 
     async handler(ctx) {
-        if (Util.empty(ctx.argsText)) {
-            return `${getEmoji("info")} ${this.getArgsHelp(`(count/size/usage) [limit <= ${maxLimit}]`)}`;
-        }
-
         const l_type = ctx.arg("leaderboardType"),
             l_text = ctx.arg("limitText");
 

@@ -7,10 +7,16 @@ import Util from "../../util/Util.js";
 class TagChownCommand {
     static info = {
         name: "chown",
-        description: "Change a tag's owner.",
         aliases: ["transfer"],
         parent: "tag",
         subcommand: true,
+        args: "<name> <new_owner>",
+        description:
+            "Transfers ownership of a tag to another user. Only the current tag owner or server moderators have permission to change tag ownership.",
+        usage: "- <name>: Target tag to transfer.\n- <new_owner>: Username, mention, or Discord ID of the recipient.",
+        parser: {
+            requireArgs: true
+        },
         arguments: [
             {
                 name: "tagName",
@@ -27,15 +33,15 @@ class TagChownCommand {
     };
 
     async handler(ctx) {
-        if (Util.empty(ctx.argsText)) {
-            return `${getEmoji("info")} ${this.getArgsHelp("name new_owner")}`;
-        }
-
         let t_name = ctx.arg("tagName"),
             t_args = ctx.arg("ownerText");
 
-        if (this.matchesSubcmd(t_name)) {
-            return `${getEmoji("invalid")} **${escapeMarkdown(t_name)}** is a __command__, not a __tag__. You can't manipulate commands.`;
+        {
+            const err = this.parentCmd.checkCommand(t_name);
+
+            if (err !== null) {
+                return err;
+            }
         }
 
         {

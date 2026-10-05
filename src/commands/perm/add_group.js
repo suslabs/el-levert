@@ -7,11 +7,16 @@ import Util from "../../util/Util.js";
 class PermAddGroupCommand {
     static info = {
         name: "add_group",
-        description: "Create a permission group.",
         aliases: ["create", "create_group"],
         parent: "perm",
         subcommand: true,
         allowed: "admin",
+        args: "<group_name> <level>",
+        description: "Creates a new permission group with an assigned access level.",
+        usage: "- <group_name>: Name of the new permission group.\n- <level>: Numerical permission level to assign to the group.",
+        parser: {
+            requireArgs: true
+        },
         arguments: [
             {
                 name: "groupName",
@@ -36,8 +41,8 @@ class PermAddGroupCommand {
             levelText = ctx.arg("levelText"),
             level = ctx.arg("level");
 
-        if (Util.empty(ctx.argsText) || Util.empty(g_name) || Util.empty(levelText)) {
-            return `${getEmoji("info")} ${this.getArgsHelp("group_name level")}`;
+        if (Util.empty(g_name) || Util.empty(levelText)) {
+            return `${getEmoji("info")} ${this.getArgsHelp()}`;
         }
 
         {

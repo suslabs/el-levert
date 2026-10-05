@@ -2,7 +2,6 @@ import { escapeMarkdown } from "discord.js";
 
 import { getClient, getEmoji } from "../../LevertClient.js";
 
-import Util from "../../util/Util.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 
 function codeblock(str) {
@@ -12,11 +11,17 @@ function codeblock(str) {
 class TagInfoCommand {
     static info = {
         name: "info",
-        description: "Show information about a tag.",
         aliases: ["data"],
         parent: "tag",
         subcommand: true,
         allowed: "mod",
+        args: "<name> [raw]",
+        description:
+            "Displays stored database metadata, type flags, ownership, and byte size for a tag. Moderator-only diagnostic tool for inspecting tag properties.",
+        usage: "- <name>: Target tag to inspect.\n- [raw]: Optional flag to dump the unformatted JSON object.",
+        parser: {
+            requireArgs: true
+        },
         arguments: [
             {
                 name: "tagName",
@@ -34,16 +39,16 @@ class TagInfoCommand {
     };
 
     async handler(ctx) {
-        if (Util.empty(ctx.argsText)) {
-            return `${getEmoji("info")} ${this.getArgsHelp("name")}`;
-        }
-
         let t_name = ctx.arg("tagName"),
             i_type = ctx.arg("infoType"),
             raw = i_type === "raw";
 
-        if (this.matchesSubcmd(t_name)) {
-            return `${getEmoji("invalid")} **${escapeMarkdown(t_name)}** is a __command__, not a __tag__. You can't manipulate commands.`;
+        {
+            const err = this.parentCmd.checkCommand(t_name);
+
+            if (err !== null) {
+                return err;
+            }
         }
 
         {

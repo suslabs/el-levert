@@ -13,7 +13,8 @@
         "postinstall": "node ./scripts/setup/install-sqlite.cjs",
         "format": "prettier --config .prettierrc --ignore-path .prettierignore --write **/*.{js,cjs,json}",
         "lint": "eslint . --config .eslintrc.cjs --ignore-path .gitignore --ext .js,.cjs",
-        "importer": "cross-env MOCK_MAP_PATH=\"./scripts/importer/mock/mock-map.json\" node --no-warnings=ExperimentalWarning --loader \"./scripts/mock/mock-loader.js\" ./scripts/importer/importer.js"
+        "importer": "cross-env MOCK_MAP_PATH=\"./scripts/importer/mock/mock-map.json\" node --no-warnings=ExperimentalWarning --loader \"./scripts/mock/mock-loader.js\" ./scripts/importer/importer.js",
+        "archive": "node ./scripts/archive.cjs"
     },
     "dependencies": {
         "@leeoniya/ufuzzy": "^1.0.19",

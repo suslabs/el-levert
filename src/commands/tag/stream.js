@@ -6,7 +6,10 @@ import StreamPipeline from "../../util/commands/stream/StreamPipeline.js";
 class TagStreamCommand {
     static info = {
         name: "stream",
-        usage: "tag1 > tag2 > ... > tagN",
+        aliases: ["pipe"],
+        parent: "tag",
+        subcommand: true,
+        args: "<tag1 > tag2 > ... > tagN>",
         description: `Execute a pipeline of tags and stream operators separated by > or |.
 Steps can be tag names or stream operators. Use $ in arguments to substitute piped input.
 
@@ -19,16 +22,13 @@ Operators:
 - upper: Converts input to uppercase.
 - head [n|-n count]: Returns the first n lines of input (default: 10).
 - tail [n|-n count]: Returns the last n lines of input (default: 10).`,
-        aliases: ["pipe"],
-        parent: "tag",
-        subcommand: true
+        usage: "- <pipeline>: Chain of tag names and stream operators separated by '>' or '|'.",
+        parser: {
+            requireArgs: true
+        }
     };
 
     async handler(ctx) {
-        if (Util.empty(ctx.argsText)) {
-            return `${getEmoji("info")} ${this.getArgsHelp("tag1 > tag2 > ... > tagN")}`;
-        }
-
         let out;
 
         try {

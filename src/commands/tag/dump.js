@@ -6,10 +6,13 @@ import DiscordUtil from "../../util/DiscordUtil.js";
 class TagDumpCommand {
     static info = {
         name: "dump",
-        description: "List all registered tags.",
         aliases: ["all", "list_all"],
         parent: "tag",
         subcommand: true,
+        args: "[inline|full] [spaces]",
+        description:
+            "Exports registered tags from the database. When called with 'full', exports a complete JSON file containing tag metadata and content. Without arguments or with 'inline', outputs tag names.",
+        usage: "- [inline|full]: Dump format mode ('full' for JSON export, 'inline' for name list).\n- [spaces]: Number of indentation spaces for full JSON dump.",
         arguments: [
             {
                 name: "dumpType",

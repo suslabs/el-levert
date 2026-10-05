@@ -3,10 +3,15 @@ import { getClient, getEmoji } from "../../LevertClient.js";
 class ReminderRemoveCommand {
     static info = {
         name: "remove",
-        description: "Remove one of your reminders.",
         aliases: ["unset", "delete"],
         parent: "reminder",
         subcommand: true,
+        args: "<index>",
+        description: "Delete an active reminder by its 1-based list index.",
+        usage: "- <index>: Numerical index of the reminder to remove from your list.",
+        parser: {
+            requireArgs: true
+        },
         arguments: [
             {
                 name: "index",

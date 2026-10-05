@@ -8,10 +8,16 @@ const messageRegex = /(.+?)\s*(?:(?:(['"`])((?:[^\2\\]|\\.)*?)\2)|$)/;
 class ReminderAddCommand {
     static info = {
         name: "add",
-        description: "Create a reminder.",
         aliases: ["set", "create"],
         parent: "reminder",
         subcommand: true,
+        args: '<date> ["message"]',
+        description:
+            "Create a scheduled reminder. The date can be a relative duration (e.g. 10m, 2h, 3d) or a timestamp.",
+        usage: '- <date>: When to trigger the reminder (e.g. 1h, 30m, 2026-12-01).\n- ["message"]: Optional message text enclosed in quotes.',
+        parser: {
+            requireArgs: true
+        },
         arguments: [
             {
                 name: "date",
@@ -43,8 +49,8 @@ class ReminderAddCommand {
     async handler(ctx) {
         const date = ctx.arg("date");
 
-        if (Util.empty(ctx.argsText) || Util.empty(date)) {
-            return `${getEmoji("info")} ${this.getArgsHelp('date "message"')}`;
+        if (Util.empty(date)) {
+            return `${getEmoji("info")} ${this.getArgsHelp()}`;
         }
 
         const parsedDate = DateUtil.parse(date);

@@ -63,7 +63,7 @@ describe("Merged Branch Coverage", () => {
         test("covers help, command-name rejection, missing tags, and flag/value failures", async () => {
             const command = getCommand(runtime, "tag");
 
-            await expect(executeCommand(command, "set_type", { msg })).resolves.toContain("name flag [value]");
+            await expect(executeCommand(command, "set_type", { msg })).resolves.toContain("<name> <flag> [value]");
             await expect(executeCommand(command, "set_type list version old", { msg })).resolves.toContain(
                 "is a __command__"
             );

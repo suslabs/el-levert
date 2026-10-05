@@ -14,7 +14,13 @@ class PermRevertCommand {
         parent: "perm",
         subcommand: true,
         allowed: "admin",
-        description: "Restore a permission group or membership to a previous revision.",
+        args: "<group|membership> <subject> [revision_id]",
+        description:
+            "Restore a permission group or user membership to a previous revision state or undo the latest change.",
+        usage: "- <group|membership>: Entity type to revert ('group' or 'membership').\n- <subject>: Group name or user identifier.\n- [revision_id]: Specific revision ID to restore (omitting reverts latest action).",
+        parser: {
+            requireArgs: true
+        },
         arguments: [
             {
                 name: "targetType",
@@ -34,10 +40,6 @@ class PermRevertCommand {
     }
 
     async handler(ctx) {
-        if (Util.empty(ctx.argsText)) {
-            return `${getEmoji("info")} ${this.getArgsHelp("group group_name [revision_id] | membership user_id/group_name [revision_id]")}`;
-        }
-
         const args = this._parseArgs(ctx.arg("revertData"));
 
         if (args === null) {

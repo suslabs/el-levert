@@ -7,11 +7,16 @@ import Util from "../../util/Util.js";
 class PermRemoveGroupCommand {
     static info = {
         name: "remove_group",
-        description: "Delete a permission group.",
         aliases: ["delete", "delete_group"],
         parent: "perm",
         subcommand: true,
         allowed: "admin",
+        args: "<group_name>",
+        description: "Deletes a permission group and removes all of its member associations.",
+        usage: "- <group_name>: Name of the permission group to delete.",
+        parser: {
+            requireArgs: true
+        },
         arguments: [
             {
                 name: "groupName",
@@ -22,10 +27,6 @@ class PermRemoveGroupCommand {
     };
 
     async handler(ctx) {
-        if (Util.empty(ctx.argsText)) {
-            return `${getEmoji("info")} ${this.getArgsHelp("group_name")}`;
-        }
-
         let g_name = ctx.arg("groupName");
 
         {

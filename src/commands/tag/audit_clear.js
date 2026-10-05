@@ -10,7 +10,10 @@ class TagAuditClearCommand {
         subcommand: true,
         allowed: "owner",
         ownerOnly: true,
-        description: "Clear tag audit history as the owner.",
+        args: "[tag_name] [revision_id] [end_revision_id] [--options]",
+        description:
+            "Clear tag audit history as the bot owner. Wipes revision entries matching the given tag, revision ID range, or date range, and resets the autoincrement sequence when performing a full wipe.",
+        usage: "- [tag_name]: Filter revision wipe to this tag.\n- [revision_id]: Specific revision ID or start of range.\n- [end_revision_id]: End of revision ID range.\n- --from <date>: Clear revisions created on or after date.\n- --to <date>: Clear revisions created on or before date.",
         arguments: [
             {
                 name: "from",

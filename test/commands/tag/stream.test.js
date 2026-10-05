@@ -158,15 +158,42 @@ describe("tag stream command and fake tag system", () => {
         const command = getCommand(runtime, "tag");
         const out = await executeCommand(command, "stream -help", { msg });
 
-        expect(out).toContain("Description:");
-        expect(out).toContain("echo");
-        expect(out).toContain("unembed");
-        expect(out).toContain("unescape");
-        expect(out).toContain("trim");
-        expect(out).toContain("lower");
-        expect(out).toContain("upper");
-        expect(out).toContain("head");
-        expect(out).toContain("tail");
-        expect(out).toContain("Usage:");
+        expect(out.embeds).toHaveLength(1);
+        expect(out.embeds[0].data.fields[0].name).toBe("Description");
+        expect(out.embeds[0].data.fields[1].name).toBe("Usage");
+
+        const desc = out.embeds[0].data.fields[0].value;
+        expect(desc).toContain("echo");
+        expect(desc).toContain("unembed");
+        expect(desc).toContain("unescape");
+        expect(desc).toContain("trim");
+        expect(desc).toContain("lower");
+        expect(desc).toContain("upper");
+        expect(desc).toContain("head");
+        expect(desc).toContain("tail");
+    });
+
+    test("blocks creating, editing, renaming, or aliasing on top of fake tags", async () => {
+        const command = getCommand(runtime, "tag");
+
+        expect(await executeCommand(command, "add stream test", { msg })).toContain("is a __command__, not a __tag__");
+        expect(await executeCommand(command, "add pipe test", { msg })).toContain("is a __command__, not a __tag__");
+        expect(await executeCommand(command, "edit stream test", { msg })).toContain("is a __command__, not a __tag__");
+        expect(await executeCommand(command, "rename stream test", { msg })).toContain(
+            "is a __command__, not a __tag__"
+        );
+        expect(await executeCommand(command, "alias stream test", { msg })).toContain(
+            "is a __command__, not a __tag__"
+        );
+    });
+
+    test("resolves multi-hop aliases pointing to stream", async () => {
+        const command = getCommand(runtime, "tag");
+
+        await executeCommand(command, "alias hop1 stream echo hello", { msg });
+        await executeCommand(command, "alias hop2 hop1", { msg });
+
+        const out = await executeCommand(command, "hop2", { msg });
+        expect(out[0]).toBe("hello");
     });
 });

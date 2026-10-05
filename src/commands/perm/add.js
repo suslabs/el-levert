@@ -7,11 +7,16 @@ import Util from "../../util/Util.js";
 class PermAddCommand {
     static info = {
         name: "add",
-        description: "Add a user to a permission group.",
         aliases: ["give"],
         parent: "perm",
         subcommand: true,
         allowed: "admin",
+        args: "<group_name> <user>",
+        description: "Assign a user to an existing permission group.",
+        usage: "- <group_name>: Name of the permission group.\n- <user>: Target user by mention, username, or Discord ID.",
+        parser: {
+            requireArgs: true
+        },
         arguments: [
             {
                 name: "groupName",
@@ -30,8 +35,8 @@ class PermAddCommand {
         let g_name = ctx.arg("groupName"),
             u_name = ctx.arg("userName");
 
-        if (Util.empty(ctx.argsText) || Util.empty(g_name) || Util.empty(u_name)) {
-            return `${getEmoji("info")} ${this.getArgsHelp("group_name (ping/id/username)")}`;
+        if (Util.empty(g_name) || Util.empty(u_name)) {
+            return `${getEmoji("info")} ${this.getArgsHelp()}`;
         }
 
         {

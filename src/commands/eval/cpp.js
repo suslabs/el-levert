@@ -3,9 +3,14 @@ import { getConfig } from "../../LevertClient.js";
 class CppEvalCommand {
     static info = {
         name: "cpp",
-        description: "Evaluate C++ code.",
         parent: "eval",
-        subcommand: true
+        subcommand: true,
+        args: "<script>",
+        description: "Compile and execute C++ source code in an external execution sandbox.",
+        usage: "- <script>: C++ source code to compile and run, or supply a file attachment.",
+        parser: {
+            requireArgs: true
+        }
     };
 
     load() {

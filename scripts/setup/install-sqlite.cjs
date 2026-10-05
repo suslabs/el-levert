@@ -54,4 +54,4 @@ ensureSubmodule();
 compileSubmodule();
 linkSubmodule();
 
-console.log("\n✓ SQLite submodule linked successfully.");
+console.log("\nSQLite submodule linked successfully.");

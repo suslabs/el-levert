@@ -3,9 +3,14 @@ import { getConfig } from "../../LevertClient.js";
 class PythonEvalCommand {
     static info = {
         name: "py",
-        description: "Evaluate Python code.",
         parent: "eval",
-        subcommand: true
+        subcommand: true,
+        args: "<script>",
+        description: "Execute Python code in an isolated interpreter environment.",
+        usage: "- <script>: Python code to execute, or provide a file attachment.",
+        parser: {
+            requireArgs: true
+        }
     };
 
     load() {

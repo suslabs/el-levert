@@ -52,4 +52,29 @@ describe("TextCommand", () => {
         expect(parent.getSubcmd("a")).toBeNull();
         await expect(parent.execute(new TextCommandContext({ argsText: "body" }))).resolves.toBe("parent:body");
     });
+
+    test("formats help embed with 2 fields and default messages in discord mode", () => {
+        const cmd = new ParentTextCommand({
+            name: "sample",
+            description: "Sample description",
+            usage: "sample <arg>",
+            prefix: "!"
+        });
+        const help = cmd.getHelpText(true);
+
+        expect(help.embeds).toHaveLength(1);
+        expect(help.embeds[0].data.fields).toEqual([
+            { name: "Description", value: "Sample description" },
+            { name: "Usage", value: "sample <arg>" }
+        ]);
+
+        const emptyCmd = new ParentTextCommand({ name: "empty" });
+        const emptyHelp = emptyCmd.getHelpText(true);
+
+        expect(emptyHelp.embeds).toHaveLength(1);
+        expect(emptyHelp.embeds[0].data.fields).toEqual([
+            { name: "Description", value: "No description provided." },
+            { name: "Usage", value: "No usage provided." }
+        ]);
+    });
 });

@@ -5,6 +5,8 @@ import { MessageLimitTypes } from "../../handlers/discord/MessageLimitTypes.js";
 import Tag from "../../structures/tag/Tag.js";
 import { TagTypes } from "../../structures/tag/TagTypes.js";
 
+import FakeTagRegistry from "../../managers/database/FakeTagRegistry.js";
+
 import { getClient, getEmoji, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
@@ -37,8 +39,34 @@ function getReplyData(out) {
 class TagCommand {
     static info = {
         name: "tag",
-        description: "Create, manage, and execute tags.",
         aliases: ["t"],
+        args: "<name> [args]",
+        description: `Create, manage, and execute tags and scripts. When called with a tag name, executes the tag and passes any additional text as arguments.
+
+Subcommands:
+- add <name> [body]: Create a new tag.
+- edit <name> [body]: Edit an existing tag's body.
+- delete <name>: Delete a tag.
+- rename <name> <new_name>: Rename a tag.
+- alias <name> <target> [args]: Create an alias to another tag or stream.
+- raw <name>: Show the stored body/script of a tag without executing it.
+- stream <tag1 > tag2 > ...>: Execute a pipeline of tags/operators.
+- audit [tag_name] [revision_id] [--options]: View revision history or diff.
+- audit_clear [tag_name] [revision_id] [end_revision_id] [--options]: Clear tag audit history (owner only).
+- revert <name> [revision_id]: Restore a previous tag state.
+- info <name> [raw]: Show tag details and metadata (moderators).
+- list [user]: List your tags or another user's tags.
+- search <text> [limit]: Search tag names.
+- fullsearch <query> [limit]: Search inside tag bodies.
+- leaderboard (count/size/usage) [limit]: Show tag leaderboards.
+- quota: Check your tag storage quota.
+- chown <name> <new_owner>: Transfer tag ownership.
+- hide <name> / unhide <name>: Hide or unhide a tag.
+- random [prefix]: Execute a random tag matching prefix.
+- count [scope]: Count tags by scope/type.
+- dump [inline/full] [spaces]: Export tag database (full sends JSON file).
+- set_type <name> <type|version>: Set script tag type/version (moderators).`,
+        usage: "- <name>: Name of the tag to execute.\n- [args]: Optional arguments passed to the tag.",
         arguments: [
             {
                 name: "tagName",
@@ -83,6 +111,10 @@ class TagCommand {
 
     attachmentWarning =
         "**Heads-up! Discord-hosted images disappear if the original message that provided them is deleted.**";
+
+    matchesSubcmd(name, checkAliases = true) {
+        return this.getSubcmdNames(checkAliases).includes(name) || FakeTagRegistry.has(name);
+    }
 
     async parseBase(t_args, msg, options) {
         options = ObjectUtil.guaranteeObject(options);
@@ -185,6 +217,14 @@ class TagCommand {
             attachment,
             err: null
         };
+    }
+
+    checkCommand(name) {
+        if (this.matchesSubcmd(name)) {
+            return `${getEmoji("invalid")} **${escapeMarkdown(name)}** is a __command__, not a __tag__. You can't manipulate commands.`;
+        }
+
+        return null;
     }
 
     async checkOwner(tag, ctx, action) {

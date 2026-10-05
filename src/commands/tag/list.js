@@ -10,9 +10,11 @@ function formatTagList(tags) {
 class TagListCommand {
     static info = {
         name: "list",
-        description: "List tags owned by a user.",
         parent: "tag",
         subcommand: true,
+        args: "[user]",
+        description: "List all tags registered under your account, or under another specified user's account.",
+        usage: "- [user]: Username, mention, or user ID to inspect tags for (defaults to yourself).",
         arguments: [
             {
                 name: "userName",

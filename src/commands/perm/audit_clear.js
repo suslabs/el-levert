@@ -10,7 +10,10 @@ class PermAuditClearCommand {
         subcommand: true,
         allowed: "owner",
         ownerOnly: true,
-        description: "Clear permission audit history as the owner.",
+        args: "[group_name|user] [revision_id] [end_revision_id] [--options]",
+        description:
+            "Clear permission audit history as the bot owner. Wipes revision entries matching the given criteria and resets the autoincrement sequence on a full wipe.",
+        usage: "- [group_name|user]: Filter revision wipe to this subject.\n- [revision_id]: Specific revision ID or start of range.\n- [end_revision_id]: End of revision ID range.\n- --from <date>: Clear revisions created on or after date.\n- --to <date>: Clear revisions created on or before date.",
         arguments: [
             {
                 name: "from",

@@ -7,9 +7,15 @@ import Util from "../../util/Util.js";
 class TagRenameCommand {
     static info = {
         name: "rename",
-        description: "Rename a tag.",
         parent: "tag",
         subcommand: true,
+        args: "<name> <new_name>",
+        description:
+            "Renames a tag to a new identifier and automatically updates all alias pointers referencing the old name. Only the tag owner or moderators can rename a tag.",
+        usage: "- <name>: Current name of the tag to rename.\n- <new_name>: New unique name for the tag.",
+        parser: {
+            requireArgs: true
+        },
         arguments: [
             {
                 name: "tagName",
@@ -27,15 +33,15 @@ class TagRenameCommand {
     };
 
     async handler(ctx) {
-        if (Util.empty(ctx.argsText)) {
-            return `${getEmoji("info")} ${this.getArgsHelp("name new_name")}`;
-        }
-
         let t_name = ctx.arg("tagName"),
             n_name = ctx.arg("newName");
 
-        if (this.matchesSubcmd(t_name)) {
-            return `${getEmoji("invalid")} **${escapeMarkdown(t_name)}** is a __command__, not a __tag__. You can't manipulate commands.`;
+        {
+            const err = this.parentCmd.checkCommand(t_name);
+
+            if (err !== null) {
+                return err;
+            }
         }
 
         {
@@ -50,6 +56,14 @@ class TagRenameCommand {
 
         if (Util.empty(n_name)) {
             return `${getEmoji("warn")} You must specify the new tag name.`;
+        }
+
+        {
+            const err = this.parentCmd.checkCommand(n_name);
+
+            if (err !== null) {
+                return err;
+            }
         }
 
         const tag = await getClient().tagManager.fetch(t_name);

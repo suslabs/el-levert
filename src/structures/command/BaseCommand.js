@@ -182,6 +182,10 @@ class BaseCommand {
 
     static _registerInfoGetters() {
         for (const prop of this.infoClass.dataProps) {
+            if (prop === "parser") {
+                continue;
+            }
+
             if (!Object.hasOwn(this.prototype, prop)) {
                 this._registerFunc(this._infoGetter, prop);
             }

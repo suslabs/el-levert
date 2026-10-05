@@ -5,10 +5,16 @@ import Util from "../../util/Util.js";
 class TagRandomCommand {
     static info = {
         name: "random",
-        description: "Execute a randomly selected tag.",
         aliases: ["rand", "r"],
         parent: "tag",
         subcommand: true,
+        args: "<prefix> [tag_args]",
+        description:
+            "Randomly selects and executes a registered tag whose name starts with the given prefix, forwarding any additional arguments.",
+        usage: "- <prefix>: Tag name prefix to match against.\n- [tag_args]: Optional arguments passed to the executed tag.",
+        parser: {
+            requireArgs: true
+        },
         arguments: [
             {
                 name: "prefix",
@@ -24,10 +30,6 @@ class TagRandomCommand {
     };
 
     async handler(ctx) {
-        if (Util.empty(ctx.argsText)) {
-            return `${getEmoji("info")} ${this.getArgsHelp("prefix")}`;
-        }
-
         let prefix = ctx.arg("prefix"),
             t_args = ctx.arg("tagArgs");
 

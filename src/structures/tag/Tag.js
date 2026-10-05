@@ -7,8 +7,6 @@ import { resolveVMLanguage } from "../vm/VMLanguages.js";
 
 import { TagTypes } from "./TagTypes.js";
 
-import { getClient } from "../../LevertClient.js";
-
 import Util from "../../util/Util.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
@@ -185,7 +183,7 @@ class Tag {
     }
 
     get isAlias() {
-        return Util.nonemptyString(this.aliasName) || Util.multiple(this._hops ?? []);
+        return Util.nonemptyString(this.aliasName);
     }
 
     get hops() {
@@ -395,6 +393,7 @@ class Tag {
         }
 
         let owner;
+        const { getClient } = await import("../../LevertClient.js");
 
         if (onlyMembers) {
             owner = Util.first(
@@ -720,10 +719,13 @@ class Tag {
         this._registerFlagFuncs();
     }
 
-    _setAliasProps(hops, args) {
+    _setAliasProps(hops, args, setAlias = true) {
         if (Array.isArray(hops) && !Util.empty(hops)) {
             this._hops = hops;
-            this.aliasName = hops[1] ?? this.constructor.defaultValues.aliasName;
+
+            if (setAlias) {
+                this.aliasName = hops[1] ?? this.constructor.defaultValues.aliasName;
+            }
         }
 
         const argsList = ArrayUtil.guaranteeArray(args ?? []).filter(arg => !Util.empty(arg));

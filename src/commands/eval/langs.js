@@ -14,9 +14,9 @@ function formatNames(langNames) {
 class EvalLangsCommand {
     static info = {
         name: "langs",
-        description: "List the available evaluation languages.",
         parent: "eval",
-        subcommand: true
+        subcommand: true,
+        description: "List all supported programming languages and runtime environments available for evaluation."
     };
 
     handler() {

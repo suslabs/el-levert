@@ -5,9 +5,10 @@ import Util from "../../util/Util.js";
 class TagQuotaCommand {
     static info = {
         name: "quota",
-        description: "Show your tag quota usage.",
         parent: "tag",
-        subcommand: true
+        subcommand: true,
+        description:
+            "Displays your current tag storage consumption in kilobytes and the percentage of the allowed limit."
     };
 
     async handler(ctx) {

@@ -72,8 +72,13 @@ function codeblock(str) {
 class StoikCommand {
     static info = {
         name: "stoik",
-        description: "Compare two values using the Stoik calculation.",
         category: "util",
+        args: "<reactants> -> <products>",
+        description: "Parses and balances chemical equations, verifying stoichiometry between reactants and products.",
+        usage: "- <reactants> -> <products>: Chemical reaction equation separated by '->' or '='.",
+        parser: {
+            requireArgs: true
+        },
         arguments: [
             {
                 name: "left",

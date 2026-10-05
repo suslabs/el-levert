@@ -137,8 +137,14 @@ const altLangNames = {
 class EvalCommand {
     static info = {
         name: "eval",
-        description: "Evaluate code using one of the configured languages.",
         aliases: ["e", "exec"],
+        args: "<script> [--debug]",
+        description:
+            "Execute Javascript code in an isolated sandbox environment or run code in other languages using subcommands.",
+        usage: "- <script>: Javascript code to execute, or provide a file attachment.\n- --debug, -d: Enable debug inspector output and memory diagnostics.",
+        parser: {
+            requireArgs: true
+        },
         subcommands: ["c", "cpp", "py", "vm2", "langs"],
         arguments: [
             {

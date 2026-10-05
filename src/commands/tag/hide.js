@@ -2,14 +2,18 @@ import { escapeMarkdown } from "discord.js";
 
 import { getClient, getEmoji } from "../../LevertClient.js";
 
-import Util from "../../util/Util.js";
-
 class TagHideCommand {
     static info = {
         name: "hide",
-        description: "Hide a tag.",
         parent: "tag",
         subcommand: true,
+        args: "<name>",
+        description:
+            "Hides a tag so it does not appear in search results, listing, or auto-suggestions. Can still be retrieved directly or executed.",
+        usage: "- <name>: The name of the tag to hide.",
+        parser: {
+            requireArgs: true
+        },
         arguments: [
             {
                 name: "tagName",
@@ -21,14 +25,14 @@ class TagHideCommand {
     };
 
     async handler(ctx) {
-        if (Util.empty(ctx.argsText)) {
-            return `${getEmoji("info")} ${this.getArgsHelp("name")}`;
-        }
-
         let t_name = ctx.arg("tagName");
 
-        if (this.matchesSubcmd(t_name)) {
-            return `${getEmoji("invalid")} **${escapeMarkdown(t_name)}** is a __command__, not a __tag__. You can't manipulate commands.`;
+        {
+            const err = this.parentCmd.checkCommand(t_name);
+
+            if (err !== null) {
+                return err;
+            }
         }
 
         {

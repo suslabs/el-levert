@@ -5,9 +5,12 @@ import Util from "../../util/Util.js";
 class TagCountCommand {
     static info = {
         name: "count",
-        description: "Count the registered tags.",
         parent: "tag",
         subcommand: true,
+        args: "[scope]",
+        description:
+            "Counts registered tags. Can count total tags, new-format tags, script tags, or tags owned by you or a specific user.",
+        usage: "- [scope]: Filter count by 'all', 'new', 'scripts', or a target username/mention.",
         arguments: [
             {
                 name: "subject",

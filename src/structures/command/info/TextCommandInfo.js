@@ -3,8 +3,10 @@ import BaseCommandInfo from "./BaseCommandInfo.js";
 class TextCommandInfo extends BaseCommandInfo {
     static dataProps = [
         ...BaseCommandInfo.dataProps,
+        "args",
         "description",
         "usage",
+        "parser",
         "aliases",
         "helpArgs",
         "category",
@@ -19,8 +21,10 @@ class TextCommandInfo extends BaseCommandInfo {
 
     static defaultValues = {
         ...BaseCommandInfo.defaultValues,
+        args: "",
         description: "",
         usage: "",
+        parser: {},
         aliases: [],
         helpArgs: ["help", "-help", "-h", "usage"],
         category: this.invalidValues.category,
@@ -31,8 +35,10 @@ class TextCommandInfo extends BaseCommandInfo {
     toObject() {
         return {
             ...super.toObject(),
+            args: this.args,
             description: this.description,
             usage: this.usage,
+            parser: structuredClone(this.parser),
             aliases: structuredClone(this.aliases),
             helpArgs: structuredClone(this.helpArgs),
             category: this.category,

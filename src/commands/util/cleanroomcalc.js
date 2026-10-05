@@ -34,9 +34,15 @@ function parseDimensions(argsText) {
 class CleanroomCalcCommand {
     static info = {
         name: "cleanroomcalc",
-        description: "Calculate cleanroom construction requirements.",
         aliases: ["crc"],
         category: "util",
+        args: "<width>x<height>x<length>",
+        description:
+            "Calculates material requirements, casing blocks, filter casings, plascrete, and construction costs for a GregTech Cleanroom of given dimensions.",
+        usage: "- <width>x<height>x<length>: Outer dimensions of the cleanroom in blocks (e.g. 5x5x5, 9x7x9).",
+        parser: {
+            requireArgs: true
+        },
         arguments: [
             {
                 name: "dimensions",

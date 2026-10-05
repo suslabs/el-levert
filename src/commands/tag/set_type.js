@@ -7,7 +7,13 @@ import { getClient, getEmoji } from "../../LevertClient.js";
 class TagSetTypeCommand {
     static info = {
         name: "set_type",
-        description: "Change a tag's type or script settings.",
+        args: "<name> <flag> [value]",
+        description:
+            "Changes a script tag's execution type, runtime environment, or script version flag (moderators only).",
+        usage: "- <name>: The name of the tag to modify.\n- <flag>: The type property or script setting to change.\n- [value]: New setting value.",
+        parser: {
+            requireArgs: true
+        },
         parent: "tag",
         subcommand: true,
         allowed: "mod",
@@ -41,14 +47,14 @@ class TagSetTypeCommand {
     };
 
     async handler(ctx) {
-        if (ctx.argsText.length < 2) {
-            return `${getEmoji("info")} ${this.getArgsHelp("name flag [value]")}`;
-        }
-
         let t_name = ctx.arg("tagName");
 
-        if (this.matchesSubcmd(t_name)) {
-            return `${getEmoji("invalid")} **${escapeMarkdown(t_name)}** is a __command__, not a __tag__. You can't manipulate commands.`;
+        {
+            const err = this.parentCmd.checkCommand(t_name);
+
+            if (err !== null) {
+                return err;
+            }
         }
 
         {

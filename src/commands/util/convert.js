@@ -10,9 +10,14 @@ function codeblock(str) {
 class ConvertCommand {
     static info = {
         name: "convert",
-        description: "Convert a value between units.",
         aliases: ["c"],
         category: "util",
+        args: "<value> <from_unit> <to_unit...>",
+        description: "Convert numerical quantities between compatible measurement units.",
+        usage: "- <value>: Numeric quantity to convert.\n- <from_unit>: Source unit of measurement.\n- <to_unit...>: One or more target units to convert into.",
+        parser: {
+            requireArgs: true
+        },
         arguments: [
             {
                 name: "inputText",

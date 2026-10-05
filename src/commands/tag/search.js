@@ -8,10 +8,15 @@ const defaultResultLimit = 20;
 class TagSearchCommand {
     static info = {
         name: "search",
-        description: "Find tags by name.",
         aliases: ["find"],
         parent: "tag",
         subcommand: true,
+        args: "<name> [limit|all]",
+        description: "Search for tags by matching names against a query string using substring or similarity matching.",
+        usage: "- <name>: Query string to match against tag names.\n- [limit|all]: Maximum results to display, or 'all'.",
+        parser: {
+            requireArgs: true
+        },
         arguments: [
             {
                 name: "tagName",
@@ -29,10 +34,6 @@ class TagSearchCommand {
     };
 
     async handler(ctx) {
-        if (Util.empty(ctx.argsText)) {
-            return `${getEmoji("info")} ${this.getArgsHelp("name [all/max_results]")}`;
-        }
-
         let t_name = ctx.arg("tagName"),
             m_text = ctx.arg("resultText"),
             all = m_text === "all";

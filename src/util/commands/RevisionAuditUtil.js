@@ -15,9 +15,11 @@ const RevisionAuditUtil = Object.freeze({
 
         const filePrefix = options.filePrefix ?? "revision",
             titlePrefix = options.titlePrefix ?? "Revision",
-            label = escapeMarkdown(options.label ?? "");
+            label = escapeMarkdown(options.label ?? ""),
+            useSubjectIndex = options.perSubject ?? false;
 
         const { revision, diff } = detail,
+            revNum = useSubjectIndex ? (revision.subjectIndex ?? revision.id) : revision.id,
             fields = Object.entries(diff).map(([field, value]) => ({
                 name: field,
                 value: [
@@ -26,14 +28,17 @@ const RevisionAuditUtil = Object.freeze({
                 ].join("\n")
             })),
             embed = new EmbedBuilder()
-                .setTitle(`${titlePrefix} #${revision.id} | ${label}`)
+                .setTitle(`${titlePrefix} #${revNum} | ${label}`)
                 .setDescription(
                     [
                         `Operation: \`${revision.operation}\``,
                         `Actor: \`${revision.actor}\``,
+                        useSubjectIndex && revision.id !== revNum ? `Global ID: \`#${revision.id}\`` : null,
                         `Created: ${RevisionAuditUtil.formatDate(revision.created)}`,
                         `Changed: ${revision.changed.join(", ")}`
-                    ].join("\n")
+                    ]
+                        .filter(Boolean)
+                        .join("\n")
                 );
 
         if (!Util.empty(fields)) {
@@ -44,32 +49,35 @@ const RevisionAuditUtil = Object.freeze({
 
         if (DiscordUtil.getEmbedSize(embed) > 6000 || fields.some(field => field.value.length > 1024)) {
             return {
-                content: `${titlePrefix} **#${revision.id}** for **${label}**:`,
+                content: `${titlePrefix} **#${revNum}** for **${label}**:`,
                 ...DiscordUtil.getFileAttach(
                     [
-                        `${titlePrefix} #${revision.id} for ${label}`,
+                        `${titlePrefix} #${revNum} for ${label}`,
                         `Operation: ${revision.operation}`,
                         `Actor: ${revision.actor}`,
+                        useSubjectIndex && revision.id !== revNum ? `Global ID: #${revision.id}` : null,
                         `Created: ${RevisionAuditUtil.formatDate(revision.created)}`,
                         `Changed: ${revision.changed.join(", ")}`,
                         "",
                         RevisionAuditUtil._formatDiff(diff, true)
-                    ].join("\n"),
-                    `${filePrefix}-${revision.id}.txt`
+                    ]
+                        .filter(Boolean)
+                        .join("\n"),
+                    `${filePrefix}-${revNum}.txt`
                 )
             };
         }
 
         return {
-            content: `${titlePrefix} **#${revision.id}** for **${label}**:`,
+            content: `${titlePrefix} **#${revNum}** for **${label}**:`,
             embeds: [embed]
         };
     },
 
-    createListEmbed: (revisions, title, page, getLabel) => {
+    createListEmbed: (revisions, title, page, getLabel, options) => {
         return new EmbedBuilder()
             .setTitle(title)
-            .setDescription(RevisionAuditUtil._formatRevisionList(revisions, getLabel))
+            .setDescription(RevisionAuditUtil._formatRevisionList(revisions, getLabel, options))
             .setFooter({ text: `Page ${page} | ${revisions.length} revision${Util.single(revisions) ? "" : "s"}` });
     },
 
@@ -135,12 +143,16 @@ const RevisionAuditUtil = Object.freeze({
             .join("\n\n");
     },
 
-    _formatRevisionList: (revisions, getLabel) => {
+    _formatRevisionList: (revisions, getLabel, options) => {
+        options = ObjectUtil.guaranteeObject(options);
+        const useSubjectIndex = options.perSubject ?? false;
+
         return revisions
             .map(revision => {
-                const label = escapeMarkdown(getLabel(revision));
+                const label = escapeMarkdown(getLabel(revision)),
+                    revNum = useSubjectIndex ? (revision.subjectIndex ?? revision.id) : revision.id;
 
-                return `#${revision.id} **${revision.operation}** ${label} - \`${revision.actor}\` - ${RevisionAuditUtil.formatDate(revision.created)}\nChanged: ${revision.changed.join(", ")}`;
+                return `#${revNum} **${revision.operation}** ${label} - \`${revision.actor}\` - ${RevisionAuditUtil.formatDate(revision.created)}\nChanged: ${revision.changed.join(", ")}`;
             })
             .join("\n\n");
     },

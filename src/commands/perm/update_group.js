@@ -3,16 +3,21 @@ import { escapeMarkdown } from "discord.js";
 import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-import { validUnchangedArgs } from "./UnchangedArgs.js";
 
 class PermUpdateGroupCommand {
     static info = {
         name: "update_group",
-        description: "Update a permission group's name or level.",
         aliases: ["edit", "edit_group"],
         parent: "perm",
         subcommand: true,
         allowed: "admin",
+        args: "<group_name> <new_name|unchanged> <new_level|unchanged>",
+        description:
+            "Update the name, permission level, or both for an existing permission group. Pass 'unchanged' to preserve existing values.",
+        usage: "- <group_name>: Name of the permission group to update.\n- <new_name|unchanged>: New name for the group, or 'unchanged'.\n- <new_level|unchanged>: New permission level, or 'unchanged'.",
+        parser: {
+            requireArgs: true
+        },
         arguments: [
             {
                 name: "groupName",
@@ -46,8 +51,8 @@ class PermUpdateGroupCommand {
         let g_name = ctx.arg("groupName"),
             g_data = ctx.arg("groupData");
 
-        if (Util.empty(ctx.argsText) || Util.empty(g_name) || Util.empty(g_data)) {
-            return `${getEmoji("info")} ${this.getArgsHelp("group_name (new_name/unchanged) (new_level/unchanged)")}`;
+        if (Util.empty(g_name) || Util.empty(g_data)) {
+            return `${getEmoji("info")} ${this.getArgsHelp()}`;
         }
 
         {
@@ -77,7 +82,7 @@ class PermUpdateGroupCommand {
             newLevel = ctx.arg("newLevel"),
             newLevelText = ctx.arg("newLevelText");
 
-        if (validUnchangedArgs.has(newName)) {
+        if (this.parentCmd.isUnchanged(newName)) {
             newName = null;
         } else {
             let err;
@@ -88,7 +93,7 @@ class PermUpdateGroupCommand {
             }
         }
 
-        if (validUnchangedArgs.has(newLevelText)) {
+        if (this.parentCmd.isUnchanged(newLevelText)) {
             newLevel = null;
         } else {
             newLevel = Number(newLevel);

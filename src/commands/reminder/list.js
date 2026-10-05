@@ -10,10 +10,10 @@ function formatReminders(reminders) {
 class ReminderListCommand {
     static info = {
         name: "list",
-        description: "List your reminders.",
         aliases: ["all"],
         parent: "reminder",
-        subcommand: true
+        subcommand: true,
+        description: "List all active scheduled reminders for your account."
     };
 
     async handler(ctx) {

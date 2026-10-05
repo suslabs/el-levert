@@ -20,9 +20,11 @@ function codeblock(str) {
 class PermCheckCommand {
     static info = {
         name: "check",
-        description: "Show a user's permission groups.",
         parent: "perm",
         subcommand: true,
+        args: "[user]",
+        description: "Show a user's assigned permission groups and effective permission level.",
+        usage: "- [user]: Username, mention, or user ID to check permissions for (defaults to yourself).",
         arguments: [
             {
                 name: "userName",

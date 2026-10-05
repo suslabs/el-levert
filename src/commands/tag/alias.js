@@ -7,7 +7,13 @@ import Util from "../../util/Util.js";
 class TagAliasCommand {
     static info = {
         name: "alias",
-        description: "Create or update a tag alias.",
+        args: "<name> <target_tag> [args]",
+        description:
+            "Creates or updates an alias pointing to another tag or a stream pipeline. When invoked, arguments are passed along to the target tag, supporting parameter interpolation and multi-hop aliases.",
+        usage: "- <name>: The alias name to create or update.\n- <target_tag>: Target tag name or stream/pipe command to forward execution to.\n- [args]: Optional default arguments supplied to the target tag.",
+        parser: {
+            requireArgs: true
+        },
         parent: "tag",
         subcommand: true,
         arguments: [
@@ -39,16 +45,16 @@ class TagAliasCommand {
     };
 
     async handler(ctx) {
-        if (Util.empty(ctx.argsText)) {
-            return `${getEmoji("info")} ${this.getArgsHelp("name other_tag [args]")}`;
-        }
-
         let t_name = ctx.arg("tagName"),
             a_name = ctx.arg("aliasName"),
             a_args = ctx.arg("aliasArgs");
 
-        if (this.matchesSubcmd(t_name)) {
-            return `${getEmoji("invalid")} **${escapeMarkdown(t_name)}** is a __command__, not a __tag__. You can't manipulate commands.`;
+        {
+            const err = this.parentCmd.checkCommand(t_name);
+
+            if (err !== null) {
+                return err;
+            }
         }
 
         if (Util.empty(a_name)) {

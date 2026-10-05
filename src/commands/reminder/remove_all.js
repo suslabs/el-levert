@@ -3,10 +3,10 @@ import { getClient, getEmoji } from "../../LevertClient.js";
 class ReminderRemoveAllCommand {
     static info = {
         name: "remove_all",
-        description: "Remove all of your reminders.",
         aliases: ["delete_all"],
         parent: "reminder",
-        subcommand: true
+        subcommand: true,
+        description: "Deletes all active scheduled reminders registered to your account."
     };
 
     async handler(ctx) {

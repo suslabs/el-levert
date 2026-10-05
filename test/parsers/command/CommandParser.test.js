@@ -288,4 +288,27 @@ describe("CommandParser", () => {
         expect(session.issues[0].code).toBe("unclosed_quote");
         expect(session.issues[0].message).toBe("Unclosed quote");
     });
+
+    test("computes requireArgs from config and child arguments", () => {
+        const noRequired = new CommandParser({
+            arguments: [{ name: "opt", kind: "option", type: "string" }]
+        });
+        expect(noRequired.requireArgs).toBe(false);
+
+        const configRequired = new CommandParser({
+            info: { parser: { requireArgs: true } },
+            arguments: [{ name: "opt", kind: "option", type: "string" }]
+        });
+        expect(configRequired.requireArgs).toBe(true);
+
+        const argRequired = new CommandParser({
+            arguments: [{ name: "text", kind: "positional", required: true }]
+        });
+        expect(argRequired.requireArgs).toBe(true);
+
+        const validRuleRequired = new CommandParser({
+            arguments: [{ name: "text", kind: "positional", valid: { required: true } }]
+        });
+        expect(validRuleRequired.requireArgs).toBe(true);
+    });
 });

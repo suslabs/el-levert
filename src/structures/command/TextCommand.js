@@ -1,4 +1,4 @@
-import { escapeMarkdown, bold, inlineCode, codeBlock } from "discord.js";
+import { EmbedBuilder, escapeMarkdown, bold, inlineCode } from "discord.js";
 
 import BaseCommand from "./BaseCommand.js";
 
@@ -116,26 +116,45 @@ class TextCommand extends BaseCommand {
     }
 
     getHelpText(discord = false) {
-        let help = "";
+        const description = Util.empty(this.description) ? "No description provided." : this.description,
+            usage = this.usage ?? "",
+            args = this.args ?? "";
 
-        if (!Util.empty(this.description)) {
-            const formattedDescription = discord ? codeBlock(this.description) : this.description;
-            help += `Description:\n${formattedDescription}`;
-        }
+        let text = usage;
 
-        if (!Util.empty(this.usage)) {
-            if (!Util.empty(help)) {
-                help += "\n\n";
+        if (!Util.empty(args)) {
+            const syntax = this.getArgsHelp(args, false);
+
+            if (!usage.includes(syntax) && !usage.includes(args)) {
+                text = Util.empty(usage) ? syntax : `${syntax}\n\n${usage}`;
             }
-
-            const formattedUsage = discord ? codeBlock(this.usage) : this.usage;
-            help += `Usage:\n${formattedUsage}`;
         }
 
-        return help;
+        const usageText = Util.empty(text) ? "No usage provided." : text;
+
+        if (discord) {
+            const embed = new EmbedBuilder().addFields(
+                {
+                    name: "Description",
+                    value: description
+                },
+                {
+                    name: "Usage",
+                    value: usageText
+                }
+            );
+
+            return {
+                embeds: [embed]
+            };
+        }
+
+        return `Description:\n${description}\n\nUsage:\n${usageText}`;
     }
 
     getArgsHelp(args, discord = false) {
+        args ??= this.args;
+
         const prefix = this.prefix + (this.subcommand ? this.parent + " " : "");
 
         const formattedName = discord ? bold(escapeMarkdown(this.name)) : this.name,

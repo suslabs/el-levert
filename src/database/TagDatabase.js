@@ -382,6 +382,7 @@ class TagDatabase extends SqlDatabase {
 
         if (schema.base.has("aliasName") && hasBlobType) {
             if (!schema.base.has("bin")) {
+                await this.db.run("DELETE FROM migrations WHERE id = 3 AND name = 'revisions'");
                 await this._seedAppliedMigrations([1, 2]);
                 await this.db.migrate({
                     migrationsPath: this.migrationsPath

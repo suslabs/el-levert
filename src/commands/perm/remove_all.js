@@ -5,11 +5,16 @@ import Util from "../../util/Util.js";
 class PermRemoveAllCommand {
     static info = {
         name: "remove_all",
-        description: "Remove a user from every permission group.",
         aliases: ["take"],
         parent: "perm",
         subcommand: true,
         allowed: "admin",
+        args: "<user>",
+        description: "Revoke all permission groups assigned to a user.",
+        usage: "- <user>: Target user by mention, username, or Discord ID.",
+        parser: {
+            requireArgs: true
+        },
         arguments: [
             {
                 name: "userName",
@@ -22,8 +27,8 @@ class PermRemoveAllCommand {
     async handler(ctx) {
         const u_name = ctx.arg("userName");
 
-        if (Util.empty(ctx.argsText) || Util.empty(u_name)) {
-            return `${getEmoji("info")} ${this.getArgsHelp("(ping/id/username)")}`;
+        if (Util.empty(u_name)) {
+            return `${getEmoji("info")} ${this.getArgsHelp()}`;
         }
 
         const find = Util.first(await getClient().findUsers(u_name));

@@ -2,14 +2,18 @@ import { escapeMarkdown } from "discord.js";
 
 import { getClient, getEmoji } from "../../LevertClient.js";
 
-import Util from "../../util/Util.js";
-
 class TagEditCommand {
     static info = {
         name: "edit",
-        description: "Edit a tag's body and properties.",
         parent: "tag",
         subcommand: true,
+        args: "<name> [new_body]",
+        description:
+            "Replaces a tag's body with new text, codeblock, or file attachment. Only the owner or moderators can edit a tag. Admins can provide local file paths.",
+        usage: "- <name>: The name of the tag to edit.\n- [new_body]: The updated content, or supply a file attachment.",
+        parser: {
+            requireArgs: true
+        },
         arguments: [
             {
                 name: "tagName",
@@ -26,15 +30,15 @@ class TagEditCommand {
     };
 
     async handler(ctx) {
-        if (Util.empty(ctx.argsText)) {
-            return `${getEmoji("info")} ${this.getArgsHelp("name new_body")}`;
-        }
-
         let t_name = ctx.arg("tagName"),
             t_args = ctx.arg("tagArgs");
 
-        if (this.matchesSubcmd(t_name)) {
-            return `${getEmoji("invalid")} **${escapeMarkdown(t_name)}** is a __command__, not a __tag__. You can't manipulate commands.`;
+        {
+            const err = this.parentCmd.checkCommand(t_name);
+
+            if (err !== null) {
+                return err;
+            }
         }
 
         {

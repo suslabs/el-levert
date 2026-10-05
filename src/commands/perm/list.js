@@ -10,9 +10,9 @@ function formatGroups(groups) {
 class PermListCommand {
     static info = {
         name: "list",
-        description: "List the registered permission groups.",
         parent: "perm",
-        subcommand: true
+        subcommand: true,
+        description: "List all registered permission groups, their permission levels, and member users."
     };
 
     async handler() {

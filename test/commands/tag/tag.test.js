@@ -397,7 +397,7 @@ describe("Merged Branch Coverage", () => {
         });
 
         test("covers add and alias validation, ownership, success, and manager failures", async () => {
-            expect(await run("add")).toContain("name body");
+            expect(await run("add")).toContain("<name> [body]");
             expect(await run("add delete body")).toContain("is a __command__");
             expect(await run("add bad* body")).toContain("must consist");
 
@@ -441,7 +441,7 @@ describe("Merged Branch Coverage", () => {
             await addTag(runtime, "locked", "body", "user-2");
             await addTag(runtime, "taken", "body", "user-2");
 
-            expect(await run("chown")).toContain("name new_owner");
+            expect(await run("chown")).toContain("<name> <new_owner>");
             expect(await run("chown add target")).toContain("is a __command__");
             expect(await run("chown alpha")).toContain("Invalid target user");
 
@@ -608,7 +608,7 @@ describe("Merged Branch Coverage", () => {
             expect(await run("count script")).toContain("script tag");
             expect(await run("count alex")).toContain("User `alex` has");
 
-            expect(await run("search")).toContain("name [all/max_results]");
+            expect(await run("search")).toContain("<name> [limit|all]");
             expect(await run("search bad*")).toContain("must consist");
             expect(await run("search alpha nope")).toContain("Invalid number");
 

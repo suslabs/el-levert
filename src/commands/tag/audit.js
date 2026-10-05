@@ -1,13 +1,15 @@
+import { escapeMarkdown } from "discord.js";
+
 import { getClient, getConfig, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import RevisionAuditUtil from "../../util/commands/RevisionAuditUtil.js";
 
-async function getDetail(revisionId) {
+async function getDetail(revisionId, tagName) {
     let detail;
 
     try {
-        detail = await getClient().tagManager.auditDetail(revisionId);
+        detail = await getClient().tagManager.auditDetail(revisionId, tagName);
     } catch (err) {
         if (err.name !== "TagError") {
             throw err;
@@ -18,7 +20,8 @@ async function getDetail(revisionId) {
 
     const response = RevisionAuditUtil.createDetailResponse(detail, {
         filePrefix: "tag-revision",
-        label: detail.label ?? detail.revision.key.name ?? "unknown"
+        label: detail.label ?? detail.revision.key.name ?? "unknown",
+        perSubject: Util.nonemptyString(tagName)
     });
 
     return {
@@ -33,7 +36,17 @@ class TagAuditCommand {
         parent: "tag",
         subcommand: true,
         allowed: "mod",
-        description: "View tag revisions or inspect one revision.",
+        args: "[tag_name] [revision_id] [--options]",
+        description: `View recent tag revisions or inspect a specific revision diff.
+
+Calling without a tag name shows the full audit log across all tags. Providing a revision ID displays the full before/after diff for that revision.`,
+        usage: `- [tag_name]: Target tag to view revisions for.
+- [revision_id]: Specific revision ID to inspect diff.
+- --user, --actor <user>: Filter revisions by author.
+- --operation, --op <op>: Filter by operation (import, create, update, delete, revert).
+- --from <date>, --to <date>: Filter by date or time range.
+- --page <number>: Page number of results (default: 1).
+- --limit <number>: Number of entries per page (1-20, default: 10).`,
         arguments: [
             {
                 name: "user",
@@ -65,14 +78,14 @@ class TagAuditCommand {
                 type: "integer"
             },
             {
-                name: "tagName",
+                name: "firstArg",
                 kind: "positional",
-                index: 0,
-                lowercase: true
+                index: 0
             },
             {
-                name: "scopeArgs",
-                kind: "rest"
+                name: "secondArg",
+                kind: "positional",
+                index: 1
             }
         ]
     };
@@ -82,20 +95,29 @@ class TagAuditCommand {
     }
 
     async handler(ctx) {
-        if (Util.empty(ctx.argsText)) {
-            return `${getEmoji("info")} ${this.getArgsHelp("[tag_name] [revision_id] [--options]")}`;
-        }
+        const firstArg = ctx.arg("firstArg"),
+            secondArg = ctx.arg("secondArg");
 
-        const tagName = ctx.arg("tagName");
-
-        if (!Util.empty(ctx.arg("scopeArgs"))) {
-            const detailId = RevisionAuditUtil.parseRevisionId(ctx.arg("scopeArgs"));
+        if (!Util.empty(secondArg)) {
+            const detailId = RevisionAuditUtil.parseRevisionId(secondArg);
 
             if (detailId === null) {
-                return `${getEmoji("warn")} Invalid revision ID: \`${ctx.arg("scopeArgs")}\`.`;
+                return `${getEmoji("warn")} Invalid revision ID: \`${secondArg}\`.`;
             }
 
-            return await getDetail(detailId);
+            return await getDetail(detailId, firstArg);
+        }
+
+        let tagName = null;
+
+        if (!Util.empty(firstArg)) {
+            const detailId = RevisionAuditUtil.parseRevisionId(firstArg);
+
+            if (detailId !== null) {
+                return await getDetail(detailId);
+            }
+
+            tagName = firstArg.toLowerCase();
         }
 
         const dates = RevisionAuditUtil.parseDateRange(ctx.arg("from"), ctx.arg("to"));
@@ -122,12 +144,15 @@ class TagAuditCommand {
             return `${getEmoji("info")} Found **no** tag revisions.`;
         }
 
-        const header = `${getEmoji("info")} Tag audit page **${page}**:`,
+        const isPerSubject = Util.nonemptyString(tagName);
+        const scopeLabel = isPerSubject ? ` for **${escapeMarkdown(tagName)}**` : "",
+            header = `${getEmoji("info")} Tag audit page **${page}**${scopeLabel}:`,
             embed = RevisionAuditUtil.createListEmbed(
                 revisions,
                 "Tag audit",
                 page,
-                revision => revision.key.name ?? "unknown"
+                revision => revision.key.name ?? "unknown",
+                { perSubject: isPerSubject }
             );
 
         return {

@@ -12,6 +12,7 @@ import CommandArgument from "./structs/CommandArgument.js";
 import CommandValidationIssue from "./structs/CommandValidationIssue.js";
 
 import Util from "../../util/Util.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
 
 import CommandError from "../../errors/CommandError.js";
 
@@ -46,7 +47,10 @@ class CommandParser {
 
     constructor(command) {
         this.command = command;
+        this.config = ObjectUtil.guaranteeObject(command.info?.parser);
+
         this.arguments = [];
+        this.requireArgs = false;
 
         this._compileArguments();
     }
@@ -87,6 +91,9 @@ class CommandParser {
         }
 
         this.arguments = compiled;
+
+        const hasRequired = compiled.some(arg => arg.valid?.required === true);
+        this.requireArgs = this.config.requireArgs === true || hasRequired;
     }
 
     _compileArgument(arg, compiled) {

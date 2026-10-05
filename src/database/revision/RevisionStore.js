@@ -49,6 +49,15 @@ class RevisionStore {
         return this._subject(row);
     }
 
+    async fetchInactiveSubject(target, key) {
+        const row = await this.database.subjectQueries.fetchInactive.get({
+            $target: target,
+            $key: this.constructor._json(key)
+        });
+
+        return this._subject(row);
+    }
+
     async updateSubjectKey(subject, key) {
         const res = await this.database.subjectQueries.updateKey.run({
             $id: subject.id,
@@ -111,6 +120,16 @@ class RevisionStore {
         return this._revision(row);
     }
 
+    async fetchRevisionBySubjectIndex(target, subjectId, subjectIndex) {
+        const row = await this.database.revisionQueries.fetchBySubjectIndex.get({
+            $target: target,
+            $subjectId: subjectId,
+            $subjectIndex: subjectIndex
+        });
+
+        return this._revision(row);
+    }
+
     async fetchLatest(target, subjectId) {
         const row = await this.database.revisionQueries.latest.get({
             $target: target,
@@ -151,7 +170,7 @@ class RevisionStore {
     async clear(target, options) {
         options = ObjectUtil.guaranteeObject(options);
 
-        return await this.database.revisionQueries.clear.run({
+        const res = await this.database.revisionQueries.clear.run({
             $target: target,
             $subjectId: options.subjectId ?? null,
             $id: options.id ?? null,
@@ -160,6 +179,20 @@ class RevisionStore {
             $from: options.from ?? null,
             $to: options.to ?? null
         });
+
+        const isFullClear =
+            options.subjectId == null &&
+            options.id == null &&
+            options.fromId == null &&
+            options.toId == null &&
+            options.from == null &&
+            options.to == null;
+
+        if (isFullClear && typeof this.database.revisionQueries.resetSequence?.run === "function") {
+            await this.database.revisionQueries.resetSequence.run();
+        }
+
+        return res;
     }
 
     async countRevertsOf(revision) {

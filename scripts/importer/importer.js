@@ -24,7 +24,7 @@ function parseArgs() {
         .usage("Usage: npm run importer [options]")
         .options({
             path: {
-                alias: "p",
+                alias: ["i", "p"],
                 type: "string",
                 describe: "Path to the tags file (.json or .db)"
             },

@@ -63,7 +63,9 @@ class RevisionManager {
     async ensureSubject(data) {
         const key = this.getKey(data);
 
-        let subject = await this.store.fetchSubject(this.spec.target, key);
+        let subject =
+            (await this.store.fetchSubject(this.spec.target, key)) ??
+            (await this.store.fetchInactiveSubject(this.spec.target, key));
 
         if (subject === null) {
             subject = await this.store.createSubject(this.spec.target, key, this.getStaticSnapshot(data));

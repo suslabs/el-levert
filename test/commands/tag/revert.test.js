@@ -53,18 +53,55 @@ describe("tag revert command", () => {
         const help = await run("revert -h");
         const usage = await run("revert");
 
-        expect(help).toContain("Restore a tag to a previous revision");
-        expect(usage).toContain("name [revision_id]");
+        expect(help.embeds[0].data.fields[0].value).toContain("Restores a tag to a previous revision");
+        expect(usage).toContain("<name> [revision_id]");
     });
 
     test("lets users revert their latest edit once", async () => {
         expect(await run("add alpha one")).toContain("Created tag **alpha**");
         expect(await run("edit alpha two")).toContain("Edited tag **alpha**");
-        expect(await run("revert alpha")).toContain("Reverted tag **alpha**");
+        expect(await run("revert alpha")).toContain("Reverted tag **alpha** to revision **#1**");
 
         const tag = await runtime.client.tagManager.fetch("alpha");
         expect(tag.body).toBe("one");
         expect(await run("revert alpha")).toContain("already been reverted");
+    });
+
+    test("reverts a rename back to old name with proper message", async () => {
+        expect(await run("add alpha one")).toContain("Created tag **alpha**");
+        expect(await run("rename alpha beta")).toContain("Renamed tag **alpha** to **beta**");
+        const revRes = await run("revert beta");
+        expect(revRes).toContain("Reverted tag **beta** to **alpha**");
+
+        expect(await runtime.client.tagManager.fetch("alpha")).not.toBeNull();
+        expect(await runtime.client.tagManager.fetch("beta")).toBeNull();
+    });
+
+    test("reverts a rename back to old name when reverting via old name", async () => {
+        expect(await run("add alpha one")).toContain("Created tag **alpha**");
+        expect(await run("rename alpha beta")).toContain("Renamed tag **alpha** to **beta**");
+        const revRes = await run("revert alpha");
+        expect(revRes).toContain("Reverted tag **beta** to **alpha**");
+
+        expect(await runtime.client.tagManager.fetch("alpha")).not.toBeNull();
+        expect(await runtime.client.tagManager.fetch("beta")).toBeNull();
+    });
+
+    test("blocks reverting rename if old name is already taken", async () => {
+        expect(await run("add alpha one")).toContain("Created tag **alpha**");
+        expect(await run("rename alpha beta")).toContain("Renamed tag **alpha** to **beta**");
+        expect(await run("add alpha new_tag")).toContain("Created tag **alpha**");
+
+        const revRes = await run("revert beta");
+        expect(revRes).toContain("already exists");
+    });
+
+    test("prevents users from reverting actions taken upon their tags by others", async () => {
+        expect(await run("add alpha one")).toContain("Created tag **alpha**");
+        expect(await run("edit alpha admin_edit", adminMsg)).toContain("Edited tag **alpha**");
+
+        const revRes = await run("revert alpha", userMsg);
+        expect(revRes).toContain("You can only revert your own actions");
     });
 
     test("lets mods restore a specific revision", async () => {

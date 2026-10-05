@@ -111,10 +111,16 @@ const defaultResultLimit = 8,
 class TagFullSearchCommand {
     static info = {
         name: "fullsearch",
-        description: "Search the bodies of tags for matching text.",
         aliases: ["query"],
         parent: "tag",
         subcommand: true,
+        args: "<query> [limit|all]",
+        description:
+            "Search inside the text content and script bodies of all registered tags for matches, displaying contextual snippet previews.",
+        usage: "- <query>: Text query to search for within tag contents.\n- [limit|all]: Maximum results to return, or 'all'.",
+        parser: {
+            requireArgs: true
+        },
         arguments: [
             {
                 name: "query",
@@ -138,10 +144,6 @@ class TagFullSearchCommand {
     };
 
     async handler(ctx) {
-        if (Util.empty(ctx.argsText)) {
-            return `${getEmoji("info")} ${this.getArgsHelp("query [all/max_results]")}`;
-        }
-
         let query = ctx.arg("queryBody")?.body ?? "",
             m_text = ctx.arg("resultText"),
             all = m_text === "all";

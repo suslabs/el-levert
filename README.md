@@ -268,16 +268,18 @@ Main actions:
 - `chown (name) (new_owner)` transfers ownership
 - `set_type (name) (type|version)` changes script metadata for moderators
 - `audit [tag_name] [revision_id] [--options]` shows recent tag changes or a full revision diff for moderators
-- `audit_clear [tag_name] [revision_id] [end_revision_id] [--options]` clears tag audit history for the bot owner
-- `revert (name) [revision_id]` restores a previous tag state. Tag owners can revert their own latest edit once within one hour; moderators can restore arbitrary revisions.
-- `stream (pipeline)` (or `pipe`) executes a pipeline of tags and stream operators
+- `audit_clear [tag_name] [revision_id] [end_revision_id] [--options]` clears tag audit history and resets the revision sequence when fully cleared (bot owner only)
+- `revert <name> [revision_id]` restores a previous tag state. Tag owners can revert their own latest actions within one hour; moderators can restore arbitrary revisions.
+- `stream <pipeline>` (or `pipe`) executes a pipeline of tags and stream operators
 
 Examples:
 
+- `%tag audit` shows the full audit log across all tags
+- `%tag audit 42` shows the before/after diff for revision `42` directly
 - `%tag audit example` lists recent revisions for `example`
 - `%tag audit example 42` shows the before/after diff for revision `42`
 - `%tag audit --operation update --limit 20` lists recent tag updates
-- `%tag audit_clear` clears all tag audit history (bot owner only)
+- `%tag audit_clear` clears all tag audit history and resets the revision sequence back to 0 (bot owner only)
 - `%tag audit_clear example` clears history for one tag
 - `%tag audit_clear example 42 45` clears an inclusive revision-ID range for one tag
 - `%tag audit_clear example --from "last week" --to "yesterday"` clears a date range for one tag
@@ -464,11 +466,68 @@ What users should know:
 
 These are general-purpose helper commands for calculations and lookups.
 
-- `convert (value) (from_unit) (to_unit) [more_units...]` converts between supported units and shows the conversion chain
-- `overclock` / `oc` / `oceu` calculates overclock results. The first positional argument may select `standard`, `ebf`, `lcr`, `ce`, or `macerator`; `standard` is the default when omitted. Recipe values follow the mode. Modifiers include `--tape`, `--subtick`, `--rates`, and `--voltage`.
-- OCEU behavior is based on [Horde-Of-Greg/oceu](https://github.com/Horde-Of-Greg/oceu).
-- `cleanroomcalc` / `crc` takes dimensions such as `5x5x5` and returns the required cleanroom materials
-- `stoik` checks whether a chemical equation is balanced. Use `Reactants -> Products`
+#### `overclock` / `oc` / `oceu`
+
+Calculates GregTech recipe overclocking, voltage requirements, duration, and parallel throughput.
+
+Syntax:
+
+```
+%oc [mode] <EU> <duration> [base_chance] [chance_bonus] [parallel] [amperage] [--options]
+%oc ebf <EU> <duration> <recipe_heat> <coil_heat> [parallel] [amperage] [--options]
+```
+
+Note: `<>` denotes required arguments, `[]` denotes optional arguments. Use `-` to skip an optional positional argument.
+
+Modes:
+
+- `standard`: Normal overclocking (2x speed, 4x power). Default mode.
+- `ebf`: Electric Blast Furnace mode; calculates heat difference overclocking (each 900K above required heat gives an extra 0.95x duration multiplier).
+- `lcr`: Large Chemical Reactor / perfect overclocking (4x speed, 4x power).
+- `ce`: Emulates GTCE overclocking (2.8x speed, chance doubling per overclock).
+- `macerator`: GTCE macerator mode with special chanced output handling.
+
+Arguments:
+
+- `[mode]`: Machine processing mode (`standard`, `ebf`, `lcr`, `ce`, `macerator`).
+- `<EU>`: Base EU/t cost of the recipe.
+- `<duration>`: Base recipe duration in seconds or ticks (e.g. `20`, `30s`, `1200t`).
+- `[base_chance]`: Base chanced output percentage (1-100).
+- `[chance_bonus]`: Chance increase percentage per voltage tier.
+- `[parallel]`: Number of items or batch operations run in parallel.
+- `[amperage]`: Available amperage (default: 1).
+- `<recipe_heat>`: Minimum heat capacity required by the recipe in Kelvin (EBF mode only).
+- `<coil_heat>`: Total coil heat available in Kelvin (EBF mode only).
+
+Options:
+
+- `--tape`: Applies maintenance/config hatch speed boost (0.9x duration).
+- `--subtick`: Enables subtick overclocking (doubles parallel processing once duration reaches 1t).
+- `--extra`: Displays extra high-tier voltages (UHV through MAX).
+- `--rf`: Treats input EU as RF cost (divides by 4).
+- `--time <multiplier>`: Multiplies recipe duration by a factor.
+- `--eu <multiplier>`: Multiplies recipe EU/t cost by a factor.
+- `--voltage <tier>` or `--<tier>`: Filters output table to only the specified voltage tier (e.g. `--iv`).
+- `--rates`: Displays item production rates (recipes/s) in the table.
+- `--input <multiplier>`, `--output <multiplier>`: Multiplies input consumption and output production rates.
+- `--count <number>`: Sets recipe batch count.
+- `--tick`: Displays durations in ticks only.
+- `--text`: Outputs plain text table instead of Discord embed.
+- `--auto`: Automatically selects the optimal voltage tier.
+- `--bulk`: Calculates multiple recipes at once, one per line.
+
+Examples:
+
+- `%oc 120 20` (overclock 120 EU/t for 20s)
+- `%oc 480 30s 100 10 4 2 --iv` (480 EU/t, 30s, 4 parallel, 2A, filter to IV)
+- `%oc ebf 1920 60.3s 3600 5200 4 1` (EBF mode at 1920 EU/t, 3600K recipe heat, 5200K coil heat)
+- `%oc lcr 2000 15s --rates --subtick` (LCR perfect overclocking with rates and subtick)
+
+#### Other utilities
+
+- `convert <value> <from_unit> <to_unit...>`: Converts between supported units (metric, imperial, digital, temp) and displays the conversion chain.
+- `cleanroomcalc` / `crc <width>x<height>x<length>`: Calculates required filter casings, plascrete, and construction blocks for a GregTech cleanroom of given dimensions (e.g. `5x5x5`, `9x7x9`).
+- `stoik <reactants> -> <products>`: Balances chemical equations and verifies reaction stoichiometry.
 
 ### 10. Maintenance commands
 

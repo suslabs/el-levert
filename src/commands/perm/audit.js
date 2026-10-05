@@ -46,7 +46,16 @@ class PermAuditCommand {
         parent: "perm",
         subcommand: true,
         allowed: "admin",
-        description: "View permission revisions or inspect one revision.",
+        args: "[group_name|user] [revision_id] [--options]",
+        description:
+            "View permission revisions or inspect a specific revision diff. Calling without a target shows the full audit log across all permission operations.",
+        usage: `- [group_name|user]: Filter revisions by group name, user mention, or ID.
+- [revision_id]: Specific revision ID to inspect diff.
+- --user, --actor <user>: Filter revisions by author.
+- --op, --operation <op>: Filter by operation.
+- --from <date>, --to <date>: Filter by date range.
+- --page <number>: Page number of results (default: 1).
+- --limit <number>: Entries per page (1-20, default: 10).`,
         arguments: [
             {
                 name: "user",

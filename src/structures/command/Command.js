@@ -5,6 +5,7 @@ import TextCommand from "./TextCommand.js";
 import CommandInfo from "./info/CommandInfo.js";
 import CommandContext from "./context/CommandContext.js";
 
+import Util from "../../util/Util.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 
@@ -95,6 +96,11 @@ class Command extends TextCommand {
                 return `${getEmoji("warn")} Access denied.\nOnly permission level ${this.allowed} and above can execute this command.`;
             default:
                 context.perm = perm;
+
+                if (this.parser.requireArgs && Util.empty(context.argsText)) {
+                    return `${getEmoji("info")} ${this.getArgsHelp()}`;
+                }
+
                 return await super.execute(context);
         }
     }

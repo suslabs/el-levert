@@ -2,14 +2,18 @@ import { escapeMarkdown } from "discord.js";
 
 import { getClient, getConfig, getEmoji } from "../../LevertClient.js";
 
-import Util from "../../util/Util.js";
-
 class TagRevertCommand {
     static info = {
         name: "revert",
+        args: "<name> [revision_id]",
+        description:
+            "Restores a tag to a previous revision or undoes the latest edit. Tag owners can revert their own latest actions within one hour; moderators can restore arbitrary revision IDs.",
+        usage: "- <name>: The name of the tag to revert.\n- [revision_id]: Specific revision ID to restore (moderators only).",
+        parser: {
+            requireArgs: true
+        },
         parent: "tag",
         subcommand: true,
-        description: "Restore a tag to a previous revision.",
         arguments: [
             {
                 name: "tagName",
@@ -31,14 +35,14 @@ class TagRevertCommand {
     }
 
     async handler(ctx) {
-        if (Util.empty(ctx.argsText)) {
-            return `${getEmoji("info")} ${this.getArgsHelp("name [revision_id]")}`;
-        }
-
         let t_name = ctx.arg("tagName");
 
-        if (this.matchesSubcmd(t_name)) {
-            return `${getEmoji("invalid")} **${escapeMarkdown(t_name)}** is a __command__, not a __tag__. You can't manipulate commands.`;
+        {
+            const err = this.parentCmd.checkCommand(t_name);
+
+            if (err !== null) {
+                return err;
+            }
         }
 
         {
@@ -63,7 +67,18 @@ class TagRevertCommand {
                 return `${getEmoji("ok")} Reverted tag **${escapeMarkdown(t_name)}** by deleting it.`;
             }
 
-            return `${getEmoji("ok")} Reverted tag **${escapeMarkdown(t_name)}** to **${escapeMarkdown(restored.name)}**.`;
+            if (restored._currentTag != null && restored._currentTag.name !== restored.name) {
+                return `${getEmoji("ok")} Reverted tag **${escapeMarkdown(restored._currentTag.name)}** to **${escapeMarkdown(restored.name)}**.`;
+            }
+
+            if (restored.name !== t_name) {
+                return `${getEmoji("ok")} Reverted tag **${escapeMarkdown(t_name)}** to **${escapeMarkdown(restored.name)}**.`;
+            }
+
+            const restoredRev = restored._previousRevision ?? restored._targetRevision,
+                revNum = restoredRev?.subjectIndex ?? revisionId;
+
+            return `${getEmoji("ok")} Reverted tag **${escapeMarkdown(restored.name)}** to revision **#${revNum}**.`;
         } catch (err) {
             if (err.name !== "TagError") {
                 throw err;
