@@ -958,6 +958,9 @@ class DiscordClient {
         this.logger?.info(`The bot is online. Logged in as "${this.botUsername}".`);
     }
 
+    static _validActivityTypes;
+    static _validActivityTypeNames;
+
     static {
         this._validActivityTypes = Object.entries(ActivityType)
             .filter(([key, value]) => !isNaN(key) && value !== "Custom")

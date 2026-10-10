@@ -11,6 +11,8 @@ class RevisionSubject {
         created: 0
     };
 
+    static dataProps = ["id", "target", "key", "staticSnapshot", "active", "deleted", "created"];
+
     static from(data, nullable = false, ...args) {
         if (nullable && data === null) {
             return null;
@@ -42,7 +44,6 @@ class RevisionSubject {
         return Object.fromEntries(Object.entries(data).map(entry => [prefix + entry[0], entry[1]]));
     }
 
-    static dataProps = ["id", "target", "key", "staticSnapshot", "active", "deleted", "created"];
     static _nullableDataProps = ["deleted"];
 
     static _parseJson(value, fallback) {

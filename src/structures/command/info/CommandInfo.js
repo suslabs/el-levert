@@ -1,8 +1,6 @@
 import TextCommandInfo from "./TextCommandInfo.js";
 
 class CommandInfo extends TextCommandInfo {
-    static dataProps = [...TextCommandInfo.dataProps, "allowed", "ownerOnly"];
-
     static invalidValues = {
         ...TextCommandInfo.invalidValues
     };
@@ -12,6 +10,8 @@ class CommandInfo extends TextCommandInfo {
         allowed: 0,
         ownerOnly: false
     };
+
+    static dataProps = [...TextCommandInfo.dataProps, "allowed", "ownerOnly"];
 
     toObject() {
         return {

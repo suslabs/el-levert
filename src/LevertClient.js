@@ -422,6 +422,11 @@ class LevertClient extends DiscordClient {
         }
     }
 
+    onKill() {
+        this._logStoppedTime();
+        this._deleteLogger();
+    }
+
     _setStarted() {
         this._started = true;
         this._startedAt = Date.now();
@@ -859,11 +864,6 @@ class LevertClient extends DiscordClient {
         } else {
             return this._logRestartedTime();
         }
-    }
-
-    onKill() {
-        this._logStoppedTime();
-        this._deleteLogger();
     }
 }
 

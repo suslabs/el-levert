@@ -3,8 +3,6 @@ import ObjectUtil from "../../../util/ObjectUtil.js";
 import CommandError from "../../../errors/CommandError.js";
 
 class BaseCommandInfo {
-    static dataProps = ["name", "parent", "subcommand", "subcommands"];
-
     static invalidValues = {};
 
     static defaultValues = {
@@ -12,6 +10,12 @@ class BaseCommandInfo {
         subcommand: false,
         subcommands: []
     };
+
+    static dataProps = ["name", "parent", "subcommand", "subcommands"];
+
+    static isValidName(name) {
+        return Util.nonemptyString(name);
+    }
 
     constructor(data, overrides) {
         data = ObjectUtil.guaranteeObject(data);
@@ -42,10 +46,6 @@ class BaseCommandInfo {
             subcommand: this.subcommand,
             subcommands: structuredClone(this.subcommands)
         };
-    }
-
-    static isValidName(name) {
-        return Util.nonemptyString(name);
     }
 }
 

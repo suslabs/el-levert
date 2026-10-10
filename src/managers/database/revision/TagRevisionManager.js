@@ -18,24 +18,6 @@ class TagRevisionManager {
 
     static revertAgeLimit = Util.durationSeconds.hour * 1000;
 
-    constructor(tagManager) {
-        this.tagManager = tagManager;
-        this.spec = new RevisionTargetSpec({
-            target: this.constructor.target,
-            key: ["name"],
-            staticFields: ["registered"],
-            trackedFields: ["aliasName", "name", "body", "bin", "owner", "args", "type"],
-            liveFields: ["lastEdited"],
-            encode: this.constructor.encodeValue,
-            decode: this.constructor.decodeValue,
-            label: key => key.name
-        });
-    }
-
-    get enabled() {
-        return getConfig()?.enableAuditLog ?? true;
-    }
-
     static encodeValue(field, value) {
         switch (field) {
             case "type":
@@ -66,6 +48,24 @@ class TagRevisionManager {
             default:
                 return value ?? Tag.defaultValues[field] ?? value;
         }
+    }
+
+    constructor(tagManager) {
+        this.tagManager = tagManager;
+        this.spec = new RevisionTargetSpec({
+            target: this.constructor.target,
+            key: ["name"],
+            staticFields: ["registered"],
+            trackedFields: ["aliasName", "name", "body", "bin", "owner", "args", "type"],
+            liveFields: ["lastEdited"],
+            encode: this.constructor.encodeValue,
+            decode: this.constructor.decodeValue,
+            label: key => key.name
+        });
+    }
+
+    get enabled() {
+        return getConfig()?.enableAuditLog ?? true;
     }
 
     getKey(name) {

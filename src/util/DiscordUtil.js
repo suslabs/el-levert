@@ -450,10 +450,12 @@ let DiscordUtil = {
         { pattern: "`", length: 1 }
     ],
     markdownTrimString: (str, charLimit, lineLimit) => {
-        let stack = [],
-            contentCount = 0,
-            i = 0,
-            isEscaped = false;
+        let stack = [];
+
+        let contentCount = 0,
+            i = 0;
+
+        let isEscaped = false;
 
         while (i < str.length && contentCount < charLimit) {
             if (str[i] === "\\" && !isEscaped) {

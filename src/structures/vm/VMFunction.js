@@ -23,7 +23,6 @@ class VMFunction {
     };
 
     static pathPrefix = "path:";
-    static _nullableDataProps = [];
 
     static registerOptions = {
         arguments: {
@@ -121,6 +120,8 @@ class VMFunction {
             this.registered = true;
         }
     }
+
+    static _nullableDataProps = [];
 
     static _resolveReference(ref, propertyMap) {
         if (typeof ref === "function") {

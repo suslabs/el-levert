@@ -31,10 +31,6 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         insertApplied: "INSERT INTO {{tableName}} (id, name, up, down) VALUES ($id, $name, $up, $down)"
     });
 
-    static _dbOpenMsg = "The database is open";
-    static _dbNotOpenMsg = "The database is not open";
-    static _sessionNotOpenMsg = "The database session is not open";
-
     constructor(filename, mode, config, session) {
         super();
 
@@ -422,6 +418,10 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
 
         return this;
     }
+
+    static _dbOpenMsg = "The database is open";
+    static _dbNotOpenMsg = "The database is not open";
+    static _sessionNotOpenMsg = "The database session is not open";
 
     _setConfig(config) {
         this.WALMode = config.enableWALMode ?? false;

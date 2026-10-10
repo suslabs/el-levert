@@ -27,7 +27,9 @@ class GatewayClient extends EventEmitter {
     static pingInterval = 5000;
     static pongTimeout = 3000;
 
-    static _connections = 0;
+    static delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
 
     constructor(url, options = {}) {
         super();
@@ -76,40 +78,7 @@ class GatewayClient extends EventEmitter {
         this._handleMessage = this._handleMessage.bind(this);
     }
 
-    static delay(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    static _getRetryTime(base, jitter, error) {
-        const time = base + (Math.random() * jitter - jitter / 2);
-        return error ? time * (1 + Math.random() * 0.4) : time;
-    }
-
-    static _increment() {
-        if (this.maxConnections === Infinity) {
-            return;
-        }
-
-        if (this._connections >= this.maxConnections) {
-            throw new ClientError(`Maximum connections (${this.maxConnections}) exceeded.`);
-        }
-
-        this._connections++;
-    }
-
-    static _decrement() {
-        if (this.maxConnections === Infinity) {
-            return;
-        }
-
-        if (this._connections <= 0) {
-            throw new ClientError("Connection count cannot be lower than 0");
-        }
-
-        this._connections--;
-    }
-
-    connect() {
+    connect(reconnect = false) {
         if (this.ws !== null) {
             return this._connectionReady;
         }
@@ -125,7 +94,9 @@ class GatewayClient extends EventEmitter {
         });
 
         this.destroyed = false;
-        this._reconnectAttempts = 0;
+        if (!reconnect) {
+            this._reconnectAttempts = 0;
+        }
         this._connectSocket();
 
         return this._connectionReady;
@@ -142,14 +113,6 @@ class GatewayClient extends EventEmitter {
         return this.connect();
     }
 
-    async sendRequest(op, data) {
-        if (!this.enableRetry) {
-            return await this._attemptSend(op, data);
-        }
-
-        return await this._sendWithRetry(op, data);
-    }
-
     close() {
         this.destroyed = true;
 
@@ -160,6 +123,14 @@ class GatewayClient extends EventEmitter {
 
         this._cleanupSocket();
         this.emit("close", 1000);
+    }
+
+    async sendRequest(op, data) {
+        if (!this.enableRetry) {
+            return await this._attemptSend(op, data);
+        }
+
+        return await this._sendWithRetry(op, data);
     }
 
     handleConnectPacket(packet) {
@@ -206,6 +177,173 @@ class GatewayClient extends EventEmitter {
 
         this._cleanupSocket();
         this._handleClose(closeCodes.UNKNOWN_OPCODE, false);
+    }
+
+    static _connections = 0;
+
+    static _increment() {
+        if (this.maxConnections === Infinity) {
+            return;
+        }
+
+        if (this._connections >= this.maxConnections) {
+            throw new ClientError(`Maximum connections (${this.maxConnections}) exceeded.`);
+        }
+
+        this._connections++;
+    }
+
+    static _decrement() {
+        if (this.maxConnections === Infinity) {
+            return;
+        }
+
+        if (this._connections <= 0) {
+            throw new ClientError("Connection count cannot be lower than 0");
+        }
+
+        this._connections--;
+    }
+
+    static _getRetryTime(base, jitter, error) {
+        const time = base + (Math.random() * jitter - jitter / 2);
+        return error ? time * (1 + Math.random() * 0.4) : time;
+    }
+
+    _connectSocket() {
+        if (this.destroyed) {
+            return;
+        }
+
+        try {
+            this.constructor._increment();
+        } catch (err) {
+            console.error("Connection failed:", err.message);
+            this.emit("error", err);
+            return;
+        }
+
+        this.ws = new WebSocket(this.url);
+
+        this.ws.on("open", this._handleOpen);
+        this.ws.on("message", this._handleMessage);
+        this.ws.on("close", this._handleClose);
+        this.ws.on("error", this._handleError);
+
+        this._connectTimeout = setTimeout(() => {
+            if (this.ws !== null && !this.connected) {
+                console.warn("Connection attempt timed out.");
+                this._cleanupSocket();
+                this._handleClose(1006);
+            }
+        }, this.connectTimeout);
+    }
+
+    _handleOpen() {
+        this._reconnectAttempts = 0;
+
+        if (this._connectTimeout !== null) {
+            clearTimeout(this._connectTimeout);
+            this._connectTimeout = null;
+        }
+    }
+
+    _handleMessage(data) {
+        let parsedJson;
+
+        try {
+            parsedJson = JSON.parse(data.toString());
+        } catch (err) {
+            console.error("Received invalid JSON from server:", err.message);
+            return;
+        }
+
+        if (typeof parsedJson.op === "number") {
+            let packet;
+
+            try {
+                packet = PacketParser.parse(data.toString());
+            } catch (err) {
+                console.error("Invalid control packet:", err.message);
+                this._cleanupSocket();
+                this._handleClose(closeCodes.UNKNOWN_OPCODE);
+                return;
+            }
+
+            packet.handleClient(this);
+            return;
+        }
+
+        if (parsedJson.status === "inspector_ready") {
+            this.emit("inspector_ready", parsedJson.data);
+            return;
+        }
+
+        const pending = this.pendingRequests.get(parsedJson.id);
+
+        if (typeof pending !== "undefined") {
+            this.pendingRequests.delete(parsedJson.id);
+
+            if (parsedJson.status === "error") {
+                pending.reject(new ClientError(parsedJson.data));
+            } else {
+                pending.resolve(parsedJson);
+            }
+        }
+    }
+
+    _scheduleReconnect() {
+        if (this._reconnectAttempts >= this.maxReconnectAttempts) {
+            console.error("Max reconnection attempts reached.");
+            this.emit("max_reconnect_reached");
+            return;
+        }
+
+        this._reconnectAttempts++;
+
+        const baseDelay = this._reconnectAttempts * this.reconnectDelay,
+            delay = this.constructor._getRetryTime(baseDelay, this.defaultJitter, false);
+
+        console.log(
+            `Disconnected. Reconnecting in ${(delay / 1000).toFixed(2)}s... (attempt ${this._reconnectAttempts}/${this.maxReconnectAttempts})`
+        );
+
+        this._reconnectTimeout = setTimeout(() => {
+            this.connect(true);
+        }, delay);
+    }
+
+    _handleClose(code, reconnect = !this.destroyed) {
+        this._cleanupSocket();
+
+        this._connectionReady = new Promise((resolve, reject) => {
+            this._resolveConnection = resolve;
+            this._rejectConnection = reject;
+        });
+
+        this.emit("close", code);
+
+        for (const [id, pending] of this.pendingRequests.entries()) {
+            pending.reject(new ClientError("Connection closed before response received."));
+            this.pendingRequests.delete(id);
+        }
+
+        if (reconnect) {
+            this._scheduleReconnect();
+        }
+    }
+
+    _rejectConnectionAttempt(error) {
+        if (this._rejectConnection !== null) {
+            this._rejectConnection(error);
+            this._resolveConnection = null;
+            this._rejectConnection = null;
+        }
+    }
+
+    _handleError(err) {
+        this.emit("error", err);
+        this._rejectConnectionAttempt(err);
     }
 
     _clearTimers() {
@@ -323,98 +461,6 @@ class GatewayClient extends EventEmitter {
         }
     }
 
-    _handleOpen() {
-        this._reconnectAttempts = 0;
-
-        if (this._connectTimeout !== null) {
-            clearTimeout(this._connectTimeout);
-            this._connectTimeout = null;
-        }
-    }
-
-    _rejectConnectionAttempt(error) {
-        if (this._rejectConnection !== null) {
-            this._rejectConnection(error);
-            this._resolveConnection = null;
-            this._rejectConnection = null;
-        }
-    }
-
-    _handleError(err) {
-        this.emit("error", err);
-        this._rejectConnectionAttempt(err);
-    }
-
-    _scheduleReconnect() {
-        if (this._reconnectAttempts >= this.maxReconnectAttempts) {
-            console.error("Max reconnection attempts reached.");
-            this.emit("max_reconnect_reached");
-            return;
-        }
-
-        this._reconnectAttempts++;
-
-        const baseDelay = this._reconnectAttempts * this.reconnectDelay,
-            delay = this.constructor._getRetryTime(baseDelay, this.defaultJitter, false);
-
-        console.log(
-            `Disconnected. Reconnecting in ${(delay / 1000).toFixed(2)}s... (attempt ${this._reconnectAttempts}/${this.maxReconnectAttempts})`
-        );
-
-        this._reconnectTimeout = setTimeout(() => {
-            this._connectSocket();
-        }, delay);
-    }
-
-    _connectSocket() {
-        if (this.destroyed) {
-            return;
-        }
-
-        try {
-            this.constructor._increment();
-        } catch (err) {
-            console.error("Connection failed:", err.message);
-            this.emit("error", err);
-            return;
-        }
-
-        this.ws = new WebSocket(this.url);
-
-        this.ws.on("open", this._handleOpen);
-        this.ws.on("message", this._handleMessage);
-        this.ws.on("close", this._handleClose);
-        this.ws.on("error", this._handleError);
-
-        this._connectTimeout = setTimeout(() => {
-            if (this.ws !== null && !this.connected) {
-                console.warn("Connection attempt timed out.");
-                this._cleanupSocket();
-                this._handleClose(1006);
-            }
-        }, this.connectTimeout);
-    }
-
-    _handleClose(code, reconnect = !this.destroyed) {
-        this._cleanupSocket();
-
-        this._connectionReady = new Promise((resolve, reject) => {
-            this._resolveConnection = resolve;
-            this._rejectConnection = reject;
-        });
-
-        this.emit("close", code);
-
-        for (const [id, pending] of this.pendingRequests.entries()) {
-            pending.reject(new ClientError("Connection closed before response received."));
-            this.pendingRequests.delete(id);
-        }
-
-        if (reconnect) {
-            this._scheduleReconnect();
-        }
-    }
-
     _sendHeartbeat() {
         if (this._pingTimeout !== null) {
             console.warn("Heartbeat timeout: ACK not received.");
@@ -458,50 +504,6 @@ class GatewayClient extends EventEmitter {
                     sessionId: this.sessionId
                 }).serialize()
             );
-        }
-    }
-
-    _handleMessage(data) {
-        let parsedJson;
-
-        try {
-            parsedJson = JSON.parse(data.toString());
-        } catch (err) {
-            console.error("Received invalid JSON from server:", err.message);
-            return;
-        }
-
-        if (typeof parsedJson.op === "number") {
-            let packet;
-
-            try {
-                packet = PacketParser.parse(data.toString());
-            } catch (err) {
-                console.error("Invalid control packet:", err.message);
-                this._cleanupSocket();
-                this._handleClose(closeCodes.UNKNOWN_OPCODE);
-                return;
-            }
-
-            packet.handleClient(this);
-            return;
-        }
-
-        if (parsedJson.status === "inspector_ready") {
-            this.emit("inspector_ready", parsedJson.data);
-            return;
-        }
-
-        const pending = this.pendingRequests.get(parsedJson.id);
-
-        if (typeof pending !== "undefined") {
-            this.pendingRequests.delete(parsedJson.id);
-
-            if (parsedJson.status === "error") {
-                pending.reject(new ClientError(parsedJson.data));
-            } else {
-                pending.resolve(parsedJson);
-            }
         }
     }
 }

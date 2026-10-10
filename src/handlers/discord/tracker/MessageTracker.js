@@ -98,93 +98,6 @@ class MessageTracker {
         return data.trigger === null || this._listProps.every(prop => Util.empty(data[prop]));
     }
 
-    _getData(triggerId) {
-        if (this.enableTracking && triggerId != null) {
-            return this.trackedMsgs.get(triggerId);
-        }
-    }
-
-    _pruneOldData() {
-        if (this.trackedMsgs.size >= this.trackLimit) {
-            const oldest = this.trackedMsgs.keys().next().value;
-            this.trackedMsgs.delete(oldest);
-        }
-    }
-
-    _getOrCreate(triggerId) {
-        let data = this._getData(triggerId);
-
-        if (typeof data !== "undefined") {
-            return data;
-        }
-
-        data = this.constructor._createData(triggerId);
-
-        this._pruneOldData();
-        this.trackedMsgs.set(triggerId, data);
-
-        return data;
-    }
-
-    _addItem(triggerId, listName, item) {
-        const data = this._getOrCreate(triggerId),
-            list = data[listName];
-
-        if (Array.isArray(item)) {
-            const items = item;
-            list.push(...items);
-        } else {
-            list.push(item);
-        }
-    }
-
-    _editItem(triggerId, listName, oldItem, newItem) {
-        const data = this._getData(triggerId),
-            list = data?.[listName];
-
-        if (typeof list === "undefined") {
-            return null;
-        }
-
-        if (Array.isArray(newItem)) {
-            const newItems = newItem,
-                oldItems = list;
-
-            data[listName] = newItems;
-            return [oldItems, data];
-        } else {
-            const idx = ArrayUtil._indexFunc(list, oldItem);
-
-            if (idx < 0 || idx >= list.length) {
-                return null;
-            }
-
-            oldItem = list[idx];
-            list[idx] = newItem;
-
-            return oldItem;
-        }
-    }
-
-    _deleteItem(triggerId, listName, item) {
-        const data = this._getData(triggerId),
-            list = data?.[listName];
-
-        if (typeof list === "undefined") {
-            return null;
-        }
-
-        if (item == null) {
-            const oldList = list;
-            data[listName] = [];
-
-            return [oldList, data];
-        } else {
-            item = ArrayUtil.removeItem(list, item)[1];
-            return [item, data];
-        }
-    }
-
     static _getTriggerId(triggerMsg) {
         if (TypeTester.isObject(triggerMsg)) {
             return triggerMsg.id ?? triggerMsg;
@@ -297,6 +210,93 @@ class MessageTracker {
         this._registerListFuncs();
 
         this._ready = true;
+    }
+
+    _getData(triggerId) {
+        if (this.enableTracking && triggerId != null) {
+            return this.trackedMsgs.get(triggerId);
+        }
+    }
+
+    _pruneOldData() {
+        if (this.trackedMsgs.size >= this.trackLimit) {
+            const oldest = this.trackedMsgs.keys().next().value;
+            this.trackedMsgs.delete(oldest);
+        }
+    }
+
+    _getOrCreate(triggerId) {
+        let data = this._getData(triggerId);
+
+        if (typeof data !== "undefined") {
+            return data;
+        }
+
+        data = this.constructor._createData(triggerId);
+
+        this._pruneOldData();
+        this.trackedMsgs.set(triggerId, data);
+
+        return data;
+    }
+
+    _addItem(triggerId, listName, item) {
+        const data = this._getOrCreate(triggerId),
+            list = data[listName];
+
+        if (Array.isArray(item)) {
+            const items = item;
+            list.push(...items);
+        } else {
+            list.push(item);
+        }
+    }
+
+    _editItem(triggerId, listName, oldItem, newItem) {
+        const data = this._getData(triggerId),
+            list = data?.[listName];
+
+        if (typeof list === "undefined") {
+            return null;
+        }
+
+        if (Array.isArray(newItem)) {
+            const newItems = newItem,
+                oldItems = list;
+
+            data[listName] = newItems;
+            return [oldItems, data];
+        } else {
+            const idx = ArrayUtil._indexFunc(list, oldItem);
+
+            if (idx < 0 || idx >= list.length) {
+                return null;
+            }
+
+            oldItem = list[idx];
+            list[idx] = newItem;
+
+            return oldItem;
+        }
+    }
+
+    _deleteItem(triggerId, listName, item) {
+        const data = this._getData(triggerId),
+            list = data?.[listName];
+
+        if (typeof list === "undefined") {
+            return null;
+        }
+
+        if (item == null) {
+            const oldList = list;
+            data[listName] = [];
+
+            return [oldList, data];
+        } else {
+            item = ArrayUtil.removeItem(list, item)[1];
+            return [item, data];
+        }
     }
 }
 

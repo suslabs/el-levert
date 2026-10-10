@@ -720,6 +720,8 @@ class PermissionManager extends DBManager {
         });
     }
 
+    static _groupNameRegex = /^[A-Za-z0-9\-_]+$/;
+
     _revisionOptions(options) {
         options = ObjectUtil.guaranteeObject(options);
 
@@ -814,8 +816,6 @@ class PermissionManager extends DBManager {
             after: restored.getData()
         };
     }
-
-    static _groupNameRegex = /^[A-Za-z0-9\-_]+$/;
 }
 
 export default PermissionManager;

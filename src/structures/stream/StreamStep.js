@@ -54,12 +54,15 @@ class StreamStep {
             return [initialInput, this.args].filter(Util.nonemptyString).join(" ");
         }
 
-        const inputStr =
-            typeof input === "string"
-                ? input
-                : TypeTester.isObject(input) || Array.isArray(input)
-                  ? JSON.stringify(input)
-                  : String(input ?? "");
+        let inputStr;
+
+        if (typeof input === "string") {
+            inputStr = input;
+        } else if (TypeTester.isObject(input) || Array.isArray(input)) {
+            inputStr = JSON.stringify(input);
+        } else {
+            inputStr = String(input ?? "");
+        }
 
         if (this.args.includes("$")) {
             return this.args.replaceAll("$", inputStr).trim();

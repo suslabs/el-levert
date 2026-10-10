@@ -10,6 +10,8 @@ class Group {
         users: []
     };
 
+    static dataProps = ["name", "level"];
+
     static from(data, nullable = false, ...args) {
         if (nullable && data === null) {
             return null;
@@ -90,7 +92,6 @@ class Group {
         }
     }
 
-    static dataProps = ["name", "level"];
     static _nullableDataProps = [];
 
     static _indentation = 4;

@@ -10,6 +10,24 @@ import ObjectUtil from "../../../util/ObjectUtil.js";
 import CommandError from "../../../errors/CommandError.js";
 
 class CommandArgumentSchema {
+    static compile(args) {
+        if (!Array.isArray(args)) {
+            throw new CommandError("Command arguments definition must be an array");
+        }
+
+        const normalizedArgs = args.map(arg => this._normalizeArgument(arg));
+
+        if (!this._validateArgs(normalizedArgs)) {
+            const err = Util.first(this._validateArgs.errors),
+                path = err.instancePath || "unknown";
+
+            throw new CommandError(`Invalid argument schema at ${path}: ${err.message}`);
+        }
+
+        this._validateEnumTypes(normalizedArgs);
+        return normalizedArgs;
+    }
+
     static _ajv = null;
     static _validateArgs = null;
 
@@ -27,24 +45,6 @@ class CommandArgumentSchema {
 
         this._ajv.addSchema(jsonSchema);
         this._validateArgs = this._ajv.compile(arraySchema);
-    }
-
-    static compile(args) {
-        if (!Array.isArray(args)) {
-            throw new CommandError("Command arguments definition must be an array");
-        }
-
-        const normalizedArgs = args.map(arg => this._normalizeArgument(arg));
-
-        if (!this._validateArgs(normalizedArgs)) {
-            const err = Util.first(this._validateArgs.errors),
-                path = err.instancePath || "unknown";
-
-            throw new CommandError(`Invalid argument schema at ${path}: ${err.message}`);
-        }
-
-        this._validateEnumTypes(normalizedArgs);
-        return normalizedArgs;
     }
 
     static _normalizeArgument(rawArg) {

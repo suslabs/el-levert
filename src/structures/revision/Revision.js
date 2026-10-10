@@ -17,6 +17,22 @@ class Revision {
         reason: ""
     };
 
+    static dataProps = [
+        "id",
+        "target",
+        "subjectId",
+        "subjectIndex",
+        "operation",
+        "actor",
+        "created",
+        "key",
+        "changed",
+        "snapshot",
+        "revertOf",
+        "restores",
+        "reason"
+    ];
+
     static from(data, nullable = false, ...args) {
         if (nullable && data === null) {
             return null;
@@ -44,22 +60,6 @@ class Revision {
 
         return Object.fromEntries(Object.entries(data).map(entry => [prefix + entry[0], entry[1]]));
     }
-
-    static dataProps = [
-        "id",
-        "target",
-        "subjectId",
-        "subjectIndex",
-        "operation",
-        "actor",
-        "created",
-        "key",
-        "changed",
-        "snapshot",
-        "revertOf",
-        "restores",
-        "reason"
-    ];
 
     static _nullableDataProps = ["snapshot", "revertOf", "restores", "reason"];
 

@@ -8,9 +8,6 @@ import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
 import DatabaseError from "../../../errors/DatabaseError.js";
 
 class SqliteStatement {
-    static _stFinalizedMsg = "The statement is finalized";
-    static _stNotFinalizedMsg = "The statement is not finalized";
-
     constructor(conn, sql, defaultParam = [], rawSt, options = {}) {
         this.sql = sql;
         this.defaultParam = defaultParam;
@@ -179,6 +176,9 @@ class SqliteStatement {
             }
         });
     }
+
+    static _stFinalizedMsg = "The statement is finalized";
+    static _stNotFinalizedMsg = "The statement is not finalized";
 
     _checkFinalized(expected = false, msg) {
         if (this.finalized === expected) {

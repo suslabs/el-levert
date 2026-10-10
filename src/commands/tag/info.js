@@ -77,43 +77,11 @@ class TagInfoCommand {
         const header = `${getEmoji("info")} Tag info for **${escapeMarkdown(t_name)}**:`;
 
         if (mode === "default") {
-            const isDiscord = ctx.discord ?? true,
-                owner = await getClient().formatUser(tag.owner, isDiscord),
+            const owner = await getClient().formatUser(tag.owner, true),
                 timeInfo = tag.getTimeInfo(false),
                 size = `${Util.formatNumber(tag.getSize(), 2)} KB`;
 
             const activeFlags = TagTypes.flags.names.filter(flag => tag.type.hasFlag(flag));
-
-            if (!isDiscord) {
-                const plainLines = [
-                    `Owner: ${owner}`,
-                    `Type: ${tag.getScriptType()}`,
-                    `Version: ${tag.getVersion()}`,
-                    tag.isScript ? `Language: ${tag.getScriptLanguage()}` : null,
-                    `Type int: ${tag.type.toNumber()}`,
-                    `Size: ${size}`,
-                    `Registered: ${timeInfo.registered}`,
-                    `Last edited: ${timeInfo.lastEdited}`
-                ];
-
-                if (tag.isAlias) {
-                    plainLines.push(`Alias to: ${tag.aliasName}`);
-
-                    if (!Util.empty(tag.args)) {
-                        plainLines.push(`Args: ${tag.args}`);
-                    }
-
-                    if (tag.hops.length > 2) {
-                        plainLines.push(`Hops: ${tag.hops.join(" -> ")}`);
-                    }
-                }
-
-                if (!Util.empty(activeFlags)) {
-                    plainLines.push(`Flags: ${activeFlags.join(", ")}`);
-                }
-
-                return `${header}\n${plainLines.filter(Boolean).join("\n")}`;
-            }
 
             const lines = [
                 `**Owner**: ${owner}`,

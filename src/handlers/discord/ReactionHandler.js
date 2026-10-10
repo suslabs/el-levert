@@ -65,10 +65,10 @@ function toStringArray(value) {
 
 class ReactionHandler extends Handler {
     static $name = "reactionHandler";
-    priority = -1;
-
     static emojiEyeChars = ":;=8xX";
     static emojiNoseChars = "-^'oO*";
+
+    priority = -1;
 
     constructor(enabled) {
         super(enabled);
@@ -78,23 +78,9 @@ class ReactionHandler extends Handler {
         this.reactionTracker = new ReactionTracker(20);
     }
 
-    async react(msg, emoji) {
-        if (emoji == null) {
-            return;
-        }
-
-        const react = await msg.react(emoji);
-        this.reactionTracker.addReaction(msg, react);
-    }
-
-    async removeReacts(msg) {
-        logRemove(msg);
-        Benchmark.startTiming("reaction_remove");
-
-        let botId = getClient().client.user.id;
-        await this.reactionTracker.deleteWithCallback(msg, "reaction", react => react.users.remove(botId));
-
-        logRemoveTime("reaction_remove");
+    load() {
+        this._setWords();
+        this._setParens();
     }
 
     async execute(msg) {
@@ -154,9 +140,23 @@ class ReactionHandler extends Handler {
         return reacted;
     }
 
-    load() {
-        this._setWords();
-        this._setParens();
+    async react(msg, emoji) {
+        if (emoji == null) {
+            return;
+        }
+
+        const react = await msg.react(emoji);
+        this.reactionTracker.addReaction(msg, react);
+    }
+
+    async removeReacts(msg) {
+        logRemove(msg);
+        Benchmark.startTiming("reaction_remove");
+
+        let botId = getClient().client.user.id;
+        await this.reactionTracker.deleteWithCallback(msg, "reaction", react => react.users.remove(botId));
+
+        logRemoveTime("reaction_remove");
     }
 
     static _faceRegex = (() => {

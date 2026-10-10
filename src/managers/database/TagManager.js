@@ -358,20 +358,7 @@ class TagManager extends DBManager {
             meta
         });
 
-        const newSize = newTag.getSize(),
-            typeLimit = newTag.isBinary
-                ? this.maxTagSize.binary
-                : newTag.isScript
-                  ? this.maxTagSize.script
-                  : this.maxTagSize.text;
-
-        if (newSize > typeLimit) {
-            const typeName = newTag.isBinary ? "Binary tag" : newTag.isScript ? "Script tag" : "Tag";
-            throw new TagError(`${typeName}s can take up at most ${typeLimit} kb`, {
-                size: newSize,
-                limit: typeLimit
-            });
-        }
+        this._checkTagSize(newTag);
 
         if (validate.checkExisting && tag.equivalent(newTag)) {
             throw new TagError("Can't update tag with the same body", tag);
@@ -436,20 +423,7 @@ class TagManager extends DBManager {
             this.checkBody(tag.body, true, tag.isBinary);
         }
 
-        const newTagSize = tag.getSize(),
-            typeLimit = tag.isBinary
-                ? this.maxTagSize.binary
-                : tag.isScript
-                  ? this.maxTagSize.script
-                  : this.maxTagSize.text;
-
-        if (newTagSize > typeLimit) {
-            const typeName = tag.isBinary ? "Binary tag" : tag.isScript ? "Script tag" : "Tag";
-            throw new TagError(`${typeName}s can take up at most ${typeLimit} kb`, {
-                size: newTagSize,
-                limit: typeLimit
-            });
-        }
+        this._checkTagSize(tag);
 
         if (validate.checkExisting && name !== tag.name) {
             const existingTag = await this.fetch(tag.name);
@@ -1053,33 +1027,33 @@ class TagManager extends DBManager {
         }
 
         const attach = msg.file ?? msg.attachments?.at(0);
+
         let isFile = true,
             isScript = false,
-            isBinary = false,
-            body;
+            isBinary = false;
+
+        let body;
 
         if (attach == null && !Util.nonemptyString(msg.fileUrl)) {
             isFile = false;
         } else {
             const contentType = (attach?.contentType ?? "").split(";")[0].trim().toLowerCase(),
-                url = msg.fileUrl ?? attach?.url,
-                attachInfo = msg.attachInfo ?? DiscordUtil.parseAttachmentUrl(url ?? ""),
+                url = msg.fileUrl ?? attach?.url;
+
+            const attachInfo = msg.attachInfo ?? DiscordUtil.parseAttachmentUrl(url ?? ""),
                 ext = (attachInfo?.ext ?? (attach?.name ? path.extname(attach.name) : "")).toLowerCase();
 
             isBinary = type === "tag" && binaryContentTypes.includes(contentType) && binaryExtensions.includes(ext);
             isScript = Util.hasPrefix(scriptContentTypes, contentType);
 
-            const maxSize = isBinary
-                ? this.maxTagSize.binary
-                : isScript
-                  ? this.maxTagSize.script
-                  : this.maxTagSize.text;
+            const maxSize = this._getMaxTagSize(isBinary, isScript);
 
             try {
                 const res = await DiscordUtil.fetchAttachment(msg, isBinary ? "arraybuffer" : "text", {
                     allowedContentTypes: fileContentTypes,
                     maxSize
                 });
+
                 body = isBinary ? new Uint8Array(res.body) : res.body;
             } catch (err) {
                 if (Util.hasPrefix(["Message doesn't have", "Invalid content type"], err.message)) {
@@ -1095,6 +1069,7 @@ class TagManager extends DBManager {
 
         if (!isFile) {
             const trimmedArgs = (t_args = t_args?.trimEnd() ?? "");
+
             body = trimmedArgs + (Util.empty(trimmedArgs) ? "" : " ");
             body += (msg.attachments ?? []).map(at => at.url).join(" ");
         }
@@ -1288,20 +1263,9 @@ class TagManager extends DBManager {
 
         getLogger().info(`Added tag: "${tag.name}" with type: ${tag.type.toHex()}, body:${bodyLogText}`);
 
-        const tagSize = tag.getSize(),
-            typeLimit = tag.isBinary
-                ? this.maxTagSize.binary
-                : tag.isScript
-                  ? this.maxTagSize.script
-                  : this.maxTagSize.text;
+        this._checkTagSize(tag);
 
-        if (tagSize > typeLimit) {
-            const typeName = tag.isBinary ? "Binary tag" : tag.isScript ? "Script tag" : "Tag";
-            throw new TagError(`${typeName}s can take up at most ${typeLimit} kb`, {
-                size: tagSize,
-                limit: typeLimit
-            });
-        }
+        const tagSize = tag.getSize();
 
         await this._updateQuota(tag.owner, tagSize, 1, tx);
     }
@@ -1390,6 +1354,24 @@ class TagManager extends DBManager {
             await tx.usageCreate(name);
             await tx.usageIncrement(name);
         });
+    }
+
+    _getMaxTagSize(isBinary, isScript) {
+        return isBinary ? this.maxTagSize.binary : isScript ? this.maxTagSize.script : this.maxTagSize.text;
+    }
+
+    _checkTagSize(tag) {
+        const tagSize = tag.getSize(),
+            typeLimit = this._getMaxTagSize(tag.isBinary, tag.isScript);
+
+        if (tagSize > typeLimit) {
+            const typeName = tag.isBinary ? "Binary tag" : tag.isScript ? "Script tag" : "Tag";
+
+            throw new TagError(`${typeName}s can take up at most ${typeLimit} kb`, {
+                size: tagSize,
+                limit: typeLimit
+            });
+        }
     }
 }
 export default TagManager;

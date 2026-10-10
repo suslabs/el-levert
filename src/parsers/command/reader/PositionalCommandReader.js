@@ -32,6 +32,29 @@ class PositionalCommandReader extends BaseCommandReader {
         return PositionalCommandReader._formatSplitResult(first, second, lowercase);
     }
 
+    constructor(options = {}) {
+        super(options);
+
+        this.separators = PositionalCommandReader._normalizeSeparators(this.options.separator);
+        this.index = this.options.index ?? 0;
+    }
+
+    read(session) {
+        const text = this.getSourceText(session),
+            tokens = this._lex(text);
+
+        if (tokens.length <= this.index) {
+            return undefined;
+        }
+
+        if (!this.usesArgsSource()) {
+            return this._getTokenValue(text, tokens);
+        }
+
+        session.argsIndex = Math.max(session.argsIndex, this.index + 1);
+        return this._getTokenValue(text, tokens);
+    }
+
     static _normalizeSplitConfig(options) {
         options = ObjectUtil.guaranteeObject(options);
 
@@ -75,27 +98,12 @@ class PositionalCommandReader extends BaseCommandReader {
         return [lowercase ? String(first).toLowerCase() : String(first), String(second)];
     }
 
-    constructor(options = {}) {
-        super(options);
-
-        this.separators = PositionalCommandReader._normalizeSeparators(this.options.separator);
-        this.index = this.options.index ?? 0;
-    }
-
-    read(session) {
-        const text = this.getSourceText(session),
-            tokens = this._lex(text);
-
-        if (tokens.length <= this.index) {
-            return undefined;
+    _lex(text) {
+        if (Util.empty(this.separators)) {
+            return [];
         }
 
-        if (!this.usesArgsSource()) {
-            return this._getTokenValue(text, tokens);
-        }
-
-        session.argsIndex = Math.max(session.argsIndex, this.index + 1);
-        return this._getTokenValue(text, tokens);
+        return CommandTextLexer.lex(text, this.separators);
     }
 
     _getTokenValue(text, tokens) {
@@ -104,14 +112,6 @@ class PositionalCommandReader extends BaseCommandReader {
         }
 
         return text.slice(tokens[this.index].index);
-    }
-
-    _lex(text) {
-        if (Util.empty(this.separators)) {
-            return [];
-        }
-
-        return CommandTextLexer.lex(text, this.separators);
     }
 }
 

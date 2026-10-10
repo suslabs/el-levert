@@ -36,8 +36,6 @@ class BotEvent {
         return Object.fromEntries(Object.entries(data).map(entry => [prefix + entry[0], entry[1]]));
     }
 
-    static _nullableDataProps = [];
-
     register(client) {
         if (this.registered) {
             throw new EventError("Event has already been registered");
@@ -60,6 +58,8 @@ class BotEvent {
         this.client.removeListener(this.name, this.listener);
         this.registered = false;
     }
+
+    static _nullableDataProps = [];
 }
 
 export default BotEvent;

@@ -1,19 +1,6 @@
 import BaseCommandInfo from "./BaseCommandInfo.js";
 
 class TextCommandInfo extends BaseCommandInfo {
-    static dataProps = [
-        ...BaseCommandInfo.dataProps,
-        "args",
-        "description",
-        "usage",
-        "parser",
-        "aliases",
-        "helpArgs",
-        "category",
-        "prefix",
-        "arguments"
-    ];
-
     static invalidValues = {
         ...BaseCommandInfo.invalidValues,
         category: "none"
@@ -31,6 +18,19 @@ class TextCommandInfo extends BaseCommandInfo {
         prefix: "",
         arguments: []
     };
+
+    static dataProps = [
+        ...BaseCommandInfo.dataProps,
+        "args",
+        "description",
+        "usage",
+        "parser",
+        "aliases",
+        "helpArgs",
+        "category",
+        "prefix",
+        "arguments"
+    ];
 
     toObject() {
         return {

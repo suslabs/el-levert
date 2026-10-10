@@ -11,6 +11,8 @@ class Reminder {
         msg: ""
     };
 
+    static dataProps = ["id", "user", "end", "msg"];
+
     static from(data, nullable = false, ...args) {
         if (nullable && data === null) {
             return null;
@@ -76,7 +78,6 @@ class Reminder {
         return format;
     }
 
-    static dataProps = ["id", "user", "end", "msg"];
     static _nullableDataProps = [];
 }
 

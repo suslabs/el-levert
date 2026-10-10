@@ -5,9 +5,6 @@ import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
 import DatabaseError from "../../../errors/DatabaseError.js";
 
 class SqliteStatementContainer {
-    static _stFinalizedMsg = "The statement is finalized";
-    static _stNotFinalizedMsg = "The statement is not finalized";
-
     constructor(db, sql, defaultParam = []) {
         this.sql = sql;
         this.defaultParam = defaultParam;
@@ -118,6 +115,9 @@ class SqliteStatementContainer {
         this._statements.set(conn, st);
         return st;
     }
+
+    static _stFinalizedMsg = "The statement is finalized";
+    static _stNotFinalizedMsg = "The statement is not finalized";
 
     _removeStatement(conn, st) {
         if (this._statements.get(conn) === st) {

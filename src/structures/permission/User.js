@@ -10,6 +10,8 @@ class User {
         username: ""
     };
 
+    static dataProps = ["id", "user", "group"];
+
     static from(data, nullable = false, ...args) {
         if (nullable && data === null) {
             return null;
@@ -50,7 +52,6 @@ class User {
         return DiscordUtil.formatUser(this.username, this.user, discord);
     }
 
-    static dataProps = ["id", "user", "group"];
     static _nullableDataProps = [];
 }
 

@@ -368,16 +368,14 @@ class Tag {
         }
 
         if (this.isBinary) {
+            const binaryBody = this.body instanceof Uint8Array ? this.body : new Uint8Array(this.bin ?? []);
+
             if (props.includes("body")) {
-                data.body = db ? null : this.body instanceof Uint8Array ? this.body : new Uint8Array(this.bin ?? []);
+                data.body = db ? null : binaryBody;
             }
 
             if (props.includes("bin")) {
-                data.bin = db
-                    ? (this.bin ?? Buffer.from(this.body ?? []))
-                    : this.body instanceof Uint8Array
-                      ? this.body
-                      : new Uint8Array(this.bin ?? []);
+                data.bin = db ? (this.bin ?? Buffer.from(this.body ?? [])) : binaryBody;
             }
         } else if (props.includes("bin")) {
             data.bin = null;
@@ -563,13 +561,21 @@ class Tag {
         }
 
         return (async () => {
-            const aliasName = this.isAlias ? this.aliasName : "none",
-                body = this.isBinary
-                    ? `[binary data: ${this.body?.byteLength ?? 0} bytes]`
-                    : Util.empty(this.body)
-                      ? "empty"
-                      : Util.trimString(this.body, bodyLimit, null, { showDiff: true }),
-                args = Util.empty(this.args) ? "none" : Util.trimString(this.args, bodyLimit, null, { showDiff: true });
+            const aliasName = this.isAlias ? this.aliasName : "none";
+
+            let body;
+
+            if (this.isBinary) {
+                body = `[binary data: ${this.body?.byteLength ?? 0} bytes]`;
+            } else if (Util.empty(this.body)) {
+                body = "empty";
+            } else {
+                body = Util.trimString(this.body, bodyLimit, null, { showDiff: true });
+            }
+
+            const args = Util.empty(this.args)
+                ? "none"
+                : Util.trimString(this.args, bodyLimit, null, { showDiff: true });
 
             const info = {
                 hops: this.hops,
