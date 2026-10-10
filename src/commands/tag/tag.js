@@ -54,7 +54,7 @@ Subcommands:
 - audit [tag_name] [revision_id] [--options]: View revision history or diff.
 - audit_clear [tag_name] [revision_id] [end_revision_id] [--options]: Clear tag audit history (owner only).
 - revert <name> [revision_id]: Restore a previous tag state.
-- info <name> [raw]: Show tag details and metadata (moderators).
+- info <name> [default|json|raw]: Show tag details and metadata (moderators).
 - list [user]: List your tags or another user's tags.
 - search <text> [limit]: Search tag names.
 - fullsearch <query> [limit]: Search inside tag bodies.

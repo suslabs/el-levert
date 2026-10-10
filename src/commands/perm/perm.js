@@ -53,7 +53,7 @@ class PermCommand {
     }
 
     isUnchanged(arg) {
-        return this.constructor.validUnchangedArgs.has(arg);
+        return PermCommand.validUnchangedArgs.has(arg);
     }
 
     handler(ctx) {

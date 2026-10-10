@@ -18,7 +18,7 @@ async function getDetail(revisionId, tagName) {
         return `${getEmoji("warn")} ${err.message}.`;
     }
 
-    const response = RevisionAuditUtil.createDetailResponse(detail, {
+    const response = await RevisionAuditUtil.createDetailResponse(detail, {
         filePrefix: "tag-revision",
         label: detail.label ?? detail.revision.key.name ?? "unknown",
         perSubject: Util.nonemptyString(tagName)
@@ -147,13 +147,9 @@ Calling without a tag name shows the full audit log across all tags. Providing a
         const isPerSubject = Util.nonemptyString(tagName);
         const scopeLabel = isPerSubject ? ` for **${escapeMarkdown(tagName)}**` : "",
             header = `${getEmoji("info")} Tag audit page **${page}**${scopeLabel}:`,
-            embed = RevisionAuditUtil.createListEmbed(
-                revisions,
-                "Tag audit",
-                page,
-                revision => revision.key.name ?? "unknown",
-                { perSubject: isPerSubject }
-            );
+            embed = RevisionAuditUtil.createListEmbed(revisions, page, revision => revision.key.name ?? "unknown", {
+                perSubject: isPerSubject
+            });
 
         return {
             content: header,

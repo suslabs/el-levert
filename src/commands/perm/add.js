@@ -3,6 +3,7 @@ import { escapeMarkdown } from "discord.js";
 import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import DiscordUtil from "../../util/DiscordUtil.js";
 
 class PermAddCommand {
     static info = {
@@ -67,7 +68,7 @@ class PermAddCommand {
         if (typeof find === "undefined") {
             return `${getEmoji("warn")} User \`${u_name}\` not found.`;
         } else if (await getClient().permManager.isInGroup(g_name, find.id)) {
-            return `${getEmoji("warn")} User \`${find.user.username}\` (\`${find.user.id}\`) is already a part of the group **${escapeMarkdown(g_name)}**.`;
+            return `${getEmoji("warn")} User ${DiscordUtil.formatUser(find.user, null, true)} is already a part of the group **${escapeMarkdown(g_name)}**.`;
         }
 
         try {
@@ -82,7 +83,7 @@ class PermAddCommand {
             return `${getEmoji("warn")} ${err.message}.`;
         }
 
-        return `${getEmoji("ok")} Added user \`${find.user.username}\` (\`${find.user.id}\`) to group **${escapeMarkdown(g_name)}**.`;
+        return `${getEmoji("ok")} Added user ${DiscordUtil.formatUser(find.user, null, true)} to group **${escapeMarkdown(g_name)}**.`;
     }
 }
 

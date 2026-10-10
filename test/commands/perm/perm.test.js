@@ -91,7 +91,7 @@ describe("Merged Branch Coverage", () => {
 
     describe("perm command branches", () => {
         test("covers add_group validation, permission, success, and manager failures", async () => {
-            expect(await run("add_group")).toContain("group_name level");
+            expect(await run("add_group")).toContain("<group_name> <level>");
             expect(await run("add_group bad* 4")).toContain("must consist");
             expect(await run("add_group mods nope")).toContain("Invalid group level");
             expect(await run("add_group admins2 8")).toContain("higher than or equal to your own");
@@ -128,7 +128,7 @@ describe("Merged Branch Coverage", () => {
                 }
             ];
 
-            expect(await run("add mods alice")).toContain("Added user `alice`");
+            expect(await run("add mods alice")).toContain("Added user alice");
             expect(await run("add mods alice")).toContain("already a part");
 
             runtime.client.findUsers = async () => [
@@ -198,7 +198,7 @@ describe("Merged Branch Coverage", () => {
             expect(await run("remove missing alice")).toContain("doesn't exist");
             expect(await run("remove bosses boss")).toContain("higher than or equal to your own");
             expect(await run("remove mods nobody")).toContain("is not in group");
-            expect(await run("remove mods alice")).toContain("Removed user `alice`");
+            expect(await run("remove mods alice")).toContain("Removed user alice");
 
             vi.spyOn(runtime.client.permManager, "remove").mockRejectedValueOnce(new PermissionError("Removal failed"));
             expect(await run("remove mods alice")).toContain("Removal failed");
@@ -211,7 +211,7 @@ describe("Merged Branch Coverage", () => {
             await runtime.client.permManager.add(mods, "alice-id", true);
             await runtime.client.permManager.add(bosses, "boss-id", true);
 
-            expect(await run("remove_all")).toContain("(ping/id/username)");
+            expect(await run("remove_all")).toContain("<user>");
 
             runtime.client.findUsers = async () => [];
             expect(await run("remove_all ghost")).toContain("User `ghost` not found");
@@ -233,7 +233,7 @@ describe("Merged Branch Coverage", () => {
             ];
 
             expect(await run("remove_all boss")).toContain("higher than or equal to your own");
-            expect(await run("remove_all alice")).toContain("Removed `alice`");
+            expect(await run("remove_all alice")).toContain("Removed alice");
             expect(await run("remove_all alice")).toContain("doesn't have any permissions");
             expect(await run("remove_all owner", ownerMsg)).toContain("other than being the bot owner");
         });

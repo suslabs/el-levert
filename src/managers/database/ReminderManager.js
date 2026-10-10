@@ -194,7 +194,7 @@ class ReminderManager extends DBManager {
             out += ".";
         }
 
-        getLogger().info(`Sending reminder to ${user.id} (${user.username})...`);
+        getLogger().info(`Sending reminder to ${DiscordUtil.formatUser(user)}...`);
         await user.send(out);
     }
 

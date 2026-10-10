@@ -1,6 +1,7 @@
 import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import DiscordUtil from "../../util/DiscordUtil.js";
 
 class PermRemoveAllCommand {
     static info = {
@@ -53,7 +54,7 @@ class PermRemoveAllCommand {
         const theirLevel = await getClient().permManager.maxLevel(find.user.id);
 
         {
-            const action = `remove permissions of a user (\`${find.user.username}\` \`${find.user.id}\`)`,
+            const action = `remove permissions of a user (${DiscordUtil.formatUser(find.user, null, false)})`,
                 err = this.parentCmd.checkLevel(ctx, theirLevel, action);
 
             if (err !== null) {
@@ -66,13 +67,13 @@ class PermRemoveAllCommand {
         });
 
         if (!removed) {
-            const out = `${getEmoji("info")} User \`${find.user.username}\` (\`${find.user.id}\`) doesn't have any permissions`,
+            const out = `${getEmoji("info")} User ${DiscordUtil.formatUser(find.user, null, true)} doesn't have any permissions`,
                 findIsOwner = getClient().permManager.isOwner(find.user.id);
 
             return out + (findIsOwner ? " other than being the bot owner." : ".");
         }
 
-        return `${getEmoji("ok")} Removed \`${find.user.username}\`'s (\`${find.user.id}\`) permissions.`;
+        return `${getEmoji("ok")} Removed ${DiscordUtil.formatUser(find.user, null, true, { possessive: true })} permissions.`;
     }
 }
 

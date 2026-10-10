@@ -1,3 +1,4 @@
+import fs from "node:fs/promises";
 import path from "node:path";
 
 import sqlite from "sqlite3";
@@ -16,6 +17,8 @@ import Util from "../../src/util/Util.js";
 import TypeTester from "../../src/util/TypeTester.js";
 import ArrayUtil from "../../src/util/ArrayUtil.js";
 import ObjectUtil from "../../src/util/ObjectUtil.js";
+
+import ProgressTracker from "../../src/util/misc/ProgressTracker.js";
 
 import TagCommand from "../../src/commands/tag/tag.js";
 
@@ -89,6 +92,7 @@ class DBImporter {
         this.logger = logger;
         this.tagManager = tagManager;
         this.options = options;
+        this.tracker = options.tracker ?? (options.progress !== false ? new ProgressTracker() : null);
     }
 
     async updateDatabase(path, mode = DBUpdateModes.overwrite, options = {}) {
@@ -102,6 +106,20 @@ class DBImporter {
             throw new ImporterError("No update mode provided");
         } else if (!Object.values(DBUpdateModes).includes(mode)) {
             throw new ImporterError("Invalid update mode: " + mode, mode);
+        }
+
+        try {
+            const stat = await fs.stat(path);
+
+            if (!stat.isFile()) {
+                throw new ImporterError(`Path is not a file: ${path}`);
+            }
+        } catch (err) {
+            if (err.code === "ENOENT") {
+                throw new ImporterError(`Import file not found: ${path}`);
+            }
+
+            throw err;
         }
 
         const owners = options.owners ?? this.options.owners ?? null;
@@ -135,6 +153,11 @@ class DBImporter {
 
         Tag._fetchFinished = true;
 
+        const deleteCount = mode === DBUpdateModes.overwrite ? deletedTags.length : 0,
+            totalWork = deleteCount + existingTags.length + newTags.length;
+
+        this.tracker?.start(totalWork, "Importing tags...");
+
         let count = 0;
 
         switch (mode) {
@@ -147,6 +170,7 @@ class DBImporter {
                 break;
         }
 
+        this.tracker?.finish();
         this.logger.info(count > 0 ? `Updated ${count} tag(s).` : "No tags were updated successfully.");
     }
 
@@ -166,14 +190,23 @@ class DBImporter {
         }
 
         let count = 0;
+        this.tracker?.start(oldTags.length, "Purging old tags...");
 
         for (const tag of oldTags) {
+            this.tracker?.setLabel(`Purging "${tag.name}"`);
+
             await this.tagManager
                 .delete(tag, false, { actor: this.constructor.actor })
                 .then(() => count++)
-                .catch(err => this.logger.error(`Error occured while deleting "${tag.name}":`, err));
+                .catch(err => {
+                    this.tracker?.clear();
+                    this.logger.error(`Error occured while deleting "${tag.name}":`, err);
+                });
+
+            this.tracker?.tick();
         }
 
+        this.tracker?.finish();
         this.logger.info(`Finished purging ${count} old tags.`);
         return true;
     }
@@ -300,10 +333,17 @@ class DBImporter {
         for (const name of deletedTags) {
             const oldTag = currentTags.get(name);
 
+            this.tracker?.setLabel(`Deleting "${name}"`);
+
             await this.tagManager
                 .delete(oldTag, false, { actor: this.constructor.actor })
                 .then(() => count++)
-                .catch(err => this.logger.error(`Error occured while deleting "${name}":`, err));
+                .catch(err => {
+                    this.tracker?.clear();
+                    this.logger.error(`Error occured while deleting "${name}":`, err);
+                });
+
+            this.tracker?.tick();
         }
 
         return count;
@@ -316,12 +356,19 @@ class DBImporter {
             const currTag = currentTags.get(name),
                 importTag = importTags.get(name);
 
+            this.tracker?.setLabel(`Updating "${name}"`);
+
             if (!currTag.equals(importTag)) {
                 await this.tagManager
                     .updateProps(currTag, importTag, false, { actor: this.constructor.actor })
                     .then(() => count++)
-                    .catch(err => this.logger.error(`Error occured while updating "${name}":`, err));
+                    .catch(err => {
+                        this.tracker?.clear();
+                        this.logger.error(`Error occured while updating "${name}":`, err);
+                    });
             }
+
+            this.tracker?.tick();
         }
 
         return count;
@@ -334,14 +381,21 @@ class DBImporter {
             const currentTag = currentTags.get(name),
                 importTag = importTags.get(name);
 
+            this.tracker?.setLabel(`Adding "${name}"`);
+
             if (typeof currentTag === "undefined") {
                 await this.tagManager.tag_db.transactionImmediate(async tx => {
                     await this.tagManager
                         ._addPrepared(importTag, tx, { actor: this.constructor.actor })
                         .then(() => count++)
-                        .catch(err => this.logger.error(`Error occured while adding "${name}":`, err));
+                        .catch(err => {
+                            this.tracker?.clear();
+                            this.logger.error(`Error occured while adding "${name}":`, err);
+                        });
                 });
             }
+
+            this.tracker?.tick();
         }
 
         return count;
@@ -362,12 +416,13 @@ class DBImporter {
 
         await this.tagManager.tag_db.db.run(DBImporter.maintenanceSql.deleteQuotas);
 
+        const entries = Object.entries(sizes).filter(([, stats]) => stats.count > 0);
+        this.tracker?.start(entries.length, "Recalculating quotas...");
+
         let count = 0;
 
-        for (const [user, stats] of Object.entries(sizes)) {
-            if (stats.count <= 0) {
-                continue;
-            }
+        for (const [user, stats] of entries) {
+            this.tracker?.setLabel(`Quota for "${user}"`);
 
             await this.tagManager.tag_db.db
                 .run(DBImporter.maintenanceSql.insertQuota, {
@@ -376,9 +431,15 @@ class DBImporter {
                     $count: stats.count
                 })
                 .then(() => count++)
-                .catch(err => this.logger.error(`Error recalculating quota for user ${user}:`, err));
+                .catch(err => {
+                    this.tracker?.clear();
+                    this.logger.error(`Error recalculating quota for user ${user}:`, err);
+                });
+
+            this.tracker?.tick();
         }
 
+        this.tracker?.finish();
         this.logger.info(`Recalculated quota for ${count} users.`);
     }
 

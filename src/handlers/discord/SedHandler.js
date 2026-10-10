@@ -18,7 +18,7 @@ import HandlerError from "../../errors/HandlerError.js";
 
 function logUsage(msg) {
     getLogger().info(
-        `Generating sed for "${msg.content}", issued by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)}).`
+        `Generating sed for "${msg.content}", issued by user ${DiscordUtil.formatUser(msg.author)} in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)}).`
     );
 }
 

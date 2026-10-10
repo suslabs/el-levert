@@ -131,6 +131,23 @@ class Tag {
         };
     }
 
+    static formatType(type) {
+        if (type == null) {
+            return "<unset>";
+        }
+
+        const tag = new this({ type }),
+            scriptType = tag.getScriptType(),
+            version = tag.getVersion(),
+            language = tag.isScript ? tag.getScriptLanguage() : null;
+
+        if (Util.nonemptyString(language)) {
+            return `${scriptType} [${language}] (${version})`;
+        }
+
+        return `${scriptType} (${version})`;
+    }
+
     constructor(data) {
         let aliasName = data?.aliasName,
             type = data?.type,
@@ -415,6 +432,11 @@ class Tag {
         return owner.user.username + (owner.nickname ? `(${owner.nickname})` : "");
     }
 
+    async formatOwner(discord = false, options = {}) {
+        const { getClient } = await import("../../LevertClient.js");
+        return await getClient().formatUser(this.owner, discord, options);
+    }
+
     format(argsLimit = 100) {
         let format = this.name;
 
@@ -433,6 +455,10 @@ class Tag {
         }
 
         return format;
+    }
+
+    formatType() {
+        return this.constructor.formatType(this.type);
     }
 
     sameBody(tag) {
@@ -562,7 +588,7 @@ class Tag {
                 type: this.getScriptType(),
                 language: this.getScriptLanguage(),
                 version: this.getVersion(),
-                typeData: this.type.toHex()
+                typeInt: this.type.toNumber()
             };
 
             return info;

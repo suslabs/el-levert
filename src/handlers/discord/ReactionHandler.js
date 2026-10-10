@@ -18,13 +18,13 @@ function logParensUsage(msg, parens) {
     const s = parens.total > 1 ? "e" : "i";
 
     getLogger().info(
-        `Reacting with ${parens.total} parenthes${s}s to message sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)}).`
+        `Reacting with ${parens.total} parenthes${s}s to message sent by user ${DiscordUtil.formatUser(msg.author)} in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)}).`
     );
 }
 
 function logWordsUsage(msg, words) {
     getLogger().info(
-        `Reacting to word(s): "${words.join('", "')}" sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)}).`
+        `Reacting to word(s): "${words.join('", "')}" sent by user ${DiscordUtil.formatUser(msg.author)} in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)}).`
     );
 }
 
@@ -41,7 +41,7 @@ function logReactTime(key) {
 function logRemove(msg) {
     getLogger().isDebugEnabled() &&
         getLogger().debug(
-            `Removing reactions from message ${msg.id} sent by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)}).`
+            `Removing reactions from message ${msg.id} sent by user ${DiscordUtil.formatUser(msg.author)} in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)}).`
         );
 }
 

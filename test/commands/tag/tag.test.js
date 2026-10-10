@@ -423,7 +423,7 @@ describe("Merged Branch Coverage", () => {
             await addTag(runtime, "target", "payload");
             await addTag(runtime, "locked", "payload", "user-2");
 
-            expect(await run("alias")).toContain("name other_tag");
+            expect(await run("alias")).toContain("<name> <target_tag> [args]");
             expect(await run("alias add target")).toContain("is a __command__");
             expect(await run("alias aliasOnly")).toContain("Alias target must be specified");
             expect(await run("alias bad* target")).toContain("must consist");
@@ -478,7 +478,7 @@ describe("Merged Branch Coverage", () => {
             expect(await run("delete beta")).toContain("Delete failed");
 
             await addTag(runtime, "gamma", "body");
-            expect(await run("edit")).toContain("name new_body");
+            expect(await run("edit")).toContain("<name> [new_body]");
             expect(await run("edit add value")).toContain("is a __command__");
             expect(await run("edit bad* value")).toContain("must consist");
             expect(await run("edit missing value")).toContain("doesn't exist");
@@ -493,7 +493,7 @@ describe("Merged Branch Coverage", () => {
             expect(await run("edit gamma another body")).toContain("Edit failed");
 
             await addTag(runtime, "delta", "body");
-            expect(await run("rename")).toContain("name new_name");
+            expect(await run("rename")).toContain("<name> <new_name>");
             expect(await run("rename add target")).toContain("is a __command__");
             expect(await run("rename bad* target")).toContain("must consist");
             expect(await run("rename delta")).toContain("Invalid tag name");
@@ -659,7 +659,7 @@ describe("Merged Branch Coverage", () => {
                 }
             ]);
 
-            expect(await run("leaderboard")).toContain("count/size/usage");
+            expect(await run("leaderboard")).toContain("<count|size|usage> [limit]");
             expect(await run("leaderboard nope")).toContain("Invalid leaderboard type");
             expect(await run("leaderboard count nope")).toContain("Invalid limit");
 
@@ -737,7 +737,7 @@ describe("Merged Branch Coverage", () => {
                 files: expect.any(Array)
             });
 
-            expect(await run("fullsearch")).toContain("query [all/max_results]");
+            expect(await run("fullsearch")).toContain("<query> [limit|all]");
             expect(await run("fullsearch alpha nope")).toContain("Invalid number");
 
             vi.spyOn(runtime.client.tagManager, "fullSearch").mockResolvedValueOnce({

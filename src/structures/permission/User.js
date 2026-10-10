@@ -1,6 +1,5 @@
-import { inlineCode } from "discord.js";
-
 import Util from "../../util/Util.js";
+import DiscordUtil from "../../util/DiscordUtil.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 
 class User {
@@ -48,12 +47,7 @@ class User {
     }
 
     format(discord = false) {
-        if (!Util.empty(this.username)) {
-            const formattedUser = discord ? inlineCode(this.user) : this.user;
-            return `${this.username} (${formattedUser})`;
-        }
-
-        return discord ? inlineCode(this.user) : this.user;
+        return DiscordUtil.formatUser(this.username, this.user, discord);
     }
 
     static dataProps = ["id", "user", "group"];

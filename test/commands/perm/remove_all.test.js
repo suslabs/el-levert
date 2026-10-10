@@ -38,7 +38,7 @@ describe("perm remove_all command", () => {
         const command = getCommand(runtime, "perm");
 
         await expect(executeCommand(command, "remove_all alice", { msg: adminMsg })).resolves.toContain(
-            "Removed `alice`"
+            "Removed alice"
         );
         await expect(executeCommand(command, "remove_all alice", { msg: adminMsg })).resolves.toContain(
             "doesn't have any permissions"

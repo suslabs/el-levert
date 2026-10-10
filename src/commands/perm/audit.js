@@ -29,7 +29,7 @@ async function getDetail(revisionId) {
         return `${getEmoji("warn")} ${err.message}.`;
     }
 
-    const response = RevisionAuditUtil.createDetailResponse(detail, {
+    const response = await RevisionAuditUtil.createDetailResponse(detail, {
         filePrefix: "permission-revision",
         label: detail.label ?? getLabel(detail.revision)
     });
@@ -149,7 +149,7 @@ class PermAuditCommand {
         }
 
         const header = `${getEmoji("info")} Permission audit page **${page}**:`,
-            embed = RevisionAuditUtil.createListEmbed(revisions, "Permission audit", page, getLabel);
+            embed = RevisionAuditUtil.createListEmbed(revisions, page, getLabel);
 
         return {
             content: header,

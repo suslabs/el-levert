@@ -17,7 +17,7 @@ function logUsage(msg, str) {
     DiscordUtil.msgUrlRegex.lastIndex = 0;
 
     getLogger().info(
-        `Generating preview for "${Util.first(str.match(DiscordUtil.msgUrlRegex))}", issued by user ${msg.author.id} (${msg.author.username}) in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)}).`
+        `Generating preview for "${Util.first(str.match(DiscordUtil.msgUrlRegex))}", issued by user ${DiscordUtil.formatUser(msg.author)} in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)}).`
     );
 }
 

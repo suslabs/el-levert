@@ -3,6 +3,7 @@ import { escapeMarkdown } from "discord.js";
 import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import DiscordUtil from "../../util/DiscordUtil.js";
 
 class PermRemoveCommand {
     static info = {
@@ -60,7 +61,7 @@ class PermRemoveCommand {
         }
 
         {
-            const action = `remove user \`${find.user.username}\` (\`${find.user.id}\`) from a group`,
+            const action = `remove user ${DiscordUtil.formatUser(find.user, null, false)} from a group`,
                 err = this.parentCmd.checkLevel(ctx, group.level, action);
 
             if (err !== null) {
@@ -83,10 +84,10 @@ class PermRemoveCommand {
         }
 
         if (removed) {
-            return `${getEmoji("ok")} Removed user \`${find.user.username}\` (\`${find.user.id}\`) from group **${escapeMarkdown(g_name)}**.`;
+            return `${getEmoji("ok")} Removed user ${DiscordUtil.formatUser(find.user, null, true)} from group **${escapeMarkdown(g_name)}**.`;
         }
 
-        return `${getEmoji("warn")} User \`${find.user.username}\` (\`${find.user.id}\`) is not in group **${escapeMarkdown(g_name)}**.`;
+        return `${getEmoji("warn")} User ${DiscordUtil.formatUser(find.user, null, true)} is not in group **${escapeMarkdown(g_name)}**.`;
     }
 }
 

@@ -97,10 +97,13 @@ describe("tag audit command", () => {
 
         const alphaDetail = await run("audit alpha 1");
         expect(alphaDetail.content).toContain("Revision **#1** for **alpha**");
-        expect(alphaDetail.embeds[0].data.title).toContain("Revision #1 | alpha");
+        expect(alphaDetail.embeds[0].data.title).toBeUndefined();
+        expect(alphaDetail.embeds[0].data.description).toContain("Version: `new`");
+        expect(alphaDetail.embeds[0].data.description).toContain("name-user-1 (`user-1`)");
 
         const globalDetail = await run("audit 3");
         expect(globalDetail.content).toContain("Revision **#3** for **alpha**");
+        expect(globalDetail.embeds[0].data.title).toBeUndefined();
     });
 
     test("shows compact audit entries and revision details", async () => {
@@ -129,7 +132,7 @@ describe("tag audit command", () => {
 
         const detail = await run(`audit ${revisionId}`);
         expect(detail.content).toContain(`Revision **#${revisionId}**`);
-        expect(detail.embeds[0].data.title).toContain("alpha");
+        expect(detail.embeds[0].data.title).toBeUndefined();
     });
 
     test("handles empty audit pages", async () => {

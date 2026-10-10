@@ -1,5 +1,9 @@
 import { EmbedBuilder, escapeMarkdown } from "discord.js";
 
+import Tag from "../../structures/tag/Tag.js";
+
+import { getClient } from "../../LevertClient.js";
+
 import Util from "../Util.js";
 import DiscordUtil from "../DiscordUtil.js";
 import ObjectUtil from "../ObjectUtil.js";
@@ -10,7 +14,11 @@ const RevisionAuditUtil = Object.freeze({
         return new Date(time).toUTCString();
     },
 
-    createDetailResponse: (detail, options) => {
+    formatUser: async (user, discord = false, options = {}) => {
+        return await getClient().formatUser(user, discord, options);
+    },
+
+    createDetailResponse: async (detail, options) => {
         options = ObjectUtil.guaranteeObject(options);
 
         const filePrefix = options.filePrefix ?? "revision",
@@ -19,27 +27,47 @@ const RevisionAuditUtil = Object.freeze({
             useSubjectIndex = options.perSubject ?? false;
 
         const { revision, diff } = detail,
-            revNum = useSubjectIndex ? (revision.subjectIndex ?? revision.id) : revision.id,
-            fields = Object.entries(diff).map(([field, value]) => ({
-                name: field,
-                value: [
-                    `Before: ${RevisionAuditUtil._formatValue(value.before, true)}`,
-                    `After: ${RevisionAuditUtil._formatValue(value.after, true)}`
-                ].join("\n")
-            })),
-            embed = new EmbedBuilder()
-                .setTitle(`${titlePrefix} #${revNum} | ${label}`)
-                .setDescription(
-                    [
-                        `Operation: \`${revision.operation}\``,
-                        `Actor: \`${revision.actor}\``,
-                        useSubjectIndex && revision.id !== revNum ? `Global ID: \`#${revision.id}\`` : null,
-                        `Created: ${RevisionAuditUtil.formatDate(revision.created)}`,
-                        `Changed: ${revision.changed.join(", ")}`
-                    ]
-                        .filter(Boolean)
-                        .join("\n")
-                );
+            revNum = useSubjectIndex ? (revision.subjectIndex ?? revision.id) : revision.id;
+
+        const formattedActor = await RevisionAuditUtil.formatUser(revision.actor, true),
+            rawActor = await RevisionAuditUtil.formatUser(revision.actor, false);
+
+        let version = options.version ?? null;
+
+        if (version === null) {
+            const typeBuf = detail.after?.type ?? detail.before?.type ?? null;
+
+            if (typeBuf !== null) {
+                try {
+                    version = new Tag({ type: typeBuf }).getVersion();
+                } catch (err) {}
+            }
+        }
+
+        const fields = await Promise.all(
+            Object.entries(diff).map(async ([field, value]) => {
+                const before = await RevisionAuditUtil._formatDiffValue(field, value.before, true, true),
+                    after = await RevisionAuditUtil._formatDiffValue(field, value.after, true, true);
+
+                return {
+                    name: field,
+                    value: `Before: ${before}\nAfter: ${after}`
+                };
+            })
+        );
+
+        const embed = new EmbedBuilder().setDescription(
+            [
+                `Operation: \`${revision.operation}\``,
+                `Actor: ${formattedActor}`,
+                version !== null ? `Version: \`${version}\`` : null,
+                useSubjectIndex && revision.id !== revNum ? `Global ID: \`#${revision.id}\`` : null,
+                `Created: ${RevisionAuditUtil.formatDate(revision.created)}`,
+                `Changed: ${revision.changed.join(", ")}`
+            ]
+                .filter(Boolean)
+                .join("\n")
+        );
 
         if (!Util.empty(fields)) {
             embed.addFields(fields);
@@ -48,18 +76,21 @@ const RevisionAuditUtil = Object.freeze({
         }
 
         if (DiscordUtil.getEmbedSize(embed) > 6000 || fields.some(field => field.value.length > 1024)) {
+            const diffText = await RevisionAuditUtil._formatDiff(diff, true, false);
+
             return {
                 content: `${titlePrefix} **#${revNum}** for **${label}**:`,
                 ...DiscordUtil.getFileAttach(
                     [
                         `${titlePrefix} #${revNum} for ${label}`,
                         `Operation: ${revision.operation}`,
-                        `Actor: ${revision.actor}`,
+                        `Actor: ${rawActor}`,
+                        version !== null ? `Version: ${version}` : null,
                         useSubjectIndex && revision.id !== revNum ? `Global ID: #${revision.id}` : null,
                         `Created: ${RevisionAuditUtil.formatDate(revision.created)}`,
                         `Changed: ${revision.changed.join(", ")}`,
                         "",
-                        RevisionAuditUtil._formatDiff(diff, true)
+                        diffText
                     ]
                         .filter(Boolean)
                         .join("\n"),
@@ -74,9 +105,8 @@ const RevisionAuditUtil = Object.freeze({
         };
     },
 
-    createListEmbed: (revisions, title, page, getLabel, options) => {
+    createListEmbed: (revisions, page, getLabel, options) => {
         return new EmbedBuilder()
-            .setTitle(title)
             .setDescription(RevisionAuditUtil._formatRevisionList(revisions, getLabel, options))
             .setFooter({ text: `Page ${page} | ${revisions.length} revision${Util.single(revisions) ? "" : "s"}` });
     },
@@ -112,35 +142,51 @@ const RevisionAuditUtil = Object.freeze({
         };
     },
 
-    _formatValue: (value, full = false) => {
+    _formatDiffValue: async (field, value, full = false, discord = false) => {
         if (value === null) {
             return "<missing>";
         } else if (typeof value === "undefined") {
             return "<unset>";
-        } else if (typeof value === "string") {
-            return full
-                ? value
-                : Util.trimString(value, 300, 5, {
-                      showDiff: true
-                  });
         }
 
-        return JSON.stringify(value);
+        switch (field) {
+            case "type":
+                return Tag.formatType(value);
+            case "owner":
+            case "user":
+                return await RevisionAuditUtil.formatUser(value, discord);
+            case "bin":
+                return `[binary data: ${value.byteLength ?? 0} bytes]`;
+            default:
+                if (typeof value === "string") {
+                    return full
+                        ? value
+                        : Util.trimString(value, 300, 5, {
+                              showDiff: true
+                          });
+                }
+
+                return JSON.stringify(value);
+        }
     },
 
-    _formatDiff: (diff, full = false) => {
+    _formatDiff: async (diff, full = false, discord = false) => {
         const entries = Object.entries(diff);
 
         if (Util.empty(entries)) {
             return "No tracked fields changed.";
         }
 
-        return entries
-            .map(
-                ([field, value]) =>
-                    `${field}:\n- ${RevisionAuditUtil._formatValue(value.before, full)}\n+ ${RevisionAuditUtil._formatValue(value.after, full)}`
-            )
-            .join("\n\n");
+        const lines = await Promise.all(
+            entries.map(async ([field, value]) => {
+                const before = await RevisionAuditUtil._formatDiffValue(field, value.before, full, discord),
+                    after = await RevisionAuditUtil._formatDiffValue(field, value.after, full, discord);
+
+                return `${field}:\n- ${before}\n+ ${after}`;
+            })
+        );
+
+        return lines.join("\n\n");
     },
 
     _formatRevisionList: (revisions, getLabel, options) => {

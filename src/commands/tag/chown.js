@@ -3,6 +3,7 @@ import { escapeMarkdown } from "discord.js";
 import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import DiscordUtil from "../../util/DiscordUtil.js";
 
 class TagChownCommand {
     static info = {
@@ -89,7 +90,7 @@ class TagChownCommand {
             return `${getEmoji("warn")} ${err.message}.`;
         }
 
-        return `${getEmoji("ok")} Transferred tag **${escapeMarkdown(t_name)}** to \`${find.user.username}\`.`;
+        return `${getEmoji("ok")} Transferred tag **${escapeMarkdown(t_name)}** to ${DiscordUtil.formatUser(find.user, null, true)}.`;
     }
 }
 

@@ -852,6 +852,26 @@ class DiscordClient {
         return ((user.user = user), user);
     }
 
+    async formatUser(user, discord = false, options) {
+        if (Util.empty(user) || user === "0") {
+            return "invalid";
+        }
+
+        if (TypeTester.isObject(user) && Util.nonemptyString(user.username)) {
+            return DiscordUtil.formatUser(user, null, discord, options);
+        }
+
+        const userId = typeof user === "string" ? user : user?.id;
+        let fetched = null;
+
+        try {
+            fetched = await this.findUserById(userId);
+        } catch (err) {}
+
+        const username = fetched?.username ?? null;
+        return DiscordUtil.formatUser(username, userId, discord, options);
+    }
+
     async findUsers(query, options, fetchOptions) {
         query = String(query ?? "").trim();
 

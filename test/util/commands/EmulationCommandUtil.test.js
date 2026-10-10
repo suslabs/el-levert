@@ -60,6 +60,7 @@ describe("EmulationCommandUtil", () => {
             "tag-name",
             "tag-alias-name",
             "tag-body",
+            "tag-bin",
             "tag-owner",
             "tag-args",
             "tag-type",

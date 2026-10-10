@@ -2,6 +2,8 @@ import { escapeMarkdown } from "discord.js";
 
 import { getClient, getEmoji } from "../../LevertClient.js";
 
+import DiscordUtil from "../../util/DiscordUtil.js";
+
 class TagOwnerCommand {
     static info = {
         name: "owner",
@@ -60,7 +62,7 @@ class TagOwnerCommand {
             }
         }
 
-        let out = `${getEmoji("info")} Tag **${escapeMarkdown(t_name)}** is owned by \`${owner.user.username}\``;
+        let out = `${getEmoji("info")} Tag **${escapeMarkdown(t_name)}** is owned by ${DiscordUtil.formatUser(owner.user, null, true)}`;
 
         if (owner.nickname) {
             out += ` (also known as **${escapeMarkdown(owner.nickname)}**)`;

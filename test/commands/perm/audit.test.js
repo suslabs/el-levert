@@ -49,7 +49,8 @@ afterEach(async () => {
 
 describe("permission audit command", () => {
     test("shows help, compact entries, and revision details", async () => {
-        expect(await run("audit help")).toContain("View permission revisions");
+        const help = await run("audit help");
+        expect(help.embeds[0].data.fields[0].value).toContain("View permission revisions");
         expect(await run("audit")).toContain("[subject] [revision_id]");
 
         await run("add_group moderators 5");

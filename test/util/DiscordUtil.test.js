@@ -168,4 +168,16 @@ describe("DiscordUtil", () => {
         });
         expect(msg.channel.name).toBe("general");
     });
+
+    test("formats users across diverse inputs, formats, and options", () => {
+        expect(DiscordUtil.formatUser("alex", "12345", true)).toBe("alex (`12345`)");
+        expect(DiscordUtil.formatUser("alex", "12345", false)).toBe("alex (12345)");
+        expect(DiscordUtil.formatUser({ id: "12345", username: "alex" }, null, true)).toBe("alex (`12345`)");
+        expect(DiscordUtil.formatUser("12345", null, true)).toBe("`12345`");
+        expect(DiscordUtil.formatUser("12345", null, false)).toBe("12345");
+        expect(DiscordUtil.formatUser("0")).toBe("invalid");
+        expect(DiscordUtil.formatUser(null)).toBe("invalid");
+        expect(DiscordUtil.formatUser("alex", "12345", true, { possessive: true })).toBe("alex's (`12345`)");
+        expect(DiscordUtil.formatUser("12345", null, true, { possessive: true })).toBe("`12345`'s");
+    });
 });

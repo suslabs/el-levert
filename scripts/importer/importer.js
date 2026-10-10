@@ -1,3 +1,4 @@
+import fs from "node:fs/promises";
 import path from "node:path";
 
 import yargs from "yargs";
@@ -62,6 +63,11 @@ function parseArgs() {
                 type: "boolean",
                 default: false,
                 describe: "Write tag revisions to the audit log"
+            },
+            progress: {
+                type: "boolean",
+                default: true,
+                describe: "Show progress indicator"
             }
         })
         .alias("help", "h")
@@ -80,7 +86,8 @@ function getInputValues(argv) {
         amend = argv.amend ?? false,
         fix = argv.fix ?? false,
         purgeOld = argv["purge-old"] ?? false,
-        audit = argv.audit ?? false;
+        audit = argv.audit ?? false,
+        progress = argv.progress ?? true;
 
     targetPath = targetPath.trim();
 
@@ -119,7 +126,8 @@ function getInputValues(argv) {
         amend,
         fix,
         purgeOld,
-        audit
+        audit,
+        progress
     };
 }
 
@@ -168,13 +176,33 @@ async function loadTagManager() {
     const config = await loadConfig(),
         logger = setupLogger(loggerName, config.importLogFile);
 
+    if (!Util.empty(input.path)) {
+        try {
+            const stat = await fs.stat(input.path);
+
+            if (!stat.isFile()) {
+                logger.error(`Path is not a file: ${input.path}`);
+                process.exit(1);
+            }
+        } catch (err) {
+            if (err.code === "ENOENT") {
+                logger.error(`Import file not found: ${input.path}`);
+                process.exit(1);
+            }
+
+            throw err;
+        }
+    }
+
     // eslint-disable-next-line unused-imports/no-unused-vars
     const client = loadClient(config, logger, {
             enableAuditLog: input.audit
         }),
         tagManager = await loadTagManager();
 
-    const importer = new DBImporter(tagManager, logger);
+    const importer = new DBImporter(tagManager, logger, {
+        progress: input.progress
+    });
 
     if (!Util.empty(input.path)) {
         const updateMode = Object.values(DBUpdateModes)[Number(input.amend)];

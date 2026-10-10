@@ -19,7 +19,7 @@ function logCommandUsage(msg, name, args) {
     const cmdArgs = !Util.empty(args) ? ` with args:${LoggerUtil.formatLog(args)}` : ".";
 
     getLogger().info(
-        `User ${msg.author.id} (${msg.author.username}) used command "${name}" in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)})${cmdArgs}`
+        `User ${DiscordUtil.formatUser(msg.author)} used command "${name}" in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)})${cmdArgs}`
     );
 }
 

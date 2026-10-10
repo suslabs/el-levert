@@ -214,9 +214,12 @@ describe("Tag", () => {
                 owner: "alice(ally)",
                 type: "text",
                 language: undefined,
-                typeData: "01"
+                typeInt: 1
             })
         );
+        expect(plain.formatType()).toBe("text (new)");
+        expect(Tag.formatType(plain.type)).toBe("text (new)");
+        expect(Tag.formatType(new Tag({ meta: { type: "ivm", language: "ts" } }).type)).toBe("ivm [ts] (new)");
 
         const same = new Tag({ name: "same", body: "next", owner: "found", meta: { type: "text" } });
         const alias = new Tag({ name: "alias", aliasName: "renamed", args: "a b", meta: { type: "text" } });

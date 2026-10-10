@@ -2,7 +2,7 @@ import { Buffer } from "node:buffer";
 
 import axios from "axios";
 
-import { EmbedBuilder, ChannelType, AttachmentBuilder } from "discord.js";
+import { EmbedBuilder, ChannelType, AttachmentBuilder, inlineCode } from "discord.js";
 
 import Util from "./Util.js";
 import TypeTester from "./TypeTester.js";
@@ -38,6 +38,37 @@ let DiscordUtil = {
 
         const matches = Array.from(str.matchAll(DiscordUtil.mentionRegex));
         return matches.map(match => match[1]);
+    },
+
+    formatUser: (user, id = null, discord = false, options) => {
+        options = ObjectUtil.guaranteeObject(options);
+
+        const isDiscord = options.discord ?? discord,
+            possessive = options.possessive ?? false;
+
+        let username = null;
+
+        if (TypeTester.isObject(user)) {
+            username = user.username;
+            id = user.id;
+        } else if (id !== null) {
+            username = user;
+        } else {
+            id = user;
+        }
+
+        if (Util.empty(id) || id === "0") {
+            return "invalid";
+        }
+
+        const formattedId = isDiscord ? inlineCode(id) : id;
+
+        if (Util.nonemptyString(username)) {
+            const name = possessive ? `${username}'s` : username;
+            return `${name} (${formattedId})`;
+        }
+
+        return possessive ? `${formattedId}'s` : formattedId;
     },
 
     codeblockRegex: /(?<!\\)(?:`{3}([\S]+\n)?([\s\S]*?)`{3}|`([^`\n]+)`)/g,

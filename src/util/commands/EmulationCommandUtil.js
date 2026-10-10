@@ -32,15 +32,13 @@ function makeCliArg(name, options) {
 }
 
 function makeFieldRule(field) {
-    switch (field.type) {
-        case "object":
-            return makeObjectRule(makeSchemaProperties(field.fields));
-
-        default:
-            return {
-                type: field.type
-            };
+    if (Array.isArray(field.fields)) {
+        return makeObjectRule(makeSchemaProperties(field.fields));
     }
+
+    return {
+        type: field.type
+    };
 }
 
 function makeSchemaProperties(fields) {
@@ -51,7 +49,7 @@ function makeGroupProperties(fields) {
     return Object.fromEntries(
         fields.map(field => [
             field.name,
-            field.type === "object"
+            Array.isArray(field.fields)
                 ? {
                       kind: "group",
                       properties: makeGroupProperties(field.fields)
@@ -75,7 +73,7 @@ function makeCliFieldArg(prefix, field) {
 
 function getCliFields(fields, prefix = "") {
     return fields.flatMap(field => {
-        if (field.type === "object") {
+        if (Array.isArray(field.fields)) {
             const nextPrefix = field.cliPrefix;
 
             if (!Util.nonemptyString(nextPrefix)) {
@@ -99,15 +97,12 @@ function makeOverride(fields, getValue) {
 }
 
 function makeObjectFieldValue(source, field) {
-    switch (field.type) {
-        case "object": {
-            const value = makeObjectOverride(source[field.name], field.fields);
-            return !Util.empty(Object.keys(value)) ? value : undefined;
-        }
-
-        default:
-            return source[field.name];
+    if (Array.isArray(field.fields)) {
+        const value = makeObjectOverride(source[field.name], field.fields);
+        return !Util.empty(Object.keys(value)) ? value : undefined;
     }
+
+    return source[field.name];
 }
 
 function makeObjectOverride(source, fields) {
@@ -116,23 +111,20 @@ function makeObjectOverride(source, fields) {
 }
 
 function makeCliFieldValue(source, prefix, field) {
-    switch (field.type) {
-        case "object": {
-            const nextPrefix = field.cliPrefix;
+    if (Array.isArray(field.fields)) {
+        const nextPrefix = field.cliPrefix;
 
-            if (!Util.nonemptyString(nextPrefix)) {
-                return undefined;
-            }
-
-            const fullPrefix = makeCliFieldName(prefix, nextPrefix),
-                value = makeCliOverride(source, field.fields, fullPrefix);
-
-            return !Util.empty(Object.keys(value)) ? value : undefined;
+        if (!Util.nonemptyString(nextPrefix)) {
+            return undefined;
         }
 
-        default:
-            return source[makeCliFieldName(prefix, field.name)];
+        const fullPrefix = makeCliFieldName(prefix, nextPrefix),
+            value = makeCliOverride(source, field.fields, fullPrefix);
+
+        return !Util.empty(Object.keys(value)) ? value : undefined;
     }
+
+    return source[makeCliFieldName(prefix, field.name)];
 }
 
 function makeCliOverride(source, fields, prefix = "") {

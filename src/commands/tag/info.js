@@ -1,7 +1,10 @@
-import { escapeMarkdown } from "discord.js";
+import { EmbedBuilder, escapeMarkdown } from "discord.js";
+
+import { TagTypes } from "../../structures/tag/TagTypes.js";
 
 import { getClient, getEmoji } from "../../LevertClient.js";
 
+import Util from "../../util/Util.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 
 function codeblock(str) {
@@ -15,10 +18,10 @@ class TagInfoCommand {
         parent: "tag",
         subcommand: true,
         allowed: "mod",
-        args: "<name> [raw]",
+        args: "<name> [default|json|raw]",
         description:
             "Displays stored database metadata, type flags, ownership, and byte size for a tag. Moderator-only diagnostic tool for inspecting tag properties.",
-        usage: "- <name>: Target tag to inspect.\n- [raw]: Optional flag to dump the unformatted JSON object.",
+        usage: "- <name>: Target tag to inspect.\n- [default|json|raw]: Output mode (default: embed/text, json: formatted json, raw: stored db record).",
         parser: {
             requireArgs: true
         },
@@ -38,10 +41,15 @@ class TagInfoCommand {
         ]
     };
 
+    static validModes = new Set(["default", "json", "raw"]);
+
     async handler(ctx) {
         let t_name = ctx.arg("tagName"),
-            i_type = ctx.arg("infoType"),
-            raw = i_type === "raw";
+            mode = ctx.arg("infoType") ?? "default";
+
+        if (!TagInfoCommand.validModes.has(mode)) {
+            return `${getEmoji("warn")} Invalid info mode: \`${mode}\`.`;
+        }
 
         {
             const err = this.parentCmd.checkCommand(t_name);
@@ -66,7 +74,83 @@ class TagInfoCommand {
             return `${getEmoji("warn")} Tag **${escapeMarkdown(t_name)}** doesn't exist.`;
         }
 
-        const header = `${getEmoji("info")} Tag info for **${escapeMarkdown(t_name)}**:`,
+        const header = `${getEmoji("info")} Tag info for **${escapeMarkdown(t_name)}**:`;
+
+        if (mode === "default") {
+            const isDiscord = ctx.discord ?? true,
+                owner = await getClient().formatUser(tag.owner, isDiscord),
+                timeInfo = tag.getTimeInfo(false),
+                size = `${Util.formatNumber(tag.getSize(), 2)} KB`;
+
+            const activeFlags = TagTypes.flags.names.filter(flag => tag.type.hasFlag(flag));
+
+            if (!isDiscord) {
+                const plainLines = [
+                    `Owner: ${owner}`,
+                    `Type: ${tag.getScriptType()}`,
+                    `Version: ${tag.getVersion()}`,
+                    tag.isScript ? `Language: ${tag.getScriptLanguage()}` : null,
+                    `Type int: ${tag.type.toNumber()}`,
+                    `Size: ${size}`,
+                    `Registered: ${timeInfo.registered}`,
+                    `Last edited: ${timeInfo.lastEdited}`
+                ];
+
+                if (tag.isAlias) {
+                    plainLines.push(`Alias to: ${tag.aliasName}`);
+
+                    if (!Util.empty(tag.args)) {
+                        plainLines.push(`Args: ${tag.args}`);
+                    }
+
+                    if (tag.hops.length > 2) {
+                        plainLines.push(`Hops: ${tag.hops.join(" -> ")}`);
+                    }
+                }
+
+                if (!Util.empty(activeFlags)) {
+                    plainLines.push(`Flags: ${activeFlags.join(", ")}`);
+                }
+
+                return `${header}\n${plainLines.filter(Boolean).join("\n")}`;
+            }
+
+            const lines = [
+                `**Owner**: ${owner}`,
+                `**Type**: \`${tag.getScriptType()}\``,
+                `**Version**: \`${tag.getVersion()}\``,
+                tag.isScript ? `**Language**: \`${tag.getScriptLanguage()}\`` : null,
+                `**Type int**: \`${tag.type.toNumber()}\``,
+                `**Size**: ${size}`,
+                `**Registered**: ${timeInfo.registered}`,
+                `**Last edited**: ${timeInfo.lastEdited}`
+            ];
+
+            if (tag.isAlias) {
+                lines.push(`**Alias to**: **${escapeMarkdown(tag.aliasName)}**`);
+
+                if (!Util.empty(tag.args)) {
+                    lines.push(`**Args**: ${tag.args}`);
+                }
+
+                if (tag.hops.length > 2) {
+                    lines.push(`**Hops**: ${tag.hops.join(" -> ")}`);
+                }
+            }
+
+            if (!Util.empty(activeFlags)) {
+                lines.push(`**Flags**: \`${activeFlags.join(", ")}\``);
+            }
+
+            const embed = new EmbedBuilder().setDescription(lines.filter(Boolean).join("\n"));
+
+            return {
+                content: header,
+                embeds: [embed]
+            };
+        }
+
+        const raw = mode === "raw",
             info = await tag.getInfo(raw),
             infoJson = JSON.stringify(info, undefined, 4);
 
