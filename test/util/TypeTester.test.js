@@ -98,4 +98,50 @@ describe("TypeTester", () => {
             })
         ).toThrow("Bad choice: no");
     });
+
+    test("test normalizeEnum with numeric, boolean, and empty values", () => {
+        class CustomError extends Error {
+            constructor(message, ref) {
+                super(message);
+                this.name = "CustomError";
+                this.ref = ref;
+            }
+        }
+
+        const numericValues = [16, 32, 64, 128, 256, 512];
+
+        // Valid numbers (including 0)
+        expect(TypeTester.normalizeEnum(128, numericValues, "size")).toBe(128);
+        expect(TypeTester.normalizeEnum(16, numericValues, "size")).toBe(16);
+        expect(TypeTester.normalizeEnum(0, [0, 1, 2], "index")).toBe(0);
+
+        // Unknown numbers
+        expect(() => TypeTester.normalizeEnum(999, numericValues, "size", CustomError)).toThrow("Invalid size: 999");
+        expect(() => TypeTester.normalizeEnum(-1, numericValues, "size")).toThrow("Invalid size: -1");
+
+        // Missing values (null, undefined, empty string)
+        expect(() => TypeTester.normalizeEnum(null, numericValues, "size", CustomError)).toThrow("Invalid size");
+        expect(() =>
+            TypeTester.normalizeEnum(undefined, numericValues, "size", CustomError, {
+                missing: true
+            })
+        ).toThrow("No size provided");
+        expect(() => TypeTester.normalizeEnum("", numericValues, "size")).toThrow("Invalid size");
+
+        // allowEmpty with empty string
+        expect(
+            TypeTester.normalizeEnum("", ["", "default"], "opt", CustomError, {
+                allowEmpty: true
+            })
+        ).toBe("");
+
+        // Boolean and BigInt enums
+        expect(TypeTester.normalizeEnum(false, [false, true], "flag")).toBe(false);
+        expect(TypeTester.normalizeEnum(true, [false, true], "flag")).toBe(true);
+        expect(TypeTester.normalizeEnum(0n, [0n, 1n], "bigint")).toBe(0n);
+
+        // normalizeEnums with numbers
+        expect(TypeTester.normalizeEnums([16, 128], numericValues, "sizes")).toEqual([16, 128]);
+        expect(() => TypeTester.normalizeEnums([16, 999], numericValues, "sizes")).toThrow("Invalid sizes: 999");
+    });
 });
