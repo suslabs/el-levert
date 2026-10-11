@@ -15,8 +15,8 @@ let Util = {
         minute: 60,
         hour: 3600,
         day: 86400,
-        month: 2592000,
         week: 604800,
+        month: 2592000,
         year: 31536000
     }),
 
@@ -742,12 +742,14 @@ let Util = {
         const whitelist = Array.isArray(options.whitelist) ? options.whitelist : [],
             blacklist = Array.isArray(options.blacklist) ? options.blacklist : ["milli"];
 
-        const durationNames = Object.keys(Util.durationSeconds).filter(name => {
-                const inWhitelist = whitelist.length ? whitelist.includes(name) : true,
-                    inBlacklist = blacklist.includes(name);
+        const durationNames = Object.keys(Util.durationSeconds)
+                .filter(name => {
+                    const inWhitelist = whitelist.length ? whitelist.includes(name) : true,
+                        inBlacklist = blacklist.includes(name);
 
-                return inWhitelist && !inBlacklist;
-            }),
+                    return inWhitelist && !inBlacklist;
+                })
+                .reverse(),
             durations = {};
 
         let d_secs = delta * Util.durationSeconds.milli;

@@ -120,12 +120,11 @@ describe("Util", () => {
         expect(Util.bytesToNumber(new Uint8Array([0x34, 0x12]))).toBe(0x1234);
         expect(Util.validUrl("https://example.com/test")).toBe(true);
         expect(Util.timeDelta(10n, 42n, 2n)).toBe(16n);
-        expect(Util.duration(65_000)).toEqual({ second: 65 });
-        expect(Util.duration(65_000, 5)).toEqual({ second: 65 });
-        expect(Util.duration(65_000, { largestOnly: true, format: true })).toBe("65 seconds");
-        expect(Util.duration(65_000, { largestN: 1, format: true, whitelist: ["minute", "second"] })).toBe(
-            "65 seconds"
-        );
+        expect(Util.duration(65_000)).toEqual({ minute: 1, second: 5 });
+        expect(Util.duration(65_000, 5)).toEqual({ minute: 1, second: 5 });
+        expect(Util.duration(65_000, { largestOnly: true, format: true })).toBe("1 minute");
+        expect(Util.duration(65_000, { largestN: 1, format: true, whitelist: ["minute", "second"] })).toBe("1 minute");
+        expect(Util.duration(65_000, { format: true })).toBe("1 minute, 5 seconds");
     });
 
     test("coordinates async helpers and timeouts", async () => {
