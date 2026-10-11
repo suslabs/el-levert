@@ -65,6 +65,20 @@ class InputManager extends Manager {
             input: process.stdin,
             output: process.stdout
         });
+
+        this.rl.on("SIGINT", () => {
+            const handled = process.emit("SIGINT");
+
+            if (!handled) {
+                process.exit(130);
+            }
+        });
+
+        this.rl.on("close", () => {
+            if (this.loopRunning) {
+                this.unload();
+            }
+        });
     }
 
     _startInputLoop() {

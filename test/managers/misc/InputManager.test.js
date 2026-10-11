@@ -78,4 +78,18 @@ describe("InputManager", () => {
         expect(manager.rl).toBeNull();
         expect(manager._aborter).toBeNull();
     });
+    test("forwards SIGINT to process when readline receives SIGINT", async () => {
+        const manager = new InputManager(true, ">", {});
+        const handler = vi.fn();
+        process.on("SIGINT", handler);
+
+        manager._setupReadline();
+        expect(manager.rl.listenerCount("SIGINT")).toBeGreaterThan(0);
+
+        manager.rl.emit("SIGINT");
+        expect(handler).toHaveBeenCalled();
+
+        process.removeListener("SIGINT", handler);
+        await manager.unload();
+    });
 });
