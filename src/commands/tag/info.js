@@ -1,7 +1,5 @@
 import { EmbedBuilder, escapeMarkdown } from "discord.js";
 
-import { TagTypes } from "../../structures/tag/TagTypes.js";
-
 import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
@@ -77,38 +75,61 @@ class TagInfoCommand {
         const header = `${getEmoji("info")} Tag info for **${escapeMarkdown(t_name)}**:`;
 
         if (mode === "default") {
-            const owner = await getClient().formatUser(tag.owner, true),
-                timeInfo = tag.getTimeInfo(false),
-                size = `${Util.formatNumber(tag.getSize(), 2)} KB`;
+            const isDiscord = ctx.discord ?? true,
+                info = await tag.getInfo(false);
 
-            const activeFlags = TagTypes.flags.names.filter(flag => tag.type.hasFlag(flag));
+            if (!isDiscord) {
+                const plainHopsStr = Array.isArray(info.hops) && info.hops.length > 0 ? info.hops.join(" -> ") : "none";
+
+                const plainLines = [
+                    `Hops: ${plainHopsStr}`,
+                    `Is alias: ${info.isAlias}`,
+                    `Name: ${info.name}`,
+                    `Alias name: ${info.aliasName}`,
+                    `Body: ${info.body}`,
+                    `Size: ${info.size}`,
+                    `Is script: ${info.isScript}`,
+                    `Is binary: ${info.isBinary}`,
+                    `Is hidden: ${info.isHidden}`,
+                    `Owner: ${info.owner} (${info.ownerId})`,
+                    `Args: ${info.args}`,
+                    `Registered: ${info.registered}`,
+                    `Last edited: ${info.lastEdited}`,
+                    `Registered timestamp: ${info.registeredTimestamp}`,
+                    `Last edited timestamp: ${info.lastEditedTimestamp}`,
+                    `Type: ${info.type}`,
+                    info.isScript ? `Language: ${info.language}` : null,
+                    `Version: ${info.version}`,
+                    `Type int: ${info.typeInt}`
+                ];
+
+                return `${header}\n${plainLines.filter(Boolean).join("\n")}`;
+            }
+
+            const hopsStr =
+                Array.isArray(info.hops) && info.hops.length > 0 ? info.hops.map(h => `*${h}*`).join(" -> ") : "none";
 
             const lines = [
-                `**Owner**: ${owner}`,
-                `**Type**: \`${tag.getScriptType()}\``,
-                `**Version**: \`${tag.getVersion()}\``,
-                tag.isScript ? `**Language**: \`${tag.getScriptLanguage()}\`` : null,
-                `**Type int**: \`${tag.type.toNumber()}\``,
-                `**Size**: ${size}`,
-                `**Registered**: ${timeInfo.registered}`,
-                `**Last edited**: ${timeInfo.lastEdited}`
+                `**Hops**: ${hopsStr}`,
+                `**Is alias**: ${info.isAlias}`,
+                `**Name**: *${info.name}*`,
+                `**Alias name**: ${info.aliasName}`,
+                `**Body**: ${info.body}`,
+                `**Size**: ${info.size}`,
+                `**Is script**: ${info.isScript}`,
+                `**Is binary**: ${info.isBinary}`,
+                `**Is hidden**: ${info.isHidden}`,
+                `**Owner**: ${info.owner} (\`${info.ownerId}\`)`,
+                `**Args**: ${info.args}`,
+                `**Registered**: ${info.registered}`,
+                `**Last edited**: ${info.lastEdited}`,
+                `**Registered timestamp**: ${info.registeredTimestamp}`,
+                `**Last edited timestamp**: ${info.lastEditedTimestamp}`,
+                `**Type**: ${info.type}`,
+                info.isScript ? `**Language**: ${info.language}` : null,
+                `**Version**: ${info.version}`,
+                `**Type int**: ${info.typeInt}`
             ];
-
-            if (tag.isAlias) {
-                lines.push(`**Alias to**: **${escapeMarkdown(tag.aliasName)}**`);
-
-                if (!Util.empty(tag.args)) {
-                    lines.push(`**Args**: ${tag.args}`);
-                }
-
-                if (tag.hops.length > 2) {
-                    lines.push(`**Hops**: ${tag.hops.join(" -> ")}`);
-                }
-            }
-
-            if (!Util.empty(activeFlags)) {
-                lines.push(`**Flags**: \`${activeFlags.join(", ")}\``);
-            }
 
             const embed = new EmbedBuilder().setDescription(lines.filter(Boolean).join("\n"));
 

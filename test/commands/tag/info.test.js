@@ -42,9 +42,9 @@ describe("tag info command", () => {
         expect(out.embeds).toHaveLength(1);
         expect(out.embeds[0].data.title).toBeUndefined();
         expect(out.embeds[0].data.description).toContain("**Owner**: name-user-1 (`user-1`)");
-        expect(out.embeds[0].data.description).toContain("**Type**: `text`");
-        expect(out.embeds[0].data.description).toContain("**Version**: `new`");
-        expect(out.embeds[0].data.description).toContain("**Type int**: `1`");
+        expect(out.embeds[0].data.description).toContain("**Type**: text");
+        expect(out.embeds[0].data.description).toContain("**Version**: new");
+        expect(out.embeds[0].data.description).toContain("**Type int**: 1");
     });
 
     test("returns tag info in default mode as plain text when discord is false", async () => {

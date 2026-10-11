@@ -583,6 +583,7 @@ class Tag {
                 name: this.name,
                 aliasName,
                 body,
+                size: this.getSize(),
                 isScript: this.isScript,
                 isBinary: this.isBinary,
                 isHidden: this.isHidden,
