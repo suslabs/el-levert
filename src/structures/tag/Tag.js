@@ -1,6 +1,6 @@
 import { Buffer } from "node:buffer";
 
-import { escapeMarkdown, bold, codeBlock } from "discord.js";
+import { escapeMarkdown, bold, codeBlock, time } from "discord.js";
 
 import TagBitField from "./TagBitField.js";
 import { resolveVMLanguage } from "../vm/VMLanguages.js";
@@ -537,7 +537,7 @@ class Tag {
         return discord ? DiscordUtil.getFileAttach(body, `${this.name}.txt`) : body;
     }
 
-    getTimeInfo(raw = false) {
+    getTimeInfo(raw = false, discord = false) {
         return Object.fromEntries(
             this.constructor._timeProps.map(prop => {
                 const value = this[prop];
@@ -546,10 +546,19 @@ class Tag {
                     const timestampName = `${prop}Timestamp`;
                     return [timestampName, value];
                 } else {
-                    const invalidValue = this.constructor.invalidValues[prop],
-                        time = value === invalidValue ? "not set" : new Date(value).toUTCString();
+                    const invalidValue = this.constructor.invalidValues[prop];
 
-                    return [prop, time];
+                    let timeStr;
+
+                    if (value === invalidValue) {
+                        timeStr = "not set";
+                    } else if (discord) {
+                        timeStr = time(new Date(value));
+                    } else {
+                        timeStr = new Date(value).toUTCString();
+                    }
+
+                    return [prop, timeStr];
                 }
             })
         );

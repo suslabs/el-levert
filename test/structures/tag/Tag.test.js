@@ -208,6 +208,10 @@ describe("Tag", () => {
             registered: new Date(1).toUTCString(),
             lastEdited: new Date(2).toUTCString()
         });
+        expect(plain.getTimeInfo(false, true)).toEqual({
+            registered: "<t:0>",
+            lastEdited: "<t:0>"
+        });
         expect(await plain.getInfo()).toEqual(
             expect.objectContaining({
                 name: "renamed",

@@ -1,4 +1,4 @@
-import { EmbedBuilder, escapeMarkdown } from "discord.js";
+import { EmbedBuilder, escapeMarkdown, time } from "discord.js";
 
 import Tag from "../../structures/tag/Tag.js";
 
@@ -10,8 +10,12 @@ import ObjectUtil from "../ObjectUtil.js";
 import DateUtil from "./DateUtil.js";
 
 const RevisionAuditUtil = Object.freeze({
-    formatDate: time => {
-        return new Date(time).toUTCString();
+    formatDate: (date, discord = false) => {
+        if (discord) {
+            return time(new Date(date));
+        }
+
+        return new Date(date).toUTCString();
     },
 
     formatUser: async (user, discord = false, options = {}) => {
@@ -62,7 +66,7 @@ const RevisionAuditUtil = Object.freeze({
                 `Actor: ${formattedActor}`,
                 version !== null ? `Version: \`${version}\`` : null,
                 useSubjectIndex && revision.id !== revNum ? `Global ID: \`#${revision.id}\`` : null,
-                `Created: ${RevisionAuditUtil.formatDate(revision.created)}`,
+                `Created: ${RevisionAuditUtil.formatDate(revision.created, true)}`,
                 `Changed: ${revision.changed.join(", ")}`
             ]
                 .filter(Boolean)
@@ -198,7 +202,7 @@ const RevisionAuditUtil = Object.freeze({
                 const label = escapeMarkdown(getLabel(revision)),
                     revNum = useSubjectIndex ? (revision.subjectIndex ?? revision.id) : revision.id;
 
-                return `#${revNum} **${revision.operation}** ${label} - \`${revision.actor}\` - ${RevisionAuditUtil.formatDate(revision.created)}\nChanged: ${revision.changed.join(", ")}`;
+                return `#${revNum} **${revision.operation}** ${label} - \`${revision.actor}\` - ${RevisionAuditUtil.formatDate(revision.created, true)}\nChanged: ${revision.changed.join(", ")}`;
             })
             .join("\n\n");
     },

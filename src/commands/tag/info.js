@@ -75,36 +75,8 @@ class TagInfoCommand {
         const header = `${getEmoji("info")} Tag info for **${escapeMarkdown(t_name)}**:`;
 
         if (mode === "default") {
-            const isDiscord = ctx.discord ?? true,
-                info = await tag.getInfo(false);
-
-            if (!isDiscord) {
-                const plainHopsStr = Array.isArray(info.hops) && info.hops.length > 0 ? info.hops.join(" -> ") : "none";
-
-                const plainLines = [
-                    `Hops: ${plainHopsStr}`,
-                    `Is alias: ${info.isAlias}`,
-                    `Name: ${info.name}`,
-                    `Alias name: ${info.aliasName}`,
-                    `Body: ${info.body}`,
-                    `Size: ${Util.formatNumber(info.size, 2)} KB`,
-                    `Is script: ${info.isScript}`,
-                    `Is binary: ${info.isBinary}`,
-                    `Is hidden: ${info.isHidden}`,
-                    `Owner: ${info.owner} (${info.ownerId})`,
-                    `Args: ${info.args}`,
-                    `Registered: ${info.registered}`,
-                    `Last edited: ${info.lastEdited}`,
-                    `Registered timestamp: ${info.registeredTimestamp}`,
-                    `Last edited timestamp: ${info.lastEditedTimestamp}`,
-                    `Type: ${info.type}`,
-                    info.isScript ? `Language: ${info.language}` : null,
-                    `Version: ${info.version}`,
-                    `Type int: ${info.typeInt}`
-                ];
-
-                return `${header}\n${plainLines.filter(Boolean).join("\n")}`;
-            }
+            const info = await tag.getInfo(false),
+                timeInfo = tag.getTimeInfo(false, true);
 
             const hopsStr =
                 Array.isArray(info.hops) && info.hops.length > 0 ? info.hops.map(h => `*${h}*`).join(" -> ") : "none";
@@ -121,8 +93,8 @@ class TagInfoCommand {
                 `**Is hidden**: ${info.isHidden}`,
                 `**Owner**: ${info.owner} (\`${info.ownerId}\`)`,
                 `**Args**: ${info.args}`,
-                `**Registered**: ${info.registered}`,
-                `**Last edited**: ${info.lastEdited}`,
+                `**Registered**: ${timeInfo.registered}`,
+                `**Last edited**: ${timeInfo.lastEdited}`,
                 `**Registered timestamp**: ${info.registeredTimestamp}`,
                 `**Last edited timestamp**: ${info.lastEditedTimestamp}`,
                 `**Type**: ${info.type}`,

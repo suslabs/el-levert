@@ -45,36 +45,7 @@ describe("tag info command", () => {
         expect(out.embeds[0].data.description).toContain("**Type**: text");
         expect(out.embeds[0].data.description).toContain("**Version**: new");
         expect(out.embeds[0].data.description).toContain("**Type int**: 1");
-    });
-
-    test("returns tag info in default mode as plain text when discord is false", async () => {
-        const command = getCommand(runtime, "tag");
-        const out = await command.execute(
-            command.createContext({
-                commandName: "tag",
-                raw: "%tag info alpha",
-                rawContent: "info alpha",
-                argsText: "info alpha",
-                msg,
-                author: msg.author,
-                channel: msg.channel,
-                discord: false,
-                handler: null,
-                parseResult: {
-                    raw: "info alpha",
-                    content: "info alpha",
-                    name: "tag",
-                    argsText: "info alpha"
-                }
-            })
-        );
-
-        expect(typeof out).toBe("string");
-        expect(out).toContain("Tag info for **alpha**");
-        expect(out).toContain("Owner: name-user-1 (user-1)");
-        expect(out).toContain("Type: text");
-        expect(out).toContain("Version: new");
-        expect(out).toContain("Type int: 1");
+        expect(out.embeds[0].data.description).toMatch(/\*\*Registered\*\*: <t:\d+>/);
     });
 
     test("returns tag info in json mode", async () => {
