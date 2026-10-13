@@ -16,7 +16,7 @@ import TagError from "../../../errors/TagError.js";
 class TagRevisionManager {
     static target = "tag";
 
-    static revertAgeLimit = Util.durationSeconds.hour * 1000;
+    static revertAgeLimit = Util.durationSeconds.hour / Util.durationSeconds.milli;
 
     static encodeValue(field, value) {
         switch (field) {

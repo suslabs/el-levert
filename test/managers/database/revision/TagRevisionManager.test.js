@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
+import Tag from "../../../../src/structures/tag/Tag.js";
+
 import { cleanupRuntime, createRuntime } from "../../../helpers/runtimeHarness.js";
 
 let runtime;
@@ -139,5 +141,46 @@ describe("TagRevisionManager", () => {
         } finally {
             await cleanupRuntime(liveRuntime);
         }
+    });
+
+    test("records baseline on mutating an unversioned tag and supports revert across edit, delete, chown, and rename", async () => {
+        const manager = await createManager();
+
+        await manager.tag_db.quotaCreate("u1");
+        await manager.tag_db.add(
+            new Tag({
+                name: "unv",
+                body: "initial body",
+                owner: "u1"
+            })
+        );
+
+        await manager.edit(await manager.fetch("unv"), "edited body", {}, true, { actor: "u1" });
+
+        const editRevs = await manager.audit({ name: "unv" });
+        expect(editRevs.map(r => r.operation)).toEqual(expect.arrayContaining(["import", "update"]));
+
+        await manager.revert("unv", null, "u1", { actor: "u1" });
+        expect((await manager.fetch("unv")).body).toBe("initial body");
+
+        await manager.tag_db.quotaCreate("u2");
+        await manager.chown(await manager.fetch("unv"), "u2", true, { actor: "u1" });
+        await manager.revert("unv", null, "u1", { actor: "u1" });
+        expect((await manager.fetch("unv")).owner).toBe("u1");
+
+        await manager.rename(await manager.fetch("unv"), "unv_renamed", true, { actor: "u1" });
+        await manager.revert("unv_renamed", null, "u1", { actor: "u1" });
+        expect(await manager.fetch("unv")).not.toBeNull();
+        expect(await manager.fetch("unv_renamed")).toBeNull();
+
+        await manager.rename(await manager.fetch("unv"), "unv_renamed2", true, { actor: "u1" });
+        await manager.revert("unv", null, "u1", { actor: "u1" });
+        expect(await manager.fetch("unv")).not.toBeNull();
+        expect(await manager.fetch("unv_renamed2")).toBeNull();
+
+        await manager.delete(await manager.fetch("unv"), true, { actor: "u1" });
+        expect(await manager.fetch("unv")).toBeNull();
+        await manager.revert("unv", null, "u1", { actor: "u1" });
+        expect(await manager.fetch("unv")).not.toBeNull();
     });
 });

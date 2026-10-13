@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
+import Tag from "../../../src/structures/tag/Tag.js";
+
 import {
     addAdmin,
     cleanupRuntime,
@@ -116,5 +118,62 @@ describe("tag revert command", () => {
 
         const tag = await runtime.client.tagManager.fetch("alpha");
         expect(tag.body).toBe("two");
+    });
+
+    test("reverts a rename of an unversioned tag by new name and old name", async () => {
+        await runtime.client.tagManager.tag_db.quotaCreate("user-1");
+        await runtime.client.tagManager.tag_db.add(
+            new Tag({
+                name: "unvold",
+                body: "body",
+                owner: "user-1"
+            })
+        );
+
+        expect(await run("rename unvold unvnew")).toContain("Renamed tag **unvold** to **unvnew**");
+        const revRes = await run("revert unvnew");
+        expect(revRes).toContain("Reverted tag **unvnew** to **unvold**");
+
+        expect(await runtime.client.tagManager.fetch("unvold")).not.toBeNull();
+        expect(await runtime.client.tagManager.fetch("unvnew")).toBeNull();
+    });
+
+    test("reverts a rename of an unversioned tag when using old name", async () => {
+        await runtime.client.tagManager.tag_db.quotaCreate("user-1");
+        await runtime.client.tagManager.tag_db.add(
+            new Tag({
+                name: "unvold2",
+                body: "body",
+                owner: "user-1"
+            })
+        );
+
+        expect(await run("rename unvold2 unvnew2")).toContain("Renamed tag **unvold2** to **unvnew2**");
+        const revRes = await run("revert unvold2");
+        expect(revRes).toContain("Reverted tag **unvnew2** to **unvold2**");
+
+        expect(await runtime.client.tagManager.fetch("unvold2")).not.toBeNull();
+        expect(await runtime.client.tagManager.fetch("unvnew2")).toBeNull();
+    });
+
+    test("reverts an unversioned tag edit and delete", async () => {
+        await runtime.client.tagManager.tag_db.quotaCreate("user-1");
+        await runtime.client.tagManager.tag_db.add(
+            new Tag({
+                name: "unvedit",
+                body: "original",
+                owner: "user-1"
+            })
+        );
+
+        expect(await run("edit unvedit changed")).toContain("Edited tag **unvedit**");
+        expect(await run("revert unvedit")).toContain("Reverted tag **unvedit**");
+
+        const tag = await runtime.client.tagManager.fetch("unvedit");
+        expect(tag.body).toBe("original");
+
+        expect(await run("delete unvedit")).toContain("Deleted tag **unvedit**");
+        expect(await run("revert unvedit")).toContain("Reverted tag **unvedit**");
+        expect(await runtime.client.tagManager.fetch("unvedit")).not.toBeNull();
     });
 });

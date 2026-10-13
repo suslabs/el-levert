@@ -104,8 +104,10 @@ class RevisionManager {
 
         options = ObjectUtil.guaranteeObject(options);
 
-        const subject = await this.ensureSubject(before),
-            oldSnapshot = this.getSnapshot(before),
+        const subject = await this.ensureSubject(before);
+        await this._ensureBaseline(subject, before, options);
+
+        const oldSnapshot = this.getSnapshot(before),
             snapshot = this.getSnapshot(after),
             changed = this._changedFields(oldSnapshot, snapshot);
 
@@ -130,8 +132,10 @@ class RevisionManager {
 
         options = ObjectUtil.guaranteeObject(options);
 
-        const subject = await this.ensureSubject(data),
-            snapshot = this.getSnapshot(data),
+        const subject = await this.ensureSubject(data);
+        await this._ensureBaseline(subject, data, options);
+
+        const snapshot = this.getSnapshot(data),
             changed = Object.keys(snapshot);
 
         await this.store.markSubjectDeleted(subject);
@@ -175,6 +179,17 @@ class RevisionManager {
 
     _sameValue(a, b) {
         return JSON.stringify(a) === JSON.stringify(b);
+    }
+
+    async _ensureBaseline(subject, data, options) {
+        const latest = await this.store.fetchLatest(this.spec.target, subject.id);
+
+        if (latest === null) {
+            const snapshot = this.getSnapshot(data),
+                changed = Object.keys(snapshot);
+
+            await this._addRevision(subject, RevisionOperationTypes.import, snapshot, changed, options);
+        }
     }
 
     async _addRevision(subject, operation, snapshot, changed, options) {
