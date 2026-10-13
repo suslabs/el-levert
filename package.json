@@ -14,7 +14,9 @@
         "format": "prettier --config .prettierrc --ignore-path .prettierignore --write **/*.{js,cjs,json}",
         "lint": "eslint . --config .eslintrc.cjs --ignore-path .gitignore --ext .js,.cjs",
         "importer": "cross-env MOCK_MAP_PATH=\"./scripts/importer/mock/mock-map.json\" node --no-warnings=ExperimentalWarning --loader \"./scripts/mock/mock-loader.js\" ./scripts/importer/importer.js",
-        "archive": "node ./scripts/archive.cjs"
+        "archive": "node ./scripts/archive.cjs",
+        "upload": "node ./scripts/upload.cjs",
+        "unarchive": "node ./scripts/unarchive.cjs"
     },
     "dependencies": {
         "@leeoniya/ufuzzy": "^1.0.19",
@@ -41,6 +43,7 @@
         "eslint": "^8.57.1",
         "eslint-plugin-unused-imports": "^4.4.1",
         "prettier": "^3.8.4",
+        "ssh2-sftp-client": "^12.1.1",
         "vitest": "^4.1.9"
     }
 }
