@@ -3,14 +3,21 @@ import { EmbedBuilder } from "discord.js";
 import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-import RegexUtil from "../../util/misc/RegexUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
+import RegexUtil from "../../util/misc/RegexUtil.js";
+import PaginationUtil from "../../util/commands/PaginationUtil.js";
+import uFuzzySearch from "../../util/search/uFuzzySearch.js";
 
 const unavailable = "No text available";
 
 function getWordIndices(body, ranges) {
-    const matches = Array.from(body.matchAll(/\S+/g)),
-        wordInds = new Set();
+    const matches = Array.from(body.matchAll(/\S+/g));
+
+    if (Util.empty(ranges)) {
+        return [matches.map(match => Util.first(match)), []];
+    }
+
+    const wordInds = new Set();
 
     for (let i = 0; i < ranges.length; i += 2) {
         const start = ranges[i],
@@ -79,7 +86,7 @@ function formatSnippet(words, inds, n, discord) {
     return discord ? `> *${snippet}*` : snippet;
 }
 
-function formatSearchResults(command, results, ranges, n, discord) {
+function formatSearchResults(command, results, ranges, n, discord, startIndex = 0) {
     const format = results.map((tag, i) => {
         let snippet = "";
 
@@ -90,7 +97,7 @@ function formatSearchResults(command, results, ranges, n, discord) {
             snippet = formatSnippet(words, wordInds, n, discord);
         }
 
-        const idx = Util.single(results) ? "-" : `${i + 1}.`;
+        const idx = startIndex === 0 && Util.single(results) ? "-" : `${startIndex + i + 1}.`;
 
         if (discord) {
             const cmd = `${command.prefix}${Util.first(command.parentCmd.aliases)}`;
@@ -114,7 +121,7 @@ class TagFullSearchCommand {
         aliases: ["query"],
         parent: "tag",
         subcommand: true,
-        args: "<query> [limit|all]",
+        args: "<query> [limit|all] [--page <num>] [--limit <num>] [--all]",
         description:
             "Search inside the text content and script bodies of all registered tags for matches, displaying contextual snippet previews.",
         usage: "- <query>: Text query to search for within tag contents.\n- [limit|all]: Maximum results to return, or 'all'.",
@@ -122,6 +129,7 @@ class TagFullSearchCommand {
             requireArgs: true
         },
         arguments: [
+            ...PaginationUtil.getPaginationArguments({ defaultLimit: defaultResultLimit, maxLimit: 50 }),
             {
                 name: "query",
                 kind: "positional",
@@ -144,60 +152,176 @@ class TagFullSearchCommand {
     };
 
     async handler(ctx) {
-        let query = ctx.arg("queryBody")?.body ?? "",
-            m_text = ctx.arg("resultText"),
+        const queryArg = ctx.arg("queryBody");
+        let query = queryArg != null ? queryArg.body : "";
+
+        const m_text = ctx.arg("resultText"),
             all = m_text === "all";
 
-        let maxResults = 0;
+        const paginationOpts = PaginationUtil.getPaginationOptions(ctx, {
+            defaultLimit: defaultResultLimit,
+            maxLimit: 50
+        });
 
-        if (all) {
-            maxResults = Infinity;
-        } else if (!Util.empty(m_text)) {
-            maxResults = Util.parseInt(m_text);
+        let isAll = paginationOpts.all || all,
+            customLimit = null;
 
-            if (Number.isNaN(maxResults) || maxResults < 1) {
+        if (!Util.empty(m_text) && !isAll) {
+            const parsed = Util.parseInt(m_text);
+
+            if (Number.isNaN(parsed) || parsed < 1) {
                 return `${getEmoji("warn")} Invalid number: ${m_text}`;
             }
-        } else {
-            maxResults = defaultResultLimit;
+
+            customLimit = Util.clamp(parsed, 1, 50);
         }
+
+        const limit = customLimit ?? paginationOpts.limit ?? defaultResultLimit;
 
         splitRegex.lastIndex = 0;
         query = query.split(splitRegex).join(" ");
 
-        const {
-            results,
-            ranges,
-            other: { oversized }
-        } = await getClient().tagManager.fullSearch(query, maxResults);
+        if (isAll) {
+            const { results, ranges, other } = await getClient().tagManager.fullSearch(query, Infinity);
 
-        if (Util.empty(results)) {
-            return `${getEmoji("info")} Found **no** similar tags.`;
-        }
+            if (Util.empty(results)) {
+                return `${getEmoji("info")} Found **no** similar tags.`;
+            }
 
-        const plus = oversized ? "+" : "",
-            s = Util.single(results) ? "" : "s",
-            count = Util.formatNumber(results.length) + plus,
-            header = `${getEmoji("info")} Found **${count}** matching tag${s}:`;
+            const totalMatches = other.total ?? results.length,
+                s = totalMatches === 1 ? "" : "s",
+                count = Util.formatNumber(totalMatches),
+                header = `${getEmoji("info")} Found **${count}** matching tag${s}:`;
 
-        if (results.length > 2 * defaultResultLimit) {
+            if (results.length > 2 * defaultResultLimit) {
+                return {
+                    content: `${header}\n`,
+                    ...DiscordUtil.getFileAttach(
+                        formatSearchResults(this, results, ranges, defaultContext, false, 0),
+                        "results.txt"
+                    )
+                };
+            }
+
+            const embed = new EmbedBuilder().setDescription(
+                formatSearchResults(this, results, ranges, defaultContext, true, 0)
+            );
+
             return {
-                content: `${header}\n`,
-                ...DiscordUtil.getFileAttach(
-                    formatSearchResults(this, results, ranges, defaultContext, false),
-                    "results.txt"
-                )
+                content: header,
+                embeds: [embed]
             };
         }
 
-        const embed = new EmbedBuilder().setDescription(
-            formatSearchResults(this, results, ranges, defaultContext, true)
-        );
+        const sorted = await getClient().tagManager.fullSearchSort(query);
 
-        return {
-            content: header,
-            embeds: [embed]
+        if (sorted == null || sorted.total === 0) {
+            return `${getEmoji("info")} Found **no** similar tags.`;
+        }
+
+        const s = sorted.total === 1 ? "" : "s",
+            count = Util.formatNumber(sorted.total),
+            header = `${getEmoji("info")} Found **${count}** matching tag${s}:`;
+
+        if (sorted.total <= limit) {
+            const initialSlice = uFuzzySearch.slice(sorted, 0, sorted.total);
+
+            const embed = new EmbedBuilder().setDescription(
+                formatSearchResults(this, initialSlice.results, initialSlice.ranges, defaultContext, true, 0)
+            );
+
+            return {
+                content: header,
+                embeds: [embed]
+            };
+        }
+
+        const precomputePages = 5;
+
+        const initialPage = paginationOpts.page ?? 1,
+            totalPages = Math.max(1, Math.ceil(sorted.total / limit)),
+            clampedPage = Util.clamp(initialPage, 1, totalPages);
+
+        const initialStartPage = clampedPage,
+            initialEndPage = Math.min(initialStartPage + precomputePages - 1, totalPages),
+            initialOffset = (initialStartPage - 1) * limit,
+            initialCount = Math.min((initialEndPage - initialStartPage + 1) * limit, sorted.total - initialOffset);
+
+        const initialSlice = uFuzzySearch.slice(sorted, initialOffset, initialCount),
+            initialRanges = initialSlice.ranges;
+
+        let currentWindow = {
+            startPage: initialStartPage,
+            endPage: initialEndPage,
+            items: initialSlice.results.map((result, i) => ({ result, range: initialRanges[i] ?? [] }))
         };
+
+        return await PaginationUtil.paginate(ctx, {
+            defaultLimit: limit,
+            window: currentWindow,
+            fetch: ({ page, limit: pageSize }, fetchCtx) => {
+                const session = fetchCtx.paginationSession ?? ctx.paginationSession,
+                    activeWindow = session != null && session.window != null ? session.window : currentWindow;
+
+                if (page >= activeWindow.startPage && page <= activeWindow.endPage) {
+                    const offsetInWindow = (page - activeWindow.startPage) * pageSize;
+
+                    return {
+                        items: activeWindow.items.slice(offsetInWindow, offsetInWindow + pageSize),
+                        totalCount: sorted.total
+                    };
+                }
+
+                const newStartPage = page,
+                    newEndPage = Math.min(newStartPage + precomputePages - 1, totalPages),
+                    fetchOffset = (newStartPage - 1) * pageSize,
+                    fetchCount = Math.min((newEndPage - newStartPage + 1) * pageSize, sorted.total - fetchOffset);
+
+                const newSlice = uFuzzySearch.slice(sorted, fetchOffset, fetchCount),
+                    newRanges = newSlice.ranges;
+
+                const newWindow = {
+                    startPage: newStartPage,
+                    endPage: newEndPage,
+                    items: newSlice.results.map((result, i) => ({ result, range: newRanges[i] ?? [] }))
+                };
+
+                if (session != null) {
+                    session.window = newWindow;
+                } else {
+                    currentWindow = newWindow;
+                }
+
+                const offsetInWindow = (page - newWindow.startPage) * pageSize;
+
+                return {
+                    items: newWindow.items.slice(offsetInWindow, offsetInWindow + pageSize),
+                    totalCount: sorted.total
+                };
+            },
+            render: (pageItems, { page }) => {
+                const pageResults = pageItems.map(item => item.result),
+                    pageRanges = pageItems.map(item => item.range);
+
+                const startIndex = (page - 1) * ctx.pageSize,
+                    desc = formatSearchResults(this, pageResults, pageRanges, defaultContext, true, startIndex);
+
+                return {
+                    content: header,
+                    embeds: [new EmbedBuilder().setDescription(desc)]
+                };
+            },
+            dumpHeader: header,
+            formatDump: () => {
+                const allSlice = uFuzzySearch.slice(sorted, 0, sorted.total);
+                return formatSearchResults(this, allSlice.results, allSlice.ranges, defaultContext, false, 0);
+            },
+            filename: "results.txt"
+        });
+    }
+
+    async interactionHandler(ctx) {
+        return await PaginationUtil.handleInteraction(ctx);
     }
 }
 

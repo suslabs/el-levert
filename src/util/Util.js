@@ -106,7 +106,7 @@ let Util = {
         return new Promise(resolve => setTimeout(resolve, ms));
     },
 
-    runWithTimeout: (callback, timeoutError, timeout = 10000, options) => {
+    runWithTimeout: (callback, timeoutError, timeout = 10 / Util.durationSeconds.milli, options) => {
         if (typeof callback !== "function") {
             throw new UtilError("Callback function required");
         }

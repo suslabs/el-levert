@@ -21,11 +21,13 @@ async function executeAllHandlers(client, funcName, msg, ...args) {
 
     try {
         for (const handler of client.handlerList) {
-            const handlerFunc = handler[funcName].bind(handler),
-                executed = await handlerFunc(msg, ...args);
+            if (handler.handlesMessages) {
+                const handlerFunc = handler[funcName].bind(handler),
+                    executed = await handlerFunc(msg, ...args);
 
-            if (executed) {
-                break;
+                if (executed) {
+                    break;
+                }
             }
         }
     } finally {

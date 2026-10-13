@@ -108,7 +108,7 @@ LEVERET_OWNER=your discord id
 
 Important groups of settings:
 
-- Discord text interface: `cmdPrefix`
+- Discord text interface: `cmdPrefix`, `interactionTimeout` (active button session lifespan in seconds)
 - CLI interface: `enableCliCommands`, `cliCmdPrefix`
 - WebSocket interface: `enableWebsocket`, `websocketPort`
 - Eval modes and script network access: `enableEval`, `enableVM2`, `enableOtherLangs`, `allowLocalhostRequests`, `allowFilesystemRequests`
@@ -163,6 +163,7 @@ If reactions are enabled, the file defines the bracket reactions and the word-tr
 
 - Discord text commands with a configurable prefix
 - Tags with pipelines and streaming, aliases, quotas, search, raw dump, ownership, and script support
+- Interactive button pagination with jump modals and isolated ephemeral viewer sessions
 - Snapshot-based tag and permission audit history with revision reversion
 - JavaScript eval, optional `vm2`, optional other languages, and inspector debugging
 - Permission groups with configurable levels
@@ -200,6 +201,24 @@ Argument notation used below:
 - `(value)` means required
 - `[value]` means optional
 - `"quoted text"` means keep the text together as one argument
+
+### Interactive Pagination
+
+Multi-page results in commands (`tag list`, `tag search`, `tag fullsearch`, `tag leaderboard`, `tag audit`, `perm list`, `reminder list`) support interactive button pagination and standard command options:
+
+- `--page <num>` (alias `-p`): Start at a specific page number.
+- `--limit <num>` (alias `-l`): Configure the number of items per page.
+- `--all` (alias `-a`): Export/dump all matching results (sent as a file attachment if exceeding embed limits).
+
+Interactive Component Controls:
+- `⏮️`: Jump to the first page.
+- `◀️`: Go to the previous page.
+- `[ page / total ]`: Opens a Discord modal dialog to jump directly to any page number.
+- `▶️`: Go to the next page.
+- `⏭️`: Jump to the last page.
+
+**Ephemeral Viewer Isolation**:
+When someone other than the original command author interacts with pagination buttons or the jump modal, the bot spawns an independent ephemeral session. Non-authors can browse and paginate pages privately without ever mutating or disrupting the author's main embed.
 
 ### 1. help
 

@@ -63,6 +63,7 @@ function buildDefaultConfig(tempDir, overrides = {}) {
         otherMemLimit: 16,
         otherTimeLimit: 2,
         commandWaitTime: 3000,
+        interactionTimeout: 300000,
         enableInspector: false,
         enableUserInspector: false,
         inspectorConnectTimeout: 60000,
@@ -154,6 +155,7 @@ async function loadRuntimeManagers(client, Managers, config) {
             reminderManager: config.enableReminders,
             cliCommandManager: config.enableCliCommands,
             websocketCommandManager: config.enableWebsocket,
+            interactionManager: [],
             gatewayManager: {
                 enabled: config.enableWebsocket,
                 args: [true, config.websocketPort]
@@ -203,6 +205,7 @@ async function loadRuntimeHandlers(client, Handlers, config, reactions) {
             previewHandler: [config.enablePreviews],
             reactionHandler: reactions.enableReacts,
             sedHandler: config.enableSed,
+            interactionHandler: [],
             cliCommandHandler: config.enableCliCommands,
             websocketCommandHandler: config.enableWebsocket
         },
@@ -213,6 +216,7 @@ async function loadRuntimeHandlers(client, Handlers, config, reactions) {
     );
 
     client._loadMessageDispatcher();
+    client._loadInteractionDispatcher();
 }
 
 async function createRuntime(options = {}) {

@@ -2,8 +2,10 @@ import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
+import PaginationUtil from "../../util/commands/PaginationUtil.js";
 
-const defaultResultLimit = 20;
+const defaultResultLimit = 20,
+    maxResultLimit = 100;
 
 class TagSearchCommand {
     static info = {
@@ -11,13 +13,14 @@ class TagSearchCommand {
         aliases: ["find"],
         parent: "tag",
         subcommand: true,
-        args: "<name> [limit|all]",
+        args: "<name> [limit|all] [--page <num>] [--limit <num>] [--all]",
         description: "Search for tags by matching names against a query string using substring or similarity matching.",
         usage: "- <name>: Query string to match against tag names.\n- [limit|all]: Maximum results to display, or 'all'.",
         parser: {
             requireArgs: true
         },
         arguments: [
+            ...PaginationUtil.getPaginationArguments({ defaultLimit: defaultResultLimit, maxLimit: maxResultLimit }),
             {
                 name: "tagName",
                 kind: "positional",
@@ -47,18 +50,23 @@ class TagSearchCommand {
             }
         }
 
-        let maxResults = 0;
+        const paginationOpts = PaginationUtil.getPaginationOptions(ctx, {
+            defaultLimit: defaultResultLimit,
+            maxLimit: maxResultLimit
+        });
 
-        if (all) {
-            maxResults = Infinity;
-        } else if (!Util.empty(m_text)) {
+        const isAll = paginationOpts.all || all;
+
+        let maxResults = Infinity;
+
+        if (!Util.empty(m_text) && !isAll) {
             maxResults = Util.parseInt(m_text);
 
             if (Number.isNaN(maxResults) || maxResults < 1) {
                 return `${getEmoji("warn")} Invalid number: ${m_text}`;
             }
-        } else {
-            maxResults = defaultResultLimit;
+
+            maxResults = Util.clamp(maxResults, 1, maxResultLimit);
         }
 
         const {
@@ -75,14 +83,31 @@ class TagSearchCommand {
             count = Util.formatNumber(find.length) + plus,
             header = `${getEmoji("info")} Found **${count}** similar tag${s}:`;
 
-        if (find.length > 2 * defaultResultLimit) {
-            return {
-                content: header,
-                ...DiscordUtil.getFileAttach(find.join("\n"), "tags.txt")
-            };
+        if (isAll || find.length <= defaultResultLimit) {
+            if (find.length > 2 * defaultResultLimit) {
+                return {
+                    content: header,
+                    ...DiscordUtil.getFileAttach(find.join("\n"), "tags.txt")
+                };
+            }
+
+            return `${header} **${find.join("**, **")}**`;
         }
 
-        return `${header} **${find.join("**, **")}**`;
+        return await PaginationUtil.paginate(ctx, {
+            items: find,
+            defaultLimit: defaultResultLimit,
+            render: items => ({
+                content: `${header} **${items.join("**, **")}**`
+            }),
+            dumpHeader: header,
+            formatDump: items => items.join("\n"),
+            filename: "tags.txt"
+        });
+    }
+
+    async interactionHandler(ctx) {
+        return await PaginationUtil.handleInteraction(ctx);
     }
 }
 

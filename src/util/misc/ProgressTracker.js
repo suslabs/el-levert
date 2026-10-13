@@ -56,7 +56,7 @@ class ProgressTracker {
     }
 
     get opsPerSecond() {
-        const timeSec = this.elapsed / 1000;
+        const timeSec = this.elapsed * Util.durationSeconds.milli;
 
         if (timeSec <= 0) {
             return 0;

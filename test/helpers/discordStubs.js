@@ -6,6 +6,7 @@ function defaultReplyValue(data) {
         content,
         embeds: data?.embeds ?? [],
         files: data?.files ?? [],
+        components: data?.components ?? [],
         edit: async next => defaultReplyValue(next),
         delete: async () => undefined
     });

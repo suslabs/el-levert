@@ -5,6 +5,7 @@ import JsonLoader from "../JsonLoader.js";
 import DotenvLoader from "../DotenvLoader.js";
 
 import configPaths from "../../config/configPaths.json" assert { type: "json" };
+import DefaultAuthConfig from "../../config/DefaultAuthConfig.js";
 
 import Util from "../../util/Util.js";
 import FileUtil from "../../util/misc/FileUtil.js";
@@ -12,22 +13,21 @@ import ObjectUtil from "../../util/ObjectUtil.js";
 
 import { LoadStatus } from "../LoadStatus.js";
 
-const authEnvKeys = Object.freeze({
-    owner: "LEVERET_OWNER",
-    token: "LEVERET_TOKEN"
-});
-
 function createAuthData(jsonData, envData) {
     jsonData = ObjectUtil.guaranteeObject(jsonData);
     envData = ObjectUtil.guaranteeObject(envData);
 
+    const envKeys = DefaultAuthConfig.envKeys;
+
     return {
-        token: Util.nonemptyString(jsonData.token) ? jsonData.token : envData[authEnvKeys.token],
-        owner: Util.nonemptyString(jsonData.owner) ? jsonData.owner : envData[authEnvKeys.owner]
+        token: Util.nonemptyString(jsonData.token) ? jsonData.token : envData[envKeys.token],
+        owner: Util.nonemptyString(jsonData.owner) ? jsonData.owner : envData[envKeys.owner]
     };
 }
 
 class AuthLoader extends Loader {
+    static envKeys = DefaultAuthConfig.envKeys;
+
     constructor(logger, options) {
         options = ObjectUtil.guaranteeObject(options);
 
@@ -102,17 +102,18 @@ class AuthLoader extends Loader {
     }
 
     _validate(data) {
-        const missing = [];
+        const envKeys = DefaultAuthConfig.envKeys,
+            missing = [];
 
         if (!Util.nonemptyString(data.token)) {
             missing.push(
-                `Missing auth token. Set "token" in ${configPaths.auth} or ${authEnvKeys.token} in ${configPaths.authEnv}.`
+                `Missing auth token. Set "token" in ${configPaths.auth} or ${envKeys.token} in ${configPaths.authEnv}.`
             );
         }
 
         if (!Util.nonemptyString(data.owner)) {
             missing.push(
-                `Missing auth owner. Set "owner" in ${configPaths.auth} or ${authEnvKeys.owner} in ${configPaths.authEnv}.`
+                `Missing auth owner. Set "owner" in ${configPaths.auth} or ${envKeys.owner} in ${configPaths.authEnv}.`
             );
         }
 

@@ -39,6 +39,10 @@ class BaseConfigLoader extends JsonLoader {
     }
 
     _modify() {
+        if (this.constructor.defaultValues != null) {
+            ObjectUtil.setValuesWithDefaults(this.data, this.data, this.constructor.defaultValues);
+        }
+
         if (typeof this._childModify === "function") {
             const modifiedConfig = this._childModify(this.data);
             this.data = modifiedConfig ?? this.data;

@@ -1,5 +1,7 @@
 import BaseConfigLoader from "./BaseConfigLoader.js";
 
+import DefaultConfig from "../../config/DefaultConfig.js";
+
 import Util from "../../util/Util.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import TypeTester from "../../util/TypeTester.js";
@@ -21,16 +23,24 @@ class ConfigLoader extends BaseConfigLoader {
         config.minResponseTime = Util.clamp(
             Math.round(config.minResponseTime / Util.durationSeconds.milli),
             null,
-            10 / Util.durationSeconds.milli
+            DefaultConfig.maxMinResponseTime / Util.durationSeconds.milli
         );
         config.globalTimeLimit = Math.round(config.globalTimeLimit / Util.durationSeconds.milli);
-        config.commandWaitTime = Math.round((config.commandWaitTime ?? 0) / Util.durationSeconds.milli);
-        config.inspectorConnectTimeout = Math.round((config.inspectorConnectTimeout ?? 0) / Util.durationSeconds.milli);
+        config.commandWaitTime = Math.round(
+            (config.commandWaitTime ?? DefaultConfig.commandWaitTime) / Util.durationSeconds.milli
+        );
+        config.interactionTimeout = Math.round(
+            (config.interactionTimeout ?? DefaultConfig.interactionTimeout) / Util.durationSeconds.milli
+        );
+        config.inspectorConnectTimeout = Math.round(
+            (config.inspectorConnectTimeout ?? DefaultConfig.inspectorConnectTimeout) / Util.durationSeconds.milli
+        );
         config.userInspectorConnectTimeout = Math.round(
-            (config.userInspectorConnectTimeout ?? 0) / Util.durationSeconds.milli
+            (config.userInspectorConnectTimeout ?? DefaultConfig.userInspectorConnectTimeout) /
+                Util.durationSeconds.milli
         );
         config.userInspectorActionTimeout = Math.round(
-            (config.userInspectorActionTimeout ?? 0) / Util.durationSeconds.milli
+            (config.userInspectorActionTimeout ?? DefaultConfig.userInspectorActionTimeout) / Util.durationSeconds.milli
         );
 
         config.timeLimit = Math.round(config.timeLimit / Util.durationSeconds.milli);

@@ -2,6 +2,7 @@ import { loadBotConfig } from "../../config/loadConfig.js";
 
 import { getClient, getLogger } from "../../LevertClient.js";
 
+
 class RestartCommand {
     static info = {
         name: "restart",

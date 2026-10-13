@@ -407,8 +407,9 @@ class Tag {
             return username ? "invalid" : null;
         }
 
-        let owner;
         const { getClient } = await import("../../LevertClient.js");
+
+        let owner;
 
         if (onlyMembers) {
             owner = Util.first(
@@ -432,6 +433,7 @@ class Tag {
 
     async formatOwner(discord = false, options = {}) {
         const { getClient } = await import("../../LevertClient.js");
+
         return await getClient().formatUser(this.owner, discord, options);
     }
 

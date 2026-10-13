@@ -64,6 +64,9 @@
         "commandWaitTime": {
             "type": "number"
         },
+        "interactionTimeout": {
+            "type": "number"
+        },
         "reminderMsgLimit": {
             "type": "number"
         },
@@ -256,6 +259,7 @@
         "minResponseTime",
         "globalTimeLimit",
         "commandWaitTime",
+        "interactionTimeout",
         "reminderMsgLimit",
         "reminderSendInterval",
         "maxTagNameLength",
@@ -299,5 +303,12 @@
         "emoji",
         "bridgeBotIds"
     ],
-    "anyOf": [{ "required": ["bridgeBotMessageFormat"] }, { "required": ["bridgeBotMessageFormats"] }]
+    "anyOf": [
+        {
+            "required": ["bridgeBotMessageFormat"]
+        },
+        {
+            "required": ["bridgeBotMessageFormats"]
+        }
+    ]
 }

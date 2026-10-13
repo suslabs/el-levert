@@ -19,6 +19,7 @@
     "minResponseTime": 0.1,
     "globalTimeLimit": 60,
     "commandWaitTime": 3,
+    "interactionTimeout": 300,
     "reminderMsgLimit": 512,
     "reminderSendInterval": 10,
     "maxTagNameLength": 32,

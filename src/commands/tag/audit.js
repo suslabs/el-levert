@@ -4,6 +4,11 @@ import { getClient, getConfig, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import RevisionAuditUtil from "../../util/commands/RevisionAuditUtil.js";
+import PaginationUtil from "../../util/commands/PaginationUtil.js";
+
+const defaultLimit = 10,
+    maxLimit = 20,
+    dumpLimit = 1000;
 
 async function getDetail(revisionId, tagName) {
     let detail;
@@ -46,8 +51,10 @@ Calling without a tag name shows the full audit log across all tags. Providing a
 - --operation, --op <op>: Filter by operation (import, create, update, delete, revert).
 - --from <date>, --to <date>: Filter by date or time range.
 - --page <number>: Page number of results (default: 1).
-- --limit <number>: Number of entries per page (1-20, default: 10).`,
+- --limit <number>: Number of entries per page (1-20, default: 10).
+- --all: Dump all matching revisions.`,
         arguments: [
+            ...PaginationUtil.getPaginationArguments({ defaultLimit, maxLimit }),
             {
                 name: "user",
                 kind: "option",
@@ -66,16 +73,6 @@ Calling without a tag name shows the full audit log across all tags. Providing a
             {
                 name: "to",
                 kind: "option"
-            },
-            {
-                name: "page",
-                kind: "option",
-                type: "integer"
-            },
-            {
-                name: "limit",
-                kind: "option",
-                type: "integer"
             },
             {
                 name: "firstArg",
@@ -126,9 +123,10 @@ Calling without a tag name shows the full audit log across all tags. Providing a
             return `${getEmoji("warn")} ${dates.error}`;
         }
 
-        const limit = Util.clamp(ctx.arg("limit") ?? 10, 1, 20),
-            page = Util.clamp(ctx.arg("page") ?? 1, 1),
-            { from, to } = dates;
+        const paginationOpts = PaginationUtil.getPaginationOptions(ctx, { defaultLimit, maxLimit }),
+            fetchLimit = paginationOpts.all ? dumpLimit : 100;
+
+        const { from, to } = dates;
 
         const revisions = await getClient().tagManager.audit({
             name: tagName,
@@ -136,25 +134,43 @@ Calling without a tag name shows the full audit log across all tags. Providing a
             operation: ctx.arg("operation") ?? null,
             from,
             to,
-            limit,
-            offset: (page - 1) * limit
+            limit: fetchLimit,
+            offset: 0
         });
 
         if (Util.empty(revisions)) {
             return `${getEmoji("info")} Found **no** tag revisions.`;
         }
 
-        const isPerSubject = Util.nonemptyString(tagName);
-        const scopeLabel = isPerSubject ? ` for **${escapeMarkdown(tagName)}**` : "",
-            header = `${getEmoji("info")} Tag audit page **${page}**${scopeLabel}:`,
-            embed = RevisionAuditUtil.createListEmbed(revisions, page, revision => revision.key.name ?? "unknown", {
-                perSubject: isPerSubject
-            });
+        const isPerSubject = Util.nonemptyString(tagName),
+            scopeLabel = isPerSubject ? ` for **${escapeMarkdown(tagName)}**` : "";
 
-        return {
-            content: header,
-            embeds: [embed]
-        };
+        return await PaginationUtil.paginate(ctx, {
+            items: revisions,
+            defaultLimit,
+            maxLimit,
+            render: (items, { page }) => {
+                const header = `${getEmoji("info")} Tag audit page **${page}**${scopeLabel}:`,
+                    embed = RevisionAuditUtil.createListEmbed(items, page, revision => revision.key.name ?? "unknown", {
+                        perSubject: isPerSubject
+                    });
+
+                return {
+                    content: header,
+                    embeds: [embed]
+                };
+            },
+            dumpHeader: `${getEmoji("info")} Tag audit${scopeLabel}:`,
+            formatDump: items =>
+                RevisionAuditUtil.formatRevisionList(items, revision => revision.key.name ?? "unknown", {
+                    perSubject: isPerSubject
+                }),
+            filename: "tag_audit.txt"
+        });
+    }
+
+    async interactionHandler(ctx) {
+        return await PaginationUtil.handleInteraction(ctx);
     }
 }
 

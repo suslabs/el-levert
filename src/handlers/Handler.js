@@ -21,6 +21,7 @@ class Handler {
         this.options = options;
 
         this.priority ??= options.priority ?? 0;
+        this.handlesMessages ??= options.handlesMessages ?? false;
 
         const minResponseTime = options.minResponseTime ?? getConfig().minResponseTime,
             invalidResponseTime = !Number.isFinite(minResponseTime) || minResponseTime <= 0;

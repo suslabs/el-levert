@@ -49,7 +49,7 @@ describe("MessageTracker", () => {
         tracker.addReaction("1", [":)", ":D"]);
         tracker.addReaction("2", ":P");
 
-        expect(tracker.trackedMsgs.has("1")).toBe(false);
+        expect(tracker.items.has("1")).toBe(false);
 
         tracker.addReaction("3", [":X", ":Y"]);
         await expect(

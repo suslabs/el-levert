@@ -22,7 +22,7 @@ class PingCommand {
         const totalLatency = Util.timeDelta(sentTimestamp, originalTimestamp),
             serverLatency = Benchmark.stopTiming("ping", false);
 
-        const totalWarn = totalLatency > 1000 ? ` ${getEmoji("warn")}` : "",
+        const totalWarn = totalLatency > 1 / Util.durationSeconds.milli ? ` ${getEmoji("warn")}` : "",
             serverWarn = serverLatency > 100 ? ` ${getEmoji("warn")}` : "";
 
         await ctx.edit(

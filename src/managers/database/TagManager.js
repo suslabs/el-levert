@@ -928,7 +928,12 @@ class TagManager extends DBManager {
         });
     }
 
-    async fullSearch(query, maxResults = 20) {
+    async fullSearch(query, options = 20) {
+        const opts = typeof options === "number" ? { maxResults: options } : ObjectUtil.guaranteeObject(options);
+
+        const maxResults = opts.maxResults ?? 20,
+            offset = opts.offset ?? 0;
+
         let tags = await this.dump(true, [false, "script", "hidden"]);
 
         tags = tags
@@ -938,12 +943,28 @@ class TagManager extends DBManager {
                 body: tag.body
             }));
 
-        const res = uFuzzySearch(tags, query, {
+        const res = uFuzzySearch.search(tags, query, {
             searchKey: "body",
-            maxResults
+            maxResults,
+            offset
         });
 
         return res.other.hasInfo ? res : (res.results.forEach(x => (x.body = "")), res);
+    }
+
+    async fullSearchSort(query) {
+        let tags = await this.dump(true, [false, "script", "hidden"]);
+
+        tags = tags
+            .filter(tag => !tag.isAlias)
+            .map(tag => ({
+                name: tag.name,
+                body: tag.body
+            }));
+
+        return uFuzzySearch.sort(tags, query, {
+            searchKey: "body"
+        });
     }
 
     async random(prefix, validate = false) {
@@ -962,9 +983,7 @@ class TagManager extends DBManager {
         return Util.randomElement(tags) ?? null;
     }
 
-    async leaderboard(type, limit = 20) {
-        const defaultUser = { username: "NOT FOUND" };
-
+    async leaderboard(type, limit = 20, resolveUsers = true) {
         if (!Number.isInteger(limit) || limit < 1) {
             throw new TagError("Invalid leaderboard limit", limit);
         }
@@ -980,22 +999,36 @@ class TagManager extends DBManager {
                 break;
             case "usage":
                 leaderboard = await this.tag_db.usageLeaderboard(limit);
-
                 break;
             default:
                 throw new TagError("Invalid leaderboard type: " + type, type);
         }
 
+        if (resolveUsers) {
+            await this.resolveLeaderboardUsers(leaderboard, type);
+        }
+
+        return leaderboard;
+    }
+
+    async resolveLeaderboardUsers(leaderboard, type) {
+        const defaultUser = { username: "NOT FOUND" };
+
         switch (type) {
             case "count":
             case "size":
                 await Promise.all(
-                    leaderboard.map(entry =>
-                        getClient()
+                    leaderboard.map(async entry => {
+                        if (TypeTester.isObject(entry.user) && entry.user.username) {
+                            return;
+                        }
+
+                        const user = await getClient()
                             .findUserById(entry.user)
-                            .catch(_ => null)
-                            .then(user => (entry.user = user ?? defaultUser))
-                    )
+                            .catch(() => null);
+
+                        entry.user = user ?? defaultUser;
+                    })
                 );
                 break;
             case "usage":
@@ -1003,6 +1036,7 @@ class TagManager extends DBManager {
                     exists = await this.exists(names);
 
                 leaderboard.forEach((entry, idx) => (entry.exists = exists[idx]));
+                break;
         }
 
         return leaderboard;

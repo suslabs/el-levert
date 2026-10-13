@@ -32,7 +32,8 @@ describe("tag hide command", () => {
         expect(tag.isHidden).toBe(true);
 
         const listOut = await executeCommand(command, "list", { msg });
-        expect(listOut.files[0].attachment.toString()).toContain("alpha (hidden)");
+        const listText = listOut.embeds?.[0]?.data?.description ?? listOut.files?.[0]?.attachment?.toString();
+        expect(listText).toContain("alpha (hidden)");
 
         const searchRes = await runtime.client.tagManager.search("alpha");
         expect(searchRes.results).toEqual([]);

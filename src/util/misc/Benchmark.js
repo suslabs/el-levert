@@ -8,7 +8,7 @@ class Benchmark {
     static data = Object.create(null);
     static counts = Object.create(null);
 
-    static maxTimepointAge = 5 * 60 * 1000;
+    static maxTimepointAge = (5 * Util.durationSeconds.minute) / Util.durationSeconds.milli;
 
     static get timepoints() {
         return this._getCurrentStore().timepoints;
@@ -377,7 +377,7 @@ class Benchmark {
         timepoints: new Map()
     };
 
-    static _timepointSweepInterval = 30 * 1000;
+    static _timepointSweepInterval = 30 / Util.durationSeconds.milli;
     static _timepointSweepTimer = null;
 
     static _formatTime(key, time) {

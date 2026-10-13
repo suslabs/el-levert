@@ -2,9 +2,11 @@ import { EmbedBuilder } from "discord.js";
 
 import { getClient, getEmoji } from "../../LevertClient.js";
 
-function formatReminders(reminders) {
-    const format = reminders.map((reminder, i) => `${i + 1}. On ` + reminder.format());
-    return format.join("\n");
+import Util from "../../util/Util.js";
+import PaginationUtil from "../../util/commands/PaginationUtil.js";
+
+function formatReminders(reminders, startIndex = 0) {
+    return reminders.map((reminder, i) => `${startIndex + i + 1}. On ${reminder.format()}`).join("\n");
 }
 
 class ReminderListCommand {
@@ -13,23 +15,38 @@ class ReminderListCommand {
         aliases: ["all"],
         parent: "reminder",
         subcommand: true,
-        description: "List all active scheduled reminders for your account."
+        args: "[--page <num>] [--limit <num>] [--all]",
+        description: "List all active scheduled reminders for your account.",
+        arguments: [...PaginationUtil.getPaginationArguments({ defaultLimit: 5 })]
     };
 
     async handler(ctx) {
         const reminders = await getClient().reminderManager.list(ctx.msg.author.id);
 
-        if (reminders === null) {
+        if (reminders === null || Util.empty(reminders)) {
             return `${getEmoji("info")} You have **no** reminders.`;
         }
 
-        const format = formatReminders(reminders),
-            embed = new EmbedBuilder().setDescription(format);
+        return await PaginationUtil.paginate(ctx, {
+            items: reminders,
+            defaultLimit: 5,
+            render: (items, { page }) => {
+                const startIndex = (page - 1) * ctx.pageSize,
+                    format = formatReminders(items, startIndex);
 
-        return {
-            content: `${getEmoji("info")} Your reminders:`,
-            embeds: [embed]
-        };
+                return {
+                    content: `${getEmoji("info")} Your reminders:`,
+                    embeds: [new EmbedBuilder().setDescription(format)]
+                };
+            },
+            dumpHeader: `${getEmoji("info")} Your reminders:`,
+            formatDump: items => formatReminders(items, 0),
+            filename: "reminders.txt"
+        });
+    }
+
+    async interactionHandler(ctx) {
+        return await PaginationUtil.handleInteraction(ctx);
     }
 }
 

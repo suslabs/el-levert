@@ -1,4 +1,5 @@
 import TextCommandContext from "./TextCommandContext.js";
+
 import ObjectUtil from "../../../util/ObjectUtil.js";
 
 class CommandContext extends TextCommandContext {
@@ -12,17 +13,86 @@ class CommandContext extends TextCommandContext {
         this.channel = this.data.channel ?? this.message?.channel;
 
         this.perm = this.data.perm;
+
+        this.interactionContext = this.data.interactionContext ?? null;
     }
 
     get msg() {
         return this.message;
     }
 
+    get interaction() {
+        return this.interactionContext?.interaction ?? null;
+    }
+
+    get isInteraction() {
+        return this.interactionContext !== null;
+    }
+
+    get isAuthor() {
+        return this.data.isAuthor ?? this.interactionContext?.isAuthor ?? true;
+    }
+
+    getReply() {
+        if (this.handler != null && typeof this.handler.getReply === "function") {
+            return this.handler.getReply(this.msg);
+        }
+
+        return null;
+    }
+
     async reply(data, options) {
         options = ObjectUtil.guaranteeObject(options);
 
+        if (this.ephemeral) {
+            options.ephemeral ??= true;
+        }
+
         this.markReplied();
-        return await this.handler?.contextReply?.(this, data, options);
+
+        if (this.isInteraction) {
+            return await this.interactionContext.reply(data, options);
+        }
+
+        if (this.handler != null) {
+            return await this.handler.contextReply(this, data, options);
+        }
+
+        if (this.msg != null && typeof this.msg.reply === "function") {
+            return await this.msg.reply(data, options);
+        }
+    }
+
+    async update(data, options) {
+        options = ObjectUtil.guaranteeObject(options);
+
+        this.markReplied();
+
+        if (this.isInteraction) {
+            return await this.interactionContext.update(data, options);
+        }
+    }
+
+    async deferReply(options) {
+        options = ObjectUtil.guaranteeObject(options);
+
+        if (this.isInteraction) {
+            return await this.interactionContext.deferReply(options);
+        }
+    }
+
+    async deferUpdate(options) {
+        options = ObjectUtil.guaranteeObject(options);
+
+        if (this.isInteraction) {
+            return await this.interactionContext.deferUpdate(options);
+        }
+    }
+
+    async showModal(modal) {
+        if (this.isInteraction) {
+            return await this.interactionContext.showModal(modal);
+        }
     }
 
     async edit(data, options) {
@@ -34,10 +104,6 @@ class CommandContext extends TextCommandContext {
 
     async deleteReply() {
         return await this.handler?.deleteReplyFromContext?.(this);
-    }
-
-    getReply() {
-        return this.handler?.getReply?.(this.msg) ?? null;
     }
 }
 

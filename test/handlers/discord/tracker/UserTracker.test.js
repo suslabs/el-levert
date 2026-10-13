@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import "../../../../src/LevertClient.js";
 import UserTracker from "../../../../src/handlers/discord/tracker/UserTracker.js";
 
 beforeEach(() => {
@@ -33,12 +34,12 @@ describe("UserTracker", () => {
 
         tracker.clearUsers();
         tracker.addUser("old");
-        tracker.trackedUsers[0].timestamp = Date.now() - 100;
+        tracker.findUser("old").timestamp = Date.now() - 100;
         tracker._sweepUsers();
         expect(tracker.findUser("old")).toBeNull();
 
         tracker.clearUsers();
-        expect(tracker.trackedUsers).toEqual([]);
+        expect(tracker.items.size).toBe(0);
         tracker._stopSweepLoop();
     });
 });

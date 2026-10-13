@@ -21,9 +21,9 @@ import Util from "../../util/Util.js";
 class GatewayManager extends Manager {
     static $name = "gatewayManager";
 
-    static heartbeatInterval = 5000;
-    static identifyTimeout = 5000;
-    static heartbeatGracePeriod = 2000;
+    static heartbeatInterval = 5 / Util.durationSeconds.milli;
+    static identifyTimeout = 5 / Util.durationSeconds.milli;
+    static heartbeatGracePeriod = 2 / Util.durationSeconds.milli;
 
     constructor(enabled, port, options) {
         super(enabled, options);

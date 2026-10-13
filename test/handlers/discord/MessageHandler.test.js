@@ -323,4 +323,30 @@ describe("MessageHandler", () => {
         ).resolves.toBeNull();
         expect(loggerSpy).toHaveBeenCalled();
     });
+
+    test("strips pings safely from getter-only Embed instances", () => {
+        const getterOnlyEmbed = {
+            get title() {
+                return "@everyone title";
+            },
+            get description() {
+                return "hello @here";
+            },
+            toJSON() {
+                return {
+                    title: this.title,
+                    description: this.description
+                };
+            }
+        };
+
+        const out = {
+            content: "@everyone",
+            embeds: [getterOnlyEmbed]
+        };
+
+        expect(() => MessageHandler._stripPings(out)).not.toThrow();
+        expect(out.embeds[0].title).toBe("\\@everyone title");
+        expect(out.embeds[0].description).toBe("hello \\@here");
+    });
 });

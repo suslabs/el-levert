@@ -69,6 +69,7 @@ class ReactionHandler extends Handler {
     static emojiNoseChars = "-^'oO*";
 
     priority = -1;
+    handlesMessages = true;
 
     constructor(enabled) {
         super(enabled);

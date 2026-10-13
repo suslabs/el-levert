@@ -105,6 +105,18 @@ class Command extends TextCommand {
         }
     }
 
+    async executeInteraction(context, interactionContext) {
+        const cmdContext = this.createContext(context);
+
+        if (interactionContext != null) {
+            cmdContext.interactionContext = interactionContext;
+        }
+
+        if (typeof this.interactionHandler === "function") {
+            return await this.interactionHandler(cmdContext);
+        }
+    }
+
     static async _getPermLevel(msg, options) {
         options = ObjectUtil.guaranteeObject(options);
         const { asLevel, asUser } = options;

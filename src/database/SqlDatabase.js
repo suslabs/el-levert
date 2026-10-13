@@ -190,7 +190,7 @@ class SqlDatabase {
         this.poolMin = options.poolMin ?? 1;
         this.poolMax = options.poolMax ?? 4;
 
-        this.acquireTimeout = options.acquireTimeout ?? 5000;
+        this.acquireTimeout = options.acquireTimeout ?? 5 / Util.durationSeconds.milli;
         this.busyTimeout = options.busyTimeout;
         this.delayRelease = options.delayRelease ?? false;
 

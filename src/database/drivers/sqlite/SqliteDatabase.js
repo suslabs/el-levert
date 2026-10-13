@@ -429,7 +429,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         this.min = config.min ?? 1;
         this.max = config.max ?? 4;
 
-        this.acquireTimeout = config.acquireTimeout ?? 5000;
+        this.acquireTimeout = config.acquireTimeout ?? 5 / Util.durationSeconds.milli;
         this.busyTimeout = config.busyTimeout;
         this.delayRelease = config.delayRelease ?? false;
 

@@ -17,6 +17,7 @@ import executeAllHandlers from "./client/executeAllHandlers.js";
 import { registerGlobalErrorHandler, removeGlobalErrorHandler } from "./client/GlobalErrorHandler.js";
 
 import MessageDispatcher from "./client/MessageDispatcher.js";
+import InteractionDispatcher from "./client/InteractionDispatcher.js";
 
 import Util from "./util/Util.js";
 import TypeTester from "./util/TypeTester.js";
@@ -531,6 +532,18 @@ class LevertClient extends DiscordClient {
         this.logger.info("Unloaded MessageDispatcher.");
     }
 
+    _loadInteractionDispatcher() {
+        this.interactionDispatcher = new InteractionDispatcher(this);
+
+        this.logger.info("Loaded InteractionDispatcher.");
+    }
+
+    _unloadInteractionDispatcher() {
+        delete this.interactionDispatcher;
+
+        this.logger.info("Unloaded InteractionDispatcher.");
+    }
+
     _loadHandlers() {
         this.loadComponents(
             "handlers",
@@ -541,6 +554,7 @@ class LevertClient extends DiscordClient {
                 previewHandler: [this.config.enablePreviews],
                 reactionHandler: this.reactions.enableReacts,
                 sedHandler: this.config.enableSed,
+                interactionHandler: [],
                 cliCommandHandler: this.config.enableCliCommands,
                 websocketCommandHandler: this.config.enableWebsocket
             },
@@ -551,6 +565,7 @@ class LevertClient extends DiscordClient {
         );
 
         this._loadMessageDispatcher();
+        this._loadInteractionDispatcher();
     }
 
     _unloadHandlers() {
@@ -559,6 +574,7 @@ class LevertClient extends DiscordClient {
         });
 
         this._unloadMessageDispatcher();
+        this._unloadInteractionDispatcher();
     }
 
     async _loadManagers() {
@@ -693,8 +709,6 @@ class LevertClient extends DiscordClient {
             return;
         }
 
-        ArrayUtil.removeItem(this.handlerList, this.cliCommandHandler);
-
         this.inputManager.handleInput = this.cliCommandHandler.execute;
         this.inputManager.active = true;
     }
@@ -711,8 +725,6 @@ class LevertClient extends DiscordClient {
         if (!this.config.enableWebsocket) {
             return;
         }
-
-        ArrayUtil.removeItem(this.handlerList, this.websocketCommandHandler);
 
         this.gatewayManager.handleMessage = this.websocketCommandHandler.execute;
         this.gatewayManager.active = true;

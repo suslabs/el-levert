@@ -109,9 +109,23 @@ const RevisionAuditUtil = Object.freeze({
         };
     },
 
+    formatRevisionList: (revisions, getLabel, options) => {
+        options = ObjectUtil.guaranteeObject(options);
+        const useSubjectIndex = options.perSubject ?? false;
+
+        return revisions
+            .map(revision => {
+                const label = escapeMarkdown(getLabel(revision)),
+                    revNum = useSubjectIndex ? (revision.subjectIndex ?? revision.id) : revision.id;
+
+                return `#${revNum} **${revision.operation}** ${label} - \`${revision.actor}\` - ${RevisionAuditUtil.formatDate(revision.created, true)}\nChanged: ${revision.changed.join(", ")}`;
+            })
+            .join("\n\n");
+    },
+
     createListEmbed: (revisions, page, getLabel, options) => {
         return new EmbedBuilder()
-            .setDescription(RevisionAuditUtil._formatRevisionList(revisions, getLabel, options))
+            .setDescription(RevisionAuditUtil.formatRevisionList(revisions, getLabel, options))
             .setFooter({ text: `Page ${page} | ${revisions.length} revision${Util.single(revisions) ? "" : "s"}` });
     },
 
@@ -191,20 +205,6 @@ const RevisionAuditUtil = Object.freeze({
         );
 
         return lines.join("\n\n");
-    },
-
-    _formatRevisionList: (revisions, getLabel, options) => {
-        options = ObjectUtil.guaranteeObject(options);
-        const useSubjectIndex = options.perSubject ?? false;
-
-        return revisions
-            .map(revision => {
-                const label = escapeMarkdown(getLabel(revision)),
-                    revNum = useSubjectIndex ? (revision.subjectIndex ?? revision.id) : revision.id;
-
-                return `#${revNum} **${revision.operation}** ${label} - \`${revision.actor}\` - ${RevisionAuditUtil.formatDate(revision.created, true)}\nChanged: ${revision.changed.join(", ")}`;
-            })
-            .join("\n\n");
     },
 
     _parseClearScope: (ctx, subjectText) => {

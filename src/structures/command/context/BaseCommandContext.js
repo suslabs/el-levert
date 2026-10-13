@@ -18,9 +18,11 @@ class BaseCommandContext {
 
         this.isEdit = data.isEdit ?? false;
 
-        this.replied = false;
-        this.processingReplySent = false;
-        this.timeoutDisabled = false;
+        this.replied = data.replied ?? false;
+        this.processingReplySent = data.processingReplySent ?? false;
+        this.timeoutDisabled = data.timeoutDisabled ?? false;
+
+        this._parentContext = data._parentContext ?? null;
 
         for (const [key, value] of Object.entries(data)) {
             if (!(key in this)) {
@@ -36,9 +38,11 @@ class BaseCommandContext {
 
         const context = new this.constructor({
             ...this,
-            ...overrides
+            ...overrides,
+            _parentContext: this
         });
 
+        context._parentContext = this;
         context.replied = this.replied;
         context.processingReplySent = this.processingReplySent;
         context.timeoutDisabled = this.timeoutDisabled;
@@ -58,6 +62,8 @@ class BaseCommandContext {
 
     markReplied() {
         this.replied = true;
+        this._parentContext?.markReplied();
+
         return this;
     }
 

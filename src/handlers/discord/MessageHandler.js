@@ -17,6 +17,8 @@ import { MessageLimitTypes } from "./MessageLimitTypes.js";
 import { EmbedCountAreas } from "../../util/EmbedCountAreas.js";
 
 class MessageHandler extends Handler {
+    handlesMessages = true;
+
     constructor(enabled, hasReplyTracker = true, hasUserTracker = false, options) {
         super(enabled, options);
 
@@ -146,6 +148,42 @@ class MessageHandler extends Handler {
         return await this.editReply(context.msg, ...args);
     }
 
+    async interactionReply(interaction, data, options) {
+        options = ObjectUtil.guaranteeObject(options);
+
+        const out = this._getOutput(data, options),
+            isEphemeral = options.ephemeral ?? false;
+
+        const payload = Array.isArray(out) ? Util.first(out) : out;
+
+        if (interaction.deferred) {
+            return await interaction.editReply(payload);
+        } else if (interaction.replied) {
+            return await interaction.followUp({
+                ...payload,
+                ephemeral: isEphemeral
+            });
+        }
+
+        return await interaction.reply({
+            ...payload,
+            ephemeral: isEphemeral
+        });
+    }
+
+    async interactionUpdate(interaction, data, options) {
+        options = ObjectUtil.guaranteeObject(options);
+
+        const out = this._getOutput(data, options),
+            payload = Array.isArray(out) ? Util.first(out) : out;
+
+        if (interaction.deferred) {
+            return await interaction.editReply(payload);
+        }
+
+        return await interaction.update(payload);
+    }
+
     async delete(msg) {
         if (!this.hasReplyTracker) {
             return this._defaultDelete();
@@ -240,25 +278,38 @@ class MessageHandler extends Handler {
             return;
         }
 
-        for (const embed of out.embeds) {
+        out.embeds = out.embeds.map(rawEmbed => {
+            const embed = {
+                ...DiscordUtil.getEmbedData(rawEmbed)
+            };
+
             embed.title = MessageHandler._escapeMentions(embed.title);
             embed.description = MessageHandler._escapeMentions(embed.description);
 
             if (embed.footer != null) {
-                embed.footer.text = MessageHandler._escapeMentions(embed.footer.text);
+                embed.footer = {
+                    ...embed.footer,
+                    text: MessageHandler._escapeMentions(embed.footer.text)
+                };
             }
 
             if (embed.author != null) {
-                embed.author.name = MessageHandler._escapeMentions(embed.author.name);
+                embed.author = {
+                    ...embed.author,
+                    name: MessageHandler._escapeMentions(embed.author.name)
+                };
             }
 
             if (Array.isArray(embed.fields)) {
-                for (const field of embed.fields) {
-                    field.name = MessageHandler._escapeMentions(field.name);
-                    field.value = MessageHandler._escapeMentions(field.value);
-                }
+                embed.fields = embed.fields.map(field => ({
+                    ...field,
+                    name: MessageHandler._escapeMentions(field.name),
+                    value: MessageHandler._escapeMentions(field.value)
+                }));
             }
-        }
+
+            return embed;
+        });
     }
 
     static _formatOutput(data) {

@@ -16,7 +16,7 @@ const DotenvParser = Object.freeze({
         while ((match = lineRegex.exec(lines)) !== null) {
             const key = match[1];
 
-            let value = (match[2] ?? "").trim;
+            let value = (match[2] ?? "").trim();
 
             const first = value[0];
             value = value.replace(/^(['"`])([\s\S]*)\1$/gm, "$2");

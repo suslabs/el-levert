@@ -8,6 +8,7 @@ describe("executeAllHandlers", () => {
         const client = {
             handlerList: [
                 {
+                    handlesMessages: true,
                     execute: vi.fn().mockRejectedValueOnce(new Error("boom")).mockResolvedValueOnce(true)
                 }
             ]
@@ -27,6 +28,7 @@ describe("executeAllHandlers", () => {
         const client = {
             handlerList: [
                 {
+                    handlesMessages: true,
                     execute: vi.fn(async currentMsg => {
                         expect(await executeAllHandlers(client, "execute", currentMsg)).toBeUndefined();
                         return true;
@@ -40,5 +42,27 @@ describe("executeAllHandlers", () => {
 
         expect(client.handlerList[0].execute).toHaveBeenCalledTimes(1);
         expect(secondHandler.execute).not.toHaveBeenCalled();
+    });
+
+    test("skips handlers that do not handle messages", async () => {
+        const msg = { id: "message" };
+
+        const nonMessageHandler = {
+            handlesMessages: false,
+            execute: vi.fn()
+        };
+        const messageHandler = {
+            handlesMessages: true,
+            execute: vi.fn().mockResolvedValue(true)
+        };
+
+        const client = {
+            handlerList: [nonMessageHandler, messageHandler]
+        };
+
+        await executeAllHandlers(client, "execute", msg);
+
+        expect(nonMessageHandler.execute).not.toHaveBeenCalled();
+        expect(messageHandler.execute).toHaveBeenCalledTimes(1);
     });
 });
