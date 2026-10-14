@@ -116,13 +116,15 @@ Subcommands:
         return this.getSubcmdNames(checkAliases).includes(name) || FakeTagRegistry.has(name);
     }
 
-    async parseBase(t_args, msg, options) {
+    async parseBase(t_args, contextOrMsg, options) {
         options = ObjectUtil.guaranteeObject(options);
 
         const [t_type, t_body] = PositionalCommandReader.split(t_args, {
             lowercase: true
         });
-        msg ??= dummyMsg;
+
+        let msg = contextOrMsg?.msg ?? contextOrMsg ?? dummyMsg,
+            replyMsg = contextOrMsg?.replyMsg ?? options.replyMsg ?? null;
 
         let type = null;
 
@@ -137,14 +139,23 @@ Subcommands:
                 type = TagTypes.types.validScript.has(t_type) ? t_type : null;
         }
 
-        const body = type === null ? t_args : t_body,
-            hasAttachments = !Util.empty(msg.attachments);
+        let body = type === null ? t_args : t_body,
+            fromReply = false;
 
-        if (Util.empty(t_args) && !hasAttachments) {
+        if (Util.empty(body) && Util.empty(msg.attachments) && replyMsg !== null) {
+            msg = replyMsg;
+            body = msg.content ?? "";
+            fromReply = true;
+        }
+
+        const hasAttachments = !Util.empty(msg.attachments);
+
+        if (Util.empty(body) && !hasAttachments) {
             return {
                 body: null,
                 meta: null,
                 attachment: false,
+                fromReply: false,
                 err: `${getEmoji("warn")} Tag body is empty.`
             };
         }
@@ -207,14 +218,13 @@ Subcommands:
                 : Tag.parseTagBody(parsedBody.body, type);
         }
 
-        const attachment =
-            hasAttachments ||
-            (typeof parsed.body === "string" && !Util.empty(DiscordUtil.findAttachmentUrls(parsed.body)));
+        const attachment = hasAttachments || DiscordUtil.hasAttachmentUrls(parsed.body);
 
         return {
             body: parsed.body,
             meta: parsed.meta,
             attachment,
+            fromReply,
             err: null
         };
     }

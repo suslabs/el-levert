@@ -190,7 +190,6 @@ git reset --soft origin/main
 - [ ] Add support for slash commands (perhaps)
 - [ ] Add support for other databases
 - [ ] Add caching
-- [ ] Add different behaviour when replying to messages
 
 # Commands
 
@@ -211,6 +210,7 @@ Multi-page results in commands (`tag list`, `tag search`, `tag fullsearch`, `tag
 - `--all` (alias `-a`): Export/dump all matching results (sent as a file attachment if exceeding embed limits).
 
 Interactive Component Controls:
+
 - `⏮️`: Jump to the first page.
 - `◀️`: Go to the previous page.
 - `[ page / total ]`: Opens a Discord modal dialog to jump directly to any page number.

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { createDiscordMessage } from "../../helpers/discordStubs.js";
+import { createDiscordChannel, createDiscordMessage } from "../../helpers/discordStubs.js";
 import { cleanupRuntime, createRuntime } from "../../helpers/runtimeHarness.js";
 
 let runtime;
@@ -366,5 +366,62 @@ describe("CommandHandler", () => {
 
         expect(deleteSpy).toHaveBeenCalledTimes(1);
         expect(msg.reply).toHaveBeenCalledTimes(1);
+    });
+
+    test("populates replyMsg on context when message references another message", async () => {
+        const referencedMsg = createDiscordMessage("hello original", {
+            id: "msg-ref-1"
+        });
+
+        runtime.client.fetchMessage = vi.fn(async (chId, msgId) => {
+            if (msgId === "msg-ref-1") {
+                return referencedMsg;
+            }
+
+            return null;
+        });
+
+        let capturedContext = null;
+
+        runtime.client.commandManager = {
+            isCommand: vi.fn(() => true),
+            getCommand: vi.fn(content => [
+                {
+                    name: "testref",
+                    async execute(ctx) {
+                        capturedContext = ctx;
+                        return "ok";
+                    }
+                },
+                "testref",
+                "",
+                {
+                    raw: content,
+                    content: "testref",
+                    name: "testref",
+                    argsText: ""
+                }
+            ])
+        };
+
+        const msgWithRef = createDiscordMessage("%testref", {
+            id: "msg-cmd-1",
+            channel: createDiscordChannel({ id: "ch-1" }),
+            reference: { messageId: "msg-ref-1" },
+            reply: vi.fn(async data => data)
+        });
+
+        expect(await handler.execute(msgWithRef)).toBe(true);
+        expect(runtime.client.fetchMessage).toHaveBeenCalledWith("ch-1", "msg-ref-1");
+        expect(capturedContext.replyMsg).toBe(referencedMsg);
+
+        const msgWithoutRef = createDiscordMessage("%testref", {
+            id: "msg-cmd-2",
+            channel: createDiscordChannel({ id: "ch-1" }),
+            reply: vi.fn(async data => data)
+        });
+
+        expect(await handler.execute(msgWithoutRef)).toBe(true);
+        expect(capturedContext.replyMsg).toBeNull();
     });
 });

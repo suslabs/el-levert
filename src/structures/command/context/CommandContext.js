@@ -14,7 +14,22 @@ class CommandContext extends TextCommandContext {
 
         this.perm = this.data.perm;
 
+        this.replyMsg = this.data.replyMsg ?? null;
+
+        this.isEdit = this.data.isEdit ?? false;
+        this.processingReplySent = this.data.processingReplySent ?? false;
+
         this.interactionContext = this.data.interactionContext ?? null;
+    }
+
+    clone(context, overrides) {
+        overrides = ObjectUtil.guaranteeObject(overrides);
+
+        context.replyMsg = overrides.replyMsg ?? this.replyMsg;
+        context.isEdit = overrides.isEdit ?? this.isEdit;
+        context.processingReplySent = overrides.processingReplySent ?? this.processingReplySent;
+
+        return context;
     }
 
     get msg() {

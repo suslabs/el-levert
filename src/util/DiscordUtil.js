@@ -172,6 +172,15 @@ let DiscordUtil = {
         return matches.map(match => DiscordUtil._attachUrlMatchResult(match));
     },
 
+    hasAttachmentUrls: str => {
+        if (!Util.nonemptyString(str)) {
+            return false;
+        }
+
+        DiscordUtil.attachUrlRegex.lastIndex = 0;
+        return DiscordUtil.attachUrlRegex.test(str);
+    },
+
     discordEpoch: 1420070400000,
 
     snowflakeFromDate: date => {

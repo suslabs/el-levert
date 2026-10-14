@@ -64,10 +64,10 @@ class TagEditCommand {
             }
         }
 
-        let parsed = await this.parentCmd.parseBase(t_args, ctx.msg, {
+        let parsed = await this.parentCmd.parseBase(t_args, ctx, {
                 allowFilePath: getClient().permManager.allowed(ctx.perm, "admin")
             }),
-            { body, meta, attachment } = parsed;
+            { body, meta, attachment, fromReply } = parsed;
 
         if (parsed.err !== null) {
             return parsed.err;
@@ -104,7 +104,8 @@ class TagEditCommand {
             return `${getEmoji("warn")} ${err.message}.`;
         }
 
-        let out = `${getEmoji("ok")} Edited ${this.parentCmd.formatTagType(newTag)} **${escapeMarkdown(t_name)}**.`;
+        const suffix = fromReply ? " from replied message" : "";
+        let out = `${getEmoji("ok")} Edited ${this.parentCmd.formatTagType(newTag)} **${escapeMarkdown(t_name)}**${suffix}.`;
 
         if (attachment) {
             out += `\n${this.parentCmd.attachmentWarning}`;

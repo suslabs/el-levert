@@ -10,19 +10,13 @@ class BaseCommandContext {
         this.command = data.command ?? null;
         this.commandName = data.commandName ?? data.parseResult?.name ?? "";
 
-        this.raw = data.raw ?? data.rawContent ?? "";
-        this.rawContent = data.rawContent ?? this.raw;
+        this.raw = data.raw ?? "";
 
         this.argsText = data.argsText ?? "";
         this.parseResult = data.parseResult ?? null;
 
-        this.isEdit = data.isEdit ?? false;
-
         this.replied = data.replied ?? false;
-        this.processingReplySent = data.processingReplySent ?? false;
         this.timeoutDisabled = data.timeoutDisabled ?? false;
-
-        this._parentContext = data._parentContext ?? null;
 
         for (const [key, value] of Object.entries(data)) {
             if (!(key in this)) {
@@ -30,25 +24,11 @@ class BaseCommandContext {
             }
         }
 
+        this._parentContext = data._parentContext ?? null;
         this._disableTimeoutHook = null;
-    }
 
-    clone(overrides) {
-        overrides = ObjectUtil.guaranteeObject(overrides);
-
-        const context = new this.constructor({
-            ...this,
-            ...overrides,
-            _parentContext: this
-        });
-
-        context._parentContext = this;
-        context.replied = this.replied;
-        context.processingReplySent = this.processingReplySent;
-        context.timeoutDisabled = this.timeoutDisabled;
-        context._disableTimeoutHook = this._disableTimeoutHook;
-
-        return context;
+        this._childClone = this.clone;
+        this.clone = this._clone.bind(this);
     }
 
     withArgs(argsText, overrides) {
@@ -81,6 +61,28 @@ class BaseCommandContext {
         this._disableTimeoutHook?.();
 
         return this;
+    }
+
+    _clone(overrides) {
+        overrides = ObjectUtil.guaranteeObject(overrides);
+
+        const context = new this.constructor({
+            ...this,
+            ...overrides,
+            _parentContext: this
+        });
+
+        context.replied = this.replied;
+        context.timeoutDisabled = this.timeoutDisabled;
+
+        context._parentContext = this;
+        context._disableTimeoutHook = this._disableTimeoutHook;
+
+        if (typeof this._childClone === "function") {
+            return this._childClone.call(this, context, overrides) ?? context;
+        }
+
+        return context;
     }
 }
 

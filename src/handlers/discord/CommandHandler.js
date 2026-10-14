@@ -65,16 +65,18 @@ class CommandHandler extends MessageHandler {
 
             this._sendTyping(msg);
 
+            const replyMsg = await this._resolveReplyMsg(msg);
+
             await this._executeAndReply(
                 cmd,
                 new CommandContext({
                     command: cmd,
                     commandName: parsed.name,
                     raw: msg.content,
-                    rawContent: parsed.content,
                     argsText: parsed.argsText,
                     parseResult: parsed,
                     message: msg,
+                    replyMsg,
                     handler: this,
                     isEdit: options.isEdit
                 })
@@ -107,6 +109,32 @@ class CommandHandler extends MessageHandler {
             return await this.execute(msg, { isEdit: true });
         } else {
             return await this.delete(msg);
+        }
+    }
+
+    async _resolveReplyMsg(msg) {
+        const refId = msg.reference?.messageId;
+
+        if (!Util.nonemptyString(refId)) {
+            return null;
+        }
+
+        const channelId = msg.channel?.id ?? msg.channelId;
+
+        if (!Util.nonemptyString(channelId)) {
+            return null;
+        }
+
+        const client = getClient();
+
+        if (client === null || typeof client.fetchMessage !== "function") {
+            return null;
+        }
+
+        try {
+            return await client.fetchMessage(channelId, refId);
+        } catch {
+            return null;
         }
     }
 

@@ -243,6 +243,80 @@ describe("Merged Branch Coverage", () => {
             });
         });
 
+        test("pulls body from reply message when body is empty", async () => {
+            const replyMsg = {
+                content: "```js\nreturn 42;\n```",
+                attachments: new Map()
+            };
+
+            const ctx = {
+                msg: { attachments: new Map() },
+                replyMsg
+            };
+
+            const parsed = await command.parseBase("", ctx);
+            expect(parsed).toMatchObject({
+                body: "return 42;",
+                fromReply: true,
+                attachment: false,
+                err: null
+            });
+            expect(parsed.meta.type).toBe("ivm");
+
+            const explicitTypeParsed = await command.parseBase("vm2", ctx);
+            expect(explicitTypeParsed).toMatchObject({
+                body: "return 42;",
+                fromReply: true,
+                attachment: false,
+                err: null
+            });
+            expect(explicitTypeParsed.meta.type).toBe("vm2");
+        });
+
+        test("anchors onto reply message attachments when body is empty", async () => {
+            const replyMsg = {
+                content: "",
+                attachments: new Map([["file", { url: "https://example.com/file.png" }]])
+            };
+
+            const ctx = {
+                msg: { attachments: new Map() },
+                replyMsg
+            };
+
+            vi.spyOn(runtime.client.tagManager, "downloadBody").mockResolvedValueOnce({
+                body: "https://example.com/file.png",
+                isScript: false
+            });
+
+            const parsed = await command.parseBase("", ctx);
+            expect(parsed).toMatchObject({
+                body: "https://example.com/file.png",
+                fromReply: true,
+                attachment: true,
+                err: null
+            });
+        });
+
+        test("does not pull from reply message when body is provided", async () => {
+            const replyMsg = {
+                content: "reply text",
+                attachments: new Map()
+            };
+
+            const ctx = {
+                msg: { attachments: new Map() },
+                replyMsg
+            };
+
+            const parsed = await command.parseBase("command text", ctx);
+            expect(parsed).toMatchObject({
+                body: "command text",
+                fromReply: false,
+                err: null
+            });
+        });
+
         test("covers the main tag handler for missing tags, alias failures, execution failures, and preview branches", async () => {
             await addTag(runtime, "alpha", "body one");
 
@@ -407,6 +481,20 @@ describe("Merged Branch Coverage", () => {
             expect(await run("add alpha body")).toContain("Created tag **alpha**");
             expect(await run("add alpha body")).toContain("already exists");
 
+            const addFromReplyMsg = createCommandMessage("%tag add fromrep", {
+                replyMsg: createCommandMessage("replied body content")
+            });
+            expect(await run("add fromrep", addFromReplyMsg)).toContain(
+                "Created tag **fromrep** from replied message."
+            );
+
+            const editFromReplyMsg = createCommandMessage("%tag edit fromrep", {
+                replyMsg: createCommandMessage("new replied body content")
+            });
+            expect(await run("edit fromrep", editFromReplyMsg)).toContain(
+                "Edited tag **fromrep** from replied message."
+            );
+
             vi.spyOn(runtime.client.tagManager, "add").mockRejectedValueOnce(new TagError("Create failed"));
             expect(await run("add beta body")).toContain("Create failed");
 
@@ -515,7 +603,9 @@ describe("Merged Branch Coverage", () => {
             expect(await run("info missing", adminMsg)).toContain("doesn't exist");
 
             const infoOut = await run("info alpha", adminMsg);
-            expect(infoOut).toContain("Tag info for **alpha**");
+            expect(infoOut).toMatchObject({
+                content: expect.stringContaining("Tag info for **alpha**")
+            });
 
             runtime.client.commandHandler.outCharLimit = 20;
             const infoFile = await run("info alpha raw", adminMsg);
@@ -747,7 +837,7 @@ describe("Merged Branch Coverage", () => {
                     oversized: false
                 }
             });
-            expect(await run("fullsearch alpha")).toContain("Found **no** similar tags");
+            expect(await run("fullsearch alpha all")).toContain("Found **no** similar tags");
 
             vi.spyOn(runtime.client.tagManager, "fullSearch").mockResolvedValueOnce({
                 results: [
@@ -762,7 +852,7 @@ describe("Merged Branch Coverage", () => {
                 }
             });
 
-            expect(await run("fullsearch alpha")).toMatchObject({
+            expect(await run("fullsearch alpha all")).toMatchObject({
                 content: expect.stringContaining("Found **1** matching tag")
             });
 

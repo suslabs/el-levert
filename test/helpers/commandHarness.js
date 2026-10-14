@@ -47,9 +47,9 @@ function createDiscordCommandContext(command, argsText = "", options = {}) {
     return command.createContext({
         commandName: command.name,
         raw: msg.content,
-        rawContent: argsText,
         argsText,
         msg,
+        replyMsg: options.replyMsg ?? msg.replyMsg ?? null,
         author: options.author ?? msg.author,
         channel: options.channel ?? msg.channel,
         perm: options.perm,
@@ -68,7 +68,6 @@ function createCliCommandContext(command, argsText = "", options = {}) {
     return command.createContext({
         commandName: command.name,
         raw: argsText,
-        rawContent: argsText,
         argsText,
         line: options.line ?? argsText,
         handler: options.handler,

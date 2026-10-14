@@ -6,7 +6,7 @@ class CLICommandContext extends TextCommandContext {
 
         this.handler = this.data.handler ?? null;
 
-        this.line = this.data.line ?? this.rawContent;
+        this.line = this.data.line ?? this.raw;
     }
 }
 

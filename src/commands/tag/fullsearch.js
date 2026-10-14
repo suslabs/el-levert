@@ -188,9 +188,10 @@ class TagFullSearchCommand {
                 return `${getEmoji("info")} Found **no** similar tags.`;
             }
 
-            const totalMatches = other.total ?? results.length,
+            const plus = other?.oversized ? "+" : "",
+                totalMatches = other.total ?? results.length,
                 s = totalMatches === 1 ? "" : "s",
-                count = Util.formatNumber(totalMatches),
+                count = Util.formatNumber(totalMatches) + plus,
                 header = `${getEmoji("info")} Found **${count}** matching tag${s}:`;
 
             if (results.length > 2 * defaultResultLimit) {

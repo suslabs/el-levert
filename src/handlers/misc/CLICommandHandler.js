@@ -46,7 +46,6 @@ Use ${getClient().cliCommandManager.commandPrefix}help to get all available comm
                     command: cmd,
                     commandName: name,
                     raw: str,
-                    rawContent: parsed.content,
                     argsText: parsed.argsText,
                     parseResult: parsed,
                     handler: this,
