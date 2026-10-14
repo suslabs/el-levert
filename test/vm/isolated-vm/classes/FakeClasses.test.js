@@ -180,6 +180,25 @@ describe("isolated-vm fake classes", () => {
             }
         });
 
+        expect(fakeMsg.fixedMsg.replyMsg).toBeNull();
+        expect(fakeMsg.fixedMsg.referencedMessage).toBeNull();
+
+        const fakeWithReply = new FakeMsg({
+            ...msg,
+            replyMsg: {
+                ...msg,
+                id: "message-reply",
+                content: "replied content"
+            }
+        });
+
+        expect(fakeWithReply.fixedMsg.replyMsg).toMatchObject({
+            id: "message-reply",
+            content: "replied content",
+            replyMsg: null
+        });
+        expect(fakeWithReply.fixedMsg.referencedMessage).toBe(fakeWithReply.fixedMsg.replyMsg);
+
         expect(JSON.parse(FakeMsg.reply({ content: "reply" }, msg))).toEqual({
             content: "reply"
         });

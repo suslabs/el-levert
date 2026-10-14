@@ -6,7 +6,7 @@ import VMUtil from "../../../util/vm/VMUtil.js";
 class FakeMsg {
     static messageCount = 50;
 
-    constructor(msg) {
+    constructor(msg, isReply = false) {
         this.msg = msg ?? undefined;
 
         if (typeof this.msg === "undefined") {
@@ -18,12 +18,22 @@ class FakeMsg {
             channel = msg.channel,
             guild = channel?.guild;
 
-        const messageIds = channel?.messages?.cache
+        const messageIds = channel?.messages.cache
             .last(FakeMsg.messageCount)
             .slice(1)
             .map(msg => msg.id);
 
-        this.fixedMsg = VMUtil.removeCircularReferences({
+        let replyMsg = null;
+
+        if (!isReply) {
+            const reply = msg.replyMsg ?? msg.referencedMessage ?? null;
+
+            if (reply !== null) {
+                replyMsg = new FakeMsg(reply, true).fixedMsg;
+            }
+        }
+
+        const fixedMsg = VMUtil.removeCircularReferences({
             channelId: msg.channelId,
             guildId: msg.guildId,
             id: msg.id,
@@ -91,6 +101,11 @@ class FakeMsg {
                 ownerId: guild?.ownerId
             }
         });
+
+        fixedMsg.replyMsg = replyMsg;
+        fixedMsg.referencedMessage = replyMsg;
+
+        this.fixedMsg = fixedMsg;
     }
 
     static reply(text, msg) {
