@@ -6,6 +6,8 @@ import { DisabledGroup, OwnerGroup, OwnerUser } from "../../structures/permissio
 import Group from "../../structures/permission/Group.js";
 import User from "../../structures/permission/User.js";
 
+import { RevisionOperationTypes } from "../../structures/revision/RevisionOperationTypes.js";
+
 import { getClient, getConfig, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
@@ -358,9 +360,7 @@ class PermissionManager extends DBManager {
 
         if (group === null) {
             throw new PermissionError("Group doesn't exist");
-        }
-
-        if (group.name === OwnerGroup.name) {
+        } else if (group.name === OwnerGroup.name) {
             throw new PermissionError(`Can't add a user to the "${OwnerGroup.name}" group`, group.name);
         } else if (validate) {
             this.checkName(group.name);
@@ -386,9 +386,7 @@ class PermissionManager extends DBManager {
 
         if (group === null) {
             throw new PermissionError("Group doesn't exist");
-        }
-
-        if (group.name === OwnerGroup.name) {
+        } else if (group.name === OwnerGroup.name) {
             throw new PermissionError(`Can't remove a user from the "${OwnerGroup.name}" group`, group.name);
         } else if (validate) {
             this.checkName(group.name);
@@ -483,9 +481,7 @@ class PermissionManager extends DBManager {
 
         if (group === null) {
             throw new PermissionError("Group doesn't exist");
-        }
-
-        if (group.name === OwnerGroup.name) {
+        } else if (group.name === OwnerGroup.name) {
             throw new PermissionError(`Can't remove the "${OwnerGroup.name}" group`, group.name);
         } else if (validate) {
             this.checkName(group.name);
@@ -668,33 +664,50 @@ class PermissionManager extends DBManager {
             targetData = ObjectUtil.guaranteeObject(targetData);
 
             const subject =
-                    targetData.target === PermissionRevisionManager.userTarget
-                        ? await this.revisions.findUserSubject(targetData.user, targetData.group, tx)
-                        : await this.revisions.findGroupSubject(targetData.name, tx),
-                latest = subject === null ? null : await this.revisions.fetchLatest(subject, tx),
-                revision = revisionId == null ? latest : await this.revisions.fetchRevision(revisionId, tx);
+                targetData.target === PermissionRevisionManager.userTarget
+                    ? await this.revisions.findUserSubject(targetData.user, targetData.group, tx)
+                    : await this.revisions.findGroupSubject(targetData.name, tx);
 
-            if (subject === null || latest === null || revision === null) {
-                throw new PermissionError("Revision doesn't exist", revisionId);
+            if (subject === null) {
+                throw new PermissionError("Permission revision history doesn't exist");
             }
 
-            if (revision.subjectId !== subject.id || revision.target !== subject.target) {
-                throw new PermissionError("Revision doesn't exist", revisionId);
+            const latest = await this.revisions.fetchLatest(subject, tx);
+
+            if (latest === null) {
+                throw new PermissionError("Permission revision history doesn't exist");
             }
 
-            const target = revision.target,
-                restored =
-                    target === PermissionRevisionManager.groupTarget
-                        ? this.revisions.makeGroup(subject, revision, tx)
-                        : this.revisions.makeUser(subject, revision, tx);
+            let targetRevision;
 
-            let applied;
-
-            if (revision.target === PermissionRevisionManager.groupTarget) {
-                applied = await this._revertGroup(subject, restored, tx, this._revisionOptions({ ...options, actor }));
+            if (revisionId == null) {
+                targetRevision = latest;
             } else {
-                applied = await this._revertUser(subject, restored, tx);
+                targetRevision = await this.revisions.fetchRevision(revisionId, tx);
+
+                if (targetRevision === null || targetRevision.subjectId !== subject.id) {
+                    targetRevision = await this.revisions.fetchRevisionByIndex(subject, revisionId, tx);
+                }
             }
+
+            if (
+                targetRevision === null ||
+                targetRevision.subjectId !== subject.id ||
+                targetRevision.target !== subject.target
+            ) {
+                throw new PermissionError("Revision doesn't exist", revisionId);
+            }
+
+            const previous =
+                revisionId == null ? await this.revisions.fetchPrevious(targetRevision, tx) : targetRevision;
+
+            const target = targetRevision.target,
+                restored = this._getRevertedEntity(subject, targetRevision, previous, tx);
+
+            const applied =
+                target === PermissionRevisionManager.groupTarget
+                    ? await this._revertGroup(subject, restored, tx, this._revisionOptions({ ...options, actor }))
+                    : await this._revertUser(subject, restored, tx);
 
             const changed = Object.keys(this.revisions.getDiff(target, applied.before, applied.after, tx));
 
@@ -711,8 +724,8 @@ class PermissionManager extends DBManager {
                 this._revisionOptions({
                     ...options,
                     actor,
-                    revertOf: revision.id,
-                    restores: restored === null ? null : revision.id
+                    revertOf: targetRevision.id,
+                    restores: restored === null ? null : (previous?.id ?? targetRevision.id)
                 })
             );
 
@@ -731,6 +744,20 @@ class PermissionManager extends DBManager {
             restores: options.restores,
             reason: options.reason
         });
+    }
+
+    _getRevertedEntity(subject, target, previous, tx) {
+        if (target.operation === RevisionOperationTypes.create && previous === null) {
+            return null;
+        }
+
+        const revision = previous ?? target;
+
+        if (subject.target === PermissionRevisionManager.groupTarget) {
+            return this.revisions.makeGroup(subject, revision, tx);
+        } else {
+            return this.revisions.makeUser(subject, revision, tx);
+        }
     }
 
     async _revertGroup(subject, restored, tx, options) {
@@ -785,11 +812,12 @@ class PermissionManager extends DBManager {
 
     async _revertUser(subject, restored, tx) {
         const current = await tx.fetchUsersByUser(subject.key.user),
-            currentUser = current.find(user => user.group === subject.key.group),
-            group = await tx.fetchGroup(restored?.group ?? subject.key.group);
+            currentUser = current.find(user => user.group === subject.key.group);
+
+        const group = await tx.fetchGroup(restored?.group ?? subject.key.group);
 
         if (restored === null) {
-            if (typeof currentUser !== "undefined") {
+            if (typeof currentUser !== "undefined" && group !== null) {
                 await tx.remove(group, currentUser);
             }
 
@@ -807,7 +835,11 @@ class PermissionManager extends DBManager {
             await tx.add(group, restored);
         } else if (currentUser.group !== restored.group) {
             const currentGroup = await tx.fetchGroup(currentUser.group);
-            await tx.remove(currentGroup, currentUser);
+
+            if (currentGroup !== null) {
+                await tx.remove(currentGroup, currentUser);
+            }
+
             await tx.add(group, restored);
         }
 

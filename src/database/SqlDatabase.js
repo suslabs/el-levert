@@ -8,15 +8,22 @@ import { LoadStatus } from "../loaders/LoadStatus.js";
 
 import Util from "../util/Util.js";
 import ObjectUtil from "../util/ObjectUtil.js";
+import DatabaseUtil from "../util/database/DatabaseUtil.js";
 
 class SqlDatabase {
-    static migrationSeedSql = Object.freeze({
-        createTable:
-            "CREATE TABLE IF NOT EXISTS migrations " +
-            "(id INTEGER PRIMARY KEY, name TEXT NOT NULL, up TEXT NOT NULL, down TEXT NOT NULL);",
-        selectIds: "SELECT id FROM migrations;",
-        insertApplied: "INSERT INTO migrations (id, name, up, down) VALUES ($id, $name, $up, $down);"
-    });
+    static getMigrationSql(table = "migrations") {
+        const tableName = DatabaseUtil.quoteIdentifier(table, "Migration table name");
+
+        return Object.freeze({
+            createTable:
+                `CREATE TABLE IF NOT EXISTS ${tableName} ` +
+                "(id INTEGER PRIMARY KEY, name TEXT NOT NULL, up TEXT NOT NULL, down TEXT NOT NULL);",
+            selectIds: `SELECT id FROM ${tableName};`,
+            insertApplied: `INSERT INTO ${tableName} (id, name, up, down) VALUES ($id, $name, $up, $down);`
+        });
+    }
+
+    static migrationSql = SqlDatabase.getMigrationSql();
 
     constructor(dbPath, queryPath, options) {
         this.dbPath = dbPath;
@@ -28,12 +35,16 @@ class SqlDatabase {
         this._setOptions(options);
 
         this.db = null;
-        this._queryLoader = null;
-        this._additionalQueryLoaders = [];
+
+        this._queryLoaders = new Map();
         this._createQueries = [];
         this._queryRoot = null;
         this._migrations = new Map();
         this._loadedCategories = new Set();
+
+        if (this.queryPath != null) {
+            this._registerQueryPath(this.queryPath);
+        }
 
         this._childSetup = this.setup;
         this.setup = this._setup.bind(this);
@@ -73,12 +84,18 @@ class SqlDatabase {
 
     async create() {
         await this.open(OpenModes.OPEN_RWCREATE);
-        await this.setup("create");
         await this._loadCreateQueries();
 
         for (const query of this._createQueries) {
             await this.db.run(query);
         }
+
+        if (this.migrationsPath != null) {
+            const migrations = await this._loadMigrations();
+            await this._seedAppliedMigrations(migrations.map(m => m.id));
+        }
+
+        await this.setup("create");
     }
 
     async load() {
@@ -99,8 +116,15 @@ class SqlDatabase {
     }
 
     async migrate(options) {
+        options = ObjectUtil.guaranteeObject(options);
         await this.open(OpenModes.OPEN_RWCREATE);
-        return this.db.migrate(options);
+
+        const migrationsPath = options.migrationsPath ?? this.migrationsPath;
+
+        return await this.db.migrate({
+            ...options,
+            migrationsPath
+        });
     }
 
     async vacuum() {
@@ -182,8 +206,6 @@ class SqlDatabase {
         this.queryEncoding = options.queryEncoding ?? "utf8";
 
         this.migrationsPath = options.migrationsPath;
-        this.additionalQueryPaths = options.additionalQueryPaths ?? [];
-        this.additionalMigrationsPath = options.additionalMigrationsPath ?? null;
 
         this.enableWAL = options.enableWAL ?? true;
 
@@ -201,6 +223,12 @@ class SqlDatabase {
         this.rewriteFunc = typeof options.rewriteQueryStrings === "function" ? options.rewriteQueryStrings : undefined;
     }
 
+    _registerQueryPath(queryPath) {
+        if (Util.nonemptyString(queryPath) && !this._queryLoaders.has(queryPath)) {
+            this._queryLoaders.set(queryPath, null);
+        }
+    }
+
     _getQueryLoaderOptions(options) {
         return {
             fileExtension: this.queryExtension,
@@ -216,143 +244,75 @@ class SqlDatabase {
         queryLoader.loadQueries = options.loadQueries ?? queryLoader.loadQueries;
     }
 
-    _getAdditionalQueryLoaders(options) {
-        options = ObjectUtil.guaranteeObject(options);
+    _getQueryLoader(queryPath, options) {
+        let loader = this._queryLoaders.get(queryPath);
 
-        if (Util.empty(this._additionalQueryLoaders)) {
-            this._additionalQueryLoaders = this.additionalQueryPaths.map(
-                queryPath =>
-                    new QueryLoader(
-                        queryPath,
-                        this.logger,
-                        this._getQueryLoaderOptions({
-                            loadCreate: options.loadCreate,
-                            loadQueries: options.loadQueries,
-                            db: options.db
-                        })
-                    )
-            );
+        if (loader == null) {
+            loader = new QueryLoader(queryPath, this.logger, this._getQueryLoaderOptions(options));
+            this._queryLoaders.set(queryPath, loader);
+        } else {
+            this._setQueryLoaderOptions(loader, options);
         }
 
-        for (const queryLoader of this._additionalQueryLoaders) {
-            this._setQueryLoaderOptions(queryLoader, options);
-        }
-
-        return this._additionalQueryLoaders;
+        return loader;
     }
 
     async _loadCreateQueries() {
-        const queryLoader =
-            this._queryLoader ??
-            new QueryLoader(
-                this.queryPath,
-                this.logger,
-                this._getQueryLoaderOptions({
-                    loadCreate: true,
-                    loadQueries: false
-                })
-            );
+        this._createQueries = [];
 
-        if (this._queryLoader !== null) {
-            this._setQueryLoaderOptions(queryLoader, {
+        for (const queryPath of this._queryLoaders.keys()) {
+            const loader = this._getQueryLoader(queryPath, {
                 loadCreate: true,
                 loadQueries: false
             });
-        }
 
-        this._queryLoader = queryLoader;
-
-        const loaders = [
-            queryLoader,
-            ...this._getAdditionalQueryLoaders({
-                loadCreate: true,
-                loadQueries: false
-            })
-        ];
-
-        for (const loader of loaders) {
             const [, status] = await loader.load();
 
             if (status === LoadStatus.failed) {
                 return null;
             }
+
+            this._createQueries.push(...loader.createQueries);
         }
 
-        this._createQueries = loaders.flatMap(loader => loader.createQueries);
-        return queryLoader.result;
+        return this._createQueries;
+    }
+
+    _deleteLoadedQueries() {
+        for (const category of this._loadedCategories) {
+            delete this[category];
+        }
+
+        this._loadedCategories.clear();
     }
 
     _assignQueries(queries) {
-        this._deleteLoadedQueries();
-
         for (const [category, value] of Object.entries(queries)) {
             this[category] = value;
             this._loadedCategories.add(category);
         }
     }
 
-    async _loadDatabase() {
-        if (this._queryRoot !== null) {
-            return await this._loadScopedDatabase();
-        }
-
-        const queryLoader =
-            this._queryLoader ??
-            new QueryLoader(
-                this.queryPath,
-                this.logger,
-                this._getQueryLoaderOptions({
-                    db: this,
-                    rewriteQueryStrings: this.rewriteFunc,
-                    loadCreate: false,
-                    loadQueries: true
-                })
-            );
-
-        if (this._queryLoader !== null) {
-            this._setQueryLoaderOptions(queryLoader, {
-                db: this,
-                rewriteQueryStrings: this.rewriteFunc,
-                loadCreate: false,
-                loadQueries: true
-            });
-        }
-
-        this._queryLoader = queryLoader;
-
-        const loaders = [
-            queryLoader,
-            ...this._getAdditionalQueryLoaders({
-                db: this,
-                rewriteQueryStrings: this.rewriteFunc,
-                loadCreate: false,
-                loadQueries: true
-            })
-        ];
-
-        for (const loader of loaders) {
-            const [, status] = await loader.load();
-
-            if (status === LoadStatus.failed) {
-                return null;
-            }
-        }
-
-        const queries = Object.assign({}, ...loaders.map(loader => loader.queries));
-
-        this._assignQueries(queries);
-        return queryLoader.result;
+    _getQueryLoaders() {
+        return Array.from(this._queryLoaders.values()).filter(Boolean);
     }
 
     async _loadScopedDatabase() {
         const root = this._queryRoot;
 
-        if (!root?._queryLoader?.loaded) {
+        if (root === null) {
             return null;
         }
 
+        const loaders = root._getQueryLoaders();
+
+        if (Util.empty(loaders) || loaders.some(loader => !loader.loaded)) {
+            return null;
+        }
+
+        this._deleteLoadedQueries();
+
         const queries = {};
-        const loaders = [root._queryLoader, ...root._additionalQueryLoaders];
 
         for (const loader of loaders) {
             for (const [categoryName, categoryQueries] of Object.entries(loader.queries)) {
@@ -370,15 +330,41 @@ class SqlDatabase {
         return queries;
     }
 
+    async _loadDatabase() {
+        if (this._queryRoot !== null) {
+            return await this._loadScopedDatabase();
+        }
+
+        this._deleteLoadedQueries();
+
+        for (const queryPath of this._queryLoaders.keys()) {
+            const loader = this._getQueryLoader(queryPath, {
+                db: this,
+                rewriteQueryStrings: this.rewriteFunc,
+                loadCreate: false,
+                loadQueries: true
+            });
+
+            const [, status] = await loader.load();
+
+            if (status === LoadStatus.failed) {
+                return null;
+            }
+
+            this._assignQueries(loader.queries);
+        }
+
+        return true;
+    }
+
     async _setup(...args) {
         if (typeof this._childSetup === "function") {
             await this._childSetup.apply(this, args);
         }
 
-        if (args[0] === "load" && this.additionalMigrationsPath !== null) {
+        if (args[0] === "load" && this.migrationsPath != null) {
             await this.db.migrate({
-                migrationsPath: this.additionalMigrationsPath,
-                table: "revision_migrations"
+                migrationsPath: this.migrationsPath
             });
         }
     }
@@ -396,30 +382,29 @@ class SqlDatabase {
         return this._migrations.get(resolvedPath);
     }
 
-    async _seedAppliedMigrations(ids, migrationsPath = this.migrationsPath) {
+    async _seedAppliedMigrations(ids, migrationsPath = this.migrationsPath, table = "migrations") {
         const migrations = await this._loadMigrations(migrationsPath),
-            existing = new Set();
+            migrationSql = SqlDatabase.getMigrationSql(table);
 
-        await this.db.run(SqlDatabase.migrationSeedSql.createTable);
+        await this.db.transactionImmediate(async tx => {
+            await tx.run(migrationSql.createTable);
 
-        const rows = await this.db.all(SqlDatabase.migrationSeedSql.selectIds);
+            const rows = await tx.all(migrationSql.selectIds),
+                existing = new Set(rows.map(row => row.id));
 
-        for (const row of Array.from(rows)) {
-            existing.add(row.id);
-        }
+            for (const migration of migrations) {
+                if ((ids != null && !ids.includes(migration.id)) || existing.has(migration.id)) {
+                    continue;
+                }
 
-        for (const migration of migrations) {
-            if (!ids.includes(migration.id) || existing.has(migration.id)) {
-                continue;
+                await tx.run(migrationSql.insertApplied, {
+                    $id: migration.id,
+                    $name: migration.name,
+                    $up: migration.up,
+                    $down: migration.down
+                });
             }
-
-            await this.db.run(SqlDatabase.migrationSeedSql.insertApplied, {
-                $id: migration.id,
-                $name: migration.name,
-                $up: migration.up,
-                $down: migration.down
-            });
-        }
+        });
     }
 
     _copyScopedOverrides(scoped) {
@@ -448,16 +433,14 @@ class SqlDatabase {
         return this._queryRoot ?? this;
     }
 
-    _deleteLoadedQueries() {
-        for (const category of this._loadedCategories) {
-            delete this[category];
-        }
-
-        this._loadedCategories.clear();
-    }
-
     _unloadScopedDatabase() {
         this._deleteLoadedQueries();
+    }
+
+    _resetQueryLoaders() {
+        for (const queryPath of this._queryLoaders.keys()) {
+            this._queryLoaders.set(queryPath, null);
+        }
     }
 
     async _unloadDatabase() {
@@ -466,21 +449,21 @@ class SqlDatabase {
             return;
         }
 
-        if (!this._queryLoader?.loaded) {
-            this._queryLoader = null;
+        const loaders = this._getQueryLoaders();
+
+        if (Util.empty(loaders) || loaders.every(loader => !loader.loaded)) {
+            this._resetQueryLoaders();
             this._deleteLoadedQueries();
             return;
         }
 
         this._deleteLoadedQueries();
-        const loaders = [this._queryLoader, ...this._additionalQueryLoaders];
 
         for (const loader of loaders) {
             await loader.deleteQueries();
         }
 
-        this._queryLoader = null;
-        this._additionalQueryLoaders = [];
+        this._resetQueryLoaders();
         this._createQueries = [];
     }
 }

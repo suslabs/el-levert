@@ -88,15 +88,8 @@ let Util = {
     splitAt: (str, sep = " ") => {
         const idx = str.indexOf(sep);
 
-        let first, second;
-
-        if (idx === -1) {
-            first = str;
-            second = "";
-        } else {
-            first = str.slice(0, idx);
-            second = str.slice(idx);
-        }
+        const first = idx === -1 ? str : str.slice(0, idx),
+            second = idx === -1 ? "" : str.slice(idx);
 
         return [first, second];
     },

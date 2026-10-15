@@ -7,15 +7,7 @@ const CleanroomUtil = Object.freeze({
     maxSize: [15, 15, 15],
 
     calc: (l, w, h) => {
-        let dims;
-
-        if (Array.isArray(l)) {
-            dims = l;
-        } else {
-            dims = [l, w, h];
-        }
-
-        dims = dims.map(d => Util.clamp(d, 0));
+        const dims = (Array.isArray(l) ? l : [l, w, h]).map(d => Util.clamp(d, 0));
 
         if (dims.some((d, i) => d < CleanroomUtil.minSize[i])) {
             throw new UtilError(`Cleanroom must be at least ${CleanroomUtil.minSize.join("x")}`, dims);

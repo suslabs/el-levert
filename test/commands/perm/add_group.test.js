@@ -34,7 +34,9 @@ describe("perm add_group command", () => {
     test("creates groups through the real permission manager", async () => {
         const command = getCommand(runtime, "perm");
 
-        await expect(executeCommand(command, "add_group", { msg: adminMsg })).resolves.toContain("group_name level");
+        await expect(executeCommand(command, "add_group", { msg: adminMsg })).resolves.toContain(
+            "<group_name> <level>"
+        );
         await expect(executeCommand(command, "add_group mods 20", { msg: adminMsg })).resolves.toContain(
             "higher than or equal to your own"
         );

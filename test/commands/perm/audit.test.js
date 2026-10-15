@@ -84,6 +84,15 @@ describe("permission audit command", () => {
         expect(await run("audit helpers --limit 5")).not.toContain("Found **no** permission revisions");
     });
 
+    test("resolves username to user ID when auditing user membership", async () => {
+        await run("add_group moderators 5");
+        await run("add moderators alice");
+
+        const audit = await run("audit alice/moderators --limit 5");
+        expect(audit.embeds).toHaveLength(1);
+        expect(audit.embeds[0].data.description).toContain("alice-id in moderators");
+    });
+
     test("does not register audit, audit_clear, or revert subcommands when enableAuditLog is false", async () => {
         const disabledRuntime = await createCommandRuntime({
                 loadHandlers: true,

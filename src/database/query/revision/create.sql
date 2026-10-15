@@ -16,6 +16,7 @@ CREATE TABLE 'Revisions' (
     'id' INTEGER PRIMARY KEY AUTOINCREMENT,
     'target' TEXT NOT NULL CHECK (trim(target) != ''),
     'subjectId' INTEGER NOT NULL,
+    'subjectIndex' INTEGER NOT NULL DEFAULT 1,
     'operation' TEXT NOT NULL CHECK (trim(operation) != ''),
     'actor' TEXT NOT NULL CHECK (trim(actor) != ''),
     'created' INTEGER NOT NULL,
@@ -35,5 +36,7 @@ CREATE INDEX 'idx_Revisions_subject_created' ON 'Revisions' ('subjectId', 'creat
 CREATE INDEX 'idx_Revisions_actor_created' ON 'Revisions' ('actor', 'created');
 ---
 CREATE INDEX 'idx_Revisions_key' ON 'Revisions' ('target', 'key');
+---
+CREATE INDEX 'idx_Revisions_subject_index' ON 'Revisions' ('target', 'subjectId', 'subjectIndex');
 ---
 CREATE INDEX 'idx_Revisions_revertOf' ON 'Revisions' ('revertOf');

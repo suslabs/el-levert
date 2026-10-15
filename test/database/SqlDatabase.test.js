@@ -86,8 +86,10 @@ describe("SqlDatabase", () => {
         await db.create();
         await db.load();
 
-        expect(db._queryLoader.queryStrings.queries.insert).toContain("INSERT INTO Items");
-        expect(db._queryLoader.queryStrings.nestedQueries.fetch).toContain("SELECT value FROM Items");
+        expect(db._queryLoaders.get(db.queryPath).queryStrings.queries.insert).toContain("INSERT INTO Items");
+        expect(db._queryLoaders.get(db.queryPath).queryStrings.nestedQueries.fetch).toContain(
+            "SELECT value FROM Items"
+        );
 
         await db.queries.insert.run("alpha");
         expect((await db.nestedQueries.fetch.get("alpha")).value).toBe("alpha");
@@ -107,7 +109,7 @@ describe("SqlDatabase", () => {
         ]);
 
         await db._unloadDatabase();
-        expect(db._queryLoader).toBeNull();
+        expect(db._queryLoaders.get(db.queryPath)).toBeNull();
         expect(db.queries).toBeUndefined();
         expect(db.nestedQueries).toBeUndefined();
     });
@@ -140,18 +142,18 @@ describe("SqlDatabase", () => {
         await db.load();
 
         expect(loadPathsSpy).toHaveBeenCalledTimes(1);
-        expect(db._queryLoader.createQueries).toEqual([
+        expect(db._queryLoaders.get(db.queryPath).createQueries).toEqual([
             "CREATE TABLE Items (value TEXT) STRICT;",
             "CREATE TABLE Extra (value TEXT) STRICT;"
         ]);
 
         await db.queries.insert.run("alpha");
-        const beforeLoader = db._queryLoader;
+        const beforeLoader = db._queryLoaders.get(db.queryPath);
 
         await db.vacuum();
 
-        expect(db._queryLoader).not.toBeNull();
-        expect(db._queryLoader).not.toBe(beforeLoader);
+        expect(db._queryLoaders.get(db.queryPath)).not.toBeNull();
+        expect(db._queryLoaders.get(db.queryPath)).not.toBe(beforeLoader);
         expect((await db.queries.fetch.get("alpha")).value).toBe("alpha");
     });
 
@@ -214,5 +216,53 @@ describe("SqlDatabase", () => {
         await tx2.rollback();
 
         expect((await db.queries.list.all()).map(row => row.value)).toEqual(["alpha"]);
+    });
+
+    test("loads and scopes queries across multiple registered query paths", async () => {
+        const primaryDir = path.join(tempDir, "query-primary"),
+            secondaryDir = path.join(tempDir, "query-secondary"),
+            dbPath = path.join(tempDir, "multi-path.sqlite");
+
+        await fs.mkdir(path.join(primaryDir, "primary"), { recursive: true });
+        await fs.mkdir(path.join(secondaryDir, "secondary"), { recursive: true });
+
+        await fs.writeFile(path.join(primaryDir, "create.sql"), "CREATE TABLE PrimaryItems (val TEXT) STRICT;");
+        await fs.writeFile(path.join(primaryDir, "primary", "insert.sql"), "INSERT INTO PrimaryItems VALUES (?);");
+
+        await fs.writeFile(path.join(secondaryDir, "create.sql"), "CREATE TABLE SecondaryItems (val TEXT) STRICT;");
+        await fs.writeFile(
+            path.join(secondaryDir, "secondary", "insert.sql"),
+            "INSERT INTO SecondaryItems VALUES (?);"
+        );
+
+        class MultiSqlDatabase extends SqlDatabase {
+            constructor(dbPath, queryPath, options) {
+                super(dbPath, queryPath, options);
+                this._registerQueryPath(secondaryDir);
+            }
+        }
+
+        db = new MultiSqlDatabase(dbPath, primaryDir, { enableWAL: false });
+        await db.create();
+        await db.load();
+
+        expect(db._getQueryLoaders()).toHaveLength(2);
+
+        await db.primaryQueries.insert.run("p1");
+        await db.secondaryQueries.insert.run("s1");
+
+        expect(await db.db.get("SELECT val FROM PrimaryItems")).toEqual({ val: "p1" });
+        expect(await db.db.get("SELECT val FROM SecondaryItems")).toEqual({ val: "s1" });
+
+        await db.transactionImmediate(async tx => {
+            await tx.primaryQueries.insert.run("p2");
+            await tx.secondaryQueries.insert.run("s2");
+        });
+
+        expect((await db.db.all("SELECT val FROM PrimaryItems ORDER BY val")).map(r => r.val)).toEqual(["p1", "p2"]);
+        expect((await db.db.all("SELECT val FROM SecondaryItems ORDER BY val")).map(r => r.val)).toEqual(["s1", "s2"]);
+
+        await db._unloadDatabase();
+        expect(db._getQueryLoaders()).toEqual([]);
     });
 });

@@ -2,8 +2,6 @@ import { escapeMarkdown } from "discord.js";
 
 import { getClient, getEmoji } from "../../LevertClient.js";
 
-import Util from "../../util/Util.js";
-
 class PermRemoveGroupCommand {
     static info = {
         name: "remove_group",

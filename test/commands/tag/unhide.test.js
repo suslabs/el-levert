@@ -35,8 +35,8 @@ describe("tag unhide command", () => {
         expect(tag.isHidden).toBe(false);
 
         const listOut = await executeCommand(command, "list", { msg });
-        expect(listOut.files[0].attachment.toString()).toContain("alpha");
-        expect(listOut.files[0].attachment.toString()).not.toContain("alpha (hidden)");
+        expect(listOut.embeds[0].data.description).toContain("alpha");
+        expect(listOut.embeds[0].data.description).not.toContain("alpha (hidden)");
     });
 
     test("fails if tag is not hidden", async () => {

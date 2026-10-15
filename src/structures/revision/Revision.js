@@ -14,7 +14,7 @@ class Revision {
         snapshot: null,
         revertOf: null,
         restores: null,
-        reason: ""
+        reason: null
     };
 
     static dataProps = [

@@ -1,7 +1,5 @@
 import { getClient, getEmoji } from "../../LevertClient.js";
 
-import Util from "../../util/Util.js";
-
 class TagRandomCommand {
     static info = {
         name: "random",

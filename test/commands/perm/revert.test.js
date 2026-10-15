@@ -77,6 +77,29 @@ describe("permission revert command", () => {
         );
     });
 
+    test("reverts latest action when revision ID is omitted and resolves username to ID", async () => {
+        await run("add_group moderators 5");
+        await run("add moderators alice");
+
+        await run("update_group moderators helpers 6");
+        expect(await runtime.client.permManager.fetchGroup("helpers")).toMatchObject({ level: 6 });
+
+        // Omit revision ID to undo the rename/update
+        const revertGroupRes = await run("revert group helpers");
+        expect(revertGroupRes).toContain("Reverted permission subject");
+        expect(await runtime.client.permManager.fetchGroup("moderators")).toMatchObject({ level: 5 });
+        expect(await runtime.client.permManager.fetchGroup("helpers")).toBeNull();
+
+        // Remove alice from moderators
+        await run("remove moderators alice");
+        expect(await runtime.client.permManager.isInGroup("moderators", "alice-id")).toBeFalsy();
+
+        // Omit revision ID and use username 'alice' instead of 'alice-id'
+        const revertUserRes = await run("revert membership alice/moderators");
+        expect(revertUserRes).toContain("Reverted permission subject");
+        expect(await runtime.client.permManager.isInGroup("moderators", "alice-id")).toBeTruthy();
+    });
+
     test("disallows permission revert when enableAuditLog is false", async () => {
         runtime.client.config.enableAuditLog = false;
 

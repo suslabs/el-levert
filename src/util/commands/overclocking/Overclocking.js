@@ -82,9 +82,7 @@ class Overclocking {
     static resolveVoltage(input) {
         if (typeof input === "number") {
             return input >= 0 && input < this.tierCount ? Math.floor(input) : null;
-        }
-
-        if (typeof input !== "string" || Util.empty(input)) {
+        } else if (typeof input !== "string" || Util.empty(input)) {
             return null;
         }
 
@@ -95,7 +93,6 @@ class Overclocking {
         }
 
         const tier = tierByName[input.toLowerCase()];
-
         return typeof tier === "number" ? tier : null;
     }
 
@@ -106,9 +103,7 @@ class Overclocking {
     static parseDuration(input) {
         if (typeof input === "number") {
             return Math.floor(input);
-        }
-
-        if (typeof input !== "string" || Util.empty(input)) {
+        } else if (typeof input !== "string" || Util.empty(input)) {
             return NaN;
         }
 

@@ -309,11 +309,9 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
             this.indexList(table)
         ]);
 
-        const indexColumns = new Map();
-
-        for (const index of indexes) {
-            indexColumns.set(index.name, await this.indexInfo(index.name));
-        }
+        const indexColumns = new Map(
+            await Promise.all(indexes.map(async index => [index.name, await this.indexInfo(index.name)]))
+        );
 
         return {
             exists,

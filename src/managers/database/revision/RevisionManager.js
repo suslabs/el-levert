@@ -3,13 +3,13 @@ import { RevisionOperationTypes } from "../../../structures/revision/RevisionOpe
 import { getConfig } from "../../../LevertClient.js";
 
 import Util from "../../../util/Util.js";
-import ArrayUtil from "../../../util/ArrayUtil.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
+import RevisionUtil from "../../../util/RevisionUtil.js";
 
 class RevisionManager {
-    constructor(spec, store) {
+    constructor(spec, db) {
         this.spec = spec;
-        this.store = store;
+        this.db = db;
     }
 
     get enabled() {
@@ -29,46 +29,22 @@ class RevisionManager {
     }
 
     restoreSnapshot(subject, revision) {
-        if (revision.snapshot === null) {
-            return null;
-        }
-
-        const data = {
-            ...subject.staticSnapshot,
-            ...revision.snapshot
-        };
-
-        return Object.fromEntries(Object.entries(data).map(([key, value]) => [key, this.spec.decodeValue(key, value)]));
+        return RevisionUtil.restoreSnapshot(subject, revision, (key, value) => this.spec.decodeValue(key, value));
     }
 
     diff(before, after) {
-        before = ObjectUtil.guaranteeObject(before);
-        after = ObjectUtil.guaranteeObject(after);
-
-        const fields = ArrayUtil.unique(Object.keys(before).concat(Object.keys(after)));
-
-        return Object.fromEntries(
-            fields
-                .filter(field => !this._sameValue(before[field], after[field]))
-                .map(field => [
-                    field,
-                    {
-                        before: before[field],
-                        after: after[field]
-                    }
-                ])
-        );
+        return RevisionUtil.diff(before, after);
     }
 
     async ensureSubject(data) {
         const key = this.getKey(data);
 
         let subject =
-            (await this.store.fetchSubject(this.spec.target, key)) ??
-            (await this.store.fetchInactiveSubject(this.spec.target, key));
+            (await this.db.fetchSubject(this.spec.target, key)) ??
+            (await this.db.fetchInactiveSubject(this.spec.target, key));
 
         if (subject === null) {
-            subject = await this.store.createSubject(this.spec.target, key, this.getStaticSnapshot(data));
+            subject = await this.db.createSubject(this.spec.target, key, this.getStaticSnapshot(data));
         }
 
         return subject;
@@ -76,8 +52,9 @@ class RevisionManager {
 
     async findSubject(key) {
         return (
-            (await this.store.fetchSubject(this.spec.target, key)) ??
-            (await this.store.fetchSubjectByRevisionKey(this.spec.target, key))
+            (await this.db.fetchSubject(this.spec.target, key)) ??
+            (await this.db.fetchInactiveSubject(this.spec.target, key)) ??
+            (await this.db.fetchSubjectByRevisionKey(this.spec.target, key))
         );
     }
 
@@ -92,7 +69,7 @@ class RevisionManager {
             snapshot = this.getSnapshot(data),
             changed = this._changedFields(null, snapshot);
 
-        await this.store.restoreSubject(subject, this.getKey(data));
+        await this.db.restoreSubject(subject, this.getKey(data));
 
         return await this._addRevision(subject, RevisionOperationTypes.create, snapshot, changed, options);
     }
@@ -119,7 +96,7 @@ class RevisionManager {
             key = this.getKey(after);
 
         if (!this._sameValue(oldKey, key)) {
-            await this.store.updateSubjectKey(subject, key);
+            await this.db.updateSubjectKey(subject, key);
         }
 
         return await this._addRevision(subject, RevisionOperationTypes.update, snapshot, changed, options);
@@ -138,7 +115,7 @@ class RevisionManager {
         const snapshot = this.getSnapshot(data),
             changed = Object.keys(snapshot);
 
-        await this.store.markSubjectDeleted(subject);
+        await this.db.markSubjectDeleted(subject);
 
         return await this._addRevision(subject, RevisionOperationTypes.delete, null, changed, options);
     }
@@ -151,9 +128,9 @@ class RevisionManager {
         options = ObjectUtil.guaranteeObject(options);
 
         if (snapshot === null) {
-            await this.store.markSubjectDeleted(subject);
+            await this.db.markSubjectDeleted(subject);
         } else {
-            await this.store.restoreSubject(subject, this._snapshotKey(snapshot));
+            await this.db.restoreSubject(subject, this._snapshotKey(snapshot));
         }
 
         return await this._addRevision(subject, RevisionOperationTypes.revert, snapshot, changed, options);
@@ -161,7 +138,7 @@ class RevisionManager {
 
     async clear(options) {
         options = ObjectUtil.guaranteeObject(options);
-        return await this.store.clear(this.spec.target, options);
+        return await this.db.clear(this.spec.target, options);
     }
 
     _snapshotKey(snapshot) {
@@ -169,20 +146,15 @@ class RevisionManager {
     }
 
     _changedFields(before, after) {
-        if (before === null) {
-            return Object.keys(after);
-        }
-
-        const diff = this.diff(before, after);
-        return Object.keys(diff);
+        return RevisionUtil.changedFields(before, after);
     }
 
     _sameValue(a, b) {
-        return JSON.stringify(a) === JSON.stringify(b);
+        return RevisionUtil.sameValue(a, b);
     }
 
     async _ensureBaseline(subject, data, options) {
-        const latest = await this.store.fetchLatest(this.spec.target, subject.id);
+        const latest = await this.db.fetchLatest(this.spec.target, subject.id);
 
         if (latest === null) {
             const snapshot = this.getSnapshot(data),
@@ -193,7 +165,7 @@ class RevisionManager {
     }
 
     async _addRevision(subject, operation, snapshot, changed, options) {
-        return await this.store.addRevision({
+        return await this.db.addRevision({
             target: this.spec.target,
             subjectId: subject.id,
             operation,

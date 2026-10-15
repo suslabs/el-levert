@@ -1,7 +1,4 @@
-import path from "node:path";
-
-import SqlDatabase from "./SqlDatabase.js";
-import RevisionStore from "./revision/RevisionStore.js";
+import RevisionDatabase from "./RevisionDatabase.js";
 
 import Tag from "../structures/tag/Tag.js";
 import TagBitField from "../structures/tag/TagBitField.js";
@@ -9,13 +6,14 @@ import TagBitField from "../structures/tag/TagBitField.js";
 import Util from "../util/Util.js";
 import ArrayUtil from "../util/ArrayUtil.js";
 import ObjectUtil from "../util/ObjectUtil.js";
+import DatabaseUtil from "../util/database/DatabaseUtil.js";
 
 function sortTags(tags) {
     const objs = typeof Util.first(tags) !== "string";
     ArrayUtil.sort(tags, objs ? tag => tag.name : null);
 }
 
-class TagDatabase extends SqlDatabase {
+class TagDatabase extends RevisionDatabase {
     static tagDataProps = ["aliasName", "name", "body", "bin", "owner", "args", "registered", "lastEdited", "type"];
 
     constructor(dbPath, queryPath, options) {
@@ -25,20 +23,8 @@ class TagDatabase extends SqlDatabase {
 
         super(dbPath, queryPath, {
             ...options,
-            customFunctions,
-            additionalQueryPaths: options.additionalQueryPaths ?? [path.resolve(queryPath, "..", "revision")],
-            additionalMigrationsPath:
-                options.additionalMigrationsPath ??
-                (typeof options.migrationsPath === "string"
-                    ? path.resolve(options.migrationsPath, "..", "revision")
-                    : null)
+            customFunctions
         });
-    }
-
-    async setup(mode) {
-        if (mode === "load") {
-            await this._migrateLegacySchema();
-        }
     }
 
     async exists(name) {
@@ -67,24 +53,14 @@ class TagDatabase extends SqlDatabase {
             $name: name
         });
 
-        if (typeof row._data === "undefined") {
-            return null;
-        }
-
-        return new Tag(row);
+        return DatabaseUtil.rowEntity(row, Tag);
     }
 
     async fetchAlias(name, separator = Tag._argsSeparator) {
-        const rows = await this.tagQueries.fetchAlias.all({
+        return await this.tagQueries.fetchAlias.all({
             $name: name,
             $separator: separator
         });
-
-        return rows._data ?? [];
-    }
-
-    getRevisionStore() {
-        return new RevisionStore(this);
     }
 
     async add(tag, options) {
@@ -169,7 +145,7 @@ class TagDatabase extends SqlDatabase {
             $name: name
         });
 
-        return Array.from(rows).map(row => new Tag(row));
+        return DatabaseUtil.rowEntity(rows, Tag);
     }
 
     async delete(tag) {
@@ -188,7 +164,7 @@ class TagDatabase extends SqlDatabase {
 
     async fullDump(flag = null) {
         const rows = await this.tagQueries.fullDump.all(TagBitField.query(flag)),
-            tags = rows.map(row => new Tag(row));
+            tags = DatabaseUtil.rowEntity(rows, Tag);
 
         sortTags(tags);
         return tags;
@@ -208,7 +184,7 @@ class TagDatabase extends SqlDatabase {
         const rows = await this.tagQueries.list.all({
                 $user: user
             }),
-            tags = rows.map(row => new Tag(row));
+            tags = DatabaseUtil.rowEntity(rows, Tag);
 
         sortTags(tags);
         return tags;
@@ -291,19 +267,15 @@ class TagDatabase extends SqlDatabase {
     }
 
     async sizeLeaderboard(limit) {
-        const rows = await this.quotaQueries.sizeLeaderboard.all({
+        return await this.quotaQueries.sizeLeaderboard.all({
             $limit: limit
         });
-
-        return Array.from(rows);
     }
 
     async countLeaderboard(limit) {
-        const rows = await this.quotaQueries.countLeaderboard.all({
+        return await this.quotaQueries.countLeaderboard.all({
             $limit: limit
         });
-
-        return Array.from(rows);
     }
 
     async usageFetch(name) {
@@ -344,53 +316,9 @@ class TagDatabase extends SqlDatabase {
     }
 
     async usageLeaderboard(limit) {
-        const rows = await this.usageQueries.leaderboard.all({
+        return await this.usageQueries.leaderboard.all({
             $limit: limit
         });
-
-        return Array.from(rows);
-    }
-
-    async _migrateLegacySchema() {
-        const schema = await this.db.tableSchema("Tags");
-
-        if (Util.empty(schema.base)) {
-            return;
-        }
-
-        if (schema.base.has("hops") && !schema.base.has("aliasName")) {
-            await this.db.migrate({
-                migrationsPath: this.migrationsPath
-            });
-
-            return;
-        }
-
-        const typeColumn = schema.baseColumns.get("type");
-
-        const hasBlobType = typeColumn?.type === "BLOB",
-            hasIntegerType = typeColumn?.type === "INTEGER";
-
-        if (schema.base.has("aliasName") && hasIntegerType) {
-            await this._seedAppliedMigrations([1]);
-            await this.db.migrate({
-                migrationsPath: this.migrationsPath
-            });
-
-            return;
-        }
-
-        if (schema.base.has("aliasName") && hasBlobType) {
-            if (!schema.base.has("bin")) {
-                await this.db.run("DELETE FROM migrations WHERE id = 3 AND name = 'revisions'");
-                await this._seedAppliedMigrations([1, 2]);
-                await this.db.migrate({
-                    migrationsPath: this.migrationsPath
-                });
-            }
-
-            return;
-        }
     }
 }
 

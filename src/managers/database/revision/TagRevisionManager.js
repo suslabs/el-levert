@@ -52,6 +52,7 @@ class TagRevisionManager {
 
     constructor(tagManager) {
         this.tagManager = tagManager;
+
         this.spec = new RevisionTargetSpec({
             target: this.constructor.target,
             key: ["name"],
@@ -96,23 +97,23 @@ class TagRevisionManager {
     }
 
     async fetchRevision(id, tx = this.tagManager.tag_db) {
-        return await tx.getRevisionStore().fetchRevision(id);
+        return await tx.fetchRevision(id);
     }
 
     async fetchRevisionByIndex(subject, subjectIndex, tx = this.tagManager.tag_db) {
-        return await tx.getRevisionStore().fetchRevisionBySubjectIndex(this.spec.target, subject.id, subjectIndex);
+        return await tx.fetchRevisionBySubjectIndex(this.spec.target, subject.id, subjectIndex);
     }
 
     async fetchLatest(subject, tx = this.tagManager.tag_db) {
-        return await tx.getRevisionStore().fetchLatest(this.spec.target, subject.id);
+        return await tx.fetchLatest(this.spec.target, subject.id);
     }
 
     async fetchPrevious(revision, tx = this.tagManager.tag_db) {
-        return await tx.getRevisionStore().fetchPrevious(revision);
+        return await tx.fetchPrevious(revision);
     }
 
     async countRevertsOf(revision, tx = this.tagManager.tag_db) {
-        return await tx.getRevisionStore().countRevertsOf(revision);
+        return await tx.countRevertsOf(revision);
     }
 
     async list(options = {}, tx = this.tagManager.tag_db) {
@@ -125,7 +126,7 @@ class TagRevisionManager {
             subjectId = subject?.id ?? -1;
         }
 
-        return await tx.getRevisionStore().listRevisions({
+        return await tx.listRevisions({
             target: this.spec.target,
             ...options,
             subjectId
@@ -167,14 +168,17 @@ class TagRevisionManager {
         }
 
         if (subject === null) {
-            subject = await tx.getRevisionStore().fetchSubjectById(revision.subjectId);
+            subject = await tx.fetchSubjectById(revision.subjectId);
         }
 
-        const previous = await this.fetchPrevious(revision, tx),
-            manager = this._manager(tx),
-            before = previous === null ? null : manager.restoreSnapshot(subject, previous),
-            after = revision.snapshot === null ? null : manager.restoreSnapshot(subject, revision),
-            diff = manager.diff(before, after);
+        const previous = await this.fetchPrevious(revision, tx);
+
+        const manager = this._manager(tx);
+
+        const before = previous === null ? null : manager.restoreSnapshot(subject, previous),
+            after = revision.snapshot === null ? null : manager.restoreSnapshot(subject, revision);
+
+        const diff = manager.diff(before, after);
 
         return {
             subject,
@@ -217,7 +221,7 @@ class TagRevisionManager {
     }
 
     _manager(tx) {
-        return new RevisionManager(this.spec, tx.getRevisionStore());
+        return new RevisionManager(this.spec, tx);
     }
 }
 

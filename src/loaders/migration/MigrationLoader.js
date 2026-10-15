@@ -1,9 +1,11 @@
 import DirectoryLoader from "../DirectoryLoader.js";
 import MigrationFileLoader from "./MigrationFileLoader.js";
 
+import { LoadStatus } from "../LoadStatus.js";
+
 import ObjectUtil from "../../util/ObjectUtil.js";
 
-import { LoadStatus } from "../LoadStatus.js";
+import DatabaseError from "../../errors/DatabaseError.js";
 
 class MigrationLoader extends DirectoryLoader {
     constructor(dirPath, logger, options) {
@@ -40,7 +42,16 @@ class MigrationLoader extends DirectoryLoader {
             return this.migrations;
         }
 
-        const migrations = Array.from(this.data.values()).sort((a, b) => a.id - b.id);
+        const migrations = Array.from(this.data.values()).sort((a, b) => a.id - b.id),
+            seenIds = new Set();
+
+        for (const migration of migrations) {
+            if (seenIds.has(migration.id)) {
+                throw new DatabaseError(`Duplicate migration ID: ${migration.id}`);
+            }
+
+            seenIds.add(migration.id);
+        }
 
         this.migrations = migrations;
         return migrations;

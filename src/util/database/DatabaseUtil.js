@@ -9,6 +9,16 @@ import DatabaseError from "../../errors/DatabaseError.js";
 const eventValuesCache = new WeakMap();
 
 const DatabaseUtil = Object.freeze({
+    rowEntity: (row, _class) => {
+        if (Array.isArray(row)) {
+            return row.map(r => DatabaseUtil.rowEntity(r, _class));
+        } else if (row == null || Util.empty(Object.keys(row))) {
+            return null;
+        } else {
+            return new _class(row);
+        }
+    },
+
     getEventValues: events => {
         let values = eventValuesCache.get(events);
 

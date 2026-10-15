@@ -141,4 +141,77 @@ describe("Sqlite migrations", () => {
         expect(stored.up).not.toContain("--");
         expect(stored.down).not.toContain("--");
     });
+
+    test("rejects empty migrations directory via loader", async () => {
+        const migrationsPath = path.join(tempDir, "empty-migrations");
+        const dbPath = path.join(tempDir, "empty.sqlite");
+
+        await fs.mkdir(migrationsPath, { recursive: true });
+
+        db = new SqliteDatabase(dbPath, undefined, {
+            enableWALMode: false
+        });
+
+        await db.open();
+        await expect(db.migrate({ migrationsPath })).rejects.toThrow("Couldn't load any migrations");
+    });
+
+    test("rolls back all migrations when force is 0", async () => {
+        const migrationsPath = path.join(tempDir, "force-zero-migrations");
+        const dbPath = path.join(tempDir, "force-zero.sqlite");
+
+        await fs.mkdir(migrationsPath, { recursive: true });
+        await fs.writeFile(
+            path.join(migrationsPath, "001-initial.sql"),
+            `
+            -- up
+            CREATE TABLE Items (value TEXT);
+            -- down
+            DROP TABLE Items;
+            `
+        );
+
+        db = new SqliteDatabase(dbPath, undefined, {
+            enableWALMode: false
+        });
+
+        await db.open();
+        await db.migrate({ migrationsPath });
+
+        await db.migrate({ migrationsPath, force: 0 });
+        const applied = await db.all('SELECT id FROM "migrations"');
+        expect(applied).toEqual([]);
+    });
+
+    test("rejects duplicate migration IDs", async () => {
+        const migrationsPath = path.join(tempDir, "dup-migrations");
+        const dbPath = path.join(tempDir, "dup.sqlite");
+
+        await fs.mkdir(migrationsPath, { recursive: true });
+        await fs.writeFile(
+            path.join(migrationsPath, "001-first.sql"),
+            `
+            -- up
+            CREATE TABLE Items (value TEXT);
+            -- down
+            DROP TABLE Items;
+            `
+        );
+        await fs.writeFile(
+            path.join(migrationsPath, "001-second.sql"),
+            `
+            -- up
+            CREATE TABLE Other (value TEXT);
+            -- down
+            DROP TABLE Other;
+            `
+        );
+
+        db = new SqliteDatabase(dbPath, undefined, {
+            enableWALMode: false
+        });
+
+        await db.open();
+        await expect(db.migrate({ migrationsPath })).rejects.toThrow("Duplicate migration ID: 1");
+    });
 });

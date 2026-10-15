@@ -2,6 +2,8 @@ import { EventEmitter } from "node:events";
 
 import { describe, expect, test, vi } from "vitest";
 
+import SqliteResult from "../../../src/database/drivers/sqlite/SqliteResult.js";
+
 import DatabaseUtil from "../../../src/util/database/DatabaseUtil.js";
 import DatabaseError from "../../../src/errors/DatabaseError.js";
 
@@ -110,5 +112,40 @@ describe("DatabaseUtil", () => {
 
         expect(() => DatabaseUtil.quoteIdentifier("")).toThrow("Identifier must be a non-empty string");
         expect(() => DatabaseUtil.sanitize(1)).toThrow("Argument 0 must be a string or null");
+    });
+
+    test("converts database rows to entities via rowEntity", () => {
+        class Entity {
+            constructor(row) {
+                this.name = row.name;
+            }
+        }
+
+        expect(DatabaseUtil.rowEntity(null, Entity)).toBeNull();
+        expect(DatabaseUtil.rowEntity(undefined, Entity)).toBeNull();
+        expect(DatabaseUtil.rowEntity({}, Entity)).toBeNull();
+
+        const entity = DatabaseUtil.rowEntity({ name: "test" }, Entity);
+        expect(entity).toBeInstanceOf(Entity);
+        expect(entity.name).toBe("test");
+
+        const entities = DatabaseUtil.rowEntity([{ name: "e1" }, { name: "e2" }], Entity);
+        expect(entities).toHaveLength(2);
+        expect(entities[0].name).toBe("e1");
+        expect(entities[1].name).toBe("e2");
+
+        const singleResult = new SqliteResult({ name: "s1" }, {});
+        const singleEntity = DatabaseUtil.rowEntity(singleResult, Entity);
+        expect(singleEntity).toBeInstanceOf(Entity);
+        expect(singleEntity.name).toBe("s1");
+
+        const emptyResult = new SqliteResult(undefined, {});
+        expect(DatabaseUtil.rowEntity(emptyResult, Entity)).toBeNull();
+
+        const arrayResult = new SqliteResult([{ name: "a1" }, { name: "a2" }], {});
+        const arrayEntities = DatabaseUtil.rowEntity(arrayResult, Entity);
+        expect(arrayEntities).toHaveLength(2);
+        expect(arrayEntities[0].name).toBe("a1");
+        expect(arrayEntities[1].name).toBe("a2");
     });
 });

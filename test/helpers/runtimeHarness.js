@@ -125,17 +125,22 @@ function buildDefaultDiscordFns(tempDir) {
             },
             send: async () => undefined
         }),
-        findUsers: async query => [
-            {
-                id: `${query}-id`,
-                user: {
-                    id: `${query}-id`,
-                    username: query
-                },
-                nickname: null,
-                displayName: query
-            }
-        ],
+        findUsers: async query => {
+            const id = query.endsWith("-id") ? query : `${query}-id`,
+                username = query.endsWith("-id") ? query.slice(0, -3) : query;
+
+            return [
+                {
+                    id,
+                    user: {
+                        id,
+                        username
+                    },
+                    nickname: null,
+                    displayName: username
+                }
+            ];
+        },
         _attachmentRoot: tempDir
     };
 }

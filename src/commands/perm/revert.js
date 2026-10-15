@@ -47,8 +47,9 @@ class PermRevertCommand {
         }
 
         const { revisionId, subject } = args,
-            targetType = ctx.arg("targetType"),
-            target = this._getTarget(targetType, subject);
+            targetType = ctx.arg("targetType");
+
+        const target = await this._getTarget(targetType, subject);
 
         if (target === null) {
             return targetType === "membership"
@@ -105,7 +106,7 @@ class PermRevertCommand {
         return Number.isInteger(revisionId) ? { subject, revisionId } : null;
     }
 
-    _getTarget(targetType, subject) {
+    async _getTarget(targetType, subject) {
         switch (targetType) {
             case "group":
                 return {
@@ -113,13 +114,13 @@ class PermRevertCommand {
                     name: subject
                 };
             case "membership":
-                return this._getMembershipTarget(subject);
+                return await this._getMembershipTarget(subject);
             default:
                 return null;
         }
     }
 
-    _getMembershipTarget(subject) {
+    async _getMembershipTarget(subject) {
         if (Util.empty(subject)) {
             return null;
         }
@@ -130,10 +131,21 @@ class PermRevertCommand {
             return null;
         }
 
+        const userText = parts[0],
+            group = parts[1];
+
+        let userId = userText;
+
+        const find = Util.first(await getClient().findUsers(userText));
+
+        if (typeof find !== "undefined") {
+            userId = find.id;
+        }
+
         return {
             target: PermissionRevisionTargets.user,
-            user: parts[0],
-            group: parts[1]
+            user: userId,
+            group
         };
     }
 }

@@ -1,6 +1,3 @@
-import { getEmoji } from "../../LevertClient.js";
-
-import Util from "../../util/Util.js";
 import StreamPipeline from "../../util/commands/stream/StreamPipeline.js";
 
 class TagStreamCommand {

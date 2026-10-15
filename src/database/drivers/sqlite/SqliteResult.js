@@ -7,11 +7,18 @@ class SqliteResult extends ProxiedResult {
 
         this.setData(data);
         this.setInfo({
-            lastID: st.lastID,
-            changes: st.changes
+            lastID: st?.lastID,
+            changes: st?.changes
         });
 
-        return new Proxy(this, ResultProxyHandler);
+        const isArray = Array.isArray(data),
+            target = isArray ? data : this;
+
+        if (isArray) {
+            ResultProxyHandler.registerTarget(data, this);
+        }
+
+        return new Proxy(target, ResultProxyHandler);
     }
 }
 

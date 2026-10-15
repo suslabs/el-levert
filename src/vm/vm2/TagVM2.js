@@ -108,11 +108,10 @@ class TagVM2 extends VM {
         try {
             out = await this.procPool.run(formattedCode, vmObjects, this.vmOptions, vmFuncs, additionalPath);
 
-            if (typeof outputVars.reply.reply !== "undefined") {
-                out = outputVars.reply.reply;
-            } else {
-                out = VMUtil.formatOutput(out);
-            }
+            out =
+                typeof outputVars.reply.reply !== "undefined"
+                    ? outputVars.reply.reply
+                    : VMUtil.formatOutput(out);
         } catch (err) {
             out = this.handleError(err);
         }

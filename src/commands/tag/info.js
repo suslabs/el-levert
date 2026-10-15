@@ -79,7 +79,7 @@ class TagInfoCommand {
                 timeInfo = tag.getTimeInfo(false, true);
 
             const hopsStr =
-                Array.isArray(info.hops) && info.hops.length > 0 ? info.hops.map(h => `*${h}*`).join(" -> ") : "none";
+                Array.isArray(info.hops) && !Util.empty(info.hops) ? info.hops.map(h => `*${h}*`).join(" -> ") : "none";
 
             const lines = [
                 `**Hops**: ${hopsStr}`,

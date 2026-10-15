@@ -1,15 +1,13 @@
-import path from "node:path";
-
-import SqlDatabase from "./SqlDatabase.js";
-import RevisionStore from "./revision/RevisionStore.js";
+import RevisionDatabase from "./RevisionDatabase.js";
 
 import Group from "../structures/permission/Group.js";
 import User from "../structures/permission/User.js";
 
 import Util from "../util/Util.js";
 import ObjectUtil from "../util/ObjectUtil.js";
+import DatabaseUtil from "../util/database/DatabaseUtil.js";
 
-class PermissionDatabase extends SqlDatabase {
+class PermissionDatabase extends RevisionDatabase {
     constructor(dbPath, queryPath, options) {
         options = ObjectUtil.guaranteeObject(options);
 
@@ -17,24 +15,8 @@ class PermissionDatabase extends SqlDatabase {
 
         super(dbPath, queryPath, {
             ...options,
-            customFunctions,
-            additionalQueryPaths: options.additionalQueryPaths ?? [path.resolve(queryPath, "..", "revision")],
-            additionalMigrationsPath:
-                options.additionalMigrationsPath ??
-                (typeof options.migrationsPath === "string"
-                    ? path.resolve(options.migrationsPath, "..", "revision")
-                    : null)
+            customFunctions
         });
-    }
-
-    async setup(mode) {
-        if (mode === "load") {
-            await this._migrateLegacySchema();
-        }
-    }
-
-    getRevisionStore() {
-        return new RevisionStore(this);
     }
 
     async groupExists(name) {
@@ -63,11 +45,7 @@ class PermissionDatabase extends SqlDatabase {
             $name: name
         });
 
-        if (typeof row._data === "undefined") {
-            return null;
-        }
-
-        return new Group(row);
+        return DatabaseUtil.rowEntity(row, Group);
     }
 
     async fetchByLevel(level) {
@@ -75,11 +53,7 @@ class PermissionDatabase extends SqlDatabase {
             $level: level
         });
 
-        if (typeof row._data === "undefined") {
-            return null;
-        }
-
-        return new Group(row);
+        return DatabaseUtil.rowEntity(row, Group);
     }
 
     async addGroup(group) {
@@ -104,7 +78,7 @@ class PermissionDatabase extends SqlDatabase {
 
     async listGroups() {
         const rows = await this.groupQueries.list.all(),
-            groups = rows.map(row => new Group(row));
+            groups = DatabaseUtil.rowEntity(rows, Group);
 
         groups.sort((a, b) => b.level - a.level);
         return groups;
@@ -136,11 +110,11 @@ class PermissionDatabase extends SqlDatabase {
             $user: id
         });
 
-        if (typeof rows._data === "undefined" || Util.empty(rows)) {
+        if (Util.empty(rows)) {
             return null;
         }
 
-        return rows.map(row => new Group(row));
+        return DatabaseUtil.rowEntity(rows, Group);
     }
 
     async fetchUsersByGroup(name) {
@@ -148,7 +122,7 @@ class PermissionDatabase extends SqlDatabase {
             $name: name
         });
 
-        return Array.from(rows).map(row => new User(row));
+        return DatabaseUtil.rowEntity(rows, User);
     }
 
     async fetchUsersByUser(user) {
@@ -156,7 +130,7 @@ class PermissionDatabase extends SqlDatabase {
             $user: user
         });
 
-        return Array.from(rows).map(row => new User(row));
+        return DatabaseUtil.rowEntity(rows, User);
     }
 
     async add(group, user) {
@@ -187,37 +161,7 @@ class PermissionDatabase extends SqlDatabase {
 
     async listUsers() {
         const rows = await this.userQueries.list.all();
-        return rows.map(row => new User(row));
-    }
-
-    async _migrateLegacySchema() {
-        const userTable = await this.db.tableDetails("Users");
-
-        if (!userTable.exists) {
-            return;
-        }
-
-        const groupForeignKey = userTable.foreignKeys.find(row => row.table === "Groups" && row.from === "group"),
-            hasCascade = groupForeignKey?.on_update === "CASCADE" && groupForeignKey?.on_delete === "CASCADE";
-
-        let hasUniqueUserGroup = false;
-
-        for (const idx of userTable.indexes.filter(row => row.unique === 1)) {
-            const columns = userTable.indexColumns.get(idx.name).map(row => row.name);
-
-            if (columns.length === 2 && columns[0] === "user" && columns[1] === "group") {
-                hasUniqueUserGroup = true;
-                break;
-            }
-        }
-
-        if (hasCascade && hasUniqueUserGroup) {
-            return;
-        }
-
-        await this.db.migrate({
-            migrationsPath: this.migrationsPath
-        });
+        return DatabaseUtil.rowEntity(rows, User);
     }
 }
 

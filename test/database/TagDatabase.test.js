@@ -148,10 +148,10 @@ describe("TagDatabase", () => {
         await db.add(new Tag({ name: "plain2", body: "restored", owner: "u2" }));
         expect(await db.usageFetch("plain2")).toBe(2);
 
-        const migrations = await db.db.get(
-            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'migrations';"
+        const migrationRows = Array.from(await db.db.all("SELECT id FROM migrations ORDER BY id ASC;")).map(
+            row => row.id
         );
-        expect(typeof migrations._data).toBe("undefined");
+        expect(migrationRows).toEqual([1, 2, 3]);
 
         await db.open(OpenModes.OPEN_READWRITE);
         await db.close();
@@ -352,7 +352,7 @@ describe("TagDatabase", () => {
         const migrationRows = Array.from(await db.db.all("SELECT id FROM migrations ORDER BY id ASC;")).map(
             row => row.id
         );
-        expect(migrationRows).toEqual([1, 2]);
+        expect(migrationRows).toEqual([1, 2, 3]);
 
         await db.close();
     });
@@ -406,6 +406,10 @@ describe("TagDatabase", () => {
             $name: "scripted",
             $count: 4
         });
+        await db.db.run(
+            "CREATE TABLE IF NOT EXISTS migrations (id INTEGER PRIMARY KEY, name TEXT NOT NULL, up TEXT NOT NULL, down TEXT NOT NULL);"
+        );
+        await db.db.run("INSERT INTO migrations (id, name, up, down) VALUES (1, 'pre-refactor-tag-schema', '', '');");
 
         await db.load();
 
@@ -458,8 +462,136 @@ describe("TagDatabase", () => {
         const migrationRows = Array.from(await db.db.all("SELECT id FROM migrations ORDER BY id ASC;")).map(
             row => row.id
         );
-        expect(migrationRows).toEqual([1, 2]);
+        expect(migrationRows).toEqual([1, 2, 3]);
 
         await db.close();
+    });
+
+    test("migrates a totally unmigrated legacy database all the way to latest schema", async () => {
+        const dbPath = path.join(tempDir, "totally_unmigrated_tags.sqlite");
+        const rawDb = new TagDatabase(dbPath, queryPath, {
+            enableWAL: false,
+            migrationsPath
+        });
+
+        await rawDb.open(OpenModes.OPEN_RWCREATE);
+        await rawDb.db.exec(`
+            CREATE TABLE 'Quotas' (
+                'user' TEXT,
+                'quota' REAL,
+                PRIMARY KEY('user')
+            ) STRICT;
+
+            CREATE TABLE 'Tags' (
+                'hops' TEXT,
+                'name' TEXT,
+                'body' TEXT,
+                'owner' TEXT,
+                'args' TEXT,
+                'registered' INTEGER,
+                'lastEdited' INTEGER,
+                'type' INTEGER,
+                PRIMARY KEY('name'),
+                FOREIGN KEY('owner') REFERENCES Quotas('user')
+            ) STRICT;
+
+            CREATE INDEX 'idx_Tags_owner' ON 'Tags' ('owner');
+            CREATE INDEX 'idx_Tags_hops' ON 'Tags' ('hops');
+        `);
+
+        await rawDb.db.run("INSERT INTO Quotas ('user', 'quota') VALUES ('u1', 10.0);");
+        await rawDb.db.run("INSERT INTO Quotas ('user', 'quota') VALUES ('u2', 5.0);");
+
+        await rawDb.db.run(
+            "INSERT INTO Tags ('hops', 'name', 'body', 'owner', 'args', 'registered', 'lastEdited', 'type') VALUES ('t1', 't1', 'plain body', 'u1', NULL, 100, 200, 0);"
+        );
+        await rawDb.db.run(
+            "INSERT INTO Tags ('hops', 'name', 'body', 'owner', 'args', 'registered', 'lastEdited', 'type') VALUES ('t2,t1', 't2', NULL, 'u1', 'arg', 105, NULL, 0);"
+        );
+        await rawDb.db.run(
+            "INSERT INTO Tags ('hops', 'name', 'body', 'owner', 'args', 'registered', 'lastEdited', 'type') VALUES ('', 't3', 'console.log(1)', 'u2', NULL, 110, 210, 3);"
+        );
+
+        await rawDb.close();
+
+        const db = new TagDatabase(dbPath, queryPath, {
+            enableWAL: false,
+            migrationsPath
+        });
+
+        try {
+            await db.load();
+
+            const migrationRows = Array.from(await db.db.all("SELECT id FROM migrations ORDER BY id ASC;")).map(
+                row => row.id
+            );
+            expect(migrationRows).toEqual([1, 2, 3]);
+
+            const revMigrationRows = Array.from(
+                await db.db.all("SELECT id FROM revision_migrations ORDER BY id ASC;")
+            ).map(row => row.id);
+            expect(revMigrationRows).toEqual([1, 2]);
+
+            const t1 = await db.fetch("t1");
+            expect(t1).toMatchObject({
+                name: "t1",
+                body: "plain body",
+                owner: "u1",
+                aliasName: "",
+                bin: null
+            });
+            expect(t1.type.buffer).toEqual(new Uint8Array([0]));
+
+            const t2 = await db.fetch("t2");
+            expect(t2).toMatchObject({
+                name: "t2",
+                aliasName: "t1",
+                owner: "u1"
+            });
+
+            const t3 = await db.fetch("t3");
+            expect(t3).toMatchObject({
+                name: "t3",
+                body: "console.log(1)",
+                owner: "u2"
+            });
+            expect(t3.type.buffer).toEqual(new Uint8Array([3]));
+
+            expect(await db.quotaFetchAll("u1")).toMatchObject({
+                count: 2,
+                quota: 10.0
+            });
+            expect(await db.quotaFetchAll("u2")).toMatchObject({
+                count: 1,
+                quota: 5.0
+            });
+
+            expect(await db.usageFetch("t1")).toBe(0);
+
+            const binaryTag = new Tag({
+                name: "binary_tag",
+                bin: Buffer.from("binary_payload"),
+                owner: "u1",
+                meta: { type: "binary" }
+            });
+            await db.add(binaryTag);
+
+            const fetchedBinary = await db.fetch("binary_tag");
+            expect(fetchedBinary.bin).toEqual(Buffer.from("binary_payload"));
+
+            const subject = await db.createSubject("tag", { name: "t1" }, { registered: 100 });
+            const rev = await db.addRevision({
+                target: "tag",
+                subjectId: subject.id,
+                operation: "update",
+                actor: "u1",
+                key: { name: "t1" },
+                changed: ["body"],
+                snapshot: { name: "t1", body: "updated plain body" }
+            });
+            expect(rev.subjectIndex).toBe(1);
+        } finally {
+            await db.close();
+        }
     });
 });

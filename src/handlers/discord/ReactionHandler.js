@@ -364,17 +364,7 @@ class ReactionHandler extends Handler {
         parens.hits.forEach(hit => planned.push(hit));
         planned.sort((a, b) => a.index - b.index);
 
-        const seenEmojis = new Set(),
-            emojis = [];
-
-        for (const { emoji } of planned) {
-            if (emoji == null || seenEmojis.has(emoji)) {
-                continue;
-            }
-
-            seenEmojis.add(emoji);
-            emojis.push(emoji);
-        }
+        const emojis = ArrayUtil.unique(planned.map(p => p.emoji).filter(emoji => emoji != null));
 
         return {
             emojis,

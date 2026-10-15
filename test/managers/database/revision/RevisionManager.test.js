@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
 
+import "../../../../setupGlobals.js";
+
 import RevisionManager from "../../../../src/managers/database/revision/RevisionManager.js";
 import RevisionTargetSpec from "../../../../src/structures/revision/RevisionTargetSpec.js";
 
@@ -29,6 +31,9 @@ function createStore() {
         fetchSubjectByRevisionKey() {
             return null;
         },
+        fetchInactiveSubject() {
+            return null;
+        },
         updateSubjectKey(subject, key) {
             subject.key = key;
         },
@@ -38,6 +43,14 @@ function createStore() {
         restoreSubject(subject, key) {
             subject.key = key;
             subject.deleted = null;
+        },
+        fetchLatest(target, subjectId) {
+            return (
+                revisions
+                    .slice()
+                    .reverse()
+                    .find(rev => rev.target === target && rev.subjectId === subjectId) ?? null
+            );
         },
         addRevision(data) {
             const revision = {

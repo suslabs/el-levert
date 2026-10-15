@@ -33,6 +33,7 @@ describe("revision structures", () => {
         expect(revision.changed).toEqual([]);
         expect(revision.key).toEqual({});
         expect(revision.snapshot).toBeNull();
+        expect(revision.reason).toBeNull();
     });
 
     test("normalizes revision subjects and target specs", () => {

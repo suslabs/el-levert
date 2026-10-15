@@ -31,14 +31,13 @@ afterEach(async () => {
     await fs.rm(tempDir, { recursive: true, force: true });
 });
 
-describe("RevisionStore", () => {
+describe("RevisionDatabase", () => {
     test("persists subjects and revisions through query-backed storage", async () => {
         const db = createDb();
         await db.create();
         await db.load();
 
-        const store = db.getRevisionStore(),
-            subject = await store.createSubject("tag", { name: "alpha" }, { registered: 1 });
+        const subject = await db.createSubject("tag", { name: "alpha" }, { registered: 1 });
 
         expect(subject).toMatchObject({
             target: "tag",
@@ -46,7 +45,7 @@ describe("RevisionStore", () => {
             staticSnapshot: { registered: 1 }
         });
 
-        const revision = await store.addRevision({
+        const revision = await db.addRevision({
             target: "tag",
             subjectId: subject.id,
             operation: "create",
@@ -64,16 +63,16 @@ describe("RevisionStore", () => {
             snapshot: { name: "alpha", body: "one" }
         });
 
-        await store.updateSubjectKey(subject, { name: "beta" });
-        expect(await store.fetchSubject("tag", { name: "beta" })).toMatchObject({ id: subject.id });
-        expect(await store.fetchSubjectByRevisionKey("tag", { name: "alpha" })).toMatchObject({ id: subject.id });
+        await db.updateSubjectKey(subject, { name: "beta" });
+        expect(await db.fetchSubject("tag", { name: "beta" })).toMatchObject({ id: subject.id });
+        expect(await db.fetchSubjectByRevisionKey("tag", { name: "alpha" })).toMatchObject({ id: subject.id });
 
-        await store.markSubjectDeleted(subject, 20);
-        expect(await store.fetchSubject("tag", { name: "beta" })).toBeNull();
+        await db.markSubjectDeleted(subject, 20);
+        expect(await db.fetchSubject("tag", { name: "beta" })).toBeNull();
 
-        await store.restoreSubject(subject, { name: "beta" });
-        expect(await store.fetchLatest("tag", subject.id)).toMatchObject({ id: revision.id });
-        expect(await store.listRevisions({ target: "tag", actor: "u1", limit: 5 })).toHaveLength(1);
+        await db.restoreSubject(subject, { name: "beta" });
+        expect(await db.fetchLatest("tag", subject.id)).toMatchObject({ id: revision.id });
+        expect(await db.listRevisions({ target: "tag", actor: "u1", limit: 5 })).toHaveLength(1);
 
         await db.close();
     });
@@ -84,10 +83,9 @@ describe("RevisionStore", () => {
         await db.load();
 
         try {
-            const store = db.getRevisionStore(),
-                subject = await store.createSubject("tag", { name: "default_actor" }, {});
+            const subject = await db.createSubject("tag", { name: "default_actor" }, {});
 
-            const rev1 = await store.addRevision({
+            const rev1 = await db.addRevision({
                 target: "tag",
                 subjectId: subject.id,
                 operation: "create",
@@ -98,7 +96,7 @@ describe("RevisionStore", () => {
 
             expect(rev1.actor).toBe("unknown");
 
-            const rev2 = await store.addRevision({
+            const rev2 = await db.addRevision({
                 target: "tag",
                 subjectId: subject.id,
                 operation: "update",
@@ -120,11 +118,10 @@ describe("RevisionStore", () => {
         await db.load();
 
         try {
-            const store = db.getRevisionStore(),
-                subject = await store.createSubject("tag", { name: "empty_changed" }, {});
+            const subject = await db.createSubject("tag", { name: "empty_changed" }, {});
 
             await expect(
-                store.addRevision({
+                db.addRevision({
                     target: "tag",
                     subjectId: subject.id,
                     operation: "update",
@@ -135,7 +132,7 @@ describe("RevisionStore", () => {
             ).rejects.toThrow(RevisionError);
 
             await expect(
-                store.addRevision({
+                db.addRevision({
                     target: "tag",
                     subjectId: subject.id,
                     operation: "update",
@@ -147,4 +144,67 @@ describe("RevisionStore", () => {
             await db.close();
         }
     });
+
+    test("seeds revision migrations on create and safely re-loads", async () => {
+        const db = createDb("create_load.sqlite");
+        await db.create();
+        await db.load();
+
+        const subject = await db.createSubject("tag", { name: "fresh" }, {});
+
+        const rev = await db.addRevision({
+            target: "tag",
+            subjectId: subject.id,
+            operation: "create",
+            key: { name: "fresh" },
+            changed: ["body"],
+            snapshot: { name: "fresh", body: "one" }
+        });
+
+        expect(rev.subjectIndex).toBe(1);
+
+        await db.load();
+
+        const fetched = await db.fetchRevisionBySubjectIndex("tag", subject.id, 1);
+        expect(fetched).toMatchObject({ id: rev.id, subjectIndex: 1 });
+
+        await db.close();
+    });
+
+    test("clears revision range without deleting earlier revisions on the same subject", async () => {
+        const db = createDb("range_clear.sqlite");
+        await db.create();
+        await db.load();
+
+        try {
+            const subject = await db.createSubject("tag", { name: "range_tag" }, {});
+
+            for (let i = 1; i <= 5; i++) {
+                await db.addRevision({
+                    target: "tag",
+                    subjectId: subject.id,
+                    operation: i === 1 ? "create" : "update",
+                    key: { name: "range_tag" },
+                    changed: ["body"],
+                    snapshot: { name: "range_tag", body: `v${i}` }
+                });
+            }
+
+            const beforeClear = await db.listRevisions({ target: "tag", subjectId: subject.id, limit: 10 });
+            expect(beforeClear).toHaveLength(5);
+
+            await db.clear("tag", {
+                subjectId: subject.id,
+                fromId: 3,
+                toId: 4
+            });
+
+            const afterClear = await db.listRevisions({ target: "tag", subjectId: subject.id, limit: 10 });
+            const remainingIndices = afterClear.map(r => r.subjectIndex).sort((a, b) => a - b);
+            expect(remainingIndices).toEqual([1, 2, 5]);
+        } finally {
+            await db.close();
+        }
+    });
 });
+

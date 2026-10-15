@@ -912,7 +912,7 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
         for (const migration of previous) {
             const missingFromFiles = !migrations.some(candidate => candidate.id === migration.id),
                 rollbackPastForce = Number.isInteger(force) && migration.id > force,
-                rerunLast = force === "last" && migration.id === lastMigration.id;
+                rerunLast = force === "last" && migration.id === lastMigration?.id;
 
             if (!missingFromFiles && !rollbackPastForce && !rerunLast) {
                 break;
@@ -941,8 +941,12 @@ class SqliteDatabase extends StatementDatabase(EventEmitter) {
     }
 
     async _applyMigrations(tx, sts, migrations, applied, force, lastMigration) {
+        if (Util.empty(migrations)) {
+            return;
+        }
+
         const lastAppliedId = Util.empty(applied) ? 0 : applied.at(-1).id,
-            maxMigrationId = Number.isInteger(force) ? force : lastMigration.id;
+            maxMigrationId = Number.isInteger(force) ? force : (lastMigration?.id ?? 0);
 
         for (const migration of migrations) {
             if (migration.id <= lastAppliedId || migration.id > maxMigrationId) {

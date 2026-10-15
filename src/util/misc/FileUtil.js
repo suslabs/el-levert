@@ -10,13 +10,11 @@ function getPlatformKey() {
 
 const FileUtil = Object.freeze({
     resolve: (...parts) => {
-        const projRoot = globalThis.projRoot;
+        const projRoot = globalThis.projRoot ?? process.cwd();
 
         if (Util.empty(parts)) {
             return path.resolve(projRoot);
-        }
-
-        if (Util.single(parts) && typeof Util.first(parts) !== "string") {
+        } else if (Util.single(parts) && typeof Util.first(parts) !== "string") {
             return Util.first(parts);
         }
 

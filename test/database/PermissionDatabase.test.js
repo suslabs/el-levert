@@ -10,6 +10,8 @@ import PermissionDatabase from "../../src/database/PermissionDatabase.js";
 import Group from "../../src/structures/permission/Group.js";
 import User from "../../src/structures/permission/User.js";
 
+import { OpenModes } from "../../src/database/drivers/sqlite/OpenModes.js";
+
 const permissionQueryPath = path.resolve(projRoot, "src/database/query/permission");
 const permissionMigrationsPath = path.resolve(projRoot, "src/database/migrations/permission");
 
@@ -102,5 +104,72 @@ describe("PermissionDatabase", () => {
         await db.removeGroup(member);
         expect(await db.fetchGroup("member")).toBeNull();
         expect(await db.groupExists([])).toEqual([]);
+    });
+
+    test("migrates unconstrained users schema to current schema with unique constraints and foreign keys", async () => {
+        const dbPath = path.join(tempDir, "legacy_perm.sqlite"),
+            db = new PermissionDatabase(dbPath, permissionQueryPath, {
+                enableWAL: false,
+                migrationsPath: permissionMigrationsPath
+            });
+        openDatabases.push(db);
+
+        await db.open(OpenModes.OPEN_RWCREATE);
+        await db.db.run("PRAGMA foreign_keys = OFF;");
+        await db.db.exec(`
+            CREATE TABLE 'Groups' (
+                'name' TEXT,
+                'level' INTEGER,
+                PRIMARY KEY('name')
+            ) STRICT;
+            CREATE TABLE 'Users' (
+                'id' INTEGER,
+                'user' TEXT,
+                'group' TEXT,
+                PRIMARY KEY('id' AUTOINCREMENT),
+                FOREIGN KEY('group') REFERENCES Groups('name')
+            ) STRICT;
+        `);
+
+        await db.db.run("INSERT INTO Groups VALUES ('member', 1);");
+        await db.db.run("INSERT INTO Groups VALUES ('mod', 5);");
+
+        await db.db.run("INSERT INTO Users ('user', 'group') VALUES ('42', 'member');");
+        await db.db.run("INSERT INTO Users ('user', 'group') VALUES ('42', 'member');");
+        await db.db.run("INSERT INTO Users ('user', 'group') VALUES ('99', 'mod');");
+        await db.db.run("INSERT INTO Users ('user', 'group') VALUES ('100', 'missing_group');");
+
+        await db.close();
+
+        const loadedDb = new PermissionDatabase(dbPath, permissionQueryPath, {
+            enableWAL: false,
+            migrationsPath: permissionMigrationsPath
+        });
+        openDatabases.push(loadedDb);
+
+        await loadedDb.load();
+
+        const users = await loadedDb.listUsers();
+        expect(users).toHaveLength(2);
+        expect(users.map(u => ({ user: u.user, group: u.group }))).toEqual([
+            { user: "42", group: "member" },
+            { user: "99", group: "mod" }
+        ]);
+
+        await expect(loadedDb.add(new Group({ name: "member", level: 1 }), new User({ user: "42" }))).rejects.toThrow();
+
+        const newGroup = new Group({ name: "regular", level: 2 });
+        await loadedDb.updateGroup(new Group({ name: "member", level: 1 }), newGroup);
+        expect((await loadedDb.fetch("42")).map(g => g.name)).toEqual(["regular"]);
+
+        const migrationRows = Array.from(await loadedDb.db.all("SELECT id FROM migrations ORDER BY id ASC;")).map(
+            row => row.id
+        );
+        expect(migrationRows).toEqual([1]);
+
+        const revMigrationRows = Array.from(
+            await loadedDb.db.all("SELECT id FROM revision_migrations ORDER BY id ASC;")
+        ).map(row => row.id);
+        expect(revMigrationRows).toEqual([1, 2]);
     });
 });

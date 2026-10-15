@@ -18,18 +18,21 @@ class PermissionRevisionManager {
 
     constructor(permissionManager) {
         this.permissionManager = permissionManager;
+
         this.groupSpec = new RevisionTargetSpec({
             target: this.constructor.groupTarget,
             key: ["name"],
             trackedFields: ["name", "level"],
             label: key => key.name
         });
+
         this.userSpec = new RevisionTargetSpec({
             target: this.constructor.userTarget,
             key: ["user", "group"],
             trackedFields: ["user", "group"],
             label: key => `${key.user} in ${key.group}`
         });
+
         this.specs = new Map([
             [this.constructor.groupTarget, this.groupSpec],
             [this.constructor.userTarget, this.userSpec]
@@ -89,19 +92,23 @@ class PermissionRevisionManager {
     }
 
     async fetchRevision(id, tx = this.permissionManager.perm_db) {
-        return await tx.getRevisionStore().fetchRevision(id);
+        return await tx.fetchRevision(id);
+    }
+
+    async fetchRevisionByIndex(subject, subjectIndex, tx = this.permissionManager.perm_db) {
+        return await tx.fetchRevisionBySubjectIndex(subject.target, subject.id, subjectIndex);
     }
 
     async fetchLatest(subject, tx = this.permissionManager.perm_db) {
-        return await tx.getRevisionStore().fetchLatest(subject.target, subject.id);
+        return await tx.fetchLatest(subject.target, subject.id);
     }
 
     async fetchPrevious(revision, tx = this.permissionManager.perm_db) {
-        return await tx.getRevisionStore().fetchPrevious(revision);
+        return await tx.fetchPrevious(revision);
     }
 
     async countRevertsOf(revision, tx = this.permissionManager.perm_db) {
-        return await tx.getRevisionStore().countRevertsOf(revision);
+        return await tx.countRevertsOf(revision);
     }
 
     async list(options = {}, tx = this.permissionManager.perm_db) {
@@ -119,7 +126,7 @@ class PermissionRevisionManager {
             subjectId = subject?.id ?? -1;
         }
 
-        return await tx.getRevisionStore().listRevisions({
+        return await tx.listRevisions({
             ...options,
             subjectId
         });
@@ -159,10 +166,12 @@ class PermissionRevisionManager {
             throw new PermissionError("Revision doesn't exist", id);
         }
 
-        const subject = await tx.getRevisionStore().fetchSubjectById(revision.subjectId),
-            previous = await this.fetchPrevious(revision, tx),
-            manager = this._manager(spec, tx),
-            before = previous === null ? null : manager.restoreSnapshot(subject, previous),
+        const subject = await tx.fetchSubjectById(revision.subjectId),
+            previous = await this.fetchPrevious(revision, tx);
+
+        const manager = this._manager(spec, tx);
+
+        const before = previous === null ? null : manager.restoreSnapshot(subject, previous),
             after = revision.snapshot === null ? null : manager.restoreSnapshot(subject, revision);
 
         return {
@@ -219,7 +228,7 @@ class PermissionRevisionManager {
     }
 
     _manager(spec, tx) {
-        return new RevisionManager(spec, tx.getRevisionStore());
+        return new RevisionManager(spec, tx);
     }
 }
 

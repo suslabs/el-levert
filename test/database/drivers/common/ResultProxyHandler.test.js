@@ -36,4 +36,19 @@ describe("ResultProxyHandler", () => {
         expect(result.toJSON()).toBe(JSON.stringify({ value: "alpha" }));
         expect(util.inspect(result)).toContain("SqliteResult");
     });
+
+    test("proxies sqlite array results as genuine arrays with metadata accessors", () => {
+        const rows = [{ value: "alpha" }, { value: "beta" }];
+        const result = new SqliteResult(rows, { lastID: 0, changes: 0 });
+
+        expect(Array.isArray(result)).toBe(true);
+        expect(result).toHaveLength(2);
+        expect(result[0]).toEqual({ value: "alpha" });
+        expect(result.map(r => r.value)).toEqual(["alpha", "beta"]);
+        expect(result.lastID).toBe(0);
+        expect(result.changes).toBe(0);
+        expect(result._data).toBe(rows);
+        expect(result._obj).toBeInstanceOf(ProxiedResult);
+        expect(result.toJSON()).toBe(JSON.stringify(rows));
+    });
 });
