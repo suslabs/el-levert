@@ -114,11 +114,11 @@ class CommandContext extends TextCommandContext {
         options = ObjectUtil.guaranteeObject(options);
 
         this.markReplied();
-        return await this.handler?.editFromContext?.(this, data, options);
+        return await this.handler?.editFromContext(this, data, options);
     }
 
     async deleteReply() {
-        return await this.handler?.deleteReplyFromContext?.(this);
+        return await this.handler?.deleteReplyFromContext(this);
     }
 }
 

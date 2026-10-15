@@ -7,7 +7,7 @@ import createHttpStubServer from "../helpers/httpStubServer.js";
 let server;
 
 afterEach(async () => {
-    await server?.close?.();
+    await server?.close();
     server = null;
 });
 

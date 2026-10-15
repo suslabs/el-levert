@@ -173,22 +173,24 @@ Subcommands:
             } catch (err) {
                 getLogger().error(err);
 
-                return err.name === "TagError"
-                    ? {
-                          body: null,
-                          meta: null,
-                          attachment: false,
-                          err: `${getEmoji("warn")} ${err.message}.`
-                      }
-                    : {
-                          body: null,
-                          meta: null,
-                          attachment: false,
-                          err: {
-                              content: `${getEmoji("error")} Downloading attachment failed:`,
-                              ...DiscordUtil.getFileAttach(err.stack, "error.js")
-                          }
-                      };
+                if (err.name === "TagError") {
+                    return {
+                        body: null,
+                        meta: null,
+                        attachment: false,
+                        err: `${getEmoji("warn")} ${err.message}.`
+                    };
+                } else {
+                    return {
+                        body: null,
+                        meta: null,
+                        attachment: false,
+                        err: {
+                            content: `${getEmoji("error")} Downloading attachment failed:`,
+                            ...DiscordUtil.getFileAttach(err.stack, "error.js")
+                        }
+                    };
+                }
             }
         } else {
             const parsedBody = options.allowFilePath
@@ -210,12 +212,14 @@ Subcommands:
                 };
             }
 
-            parsed = parsedBody.guessedPath
-                ? {
-                      body: parsedBody.body,
-                      meta: Tag.getParsedMeta(parsedBody, type)
-                  }
-                : Tag.parseTagBody(parsedBody.body, type);
+            if (parsedBody.guessedPath) {
+                parsed = {
+                    body: parsedBody.body,
+                    meta: Tag.getParsedMeta(parsedBody, type)
+                };
+            } else {
+                parsed = Tag.parseTagBody(parsedBody.body, type);
+            }
         }
 
         const attachment = hasAttachments || DiscordUtil.hasAttachmentUrls(parsed.body);

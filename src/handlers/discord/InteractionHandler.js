@@ -73,18 +73,16 @@ class InteractionHandler extends MessageHandler {
             isAuthor
         });
 
+        const contextOverrides = {
+            interactionContext,
+            interaction,
+            isAuthor
+        };
+
         const commandContext =
             typeof session.context.clone === "function"
-                ? session.context.clone({
-                      interactionContext,
-                      interaction,
-                      isAuthor
-                  })
-                : Object.assign(Object.create(session.context), session.context, {
-                      interactionContext,
-                      interaction,
-                      isAuthor
-                  });
+                ? session.context.clone(contextOverrides)
+                : Object.assign(Object.create(session.context), session.context, contextOverrides);
 
         try {
             return await session.handleInteraction(commandContext);

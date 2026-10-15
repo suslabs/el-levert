@@ -188,7 +188,7 @@ class TagFullSearchCommand {
                 return `${getEmoji("info")} Found **no** similar tags.`;
             }
 
-            const plus = other?.oversized ? "+" : "",
+            const plus = other.oversized ? "+" : "",
                 totalMatches = other.total ?? results.length,
                 s = totalMatches === 1 ? "" : "s",
                 count = Util.formatNumber(totalMatches) + plus,

@@ -65,18 +65,14 @@ class TagRevertCommand {
 
             if (restored === null) {
                 return `${getEmoji("ok")} Reverted tag **${escapeMarkdown(t_name)}** by deleting it.`;
-            }
-
-            if (restored._currentTag != null && restored._currentTag.name !== restored.name) {
+            } else if (restored._currentTag != null && restored._currentTag.name !== restored.name) {
                 return `${getEmoji("ok")} Reverted tag **${escapeMarkdown(restored._currentTag.name)}** to **${escapeMarkdown(restored.name)}**.`;
-            }
-
-            if (restored.name !== t_name) {
+            } else if (restored.name !== t_name) {
                 return `${getEmoji("ok")} Reverted tag **${escapeMarkdown(t_name)}** to **${escapeMarkdown(restored.name)}**.`;
             }
 
             const restoredRev = restored._previousRevision ?? restored._targetRevision,
-                revNum = restoredRev?.subjectIndex ?? revisionId;
+                revNum = restoredRev.subjectIndex ?? revisionId;
 
             return `${getEmoji("ok")} Reverted tag **${escapeMarkdown(restored.name)}** to revision **#${revNum}**.`;
         } catch (err) {

@@ -45,7 +45,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
     for (const manager of managers) {
-        await manager?.unload?.();
+        await manager?.unload();
     }
 
     await cleanupRuntime(runtime);

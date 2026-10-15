@@ -429,7 +429,7 @@ const PaginationUtil = Object.freeze({
 
         const header = spec.dumpHeader ?? spec.header ?? `${getEmoji("info")} Full export:`;
 
-        const embedLimits = ctx.handler?.getLimits?.()?.embed ?? [DiscordUtil.embedCharLimit],
+        const embedLimits = ctx.handler?.getLimits().embed ?? [DiscordUtil.embedCharLimit],
             isOversized = Util.overSizeLimits(dump, ...embedLimits);
 
         if (!isOversized) {

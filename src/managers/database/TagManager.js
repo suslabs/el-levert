@@ -1092,7 +1092,7 @@ class TagManager extends DBManager {
             } catch (err) {
                 if (Util.hasPrefix(["Message doesn't have", "Invalid content type"], err.message)) {
                     isFile = false;
-                } else if (err.message?.startsWith("The attachment can take up at most")) {
+                } else if (err.message.startsWith("The attachment can take up at most")) {
                     const typeLabel = isBinary ? "Binary tag" : isScript ? "Script" : Util.capitalize(name);
                     throw new TagError(`${typeLabel}s can take up at most ${maxSize} kb`, err.ref);
                 } else {

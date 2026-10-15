@@ -62,7 +62,7 @@ class TagAddCommand {
 
         {
             let err;
-            [body, err] = getClient().tagManager.checkBody(body, false, meta?.type === "binary");
+            [body, err] = getClient().tagManager.checkBody(body, false, meta.type === "binary");
 
             if (err !== null) {
                 return `${getEmoji("warn")} ${err}.`;

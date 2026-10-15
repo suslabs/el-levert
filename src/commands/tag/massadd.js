@@ -3,7 +3,6 @@ import path from "node:path";
 
 import { getClient, getEmoji, getLogger } from "../../LevertClient.js";
 
-import Util from "../../util/Util.js";
 import FileUtil from "../../util/misc/FileUtil.js";
 
 class TagMassAddCommand {
@@ -92,8 +91,8 @@ class TagMassAddCommand {
 
                 out.push(`Added file: ${file.name} as tag: ${tagName}`);
             } catch (err) {
-                getLogger().error(`Error occured while adding file ${files[i]?.name ?? file?.name}`);
-                out.push(`Failed adding file: ${files[i]?.name ?? file?.name} error: ${err.message}`);
+                getLogger().error(`Error occured while adding file ${file.name}`);
+                out.push(`Failed adding file: ${file.name} error: ${err.message}`);
             }
         }
 

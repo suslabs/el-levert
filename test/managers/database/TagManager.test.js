@@ -48,7 +48,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
     for (const manager of managers) {
-        await manager?.unload?.();
+        await manager?.unload();
     }
 
     for (const server of servers) {
@@ -357,7 +357,7 @@ describe("Merged Branch Coverage", () => {
 
     afterEach(async () => {
         for (const manager of managers) {
-            await manager?.unload?.();
+            await manager?.unload();
         }
 
         await cleanupRuntime(runtime);

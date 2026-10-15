@@ -149,11 +149,13 @@ class Tag {
     }
 
     constructor(data) {
-        let aliasName = data?.aliasName,
-            type = data?.type,
-            meta = data?.meta;
+        data = ObjectUtil.guaranteeObject(data);
 
-        if (typeof data?.hops === "string") {
+        let aliasName = data.aliasName,
+            type = data.type,
+            meta = data.meta;
+
+        if (typeof data.hops === "string") {
             const hopString = data.hops,
                 hops = hopString.split(this.constructor._hopsSeparator);
 
@@ -167,14 +169,12 @@ class Tag {
             } else if (!Util.nonemptyString(aliasName)) {
                 aliasName = hops[1] ?? this.constructor.defaultValues.aliasName;
             }
-        } else if (Array.isArray(data?.hops) && !Util.nonemptyString(aliasName)) {
+        } else if (Array.isArray(data.hops) && !Util.nonemptyString(aliasName)) {
             aliasName = data.hops[1] ?? this.constructor.defaultValues.aliasName;
         }
 
-        if (data != null) {
-            delete data.hops;
-            delete data.meta;
-        }
+        delete data.hops;
+        delete data.meta;
 
         ObjectUtil.setValuesWithDefaults(this, data, this.constructor.defaultValues);
 
@@ -504,12 +504,14 @@ class Tag {
             const formattedType = discord ? bold(this.getScriptType()) : this.getScriptType(),
                 header = `Script type is ${formattedType}.`;
 
-            return discord
-                ? {
-                      content: header,
-                      ...DiscordUtil.getFileAttach(body, `${this.name}.js`)
-                  }
-                : `${header}\n---\n${body}\n---`;
+            if (discord) {
+                return {
+                    content: header,
+                    ...DiscordUtil.getFileAttach(body, `${this.name}.js`)
+                };
+            } else {
+                return `${header}\n---\n${body}\n---`;
+            }
         }
 
         if (this.isAlias) {

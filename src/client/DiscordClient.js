@@ -37,21 +37,23 @@ const {
 function normalizeAttachments(attachments) {
     attachments = ArrayUtil.guaranteeArray(attachments).filter(item => item != null);
 
-    return attachments.map((attach, i) =>
-        TypeTester.isObject(attach)
-            ? {
-                  id: String(attach.id ?? i),
-                  filename: attach.filename ?? attach.name ?? `file-${i}`,
-                  content_type: attach.content_type ?? attach.contentType,
-                  proxy_url: attach.proxy_url ?? attach.proxyURL ?? attach.url,
-                  ...attach
-              }
-            : {
-                  id: String(i),
-                  filename: `file-${i}`,
-                  url: String(attach)
-              }
-    );
+    return attachments.map((attach, i) => {
+        if (TypeTester.isObject(attach)) {
+            return {
+                id: String(attach.id ?? i),
+                filename: attach.filename ?? attach.name ?? `file-${i}`,
+                content_type: attach.content_type ?? attach.contentType,
+                proxy_url: attach.proxy_url ?? attach.proxyURL ?? attach.url,
+                ...attach
+            };
+        } else {
+            return {
+                id: String(i),
+                filename: `file-${i}`,
+                url: String(attach)
+            };
+        }
+    });
 }
 
 function normalizeEmbeds(embeds) {

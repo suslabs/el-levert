@@ -51,8 +51,8 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-    manager?.unload?.();
-    await permManager?.unload?.();
+    manager?.unload();
+    await permManager?.unload();
     await cleanupRuntime(runtime);
     runtime = null;
 });

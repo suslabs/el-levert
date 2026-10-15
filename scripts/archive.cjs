@@ -78,11 +78,13 @@ function archive(options = {}) {
         fs.mkdirSync(outDir, { recursive: true });
     }
 
-    const extraExcludes = Array.isArray(options.exclude)
-        ? options.exclude
-        : typeof options.exclude === "string"
-          ? [options.exclude]
-          : [];
+    let extraExcludes = [];
+
+    if (Array.isArray(options.exclude)) {
+        extraExcludes = options.exclude;
+    } else if (typeof options.exclude === "string") {
+        extraExcludes = [options.exclude];
+    }
 
     const allExcludes = [...defaultExcludes, ...extraExcludes],
         excludeArgs = allExcludes.flatMap(item => ["--exclude", item]);

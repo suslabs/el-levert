@@ -40,27 +40,31 @@ async function evalBase(args, msg, options) {
         try {
             ({ body } = await getClient().tagManager.downloadBody(null, msg, "eval"));
         } catch (err) {
-            return err.name === "TagError"
-                ? {
-                      body: null,
-                      err: `${getEmoji("warn")} ${err.message}.`
-                  }
-                : {
-                      body: null,
-                      err: {
-                          content: `${getEmoji("error")} Downloading attachment failed:`,
-                          ...DiscordUtil.getFileAttach(err.stack, "error.js")
-                      }
-                  };
+            if (err.name === "TagError") {
+                return {
+                    body: null,
+                    err: `${getEmoji("warn")} ${err.message}.`
+                };
+            } else {
+                return {
+                    body: null,
+                    err: {
+                        content: `${getEmoji("error")} Downloading attachment failed:`,
+                        ...DiscordUtil.getFileAttach(err.stack, "error.js")
+                    }
+                };
+            }
         }
     }
 
-    return Util.empty(body)
-        ? {
-              body: null,
-              err: `${getEmoji("error")} Can't eval an empty script.`
-          }
-        : { body, err: null };
+    if (Util.empty(body)) {
+        return {
+            body: null,
+            err: `${getEmoji("error")} Can't eval an empty script.`
+        };
+    } else {
+        return { body, err: null };
+    }
 }
 
 async function altevalBase(args, msg, lang, options) {
@@ -142,9 +146,6 @@ class EvalCommand {
         description:
             "Execute Javascript code in an isolated sandbox environment or run code in other languages using subcommands.",
         usage: "- <script>: Javascript code to execute, or provide a file attachment.\n- --debug, -d: Enable debug inspector output and memory diagnostics.",
-        parser: {
-            requireArgs: true
-        },
         subcommands: ["c", "cpp", "py", "vm2", "langs"],
         arguments: [
             {

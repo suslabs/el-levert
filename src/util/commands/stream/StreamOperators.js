@@ -62,7 +62,7 @@ async function resolveReferencedMessage(msg) {
         return null;
     }
 
-    const cached = msg.channel?.messages?.cache?.get(refId);
+    const cached = msg.channel?.messages.cache.get(refId);
 
     if (typeof cached !== "undefined") {
         return cached;

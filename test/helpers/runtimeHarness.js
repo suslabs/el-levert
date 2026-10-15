@@ -278,19 +278,19 @@ async function cleanupRuntime(runtime) {
     const { client, tempDir } = runtime;
 
     try {
-        if (client?.components?.get("handler")?.loaded) {
+        if (client?.components.get("handler")?.loaded) {
             client._unloadHandlers();
         }
     } catch {}
 
     try {
-        if (client?.components?.get("VM")?.loaded) {
+        if (client?.components.get("VM")?.loaded) {
             client._unloadVMs();
         }
     } catch {}
 
     try {
-        if (client?.components?.get("manager")?.loaded) {
+        if (client?.components.get("manager")?.loaded) {
             await client._unloadManagers();
         }
     } catch {}
@@ -302,11 +302,11 @@ async function cleanupRuntime(runtime) {
     } catch {}
 
     try {
-        client?.client?.destroy?.();
+        client?.client?.destroy();
     } catch {}
 
     try {
-        client?.logger?.end?.();
+        client?.logger?.end();
     } catch {}
 
     vi.restoreAllMocks();

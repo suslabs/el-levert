@@ -104,7 +104,7 @@ class TagVM extends VM {
             pushed = true;
 
             if (inspectorInfo.createdSession) {
-                await options.onInspectorReady?.(this._inspectorServer?.getSessionInfo(inspectorInfo.session));
+                await options.onInspectorReady?.(this._inspectorServer.getSessionInfo(inspectorInfo.session));
             }
 
             [out, outErr] = await context.runScript(code);
@@ -114,7 +114,7 @@ class TagVM extends VM {
             if (pushed) {
                 this._popContext(context);
             } else if (inspectorInfo.createdSession) {
-                this._inspectorServer?.onSessionEmpty(inspectorInfo.session);
+                this._inspectorServer.onSessionEmpty(inspectorInfo.session);
             }
 
             context?.dispose();

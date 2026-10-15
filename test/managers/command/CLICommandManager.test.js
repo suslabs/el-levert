@@ -34,7 +34,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-    manager?.unload?.();
+    manager?.unload();
     await cleanupRuntime(runtime);
     runtime = null;
 });

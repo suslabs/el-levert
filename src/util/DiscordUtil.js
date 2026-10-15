@@ -604,7 +604,7 @@ let DiscordUtil = {
                 responseType
             });
         } catch (err) {
-            throw err.message?.startsWith("maxContentLength") ? maxSizeError() : err;
+            throw err.message.startsWith("maxContentLength") ? maxSizeError() : err;
         }
 
         return { attach, body: res.data, contentType };

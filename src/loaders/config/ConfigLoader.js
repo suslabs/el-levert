@@ -107,7 +107,7 @@ class ConfigLoader extends BaseConfigLoader {
                 if (valid) {
                     config.bridgeBotExps.set(id, exp);
                 } else {
-                    this.logger?.warn?.(`No/invalid regex for bot "${id}".`);
+                    this.logger?.warn(`No/invalid regex for bot "${id}".`);
                     botIds.splice(i, 1);
                 }
             }
@@ -119,13 +119,13 @@ class ConfigLoader extends BaseConfigLoader {
             if (valid) {
                 config.bridgeBotExp = exp;
             } else {
-                this.logger?.warn?.("No/invalid bridge bot regex provided.");
+                this.logger?.warn("No/invalid bridge bot regex provided.");
                 enabled = false;
             }
         }
 
         if (!enabled) {
-            this.logger?.warn?.("Bridge bot support was disabled.");
+            this.logger?.warn("Bridge bot support was disabled.");
         }
 
         config.useBridgeBot = enabled;
