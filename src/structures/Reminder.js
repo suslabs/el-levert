@@ -1,6 +1,7 @@
 import { escapeMarkdown, time, TimestampStyles, bold } from "discord.js";
 
 import Util from "../util/Util.js";
+import DateUtil from "../util/commands/DateUtil.js";
 import ObjectUtil from "../util/ObjectUtil.js";
 
 class Reminder {
@@ -8,10 +9,11 @@ class Reminder {
         id: 0,
         user: "0",
         end: 0,
-        msg: ""
+        msg: "",
+        interval: null
     };
 
-    static dataProps = ["id", "user", "end", "msg"];
+    static dataProps = ["id", "user", "end", "msg", "interval"];
 
     static from(data, nullable = false, ...args) {
         if (nullable && data === null) {
@@ -27,6 +29,10 @@ class Reminder {
 
     get hasMessage() {
         return !Util.empty(this.msg);
+    }
+
+    get isRecurring() {
+        return this.interval !== null && this.interval > 0;
     }
 
     getData(prefix = "", nullable = true, props = this.constructor.dataProps) {
@@ -70,6 +76,10 @@ class Reminder {
     format(discord = true) {
         let format = this.getTimestamp(discord);
 
+        if (this.isRecurring) {
+            format += ` (every ${DateUtil.formatInterval(this.interval)})`;
+        }
+
         if (this.hasMessage) {
             const formattedMsg = discord ? bold(escapeMarkdown(this.msg)) : this.msg;
             format += ` with the message: ${formattedMsg}`;
@@ -78,7 +88,7 @@ class Reminder {
         return format;
     }
 
-    static _nullableDataProps = [];
+    static _nullableDataProps = ["interval"];
 }
 
 export default Reminder;

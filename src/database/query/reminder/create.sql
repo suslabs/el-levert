@@ -3,6 +3,7 @@ CREATE TABLE 'Reminders' (
     'user' TEXT NOT NULL CHECK (trim(user) != ''),
     'end' INTEGER,
     'msg' TEXT NOT NULL CHECK (trim(msg) != ''),
+    'interval' INTEGER DEFAULT NULL,
     PRIMARY KEY('id' AUTOINCREMENT)
 ) STRICT;
 ---

@@ -7,9 +7,13 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import "../../setupGlobals.js";
 
 import ReminderDatabase from "../../src/database/ReminderDatabase.js";
+import { OpenModes } from "../../src/database/drivers/sqlite/OpenModes.js";
 import Reminder from "../../src/structures/Reminder.js";
 
+import Util from "../../src/util/Util.js";
+
 const reminderQueryPath = path.resolve(projRoot, "src/database/query/reminder");
+const reminderMigrationsPath = path.resolve(projRoot, "src/database/migrations/reminder");
 
 let tempDir;
 let openDatabases;
@@ -68,5 +72,85 @@ describe("ReminderDatabase", () => {
         expect(await db.fetch("42")).toBeNull();
         expect(await db.exists("42")).toBe(false);
         expect((await db.list()).map(reminder => reminder.user)).toEqual(["99"]);
+    });
+
+    test("fetches by id, updates end time and interval", async () => {
+        const db = await track(createReminderDb()),
+            minuteMs = Util.durationSeconds.minute / Util.durationSeconds.milli,
+            twoMinutesMs = (2 * Util.durationSeconds.minute) / Util.durationSeconds.milli;
+
+        await db.add(new Reminder({ user: "42", end: 1000, msg: "repeat", interval: minuteMs }));
+        const list = await db.fetch("42");
+        expect(list).toHaveLength(1);
+
+        const reminder = list[0];
+        expect(reminder.interval).toBe(minuteMs);
+
+        const fetched = await db.fetchById(reminder.id);
+        expect(fetched).not.toBeNull();
+        expect(fetched.msg).toBe("repeat");
+        expect(fetched.interval).toBe(minuteMs);
+
+        reminder.end = 2000;
+        reminder.interval = twoMinutesMs;
+        await db.update(reminder);
+
+        const updated = await db.fetchById(reminder.id);
+        expect(updated.end).toBe(2000);
+        expect(updated.interval).toBe(twoMinutesMs);
+
+        expect(await db.fetchById(99999)).toBeNull();
+    });
+
+    test("migrates a totally unmigrated database lacking interval column and migrations table", async () => {
+        const dbPath = path.join(tempDir, "legacy_reminders.sqlite");
+        const rawDb = new ReminderDatabase(dbPath, reminderQueryPath, {
+            enableWAL: false,
+            migrationsPath: reminderMigrationsPath
+        });
+        openDatabases.push(rawDb);
+
+        await rawDb.open(OpenModes.OPEN_RWCREATE);
+        await rawDb.db.exec(`
+            CREATE TABLE 'Reminders' (
+                'id' INTEGER,
+                'user' TEXT NOT NULL CHECK (trim(user) != ''),
+                'end' INTEGER,
+                'msg' TEXT NOT NULL CHECK (trim(msg) != ''),
+                PRIMARY KEY('id' AUTOINCREMENT)
+            ) STRICT;
+            CREATE INDEX 'idx_Reminders_user' ON 'Reminders' ('user');
+            CREATE INDEX 'idx_Reminders_end' ON 'Reminders' ('end');
+        `);
+
+        await rawDb.db.run("INSERT INTO Reminders ('user', 'end', 'msg') VALUES ('user1', 5000, 'legacy msg');");
+
+        await rawDb.load();
+
+        const migrationRows = Array.from(await rawDb.db.all("SELECT id FROM migrations ORDER BY id ASC;")).map(
+            row => row.id
+        );
+        expect(migrationRows).toEqual([1]);
+
+        const reminders = await rawDb.fetch("user1");
+        expect(reminders).toHaveLength(1);
+        expect(reminders[0]).toMatchObject({
+            user: "user1",
+            end: 5000,
+            msg: "legacy msg",
+            interval: null
+        });
+
+        const newReminder = new Reminder({
+            user: "user1",
+            end: 10000,
+            msg: "recurring msg",
+            interval: (60 * Util.durationSeconds.minute) / Util.durationSeconds.milli
+        });
+        await rawDb.add(newReminder);
+
+        const fetchedAll = await rawDb.fetch("user1");
+        expect(fetchedAll).toHaveLength(2);
+        expect(fetchedAll[1].interval).toBe((60 * Util.durationSeconds.minute) / Util.durationSeconds.milli);
     });
 });

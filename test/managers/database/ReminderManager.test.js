@@ -5,7 +5,7 @@ import { cleanupRuntime, createRuntime } from "../../helpers/runtimeHarness.js";
 let runtime;
 let Reminder;
 let ReminderManager;
-let managers;
+let managers = [];
 
 async function createManager(enabled = true) {
     const manager = new ReminderManager(enabled);
@@ -19,6 +19,8 @@ async function createManager(enabled = true) {
 }
 
 beforeEach(async () => {
+    managers = [];
+
     runtime = await createRuntime({
         loadManagers: false,
         loadVMs: false
@@ -27,14 +29,12 @@ beforeEach(async () => {
     Reminder = (await import("../../../src/structures/Reminder.js")).default;
     ReminderManager = (await import("../../../src/managers/database/ReminderManager.js")).default;
 
-    managers = [];
-
     runtime.client.findUserById = id => ({
         id,
         username: `name-${id}`,
         send: vi.fn()
     });
-});
+}, 30000);
 
 afterEach(async () => {
     try {
@@ -43,9 +43,9 @@ afterEach(async () => {
 
     vi.useRealTimers();
 
-    for (const manager of managers) {
-        manager?._stopSendLoop?.();
-        await manager?.unload?.();
+    for (const manager of managers ?? []) {
+        manager?._stopSendLoop();
+        await manager?.unload();
     }
 
     await cleanupRuntime(runtime);
@@ -163,5 +163,46 @@ describe("ReminderManager", () => {
                 msg: second.msg
             }
         ]);
+    });
+
+    test("handles recurring reminders advancing schedule on trigger", async () => {
+        const manager = await createManager();
+        const now = Date.now();
+        const interval = 60_000;
+
+        const recurring = await manager.add("u1", now - 100, "recurring", false, interval);
+        expect(recurring.isRecurring).toBe(true);
+        expect(recurring.interval).toBe(interval);
+
+        const past = await manager.getPastReminders(now);
+        expect(past).toHaveLength(1);
+        expect(past[0].msg).toBe("recurring");
+
+        const remaining = await manager.list("u1");
+        expect(remaining).toHaveLength(1);
+        expect(remaining[0].end).toBeGreaterThan(now);
+        expect(remaining[0].end).toBe(now - 100 + interval);
+    });
+
+    test("snoozes active and delivered reminders seamlessly", async () => {
+        const manager = await createManager();
+        const now = Date.now();
+
+        await expect(manager.snooze("u1", 0, -100)).rejects.toThrow("Invalid snooze duration");
+        await expect(manager.snooze("nobody", 0, 60_000)).rejects.toThrow("No reminders to snooze");
+
+        const added = await manager.add("u1", now + 10_000, "snooze me", false);
+        const snoozed = await manager.snooze("u1", 0, 30_000);
+        expect(snoozed.end).toBeGreaterThanOrEqual(now + 40_000);
+
+        const snoozedDirect = await manager.snooze("u1", snoozed, 10_000);
+        expect(snoozedDirect.end).toBe(snoozed.end + 10_000);
+
+        await manager.remove("u1", 0);
+
+        manager._lastSentReminders.set("u1", added);
+        const snoozedLast = await manager.snooze("u1", null, 60_000);
+        expect(snoozedLast.msg).toBe("snooze me");
+        expect(snoozedLast.end).toBeGreaterThanOrEqual(now + 60_000);
     });
 });

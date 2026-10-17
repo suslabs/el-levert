@@ -25,7 +25,7 @@ describe("reminder add command", () => {
     test("validates input and creates reminders through the real database", async () => {
         const command = getCommand(runtime, "reminder");
 
-        await expect(executeCommand(command, "add", { msg })).resolves.toContain('date "message"');
+        await expect(executeCommand(command, "add", { msg })).resolves.toContain('<date> ["message"]');
         await expect(executeCommand(command, 'add nonsense "Pay rent"', { msg })).resolves.toContain("Invalid date");
         await expect(executeCommand(command, 'add in 1 hour ""', { msg })).resolves.toContain(
             "Invalid reminder message"
@@ -33,6 +33,38 @@ describe("reminder add command", () => {
         await expect(executeCommand(command, 'add in 1 hour "Pay rent"', { msg })).resolves.toContain(
             "You will be reminded"
         );
+        await expect(executeCommand(command, 'add every 1d "Standup meeting"', { msg })).resolves.toContain(
+            "(every 1 day)"
+        );
+        await expect(executeCommand(command, 'add every 10d 12:46 "Check backups"', { msg })).resolves.toContain(
+            "(every 1 week, 3 days)"
+        );
+        await expect(executeCommand(command, 'add 12:46 every 1d "Standup"', { msg })).resolves.toContain(
+            "(every 1 day)"
+        );
+        await expect(executeCommand(command, 'add 12:46 "Take meds" --every 1d', { msg })).resolves.toContain(
+            "(every 1 day)"
+        );
+        await expect(executeCommand(command, 'add 12:46 "Test" --every invalid', { msg })).resolves.toContain(
+            "Invalid recurring interval"
+        );
+    });
+
+    test("extracts and trims reply message content when message argument is omitted", async () => {
+        const command = getCommand(runtime, "reminder");
+
+        const replyMsg = {
+            id: "msg-12345",
+            channelId: "ch-67890",
+            guildId: "guild-111",
+            content: "Check this important task tomorrow",
+            url: "https://discord.com/channels/guild-111/ch-67890/msg-12345"
+        };
+
+        const res = await executeCommand(command, "add 1 hour", { msg, replyMsg });
+        expect(res).toContain("You will be reminded");
+        expect(res).toContain("Check this important task tomorrow");
+        expect(res).toContain("https://discord.com/channels/guild-111/ch-67890/msg-12345");
     });
 });
 

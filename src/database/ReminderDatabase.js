@@ -4,6 +4,7 @@ import Reminder from "../structures/Reminder.js";
 
 import Util from "../util/Util.js";
 import ObjectUtil from "../util/ObjectUtil.js";
+import DatabaseUtil from "../util/database/DatabaseUtil.js";
 
 class ReminderDatabase extends SqlDatabase {
     constructor(dbPath, queryPath, options) {
@@ -43,19 +44,33 @@ class ReminderDatabase extends SqlDatabase {
             $user: user
         });
 
-        if (typeof rows._data === "undefined" || Util.empty(rows)) {
+        if (Util.empty(rows)) {
             return null;
         }
 
-        const reminders = rows.map(row => new Reminder(row));
+        const reminders = DatabaseUtil.rowEntity(rows, Reminder);
         reminders.sort((a, b) => a.end - b.end);
 
         return reminders;
     }
 
+    async fetchById(id) {
+        const row = await this.queries.fetchById.get({
+            $id: id
+        });
+
+        return DatabaseUtil.rowEntity(row, Reminder);
+    }
+
     async add(reminder) {
         return await this.queries.add.run({
-            ...reminder.getData("$", true, ["user", "end", "msg"])
+            ...reminder.getData("$", true, ["user", "end", "msg", "interval"])
+        });
+    }
+
+    async update(reminder) {
+        return await this.queries.update.run({
+            ...reminder.getData("$", true, ["id", "end", "interval"])
         });
     }
 
@@ -73,7 +88,7 @@ class ReminderDatabase extends SqlDatabase {
 
     async list() {
         const rows = await this.queries.list.all(),
-            reminders = rows.map(row => new Reminder(row));
+            reminders = DatabaseUtil.rowEntity(rows, Reminder);
 
         reminders.sort((a, b) => a.end - b.end);
         return reminders;

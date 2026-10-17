@@ -9,6 +9,7 @@ import Util from "../../util/Util.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
 import Benchmark from "../../util/misc/Benchmark.js";
+import SnoozeUtil from "../../util/commands/SnoozeUtil.js";
 
 import ReminderError from "../../errors/ReminderError.js";
 
@@ -31,6 +32,7 @@ class ReminderManager extends DBManager {
         this.maxMsgLength = Util.clamp(ReminderManager.maxMsgLength, 0, DiscordUtil.msgCharLimit - 500);
 
         this._sendTimer = null;
+        this._lastSentReminders = new Map();
     }
 
     checkIndex(index, throwErrors = true) {
@@ -113,19 +115,93 @@ class ReminderManager extends DBManager {
         return await this.remind_db.list();
     }
 
-    async add(user, end, msg, validate = true) {
+    async add(user, end, msg, validate = true, interval = null) {
         if (validate) {
             if (!Number.isInteger(end) || end < Date.now()) {
                 throw new ReminderError("Invalid end time", end);
+            } else if (interval !== null && (!Number.isInteger(interval) || interval <= 0)) {
+                throw new ReminderError("Invalid reminder interval", interval);
             }
 
             msg = this.checkMessage(msg);
         }
 
-        const reminder = new Reminder({ user, end, msg });
+        const reminder = new Reminder({ user, end, msg, interval });
         await this.remind_db.add(reminder);
 
-        getLogger().info(`Added reminder for user: ${user} until: ${end} with message:${LoggerUtil.formatLog(msg)}`);
+        const intervalStr = reminder.isRecurring ? ` every ${reminder.interval}ms` : "";
+        getLogger().info(
+            `Added reminder for user: ${user} until: ${end}${intervalStr} with message:${LoggerUtil.formatLog(msg)}`
+        );
+
+        return reminder;
+    }
+
+    async snooze(user, target, duration) {
+        if (!Number.isInteger(duration) || duration <= 0) {
+            throw new ReminderError("Invalid snooze duration", duration);
+        }
+
+        let reminder = null,
+            isNew = false;
+
+        if (target instanceof Reminder) {
+            const existing = target.id ? await this.remind_db.fetchById(target.id) : null;
+
+            if (existing !== null) {
+                reminder = existing;
+                reminder.end = Math.max(reminder.end, Date.now()) + duration;
+            } else {
+                isNew = true;
+                reminder = new Reminder({
+                    user,
+                    end: Date.now() + duration,
+                    msg: target.msg,
+                    interval: null
+                });
+            }
+        } else {
+            const reminders = await this.list(user);
+
+            if (reminders === null || Util.empty(reminders)) {
+                const lastSent = this._lastSentReminders.get(user);
+
+                if (typeof lastSent !== "undefined") {
+                    isNew = true;
+                    reminder = new Reminder({
+                        user,
+                        end: Date.now() + duration,
+                        msg: lastSent.msg,
+                        interval: null
+                    });
+                } else {
+                    throw new ReminderError("No reminders to snooze");
+                }
+            } else {
+                let idx = 0;
+
+                if (typeof target === "number") {
+                    idx = target;
+                }
+
+                this.checkIndex(idx);
+                reminder = reminders[idx];
+
+                if (typeof reminder === "undefined") {
+                    throw new ReminderError("Reminder doesn't exist");
+                }
+
+                reminder.end = Math.max(reminder.end, Date.now()) + duration;
+            }
+        }
+
+        if (isNew) {
+            await this.remind_db.add(reminder);
+        } else {
+            await this.remind_db.update(reminder);
+        }
+
+        getLogger().info(`Snoozed reminder for user: ${user} until: ${reminder.end}.`);
         return reminder;
     }
 
@@ -166,9 +242,19 @@ class ReminderManager extends DBManager {
         const reminders = await this.listAll(),
             past = reminders.filter(reminder => reminder.isPast(date));
 
+        const now = date ?? Date.now();
+
         await this.remind_db.transactionImmediate(async tx => {
             for (const reminder of past) {
-                await tx.remove(reminder);
+                if (reminder.isRecurring) {
+                    while (reminder.end <= now) {
+                        reminder.end += reminder.interval;
+                    }
+
+                    await tx.update(reminder);
+                } else {
+                    await tx.remove(reminder);
+                }
             }
         });
 
@@ -188,6 +274,8 @@ class ReminderManager extends DBManager {
             return;
         }
 
+        this._lastSentReminders.set(reminder.user, reminder);
+
         let out = "You set a reminder for " + reminder.format();
 
         if (!out.endsWith('"')) {
@@ -195,7 +283,18 @@ class ReminderManager extends DBManager {
         }
 
         getLogger().info(`Sending reminder to ${DiscordUtil.formatUser(user)}...`);
-        await user.send(out);
+
+        const session = SnoozeUtil.createSession(user, reminder);
+        const row = SnoozeUtil.createSnoozeRow(session.id);
+
+        const msg = await user.send({
+            content: out,
+            components: [row]
+        });
+
+        if (typeof msg !== "undefined") {
+            session.setMessage(msg);
+        }
     }
 
     startSendLoop() {
@@ -210,6 +309,7 @@ class ReminderManager extends DBManager {
     async unload() {
         await super.unload();
         this._stopSendLoop();
+        this._lastSentReminders.clear();
     }
 
     _sendReminders = async () => {

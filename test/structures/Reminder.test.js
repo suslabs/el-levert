@@ -1,5 +1,4 @@
-import { describe, expect, test } from "vitest";
-
+import Util from "../../src/util/Util.js";
 import Reminder from "../../src/structures/Reminder.js";
 
 describe("Reminder", () => {
@@ -17,12 +16,26 @@ describe("Reminder", () => {
             rem_id: 0,
             rem_user: "42",
             rem_end: 1_000,
-            rem_msg: "hello *world*"
+            rem_msg: "hello *world*",
+            rem_interval: null
         });
         expect(reminder.isPast(2_000)).toBe(true);
+        expect(reminder.isRecurring).toBe(false);
         expect(reminder.getTimestamp()).toMatch(/^<t:1:/);
         expect(reminder.getTimestamp(false)).toContain("1970");
         expect(reminder.format()).toContain("with the message:");
         expect(reminder.format()).toContain("hello");
+
+        const dayMs = Util.durationSeconds.day / Util.durationSeconds.milli,
+            recurring = new Reminder({
+                user: "42",
+                end: 1_000,
+                msg: "standup",
+                interval: dayMs
+            });
+
+        expect(recurring.isRecurring).toBe(true);
+        expect(recurring.format()).toContain("(every 1 day)");
+        expect(recurring.format()).toContain("standup");
     });
 });
