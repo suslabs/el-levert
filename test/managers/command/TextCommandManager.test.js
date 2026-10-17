@@ -58,7 +58,7 @@ describe("TextCommandManager", () => {
 
         expect(manager.isCommand("!alpha")).toBe(true);
         expect(manager.isCommand("alpha")).toBe(false);
-        expect(manager.getCommand("!z arg1 arg2")[0]?.name).toBe("zeta");
+        expect(manager.getCommand("!z arg1 arg2")[0].name).toBe("zeta");
         expect(manager.getCommand("!z arg1 arg2")).toEqual([
             manager.searchCommands("zeta"),
             "z",

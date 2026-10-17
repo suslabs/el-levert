@@ -106,7 +106,7 @@ class Tag {
     }
 
     static getParsedMeta(parsed, type) {
-        if (parsed?.isBinary || type === "binary") {
+        if (parsed.isBinary || type === "binary") {
             return {
                 type: "binary"
             };
@@ -261,7 +261,10 @@ class Tag {
     }
 
     getVersion() {
-        return TagTypes.versions.entries.find(([, version]) => this.type.hasFlag(version.flag) === version.value)?.[0];
+        const entry = TagTypes.versions.entries.find(
+            ([, version]) => this.type.hasFlag(version.flag) === version.value
+        );
+        return Util.first(entry);
     }
 
     setVersion(version) {

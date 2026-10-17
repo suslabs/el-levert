@@ -50,7 +50,7 @@ describe("CLICommandManager", () => {
         await manager.load();
 
         expect(manager.isCommand(".help")).toBe(true);
-        expect(manager.getCommand(".help now")[0]?.name).toBe("help");
+        expect(manager.getCommand(".help now")[0].name).toBe("help");
         expect(manager.getHelp()).toContain("help");
     });
 });

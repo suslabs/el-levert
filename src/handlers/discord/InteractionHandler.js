@@ -39,8 +39,8 @@ class InteractionHandler extends MessageHandler {
             return false;
         }
 
-        const isComponent = typeof interaction.isMessageComponent === "function" && interaction.isMessageComponent(),
-            isModal = typeof interaction.isModalSubmit === "function" && interaction.isModalSubmit();
+        const isComponent = interaction.isMessageComponent(),
+            isModal = interaction.isModalSubmit();
 
         if (!isComponent && !isModal) {
             return false;
@@ -79,10 +79,7 @@ class InteractionHandler extends MessageHandler {
             isAuthor
         };
 
-        const commandContext =
-            typeof session.context.clone === "function"
-                ? session.context.clone(contextOverrides)
-                : Object.assign(Object.create(session.context), session.context, contextOverrides);
+        const commandContext = session.context.clone(contextOverrides);
 
         try {
             return await session.handleInteraction(commandContext);

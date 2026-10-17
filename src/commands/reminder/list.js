@@ -23,7 +23,7 @@ class ReminderListCommand {
     async handler(ctx) {
         const reminders = await getClient().reminderManager.list(ctx.msg.author.id);
 
-        if (reminders === null || Util.empty(reminders)) {
+        if (Util.empty(reminders)) {
             return `${getEmoji("info")} You have **no** reminders.`;
         }
 

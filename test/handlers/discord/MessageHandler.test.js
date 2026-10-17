@@ -352,7 +352,12 @@ describe("MessageHandler", () => {
 
     test("rate limits users when limit exceeded, bypassing mods", async () => {
         MessageHandler.resetRateLimiter();
-        const handler = new MessageHandler(true);
+        class TestMessageHandler extends MessageHandler {
+            static $name = "testMessageHandler";
+            execute() {}
+        }
+        const handler = new TestMessageHandler(true);
+        handler.load();
         handler.reply = vi.fn().mockResolvedValue("replied");
 
         const userMsg = {
@@ -368,6 +373,8 @@ describe("MessageHandler", () => {
         expect(handler.reply).toHaveBeenCalledTimes(1);
         expect(handler.reply).toHaveBeenCalledWith(userMsg, expect.stringContaining("slow down"));
 
+        runtime.client.permManager.enabled = true;
+        runtime.client.permManager.allowed = lvl => lvl >= 2;
         vi.spyOn(runtime.client.permManager, "maxLevel").mockResolvedValue(2);
         const modMsg = {
             author: { id: "mod-456" }
@@ -377,7 +384,7 @@ describe("MessageHandler", () => {
         expect(await handler.checkRateLimit(modMsg)).toBe(false);
 
         handler.unload();
-        expect(handler.rateLimiter.getTokens("user-123")).toBe(2);
+        expect(handler.rateLimiter.getRemaining("user-123")).toBe(2);
 
         MessageHandler.resetRateLimiter();
     });

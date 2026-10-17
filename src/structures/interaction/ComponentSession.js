@@ -62,15 +62,7 @@ class ComponentSession {
         if (!isAuthor && this.interactionMode === InteractionModes.authorOnly) {
             const warnMsg = `${getEmoji("warn")} Only the command caller can interact with this message.`;
 
-            if (typeof interactionContext.reply === "function") {
-                await interactionContext.reply(warnMsg, { ephemeral: true });
-            } else {
-                await interaction.reply({
-                    content: warnMsg,
-                    ephemeral: true
-                });
-            }
-
+            await interactionContext.reply(warnMsg, { ephemeral: true });
             return true;
         }
 
@@ -78,7 +70,7 @@ class ComponentSession {
 
         let res = false;
 
-        if (typeof command.executeInteraction === "function") {
+        if (command != null) {
             res = await command.executeInteraction(commandContext, interactionContext);
         }
 
@@ -93,7 +85,7 @@ class ComponentSession {
 
         this.active = false;
 
-        if (disableComponents && this.message && typeof this.message.edit === "function") {
+        if (disableComponents && this.message !== null) {
             try {
                 await this._disableMessageComponents();
             } catch (err) {
@@ -107,7 +99,7 @@ class ComponentSession {
     }
 
     async _disableMessageComponents() {
-        if (Util.empty(this.message?.components)) {
+        if (Util.empty(this.message.components)) {
             return;
         }
 

@@ -44,7 +44,7 @@ class MessageHandler extends Handler {
     }
 
     static resetRateLimiter() {
-        this._rateLimiter?.destroy?.();
+        this._rateLimiter?.destroy();
         this._rateLimiter = null;
     }
 
@@ -75,7 +75,7 @@ class MessageHandler extends Handler {
         const permManager = getClient().permManager;
         let perm = permManager.getLevels().default;
 
-        if (permManager.enabled && msg.author?.id != null) {
+        if (permManager.enabled) {
             perm = await permManager.maxLevel(msg.author.id);
         }
 

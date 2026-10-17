@@ -74,7 +74,7 @@ describe("CommandManager", () => {
         expect(manager.isCommand("!help", { author: { id: "user" } })).toBe(true);
         expect(manager.isCommand("bridge !help", { author: { id: "bridge" } })).toBe(true);
         expect(manager._getCommandContent("bridge !admin", { author: { id: "bridge" } })).toBe("admin");
-        expect(manager.searchCommands("help")?.name).toBe("help");
+        expect(manager.searchCommands("help").name).toBe("help");
         expect(manager.getCommands(0).map(command => command.name)).toEqual(["help"]);
         expect(
             manager

@@ -27,7 +27,7 @@ describe("tag search command", () => {
 
         const content = out.content ?? out;
         expect(content).toContain("similar tag");
-        expect(out.embeds?.[0]?.data?.description ?? content).toContain("alpha");
+        expect(content).toContain("alpha");
     });
 
     test("does not return hidden tags in search", async () => {

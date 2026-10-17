@@ -28,7 +28,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
     for (const db of dbs) {
-        if (db?.db != null) {
+        if (db.db != null) {
             await db.close();
         }
     }

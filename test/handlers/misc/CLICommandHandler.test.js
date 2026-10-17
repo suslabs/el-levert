@@ -24,8 +24,8 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-    logSpy?.mockRestore();
-    errorSpy?.mockRestore();
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
     await cleanupRuntime(runtime);
     runtime = null;
 });

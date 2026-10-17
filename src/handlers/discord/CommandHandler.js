@@ -43,7 +43,7 @@ class CommandHandler extends MessageHandler {
 
     constructor(enabled) {
         super(enabled, true, true, {
-            userSweepInterval: 10 / Util.durationSeconds.milli
+            userSweepInterval: 2 * getConfig().globalTimeLimit
         });
 
         this.commandWaitTime = getConfig().commandWaitTime;
@@ -59,12 +59,8 @@ class CommandHandler extends MessageHandler {
         const executeMain = async () => {
             const [cmd, , , parsed] = getClient().commandManager.getCommand(msg.content, msg);
 
-            if (!cmd || parsed === null) {
+            if (!cmd || parsed === null || (await this.checkRateLimit(msg))) {
                 return false;
-            }
-
-            if (await this.checkRateLimit(msg)) {
-                return true;
             }
 
             this._sendTyping(msg);
@@ -123,20 +119,14 @@ class CommandHandler extends MessageHandler {
             return null;
         }
 
-        const channelId = msg.channel?.id ?? msg.channelId;
+        const channelId = msg.channelId;
 
         if (!Util.nonemptyString(channelId)) {
             return null;
         }
 
-        const client = getClient();
-
-        if (client === null || typeof client.fetchMessage !== "function") {
-            return null;
-        }
-
         try {
-            return await client.fetchMessage(channelId, refId);
+            return await getClient().fetchMessage(channelId, refId);
         } catch {
             return null;
         }

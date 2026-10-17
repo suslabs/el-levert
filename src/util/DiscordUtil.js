@@ -706,7 +706,7 @@ let DiscordUtil = {
         }
 
         if (buf === null) {
-            const size = file?.size ?? 0,
+            const size = file.size ?? 0,
                 res = { name, size };
 
             if (data != null) {
@@ -716,7 +716,7 @@ let DiscordUtil = {
             return res;
         }
 
-        const size = file?.size ?? buf.length,
+        const size = file.size ?? buf.length,
             isBinary = DiscordUtil._isBinaryAttachment(buf, name);
 
         const res = { name, size };

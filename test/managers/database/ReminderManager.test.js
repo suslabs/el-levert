@@ -43,9 +43,9 @@ afterEach(async () => {
 
     vi.useRealTimers();
 
-    for (const manager of managers ?? []) {
-        manager?._stopSendLoop();
-        await manager?.unload();
+    for (const manager of managers) {
+        manager._stopSendLoop();
+        await manager.unload();
     }
 
     await cleanupRuntime(runtime);

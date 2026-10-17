@@ -24,7 +24,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-    handler?.unload();
+    handler.unload();
     await cleanupRuntime(runtime);
     runtime = null;
 });
@@ -122,7 +122,7 @@ describe("Merged Branch Coverage", () => {
 
     afterEach(async () => {
         vi.restoreAllMocks();
-        handler?.unload();
+        handler.unload();
         await cleanupRuntime(runtime);
         runtime = null;
     });

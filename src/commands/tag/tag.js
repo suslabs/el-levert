@@ -225,7 +225,7 @@ Subcommands:
             }
         }
 
-        const attachment = hasAttachments ? !downloaded?.isFile : DiscordUtil.hasAttachmentUrls(parsed.body);
+        const attachment = hasAttachments ? !downloaded.isFile : DiscordUtil.hasAttachmentUrls(parsed.body);
 
         return {
             body: parsed.body,
@@ -369,7 +369,7 @@ Subcommands:
             case "ClientError":
                 return `${getEmoji("error")} Can't execute script tag. ${err.message}.`;
             default:
-                const tagName = tag?.name ?? tag,
+                const tagName = TypeTester.isObject(tag) ? tag.name : tag,
                     header = Util.nonemptyString(tagName)
                         ? `${getEmoji("error")} Encountered exception while executing tag **${escapeMarkdown(tagName)}**:`
                         : `${getEmoji("error")} Encountered exception while executing tag:`;

@@ -18,7 +18,7 @@ let ownerMsg;
 async function run(args, msg = adminMsg) {
     return await executeCommand(command, args, {
         msg,
-        handler: runtime?.client?.commandHandler
+        handler: runtime.client.commandHandler
     });
 }
 

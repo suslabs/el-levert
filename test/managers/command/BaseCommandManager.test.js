@@ -74,7 +74,7 @@ describe("BaseCommandManager", () => {
 
         expect(loadRes).toBeTruthy();
         expect(manager.commands.map(command => command.name).sort()).toEqual(["add", "alpha", "tag"]);
-        expect(manager.searchCommands("tag").getSubcmd("add")?.name).toBe("add");
+        expect(manager.searchCommands("tag").getSubcmd("add").name).toBe("add");
         expect(manager.commands.some(command => command.name === "orphan")).toBe(false);
 
         const parent = manager.searchCommands("tag");

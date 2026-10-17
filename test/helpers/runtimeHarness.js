@@ -161,6 +161,22 @@ function buildDefaultDiscordFns(tempDir) {
     };
 }
 
+function buildDefaultManagers() {
+    return {
+        permManager: {
+            enabled: false,
+            getLevels: () => ({ default: 0 }),
+            allowed: () => false,
+            maxLevel: async () => 0
+        },
+        commandManager: {
+            searchCommands: () => ({
+                subcmds: new Map([["snooze", {}]])
+            })
+        }
+    };
+}
+
 async function importFresh(modulePath) {
     return await import(modulePath);
 }
@@ -262,7 +278,7 @@ async function createRuntime(options = {}) {
     });
 
     silenceLogger(client.logger);
-    Object.assign(client, buildDefaultDiscordFns(tempDir), options.discordOverrides);
+    Object.assign(client, buildDefaultManagers(), buildDefaultDiscordFns(tempDir), options.discordOverrides);
 
     if (options.clientOverrides != null) {
         Object.assign(client, options.clientOverrides);
@@ -299,35 +315,35 @@ async function cleanupRuntime(runtime) {
     const { client, tempDir } = runtime;
 
     try {
-        if (client?.components.get("handler")?.loaded) {
+        if (client.components.get("handler")?.loaded) {
             client._unloadHandlers();
         }
     } catch {}
 
     try {
-        if (client?.components.get("VM")?.loaded) {
+        if (client.components.get("VM")?.loaded) {
             client._unloadVMs();
         }
     } catch {}
 
     try {
-        if (client?.components.get("manager")?.loaded) {
+        if (client.components.get("manager")?.loaded) {
             await client._unloadManagers();
         }
     } catch {}
 
     try {
-        if (client?._eventLoader?.loaded) {
+        if (client._eventLoader?.loaded) {
             client._unloadEvents();
         }
     } catch {}
 
     try {
-        client?.client?.destroy();
+        client.client?.destroy();
     } catch {}
 
     try {
-        client?.logger?.end();
+        client.logger.end();
     } catch {}
 
     vi.restoreAllMocks();

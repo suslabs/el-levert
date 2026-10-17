@@ -21,9 +21,10 @@ afterEach(async () => {
 describe("messageUpdate event", () => {
     test("passes updated messages to the real client message dispatcher", async () => {
         const event = (await import("../../src/events/messageUpdate.js")).default;
-        const msg = { id: "1" };
+        const oldMsg = { id: "1", content: "old" },
+            newMsg = { id: "1", content: "new" };
 
-        await event.listener({}, msg);
-        expect(runtime.client.messageDispatcher.processEdit).toHaveBeenCalledWith(msg);
+        await event.listener(oldMsg, newMsg);
+        expect(runtime.client.messageDispatcher.processEdit).toHaveBeenCalledWith(oldMsg, newMsg);
     });
 });

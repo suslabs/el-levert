@@ -378,21 +378,11 @@ const PaginationUtil = Object.freeze({
     },
 
     handleInteraction: async ctx => {
-        const session = ctx.paginationSession ?? ctx.interactionContext?.session;
+        const session = ctx.paginationSession ?? ctx.interactionContext?.session,
+            spec = ctx.paginationSpec ?? session?.spec,
+            interaction = ctx.interaction;
 
-        if (session == null) {
-            return false;
-        }
-
-        const spec = ctx.paginationSpec ?? session.spec;
-
-        if (spec == null) {
-            return false;
-        }
-
-        const interaction = ctx.interaction;
-
-        if (interaction == null) {
+        if (session == null || spec == null || interaction == null) {
             return false;
         }
 

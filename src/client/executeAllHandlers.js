@@ -1,23 +1,11 @@
-let inProcessIds = [];
-
-function addId(msg_id) {
-    inProcessIds.push(msg_id);
-}
-
-function removeId(msg_id) {
-    inProcessIds = inProcessIds.filter(id => id !== msg_id);
-}
-
-function isProcessing(msg_id) {
-    return inProcessIds.includes(msg_id);
-}
+const inProcessIds = new Set();
 
 async function executeAllHandlers(client, funcName, msg, ...args) {
-    if (isProcessing(msg.id)) {
+    if (inProcessIds.has(msg.id)) {
         return;
     }
 
-    addId(msg.id);
+    inProcessIds.add(msg.id);
 
     try {
         for (const handler of client.handlerList) {
@@ -31,7 +19,7 @@ async function executeAllHandlers(client, funcName, msg, ...args) {
             }
         }
     } finally {
-        removeId(msg.id);
+        inProcessIds.delete(msg.id);
     }
 }
 

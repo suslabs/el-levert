@@ -62,21 +62,11 @@ let SnoozeUtil = {
     },
 
     handleInteraction: async ctx => {
-        const session = ctx.paginationSession ?? ctx.interactionContext?.session;
+        const session = ctx.paginationSession ?? ctx.interactionContext?.session,
+            reminder = session?.spec.reminder,
+            interaction = ctx.interaction;
 
-        if (session == null) {
-            return false;
-        }
-
-        const reminder = session.spec?.reminder;
-
-        if (reminder == null) {
-            return false;
-        }
-
-        const interaction = ctx.interactionContext?.interaction ?? ctx.interaction;
-
-        if (interaction == null) {
+        if (session == null || reminder == null || interaction == null) {
             return false;
         }
 

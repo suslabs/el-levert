@@ -55,7 +55,7 @@ beforeEach(async () => {
 afterEach(async () => {
     vi.restoreAllMocks();
 
-    if (db?.db != null) {
+    if (db != null && db.db != null) {
         await db.close();
     }
 

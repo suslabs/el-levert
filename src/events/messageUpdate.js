@@ -4,7 +4,7 @@ import { getClient } from "../LevertClient.js";
 
 export default {
     name: Events.MessageUpdate,
-    listener: (_, msg) => {
-        return getClient().messageDispatcher.processEdit(msg);
+    listener: (oldMsg, newMsg) => {
+        return getClient().messageDispatcher.processEdit(oldMsg, newMsg);
     }
 };
