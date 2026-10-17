@@ -10,7 +10,7 @@ class TagAddCommand {
         subcommand: true,
         args: "<name> [body]",
         description:
-            "Creates a new tag under your ownership. Accepts plain text, markdown codeblocks for scripts, or Discord attachments (images, text files, or binary .bin files). Admins can also specify local file paths.",
+            "Creates a new tag under your ownership. Accepts plain text, markdown codeblocks for scripts, or Discord attachments (images, text files, or binary .bin files). The bot owner can also specify local file paths.",
         usage: "- <name>: Unique tag identifier to register.\n- [body]: Content of the tag, or provide a file attachment.",
         parser: {
             requireArgs: true
@@ -52,7 +52,7 @@ class TagAddCommand {
         }
 
         let parsed = await this.parentCmd.parseBase(t_args, ctx, {
-                allowFilePath: getClient().permManager.allowed(ctx.perm, "admin")
+                allowFilePath: this.parentCmd.canUseFilePath(ctx)
             }),
             { body, meta, attachment, fromReply } = parsed;
 

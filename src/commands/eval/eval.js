@@ -194,7 +194,7 @@ class EvalCommand {
     }
 
     canUseFilePath(ctx) {
-        return getClient().permManager.allowed(ctx.perm, "admin");
+        return getClient().permManager.isOwner(ctx.author.id);
     }
 
     async handler(ctx) {

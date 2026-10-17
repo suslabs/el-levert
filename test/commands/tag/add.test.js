@@ -106,14 +106,20 @@ describe("tag add command", () => {
         expect(res).toContain(command.attachmentWarning);
     });
 
-    test("lets admins create tags from file paths", async () => {
+    test("lets the bot owner create tags from file paths, but treats paths literally for admins and regular users", async () => {
         const command = getCommand(runtime, "tag"),
             filePath = path.join(runtime.tempDir, "alpha.js");
 
         await fs.writeFile(filePath, "return 7;");
-        await addAdmin(runtime, msg.author.id);
 
-        await expect(executeCommand(command, `add alpha ${filePath}`, { msg })).resolves.toContain(
+        const ownerMsg = createCommandMessage(`%tag add alpha ${filePath}`, {
+            author: {
+                id: runtime.client.owner,
+                username: "owner"
+            }
+        });
+
+        await expect(executeCommand(command, `add alpha ${filePath}`, { msg: ownerMsg })).resolves.toContain(
             "Created script tag **alpha**"
         );
 
@@ -122,5 +128,15 @@ describe("tag add command", () => {
         expect(alpha.body).toBe("return 7;");
         expect(alpha.getScriptType()).toBe("ivm");
         expect(alpha.getScriptLanguage()).toBe("js");
+
+        await addAdmin(runtime, msg.author.id);
+
+        await expect(executeCommand(command, `add beta ${filePath}`, { msg })).resolves.toContain(
+            "Created tag **beta**"
+        );
+
+        const beta = await runtime.client.tagManager.fetch("beta");
+        expect(beta.body).toBe(filePath);
+        expect(beta.getScriptType()).toBe("text");
     });
 });

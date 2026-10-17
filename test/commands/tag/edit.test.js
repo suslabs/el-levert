@@ -43,14 +43,20 @@ describe("tag edit command", () => {
         );
     });
 
-    test("lets admins edit tags from file paths", async () => {
+    test("lets the bot owner edit tags from file paths, but treats paths literally for admins and regular users", async () => {
         const command = getCommand(runtime, "tag"),
             filePath = path.join(runtime.tempDir, "alpha.ts");
 
         await fs.writeFile(filePath, "const value: number = 1;\nreturn value;");
-        await addAdmin(runtime, msg.author.id);
 
-        await expect(executeCommand(command, `edit alpha ${filePath}`, { msg })).resolves.toContain(
+        const ownerMsg = createCommandMessage(`%tag edit alpha ${filePath}`, {
+            author: {
+                id: runtime.client.owner,
+                username: "owner"
+            }
+        });
+
+        await expect(executeCommand(command, `edit alpha ${filePath}`, { msg: ownerMsg })).resolves.toContain(
             "Edited script tag"
         );
 
@@ -59,5 +65,15 @@ describe("tag edit command", () => {
         expect(alpha.body).toBe("const value: number = 1;\nreturn value;");
         expect(alpha.getScriptType()).toBe("ivm");
         expect(alpha.getScriptLanguage()).toBe("ts");
+
+        await addAdmin(runtime, msg.author.id);
+
+        await expect(executeCommand(command, `edit alpha ${filePath}`, { msg })).resolves.toContain(
+            "Edited tag"
+        );
+
+        const alphaLiteral = await runtime.client.tagManager.fetch("alpha");
+        expect(alphaLiteral.body).toBe(filePath);
+        expect(alphaLiteral.getScriptType()).toBe("text");
     });
 });

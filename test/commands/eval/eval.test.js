@@ -140,7 +140,7 @@ describe("Merged Branch Coverage", () => {
 
             await expect(executeCommand(command, "", { msg: attachmentMsg })).resolves.toMatchObject({
                 content: ":no_entry_sign: Downloading attachment failed:",
-                files: expect.any(Array)
+                embeds: expect.any(Array)
             });
 
             runtime.client.tagVM.runScript = async () => {
@@ -151,16 +151,13 @@ describe("Merged Branch Coverage", () => {
 
             await expect(
                 executeCommand(command, "```js\n1 + 1\n```", { msg: createCommandMessage("%eval") })
-            ).resolves.toEqual([
-                ":no_entry_sign: Stopped.",
-                {
-                    type: "options",
-                    useConfigLimits: true
-                }
-            ]);
+            ).resolves.toMatchObject({
+                content: ":no_entry_sign: Encountered exception while executing script:",
+                embeds: expect.any(Array)
+            });
         });
 
-        test("lets admins load scripts from files without guessing for regular users", async () => {
+        test("lets the bot owner load scripts from files without guessing for admins or regular users", async () => {
             const command = getCommand(runtime, "eval"),
                 filePath = path.join(runtime.tempDir, "script.js");
 
@@ -173,13 +170,30 @@ describe("Merged Branch Coverage", () => {
                 executeCommand(command, filePath, {
                     msg: createCommandMessage(`%eval ${filePath}`, {
                         author: {
+                            id: runtime.client.owner,
+                            username: "owner"
+                        }
+                    })
+                })
+            ).resolves.toEqual([
+                "from file",
+                {
+                    type: "options",
+                    useConfigLimits: true
+                }
+            ]);
+
+            await expect(
+                executeCommand(command, filePath, {
+                    msg: createCommandMessage(`%eval ${filePath}`, {
+                        author: {
                             id: "admin-user",
                             username: "admin"
                         }
                     })
                 })
             ).resolves.toEqual([
-                "from file",
+                filePath,
                 {
                     type: "options",
                     useConfigLimits: true
@@ -282,7 +296,7 @@ describe("Merged Branch Coverage", () => {
 
             await expect(executeCommand(cCommand, "```c\nint main(){}\n```", { msg })).resolves.toMatchObject({
                 content: ":no_entry_sign: Script compilation failed:",
-                files: expect.any(Array)
+                embeds: expect.any(Array)
             });
 
             runtime.client.externalVM.runScript = async () => {

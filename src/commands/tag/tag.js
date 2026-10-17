@@ -116,6 +116,10 @@ Subcommands:
         return this.getSubcmdNames(checkAliases).includes(name) || FakeTagRegistry.has(name);
     }
 
+    canUseFilePath(ctx) {
+        return getClient().permManager.isOwner(ctx.author.id);
+    }
+
     async parseBase(t_args, contextOrMsg, options) {
         options = ObjectUtil.guaranteeObject(options);
 
@@ -160,11 +164,11 @@ Subcommands:
             };
         }
 
-        let parsed;
+        let parsed, downloaded;
 
         if (hasAttachments) {
             try {
-                const downloaded = await getClient().tagManager.downloadBody(t_args, msg, "tag");
+                downloaded = await getClient().tagManager.downloadBody(t_args, msg, "tag");
 
                 parsed = {
                     ...downloaded,

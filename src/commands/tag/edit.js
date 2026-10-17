@@ -9,7 +9,7 @@ class TagEditCommand {
         subcommand: true,
         args: "<name> [new_body]",
         description:
-            "Replaces a tag's body with new text, codeblock, or file attachment. Only the owner or moderators can edit a tag. Admins can provide local file paths.",
+            "Replaces a tag's body with new text, codeblock, or file attachment. Only the owner or moderators can edit a tag. The bot owner can provide local file paths.",
         usage: "- <name>: The name of the tag to edit.\n- [new_body]: The updated content, or supply a file attachment.",
         parser: {
             requireArgs: true
@@ -65,7 +65,7 @@ class TagEditCommand {
         }
 
         let parsed = await this.parentCmd.parseBase(t_args, ctx, {
-                allowFilePath: getClient().permManager.allowed(ctx.perm, "admin")
+                allowFilePath: this.parentCmd.canUseFilePath(ctx)
             }),
             { body, meta, attachment, fromReply } = parsed;
 
