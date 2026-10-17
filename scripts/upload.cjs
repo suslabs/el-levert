@@ -5,7 +5,19 @@ const SftpClient = require("ssh2-sftp-client");
 const yargs = require("yargs");
 const { hideBin } = require("yargs/helpers");
 
-const { resolveDefaultOutput } = require("./archive.cjs");
+const { archive, resolveDefaultOutput } = require("./archive.cjs");
+
+function loadEnvFile(envPath) {
+    if (!envPath) {
+        return;
+    }
+
+    const resolved = path.resolve(envPath);
+
+    if (fs.existsSync(resolved)) {
+        process.loadEnvFile(resolved);
+    }
+}
 
 function resolveConnectionConfig(options = {}) {
     const host = options.host ?? process.env.DEPLOY_HOST;
@@ -69,15 +81,18 @@ function resolveArchive(options, repoRoot) {
     const defaultPath = resolveDefaultOutput(repoRoot);
 
     if (!fs.existsSync(defaultPath)) {
-        throw new Error(`Default archive not found at '${defaultPath}'. Run archive first.`);
+        console.log(`Default archive not found at '${defaultPath}'. Building archive...`);
+        return archive();
     }
 
     return defaultPath;
 }
 
 function executeRemote(sshClient, command) {
+    const wrappedCmd = `export PATH="$PATH:$HOME/.nvm/versions/node/$(ls $HOME/.nvm/versions/node 2>/dev/null | tail -n 1)/bin:/usr/local/bin:/usr/bin:~/.npm-global/bin"; ${command}`;
+
     return new Promise((resolve, reject) => {
-        sshClient.exec(command, (err, stream) => {
+        sshClient.exec(wrappedCmd, (err, stream) => {
             if (err) {
                 return reject(err);
             }
@@ -106,6 +121,10 @@ function executeRemote(sshClient, command) {
 }
 
 async function upload(options = {}) {
+    const envPath = options.env ?? process.env.DEPLOY_ENV ?? ".deploy/.env";
+
+    loadEnvFile(envPath);
+
     const repoRoot = path.resolve(__dirname, ".."),
         localArchive = resolveArchive(options, repoRoot);
 
@@ -118,12 +137,20 @@ async function upload(options = {}) {
     const localScript = path.join(__dirname, "unarchive.cjs"),
         connectionConfig = resolveConnectionConfig(options);
 
+    const targetDir = options.targetDir ?? options["target-dir"] ?? options.target ?? process.env.DEPLOY_TARGET_DIR,
+        pm2App = options.pm2 ?? options["pm2"] ?? process.env.DEPLOY_PM2;
+
     console.log(`Connecting to ${connectionConfig.username}@${connectionConfig.host}:${connectionConfig.port}...`);
 
     const sftp = new SftpClient();
 
     try {
         await sftp.connect(connectionConfig);
+
+        if (typeof pm2App === "string" && pm2App.trim().length > 0) {
+            console.log(`Stopping PM2 application '${pm2App}'...`);
+            await executeRemote(sftp.client, `pm2 stop "${pm2App}" || true`);
+        }
 
         console.log(`Uploading archive to ${remoteArchive}...`);
         await sftp.fastPut(localArchive, remoteArchive);
@@ -133,15 +160,19 @@ async function upload(options = {}) {
             await sftp.fastPut(localScript, remoteScript);
         }
 
-        const pm2App = options.pm2 ?? options["pm2"];
+        if (typeof targetDir === "string" && targetDir.trim().length > 0) {
+            console.log(`Extracting archive on remote to '${targetDir}'...`);
+            const unarchiveCmd = `cd "${targetDir}" && NODE_PATH="${targetDir}/node_modules" node "${remoteScript}" --archive "${remoteArchive}" --target "${targetDir}"`;
+            await executeRemote(sftp.client, unarchiveCmd);
+        }
 
         if (typeof pm2App === "string" && pm2App.trim().length > 0) {
             console.log(`Restarting PM2 application '${pm2App}'...`);
-            const pm2Cmd = `pm2 reload "${pm2App}" || pm2 restart "${pm2App}"`;
+            const pm2Cmd = `pm2 restart "${pm2App}" || pm2 start "${pm2App}"`;
             await executeRemote(sftp.client, pm2Cmd);
         }
 
-        console.log(`Upload complete. Run on remote: node ${remoteScript} --archive ${remoteArchive}`);
+        console.log("Upload and deployment complete.");
 
         return { localArchive, remoteArchive, remoteScript };
     } finally {
@@ -153,6 +184,11 @@ function parseArgs() {
     return yargs(hideBin(process.argv))
         .usage("Usage: npm run upload [options]")
         .options({
+            env: {
+                alias: "e",
+                type: "string",
+                describe: "Path to .env file for deployment settings"
+            },
             host: {
                 alias: "H",
                 type: "string",
@@ -188,9 +224,14 @@ function parseArgs() {
                 default: "/tmp",
                 describe: "Remote directory for upload destination"
             },
+            "target-dir": {
+                alias: "t",
+                type: "string",
+                describe: "Remote directory for project extraction"
+            },
             pm2: {
                 type: "string",
-                describe: "PM2 application name to restart (optional)"
+                describe: "PM2 application name to manage (stop before replace, restart after)"
             }
         })
         .alias("help", "h")
@@ -213,6 +254,7 @@ module.exports = {
     upload,
     resolveConnectionConfig,
     resolveArchive,
+    loadEnvFile,
     executeRemote,
     parseArgs
 };

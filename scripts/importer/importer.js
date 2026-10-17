@@ -135,7 +135,9 @@ const loggerName = "Importer",
     logLevel = "info";
 
 function setupLogger(name, logFile) {
-    const loggerConfig = getDefaultLoggerConfig(name, logFile, true, logLevel);
+    const loggerConfig = getDefaultLoggerConfig(name, logFile, true, logLevel, {
+        showDate: false
+    });
     return createLogger(loggerConfig);
 }
 

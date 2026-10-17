@@ -11,11 +11,11 @@ import ObjectUtil from "../../util/ObjectUtil.js";
 class InteractionHandler extends MessageHandler {
     static $name = "interactionHandler";
 
+    priority = 1;
+    handlesMessages = false;
+
     constructor(enabled, options) {
         options = ObjectUtil.guaranteeObject(options);
-        options.handlesMessages ??= false;
-        options.priority ??= 1;
-
         super(enabled, false, false, options);
 
         const sweepInterval = options.sweepInterval ?? 30 / Util.durationSeconds.milli;

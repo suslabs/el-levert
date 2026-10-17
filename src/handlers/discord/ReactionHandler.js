@@ -65,8 +65,11 @@ function toStringArray(value) {
 
 class ReactionHandler extends Handler {
     static $name = "reactionHandler";
+
     static emojiEyeChars = ":;=8xX";
     static emojiNoseChars = "-^'oO*";
+
+    static trackLimit = 20;
 
     priority = -1;
     handlesMessages = true;
@@ -76,7 +79,7 @@ class ReactionHandler extends Handler {
 
         this.multipleReacts = getClient().reactions.multipleReacts ?? false;
 
-        this.reactionTracker = new ReactionTracker(20);
+        this.reactionTracker = new ReactionTracker(this.constructor.trackLimit);
     }
 
     load() {
