@@ -319,9 +319,16 @@ class GatewayClient extends EventEmitter {
                 : this._reconnectAttempts * this.reconnectDelay,
             delay = this.constructor._getRetryTime(baseDelay, this.defaultJitter, isRateLimited);
 
+        const delayStr = Util.duration(delay, {
+            unit: "second",
+            format: true,
+            short: true,
+            digits: 2
+        });
+
         const logMsg = isRateLimited
-            ? `Rate limit exceeded. Reconnecting in ${(delay / 1000).toFixed(2)}s... (attempt ${this._reconnectAttempts}/${this.maxReconnectAttempts})`
-            : `Disconnected. Reconnecting in ${(delay / 1000).toFixed(2)}s... (attempt ${this._reconnectAttempts}/${this.maxReconnectAttempts})`;
+            ? `Rate limit exceeded. Reconnecting in ${delayStr}... (attempt ${this._reconnectAttempts}/${this.maxReconnectAttempts})`
+            : `Disconnected. Reconnecting in ${delayStr}... (attempt ${this._reconnectAttempts}/${this.maxReconnectAttempts})`;
 
         console.log(logMsg);
 

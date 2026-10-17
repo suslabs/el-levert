@@ -72,7 +72,6 @@ class SedHandler extends MessageHandler {
         logUsage(msg);
         Benchmark.startTiming("sed_generate");
 
-        SedHandler.sedRegex.lastIndex = 0;
         const matches = Array.from(str.matchAll(SedHandler.sedRegex));
 
         if (Util.empty(matches)) {
@@ -149,7 +148,8 @@ class SedHandler extends MessageHandler {
             ? content.replace(...Util.first(rules))
             : RegexUtil.multipleReplace(content, ...rules);
 
-        const username = sedMsg.author.displayName,
+        const description = replacedContent || "\u200b",
+            username = sedMsg.author.displayName,
             avatar = sedMsg.author.displayAvatarURL(),
             timestamp = sedMsg.editedTimestamp ?? sedMsg.createdTimestamp,
             image = sedMsg.attachments.at(0)?.url,
@@ -160,7 +160,7 @@ class SedHandler extends MessageHandler {
                 name: username,
                 iconURL: avatar
             })
-            .setDescription(replacedContent)
+            .setDescription(description)
             .setTimestamp(timestamp)
             .setImage(image)
             .setFooter({
@@ -174,6 +174,10 @@ class SedHandler extends MessageHandler {
     async execute(msg) {
         if (!this.canSed(msg.content)) {
             return false;
+        }
+
+        if (await this.checkRateLimit(msg)) {
+            return true;
         }
 
         Benchmark.startTiming("sed_send");

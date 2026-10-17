@@ -349,4 +349,36 @@ describe("MessageHandler", () => {
         expect(out.embeds[0].title).toBe("\\@everyone title");
         expect(out.embeds[0].description).toBe("hello \\@here");
     });
+
+    test("rate limits users when limit exceeded, bypassing mods", async () => {
+        MessageHandler.resetRateLimiter();
+        const handler = new MessageHandler(true);
+        handler.reply = vi.fn().mockResolvedValue("replied");
+
+        const userMsg = {
+            author: { id: "user-123" }
+        };
+
+        const RateLimiter = (await import("../../../src/util/misc/RateLimiter.js")).default;
+        MessageHandler.rateLimiter = new RateLimiter(2, 5000);
+
+        expect(await handler.checkRateLimit(userMsg)).toBe(false);
+        expect(await handler.checkRateLimit(userMsg)).toBe(false);
+        expect(await handler.checkRateLimit(userMsg)).toBe(true);
+        expect(handler.reply).toHaveBeenCalledTimes(1);
+        expect(handler.reply).toHaveBeenCalledWith(userMsg, expect.stringContaining("slow down"));
+
+        vi.spyOn(runtime.client.permManager, "maxLevel").mockResolvedValue(2);
+        const modMsg = {
+            author: { id: "mod-456" }
+        };
+        expect(await handler.checkRateLimit(modMsg)).toBe(false);
+        expect(await handler.checkRateLimit(modMsg)).toBe(false);
+        expect(await handler.checkRateLimit(modMsg)).toBe(false);
+
+        handler.unload();
+        expect(handler.rateLimiter.getTokens("user-123")).toBe(2);
+
+        MessageHandler.resetRateLimiter();
+    });
 });

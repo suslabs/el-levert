@@ -14,6 +14,8 @@ describe("ConfigLoader", () => {
             outLineLimit: -5,
             embedCharLimit: 999999,
             embedLineLimit: -1,
+            commandRateLimit: 45,
+            commandRateLimitWindow: 30,
             minResponseTime: 5500,
             globalTimeLimit: 2200,
             vmInspector: {
@@ -41,6 +43,8 @@ describe("ConfigLoader", () => {
         expect(config.outLineLimit).toBe(0);
         expect(config.embedCharLimit).toBeGreaterThan(0);
         expect(config.embedLineLimit).toBe(0);
+        expect(config.commandRateLimit).toBe(45);
+        expect(config.commandRateLimitWindow).toBe(30000);
         expect(config.minResponseTime).toBe(10000);
         expect(config.globalTimeLimit).toBe(2200000);
         expect(config.vmInspector.connectTimeout).toBe(2000000);

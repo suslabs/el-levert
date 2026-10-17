@@ -52,6 +52,21 @@ describe("CommandHandler", () => {
     });
 
     test("reports real execution failures through replyWithError", async () => {
+        const pingCmd = runtime.client.commandManager.searchCommands("ping");
+        vi.spyOn(pingCmd, "execute").mockRejectedValueOnce(new Error("Command crashed"));
+
+        const msg = createDiscordMessage("%ping", {
+            reply: vi.fn(async data => data)
+        });
+
+        expect(await handler.execute(msg)).toBe(true);
+
+        const [reply] = msg.reply.mock.calls[0];
+        expect(reply.content).toContain("Encountered exception while executing command **ping**");
+        expect(reply.files).toHaveLength(1);
+    });
+
+    test("reports tag execution failures through specialized error handler", async () => {
         await runtime.client.tagManager.add("broken", "(", "user-1", { type: "ivm" });
 
         const msg = createDiscordMessage("%tag broken", {
@@ -61,8 +76,8 @@ describe("CommandHandler", () => {
         expect(await handler.execute(msg)).toBe(true);
 
         const [reply] = msg.reply.mock.calls[0];
-        expect(reply.content).toContain("Encountered exception while executing command **tag**");
-        expect(reply.files).toHaveLength(1);
+        expect(reply.content).toContain("Encountered exception while executing tag **broken**:");
+        expect(reply.embeds).toHaveLength(1);
     });
 
     test("supports stateful command-managed replies and edits", async () => {
@@ -423,5 +438,33 @@ describe("CommandHandler", () => {
 
         expect(await handler.execute(msgWithoutRef)).toBe(true);
         expect(capturedContext.replyMsg).toBeNull();
+    });
+
+    test("aborts command execution and warns if rate limited", async () => {
+        const RateLimiter = (await import("../../../src/util/misc/RateLimiter.js")).default;
+        const MessageHandler = (await import("../../../src/handlers/discord/MessageHandler.js")).default;
+
+        MessageHandler.rateLimiter = new RateLimiter(1, 5000);
+
+        const msg1 = createDiscordMessage("%tag list", {
+            author: { id: "user-rl" },
+            reply: vi.fn(async data => data)
+        });
+
+        expect(await handler.execute(msg1)).toBe(true);
+
+        const msg2 = createDiscordMessage("%tag list", {
+            author: { id: "user-rl" },
+            reply: vi.fn(async data => data)
+        });
+
+        expect(await handler.execute(msg2)).toBe(true);
+        expect(msg2.reply).toHaveBeenCalledWith(
+            expect.objectContaining({
+                content: expect.stringContaining("slow down")
+            })
+        );
+
+        MessageHandler.resetRateLimiter();
     });
 });

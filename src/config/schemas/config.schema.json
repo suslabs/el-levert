@@ -55,6 +55,15 @@
         "embedLineLimit": {
             "type": "number"
         },
+        "errorCharLimit": {
+            "type": "number"
+        },
+        "commandRateLimit": {
+            "type": "number"
+        },
+        "commandRateLimitWindow": {
+            "type": "number"
+        },
         "minResponseTime": {
             "type": "number"
         },
@@ -218,9 +227,10 @@
                 "error": { "type": "string" },
                 "ok": { "type": "string" },
                 "invalid": { "type": "string" },
-                "waiting": { "type": "string" }
+                "waiting": { "type": "string" },
+                "clock": { "type": "string" }
             },
-            "required": ["info", "warn", "error", "ok", "invalid", "waiting"]
+            "required": ["info", "warn", "error", "ok", "invalid", "waiting", "clock"]
         },
         "bridgeBotIds": {
             "type": "array"
@@ -289,6 +299,9 @@
         "outLineLimit",
         "embedCharLimit",
         "embedLineLimit",
+        "errorCharLimit",
+        "commandRateLimit",
+        "commandRateLimitWindow",
         "minResponseTime",
         "globalTimeLimit",
         "commandWaitTime",

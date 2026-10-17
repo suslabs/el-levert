@@ -16,6 +16,9 @@
     "outLineLimit": 16,
     "embedCharLimit": 3000,
     "embedLineLimit": 40,
+    "errorCharLimit": 1000,
+    "commandRateLimit": 60,
+    "commandRateLimitWindow": 60,
     "minResponseTime": 0.1,
     "globalTimeLimit": 60,
     "commandWaitTime": 3,
@@ -73,7 +76,8 @@
         "error": ":no_entry_sign:",
         "ok": ":white_check_mark:",
         "invalid": ":police_car:",
-        "waiting": ":hourglass_flowing_sand:"
+        "waiting": ":hourglass_flowing_sand:",
+        "clock": ":clock3:"
     },
     "bridgeBotIds": [],
     "bridgeBotMessageFormat": "\\*{2}.+?:\\*{2}\\s",

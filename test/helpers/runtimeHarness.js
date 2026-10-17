@@ -86,13 +86,17 @@ function buildDefaultConfig(tempDir, overrides = {}) {
         outLineLimit: 30,
         embedCharLimit: 5900,
         embedLineLimit: 30,
+        commandRateLimit: 60,
+        commandRateLimitWindow: 60000,
+        minResponseTime: 100,
         emoji: {
             info: ":information_source:",
             warn: ":warning:",
             error: ":no_entry_sign:",
             ok: ":white_check_mark:",
             invalid: ":police_car:",
-            waiting: ":hourglass_flowing_sand:"
+            waiting: ":hourglass_flowing_sand:",
+            clock: ":clock3:"
         },
         ...overrides
     };

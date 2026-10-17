@@ -1,9 +1,11 @@
+import { bold } from "discord.js";
+
 import Handler from "../Handler.js";
 
 import ReplyTracker from "./tracker/ReplyTracker.js";
 import UserTracker from "./tracker/UserTracker.js";
 
-import { getConfig, getEmoji, getLogger } from "../../LevertClient.js";
+import { getClient, getConfig, getEmoji, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
@@ -12,12 +14,45 @@ import ArrayUtil from "../../util/ArrayUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import { isErrorCode } from "../../util/discord/ErrorCodes.js";
 import VMUtil from "../../util/vm/VMUtil.js";
+import RateLimiter from "../../util/misc/RateLimiter.js";
 
 import { MessageLimitTypes } from "./MessageLimitTypes.js";
 import { EmbedCountAreas } from "../../util/EmbedCountAreas.js";
 
 class MessageHandler extends Handler {
+    static _rateLimiter = null;
+
+    static get rateLimiter() {
+        if (this._rateLimiter === null) {
+            const config = getConfig();
+
+            if (config != null) {
+                const limit = config.commandRateLimit,
+                    window = config.commandRateLimitWindow;
+
+                if (limit > 0 && window > 0) {
+                    this._rateLimiter = new RateLimiter(limit, window);
+                }
+            }
+        }
+
+        return this._rateLimiter;
+    }
+
+    static set rateLimiter(val) {
+        this._rateLimiter = val;
+    }
+
+    static resetRateLimiter() {
+        this._rateLimiter?.destroy?.();
+        this._rateLimiter = null;
+    }
+
     handlesMessages = true;
+
+    get rateLimiter() {
+        return this.constructor.rateLimiter;
+    }
 
     constructor(enabled, hasReplyTracker = true, hasUserTracker = false, options) {
         super(enabled, options);
@@ -28,6 +63,42 @@ class MessageHandler extends Handler {
         this.useConfigLimits = this.options.useConfigLimits ?? false;
 
         this.setLimits();
+    }
+
+    async checkRateLimit(msg) {
+        const rateLimiter = this.rateLimiter;
+
+        if (rateLimiter === null) {
+            return false;
+        }
+
+        const permManager = getClient().permManager;
+        let perm = permManager.getLevels().default;
+
+        if (permManager.enabled && msg.author?.id != null) {
+            perm = await permManager.maxLevel(msg.author.id);
+        }
+
+        if (permManager.allowed(perm, "mod")) {
+            return false;
+        }
+
+        if (rateLimiter.check(msg.author.id)) {
+            return false;
+        }
+
+        const waitMs = rateLimiter.getTimeToReset(msg.author.id),
+            waitStr = Util.duration(waitMs, {
+                format: true,
+                short: true,
+                largestOnly: true
+            });
+
+        const waitBold = bold(waitStr),
+            warning = `${getEmoji("clock")} You are sending commands too fast. Please slow down! (${waitBold})`;
+
+        await this.reply(msg, warning);
+        return true;
     }
 
     getReply(msg, i = 0) {
@@ -216,6 +287,8 @@ class MessageHandler extends Handler {
             this.userTracker.clearUsers();
             this.userTracker._stopSweepLoop();
         }
+
+        this.constructor._rateLimiter?.clear();
     }
 
     setLimits(limits) {
@@ -258,7 +331,6 @@ class MessageHandler extends Handler {
         }
 
         const codeblockRanges = DiscordUtil.findCodeblocks(str);
-        MessageHandler._mentionRegex.lastIndex = 0;
 
         return str.replaceAll(MessageHandler._mentionRegex, (match, p1, offset) => {
             for (const [start, end] of codeblockRanges) {
@@ -489,7 +561,7 @@ class MessageHandler extends Handler {
     }
 
     _getErrorOutput(err, out) {
-        const errMsg = err.stack ?? err.message ?? "No error message available";
+        const errMsg = Util.getErrorMessage(err);
 
         return {
             content: `${getEmoji("error")} Encountered exception while ${out}:`,

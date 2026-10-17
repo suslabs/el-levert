@@ -26,9 +26,8 @@ describe("Util", () => {
         expect(Util.stripSpaces(" a \n b ")).toBe("ab");
         expect(Util.splitChars("hello")).toEqual(["h", "e", "l", "l", "o"]);
         expect(Util.capitalize("  hello  ")).toBe("  Hello  ");
-        expect(Util.camelCaseToKebab("channelLastMessageId")).toBe("channel-last-message-id");
-        expect(Util.camelCaseToWords("helloWorld")).toBe("hello world");
-        expect(Util.wordsToCamelCase("HELLO world")).toBe("helloWorld");
+        expect(Util.uncapitalize("  Hello  ")).toBe("  hello  ");
+        expect(Util.toggleCase("Hello World!")).toBe("hELLO wORLD!");
         expect(Util.hasDuplicates("abba")).toBe(true);
         expect(Util.unique("abca")).toBe("abc");
         expect(Util.removeStringRange("abcdef", 2, 2)).toBe("abef");
@@ -183,4 +182,38 @@ describe("Util", () => {
             )
         ).resolves.toBe("late");
     });
+
+    test("formats duration and handles units", () => {
+        expect(Util.duration(5000)).toEqual({ second: 5 });
+        expect(Util.duration(5000, { format: true })).toBe("5 seconds");
+        expect(Util.duration(1000, { format: true })).toBe("1 second");
+        expect(Util.duration(5000, { format: true, short: true })).toBe("5s");
+        expect(Util.duration(65000, { format: true, short: true })).toBe("1m, 5s");
+        expect(Util.duration(65000, { format: true, short: true, largestOnly: true })).toBe("1m");
+        expect(Util.duration(5000, { unit: "second", format: true, short: true })).toBe("5s");
+        expect(Util.duration(125000, { unit: "minute", format: true, digits: 2 })).toBe("2.08 minutes");
+        expect(Util.duration(125000, { unit: "minute", format: true, short: true, digits: 2 })).toBe("2.08m");
+        expect(() => Util.duration(5000, { unit: "invalid" })).toThrow();
+    });
+
+    test("formats byte sizes with formatSize", () => {
+        expect(Util.formatSize(1024)).toBe("1 kilobyte");
+        expect(Util.formatSize(2048)).toBe("2 kilobytes");
+        expect(Util.formatSize(1024, { short: true })).toBe("1 KB");
+        expect(Util.formatSize(1048576, { short: true })).toBe("1 MB");
+        expect(Util.formatSize(2500, { unit: "kilobyte", short: true, digits: 2 })).toBe("2.44 KB");
+        expect(Util.formatSize(1048576, { format: false })).toEqual({ megabyte: 1 });
+        expect(() => Util.formatSize(1024, { unit: "bad" })).toThrow();
+    });
+
+    test("extracts error messages with getErrorMessage", () => {
+        const errWithStack = new Error("something went wrong");
+        expect(Util.getErrorMessage(errWithStack)).toBe(errWithStack.stack);
+
+        expect(Util.getErrorMessage({ message: "custom error" })).toBe("custom error");
+        expect(Util.getErrorMessage("direct error string")).toBe("direct error string");
+        expect(Util.getErrorMessage(null)).toBe("No error message available");
+        expect(Util.getErrorMessage(null, "custom fallback")).toBe("custom fallback");
+    });
 });
+

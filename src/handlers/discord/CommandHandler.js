@@ -63,6 +63,10 @@ class CommandHandler extends MessageHandler {
                 return false;
             }
 
+            if (await this.checkRateLimit(msg)) {
+                return true;
+            }
+
             this._sendTyping(msg);
 
             const replyMsg = await this._resolveReplyMsg(msg);

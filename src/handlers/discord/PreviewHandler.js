@@ -14,8 +14,6 @@ import { ignoredPreviewErrors } from "./PreviewErrorMessages.js";
 import HandlerError from "../../errors/HandlerError.js";
 
 function logUsage(msg, str) {
-    DiscordUtil.msgUrlRegex.lastIndex = 0;
-
     getLogger().info(
         `Generating preview for "${Util.first(str.match(DiscordUtil.msgUrlRegex))}", issued by user ${DiscordUtil.formatUser(msg.author)} in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)}).`
     );
@@ -66,7 +64,6 @@ class PreviewHandler extends MessageHandler {
     }
 
     removeLink(str) {
-        DiscordUtil.msgUrlRegex.lastIndex = 0;
         return str.replace(DiscordUtil.msgUrlRegex, "");
     }
 
@@ -153,6 +150,10 @@ class PreviewHandler extends MessageHandler {
     async execute(msg) {
         if (!this.canPreview(msg.content)) {
             return false;
+        }
+
+        if (await this.checkRateLimit(msg)) {
+            return true;
         }
 
         let preview = null;

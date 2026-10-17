@@ -3,73 +3,17 @@ import BaseConfigLoader from "./BaseConfigLoader.js";
 import DefaultConfig from "../../config/DefaultConfig.js";
 
 import Util from "../../util/Util.js";
-import DiscordUtil from "../../util/DiscordUtil.js";
 import TypeTester from "../../util/TypeTester.js";
 
 class ConfigLoader extends BaseConfigLoader {
     static formatContentGroup = "(?<content>)";
+    static defaults = DefaultConfig;
 
     constructor(logger, options) {
         super("config", logger, options);
     }
 
     modify(config) {
-        config.outCharLimit = Util.clamp(config.outCharLimit, 0, DiscordUtil.msgCharLimit);
-        config.outLineLimit = Util.clamp(config.outLineLimit, 0, DiscordUtil.msgCharLimit);
-
-        config.embedCharLimit = Util.clamp(config.embedCharLimit, 0, DiscordUtil.embedCharLimit);
-        config.embedLineLimit = Util.clamp(config.embedLineLimit, 0, DiscordUtil.embedCharLimit);
-
-        config.minResponseTime = Util.clamp(
-            Math.round(config.minResponseTime / Util.durationSeconds.milli),
-            null,
-            DefaultConfig.maxMinResponseTime / Util.durationSeconds.milli
-        );
-        config.globalTimeLimit = Math.round(config.globalTimeLimit / Util.durationSeconds.milli);
-        config.commandWaitTime = Math.round(
-            (config.commandWaitTime ?? DefaultConfig.commandWaitTime) / Util.durationSeconds.milli
-        );
-        config.interactionTimeout = Math.round(
-            (config.interactionTimeout ?? DefaultConfig.interactionTimeout) / Util.durationSeconds.milli
-        );
-
-        if (config.vmInspector != null) {
-            config.vmInspector.connectTimeout = Math.round(
-                (config.vmInspector.connectTimeout ?? DefaultConfig.vmInspector.connectTimeout) /
-                    Util.durationSeconds.milli
-            );
-            config.vmInspector.userConnectTimeout = Math.round(
-                (config.vmInspector.userConnectTimeout ?? DefaultConfig.vmInspector.userConnectTimeout) /
-                    Util.durationSeconds.milli
-            );
-            config.vmInspector.userActionTimeout = Math.round(
-                (config.vmInspector.userActionTimeout ?? DefaultConfig.vmInspector.userActionTimeout) /
-                    Util.durationSeconds.milli
-            );
-        }
-
-        if (config.vmHttp != null) {
-            config.vmHttp.maxUploadSize = Math.round(
-                (config.vmHttp.maxUploadSize ?? DefaultConfig.vmHttp.maxUploadSize) * Util.dataBytes.megabyte
-            );
-            config.vmHttp.maxDownloadSize = Math.round(
-                (config.vmHttp.maxDownloadSize ?? DefaultConfig.vmHttp.maxDownloadSize) * Util.dataBytes.megabyte
-            );
-            config.vmHttp.maxRequests = config.vmHttp.maxRequests ?? DefaultConfig.vmHttp.maxRequests;
-            config.vmHttp.rateLimitWindow = Math.round(
-                (config.vmHttp.rateLimitWindow ?? DefaultConfig.vmHttp.rateLimitWindow) / Util.durationSeconds.milli
-            );
-            config.vmHttp.allowLocalhostRequests =
-                config.vmHttp.allowLocalhostRequests ?? DefaultConfig.vmHttp.allowLocalhostRequests;
-            config.vmHttp.allowFilesystemRequests =
-                config.vmHttp.allowFilesystemRequests ?? DefaultConfig.vmHttp.allowFilesystemRequests;
-        }
-
-        config.timeLimit = Math.round(config.timeLimit / Util.durationSeconds.milli);
-        config.otherTimeLimit = Math.round(config.otherTimeLimit / Util.durationSeconds.milli);
-
-        config.reminderSendInterval = Math.round(config.reminderSendInterval / Util.durationSeconds.milli);
-
         this._setBridgeBotConfig(config);
     }
 

@@ -240,5 +240,35 @@ describe("Merged Branch Coverage", () => {
                 })
             );
         });
+
+        test("aborts sed execution and warns if rate limited", async () => {
+            const RateLimiter = (await import("../../../src/util/misc/RateLimiter.js")).default;
+            const MessageHandler = (await import("../../../src/handlers/discord/MessageHandler.js")).default;
+
+            MessageHandler.rateLimiter = new RateLimiter(1, 5000);
+
+            const msg1 = createDiscordMessage("sed/a/b/", {
+                author: { id: "user-sed" },
+                reply: vi.fn(async data => data)
+            });
+
+            runtime.client.fetchMessage = async () => null;
+
+            await handler.execute(msg1);
+
+            const msg2 = createDiscordMessage("sed/a/b/", {
+                author: { id: "user-sed" },
+                reply: vi.fn(async data => data)
+            });
+
+            expect(await handler.execute(msg2)).toBe(true);
+            expect(msg2.reply).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    content: expect.stringContaining("slow down")
+                })
+            );
+
+            MessageHandler.resetRateLimiter();
+        });
     });
 });
