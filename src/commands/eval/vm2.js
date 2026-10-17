@@ -1,4 +1,6 @@
-import { getClient, getConfig } from "../../LevertClient.js";
+import { getClient, getConfig, getEmoji } from "../../LevertClient.js";
+
+import DiscordUtil from "../../util/DiscordUtil.js";
 
 class Vm2EvalCommand {
     static info = {
@@ -27,7 +29,15 @@ class Vm2EvalCommand {
             return parsed.err;
         }
 
-        return await getClient().tagVM2.runScript(body, ctx.msg);
+        try {
+            return await getClient().tagVM2.runScript(body, ctx.msg);
+        } catch (err) {
+            const header = `${getEmoji("error")} Encountered exception while executing script:`;
+
+            return DiscordUtil.formatErrorEmbed(header, err, {
+                charLimit: getConfig().errorCharLimit
+            });
+        }
     }
 }
 

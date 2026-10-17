@@ -58,7 +58,21 @@ describe("DiscordUtil", () => {
         ]);
     });
 
-    test("invalid attachment URLs parse to null", () => {
+    test("identifies and parses attachment URLs", () => {
+        const url = "https://cdn.discordapp.com/attachments/123456789/987654321/image.png?ex=6500&is=6400&hm=abcd";
+        const bareUrl = "https://cdn.discordapp.com/attachments/123456789/987654321/image.png";
+
+        expect(DiscordUtil.isAttachmentUrl(url)).toBe(true);
+        expect(DiscordUtil.isAttachmentUrl(bareUrl)).toBe(true);
+        expect(DiscordUtil.isAttachmentUrl("not a discord attachment")).toBe(false);
+        expect(DiscordUtil.isAttachmentUrl("")).toBe(false);
+        expect(DiscordUtil.isAttachmentUrl(null)).toBe(false);
+
+        expect(DiscordUtil.hasAttachmentUrls(`Here is a file: ${bareUrl} check it out`)).toBe(true);
+        expect(DiscordUtil.hasAttachmentUrls("no attachments here")).toBe(false);
+        expect(DiscordUtil.hasAttachmentUrls("")).toBe(false);
+        expect(DiscordUtil.hasAttachmentUrls(null)).toBe(false);
+
         expect(DiscordUtil.parseAttachmentUrl("not a discord attachment")).toBeNull();
     });
 
@@ -179,5 +193,24 @@ describe("DiscordUtil", () => {
         expect(DiscordUtil.formatUser(null)).toBe("invalid");
         expect(DiscordUtil.formatUser("alex", "12345", true, { possessive: true })).toBe("alex's (`12345`)");
         expect(DiscordUtil.formatUser("12345", null, true, { possessive: true })).toBe("`12345`'s");
+    });
+
+    test("formats error embed and overflows to file attachment when exceeding char limit", () => {
+        const shortRes = DiscordUtil.formatErrorEmbed("Header:", new Error("short error"), {
+            charLimit: 1000
+        });
+        expect(shortRes.content).toBe("Header:");
+        expect(shortRes.embeds).toHaveLength(1);
+        expect(shortRes.files).toBeUndefined();
+
+        const longError = "a".repeat(1500);
+        const longRes = DiscordUtil.formatErrorEmbed("Header:", longError, {
+            filename: "custom_error.txt",
+            charLimit: 1000
+        });
+        expect(longRes.content).toBe("Header:");
+        expect(longRes.embeds).toBeUndefined();
+        expect(longRes.files).toHaveLength(1);
+        expect(longRes.files[0].name).toBe("custom_error.txt");
     });
 });

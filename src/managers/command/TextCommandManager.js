@@ -7,6 +7,7 @@ import CommandParser from "../../parsers/command/CommandParser.js";
 
 import Util from "../../util/Util.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
+import CaseUtil from "../../util/misc/CaseUtil.js";
 
 import categoryNames from "./categoryNames.json" assert { type: "json" };
 
@@ -115,7 +116,7 @@ class TextCommandManager extends BaseCommandManager {
             const foundName = categoryNames[name],
                 formattedName = Util.nonemptyString(foundName)
                     ? Util.capitalize(foundName)
-                    : Util.capitalize(name).replaceAll(/[_-]/g, " ");
+                    : Util.capitalize(CaseUtil.toWords(name));
 
             headers[i++] = this._isInvalidCategory(name)
                 ? ""

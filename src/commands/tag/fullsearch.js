@@ -177,8 +177,6 @@ class TagFullSearchCommand {
         }
 
         const limit = customLimit ?? paginationOpts.limit ?? defaultResultLimit;
-
-        splitRegex.lastIndex = 0;
         query = query.split(splitRegex).join(" ");
 
         if (isAll) {

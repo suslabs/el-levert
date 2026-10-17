@@ -9,6 +9,7 @@ import { getClient } from "../../LevertClient.js";
 import Util from "../Util.js";
 import ObjectUtil from "../ObjectUtil.js";
 import FileUtil from "../misc/FileUtil.js";
+import CaseUtil from "../misc/CaseUtil.js";
 
 import CommandError from "../../errors/CommandError.js";
 
@@ -26,7 +27,7 @@ function makeCliArg(name, options) {
     return Object.freeze({
         name,
         kind: "option",
-        aliases: [Util.camelCaseToKebab(name)],
+        aliases: [CaseUtil.toKebabCase(name)],
         ...ObjectUtil.guaranteeObject(options)
     });
 }

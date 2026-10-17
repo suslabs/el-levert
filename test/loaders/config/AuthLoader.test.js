@@ -106,4 +106,15 @@ describe("AuthLoader", () => {
 
         await expect(loader.load()).resolves.toEqual([null, LoadStatus.failed]);
     });
+
+    test("validates complete and incomplete auth data", async () => {
+        const { default: AuthLoader } = await import("../../../src/loaders/config/AuthLoader.js");
+        const loader = new AuthLoader(null, {
+            throwOnFailure: false
+        });
+
+        expect(loader.validate({ token: "t", owner: "o" })).toBe(LoadStatus.successful);
+        expect(loader.validate({ token: "", owner: "o" })).toBe(LoadStatus.failed);
+        expect(loader.validate({ token: "t", owner: "" })).toBe(LoadStatus.failed);
+    });
 });

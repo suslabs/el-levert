@@ -5,13 +5,11 @@ import TypeTester from "../TypeTester.js";
 const RegexUtil = Object.freeze({
     _regexEscapeRegex: /[.*+?^${}()|[\]\\]/g,
     escapeRegex: str => {
-        RegexUtil._regexEscapeRegex.lastIndex = 0;
         return str.replace(RegexUtil._regexEscapeRegex, "\\$&");
     },
 
     _charClassExcapeRegex: /[-\\\]^]/g,
     escapeCharClass: str => {
-        RegexUtil._charClassExcapeRegex.lastIndex = 0;
         return str.replace(RegexUtil._charClassExcapeRegex, "\\$&");
     },
 
@@ -86,8 +84,6 @@ const RegexUtil = Object.freeze({
             const newFlags = Util.unique(regex.flags + "g"),
                 globalRegex = new regexCtor(regex.source, newFlags);
 
-            globalRegex.lastIndex = 0;
-
             for (const match of str.matchAll(globalRegex)) {
                 const start = match.index,
                     end = match.index + match[0].length;
@@ -115,7 +111,6 @@ const RegexUtil = Object.freeze({
             if (typeof info.replacement === "function") {
                 replaced = info.replacement(fullMatch, ...info.match.slice(1), info.start, str);
             } else {
-                info.regex.lastIndex = 0;
                 replaced = fullMatch.replace(info.regex, info.replacement);
             }
 
@@ -128,8 +123,6 @@ const RegexUtil = Object.freeze({
 
     _templateReplaceRegex: /(?<!\\){{(.*?)}}(?!\\)/g,
     templateReplace: (template, strings) => {
-        RegexUtil._templateReplaceRegex.lastIndex = 0;
-
         return template.replace(RegexUtil._templateReplaceRegex, (match, key) => {
             key = key.trim();
             return strings[key] ?? match;

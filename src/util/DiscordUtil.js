@@ -2,7 +2,7 @@ import { Buffer } from "node:buffer";
 
 import axios from "axios";
 
-import { EmbedBuilder, ChannelType, AttachmentBuilder, inlineCode } from "discord.js";
+import { EmbedBuilder, ChannelType, AttachmentBuilder, inlineCode, codeBlock } from "discord.js";
 
 import Util from "./Util.js";
 import TypeTester from "./TypeTester.js";
@@ -24,8 +24,6 @@ let DiscordUtil = {
     // userIdRegex: /[A-Za-z0-9]{24,30}/g,
 
     findUserIds: str => {
-        DiscordUtil.userIdRegex.lastIndex = 0;
-
         const matches = Array.from(str.matchAll(DiscordUtil.userIdRegex));
         return matches.map(match => match[0]);
     },
@@ -34,8 +32,6 @@ let DiscordUtil = {
     // mentionRegex: /<@([A-Za-z0-9]{24,30})>/g,
 
     findMentions: str => {
-        DiscordUtil.mentionRegex.lastIndex = 0;
-
         const matches = Array.from(str.matchAll(DiscordUtil.mentionRegex));
         return matches.map(match => match[1]);
     },
@@ -74,8 +70,6 @@ let DiscordUtil = {
     codeblockRegex: /(?<!\\)(?:`{3}([\S]+\n)?([\s\S]*?)`{3}|`([^`\n]+)`)/g,
 
     findCodeblocks: str => {
-        DiscordUtil.codeblockRegex.lastIndex = 0;
-
         const matches = str.matchAll(DiscordUtil.codeblockRegex);
         return Array.from(matches).map(match => [match.index, match.index + match[0].length]);
     },
@@ -87,6 +81,30 @@ let DiscordUtil = {
     getFileAttach: (data, name = "message.txt") => {
         const attachment = new AttachmentBuilder(Buffer.from(data), { name });
         return { files: [attachment] };
+    },
+
+    formatErrorEmbed: (header, err, options) => {
+        options = ObjectUtil.guaranteeObject(options);
+
+        const filename = options.filename ?? "error.js",
+            charLimit = options.charLimit ?? DiscordUtil.embedCharLimit;
+
+        const errMsg = Util.getErrorMessage(err);
+
+        const formatted = codeBlock(errMsg);
+
+        const res = {
+            content: header
+        };
+
+        if (!Util.overSizeLimits(formatted, charLimit)) {
+            const embed = new EmbedBuilder().setDescription(formatted);
+            res.embeds = [embed];
+        } else {
+            res.files = DiscordUtil.getFileAttach(errMsg, filename).files;
+        }
+
+        return res;
     },
 
     getMessageUrl: (sv_id, ch_id, msg_id) => {
@@ -128,7 +146,7 @@ let DiscordUtil = {
     },
 
     attachUrlRegex:
-        /(?<prefix>(?:(https?:)\/\/)?(cdn|media)\.discordapp\.(com|net)\/attachments\/(?<sv_id>\d+)\/(?<ch_id>\d+)\/(?<filename>.+?)(?<ext>\.\w+)?)(?:\?(?:ex=(?<ex>[0-9a-f]+)&is=(?<is>[0-9a-f]+)&hm=(?<hm>[0-9a-f]+))?)?(?=\s|$|\p{P})/giu,
+        /(?<prefix>(?:(https?:)\/\/)?(cdn|media)\.discordapp\.(com|net)\/attachments\/(?<sv_id>\d+)\/(?<ch_id>\d+)\/(?<filename>[^/?#\s]+?)(?<ext>\.[^.?#\s]+)?(?=\?|\s|$))\??(?:ex=(?<ex>[0-9a-f]+)&is=(?<is>[0-9a-f]+)&hm=(?<hm>[0-9a-f]+))?/giu,
 
     _attachUrlMatchResult: match => {
         if (!match) {
@@ -158,6 +176,15 @@ let DiscordUtil = {
             is: groups.is,
             hm: groups.hm
         };
+    },
+
+    isAttachmentUrl: url => {
+        if (!Util.nonemptyString(url)) {
+            return false;
+        }
+
+        DiscordUtil.singleAttachRegex.lastIndex = 0;
+        return DiscordUtil.singleAttachRegex.test(url.trim());
     },
 
     parseAttachmentUrl: url => {
@@ -622,7 +649,7 @@ let DiscordUtil = {
 {
     DiscordUtil.parseScriptRegex = new RegExp(`^${DiscordUtil.codeblockRegex.source}$`);
     DiscordUtil.singleMsgRegex = new RegExp(`^${DiscordUtil.msgUrlRegex.source}$`, "i");
-    DiscordUtil.singleAttachRegex = new RegExp(`^${DiscordUtil.attachUrlRegex.source}$`, "iu");
+    DiscordUtil.singleAttachRegex = new RegExp(`^(?:${DiscordUtil.attachUrlRegex.source})$`, "iu");
 }
 
 DiscordUtil = Object.freeze(DiscordUtil);

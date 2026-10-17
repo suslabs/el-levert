@@ -17,12 +17,13 @@ import { getClient, getEmoji } from "../../LevertClient.js";
 import Util from "../Util.js";
 import ObjectUtil from "../ObjectUtil.js";
 import DiscordUtil from "../DiscordUtil.js";
+import CaseUtil from "../misc/CaseUtil.js";
 
 function makePaginationArg(name, options) {
     return Object.freeze({
         name,
         kind: "option",
-        aliases: [Util.camelCaseToKebab(name)],
+        aliases: [CaseUtil.toKebabCase(name)],
         ...ObjectUtil.guaranteeObject(options)
     });
 }

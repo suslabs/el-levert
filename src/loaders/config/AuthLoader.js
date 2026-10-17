@@ -52,13 +52,37 @@ class AuthLoader extends Loader {
         }
 
         const data = createAuthData(jsonData, envData),
-            status = this._validate(data);
+            status = this.validate(data);
 
         if (status === LoadStatus.failed) {
             return status;
         }
 
         this.data = data;
+        return LoadStatus.successful;
+    }
+
+    validate(data) {
+        const envKeys = DefaultAuthConfig.envKeys;
+
+        const missing = [];
+
+        if (!Util.nonemptyString(data.token)) {
+            missing.push(
+                `Missing auth token. Set "token" in ${configPaths.auth} or ${envKeys.token} in ${configPaths.authEnv}.`
+            );
+        }
+
+        if (!Util.nonemptyString(data.owner)) {
+            missing.push(
+                `Missing auth owner. Set "owner" in ${configPaths.auth} or ${envKeys.owner} in ${configPaths.authEnv}.`
+            );
+        }
+
+        if (!Util.empty(missing)) {
+            return this.failure(missing.join("\n"));
+        }
+
         return LoadStatus.successful;
     }
 
@@ -99,29 +123,6 @@ class AuthLoader extends Loader {
         });
 
         return await loader.load();
-    }
-
-    _validate(data) {
-        const envKeys = DefaultAuthConfig.envKeys,
-            missing = [];
-
-        if (!Util.nonemptyString(data.token)) {
-            missing.push(
-                `Missing auth token. Set "token" in ${configPaths.auth} or ${envKeys.token} in ${configPaths.authEnv}.`
-            );
-        }
-
-        if (!Util.nonemptyString(data.owner)) {
-            missing.push(
-                `Missing auth owner. Set "owner" in ${configPaths.auth} or ${envKeys.owner} in ${configPaths.authEnv}.`
-            );
-        }
-
-        if (!Util.empty(missing)) {
-            return this.failure(missing.join("\n"));
-        }
-
-        return LoadStatus.successful;
     }
 }
 

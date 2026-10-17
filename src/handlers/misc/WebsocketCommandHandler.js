@@ -135,7 +135,7 @@ class WebsocketCommandHandler extends Handler {
 
     _handleExecutionError(err, packet, socket, context, cmd) {
         getLogger().error(
-            `Encountered exception while executing websocket command "${cmd.name}":\n${err.stack ?? err.message}`
+            `Encountered exception while executing websocket command "${cmd.name}":\n${Util.getErrorMessage(err)}`
         );
 
         if (context !== null) {

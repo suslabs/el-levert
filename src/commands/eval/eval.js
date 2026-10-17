@@ -48,10 +48,9 @@ async function evalBase(args, msg, options) {
             } else {
                 return {
                     body: null,
-                    err: {
-                        content: `${getEmoji("error")} Downloading attachment failed:`,
-                        ...DiscordUtil.getFileAttach(err.stack, "error.js")
-                    }
+                    err: DiscordUtil.formatErrorEmbed(`${getEmoji("error")} Downloading attachment failed:`, err, {
+                        charLimit: getConfig().errorCharLimit
+                    })
                 };
             }
         }
@@ -81,7 +80,11 @@ async function altevalBase(args, msg, lang, options) {
         [evalOut, resCode] = await getClient().externalVM.runScript(body, lang);
     } catch (err) {
         if (err.name !== "ExternalVMError") {
-            throw err;
+            const header = `${getEmoji("error")} Encountered exception while executing script:`;
+
+            return DiscordUtil.formatErrorEmbed(header, err, {
+                charLimit: getConfig().errorCharLimit
+            });
         }
 
         let parsedJson = {};
@@ -103,10 +106,12 @@ async function altevalBase(args, msg, lang, options) {
         case 3:
             break;
         case 6:
-            return {
-                content: `${getEmoji("error")} Script compilation failed:`,
-                ...DiscordUtil.getFileAttach(evalOut.compileOutput, "compile_error.js")
-            };
+            const compileHeader = `${getEmoji("error")} Script compilation failed:`;
+
+            return DiscordUtil.formatErrorEmbed(compileHeader, evalOut.compileOutput, {
+                filename: "compile_error.js",
+                charLimit: getConfig().errorCharLimit
+            });
         default:
             return `${getEmoji("error")} ${getClient().externalVM.codes[resCode]}.`;
     }
@@ -232,19 +237,17 @@ class EvalCommand {
 
             out = await getClient().tagVM.runScript(body, { msg: ctx.msg }, { commandContext: ctx });
         } catch (err) {
-            if (err.name !== "VMError") {
-                throw err;
-            }
-
-            out = `${getEmoji("error")} ${err.message}.`;
-
-            if (debug) {
-                await ctx.edit(out, {
-                    useConfigLimits: true
+            const header = `${getEmoji("error")} Encountered exception while executing script:`,
+                errorOut = DiscordUtil.formatErrorEmbed(header, err, {
+                    charLimit: getConfig().errorCharLimit
                 });
 
+            if (debug) {
+                await ctx.edit(errorOut);
                 return;
             }
+
+            return errorOut;
         }
 
         return [

@@ -87,7 +87,11 @@ class TagInfoCommand {
                 `**Name**: *${info.name}*`,
                 `**Alias name**: ${info.aliasName}`,
                 `**Body**: ${info.body}`,
-                `**Size**: ${Util.formatNumber(info.size, 2)} KB`,
+                `**Size**: ${Util.formatSize(info.size * Util.dataBytes.kilobyte, {
+                    unit: "kilobyte",
+                    short: true,
+                    digits: 2
+                })}`,
                 `**Is script**: ${info.isScript}`,
                 `**Is binary**: ${info.isBinary}`,
                 `**Is hidden**: ${info.isHidden}`,

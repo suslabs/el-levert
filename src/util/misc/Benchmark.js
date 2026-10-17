@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
 import Util from "../Util.js";
+import CaseUtil from "./CaseUtil.js";
 
 import UtilError from "../../errors/UtilError.js";
 
@@ -354,10 +355,15 @@ class Benchmark {
             maxText = Math.round(max * 1000).toLocaleString();
 
         const avgText = Math.round(avg * 1000).toLocaleString(),
-            sumText = Util.round(sum / 1000, 3);
+            sumText = Util.duration(sum, {
+                unit: "second",
+                format: true,
+                short: true,
+                digits: 3
+            });
 
         console.log(
-            `${name} - ${runs} runs | min: ${minText}us | max: ${maxText}us | avg: ${avgText}us | total: ${sumText}s`
+            `${name} - ${runs} runs | min: ${minText}us | max: ${maxText}us | avg: ${avgText}us | total: ${sumText}`
         );
 
         return [min, max, avg, sum, result];
@@ -406,17 +412,12 @@ class Benchmark {
 
     static _formatCountOrigName(name) {
         name = this._formatCountInput(name);
-        name = name.replaceAll(" ", "_");
-        return name.toLowerCase();
+        return CaseUtil.toSnakeCase(name);
     }
 
     static _formatCountName(name) {
         name = this._formatCountInput(name);
-
-        name = name.replaceAll(" ", "_");
-        name += "_count";
-
-        return name.toUpperCase();
+        return CaseUtil.toSnakeCase(`${name}_count`, true);
     }
 
     static _getCurrentStore() {

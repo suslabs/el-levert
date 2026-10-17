@@ -250,7 +250,6 @@ class ReactionHandler extends Handler {
             matches = [];
 
         str = normalizeText(str);
-        this._wordRegex.lastIndex = 0;
 
         for (const match of str.matchAll(this._wordRegex)) {
             const word = Util.first(match);
@@ -292,7 +291,6 @@ class ReactionHandler extends Handler {
             return info;
         }
 
-        ReactionHandler._faceRegex.lastIndex = 0;
         const clean = str.replace(ReactionHandler._faceRegex, match => match.replace(/[()]/g, " "));
 
         const unmatchedLeft = [],

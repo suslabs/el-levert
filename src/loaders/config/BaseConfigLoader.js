@@ -4,11 +4,47 @@ import JsonLoader from "../JsonLoader.js";
 
 import configPaths from "../../config/configPaths.json" assert { type: "json" };
 
-import ObjectUtil from "../../util/ObjectUtil.js";
-
 import { LoadStatus } from "../LoadStatus.js";
 
+import Util from "../../util/Util.js";
+import TypeTester from "../../util/TypeTester.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
+
 class BaseConfigLoader extends JsonLoader {
+    static applyDefaults(data, defaults) {
+        if (!TypeTester.isObject(data) || !TypeTester.isObject(defaults)) {
+            return data;
+        }
+
+        for (const [key, def] of Object.entries(defaults)) {
+            if (this._isDescriptor(def)) {
+                let val = data[key] ?? def.base ?? def.min ?? 0;
+
+                if (def.mult != null) {
+                    val *= def.mult;
+                }
+
+                if (def.round) {
+                    val = Math.round(val);
+                }
+
+                if (def.min != null || def.max != null) {
+                    val = Util.clamp(val, def.min, def.max);
+                }
+
+                data[key] = val;
+            } else if (TypeTester.isObject(def) && !Array.isArray(def) && Object.keys(def).length > 0) {
+                if (data[key] != null) {
+                    this.applyDefaults(data[key], def);
+                }
+            } else if (data[key] == null) {
+                data[key] = typeof def === "object" && def !== null ? structuredClone(def) : def;
+            }
+        }
+
+        return data;
+    }
+
     constructor(name, logger, options) {
         options = ObjectUtil.guaranteeObject(options);
 
@@ -38,9 +74,16 @@ class BaseConfigLoader extends JsonLoader {
         return LoadStatus.successful;
     }
 
+    static _isDescriptor(obj) {
+        return (
+            TypeTester.isObject(obj) &&
+            ("min" in obj || "max" in obj || "round" in obj || "mult" in obj || "base" in obj)
+        );
+    }
+
     _modify() {
-        if (this.constructor.defaultValues != null) {
-            ObjectUtil.setValuesWithDefaults(this.data, this.data, this.constructor.defaultValues);
+        if (this.constructor.defaults != null) {
+            this.constructor.applyDefaults(this.data, this.constructor.defaults);
         }
 
         if (typeof this._childModify === "function") {

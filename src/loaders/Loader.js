@@ -1,6 +1,7 @@
 import Util from "../util/Util.js";
 import TypeTester from "../util/TypeTester.js";
 import ObjectUtil from "../util/ObjectUtil.js";
+import CaseUtil from "../util/misc/CaseUtil.js";
 
 import { LoadStatus } from "./LoadStatus.js";
 
@@ -40,7 +41,7 @@ class Loader {
     }
 
     getName(capitalized = false) {
-        const type = this.type.replaceAll("_", " "),
+        const type = CaseUtil.toWords(this.type),
             name = [this.name, type].filter(str => !Util.empty(str)).join(" ");
 
         return capitalized ? Util.capitalize(name) : name;

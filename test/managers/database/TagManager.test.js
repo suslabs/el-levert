@@ -256,7 +256,8 @@ describe("TagManager", () => {
         ).resolves.toEqual({
             body: "plain file",
             isScript: false,
-            isBinary: false
+            isBinary: false,
+            isFile: true
         });
 
         await expect(
@@ -272,7 +273,8 @@ describe("TagManager", () => {
         ).resolves.toEqual({
             body: "console.log(1);",
             isScript: true,
-            isBinary: false
+            isBinary: false,
+            isFile: true
         });
 
         await expect(
@@ -409,7 +411,8 @@ describe("Merged Branch Coverage", () => {
             expect(out).toEqual({
                 body: "prefix https://example.com/file.png",
                 isScript: false,
-                isBinary: false
+                isBinary: false,
+                isFile: false
             });
         });
 

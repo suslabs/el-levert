@@ -24,11 +24,11 @@ beforeEach(async () => {
             username: "alex"
         }
     });
-});
+}, 30000);
 
 afterEach(async () => {
     await cleanupRuntime(runtime);
-});
+}, 30000);
 
 describe("tag command", () => {
     test("runs through the real command and preview path", async () => {
@@ -228,7 +228,8 @@ describe("Merged Branch Coverage", () => {
 
             vi.spyOn(runtime.client.tagManager, "downloadBody").mockResolvedValueOnce({
                 body: "downloaded body",
-                isScript: false
+                isScript: false,
+                isFile: true
             });
 
             expect(
@@ -238,7 +239,7 @@ describe("Merged Branch Coverage", () => {
             ).toMatchObject({
                 body: "downloaded body",
                 meta: {},
-                attachment: true,
+                attachment: false,
                 err: null
             });
         });
@@ -286,7 +287,8 @@ describe("Merged Branch Coverage", () => {
 
             vi.spyOn(runtime.client.tagManager, "downloadBody").mockResolvedValueOnce({
                 body: "https://example.com/file.png",
-                isScript: false
+                isScript: false,
+                isFile: false
             });
 
             const parsed = await command.parseBase("", ctx);

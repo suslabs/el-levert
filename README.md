@@ -110,9 +110,9 @@ Important groups of settings:
 
 - Discord text interface: `cmdPrefix`, `interactionTimeout` (active button session lifespan in seconds)
 - CLI interface: `enableCliCommands`, `cliCmdPrefix`
-- WebSocket interface: `enableWebsocket`, `websocketPort`
-- Eval modes and script network access: `enableEval`, `enableVM2`, `enableOtherLangs`, `allowLocalhostRequests`, `allowFilesystemRequests`
-- Inspector and debugging: `enableInspector`, `enableUserInspector`, timeout and port settings
+- Eval modes and execution: `enableEval`, `enableVM2`, `enableOtherLangs`
+- VM HTTP settings: `vmHttp` (`maxUploadSize`, `maxDownloadSize`, `maxRequests`, `rateLimitWindow`, `allowLocalhostRequests`, `allowFilesystemRequests`)
+- Inspector and debugging: `vmInspector` (`enable`, `enableUser`, `connectTimeout`, `userConnectTimeout`, `userActionTimeout`, `port`)
 - Tags and quotas: `maxTagNameLength`, `tagNameRegex`, `maxTagSize` (per-tag limits for `text`, `script`, and `binary`), `maxQuota`, `maxTagCount`
 - Reply and output limits: `outCharLimit`, `outLineLimit`, `embedCharLimit`, `embedLineLimit`
 - Major features: `enablePreviews`, `enableSed`, `enablePermissions`, `enableReminders`
@@ -456,7 +456,7 @@ What users should know:
 
 ### 8. reminder
 
-Reminders let users schedule a DM for a future time.
+Reminders let users schedule personal timed notifications delivered via Discord DMs, supporting one-time schedules or repeating intervals.
 
 Who uses this:
 
@@ -465,20 +465,36 @@ Who uses this:
 Base usage:
 
 `%reminder (subcommand) ...`
+`%r (subcommand) ...`
 
 Main actions:
 
-- `add (date) "message"` creates a reminder
-- `list` shows your reminders
+- `add <date> ["message"] [--every <interval>]` creates a scheduled or recurring reminder
+- `list` shows your active reminders
+- `snooze (index) [duration]` delays a reminder by a duration (default: 10m)
 - `remove (index)` removes one reminder
 - `remove_all` removes all reminders
 
+Recurring reminders and scheduling:
+
+- **Natural language with initial time and interval:**
+    - `%r add every 10d 12:46 "check server backups"`
+    - `%r add every 1d at 18:00 "daily standup notes"`
+    - `%r add at 12:46 every 1d "take medicine"`
+    - `%r add 12:46 every 10d "rotate credentials"`
+    - `%r add daily at 09:00 "morning sync"`
+    - `%r add every 2h "drink water"`
+- **Explicit recurrence argument (`--every`, `--interval`, `-e`):**
+    - `%r add 12:46 "take medicine" --every 1d`
+    - `%r add tomorrow at 10:00 "weekly review" --every 1w`
+    - `%r add in 2 hours "hourly ping" -e 1h`
+
 What users should know:
 
-- The date is parsed in natural language, so inputs like `tomorrow 18:00` or `in 2 hours` usually work.
-- The message should be quoted when it contains spaces.
-- Dates in the past are rejected.
-- `remove` uses a 1-based index from your list.
+- The date is parsed in natural language, so inputs like `tomorrow 18:00`, `in 2 hours`, or `12:46` work.
+- If an initial time of day (e.g. `12:46`) has already passed today and a recurrence interval is present, it automatically schedules for the next upcoming occurrence.
+- The message should be quoted when it contains spaces. When run as a reply with no message text, the replied message content and jump link are used.
+- `remove` and `snooze` use a 1-based index from your list.
 - Reminders are sent to you by DM.
 
 ### 9. Utility commands

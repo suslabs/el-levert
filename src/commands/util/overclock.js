@@ -5,6 +5,7 @@ import { getEmoji } from "../../LevertClient.js";
 import { OverclockingValues } from "../../structures/OverclockingValues.js";
 
 import Util from "../../util/Util.js";
+import CaseUtil from "../../util/misc/CaseUtil.js";
 import Overclocking from "../../util/commands/overclocking/Overclocking.js";
 import OverclockingModes from "../../util/commands/overclocking/OverclockingModes.js";
 import OverclockArgumentParser from "../../util/commands/overclocking/OverclockArgumentParser.js";
@@ -28,18 +29,14 @@ Default mode: ${OverclockingModes.standard}.
 Use \`-\` to skip an optional positional argument.`;
 }
 
-function formatFieldName(name) {
-    return Util.camelCaseToWords(name).replaceAll(/_/g, " ");
-}
-
 function getParserErrorText(cmd, err) {
     switch (err.ref?.reason) {
         case "missing_args":
-            return `${getEmoji("warn")} Missing required argument: **${formatFieldName(err.ref.field)}**.\n\n${getUsageText(cmd)}`;
+            return `${getEmoji("warn")} Missing required argument: **${CaseUtil.toWords(err.ref.field)}**.\n\n${getUsageText(cmd)}`;
         case "invalid_mode":
             return `${getEmoji("warn")} Invalid recipe mode: \`${err.ref.mode}\`.\n\n${getUsageText(cmd)}`;
         case "invalid_value":
-            return `${getEmoji("warn")} Invalid **${formatFieldName(err.ref.field)}**: \`${err.ref.input}\`.\n\n${getUsageText(cmd)}`;
+            return `${getEmoji("warn")} Invalid **${CaseUtil.toWords(err.ref.field)}**: \`${err.ref.input}\`.\n\n${getUsageText(cmd)}`;
         default:
             return getUsageText(cmd);
     }

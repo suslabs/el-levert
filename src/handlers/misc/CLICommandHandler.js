@@ -5,6 +5,8 @@ import { getClient, getLogger } from "../../LevertClient.js";
 import CLICommandContext from "../../structures/command/context/CLICommandContext.js";
 import { validConsoleLevels } from "./ConsoleLevels.js";
 
+import Util from "../../util/Util.js";
+
 class CLICommandHandler extends Handler {
     static $name = "cliCommandHandler";
 
@@ -60,7 +62,7 @@ Use ${getClient().cliCommandManager.commandPrefix}help to get all available comm
             out = await executeMain();
         } catch (err) {
             getLogger().error(
-                `Encountered exception while executing command "${cmd.name}":\n${err.stack ?? err.message}`
+                `Encountered exception while executing command "${cmd.name}":\n${Util.getErrorMessage(err)}`
             );
 
             return;

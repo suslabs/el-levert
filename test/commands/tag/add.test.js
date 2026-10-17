@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
     addAdmin,
@@ -26,6 +26,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+    vi.restoreAllMocks();
     await cleanupRuntime(runtime);
 });
 
@@ -61,6 +62,48 @@ describe("tag add command", () => {
         await expect(executeCommand(command, `add alpha ${url}`, { msg })).resolves.toBe(
             `:white_check_mark: Created tag **alpha**.\n${command.attachmentWarning}`
         );
+    });
+
+    test("does not add warning when attachment is downloaded into the body", async () => {
+        const command = getCommand(runtime, "tag");
+
+        const attachMsg = createCommandMessage("%tag add beta", {
+            author: msg.author,
+            attachments: [{ url: "https://example.com/file.txt", contentType: "text/plain" }]
+        });
+
+        vi.spyOn(runtime.client.tagManager, "downloadBody").mockResolvedValueOnce({
+            body: "downloaded content",
+            isScript: false,
+            isBinary: false,
+            isFile: true
+        });
+
+        const res = await executeCommand(command, "add beta", { msg: attachMsg });
+
+        expect(res).toContain("Created tag **beta**");
+        expect(res).not.toContain(command.attachmentWarning);
+    });
+
+    test("adds warning when attachment is not covered by downloading the body", async () => {
+        const command = getCommand(runtime, "tag");
+
+        const attachMsg = createCommandMessage("%tag add gamma", {
+            author: msg.author,
+            attachments: [{ url: "https://cdn.discordapp.com/attachments/1/2/image.png", contentType: "image/png" }]
+        });
+
+        vi.spyOn(runtime.client.tagManager, "downloadBody").mockResolvedValueOnce({
+            body: "https://cdn.discordapp.com/attachments/1/2/image.png",
+            isScript: false,
+            isBinary: false,
+            isFile: false
+        });
+
+        const res = await executeCommand(command, "add gamma", { msg: attachMsg });
+
+        expect(res).toContain("Created tag **gamma**");
+        expect(res).toContain(command.attachmentWarning);
     });
 
     test("lets admins create tags from file paths", async () => {

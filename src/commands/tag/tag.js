@@ -7,7 +7,7 @@ import { TagTypes } from "../../structures/tag/TagTypes.js";
 
 import FakeTagRegistry from "../../managers/database/FakeTagRegistry.js";
 
-import { getClient, getEmoji, getLogger } from "../../LevertClient.js";
+import { getClient, getConfig, getEmoji, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
@@ -185,10 +185,9 @@ Subcommands:
                         body: null,
                         meta: null,
                         attachment: false,
-                        err: {
-                            content: `${getEmoji("error")} Downloading attachment failed:`,
-                            ...DiscordUtil.getFileAttach(err.stack, "error.js")
-                        }
+                        err: DiscordUtil.formatErrorEmbed(`${getEmoji("error")} Downloading attachment failed:`, err, {
+                            charLimit: getConfig().errorCharLimit
+                        })
                     };
                 }
             }
@@ -222,7 +221,7 @@ Subcommands:
             }
         }
 
-        const attachment = hasAttachments || DiscordUtil.hasAttachmentUrls(parsed.body);
+        const attachment = hasAttachments ? !downloaded?.isFile : DiscordUtil.hasAttachmentUrls(parsed.body);
 
         return {
             body: parsed.body,
@@ -301,7 +300,7 @@ Subcommands:
             try {
                 tag = await getClient().tagManager.fetchAlias(tag);
             } catch (err) {
-                return this.formatError(err);
+                return this.formatError(err, tag);
             }
         }
 
@@ -325,7 +324,7 @@ Subcommands:
             );
         } catch (err) {
             errored = true;
-            out = this.formatError(err);
+            out = this.formatError(err, tag);
         }
 
         if (errored && !debug) {
@@ -352,7 +351,7 @@ Subcommands:
         }
     }
 
-    formatError(err) {
+    formatError(err, tag) {
         switch (err.name) {
             case "TagError":
                 switch (err.message) {
@@ -366,7 +365,14 @@ Subcommands:
             case "ClientError":
                 return `${getEmoji("error")} Can't execute script tag. ${err.message}.`;
             default:
-                throw err;
+                const tagName = tag?.name ?? tag,
+                    header = Util.nonemptyString(tagName)
+                        ? `${getEmoji("error")} Encountered exception while executing tag **${escapeMarkdown(tagName)}**:`
+                        : `${getEmoji("error")} Encountered exception while executing tag:`;
+
+                return DiscordUtil.formatErrorEmbed(header, err, {
+                    charLimit: getConfig().errorCharLimit
+                });
         }
     }
 

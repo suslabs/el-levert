@@ -5,6 +5,8 @@ import DefaultReactionsConfig from "../../config/DefaultReactionsConfig.js";
 import TypeTester from "../../util/TypeTester.js";
 
 class ReactionsLoader extends BaseConfigLoader {
+    static defaults = DefaultReactionsConfig;
+
     constructor(logger, options) {
         super("reactions", logger, options);
     }

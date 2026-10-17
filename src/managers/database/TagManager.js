@@ -50,7 +50,6 @@ class TagManager extends DBManager {
     }
 
     isTagName(name) {
-        this.tagNameRegex.lastIndex = 0;
         return this.tagNameRegex.test(name);
     }
 
@@ -1108,7 +1107,7 @@ class TagManager extends DBManager {
             body += (msg.attachments ?? []).map(at => at.url).join(" ");
         }
 
-        return { body, isScript, isBinary };
+        return { body, isScript, isBinary, isFile };
     }
 
     emulateTag(options) {
