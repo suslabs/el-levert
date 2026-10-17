@@ -130,15 +130,12 @@ async function showJumpModal(interaction, sessionId, totalPages) {
     const row = new ActionRowBuilder().addComponents(pageInput);
     modal.addComponents(row);
 
-    if (typeof interaction.showModal === "function") {
-        await interaction.showModal(modal);
-    }
-
+    await interaction.showModal(modal);
     return true;
 }
 
 function resolveInteractionTargetPage(interaction, action, currentPage, totalPages) {
-    if (action === "modal" || (typeof interaction.isModalSubmit === "function" && interaction.isModalSubmit())) {
+    if (action === "modal" || interaction.isModalSubmit()) {
         const pageStr = interaction.fields.getTextInputValue("page_number").trim(),
             parsedPage = Util.parseInt(pageStr);
 
@@ -378,11 +375,16 @@ const PaginationUtil = Object.freeze({
     },
 
     handleInteraction: async ctx => {
-        const session = ctx.paginationSession ?? ctx.interactionContext?.session,
-            spec = ctx.paginationSpec ?? session?.spec,
-            interaction = ctx.interaction;
+        const session = ctx.paginationSession ?? ctx.interactionContext?.session;
 
-        if (session == null || spec == null || interaction == null) {
+        if (session == null) {
+            return false;
+        }
+
+        const spec = ctx.paginationSpec ?? session.spec,
+            interaction = ctx.interactionContext?.interaction ?? ctx.interaction;
+
+        if (spec == null || interaction == null) {
             return false;
         }
 

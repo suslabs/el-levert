@@ -16,7 +16,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-    if (db != null && db.db != null) {
+    if (db?.db != null) {
         await db.close();
     }
 

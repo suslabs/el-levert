@@ -26,7 +26,15 @@ class ComponentSession {
         this.timeout = options.timeout ?? configTimeout ?? fallbackTimeout;
 
         this.onDestroy = options.onDestroy ?? null;
-        this.message = options.message ?? (typeof ctx.getReply === "function" ? ctx.getReply() : null);
+
+        if (options.message != null) {
+            this.message = options.message;
+        } else if (typeof ctx.getReply === "function") {
+            this.message = ctx.getReply();
+        } else {
+            this.message = null;
+        }
+
         this.spec = options.spec ?? null;
         this.active = true;
 

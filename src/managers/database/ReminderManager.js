@@ -163,7 +163,7 @@ class ReminderManager extends DBManager {
         } else {
             const reminders = await this.list(user);
 
-            if (reminders === null || Util.empty(reminders)) {
+            if (Util.empty(reminders)) {
                 const lastSent = this._lastSentReminders.get(user);
 
                 if (typeof lastSent !== "undefined") {

@@ -25,7 +25,7 @@ class PermListCommand {
     async handler(ctx) {
         const groups = await getClient().permManager.listGroups(true);
 
-        if (groups === null || Util.empty(groups)) {
+        if (Util.empty(groups)) {
             return `${getEmoji("info")} **No** permissions are registered.`;
         }
 

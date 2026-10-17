@@ -33,7 +33,7 @@ class BaseConfigLoader extends JsonLoader {
                 }
 
                 data[key] = val;
-            } else if (TypeTester.isObject(def) && !Array.isArray(def) && Object.keys(def).length > 0) {
+            } else if (TypeTester.isObject(def) && !Array.isArray(def) && !Util.empty(Object.keys(def))) {
                 if (data[key] != null) {
                     this.applyDefaults(data[key], def);
                 }

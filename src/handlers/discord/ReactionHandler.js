@@ -422,15 +422,9 @@ class ReactionHandler extends Handler {
                 diff.removed.map(reaction => {
                     this.reactionTracker.deleteReaction(msg, reaction);
 
-                    const remove = reaction?.users?.remove;
-
-                    if (typeof remove !== "function") {
-                        return Promise.resolve(undefined);
-                    }
-
-                    return Promise.resolve(remove.call(reaction.users, botId)).catch(err =>
-                        getLogger().error("Failed to remove reaction from message:", err)
-                    );
+                    return reaction.users
+                        .remove(botId)
+                        .catch(err => getLogger().error("Failed to remove reaction from message:", err));
                 })
             );
 

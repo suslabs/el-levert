@@ -458,7 +458,7 @@ describe("CommandHandler", () => {
             reply: vi.fn(async data => data)
         });
 
-        expect(await handler.execute(msg2)).toBe(true);
+        expect(await handler.execute(msg2)).toBe(false);
         expect(msg2.reply).toHaveBeenCalledWith(
             expect.objectContaining({
                 content: expect.stringContaining("slow down")

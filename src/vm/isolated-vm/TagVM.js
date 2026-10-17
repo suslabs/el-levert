@@ -272,7 +272,7 @@ class TagVM extends VM {
         values = ObjectUtil.guaranteeObject(values);
         options = ObjectUtil.guaranteeObject(options);
 
-        const userId = options.commandContext?.msg?.author?.id ?? values.msg?.author?.id ?? null;
+        const userId = options.commandContext?.msg.author.id ?? values.msg?.author.id ?? null;
 
         return this._inspectorServer.createUserSession({
             title: options.inspectorTitle,

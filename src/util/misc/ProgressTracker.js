@@ -135,12 +135,12 @@ class ProgressTracker {
             this.complete(true);
         }
 
-        if (this.stream?.isTTY) {
+        if (this.stream.isTTY) {
             this._clearLine();
         }
 
         if (Util.nonemptyString(message)) {
-            this.stream?.write(`${message}\n`);
+            this.stream.write(`${message}\n`);
         }
     }
 
@@ -216,13 +216,13 @@ class ProgressTracker {
     }
 
     _writeLine(line) {
-        if (this.stream?.isTTY) {
+        if (this.stream.isTTY) {
             this._clearLine();
             this.stream.write(line);
             return;
         }
 
-        this.stream?.write(`${line}\n`);
+        this.stream.write(`${line}\n`);
     }
 
     _renderLine() {

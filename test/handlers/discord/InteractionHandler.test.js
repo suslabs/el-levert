@@ -25,7 +25,8 @@ afterEach(async () => {
 describe("InteractionHandler", () => {
     test("ignores non-component interactions", async () => {
         const interaction = {
-            isMessageComponent: () => false
+            isMessageComponent: () => false,
+            isModalSubmit: () => false
         };
 
         const result = await handler.execute(interaction);
@@ -36,6 +37,7 @@ describe("InteractionHandler", () => {
         const replyMock = vi.fn().mockResolvedValue(true);
         const interaction = {
             isMessageComponent: () => true,
+            isModalSubmit: () => false,
             customId: "page:next:expired123",
             user: { id: "user-1" },
             replied: false,
@@ -56,7 +58,11 @@ describe("InteractionHandler", () => {
     test("dispatches to registered active session", async () => {
         const mockCtx = {
             author: { id: "user-1" },
-            getReply: () => null
+            getReply: () => null,
+            clone: overrides => ({
+                ...mockCtx,
+                ...overrides
+            })
         };
 
         const session = new ComponentSession(mockCtx, { timeout: 0 });
@@ -66,6 +72,7 @@ describe("InteractionHandler", () => {
 
         const interaction = {
             isMessageComponent: () => true,
+            isModalSubmit: () => false,
             customId: `page:next:${session.id}`,
             user: { id: "user-1" }
         };
@@ -83,7 +90,11 @@ describe("InteractionHandler", () => {
     test("dispatches modal submit interactions to registered session", async () => {
         const mockCtx = {
             author: { id: "user-1" },
-            getReply: () => null
+            getReply: () => null,
+            clone: overrides => ({
+                ...mockCtx,
+                ...overrides
+            })
         };
 
         const session = new ComponentSession(mockCtx, { timeout: 0 });

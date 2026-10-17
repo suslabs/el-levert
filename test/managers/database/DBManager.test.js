@@ -28,9 +28,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-    if (manager != null) {
-        await manager.unload();
-    }
+    await manager?.unload();
 
     await cleanupRuntime(runtime);
 });

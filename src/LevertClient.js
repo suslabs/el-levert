@@ -888,7 +888,7 @@ function getConfig() {
 }
 
 function getEmoji(name) {
-    return getConfig()?.emoji?.[name] ?? "";
+    return getConfig()?.emoji[name] ?? "";
 }
 
 function getLogger() {

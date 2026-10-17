@@ -509,7 +509,7 @@ let DiscordUtil = {
                     const part = str.slice(i, i + length);
 
                     if (part === pattern) {
-                        const hasContentAfter = part.trim().length > 0;
+                        const hasContentAfter = !Util.empty(part.trim());
 
                         if (hasContentAfter) {
                             stack[stack.length - 1] === pattern ? stack.pop() : stack.push(pattern);
@@ -604,7 +604,7 @@ let DiscordUtil = {
         const [ctypePrefs, extensions] = ArrayUtil.split(ctypes, type => type.startsWith("."));
 
         if (!Util.empty(extensions)) {
-            if (attachInfo == null || Util.empty(attachInfo.ext)) {
+            if (Util.empty(attachInfo?.ext)) {
                 throw new UtilError("Extension can only be validated for attachment URLs");
             }
 

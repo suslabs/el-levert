@@ -9,6 +9,8 @@ import Util from "../../util/Util.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 
+import CommandError from "../../errors/CommandError.js";
+
 class Command extends TextCommand {
     static infoClass = CommandInfo;
     static contextClass = CommandContext;
@@ -106,15 +108,17 @@ class Command extends TextCommand {
     }
 
     async executeInteraction(context, interactionContext) {
+        if (typeof this.interactionHandler !== "function") {
+            throw new CommandError(`Command "${this.name}" has no interaction handler`);
+        }
+
         const cmdContext = this.createContext(context);
 
         if (interactionContext != null) {
             cmdContext.interactionContext = interactionContext;
         }
 
-        if (typeof this.interactionHandler === "function") {
-            return await this.interactionHandler(cmdContext);
-        }
+        return await this.interactionHandler(cmdContext);
     }
 
     static async _getPermLevel(msg, options) {

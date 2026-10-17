@@ -29,9 +29,7 @@ describe("Gateway protocol and GatewayClient", () => {
     });
 
     afterAll(async () => {
-        if (runtime !== undefined) {
-            await cleanupRuntime(runtime);
-        }
+        await cleanupRuntime(runtime);
     });
 
     test("client can connect, identify and receive READY", async () => {

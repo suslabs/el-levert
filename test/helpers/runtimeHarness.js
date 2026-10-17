@@ -333,13 +333,13 @@ async function cleanupRuntime(runtime) {
     } catch {}
 
     try {
-        if (client._eventLoader?.loaded) {
+        if (client._eventLoader.loaded) {
             client._unloadEvents();
         }
     } catch {}
 
     try {
-        client.client?.destroy();
+        client.client.destroy();
     } catch {}
 
     try {

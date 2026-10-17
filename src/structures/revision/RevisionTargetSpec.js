@@ -45,15 +45,27 @@ class RevisionTargetSpec {
     }
 
     encodeValue(field, value) {
-        return typeof this.encode === "function" ? this.encode(field, value) : value;
+        if (typeof this.encode !== "function") {
+            return value;
+        }
+
+        return this.encode(field, value);
     }
 
     decodeValue(field, value) {
-        return typeof this.decode === "function" ? this.decode(field, value) : value;
+        if (typeof this.decode !== "function") {
+            return value;
+        }
+
+        return this.decode(field, value);
     }
 
     getLabel(key) {
-        return typeof this.label === "function" ? this.label(key) : Object.values(key).join(":");
+        if (typeof this.label !== "function") {
+            return Object.values(key).join(":");
+        }
+
+        return this.label(key);
     }
 
     _extract(data, fields) {

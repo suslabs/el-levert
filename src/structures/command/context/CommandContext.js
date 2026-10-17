@@ -67,13 +67,9 @@ class CommandContext extends TextCommandContext {
 
         if (this.isInteraction) {
             return await this.interactionContext.reply(data, options);
-        }
-
-        if (this.handler != null) {
+        } else if (this.handler != null) {
             return await this.handler.contextReply(this, data, options);
-        }
-
-        if (this.msg != null && typeof this.msg.reply === "function") {
+        } else if (this.msg != null) {
             return await this.msg.reply(data, options);
         }
     }
