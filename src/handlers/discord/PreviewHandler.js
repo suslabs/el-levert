@@ -7,7 +7,6 @@ import { getClient, getConfig, getEmoji, getLogger } from "../../LevertClient.js
 
 import Util from "../../util/Util.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
-import LoggerUtil from "../../util/LoggerUtil.js";
 import Benchmark from "../../util/misc/Benchmark.js";
 import { ignoredPreviewErrors } from "./PreviewErrorMessages.js";
 
@@ -25,8 +24,7 @@ function logGenerateCancelled(reason) {
 
 function logPreviewSending(preview) {
     if (getLogger().isDebugEnabled()) {
-        const text = DiscordUtil.getEmbedData(preview).description;
-        getLogger().debug(`Sending preview:${LoggerUtil.formatLog(text)}`);
+        getLogger().debug(`Sending preview:${DiscordUtil.formatMessageLog(preview)}`);
     }
 }
 

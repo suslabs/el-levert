@@ -1,24 +1,27 @@
 import { Buffer } from "node:buffer";
+import path from "node:path";
 
 import axios from "axios";
 
 import { EmbedBuilder, ChannelType, AttachmentBuilder, inlineCode, codeBlock } from "discord.js";
 
 import Util from "./Util.js";
+import LoggerUtil from "./LoggerUtil.js";
 import TypeTester from "./TypeTester.js";
 import ObjectUtil from "./ObjectUtil.js";
 import ArrayUtil from "./ArrayUtil.js";
 
 import { EmbedCountAreas, validEmbedCountAreas } from "./EmbedCountAreas.js";
 import { CountTypes } from "./CountTypes.js";
+import { validBinaryExtensions, validTextExtensions } from "./misc/FileExtensions.js";
 
 import UtilError from "../errors/UtilError.js";
-
-const threadChannelTypes = new Set([ChannelType.PublicThread, ChannelType.PrivateThread]);
 
 let DiscordUtil = {
     msgCharLimit: 2000,
     embedCharLimit: 4096,
+
+    threadChannelTypes: new Set([ChannelType.PublicThread, ChannelType.PrivateThread]),
 
     userIdRegex: /\d{17,20}/g,
     // userIdRegex: /[A-Za-z0-9]{24,30}/g,
@@ -87,15 +90,13 @@ let DiscordUtil = {
         options = ObjectUtil.guaranteeObject(options);
 
         const filename = options.filename ?? "error.js",
-            charLimit = options.charLimit ?? DiscordUtil.embedCharLimit;
+            charLimit = options.charLimit ?? DiscordUtil.embedCharLimit,
+            lang = options.lang ?? options.language ?? "js";
 
-        const errMsg = Util.getErrorMessage(err);
+        const errMsg = Util.getErrorMessage(err),
+            formatted = Util.empty(lang) ? codeBlock(errMsg) : codeBlock(lang, errMsg);
 
-        const formatted = codeBlock(errMsg);
-
-        const res = {
-            content: header
-        };
+        const res = { content: header };
 
         if (!Util.overSizeLimits(formatted, charLimit)) {
             const embed = new EmbedBuilder().setDescription(formatted);
@@ -226,7 +227,7 @@ let DiscordUtil = {
 
     isThreadChannel: channel => {
         const type = TypeTester.isObject(channel) ? channel.type : channel;
-        return threadChannelTypes.has(type);
+        return DiscordUtil.threadChannelTypes.has(type);
     },
 
     formatChannelName: (channel, currentGuild) => {
@@ -643,6 +644,127 @@ let DiscordUtil = {
 
         const channel = client.channels.cache.get(ch_id);
         Object.defineProperty(msg, "channel", { value: channel });
+    },
+
+    logAttachCharLimit: 2000,
+    logAttachByteLimit: 256,
+
+    formatMessageLog: (data, splitLength = 80, maxLength = 2500, options) => {
+        if (data == null) {
+            return LoggerUtil.formatLog(null, splitLength, maxLength);
+        }
+
+        const payload = Array.isArray(data) && Util.single(data) ? Util.first(data) : data,
+            normalized = DiscordUtil._formatMessagePayload(payload, options);
+
+        return LoggerUtil.formatLog(normalized, splitLength, maxLength);
+    },
+
+    _isBinaryAttachment: (buf, name = "") => {
+        const ext = path.extname(name).toLowerCase();
+
+        if (validBinaryExtensions.has(ext)) {
+            return true;
+        } else if (validTextExtensions.has(ext)) {
+            return false;
+        }
+
+        const sample = buf.subarray(0, 1024);
+        return sample.includes(0);
+    },
+
+    _formatAttachment: (file, options) => {
+        options = ObjectUtil.guaranteeObject(options);
+
+        const charLimit = options.charLimit ?? DiscordUtil.logAttachCharLimit,
+            byteLimit = options.byteLimit ?? DiscordUtil.logAttachByteLimit;
+
+        let name = "attachment",
+            data = null;
+
+        if (file instanceof AttachmentBuilder) {
+            name = file.name ?? "attachment";
+            data = file.attachment;
+        } else if (Buffer.isBuffer(file)) {
+            name = "attachment.bin";
+            data = file;
+        } else if (TypeTester.isObject(file)) {
+            name = file.name ?? "attachment";
+            data = file.attachment ?? file.data;
+        } else {
+            return file;
+        }
+
+        let buf = null;
+
+        if (Buffer.isBuffer(data)) {
+            buf = data;
+        } else if (typeof data === "string") {
+            buf = Buffer.from(data, "utf8");
+        } else if (data instanceof Uint8Array || data instanceof ArrayBuffer) {
+            buf = Buffer.from(data);
+        }
+
+        if (buf === null) {
+            const size = file?.size ?? 0,
+                res = { name, size };
+
+            if (data != null) {
+                res.data = typeof data === "object" ? data.constructor.name : String(data);
+            }
+
+            return res;
+        }
+
+        const size = file?.size ?? buf.length,
+            isBinary = DiscordUtil._isBinaryAttachment(buf, name);
+
+        const res = { name, size };
+
+        if (isBinary) {
+            const hexSlice = buf.subarray(0, byteLimit),
+                hexStr = hexSlice.toString("hex");
+
+            res.data = buf.length > byteLimit ? `${hexStr}...` : hexStr;
+        } else {
+            const text = buf.toString("utf8");
+
+            res.data = Util.trimString(text, charLimit, null, {
+                showDiff: true
+            });
+        }
+
+        return res;
+    },
+
+    _formatMessagePayload: (data, options) => {
+        if (data == null) {
+            return null;
+        } else if (data instanceof AttachmentBuilder || Buffer.isBuffer(data)) {
+            return DiscordUtil._formatAttachment(data, options);
+        } else if (data instanceof EmbedBuilder) {
+            return DiscordUtil.getBuiltEmbed(data);
+        } else if (Array.isArray(data)) {
+            return data.map(item => DiscordUtil._formatMessagePayload(item, options));
+        } else if (TypeTester.isObject(data)) {
+            const res = { ...data };
+
+            if (Array.isArray(res.files)) {
+                res.files = res.files.map(file => DiscordUtil._formatAttachment(file, options));
+            } else if (res.files != null) {
+                res.files = DiscordUtil._formatAttachment(res.files, options);
+            }
+
+            if (Array.isArray(res.embeds)) {
+                res.embeds = res.embeds.map(embed => DiscordUtil.getBuiltEmbed(embed));
+            } else if (res.embeds != null) {
+                res.embeds = DiscordUtil.getBuiltEmbed(res.embeds);
+            }
+
+            return res;
+        } else {
+            return data;
+        }
     }
 };
 

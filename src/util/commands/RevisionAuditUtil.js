@@ -109,23 +109,39 @@ const RevisionAuditUtil = Object.freeze({
         };
     },
 
-    formatRevisionList: (revisions, getLabel, options) => {
+    formatRevisionList: async (revisions, getLabel, options) => {
         options = ObjectUtil.guaranteeObject(options);
-        const useSubjectIndex = options.perSubject ?? false;
 
-        return revisions
-            .map(revision => {
-                const label = escapeMarkdown(getLabel(revision)),
-                    revNum = useSubjectIndex ? (revision.subjectIndex ?? revision.id) : revision.id;
+        const useSubjectIndex = options.perSubject ?? false,
+            isDiscord = options.discord ?? true;
 
-                return `#${revNum} **${revision.operation}** ${label} - \`${revision.actor}\` - ${RevisionAuditUtil.formatDate(revision.created, true)}\nChanged: ${revision.changed.join(", ")}`;
+        const formattedRevisions = await Promise.all(
+            revisions.map(async revision => {
+                const rawLabel = getLabel(revision),
+                    label = isDiscord ? escapeMarkdown(rawLabel) : rawLabel;
+
+                const revNum = useSubjectIndex ? (revision.subjectIndex ?? revision.id) : revision.id;
+
+                const actor = await RevisionAuditUtil.formatUser(revision.actor, isDiscord),
+                    date = RevisionAuditUtil.formatDate(revision.created, isDiscord);
+
+                const op = isDiscord ? `**${revision.operation}**` : revision.operation;
+
+                return `#${revNum} ${op} ${label} - ${actor} - ${date}\nChanged: ${revision.changed.join(", ")}`;
             })
-            .join("\n\n");
+        );
+
+        return formattedRevisions.join("\n\n");
     },
 
-    createListEmbed: (revisions, page, getLabel, options) => {
+    createListEmbed: async (revisions, page, getLabel, options) => {
+        const description = await RevisionAuditUtil.formatRevisionList(revisions, getLabel, {
+            ...options,
+            discord: true
+        });
+
         return new EmbedBuilder()
-            .setDescription(RevisionAuditUtil.formatRevisionList(revisions, getLabel, options))
+            .setDescription(description)
             .setFooter({ text: `Page ${page} | ${revisions.length} revision${Util.single(revisions) ? "" : "s"}` });
     },
 

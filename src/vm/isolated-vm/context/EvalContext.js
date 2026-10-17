@@ -246,9 +246,19 @@ class EvalContext {
     async _compileScript(code, setScript) {
         code = this.inspector.getDebuggerCode(code);
 
-        const script = await this.isolate.compileScript(code, {
-            filename: this.scriptName
-        });
+        let script;
+
+        try {
+            script = await this.isolate.compileScript(code, {
+                filename: this.scriptName
+            });
+        } catch (err) {
+            if (!this.enableInspector) {
+                VMUtil.rewriteIVMStackTrace(err);
+            }
+
+            throw err;
+        }
 
         if (setScript) {
             this._script = script;

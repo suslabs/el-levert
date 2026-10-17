@@ -72,4 +72,24 @@ describe("tag info command", () => {
 
         expect(out).toContain("Invalid info mode: `invalid_mode`");
     });
+
+    test("attaches tag_info.txt with plain text when default info overflows embed limit", async () => {
+        const command = getCommand(runtime, "tag");
+        runtime.client.commandHandler._embedCharLimit = 10;
+
+        const out = await executeCommand(command, "info alpha", {
+            msg,
+            handler: runtime.client.commandHandler
+        });
+
+        expect(out.content).toContain("Tag info for **alpha**");
+        expect(out.files).toHaveLength(1);
+        expect(out.files[0].name).toBe("tag_info.txt");
+
+        const content = out.files[0].attachment.toString();
+        expect(content).toContain("Owner: name-user-1 (user-1)");
+        expect(content).toContain("Type: text");
+        expect(content).not.toContain("**");
+        expect(content).not.toContain("`");
+    });
 });

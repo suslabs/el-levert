@@ -5,8 +5,8 @@ import { getClient, getEmoji } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 import PaginationUtil from "../../util/commands/PaginationUtil.js";
 
-function formatReminders(reminders, startIndex = 0) {
-    return reminders.map((reminder, i) => `${startIndex + i + 1}. On ${reminder.format()}`).join("\n");
+function formatReminders(reminders, startIndex = 0, discord = true) {
+    return reminders.map((reminder, i) => `${startIndex + i + 1}. On ${reminder.format(discord)}`).join("\n");
 }
 
 class ReminderListCommand {
@@ -32,7 +32,7 @@ class ReminderListCommand {
             defaultLimit: 5,
             render: (items, { page }) => {
                 const startIndex = (page - 1) * ctx.pageSize,
-                    format = formatReminders(items, startIndex);
+                    format = formatReminders(items, startIndex, true);
 
                 return {
                     content: `${getEmoji("info")} Your reminders:`,
@@ -40,7 +40,7 @@ class ReminderListCommand {
                 };
             },
             dumpHeader: `${getEmoji("info")} Your reminders:`,
-            formatDump: items => formatReminders(items, 0),
+            formatDump: (items, discord = true) => formatReminders(items, 0, discord),
             filename: "reminders.txt"
         });
     }

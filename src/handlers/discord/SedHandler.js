@@ -9,7 +9,6 @@ import { getClient, getEmoji, getLogger } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import RegexUtil from "../../util/misc/RegexUtil.js";
-import LoggerUtil from "../../util/LoggerUtil.js";
 import Benchmark from "../../util/misc/Benchmark.js";
 
 import { ScriptCommandType } from "../../parsers/command/type/index.js";
@@ -28,8 +27,7 @@ function logGenerateCancelled(reason) {
 
 function logSedSending(sed) {
     if (getLogger().isDebugEnabled()) {
-        const text = DiscordUtil.getEmbedData(sed).description;
-        getLogger().debug(`Sending replaced message:${LoggerUtil.formatLog(text)}`);
+        getLogger().debug(`Sending replaced message:${DiscordUtil.formatMessageLog(sed)}`);
     }
 }
 

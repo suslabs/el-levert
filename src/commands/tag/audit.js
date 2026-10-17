@@ -149,11 +149,16 @@ Calling without a tag name shows the full audit log across all tags. Providing a
             items: revisions,
             defaultLimit,
             maxLimit,
-            render: (items, { page }) => {
+            render: async (items, { page }) => {
                 const header = `${getEmoji("info")} Tag audit page **${page}**${scopeLabel}:`,
-                    embed = RevisionAuditUtil.createListEmbed(items, page, revision => revision.key.name ?? "unknown", {
-                        perSubject: isPerSubject
-                    });
+                    embed = await RevisionAuditUtil.createListEmbed(
+                        items,
+                        page,
+                        revision => revision.key.name ?? "unknown",
+                        {
+                            perSubject: isPerSubject
+                        }
+                    );
 
                 return {
                     content: header,
@@ -161,9 +166,10 @@ Calling without a tag name shows the full audit log across all tags. Providing a
                 };
             },
             dumpHeader: `${getEmoji("info")} Tag audit${scopeLabel}:`,
-            formatDump: items =>
+            formatDump: (items, discord = true) =>
                 RevisionAuditUtil.formatRevisionList(items, revision => revision.key.name ?? "unknown", {
-                    perSubject: isPerSubject
+                    perSubject: isPerSubject,
+                    discord
                 }),
             filename: "tag_audit.txt"
         });

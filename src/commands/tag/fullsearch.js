@@ -311,9 +311,9 @@ class TagFullSearchCommand {
                 };
             },
             dumpHeader: header,
-            formatDump: () => {
+            formatDump: (items, discord = true) => {
                 const allSlice = uFuzzySearch.slice(sorted, 0, sorted.total);
-                return formatSearchResults(this, allSlice.results, allSlice.ranges, defaultContext, false, 0);
+                return formatSearchResults(this, allSlice.results, allSlice.ranges, defaultContext, discord, 0);
             },
             filename: "results.txt"
         });

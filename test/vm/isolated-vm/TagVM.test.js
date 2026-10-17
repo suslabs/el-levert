@@ -368,4 +368,21 @@ describe("TagVM", () => {
             })
         ).toThrow(new VMError(VMErrors.timeout.out).message);
     });
+
+    test("rewrites stack trace on script compilation error to avoid leaking host stack", async () => {
+        const msg = createDiscordMessage("hello");
+
+        let thrownErr;
+
+        try {
+            await vm.runScript("function(", { msg });
+        } catch (err) {
+            thrownErr = err;
+        }
+
+        expect(thrownErr).toBeDefined();
+        expect(thrownErr.name).toBe("SyntaxError");
+        expect(thrownErr.stack).not.toContain("EvalContext._compileScript");
+        expect(thrownErr.stack).not.toContain("TagVM.runScript");
+    });
 });

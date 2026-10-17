@@ -133,9 +133,22 @@ class TextCommand extends BaseCommand {
         const usageText = Util.empty(text) ? "No usage provided." : text;
 
         if (discord) {
-            const embed = new EmbedBuilder().setDescription(
-                `**Description:**\n${description}\n\n**Usage:**\n${usageText}`
-            );
+            const embed = new EmbedBuilder();
+
+            if (description.length > 1024 || usageText.length > 1024) {
+                embed.setDescription(`**Description:**\n${description}\n\n**Usage:**\n${usageText}`);
+            } else {
+                embed.addFields(
+                    {
+                        name: "Description",
+                        value: description
+                    },
+                    {
+                        name: "Usage",
+                        value: usageText
+                    }
+                );
+            }
 
             return {
                 embeds: [embed]

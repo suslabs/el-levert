@@ -109,6 +109,44 @@ class TagInfoCommand {
 
             const embed = new EmbedBuilder().setDescription(lines.filter(Boolean).join("\n"));
 
+            const embedLimits = ctx.handler != null ? ctx.handler.getLimits().embed : [DiscordUtil.embedCharLimit];
+
+            if (DiscordUtil.overSizeLimits(embed, ...embedLimits)) {
+                const plainTimeInfo = tag.getTimeInfo(false, false),
+                    plainHops = Array.isArray(info.hops) && !Util.empty(info.hops) ? info.hops.join(" -> ") : "none";
+
+                const plainLines = [
+                    `Hops: ${plainHops}`,
+                    `Is alias: ${info.isAlias}`,
+                    `Name: ${info.name}`,
+                    `Alias name: ${info.aliasName}`,
+                    `Body: ${info.body}`,
+                    `Size: ${Util.formatSize(info.size * Util.dataBytes.kilobyte, {
+                        unit: "kilobyte",
+                        short: true,
+                        digits: 2
+                    })}`,
+                    `Is script: ${info.isScript}`,
+                    `Is binary: ${info.isBinary}`,
+                    `Is hidden: ${info.isHidden}`,
+                    `Owner: ${info.owner} (${info.ownerId})`,
+                    `Args: ${info.args}`,
+                    `Registered: ${plainTimeInfo.registered}`,
+                    `Last edited: ${plainTimeInfo.lastEdited}`,
+                    `Registered timestamp: ${info.registeredTimestamp}`,
+                    `Last edited timestamp: ${info.lastEditedTimestamp}`,
+                    `Type: ${info.type}`,
+                    info.isScript ? `Language: ${info.language}` : null,
+                    `Version: ${info.version}`,
+                    `Type int: ${info.typeInt}`
+                ];
+
+                return {
+                    content: header,
+                    ...DiscordUtil.getFileAttach(plainLines.filter(Boolean).join("\n"), "tag_info.txt")
+                };
+            }
+
             return {
                 content: header,
                 embeds: [embed]

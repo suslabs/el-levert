@@ -17,7 +17,8 @@ let ownerMsg;
 
 async function run(args, msg = adminMsg) {
     return await executeCommand(command, args, {
-        msg
+        msg,
+        handler: runtime?.client?.commandHandler
     });
 }
 
@@ -194,5 +195,31 @@ describe("tag audit command", () => {
         } finally {
             await cleanupRuntime(disabledRuntime);
         }
+    });
+
+    test("formats global audit page with proper user formatting", async () => {
+        expect(await run("add alpha one", userMsg)).toContain("Created tag **alpha**");
+        const audit = await run("audit");
+
+        expect(audit.embeds[0].data.description).toContain("name-user-1 (`user-1`)");
+    });
+
+    test("formats --all export cleanly as file when exceeding limits with discord=false", async () => {
+        expect(await run("add alpha one", userMsg)).toContain("Created tag **alpha**");
+
+        const dumpRes = await run("audit --all");
+        expect(dumpRes.content).toContain("Tag audit:");
+        expect(dumpRes.embeds).toHaveLength(1);
+
+        runtime.client.commandHandler._embedCharLimit = 10;
+        const fileRes = await run("audit --all");
+        expect(fileRes.content).toContain("Tag audit:");
+        expect(fileRes.files).toHaveLength(1);
+        expect(fileRes.files[0].name).toBe("tag_audit.txt");
+
+        const fileContent = fileRes.files[0].attachment.toString();
+        expect(fileContent).toContain("#1 create alpha - name-user-1 (user-1)");
+        expect(fileContent).not.toContain("**");
+        expect(fileContent).not.toContain("`");
     });
 });

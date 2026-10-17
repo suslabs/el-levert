@@ -5,8 +5,10 @@ import { getClient, getEmoji } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 import PaginationUtil from "../../util/commands/PaginationUtil.js";
 
-function formatGroups(groups, startIndex = 0) {
-    const format = groups.map((group, i) => `${startIndex + i + 1}\\. ${group.formatUsers(true, true)}`);
+function formatGroups(groups, startIndex = 0, discord = true) {
+    const dot = discord ? "\\. " : ". ",
+        format = groups.map((group, i) => `${startIndex + i + 1}${dot}${group.formatUsers(true, discord)}`);
+
     return format.join("\n");
 }
 
@@ -34,7 +36,7 @@ class PermListCommand {
             defaultLimit: 10,
             render: (items, { page }) => {
                 const startIndex = (page - 1) * ctx.pageSize,
-                    format = formatGroups(items, startIndex);
+                    format = formatGroups(items, startIndex, true);
 
                 return {
                     content: header,
@@ -42,7 +44,7 @@ class PermListCommand {
                 };
             },
             dumpHeader: header,
-            formatDump: items => formatGroups(items, 0),
+            formatDump: (items, discord = true) => formatGroups(items, 0, discord),
             filename: "permissions.txt"
         });
     }

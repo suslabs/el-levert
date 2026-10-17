@@ -168,9 +168,9 @@ class PermAuditCommand {
             items: revisions,
             defaultLimit,
             maxLimit,
-            render: (items, { page }) => {
+            render: async (items, { page }) => {
                 const header = `${getEmoji("info")} Permission audit page **${page}**${scopeLabel}:`,
-                    embed = RevisionAuditUtil.createListEmbed(items, page, getLabel, {
+                    embed = await RevisionAuditUtil.createListEmbed(items, page, getLabel, {
                         perSubject: isPerSubject
                     });
 
@@ -180,9 +180,10 @@ class PermAuditCommand {
                 };
             },
             dumpHeader: `${getEmoji("info")} Permission audit${scopeLabel}:`,
-            formatDump: items =>
+            formatDump: (items, discord = true) =>
                 RevisionAuditUtil.formatRevisionList(items, getLabel, {
-                    perSubject: isPerSubject
+                    perSubject: isPerSubject,
+                    discord
                 }),
             filename: "permission_audit.txt"
         });

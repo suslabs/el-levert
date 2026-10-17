@@ -33,7 +33,7 @@ function logCommandOutput(cmd, out) {
             out = Util.first(out);
         }
 
-        getLogger().debug(`Command "${cmd.name}" returned:${LoggerUtil.formatLog(out)}`);
+        getLogger().debug(`Command "${cmd.name}" returned:${DiscordUtil.formatMessageLog(out)}`);
     }
 }
 

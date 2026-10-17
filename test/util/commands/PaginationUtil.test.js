@@ -1,4 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
+import { EmbedBuilder } from "discord.js";
 
 import PaginationUtil from "../../../src/util/commands/PaginationUtil.js";
 import DiscordUtil from "../../../src/util/DiscordUtil.js";
@@ -143,6 +144,58 @@ describe("PaginationUtil", () => {
         expect(res.content).toBe("All items:");
         expect(res.files).toHaveLength(1);
         expect(res.files[0].name).toBe("export.txt");
+    });
+
+    test("dumpAll requests discord = false formatting when output exceeds embed limits", async () => {
+        const mockCtx = {
+            handler: {
+                getLimits: () => ({
+                    embed: [50, null]
+                })
+            }
+        };
+
+        const formatSpy = vi.fn((items, discord) => (discord ? "**" + "A".repeat(100) + "**" : "A".repeat(100)));
+
+        const res = await PaginationUtil.dumpAll(mockCtx, {
+            items: ["item"],
+            formatDump: formatSpy,
+            dumpHeader: "All items:",
+            filename: "export.txt"
+        });
+
+        expect(formatSpy).toHaveBeenCalledWith(["item"], true, mockCtx);
+        expect(formatSpy).toHaveBeenCalledWith(["item"], false, mockCtx);
+        expect(res.content).toBe("All items:");
+        expect(res.files).toHaveLength(1);
+        expect(res.files[0].attachment.toString()).toBe("A".repeat(100));
+    });
+
+    test("paginate detects oversized embed on rendered page and converts to file attachment", async () => {
+        const mockCtx = {
+            arg: () => undefined,
+            handler: {
+                getLimits: () => ({
+                    embed: [50, null]
+                })
+            }
+        };
+
+        const res = await PaginationUtil.paginate(mockCtx, {
+            items: ["item1"],
+            defaultLimit: 10,
+            render: () => ({
+                content: "Header:",
+                embeds: [new EmbedBuilder().setDescription("B".repeat(100))]
+            }),
+            formatDump: (items, discord) => (discord ? "**item1**" : "item1"),
+            filename: "page.txt"
+        });
+
+        expect(res.content).toBe("Header:");
+        expect(res.files).toHaveLength(1);
+        expect(res.files[0].name).toBe("page.txt");
+        expect(res.files[0].attachment.toString()).toBe("item1");
     });
 
     test("handleInteraction advances session.page for author", async () => {

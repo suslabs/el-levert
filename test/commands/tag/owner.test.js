@@ -56,7 +56,9 @@ afterEach(async () => {
 
 describe("tag owner command", () => {
     test("resolves tag ownership through the real tag structure", async () => {
-        const command = getCommand(runtime, "tag");
-        await expect(executeCommand(command, "owner alpha", { msg })).resolves.toContain("also known as");
+        const command = getCommand(runtime, "tag"),
+            res = await executeCommand(command, "owner alpha", { msg });
+
+        expect(res).toContain("Tag **alpha** is owned by `owner` (also known as **nick**).");
     });
 });

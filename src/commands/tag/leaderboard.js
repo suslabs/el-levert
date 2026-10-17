@@ -10,34 +10,40 @@ const defaultLimit = 10,
     maxLimit = 50,
     dumpLimit = 1000;
 
-function formatLeaderboard(leaderboard, type, startIndex = 0) {
+function formatLeaderboard(leaderboard, type, startIndex = 0, discord = true) {
     return leaderboard
         .map((entry, i) => {
-            let str;
+            const index = `${startIndex + i + 1}. `;
+
+            const name = type === "usage"
+                ? `${entry.name}${entry.exists ? "" : "*"}`
+                : entry.user.username;
+
+            const label = discord ? `\`${name}\`: ` : `${name}: `;
+
+            let value;
 
             switch (type) {
                 case "count":
+                    const countNum = Util.formatNumber(entry.count),
+                        countSuffix = ` tag${entry.count > 1 ? "s" : ""}`;
+
+                    value = (discord ? `**${countNum}**` : countNum) + countSuffix;
+                    break;
                 case "size":
-                    str = `${startIndex + i + 1}. \`${entry.user.username}\`: `;
+                    const quotaNum = Util.formatNumber(entry.quota, 2);
+
+                    value = (discord ? `**${quotaNum}**` : quotaNum) + " kb";
                     break;
                 case "usage":
-                    str = `${startIndex + i + 1}. \`${entry.name}${entry.exists ? "" : "*"}\`: `;
+                    const useNum = Util.formatNumber(entry.count),
+                        useSuffix = ` use${entry.count > 1 ? "s" : ""}`;
+
+                    value = (discord ? `**${useNum}**` : useNum) + useSuffix;
                     break;
             }
 
-            switch (type) {
-                case "count":
-                    str += `**${Util.formatNumber(entry.count)}** tag${entry.count > 1 ? "s" : ""}`;
-                    break;
-                case "size":
-                    str += `**${Util.formatNumber(entry.quota, 2)}** kb`;
-                    break;
-                case "usage":
-                    str += `**${Util.formatNumber(entry.count)}** use${entry.count > 1 ? "s" : ""}`;
-                    break;
-            }
-
-            return str;
+            return `${index}${label}${value}`;
         })
         .join("\n");
 }
@@ -110,7 +116,7 @@ class TagLeaderboardCommand {
                 await getClient().tagManager.resolveLeaderboardUsers(items, l_type);
 
                 const startIndex = (page - 1) * ctx.pageSize,
-                    desc = formatLeaderboard(items, l_type, startIndex);
+                    desc = formatLeaderboard(items, l_type, startIndex, true);
 
                 return {
                     content: header,
@@ -118,9 +124,9 @@ class TagLeaderboardCommand {
                 };
             },
             dumpHeader: header,
-            formatDump: async items => {
+            formatDump: async (items, discord = true) => {
                 await getClient().tagManager.resolveLeaderboardUsers(items, l_type);
-                return formatLeaderboard(items, l_type, 0);
+                return formatLeaderboard(items, l_type, 0, discord);
             },
             filename: `leaderboard_${l_type}.txt`
         });

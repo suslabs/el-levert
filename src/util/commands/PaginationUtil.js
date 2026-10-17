@@ -66,12 +66,43 @@ function resolveTargetPage(action, currentPage, totalPages) {
     }
 }
 
+async function handleRenderOverflow(rendered, items, spec, ctx) {
+    if (typeof rendered !== "object" || rendered === null) {
+        return rendered;
+    }
+
+    const embeds = rendered.embeds;
+
+    if (Util.empty(embeds) || typeof spec.formatDump !== "function") {
+        return rendered;
+    }
+
+    const embedLimits = ctx.handler != null ? ctx.handler.getLimits().embed : [DiscordUtil.embedCharLimit];
+
+    const isOversized = embeds.some(embed => DiscordUtil.overSizeLimits(embed, ...embedLimits));
+
+    if (!isOversized) {
+        return rendered;
+    }
+
+    const dump = await spec.formatDump(items, false, ctx),
+        filename = spec.filename ?? "page.txt";
+
+    const header = rendered.content ?? spec.dumpHeader ?? spec.header ?? `${getEmoji("info")} Results:`;
+
+    return {
+        content: header,
+        ...DiscordUtil.getFileAttach(dump, filename)
+    };
+}
+
 async function renderPage(spec, page, ctx) {
     const data = await fetchPageData(spec, page, ctx.pageSize, ctx),
         items = data.items,
         totalCount = data.totalCount;
 
-    const rendered = await spec.render(items, { page, totalPages: ctx.totalPages, totalCount }, ctx);
+    let rendered = await spec.render(items, { page, totalPages: ctx.totalPages, totalCount }, ctx);
+    rendered = await handleRenderOverflow(rendered, items, spec, ctx);
 
     return { rendered, items, totalCount };
 }
@@ -292,7 +323,8 @@ const PaginationUtil = Object.freeze({
         ctx.totalPages = totalPages;
         ctx.totalCount = totalCount;
 
-        const rendered = await spec.render(items, { page, totalPages, totalCount }, ctx);
+        let rendered = await spec.render(items, { page, totalPages, totalCount }, ctx);
+        rendered = await handleRenderOverflow(rendered, items, spec, ctx);
 
         if (totalPages <= 1) {
             if (ctx.isInteraction) {
@@ -422,15 +454,15 @@ const PaginationUtil = Object.freeze({
             return `${getEmoji("info")} Found ${items.length} results.`;
         }
 
-        const dump = await spec.formatDump(items, ctx);
+        const header = spec.dumpHeader ?? spec.header ?? `${getEmoji("info")} Full export:`;
+
+        let dump = await spec.formatDump(items, true, ctx);
 
         if (typeof dump !== "string") {
             return dump;
         }
 
-        const header = spec.dumpHeader ?? spec.header ?? `${getEmoji("info")} Full export:`;
-
-        const embedLimits = ctx.handler?.getLimits().embed ?? [DiscordUtil.embedCharLimit],
+        const embedLimits = ctx.handler != null ? ctx.handler.getLimits().embed : [DiscordUtil.embedCharLimit],
             isOversized = Util.overSizeLimits(dump, ...embedLimits);
 
         if (!isOversized) {
@@ -440,6 +472,7 @@ const PaginationUtil = Object.freeze({
             };
         }
 
+        dump = await spec.formatDump(items, false, ctx);
         const filename = spec.filename ?? "dump.txt";
 
         return {

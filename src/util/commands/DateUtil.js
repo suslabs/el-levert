@@ -327,8 +327,7 @@ let DateUtil = {
         monthly: Util.durationSeconds.month / Util.durationSeconds.milli,
         yearly: Util.durationSeconds.year / Util.durationSeconds.milli
     });
-
-    DateUtil = Object.freeze(DateUtil);
 }
 
+DateUtil = Object.freeze(DateUtil);
 export default DateUtil;

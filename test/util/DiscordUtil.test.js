@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "vitest";
-import { ChannelType } from "discord.js";
+import { ChannelType, EmbedBuilder, AttachmentBuilder } from "discord.js";
 
 import DiscordUtil from "../../src/util/DiscordUtil.js";
 import createHttpStubServer from "../helpers/httpStubServer.js";
@@ -201,7 +201,13 @@ describe("DiscordUtil", () => {
         });
         expect(shortRes.content).toBe("Header:");
         expect(shortRes.embeds).toHaveLength(1);
+        expect(shortRes.embeds[0].data.description).toContain("```js\nError: short error");
         expect(shortRes.files).toBeUndefined();
+
+        const customRes = DiscordUtil.formatErrorEmbed("Header:", new Error("py error"), {
+            lang: "py"
+        });
+        expect(customRes.embeds[0].data.description).toContain("```py\nError: py error");
 
         const longError = "a".repeat(1500);
         const longRes = DiscordUtil.formatErrorEmbed("Header:", longError, {
@@ -212,5 +218,50 @@ describe("DiscordUtil", () => {
         expect(longRes.embeds).toBeUndefined();
         expect(longRes.files).toHaveLength(1);
         expect(longRes.files[0].name).toBe("custom_error.txt");
+    });
+
+    test("formats message logs with smart attachments and data serialization", () => {
+        expect(DiscordUtil.formatMessageLog(null)).toBe(" none");
+        expect(DiscordUtil.formatMessageLog("simple reply")).toBe(' "simple reply"');
+        expect(DiscordUtil.formatMessageLog(["wrapped reply"])).toBe(' "wrapped reply"');
+
+        const textContent = "Hello world\nSecond line",
+            textAttach = new AttachmentBuilder(Buffer.from(textContent), {
+                name: "sample.txt"
+            });
+        const textLog = DiscordUtil.formatMessageLog({ files: [textAttach] });
+        expect(textLog).toContain("sample.txt");
+        expect(textLog).toContain('"size":23');
+        expect(textLog).toContain("Hello world\\nSecond line");
+        expect(textLog).not.toContain('"preview"');
+
+        const binaryAttach = new AttachmentBuilder(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0x01]), {
+            name: "image.png"
+        });
+        const binaryLog = DiscordUtil.formatMessageLog({ files: [binaryAttach] });
+        expect(binaryLog).toContain("image.png");
+        expect(binaryLog).toContain('"size":6');
+        expect(binaryLog).toContain("89504e470001");
+        expect(binaryLog).not.toContain('"preview"');
+
+        const longText = "a".repeat(2500);
+        const longTextAttach = new AttachmentBuilder(Buffer.from(longText), {
+            name: "long.txt"
+        });
+        const longLog = DiscordUtil.formatMessageLog({ files: [longTextAttach] });
+        expect(longLog).toContain('"size":2500');
+        expect(longLog).toContain("more character");
+
+        const longBytes = Buffer.alloc(300, 0xab);
+        const longBinaryAttach = new AttachmentBuilder(longBytes, {
+            name: "data.bin"
+        });
+        const longBinaryLog = DiscordUtil.formatMessageLog({ files: [longBinaryAttach] });
+        expect(longBinaryLog).toContain('"size":300');
+        expect(longBinaryLog).toContain("...");
+
+        const embed = new EmbedBuilder().setDescription("test description");
+        const embedLog = DiscordUtil.formatMessageLog(embed);
+        expect(embedLog).toContain("test description");
     });
 });

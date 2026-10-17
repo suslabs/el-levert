@@ -272,26 +272,19 @@ let VMUtil = {
 
         const lines = err.stack.split("\n");
 
-        let msgLineCount = 1;
+        let msgLineCount = -1;
 
         try {
             const errString = String(err);
 
             if (err.stack.startsWith(errString)) {
                 msgLineCount = errString.split("\n").length;
-            } else {
-                const firstFrameIdx = lines.findIndex(line => line.trim().startsWith("at "));
-
-                if (firstFrameIdx !== -1) {
-                    msgLineCount = firstFrameIdx;
-                }
             }
-        } catch (e) {
+        } catch (e) {}
+
+        if (msgLineCount === -1) {
             const firstFrameIdx = lines.findIndex(line => line.trim().startsWith("at "));
-
-            if (firstFrameIdx !== -1) {
-                msgLineCount = firstFrameIdx;
-            }
+            msgLineCount = firstFrameIdx !== -1 ? firstFrameIdx : 1;
         }
 
         msgLineCount = Util.clamp(msgLineCount, 1, lines.length);
@@ -308,7 +301,7 @@ let VMUtil = {
         }
 
         const formattedFrames = stackFrames.map(frame => VMUtil._spaces + frame),
-            newStack = msgLine + "\n" + formattedFrames.join("\n");
+            newStack = Util.empty(formattedFrames) ? msgLine : msgLine + "\n" + formattedFrames.join("\n");
 
         try {
             delete err.stack;
@@ -326,10 +319,20 @@ let VMUtil = {
     },
 
     _ivmBoundary: "(<isolated-vm boundary>)",
+    _compileScript: "compileScript",
+
     rewriteIVMStackTrace: err => {
         return VMUtil.rewriteStackTrace(err, (msgLine, stackFrames) => {
-            const boundaryLine = stackFrames.findIndex(frame => frame.startsWith("at " + VMUtil._ivmBoundary));
-            return boundaryLine >= 0 ? [msgLine, stackFrames.slice(0, boundaryLine + 1)] : false;
+            const boundaryLine = stackFrames.findIndex(frame => frame.startsWith("at " + VMUtil._ivmBoundary)),
+                hostLine = stackFrames.findIndex(frame => frame.includes(VMUtil._compileScript));
+
+            if (boundaryLine >= 0) {
+                return [msgLine, stackFrames.slice(0, boundaryLine + 1)];
+            } else if (hostLine >= 0) {
+                return [msgLine, stackFrames.slice(0, hostLine)];
+            }
+
+            return false;
         });
     },
 

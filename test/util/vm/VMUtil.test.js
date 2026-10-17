@@ -340,6 +340,13 @@ describe("VMUtil", () => {
         VMUtil.rewriteIVMStackTrace(errNoBoundary);
         expect(errNoBoundary.stack).toBe(originalStack);
 
+        const errCompileHost = new Error("SyntaxError: Unexpected token");
+        errCompileHost.stack =
+            "SyntaxError: Unexpected token\n    at Isolate.compileScript (isolated-vm.js:1:1)\n    at async EvalContext._compileScript (EvalContext.js:1:1)";
+        VMUtil.rewriteIVMStackTrace(errCompileHost);
+        expect(errCompileHost.stack).toBe("SyntaxError: Unexpected token");
+        expect(VMUtil._compileScript).toBe("compileScript");
+
         const errMultiLine = new Error("first line\nsecond line\nthird line");
         errMultiLine.stack =
             "Error: first line\nsecond line\nthird line\n    at first (file.js:1:1)\n    at (<isolated-vm boundary>)\n    at hidden (file.js:2:1)";
