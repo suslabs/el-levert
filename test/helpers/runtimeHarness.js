@@ -4,6 +4,8 @@ import path from "node:path";
 
 import { vi } from "vitest";
 
+import Util from "../../src/util/Util.js";
+
 const repoRoot = path.resolve(import.meta.dirname, "../..");
 
 function buildDefaultConfig(tempDir, overrides = {}) {
@@ -23,8 +25,6 @@ function buildDefaultConfig(tempDir, overrides = {}) {
         enableEval: true,
         enableOtherLangs: false,
         enableVM2: false,
-        allowLocalhostRequests: false,
-        allowFilesystemRequests: false,
         enablePreviews: true,
         enableSed: true,
         enableCliCommands: false,
@@ -64,12 +64,24 @@ function buildDefaultConfig(tempDir, overrides = {}) {
         otherTimeLimit: 2,
         commandWaitTime: 3000,
         interactionTimeout: 300000,
-        enableInspector: false,
-        enableUserInspector: false,
-        inspectorConnectTimeout: 60000,
-        userInspectorConnectTimeout: 30000,
-        userInspectorActionTimeout: 300000,
-        inspectorPort,
+        vmInspector: {
+            enable: false,
+            enableUser: false,
+            connectTimeout: 60000,
+            userConnectTimeout: 30000,
+            userActionTimeout: 300000,
+            port: inspectorPort,
+            ...overrides.vmInspector
+        },
+        vmHttp: {
+            maxUploadSize: 50 * Util.dataBytes.megabyte,
+            maxDownloadSize: 50 * Util.dataBytes.megabyte,
+            maxRequests: 20,
+            rateLimitWindow: 1000,
+            allowLocalhostRequests: false,
+            allowFilesystemRequests: false,
+            ...overrides.vmHttp
+        },
         outCharLimit: 1900,
         outLineLimit: 30,
         embedCharLimit: 5900,

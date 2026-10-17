@@ -59,12 +59,11 @@ class TagVM extends VM {
         this.memLimit = getConfig().memLimit;
         this.timeLimit = getConfig().timeLimit;
 
-        this.enableInspector = getConfig().enableInspector;
-        this.enableUserInspector = this.enableInspector && (getConfig().enableUserInspector ?? false);
+        this.enableInspector = getConfig().vmInspector.enable;
+        this.enableUserInspector = this.enableInspector && (getConfig().vmInspector.enableUser ?? false);
         this.inspectorMode = this._getInspectorMode();
 
-        this.allowLocalhostRequests = getConfig()?.allowLocalhostRequests ?? false;
-        this.allowFilesystemRequests = getConfig()?.allowFilesystemRequests ?? false;
+        this.vmHttp = getConfig().vmHttp;
 
         this._contextStack = [];
     }
@@ -130,10 +129,7 @@ class TagVM extends VM {
     }
 
     load() {
-        initFakeAxios({
-            allowLocalhostRequests: this.allowLocalhostRequests,
-            allowFilesystemRequests: this.allowFilesystemRequests
-        });
+        initFakeAxios(this.vmHttp);
 
         EvalContext.initFunctions();
         this._setupInspectorServer();
@@ -157,12 +153,12 @@ class TagVM extends VM {
             return;
         }
 
-        const inspectorPort = getConfig().inspectorPort;
+        const inspectorPort = getConfig().vmInspector.port;
 
         const options = {
             logPackets: TagVM.logInspectorPackets,
             mode: this.inspectorMode,
-            userInspectorActionTimeout: getConfig().userInspectorActionTimeout
+            userInspectorActionTimeout: getConfig().vmInspector.userActionTimeout
         };
 
         const server = new InspectorServer(this.enableInspector, inspectorPort, options);
@@ -243,7 +239,7 @@ class TagVM extends VM {
         switch (this.inspectorMode) {
             case InspectorModes.console:
                 return {
-                    connectTimeout: getConfig().inspectorConnectTimeout,
+                    connectTimeout: getConfig().vmInspector.connectTimeout,
                     createdSession: false,
                     enable: true,
                     mode: InspectorModes.console,
@@ -255,7 +251,7 @@ class TagVM extends VM {
                 }
 
                 return {
-                    connectTimeout: getConfig().userInspectorConnectTimeout,
+                    connectTimeout: getConfig().vmInspector.userConnectTimeout,
                     createdSession: true,
                     enable: true,
                     mode: InspectorModes.user,

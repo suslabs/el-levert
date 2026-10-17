@@ -2,6 +2,7 @@ import { describe, expect, test, vi } from "vitest";
 
 import "../../../setupGlobals.js";
 
+import Util from "../../../src/util/Util.js";
 import ConfigLoader from "../../../src/loaders/config/ConfigLoader.js";
 
 describe("ConfigLoader", () => {
@@ -15,9 +16,19 @@ describe("ConfigLoader", () => {
             embedLineLimit: -1,
             minResponseTime: 5500,
             globalTimeLimit: 2200,
-            inspectorConnectTimeout: 2000,
-            userInspectorConnectTimeout: 3000,
-            userInspectorActionTimeout: 4000,
+            vmInspector: {
+                connectTimeout: 2000,
+                userConnectTimeout: 3000,
+                userActionTimeout: 4000
+            },
+            vmHttp: {
+                maxUploadSize: 10,
+                maxDownloadSize: 20,
+                maxRequests: 30,
+                rateLimitWindow: 2,
+                allowLocalhostRequests: false,
+                allowFilesystemRequests: false
+            },
             timeLimit: 800,
             otherTimeLimit: 1200,
             reminderSendInterval: 3000
@@ -32,9 +43,13 @@ describe("ConfigLoader", () => {
         expect(config.embedLineLimit).toBe(0);
         expect(config.minResponseTime).toBe(10000);
         expect(config.globalTimeLimit).toBe(2200000);
-        expect(config.inspectorConnectTimeout).toBe(2000000);
-        expect(config.userInspectorConnectTimeout).toBe(3000000);
-        expect(config.userInspectorActionTimeout).toBe(4000000);
+        expect(config.vmInspector.connectTimeout).toBe(2000000);
+        expect(config.vmInspector.userConnectTimeout).toBe(3000000);
+        expect(config.vmInspector.userActionTimeout).toBe(4000000);
+        expect(config.vmHttp.maxUploadSize).toBe(10 * Util.dataBytes.megabyte);
+        expect(config.vmHttp.maxDownloadSize).toBe(20 * Util.dataBytes.megabyte);
+        expect(config.vmHttp.maxRequests).toBe(30);
+        expect(config.vmHttp.rateLimitWindow).toBe(2000);
         expect(config.timeLimit).toBe(800000);
         expect(config.otherTimeLimit).toBe(1200000);
         expect(config.reminderSendInterval).toBe(3000000);
@@ -53,9 +68,19 @@ describe("ConfigLoader", () => {
             embedLineLimit: 10,
             minResponseTime: 10000,
             globalTimeLimit: 1000,
-            inspectorConnectTimeout: 1000,
-            userInspectorConnectTimeout: 1000,
-            userInspectorActionTimeout: 1000,
+            vmInspector: {
+                connectTimeout: 1000,
+                userConnectTimeout: 1000,
+                userActionTimeout: 1000
+            },
+            vmHttp: {
+                maxUploadSize: 50,
+                maxDownloadSize: 50,
+                maxRequests: 20,
+                rateLimitWindow: 1,
+                allowLocalhostRequests: false,
+                allowFilesystemRequests: false
+            },
             timeLimit: 1000,
             otherTimeLimit: 1000,
             reminderSendInterval: 1000,

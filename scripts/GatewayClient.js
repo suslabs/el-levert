@@ -4,7 +4,7 @@ import { WebSocket } from "ws";
 
 import PacketParser from "../src/gateway/PacketParser.js";
 
-import { closeCodes } from "../src/structures/gateway/GatewayCloseCodes.js";
+import { closeCodes } from "../src/util/misc/WebsocketCloseCodes.js";
 import HeartbeatPacket from "../src/structures/gateway/packets/HeartbeatPacket.js";
 import IdentifyPacket from "../src/structures/gateway/packets/IdentifyPacket.js";
 import ResumePacket from "../src/structures/gateway/packets/ResumePacket.js";
@@ -16,16 +16,17 @@ import ClientError from "../src/errors/ClientError.js";
 class GatewayClient extends EventEmitter {
     static maxConnections = Infinity;
     static maxReconnectAttempts = 5;
-    static reconnectDelay = 1000;
-    static defaultJitter = 1000;
+    static reconnectDelay = Util.durationSeconds.second / Util.durationSeconds.milli;
+    static defaultJitter = Util.durationSeconds.second / Util.durationSeconds.milli;
+    static rateLimitBackoff = (2 * Util.durationSeconds.second) / Util.durationSeconds.milli;
 
     static maxRPS = Infinity;
     static maxRetryCount = 5;
-    static retryDelay = 1000;
+    static retryDelay = Util.durationSeconds.second / Util.durationSeconds.milli;
 
-    static connectTimeout = 5000;
-    static pingInterval = 5000;
-    static pongTimeout = 3000;
+    static connectTimeout = (5 * Util.durationSeconds.second) / Util.durationSeconds.milli;
+    static pingInterval = (5 * Util.durationSeconds.second) / Util.durationSeconds.milli;
+    static pongTimeout = (3 * Util.durationSeconds.second) / Util.durationSeconds.milli;
 
     static delay(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
@@ -43,6 +44,7 @@ class GatewayClient extends EventEmitter {
         this.reconnectDelay = options.reconnectDelay ?? this.constructor.reconnectDelay;
         this.defaultJitter = options.defaultJitter ?? this.constructor.defaultJitter;
         this.maxReconnectAttempts = options.maxReconnectAttempts ?? this.constructor.maxReconnectAttempts;
+        this.rateLimitBackoff = options.rateLimitBackoff ?? this.constructor.rateLimitBackoff;
 
         this.maxRPS = options.maxRPS ?? this.constructor.maxRPS;
         this.maxRetryCount = options.maxRetryCount ?? this.constructor.maxRetryCount;
@@ -168,15 +170,23 @@ class GatewayClient extends EventEmitter {
     }
 
     handleInvalidSessionPacket(packet) {
-        const msg = packet.message || "Invalid session";
+        const msg = packet.message || "Invalid session",
+            isRateLimited = /rate limit/i.test(msg);
 
         console.warn(`Invalid session: ${msg}`);
+
+        if (isRateLimited) {
+            this.emit("rate_limited", {
+                code: closeCodes.RATE_LIMITED,
+                reason: msg
+            });
+        }
 
         this.sessionId = null;
         this._rejectConnectionAttempt(new ClientError(msg));
 
         this._cleanupSocket();
-        this._handleClose(closeCodes.UNKNOWN_OPCODE, false);
+        this._handleClose(isRateLimited ? closeCodes.RATE_LIMITED : closeCodes.UNKNOWN_OPCODE, false);
     }
 
     static _connections = 0;
@@ -292,21 +302,28 @@ class GatewayClient extends EventEmitter {
         }
     }
 
-    _scheduleReconnect() {
+    _scheduleReconnect(isRateLimited = false) {
         if (this._reconnectAttempts >= this.maxReconnectAttempts) {
             console.error("Max reconnection attempts reached.");
             this.emit("max_reconnect_reached");
+            this._rejectConnectionAttempt(
+                new ClientError(isRateLimited ? "WebSocket rate limit exceeded." : "Max reconnection attempts reached.")
+            );
             return;
         }
 
         this._reconnectAttempts++;
 
-        const baseDelay = this._reconnectAttempts * this.reconnectDelay,
-            delay = this.constructor._getRetryTime(baseDelay, this.defaultJitter, false);
+        const baseDelay = isRateLimited
+                ? Math.max(this.rateLimitBackoff, this._reconnectAttempts * this.reconnectDelay)
+                : this._reconnectAttempts * this.reconnectDelay,
+            delay = this.constructor._getRetryTime(baseDelay, this.defaultJitter, isRateLimited);
 
-        console.log(
-            `Disconnected. Reconnecting in ${(delay / 1000).toFixed(2)}s... (attempt ${this._reconnectAttempts}/${this.maxReconnectAttempts})`
-        );
+        const logMsg = isRateLimited
+            ? `Rate limit exceeded. Reconnecting in ${(delay / 1000).toFixed(2)}s... (attempt ${this._reconnectAttempts}/${this.maxReconnectAttempts})`
+            : `Disconnected. Reconnecting in ${(delay / 1000).toFixed(2)}s... (attempt ${this._reconnectAttempts}/${this.maxReconnectAttempts})`;
+
+        console.log(logMsg);
 
         this._reconnectTimeout = setTimeout(() => {
             this.connect(true);
@@ -321,15 +338,28 @@ class GatewayClient extends EventEmitter {
             this._rejectConnection = reject;
         });
 
+        const isRateLimited = code === closeCodes.RATE_LIMITED;
+
+        if (isRateLimited) {
+            this.emit("rate_limited", {
+                code,
+                reason: "Rate limited"
+            });
+        }
+
         this.emit("close", code);
 
+        const errorMsg = isRateLimited
+            ? "WebSocket rate limit exceeded."
+            : "Connection closed before response received.";
+
         for (const [id, pending] of this.pendingRequests.entries()) {
-            pending.reject(new ClientError("Connection closed before response received."));
+            pending.reject(new ClientError(errorMsg));
             this.pendingRequests.delete(id);
         }
 
         if (reconnect) {
-            this._scheduleReconnect();
+            this._scheduleReconnect(isRateLimited);
         }
     }
 

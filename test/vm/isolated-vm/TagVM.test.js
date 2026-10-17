@@ -20,7 +20,7 @@ beforeEach(async () => {
         loadManagers: true,
         config: {
             enableEval: true,
-            enableInspector: false,
+            vmInspector: { enable: false },
             memLimit: 64,
             timeLimit: 50
         }

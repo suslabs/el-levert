@@ -113,23 +113,30 @@
         "otherTimeLimit": {
             "type": "number"
         },
-        "enableInspector": {
-            "type": "boolean"
-        },
-        "enableUserInspector": {
-            "type": "boolean"
-        },
-        "inspectorConnectTimeout": {
-            "type": "number"
-        },
-        "userInspectorConnectTimeout": {
-            "type": "number"
-        },
-        "userInspectorActionTimeout": {
-            "type": "number"
-        },
-        "inspectorPort": {
-            "type": "number"
+        "vmInspector": {
+            "type": "object",
+            "properties": {
+                "enable": {
+                    "type": "boolean"
+                },
+                "enableUser": {
+                    "type": "boolean"
+                },
+                "connectTimeout": {
+                    "type": "number"
+                },
+                "userConnectTimeout": {
+                    "type": "number"
+                },
+                "userActionTimeout": {
+                    "type": "number"
+                },
+                "port": {
+                    "type": "number"
+                }
+            },
+            "required": ["enable", "enableUser", "connectTimeout", "userConnectTimeout", "userActionTimeout", "port"],
+            "additionalProperties": false
         },
         "maxGroupNameLength": {
             "type": "number"
@@ -153,12 +160,6 @@
             "type": "boolean"
         },
         "enableVM2": {
-            "type": "boolean"
-        },
-        "allowLocalhostRequests": {
-            "type": "boolean"
-        },
-        "allowFilesystemRequests": {
             "type": "boolean"
         },
         "enablePermissions": {
@@ -236,6 +237,38 @@
                     "type": "object"
                 }
             ]
+        },
+        "vmHttp": {
+            "type": "object",
+            "properties": {
+                "maxUploadSize": {
+                    "type": "number"
+                },
+                "maxDownloadSize": {
+                    "type": "number"
+                },
+                "maxRequests": {
+                    "type": "number"
+                },
+                "rateLimitWindow": {
+                    "type": "number"
+                },
+                "allowLocalhostRequests": {
+                    "type": "boolean"
+                },
+                "allowFilesystemRequests": {
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "maxUploadSize",
+                "maxDownloadSize",
+                "maxRequests",
+                "rateLimitWindow",
+                "allowLocalhostRequests",
+                "allowFilesystemRequests"
+            ],
+            "additionalProperties": false
         }
     },
     "required": [
@@ -271,12 +304,7 @@
         "timeLimit",
         "otherMemLimit",
         "otherTimeLimit",
-        "enableInspector",
-        "enableUserInspector",
-        "inspectorConnectTimeout",
-        "userInspectorConnectTimeout",
-        "userInspectorActionTimeout",
-        "inspectorPort",
+        "vmInspector",
         "maxGroupNameLength",
         "tagModeratorLevel",
         "permissionAdminLevel",
@@ -285,8 +313,6 @@
         "enableEval",
         "enableOtherLangs",
         "enableVM2",
-        "allowLocalhostRequests",
-        "allowFilesystemRequests",
         "enablePermissions",
         "enableReminders",
         "enableAuditLog",
@@ -301,7 +327,8 @@
         "logChannelId",
         "logWebhook",
         "emoji",
-        "bridgeBotIds"
+        "bridgeBotIds",
+        "vmHttp"
     ],
     "anyOf": [
         {

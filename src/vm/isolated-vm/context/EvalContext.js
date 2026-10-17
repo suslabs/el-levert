@@ -7,6 +7,7 @@ import FakeUtil from "../classes/FakeUtil.js";
 import FakeTag from "../classes/FakeTag.js";
 import FakeMsg from "../classes/FakeMsg.js";
 import FakeVM from "../classes/FakeVM.js";
+import { FakeHttp } from "../classes/FakeHttp.js";
 
 import ContextFunctions from "./ContextFunctions.js";
 import EventLoop from "./EventLoop.js";
@@ -61,6 +62,16 @@ class EvalContext {
         this._aborter = new AbortController();
         this.abortSignal = this._aborter.signal;
         this._disposed = false;
+    }
+
+    get rootContext() {
+        let curr = this;
+
+        while (curr.parent != null) {
+            curr = curr.parent;
+        }
+
+        return curr;
     }
 
     get scriptName() {
@@ -149,6 +160,8 @@ class EvalContext {
 
         this._disposed = true;
         this._aborter.abort();
+
+        FakeHttp.resetContext(this);
 
         this._disposeChildren();
         this._disposeInspector();

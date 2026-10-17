@@ -290,4 +290,77 @@ describe("FakeHttp security checks", () => {
         expect(res.error).toBeDefined();
         expect(res.error.message).toContain("File not found or unreadable");
     });
+
+    test("enforces maxUploadSize by rejecting oversized request payloads", async () => {
+        resetFakeAxios();
+        initFakeAxios({
+            allowLocalhostRequests: true,
+            maxUploadSize: 50
+        });
+
+        const context = { id: "test-upload-ctx" };
+
+        await expect(
+            FakeHttp.request(context, {
+                url: "http://127.0.0.1",
+                data: "x".repeat(100),
+                errorType: "value"
+            })
+        ).rejects.toThrow("Request body exceeds maximum upload size of 50 bytes");
+    });
+
+    test("enforces maxDownloadSize in fsAdapter by rejecting oversized files", async () => {
+        resetFakeAxios();
+        initFakeAxios({
+            allowFilesystemRequests: true,
+            maxDownloadSize: 10
+        });
+
+        const thisFileUrl = new URL(import.meta.url).href;
+
+        const res = await FakeHttp.request(undefined, {
+            url: thisFileUrl,
+            errorType: "value"
+        });
+
+        expect(res.status).toBe(413);
+        expect(res.error).toBeDefined();
+        expect(res.error.message).toContain("File size exceeds maximum download size of 10 bytes");
+    });
+
+    test("enforces per-execution rate limit across calls and isolates scopes", async () => {
+        resetFakeAxios();
+        initFakeAxios({
+            allowLocalhostRequests: true,
+            maxRequests: 2,
+            rateLimitWindow: 2000
+        });
+
+        const rootA = { id: "exec-A" };
+        const contextA = { rootContext: rootA };
+
+        const rootB = { id: "exec-B" };
+        const contextB = { rootContext: rootB };
+
+        // 1st and 2nd requests for context A pass rate limit check
+        const resA1 = await FakeHttp.request(contextA, { url: "http://127.0.0.1", errorType: "value" });
+        expect(resA1).toBeDefined();
+
+        const resA2 = await FakeHttp.request(contextA, { url: "http://127.0.0.1", errorType: "value" });
+        expect(resA2).toBeDefined();
+
+        // 3rd request for context A exceeds rate limit
+        await expect(FakeHttp.request(contextA, { url: "http://127.0.0.1", errorType: "value" })).rejects.toThrow(
+            "HTTP request rate limit exceeded"
+        );
+
+        // Context B has its own independent rate limit quota
+        const resB1 = await FakeHttp.request(contextB, { url: "http://127.0.0.1", errorType: "value" });
+        expect(resB1).toBeDefined();
+
+        // After resetting context A, capacity is restored
+        FakeHttp.resetContext(contextA);
+        const resA3 = await FakeHttp.request(contextA, { url: "http://127.0.0.1", errorType: "value" });
+        expect(resA3).toBeDefined();
+    });
 });

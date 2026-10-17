@@ -12,6 +12,7 @@ import { getLogger } from "../../../LevertClient.js";
 
 import Util from "../../../util/Util.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
+import { getHttpStatusText, httpStatusCodes } from "../../../util/misc/HttpStatusCodes.js";
 
 import VMError from "../../../errors/VMError.js";
 
@@ -221,11 +222,11 @@ class InspectorServer {
     }
 
     _write404(res) {
-        res.writeHead(404, {
+        res.writeHead(httpStatusCodes.NOT_FOUND, {
             "Content-Type": "text/plain"
         });
 
-        res.end("404 Not Found");
+        res.end(`${httpStatusCodes.NOT_FOUND} ${getHttpStatusText(httpStatusCodes.NOT_FOUND)}`);
     }
 
     _httpReqHandler = (req, res) => {
@@ -243,10 +244,10 @@ class InspectorServer {
 
         switch (url.pathname) {
             case versionPath:
-                this._writeJson(res, 200, session.getVersionInfo());
+                this._writeJson(res, httpStatusCodes.OK, session.getVersionInfo());
                 break;
             case listPath:
-                this._writeJson(res, 200, [session.getTargetInfo(host)]);
+                this._writeJson(res, httpStatusCodes.OK, [session.getTargetInfo(host)]);
                 break;
             default:
                 this._write404(res);
@@ -259,7 +260,9 @@ class InspectorServer {
             session = this._getSessionForWs(url.pathname);
 
         if (session === null) {
-            socket.write("HTTP/1.1 404 Not Found\r\n\r\n");
+            socket.write(
+                `HTTP/1.1 ${httpStatusCodes.NOT_FOUND} ${getHttpStatusText(httpStatusCodes.NOT_FOUND)}\r\n\r\n`
+            );
             socket.destroy();
             return;
         }

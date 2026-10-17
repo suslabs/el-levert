@@ -12,11 +12,13 @@ import {
     HeartbeatAckPacket,
     InvalidSessionPacket
 } from "../../structures/gateway/packets/index.js";
-import { closeCodes } from "../../structures/gateway/GatewayCloseCodes.js";
+import { closeCodes } from "../../util/misc/WebsocketCloseCodes.js";
 
 import { getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
+import RateLimiter from "../../util/misc/RateLimiter.js";
 
 class GatewayManager extends Manager {
     static $name = "gatewayManager";
@@ -25,12 +27,20 @@ class GatewayManager extends Manager {
     static identifyTimeout = 5 / Util.durationSeconds.milli;
     static heartbeatGracePeriod = 2 / Util.durationSeconds.milli;
 
+    static packetLimit = 100;
+    static rateLimitWindow = Util.durationSeconds.second / Util.durationSeconds.milli;
+
     constructor(enabled, port, options) {
+        options = ObjectUtil.guaranteeObject(options);
         super(enabled, options);
 
         this.port = port;
         this.handleMessage = this.options.handleMessage;
 
+        const packetLimit = this.options.packetLimit ?? this.constructor.packetLimit,
+            rateLimitWindow = this.options.rateLimitWindow ?? this.constructor.rateLimitWindow;
+
+        this.rateLimiter = new RateLimiter(packetLimit, rateLimitWindow);
         this.gatewayServer = new GatewayServer(this.port, options);
         this.sessions = new Map();
 
@@ -72,6 +82,7 @@ class GatewayManager extends Manager {
     unload() {
         this.gatewayServer.stop();
         this.sessions.clear();
+        this.rateLimiter.clear();
     }
 
     handleIdentify(socket, clientId) {
@@ -238,6 +249,12 @@ class GatewayManager extends Manager {
             return;
         }
 
+        if (!this.rateLimiter.check(socket)) {
+            getLogger().warn(`WebSocket client (${this._getClientId(socket)}) rate limit exceeded.`);
+            this._closeSocket(socket, closeCodes.RATE_LIMITED, "Rate limited");
+            return;
+        }
+
         let parsedJson;
 
         try {
@@ -285,11 +302,13 @@ class GatewayManager extends Manager {
 
     _handleClose(socket, code, reason) {
         this._clearSocketTimers(socket);
+        this.rateLimiter.reset(socket);
         getLogger().info(`WebSocket client (ID: ${this._getClientId(socket)}) disconnected`);
     }
 
     _handleError(socket, err) {
         this._clearSocketTimers(socket);
+        this.rateLimiter.reset(socket);
         getLogger().error(`WebSocket client (ID: ${this._getClientId(socket)}) error:`, err);
     }
 

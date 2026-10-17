@@ -32,16 +32,38 @@ class ConfigLoader extends BaseConfigLoader {
         config.interactionTimeout = Math.round(
             (config.interactionTimeout ?? DefaultConfig.interactionTimeout) / Util.durationSeconds.milli
         );
-        config.inspectorConnectTimeout = Math.round(
-            (config.inspectorConnectTimeout ?? DefaultConfig.inspectorConnectTimeout) / Util.durationSeconds.milli
-        );
-        config.userInspectorConnectTimeout = Math.round(
-            (config.userInspectorConnectTimeout ?? DefaultConfig.userInspectorConnectTimeout) /
-                Util.durationSeconds.milli
-        );
-        config.userInspectorActionTimeout = Math.round(
-            (config.userInspectorActionTimeout ?? DefaultConfig.userInspectorActionTimeout) / Util.durationSeconds.milli
-        );
+
+        if (config.vmInspector != null) {
+            config.vmInspector.connectTimeout = Math.round(
+                (config.vmInspector.connectTimeout ?? DefaultConfig.vmInspector.connectTimeout) /
+                    Util.durationSeconds.milli
+            );
+            config.vmInspector.userConnectTimeout = Math.round(
+                (config.vmInspector.userConnectTimeout ?? DefaultConfig.vmInspector.userConnectTimeout) /
+                    Util.durationSeconds.milli
+            );
+            config.vmInspector.userActionTimeout = Math.round(
+                (config.vmInspector.userActionTimeout ?? DefaultConfig.vmInspector.userActionTimeout) /
+                    Util.durationSeconds.milli
+            );
+        }
+
+        if (config.vmHttp != null) {
+            config.vmHttp.maxUploadSize = Math.round(
+                (config.vmHttp.maxUploadSize ?? DefaultConfig.vmHttp.maxUploadSize) * Util.dataBytes.megabyte
+            );
+            config.vmHttp.maxDownloadSize = Math.round(
+                (config.vmHttp.maxDownloadSize ?? DefaultConfig.vmHttp.maxDownloadSize) * Util.dataBytes.megabyte
+            );
+            config.vmHttp.maxRequests = config.vmHttp.maxRequests ?? DefaultConfig.vmHttp.maxRequests;
+            config.vmHttp.rateLimitWindow = Math.round(
+                (config.vmHttp.rateLimitWindow ?? DefaultConfig.vmHttp.rateLimitWindow) / Util.durationSeconds.milli
+            );
+            config.vmHttp.allowLocalhostRequests =
+                config.vmHttp.allowLocalhostRequests ?? DefaultConfig.vmHttp.allowLocalhostRequests;
+            config.vmHttp.allowFilesystemRequests =
+                config.vmHttp.allowFilesystemRequests ?? DefaultConfig.vmHttp.allowFilesystemRequests;
+        }
 
         config.timeLimit = Math.round(config.timeLimit / Util.durationSeconds.milli);
         config.otherTimeLimit = Math.round(config.otherTimeLimit / Util.durationSeconds.milli);

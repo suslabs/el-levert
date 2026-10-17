@@ -35,12 +35,14 @@
     "timeLimit": 15,
     "otherMemLimit": 50,
     "otherTimeLimit": 15,
-    "enableInspector": false,
-    "enableUserInspector": false,
-    "inspectorConnectTimeout": 60,
-    "userInspectorConnectTimeout": 30,
-    "userInspectorActionTimeout": 300,
-    "inspectorPort": 8080,
+    "vmInspector": {
+        "enable": false,
+        "enableUser": false,
+        "connectTimeout": 60,
+        "userConnectTimeout": 30,
+        "userActionTimeout": 300,
+        "port": 8080
+    },
     "maxGroupNameLength": 16,
     "tagModeratorLevel": 1,
     "permissionAdminLevel": 2,
@@ -49,8 +51,6 @@
     "enableEval": true,
     "enableOtherLangs": false,
     "enableVM2": false,
-    "allowLocalhostRequests": false,
-    "allowFilesystemRequests": false,
     "enablePermissions": true,
     "enableReminders": true,
     "enableAuditLog": true,
@@ -76,5 +76,13 @@
         "waiting": ":hourglass_flowing_sand:"
     },
     "bridgeBotIds": [],
-    "bridgeBotMessageFormat": "\\*{2}.+?:\\*{2}\\s"
+    "bridgeBotMessageFormat": "\\*{2}.+?:\\*{2}\\s",
+    "vmHttp": {
+        "maxUploadSize": 50,
+        "maxDownloadSize": 50,
+        "maxRequests": 20,
+        "rateLimitWindow": 1,
+        "allowLocalhostRequests": false,
+        "allowFilesystemRequests": false
+    }
 }

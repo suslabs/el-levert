@@ -138,4 +138,72 @@ describe("Gateway protocol and GatewayClient", () => {
 
         client.close();
     });
+
+    test("closes connection with RATE_LIMITED when packet limit is exceeded", async () => {
+        const rawWs = new WebSocket(url);
+
+        const receivedClose = new Promise(resolve => {
+            rawWs.on("close", (code, reason) => {
+                resolve({ code, reason: reason.toString() });
+            });
+        });
+
+        rawWs.on("open", () => {
+            for (let i = 0; i < 105; i++) {
+                rawWs.send(
+                    JSON.stringify({
+                        op: 1,
+                        d: null
+                    })
+                );
+            }
+        });
+
+        const closeInfo = await receivedClose;
+        expect(closeInfo.code).toBe(4008);
+    });
+
+    test("client handles RATE_LIMITED close from gateway and emits rate_limited", async () => {
+        const client = new GatewayClient(url, {
+            clientId: "test_gateway_ratelimit",
+            connectTimeout: 2000,
+            pingInterval: 1000,
+            pongTimeout: 500,
+            maxRetryCount: 0,
+            maxReconnectAttempts: 1,
+            rateLimitBackoff: 200
+        });
+
+        await client.connect();
+        expect(client.connected).toBe(true);
+        const originalSessionId = client.sessionId;
+
+        const rateLimitedPromise = new Promise(resolve => {
+            client.once("rate_limited", data => resolve(data));
+        });
+
+        const closePromise = new Promise(resolve => {
+            client.once("close", code => resolve(code));
+        });
+
+        const pendingRequests = [];
+        for (let i = 0; i < 110; i++) {
+            pendingRequests.push(client.sendRequest("version", {}).catch(err => err));
+        }
+
+        const rateLimitData = await rateLimitedPromise;
+        expect(rateLimitData.code).toBe(4008);
+
+        const closeCode = await closePromise;
+        expect(closeCode).toBe(4008);
+
+        const results = await Promise.all(pendingRequests);
+        const rateLimitErrors = results.filter(res => res instanceof Error && res.message.includes("rate limit"));
+        expect(rateLimitErrors.length).toBeGreaterThan(0);
+
+        await new Promise(resolve => setTimeout(resolve, 500));
+        expect(client.sessionId).toBe(originalSessionId);
+
+        client.close();
+    });
 });

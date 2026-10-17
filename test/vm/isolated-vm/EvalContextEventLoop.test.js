@@ -13,7 +13,7 @@ async function createContext(options = {}) {
         loadManagers: true,
         config: {
             enableEval: true,
-            enableInspector: false,
+            vmInspector: { enable: false },
             memLimit: options.memLimit ?? 64,
             timeLimit: options.timeLimit ?? 500
         }

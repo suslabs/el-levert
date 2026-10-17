@@ -15,6 +15,9 @@ import TypeTester from "../../../util/TypeTester.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
 import VMUtil from "../../../util/vm/VMUtil.js";
 
+import RateLimiter from "../../../util/misc/RateLimiter.js";
+import { getHttpStatusText, httpStatusCodes } from "../../../util/misc/HttpStatusCodes.js";
+
 import VMError from "../../../errors/VMError.js";
 
 function createBlocklist() {
@@ -31,8 +34,8 @@ function createBlocklist() {
     // IPv4 Link-Local
     blocklist.addSubnet("169.254.0.0", 16, "ipv4");
 
-    // IPv4 Local Endpoint
-    blocklist.addAddress("0.0.0.0", "ipv4");
+    // IPv4 This Host / Local Endpoint (0.0.0.0/8)
+    blocklist.addSubnet("0.0.0.0", 8, "ipv4");
 
     // IPv6 Localhost / Loopback
     blocklist.addAddress("::1", "ipv6");
@@ -77,7 +80,7 @@ function createSecureAgent(_class, blocklist) {
     const originalCreateConnection = agent.createConnection;
 
     agent.createConnection = function (options, cb) {
-        const host = options.host;
+        const host = options.host ?? options.hostname;
 
         if (checkIP(host, blocklist)) {
             const err = new VMError("Access to local/private IP addresses is blocked");
@@ -116,7 +119,7 @@ function createSecureAgent(_class, blocklist) {
     return agent;
 }
 
-async function fsAdapter(req) {
+async function fsAdapter(req, maxDownloadSize = Infinity) {
     let filePath;
 
     try {
@@ -124,43 +127,80 @@ async function fsAdapter(req) {
     } catch (err) {
         return Promise.reject({
             message: `Invalid file URL format: ${req.url}`,
-            response: { status: 400, statusText: "Bad Request" },
+            response: {
+                status: httpStatusCodes.BAD_REQUEST,
+                statusText: getHttpStatusText(httpStatusCodes.BAD_REQUEST)
+            },
             config: req
         });
     }
 
     try {
-        const data = await fs.readFile(filePath);
+        const stat = await fs.stat(filePath);
 
-        let resData;
+        if (!stat.isFile()) {
+            return Promise.reject({
+                message: `Path is not a regular file: ${req.url}`,
+                response: {
+                    status: httpStatusCodes.NOT_FOUND,
+                    statusText: getHttpStatusText(httpStatusCodes.NOT_FOUND)
+                },
+                config: req
+            });
+        }
+
+        if (stat.size > maxDownloadSize) {
+            return Promise.reject({
+                message: `File size exceeds maximum download size of ${maxDownloadSize} bytes`,
+                response: {
+                    status: httpStatusCodes.PAYLOAD_TOO_LARGE,
+                    statusText: getHttpStatusText(httpStatusCodes.PAYLOAD_TOO_LARGE)
+                },
+                config: req
+            });
+        }
+
+        let data = await fs.readFile(filePath),
+            resData;
 
         if (req.responseType === "arraybuffer") {
             resData = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
         } else {
-            const json = req.url.endsWith(".json") || req.responseType === "json",
+            const json = VMUtil._jsonRequestRegex.test(req.url) || req.responseType === "json",
                 text = data.toString("utf8");
 
-            resData = json ? JSON.parse(text) : text;
+            try {
+                resData = json ? JSON.parse(text) : text;
+            } catch {
+                resData = text;
+            }
         }
 
         return {
             data: resData,
-            status: 200,
-            statusText: "OK",
+            status: httpStatusCodes.OK,
+            statusText: getHttpStatusText(httpStatusCodes.OK),
             headers: {},
             config: req
         };
     } catch (err) {
+        if (err.response?.status === httpStatusCodes.PAYLOAD_TOO_LARGE) {
+            return Promise.reject(err);
+        }
+
         return Promise.reject({
             message: `File not found or unreadable at: ${req.url}`,
             response: {
-                status: 404,
-                statusText: "Not Found"
+                status: httpStatusCodes.NOT_FOUND,
+                statusText: getHttpStatusText(httpStatusCodes.NOT_FOUND)
             },
             config: req
         });
     }
 }
+
+let fakeAxios = null,
+    rateLimiter = null;
 
 function createFakeAxios(options) {
     options = ObjectUtil.guaranteeObject(options);
@@ -168,7 +208,18 @@ function createFakeAxios(options) {
     const allowLocalhostRequests = options.allowLocalhostRequests ?? false,
         allowFilesystemRequests = options.allowFilesystemRequests ?? false;
 
-    const config = {};
+    const maxUploadSize = options.maxUploadSize ?? Infinity,
+        maxDownloadSize = options.maxDownloadSize ?? Infinity;
+
+    const maxRequests = options.maxRequests ?? Infinity,
+        rateLimitWindow = options.rateLimitWindow ?? 1000;
+
+    rateLimiter = new RateLimiter(maxRequests, rateLimitWindow);
+
+    const config = {
+        maxBodyLength: maxUploadSize,
+        maxContentLength: maxDownloadSize
+    };
 
     if (!allowLocalhostRequests) {
         const blocklist = createBlocklist();
@@ -182,7 +233,7 @@ function createFakeAxios(options) {
     if (allowFilesystemRequests) {
         config.adapter = reqConfig => {
             if (reqConfig.url && reqConfig.url.startsWith("file://")) {
-                return fsAdapter(reqConfig);
+                return fsAdapter(reqConfig, maxDownloadSize);
             } else {
                 return originalAdapter(reqConfig);
             }
@@ -205,7 +256,25 @@ function createFakeAxios(options) {
                     reqConfig.data
                 );
 
-            bodyBuffer = Buffer.from(transformedData, "utf8");
+            if (Buffer.isBuffer(transformedData)) {
+                bodyBuffer = transformedData;
+            } else if (ArrayBuffer.isView(transformedData)) {
+                bodyBuffer = Buffer.from(
+                    transformedData.buffer,
+                    transformedData.byteOffset,
+                    transformedData.byteLength
+                );
+            } else if (transformedData instanceof ArrayBuffer) {
+                bodyBuffer = Buffer.from(transformedData);
+            } else if (typeof transformedData === "string") {
+                bodyBuffer = Buffer.from(transformedData, "utf8");
+            } else {
+                bodyBuffer = Buffer.from(JSON.stringify(transformedData) ?? "", "utf8");
+            }
+        }
+
+        if (bodyBuffer.byteLength > maxUploadSize) {
+            throw new VMError(`Request body exceeds maximum upload size of ${maxUploadSize} bytes`);
         }
 
         reqConfig.bodyBuffer = bodyBuffer;
@@ -215,8 +284,6 @@ function createFakeAxios(options) {
     return client;
 }
 
-let fakeAxios = null;
-
 function initFakeAxios(options) {
     fakeAxios ??= createFakeAxios(options);
     return fakeAxios;
@@ -224,6 +291,8 @@ function initFakeAxios(options) {
 
 function resetFakeAxios() {
     fakeAxios = null;
+    rateLimiter?.destroy();
+    rateLimiter = null;
 }
 
 const FakeHttp = Object.freeze({
@@ -231,9 +300,26 @@ const FakeHttp = Object.freeze({
         return fakeAxios;
     },
 
+    get rateLimiter() {
+        return rateLimiter;
+    },
+
+    resetContext: context => {
+        if (context != null && rateLimiter !== null) {
+            const root = context.rootContext ?? context;
+            rateLimiter.reset(root);
+        }
+    },
+
     request: async (context, data) => {
         if (fakeAxios === null) {
             throw new VMError("HTTP client is not initialized");
+        }
+
+        const rootContext = context?.rootContext ?? context;
+
+        if (rateLimiter !== null && !rateLimiter.check(rootContext)) {
+            throw new VMError("HTTP request rate limit exceeded");
         }
 
         const reqConfig = VMUtil.makeRequestConfig(data, context);
@@ -244,9 +330,13 @@ const FakeHttp = Object.freeze({
         try {
             res = await fakeAxios.request(reqConfig);
         } catch (err) {
+            if (err instanceof VMError) {
+                throw err;
+            }
+
             reqErr = err;
 
-            if (TypeTester.className(err) === "AxiosError") {
+            if (TypeTester.className(err) === "AxiosError" || err.response != null) {
                 getLogger().error("Axios request error:", err);
                 res = err.response;
             } else {
