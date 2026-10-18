@@ -476,6 +476,7 @@ Base usage:
 Main actions:
 
 - `add <date> ["message"] [--every <interval>]` creates a scheduled or recurring reminder
+- `edit <index> [date] ["message"] [--every <interval>] [--clear-every]` edits an active reminder
 - `list` shows your active reminders
 - `snooze (index) [duration]` delays a reminder by a duration (default: 10m)
 - `remove (index)` removes one reminder
@@ -500,7 +501,7 @@ What users should know:
 - The date is parsed in natural language, so inputs like `tomorrow 18:00`, `in 2 hours`, or `12:46` work.
 - If an initial time of day (e.g. `12:46`) has already passed today and a recurrence interval is present, it automatically schedules for the next upcoming occurrence.
 - The message should be quoted when it contains spaces. When run as a reply with no message text, the replied message content and jump link are used.
-- `remove` and `snooze` use a 1-based index from your list.
+- `remove`, `edit`, and `snooze` use a 1-based index from your list.
 - Reminders are sent to you by DM.
 
 ### 9. Utility commands

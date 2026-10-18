@@ -7,7 +7,7 @@ class ReminderCommand {
         args: "<subcommand> [args]",
         description: "Manage personal reminders. Set timed notifications to be delivered to you in Discord.",
         usage: "- <subcommand>: Reminder management operation to execute.",
-        subcommands: ["add", "list", "remove", "remove_all", "snooze"]
+        subcommands: ["add", "edit", "list", "remove", "remove_all", "snooze"]
     };
 
     load() {

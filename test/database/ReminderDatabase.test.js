@@ -97,6 +97,7 @@ describe("ReminderDatabase", () => {
 
         const updated = await db.fetchById(reminder.id);
         expect(updated.end).toBe(2000);
+        expect(updated.msg).toBe("repeat");
         expect(updated.interval).toBe(twoMinutesMs);
 
         expect(await db.fetchById(99999)).toBeNull();

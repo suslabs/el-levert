@@ -137,6 +137,44 @@ class ReminderManager extends DBManager {
         return reminder;
     }
 
+    async edit(user, index, end = null, interval, validate = true) {
+        if (validate) {
+            index = this.checkIndex(index);
+        }
+
+        const reminders = await this.list(user),
+            reminder = reminders?.[index];
+
+        if (reminders === null || typeof reminder === "undefined") {
+            throw new ReminderError("Reminder doesn't exist");
+        }
+
+        if (validate) {
+            if (end !== null && (!Number.isInteger(end) || end < Date.now())) {
+                throw new ReminderError("Invalid end time", end);
+            } else if (interval != null && (!Number.isInteger(interval) || interval <= 0)) {
+                throw new ReminderError("Invalid reminder interval", interval);
+            }
+        }
+
+        if (end !== null) {
+            reminder.end = end;
+        }
+
+        if (typeof interval !== "undefined") {
+            reminder.interval = interval;
+        }
+
+        await this.remind_db.update(reminder);
+
+        const intervalStr = reminder.isRecurring ? ` every ${reminder.interval}ms` : "";
+        getLogger().info(
+            `Updated reminder: ${index} for user: ${user} until: ${reminder.end}${intervalStr} with message:${LoggerUtil.formatLog(reminder.msg)}`
+        );
+
+        return reminder;
+    }
+
     async snooze(user, target, duration) {
         if (!Number.isInteger(duration) || duration <= 0) {
             throw new ReminderError("Invalid snooze duration", duration);
@@ -277,11 +315,10 @@ class ReminderManager extends DBManager {
         this._lastSentReminders.set(reminder.user, reminder);
 
         const out = "You set a reminder for " + reminder.format();
-
         getLogger().info(`Sending reminder to ${DiscordUtil.formatUser(user)}...`);
 
-        const session = SnoozeUtil.createSession(user, reminder);
-        const row = SnoozeUtil.createSnoozeRow(session.id);
+        const session = SnoozeUtil.createSession(user, reminder),
+            row = SnoozeUtil.createSnoozeRow(session.id);
 
         const msg = await user.send({
             content: out,
@@ -304,6 +341,7 @@ class ReminderManager extends DBManager {
 
     async unload() {
         await super.unload();
+
         this._stopSendLoop();
         this._lastSentReminders.clear();
     }

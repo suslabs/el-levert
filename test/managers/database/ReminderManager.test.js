@@ -75,6 +75,18 @@ describe("ReminderManager", () => {
         expect(removed.msg).toBe("second");
         await expect(manager.remove("u1", 4, true)).rejects.toThrow("Reminder doesn't exist");
 
+        const edited = await manager.edit("u1", 0, now + 3000, 60000, true);
+        expect(edited.msg).toBe("first");
+        expect(edited.end).toBe(now + 3000);
+        expect(edited.interval).toBe(60000);
+
+        const cleared = await manager.edit("u1", 0, null, null, true);
+        expect(cleared.interval).toBeNull();
+
+        await expect(manager.edit("u1", 0, now - 1, undefined, true)).rejects.toThrow("Invalid end time");
+        await expect(manager.edit("u1", 0, null, -5, true)).rejects.toThrow("Invalid reminder interval");
+        await expect(manager.edit("u1", 99, null, 60000, true)).rejects.toThrow("Reminder doesn't exist");
+
         expect(await manager.removeAll("missing")).toBe(false);
         expect(await manager.removeAll("u2")).toBe(true);
         expect(await manager.exists("u2")).toBe(false);
