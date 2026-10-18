@@ -35,34 +35,35 @@ const fileFormat = [
     "json"
 ];
 
-const consoleFormat = [
-    "colorize",
-    {
-        name: "timestamp",
-        opts: {
-            format: "YYYY-MM-DD HH:mm:ss"
-        }
-    },
-    {
-        name: "errors",
-        opts: {
-            stack: true
-        }
-    },
-    {
-        name: "printf",
-        opts: printfTemplate
-    }
-];
+function getDefaultLoggerConfig(name, filename, consoleOutput, level, options = {}) {
+    const showDate = options.showDate ?? true,
+        dateFormat = showDate ? "YYYY-MM-DD HH:mm:ss" : "HH:mm:ss";
 
-function getDefaultLoggerConfig(name, filename, consoleOutput, level) {
     const config = {
         name,
         filename,
         consoleOutput,
         level,
         fileFormat,
-        consoleFormat
+        consoleFormat: [
+            "colorize",
+            {
+                name: "timestamp",
+                opts: {
+                    format: dateFormat
+                }
+            },
+            {
+                name: "errors",
+                opts: {
+                    stack: true
+                }
+            },
+            {
+                name: "printf",
+                opts: printfTemplate
+            }
+        ]
     };
 
     return config;

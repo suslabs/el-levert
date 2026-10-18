@@ -75,16 +75,7 @@ class PreviewHandler extends MessageHandler {
         logUsage(msg, str);
         Benchmark.startTiming("preview_generate");
 
-        const { sv_id, ch_id, msg_id } = match;
-
-        const prevMsg = await getClient().fetchMessage(ch_id, msg_id, {
-            user_id: msg.author.id,
-            checkAccess: true
-        });
-
-        if (prevMsg === null) {
-            throw new HandlerError("Preview message not found", { sv_id, ch_id, msg_id });
-        }
+        const [prevMsg, sv_id, ch_id, msg_id] = await this._resolveTarget(msg, match);
 
         let content = prevMsg.content,
             image;
@@ -198,6 +189,25 @@ class PreviewHandler extends MessageHandler {
             .catch(() => Benchmark.stopTiming("preview_send", null));
 
         return true;
+    }
+
+    async _resolveTarget(msg, match) {
+        const { sv_id, ch_id, msg_id } = match;
+
+        const prevMsg = await getClient().fetchMessage(ch_id, msg_id, {
+            user_id: msg.author.id,
+            checkAccess: true
+        });
+
+        if (prevMsg === null) {
+            throw new HandlerError("Preview message not found", {
+                sv_id,
+                ch_id,
+                msg_id
+            });
+        }
+
+        return [prevMsg, sv_id, ch_id, msg_id];
     }
 }
 export default PreviewHandler;

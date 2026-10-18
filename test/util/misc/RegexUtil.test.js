@@ -20,9 +20,19 @@ describe("RegexUtil", () => {
         expect("rabbit".match(RegexUtil.getWordRegex("rabbit"))).toEqual(["rabbit"]);
         expect("cleveret rabbit".match(RegexUtil.getWordRegex(["leveret", "rabbit"]))).toEqual(["rabbit"]);
         expect(RegexUtil.getMergedRegex([/cat/g, /dog/i]).source).toContain("cat");
-        expect(RegexUtil.multipleReplace("abc123", [/[a-z]+/, "letters"], [/\d+/, value => `[${value}]`])).toBe(
-            "letters[123]"
-        );
+        expect(
+            RegexUtil.multipleReplace("abc123", [
+                [/[a-z]+/, "letters"],
+                [/\d+/, value => `[${value}]`]
+            ])
+        ).toBe("letters[123]");
+        expect(
+            RegexUtil.multipleReplace("foo bar foo bar", [
+                [/foo/, "FOO"],
+                [/bar/g, "BAR"]
+            ])
+        ).toBe("FOO BAR foo BAR");
+        expect(RegexUtil.multipleReplace("abc123def", [[/(?<=abc)\d+/, "XYZ"]])).toBe("abcXYZdef");
         expect(RegexUtil.templateReplace("Hi {{ name }} and \\{{ skip }}", { name: "Alex" })).toBe(
             "Hi Alex and \\{{ skip }}"
         );

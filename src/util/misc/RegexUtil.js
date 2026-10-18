@@ -72,52 +72,107 @@ const RegexUtil = Object.freeze({
         return new regexCtor(expText, expFlags);
     },
 
-    multipleReplace: (str, ...rules) => {
+    _substituteRegex: /\$([$&`']|\d{1,2}|<([^>]+)>)/g,
+
+    _evaluateReplacement: (replacement, match, str) => {
+        if (typeof replacement === "function") {
+            return replacement(match[0], ...match.slice(1), match.index, str);
+        }
+
+        if (typeof replacement !== "string" || !replacement.includes("$")) {
+            return String(replacement ?? "");
+        }
+
+        return replacement.replace(RegexUtil._substituteRegex, (fullToken, token, groupName) => {
+            if (token === "$") {
+                return "$";
+            } else if (token === "&") {
+                return match[0];
+            } else if (token === "`") {
+                return str.slice(0, match.index);
+            } else if (token === "'") {
+                return str.slice(match.index + match[0].length);
+            } else if (groupName && match.groups) {
+                return match.groups[groupName] ?? "";
+            }
+
+            const num = Number(token);
+
+            if (!Number.isNaN(num) && num > 0 && num < match.length) {
+                return match[num] ?? "";
+            }
+
+            return fullToken;
+        });
+    },
+
+    multipleReplace: (str, rules = []) => {
         if (rules.length < 1) {
             return str;
         }
 
-        const regexCtor = rules[0][0].constructor,
-            matchInfo = [];
+        const regexCtor = rules[0][0].constructor;
 
-        for (const [regex, replacement] of rules) {
-            const newFlags = Util.unique(regex.flags + "g"),
-                globalRegex = new regexCtor(regex.source, newFlags);
+        const ruleEntries = rules.map(([regex, replacement], idx) => {
+            const isGlobal = regex.flags.includes("g"),
+                newFlags = Util.unique(regex.flags + "g");
 
-            for (const match of str.matchAll(globalRegex)) {
-                const start = match.index,
-                    end = match.index + match[0].length;
+            return {
+                idx,
+                regex,
+                replacement,
+                isGlobal,
+                scanner: new regexCtor(regex.source, newFlags)
+            };
+        });
 
-                matchInfo.push({ regex, replacement, match, start, end });
+        const activeRules = new Set(ruleEntries),
+            out = [];
+
+        let cursor = 0;
+
+        while (cursor < str.length && activeRules.size > 0) {
+            let bestMatch = null,
+                bestRule = null;
+
+            for (const rule of activeRules) {
+                rule.scanner.lastIndex = cursor;
+                const match = rule.scanner.exec(str);
+
+                if (match === null) {
+                    activeRules.delete(rule);
+                    continue;
+                }
+
+                const isEarlier = bestMatch === null || match.index < bestMatch.index,
+                    isTieBreak = bestMatch !== null && match.index === bestMatch.index && rule.idx < bestRule.idx;
+
+                if (isEarlier || isTieBreak) {
+                    bestMatch = match;
+                    bestRule = rule;
+
+                    if (bestMatch.index === cursor && bestRule.idx === 0) {
+                        break;
+                    }
+                }
+            }
+
+            if (bestMatch === null) {
+                break;
+            }
+
+            out.push(str.slice(cursor, bestMatch.index));
+            out.push(RegexUtil._evaluateReplacement(bestRule.replacement, bestMatch, str));
+
+            const matchLength = Math.max(bestMatch[0].length, 1);
+            cursor = bestMatch.index + matchLength;
+
+            if (!bestRule.isGlobal) {
+                activeRules.delete(bestRule);
             }
         }
 
-        matchInfo.sort((a, b) => a.start - b.start || b.end - a.end);
-
-        let out = [],
-            lastIndex = 0;
-
-        for (const info of matchInfo) {
-            if (info.start < lastIndex) {
-                continue;
-            }
-
-            out.push(str.slice(lastIndex, info.start));
-            lastIndex = info.end;
-
-            let fullMatch = info.match[0],
-                replaced = null;
-
-            if (typeof info.replacement === "function") {
-                replaced = info.replacement(fullMatch, ...info.match.slice(1), info.start, str);
-            } else {
-                replaced = fullMatch.replace(info.regex, info.replacement);
-            }
-
-            out.push(replaced ?? "");
-        }
-
-        out.push(str.slice(lastIndex));
+        out.push(str.slice(cursor));
         return out.join("");
     },
 

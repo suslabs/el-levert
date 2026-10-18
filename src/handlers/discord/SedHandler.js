@@ -70,81 +70,12 @@ class SedHandler extends MessageHandler {
         logUsage(msg);
         Benchmark.startTiming("sed_generate");
 
-        const matches = Array.from(str.matchAll(SedHandler.sedRegex));
-
-        if (Util.empty(matches)) {
-            throw new HandlerError("Invalid input string", str);
-        }
-
-        const singleRule = Util.single(matches),
-            expIdx = i => (singleRule ? undefined : i);
-
-        const rules = matches.map((match, i) => {
-            if (!match.groups) {
-                throw new HandlerError("Invalid regex args", {
-                    i: expIdx(i),
-                    str: Util.first(match)
-                });
-            }
-
-            let { regex_text: regexText, replace, flags_text: flagsText } = match.groups;
-            regexText = ScriptCommandType.parse(regexText || "").body.replaceAll("\\/", "/");
-            replace = ScriptCommandType.parse(replace || "").body.replaceAll("\\/", "/");
-            flagsText = ScriptCommandType.parse(flagsText || SedHandler.defaultFlags).body.toLowerCase();
-
-            if (!RegexUtil.validFlags(flagsText)) {
-                throw new HandlerError("Invalid regex flags", {
-                    i: expIdx(i),
-                    flagsText
-                });
-            }
-
-            try {
-                const regex = new RE2(regexText, flagsText);
-                return [regex, replace];
-            } catch (err) {
-                if (err instanceof SyntaxError) {
-                    throw new HandlerError("Invalid regex or flags", {
-                        i: expIdx(i),
-                        regexText,
-                        flagsText
-                    });
-                }
-
-                throw err;
-            }
-        });
-
-        const mergedRegex = singleRule ? Util.first(rules)[0] : RegexUtil.getMergedRegex(rules.map(rule => rule[0]));
-
-        let sedMsg, content;
-
-        if (msg.type === MessageType.Reply) {
-            sedMsg = await getClient().fetchMessage(msg.channel.id, msg.reference.messageId);
-            content = sedMsg.content;
-
-            mergedRegex.lastIndex = 0;
-
-            if (!mergedRegex.test(content)) {
-                throw new HandlerError("No matching text found", {
-                    regex: mergedRegex,
-                    content
-                });
-            }
-        } else {
-            sedMsg = await this._fetchMatch(msg.channel.id, mergedRegex, msg.id);
-            content = sedMsg?.content;
-
-            if (typeof content === "undefined") {
-                throw new HandlerError("No matching message found", {
-                    regex: mergedRegex
-                });
-            }
-        }
+        const [rules, singleRule] = SedHandler._parseRules(str),
+            sedMsg = await this._resolveTarget(msg, rules, singleRule);
 
         const replacedContent = singleRule
-            ? content.replace(...Util.first(rules))
-            : RegexUtil.multipleReplace(content, ...rules);
+            ? sedMsg.content.replace(...Util.first(rules))
+            : RegexUtil.multipleReplace(sedMsg.content, rules);
 
         const description = replacedContent || "\u200b",
             username = sedMsg.author.displayName,
@@ -228,6 +159,61 @@ class SedHandler extends MessageHandler {
         return true;
     }
 
+    static _parsePattern(str = "") {
+        const { body } = ScriptCommandType.parse(str);
+        return body.replaceAll("\\/", "/");
+    }
+
+    static _parseRule(match, expIndex) {
+        if (!match.groups) {
+            throw new HandlerError("Invalid regex args", {
+                i: expIndex,
+                str: Util.first(match)
+            });
+        }
+
+        const regexText = SedHandler._parsePattern(match.groups.regex_text),
+            replace = SedHandler._parsePattern(match.groups.replace);
+
+        const rawFlags = match.groups.flags_text ?? SedHandler.defaultFlags,
+            flags = ScriptCommandType.parse(rawFlags).body.toLowerCase();
+
+        if (!RegexUtil.validFlags(flags)) {
+            throw new HandlerError("Invalid regex flags", {
+                i: expIndex,
+                flagsText: flags
+            });
+        }
+
+        try {
+            const regex = new RE2(regexText, flags);
+            return [regex, replace];
+        } catch (err) {
+            if (err instanceof SyntaxError) {
+                throw new HandlerError("Invalid regex or flags", {
+                    i: expIndex,
+                    regexText,
+                    flagsText: flags
+                });
+            }
+
+            throw err;
+        }
+    }
+
+    static _parseRules(str) {
+        const matches = Array.from(str.matchAll(SedHandler.sedRegex));
+
+        if (Util.empty(matches)) {
+            throw new HandlerError("Invalid input string", str);
+        }
+
+        const singleRule = Util.single(matches),
+            rules = matches.map((match, i) => SedHandler._parseRule(match, singleRule ? undefined : i));
+
+        return [rules, singleRule];
+    }
+
     async _fetchMatch(ch_id, regex, ignore_id, limit = 100) {
         const msgs = await getClient().fetchMessages(ch_id, { limit }),
             botId = getClient().botId;
@@ -246,6 +232,35 @@ class SedHandler extends MessageHandler {
         });
 
         return sedMsg ?? null;
+    }
+
+    async _resolveTarget(msg, rules, singleRule) {
+        const mergedRegex = singleRule ? Util.first(rules)[0] : RegexUtil.getMergedRegex(rules.map(rule => rule[0]));
+
+        let sedMsg, content;
+
+        if (msg.type === MessageType.Reply) {
+            sedMsg = await getClient().fetchMessage(msg.channel.id, msg.reference.messageId);
+            content = sedMsg.content;
+
+            if (!mergedRegex.test(content)) {
+                throw new HandlerError("No matching text found", {
+                    regex: mergedRegex,
+                    content
+                });
+            }
+        } else {
+            sedMsg = await this._fetchMatch(msg.channel.id, mergedRegex, msg.id);
+            content = sedMsg?.content;
+
+            if (typeof content === "undefined") {
+                throw new HandlerError("No matching message found", {
+                    regex: mergedRegex
+                });
+            }
+        }
+
+        return sedMsg;
     }
 }
 

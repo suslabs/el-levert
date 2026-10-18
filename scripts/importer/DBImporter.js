@@ -92,7 +92,19 @@ class DBImporter {
         this.logger = logger;
         this.tagManager = tagManager;
         this.options = options;
-        this.tracker = options.tracker ?? (options.progress !== false ? new ProgressTracker() : null);
+
+        const progress = options.progress ?? true,
+            tracker = options.tracker ?? null;
+
+        if (tracker !== null) {
+            this.tracker = tracker;
+        } else if (progress) {
+            this.tracker = new ProgressTracker({
+                stream: process.stdout
+            });
+        } else {
+            this.tracker = null;
+        }
     }
 
     async updateDatabase(path, mode = DBUpdateModes.overwrite, options = {}) {
