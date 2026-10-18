@@ -8,10 +8,6 @@ import Util from "../../util/Util.js";
 import RevisionAuditUtil from "../../util/commands/RevisionAuditUtil.js";
 import PaginationUtil from "../../util/commands/PaginationUtil.js";
 
-const defaultLimit = 10,
-    maxLimit = 20,
-    dumpLimit = 1000;
-
 function getLabel(revision) {
     switch (revision.target) {
         case PermissionRevisionTargets.group:
@@ -48,6 +44,10 @@ async function getDetail(revisionId) {
 }
 
 class PermAuditCommand {
+    static defaultLimit = 10;
+    static maxLimit = 20;
+    static dumpLimit = 1000;
+
     static info = {
         name: "audit",
         parent: "perm",
@@ -65,7 +65,10 @@ class PermAuditCommand {
 - --limit <number>: Entries per page (1-20, default: 10).
 - --all: Dump all matching revisions.`,
         arguments: [
-            ...PaginationUtil.getPaginationArguments({ defaultLimit, maxLimit }),
+            ...PaginationUtil.getPaginationArguments({
+                defaultLimit: PermAuditCommand.defaultLimit,
+                maxLimit: PermAuditCommand.maxLimit
+            }),
             {
                 name: "user",
                 kind: "option",
@@ -141,8 +144,11 @@ class PermAuditCommand {
             return `${getEmoji("warn")} ${dates.error}`;
         }
 
-        const paginationOpts = PaginationUtil.getPaginationOptions(ctx, { defaultLimit, maxLimit }),
-            fetchLimit = paginationOpts.all ? dumpLimit : 100;
+        const paginationOpts = PaginationUtil.getPaginationOptions(ctx, {
+                defaultLimit: PermAuditCommand.defaultLimit,
+                maxLimit: PermAuditCommand.maxLimit
+            }),
+            fetchLimit = paginationOpts.all ? PermAuditCommand.dumpLimit : 100;
 
         const { from, to } = dates;
 
@@ -166,8 +172,9 @@ class PermAuditCommand {
 
         return await PaginationUtil.paginate(ctx, {
             items: revisions,
-            defaultLimit,
-            maxLimit,
+            defaultLimit: PermAuditCommand.defaultLimit,
+            maxLimit: PermAuditCommand.maxLimit,
+
             render: async (items, { page }) => {
                 const header = `${getEmoji("info")} Permission audit page **${page}**${scopeLabel}:`,
                     embed = await RevisionAuditUtil.createListEmbed(items, page, getLabel, {
@@ -179,6 +186,7 @@ class PermAuditCommand {
                     embeds: [embed]
                 };
             },
+
             dumpHeader: `${getEmoji("info")} Permission audit${scopeLabel}:`,
             formatDump: (items, discord = true) =>
                 RevisionAuditUtil.formatRevisionList(items, getLabel, {
@@ -195,4 +203,3 @@ class PermAuditCommand {
 }
 
 export default PermAuditCommand;
-

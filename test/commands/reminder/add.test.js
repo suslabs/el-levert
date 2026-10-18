@@ -48,6 +48,12 @@ describe("reminder add command", () => {
         await expect(executeCommand(command, 'add 12:46 "Test" --every invalid', { msg })).resolves.toContain(
             "Invalid recurring interval"
         );
+        await expect(executeCommand(command, 'add every 30s "Standup"', { msg })).resolves.toContain(
+            "Repeat interval must be at least 1 minute"
+        );
+        await expect(executeCommand(command, 'add 12:46 "Test" --every 10s', { msg })).resolves.toContain(
+            "Repeat interval must be at least 1 minute"
+        );
     });
 
     test("extracts and trims reply message content when message argument is omitted", async () => {

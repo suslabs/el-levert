@@ -7,6 +7,8 @@ import DateUtil from "../../util/commands/DateUtil.js";
 const messageRegex = /(.+?)\s*(?:(?:(['"`])((?:[^\2\\]|\\.)*?)\2)|$)/;
 
 class ReminderAddCommand {
+    static minInterval = Util.durationSeconds.minute / Util.durationSeconds.milli;
+
     static info = {
         name: "add",
         aliases: ["set", "create"],
@@ -71,6 +73,11 @@ class ReminderAddCommand {
             return `${getEmoji("warn")} Invalid date: \`${date}\`.`;
         }
 
+        if (parsed.isRecurring && parsed.interval < ReminderAddCommand.minInterval) {
+            const minInterval = Util.duration(ReminderAddCommand.minInterval, { format: true });
+            return `${getEmoji("warn")} Repeat interval must be at least ${minInterval}.`;
+        }
+
         let message = ctx.arg("message"),
             quote = ctx.arg("quote");
 
@@ -129,7 +136,7 @@ class ReminderAddCommand {
         }
 
         const format = reminder.format();
-        return `${getEmoji("info")} You will be reminded on ${format}${format.endsWith('"') ? "" : "."}`;
+        return `${getEmoji("info")} You will be reminded on ${format}`;
     }
 }
 

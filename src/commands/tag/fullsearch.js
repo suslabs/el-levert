@@ -110,12 +110,14 @@ function formatSearchResults(command, results, ranges, n, discord, startIndex = 
     return format.join("\n");
 }
 
-const defaultResultLimit = 8,
-    defaultContext = 3,
-    separators = ",.;-",
+const separators = ",.;-",
     splitRegex = new RegExp(RegexUtil.escapeCharClass(separators), "g");
 
 class TagFullSearchCommand {
+    static defaultResultLimit = 8;
+    static maxLimit = 50;
+    static defaultContext = 3;
+
     static info = {
         name: "fullsearch",
         aliases: ["query"],
@@ -129,7 +131,10 @@ class TagFullSearchCommand {
             requireArgs: true
         },
         arguments: [
-            ...PaginationUtil.getPaginationArguments({ defaultLimit: defaultResultLimit, maxLimit: 50 }),
+            ...PaginationUtil.getPaginationArguments({
+                defaultLimit: TagFullSearchCommand.defaultResultLimit,
+                maxLimit: TagFullSearchCommand.maxLimit
+            }),
             {
                 name: "query",
                 kind: "positional",
@@ -159,8 +164,8 @@ class TagFullSearchCommand {
             all = m_text === "all";
 
         const paginationOpts = PaginationUtil.getPaginationOptions(ctx, {
-            defaultLimit: defaultResultLimit,
-            maxLimit: 50
+            defaultLimit: TagFullSearchCommand.defaultResultLimit,
+            maxLimit: TagFullSearchCommand.maxLimit
         });
 
         let isAll = paginationOpts.all || all,
@@ -173,10 +178,10 @@ class TagFullSearchCommand {
                 return `${getEmoji("warn")} Invalid number: ${m_text}`;
             }
 
-            customLimit = Util.clamp(parsed, 1, 50);
+            customLimit = Util.clamp(parsed, 1, TagFullSearchCommand.maxLimit);
         }
 
-        const limit = customLimit ?? paginationOpts.limit ?? defaultResultLimit;
+        const limit = customLimit ?? paginationOpts.limit ?? TagFullSearchCommand.defaultResultLimit;
         query = query.split(splitRegex).join(" ");
 
         if (isAll) {
@@ -192,18 +197,18 @@ class TagFullSearchCommand {
                 count = Util.formatNumber(totalMatches) + plus,
                 header = `${getEmoji("info")} Found **${count}** matching tag${s}:`;
 
-            if (results.length > 2 * defaultResultLimit) {
+            if (results.length > 2 * TagFullSearchCommand.defaultResultLimit) {
                 return {
                     content: `${header}\n`,
                     ...DiscordUtil.getFileAttach(
-                        formatSearchResults(this, results, ranges, defaultContext, false, 0),
+                        formatSearchResults(this, results, ranges, TagFullSearchCommand.defaultContext, false, 0),
                         "results.txt"
                     )
                 };
             }
 
             const embed = new EmbedBuilder().setDescription(
-                formatSearchResults(this, results, ranges, defaultContext, true, 0)
+                formatSearchResults(this, results, ranges, TagFullSearchCommand.defaultContext, true, 0)
             );
 
             return {
@@ -226,7 +231,14 @@ class TagFullSearchCommand {
             const initialSlice = uFuzzySearch.slice(sorted, 0, sorted.total);
 
             const embed = new EmbedBuilder().setDescription(
-                formatSearchResults(this, initialSlice.results, initialSlice.ranges, defaultContext, true, 0)
+                formatSearchResults(
+                    this,
+                    initialSlice.results,
+                    initialSlice.ranges,
+                    TagFullSearchCommand.defaultContext,
+                    true,
+                    0
+                )
             );
 
             return {
@@ -298,22 +310,38 @@ class TagFullSearchCommand {
                     totalCount: sorted.total
                 };
             },
+
             render: (pageItems, { page }) => {
                 const pageResults = pageItems.map(item => item.result),
                     pageRanges = pageItems.map(item => item.range);
 
                 const startIndex = (page - 1) * ctx.pageSize,
-                    desc = formatSearchResults(this, pageResults, pageRanges, defaultContext, true, startIndex);
+                    desc = formatSearchResults(
+                        this,
+                        pageResults,
+                        pageRanges,
+                        TagFullSearchCommand.defaultContext,
+                        true,
+                        startIndex
+                    );
 
                 return {
                     content: header,
                     embeds: [new EmbedBuilder().setDescription(desc)]
                 };
             },
+
             dumpHeader: header,
             formatDump: (items, discord = true) => {
                 const allSlice = uFuzzySearch.slice(sorted, 0, sorted.total);
-                return formatSearchResults(this, allSlice.results, allSlice.ranges, defaultContext, discord, 0);
+                return formatSearchResults(
+                    this,
+                    allSlice.results,
+                    allSlice.ranges,
+                    TagFullSearchCommand.defaultContext,
+                    discord,
+                    0
+                );
             },
             filename: "results.txt"
         });

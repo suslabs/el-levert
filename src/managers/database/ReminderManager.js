@@ -276,11 +276,7 @@ class ReminderManager extends DBManager {
 
         this._lastSentReminders.set(reminder.user, reminder);
 
-        let out = "You set a reminder for " + reminder.format();
-
-        if (!out.endsWith('"')) {
-            out += ".";
-        }
+        const out = "You set a reminder for " + reminder.format();
 
         getLogger().info(`Sending reminder to ${DiscordUtil.formatUser(user)}...`);
 

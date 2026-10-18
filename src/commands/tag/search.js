@@ -4,10 +4,10 @@ import Util from "../../util/Util.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import PaginationUtil from "../../util/commands/PaginationUtil.js";
 
-const defaultResultLimit = 20,
-    maxResultLimit = 100;
-
 class TagSearchCommand {
+    static defaultResultLimit = 20;
+    static maxResultLimit = 100;
+
     static info = {
         name: "search",
         aliases: ["find"],
@@ -20,7 +20,10 @@ class TagSearchCommand {
             requireArgs: true
         },
         arguments: [
-            ...PaginationUtil.getPaginationArguments({ defaultLimit: defaultResultLimit, maxLimit: maxResultLimit }),
+            ...PaginationUtil.getPaginationArguments({
+                defaultLimit: TagSearchCommand.defaultResultLimit,
+                maxLimit: TagSearchCommand.maxResultLimit
+            }),
             {
                 name: "tagName",
                 kind: "positional",
@@ -51,8 +54,8 @@ class TagSearchCommand {
         }
 
         const paginationOpts = PaginationUtil.getPaginationOptions(ctx, {
-            defaultLimit: defaultResultLimit,
-            maxLimit: maxResultLimit
+            defaultLimit: TagSearchCommand.defaultResultLimit,
+            maxLimit: TagSearchCommand.maxResultLimit
         });
 
         const isAll = paginationOpts.all || all;
@@ -66,7 +69,7 @@ class TagSearchCommand {
                 return `${getEmoji("warn")} Invalid number: ${m_text}`;
             }
 
-            maxResults = Util.clamp(maxResults, 1, maxResultLimit);
+            maxResults = Util.clamp(maxResults, 1, TagSearchCommand.maxResultLimit);
         }
 
         const {
@@ -83,8 +86,8 @@ class TagSearchCommand {
             count = Util.formatNumber(find.length) + plus,
             header = `${getEmoji("info")} Found **${count}** similar tag${s}:`;
 
-        if (isAll || find.length <= defaultResultLimit) {
-            if (find.length > 2 * defaultResultLimit) {
+        if (isAll || find.length <= TagSearchCommand.defaultResultLimit) {
+            if (find.length > 2 * TagSearchCommand.defaultResultLimit) {
                 return {
                     content: header,
                     ...DiscordUtil.getFileAttach(find.join("\n"), "tags.txt")
@@ -96,10 +99,12 @@ class TagSearchCommand {
 
         return await PaginationUtil.paginate(ctx, {
             items: find,
-            defaultLimit: defaultResultLimit,
+            defaultLimit: TagSearchCommand.defaultResultLimit,
+
             render: items => ({
                 content: `${header} **${items.join("**, **")}**`
             }),
+
             dumpHeader: header,
             formatDump: items => items.join("\n"),
             filename: "tags.txt"

@@ -4,20 +4,14 @@ import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import PaginationUtil from "../../util/commands/PaginationUtil.js";
-import { validLeaderboardTypes } from "./LeaderboardTypes.js";
-
-const defaultLimit = 10,
-    maxLimit = 50,
-    dumpLimit = 1000;
+import { validLeaderboardTypes } from "../../util/commands/LeaderboardTypes.js";
 
 function formatLeaderboard(leaderboard, type, startIndex = 0, discord = true) {
     return leaderboard
         .map((entry, i) => {
             const index = `${startIndex + i + 1}. `;
 
-            const name = type === "usage"
-                ? `${entry.name}${entry.exists ? "" : "*"}`
-                : entry.user.username;
+            const name = type === "usage" ? `${entry.name}${entry.exists ? "" : "*"}` : entry.user.username;
 
             const label = discord ? `\`${name}\`: ` : `${name}: `;
 
@@ -49,6 +43,10 @@ function formatLeaderboard(leaderboard, type, startIndex = 0, discord = true) {
 }
 
 class TagLeaderboardCommand {
+    static defaultLimit = 10;
+    static maxLimit = 50;
+    static dumpLimit = 1000;
+
     static info = {
         name: "leaderboard",
         aliases: ["lb"],
@@ -62,7 +60,10 @@ class TagLeaderboardCommand {
             requireArgs: true
         },
         arguments: [
-            ...PaginationUtil.getPaginationArguments({ defaultLimit, maxLimit }),
+            ...PaginationUtil.getPaginationArguments({
+                defaultLimit: TagLeaderboardCommand.defaultLimit,
+                maxLimit: TagLeaderboardCommand.maxLimit
+            }),
             {
                 name: "leaderboardType",
                 kind: "positional",
@@ -85,12 +86,15 @@ class TagLeaderboardCommand {
             return `${getEmoji("warn")} Invalid leaderboard type.`;
         }
 
-        const paginationOpts = PaginationUtil.getPaginationOptions(ctx, { defaultLimit, maxLimit });
+        const paginationOpts = PaginationUtil.getPaginationOptions(ctx, {
+            defaultLimit: TagLeaderboardCommand.defaultLimit,
+            maxLimit: TagLeaderboardCommand.maxLimit
+        });
 
-        let fetchLimit = maxLimit;
+        let fetchLimit = TagLeaderboardCommand.maxLimit;
 
         if (paginationOpts.all) {
-            fetchLimit = dumpLimit;
+            fetchLimit = TagLeaderboardCommand.dumpLimit;
         } else if (!Util.empty(l_text)) {
             const parsedLimit = Util.parseInt(l_text);
 
@@ -98,7 +102,7 @@ class TagLeaderboardCommand {
                 return `${getEmoji("warn")} Invalid limit: ${l_text}`;
             }
 
-            fetchLimit = Util.clamp(parsedLimit, 1, maxLimit);
+            fetchLimit = Util.clamp(parsedLimit, 1, TagLeaderboardCommand.maxLimit);
         }
 
         const leaderboard = await getClient().tagManager.leaderboard(l_type, fetchLimit, false);
@@ -111,7 +115,8 @@ class TagLeaderboardCommand {
 
         return await PaginationUtil.paginate(ctx, {
             items: leaderboard,
-            defaultLimit,
+            defaultLimit: TagLeaderboardCommand.defaultLimit,
+
             render: async (items, { page }) => {
                 await getClient().tagManager.resolveLeaderboardUsers(items, l_type);
 
@@ -123,6 +128,7 @@ class TagLeaderboardCommand {
                     embeds: [new EmbedBuilder().setDescription(desc)]
                 };
             },
+
             dumpHeader: header,
             formatDump: async (items, discord = true) => {
                 await getClient().tagManager.resolveLeaderboardUsers(items, l_type);

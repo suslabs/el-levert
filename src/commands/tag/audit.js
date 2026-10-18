@@ -6,10 +6,6 @@ import Util from "../../util/Util.js";
 import RevisionAuditUtil from "../../util/commands/RevisionAuditUtil.js";
 import PaginationUtil from "../../util/commands/PaginationUtil.js";
 
-const defaultLimit = 10,
-    maxLimit = 20,
-    dumpLimit = 1000;
-
 async function getDetail(revisionId, tagName) {
     let detail;
 
@@ -36,6 +32,10 @@ async function getDetail(revisionId, tagName) {
 }
 
 class TagAuditCommand {
+    static defaultLimit = 10;
+    static maxLimit = 20;
+    static dumpLimit = 1000;
+
     static info = {
         name: "audit",
         parent: "tag",
@@ -54,7 +54,10 @@ Calling without a tag name shows the full audit log across all tags. Providing a
 - --limit <number>: Number of entries per page (1-20, default: 10).
 - --all: Dump all matching revisions.`,
         arguments: [
-            ...PaginationUtil.getPaginationArguments({ defaultLimit, maxLimit }),
+            ...PaginationUtil.getPaginationArguments({
+                defaultLimit: TagAuditCommand.defaultLimit,
+                maxLimit: TagAuditCommand.maxLimit
+            }),
             {
                 name: "user",
                 kind: "option",
@@ -123,8 +126,11 @@ Calling without a tag name shows the full audit log across all tags. Providing a
             return `${getEmoji("warn")} ${dates.error}`;
         }
 
-        const paginationOpts = PaginationUtil.getPaginationOptions(ctx, { defaultLimit, maxLimit }),
-            fetchLimit = paginationOpts.all ? dumpLimit : 100;
+        const paginationOpts = PaginationUtil.getPaginationOptions(ctx, {
+                defaultLimit: TagAuditCommand.defaultLimit,
+                maxLimit: TagAuditCommand.maxLimit
+            }),
+            fetchLimit = paginationOpts.all ? TagAuditCommand.dumpLimit : 100;
 
         const { from, to } = dates;
 
@@ -147,8 +153,9 @@ Calling without a tag name shows the full audit log across all tags. Providing a
 
         return await PaginationUtil.paginate(ctx, {
             items: revisions,
-            defaultLimit,
-            maxLimit,
+            defaultLimit: TagAuditCommand.defaultLimit,
+            maxLimit: TagAuditCommand.maxLimit,
+
             render: async (items, { page }) => {
                 const header = `${getEmoji("info")} Tag audit page **${page}**${scopeLabel}:`,
                     embed = await RevisionAuditUtil.createListEmbed(
@@ -165,6 +172,7 @@ Calling without a tag name shows the full audit log across all tags. Providing a
                     embeds: [embed]
                 };
             },
+
             dumpHeader: `${getEmoji("info")} Tag audit${scopeLabel}:`,
             formatDump: (items, discord = true) =>
                 RevisionAuditUtil.formatRevisionList(items, revision => revision.key.name ?? "unknown", {

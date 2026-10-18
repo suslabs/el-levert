@@ -82,7 +82,7 @@ class Reminder {
 
         if (this.hasMessage) {
             const formattedMsg = discord ? bold(escapeMarkdown(this.msg)) : this.msg;
-            format += ` with the message: ${formattedMsg}`;
+            format += ` with the message:\n${formattedMsg}`;
         }
 
         return format;

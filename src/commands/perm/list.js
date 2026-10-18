@@ -13,13 +13,19 @@ function formatGroups(groups, startIndex = 0, discord = true) {
 }
 
 class PermListCommand {
+    static defaultLimit = 10;
+    static maxLimit = 50;
+
     static info = {
         name: "list",
         parent: "perm",
         subcommand: true,
         args: "[--page <num>] [--limit <num>] [--all]",
         description: "List all registered permission groups, their permission levels, and member users.",
-        arguments: PaginationUtil.getPaginationArguments({ defaultLimit: 10, maxLimit: 50 })
+        arguments: PaginationUtil.getPaginationArguments({
+            defaultLimit: PermListCommand.defaultLimit,
+            maxLimit: PermListCommand.maxLimit
+        })
     };
 
     async handler(ctx) {
@@ -33,7 +39,8 @@ class PermListCommand {
 
         return await PaginationUtil.paginate(ctx, {
             items: groups,
-            defaultLimit: 10,
+            defaultLimit: PermListCommand.defaultLimit,
+
             render: (items, { page }) => {
                 const startIndex = (page - 1) * ctx.pageSize,
                     format = formatGroups(items, startIndex, true);
@@ -43,6 +50,7 @@ class PermListCommand {
                     embeds: [new EmbedBuilder().setDescription(format)]
                 };
             },
+
             dumpHeader: header,
             formatDump: (items, discord = true) => formatGroups(items, 0, discord),
             filename: "permissions.txt"

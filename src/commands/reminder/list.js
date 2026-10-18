@@ -10,6 +10,8 @@ function formatReminders(reminders, startIndex = 0, discord = true) {
 }
 
 class ReminderListCommand {
+    static defaultLimit = 5;
+
     static info = {
         name: "list",
         aliases: ["all"],
@@ -17,7 +19,7 @@ class ReminderListCommand {
         subcommand: true,
         args: "[--page <num>] [--limit <num>] [--all]",
         description: "List all active scheduled reminders for your account.",
-        arguments: [...PaginationUtil.getPaginationArguments({ defaultLimit: 5 })]
+        arguments: [...PaginationUtil.getPaginationArguments({ defaultLimit: ReminderListCommand.defaultLimit })]
     };
 
     async handler(ctx) {
@@ -29,7 +31,8 @@ class ReminderListCommand {
 
         return await PaginationUtil.paginate(ctx, {
             items: reminders,
-            defaultLimit: 5,
+            defaultLimit: ReminderListCommand.defaultLimit,
+
             render: (items, { page }) => {
                 const startIndex = (page - 1) * ctx.pageSize,
                     format = formatReminders(items, startIndex, true);
@@ -39,6 +42,7 @@ class ReminderListCommand {
                     embeds: [new EmbedBuilder().setDescription(format)]
                 };
             },
+
             dumpHeader: `${getEmoji("info")} Your reminders:`,
             formatDump: (items, discord = true) => formatReminders(items, 0, discord),
             filename: "reminders.txt"

@@ -27,9 +27,9 @@ function formatFullTags(tags) {
     return format;
 }
 
-const defaultLimit = 30;
-
 class TagListCommand {
+    static defaultLimit = 30;
+
     static info = {
         name: "list",
         parent: "tag",
@@ -38,7 +38,7 @@ class TagListCommand {
         description: "List all tags registered under your account, or under another specified user's account.",
         usage: "- [user]: Username, mention, or user ID to inspect tags for (defaults to yourself).",
         arguments: [
-            ...PaginationUtil.getPaginationArguments({ defaultLimit }),
+            ...PaginationUtil.getPaginationArguments({ defaultLimit: TagListCommand.defaultLimit }),
             {
                 name: "userName",
                 kind: "positional",
@@ -81,7 +81,8 @@ class TagListCommand {
 
         return await PaginationUtil.paginate(ctx, {
             items: allTags,
-            defaultLimit,
+            defaultLimit: TagListCommand.defaultLimit,
+
             render: (items, { page }) => {
                 const startIndex = (page - 1) * ctx.pageSize,
                     desc = formatTagList(items, startIndex);
@@ -91,6 +92,7 @@ class TagListCommand {
                     embeds: [new EmbedBuilder().setDescription(desc).setFooter({ text: footer })]
                 };
             },
+
             dumpHeader: header,
             formatDump: () => formatFullTags(tags),
             filename: "tags.txt"
