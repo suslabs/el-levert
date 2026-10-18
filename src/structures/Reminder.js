@@ -1,10 +1,11 @@
 import { escapeMarkdown, time, TimestampStyles, bold } from "discord.js";
 
+import BaseStructure from "./BaseStructure.js";
+
 import Util from "../util/Util.js";
 import DateUtil from "../util/commands/DateUtil.js";
-import ObjectUtil from "../util/ObjectUtil.js";
 
-class Reminder {
+class Reminder extends BaseStructure {
     static defaultValues = {
         id: 0,
         user: "0",
@@ -14,17 +15,10 @@ class Reminder {
     };
 
     static dataProps = ["id", "user", "end", "msg", "interval"];
-
-    static from(data, nullable = false, ...args) {
-        if (nullable && data === null) {
-            return null;
-        }
-
-        return data instanceof this ? data : new this(data, ...args);
-    }
+    static nullableDataProps = ["msg", "interval"];
 
     constructor(data) {
-        ObjectUtil.setValuesWithDefaults(this, data, this.constructor.defaultValues);
+        super(data);
     }
 
     get hasMessage() {
@@ -33,18 +27,6 @@ class Reminder {
 
     get isRecurring() {
         return this.interval !== null && this.interval > 0;
-    }
-
-    getData(prefix = "", nullable = true, props = this.constructor.dataProps) {
-        const data = ObjectUtil.filterObject(this, key => props.includes(key));
-
-        if (nullable) {
-            for (const prop of this.constructor._nullableDataProps.filter(prop => props.includes(prop))) {
-                data[prop] ||= null;
-            }
-        }
-
-        return Object.fromEntries(Object.entries(data).map(entry => [prefix + entry[0], entry[1]]));
     }
 
     isPast(date) {
@@ -87,8 +69,6 @@ class Reminder {
 
         return format;
     }
-
-    static _nullableDataProps = ["interval"];
 }
 
 export default Reminder;

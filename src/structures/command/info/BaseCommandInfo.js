@@ -1,8 +1,11 @@
+import BaseStructure from "../../BaseStructure.js";
+
 import Util from "../../../util/Util.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
+
 import CommandError from "../../../errors/CommandError.js";
 
-class BaseCommandInfo {
+class BaseCommandInfo extends BaseStructure {
     static invalidValues = {};
 
     static defaultValues = {
@@ -19,33 +22,15 @@ class BaseCommandInfo {
 
     constructor(data, overrides) {
         data = ObjectUtil.guaranteeObject(data);
-        overrides = ObjectUtil.guaranteeObject(overrides);
+        const source = typeof data.getData === "function" ? data.getData() : data;
 
-        const source = typeof data.toObject === "function" ? data.toObject() : data;
-
-        ObjectUtil.setValuesWithDefaults(
-            this,
-            {
-                ...source,
-                ...overrides
-            },
-            this.constructor.defaultValues
-        );
+        super(overrides != null ? { ...source, ...overrides } : source);
 
         if (!this.constructor.isValidName(this.name)) {
             throw new CommandError("Command must have a name");
         } else if (this.subcommand && !Util.nonemptyString(this.parent)) {
             throw new CommandError("Subcommands must have a parent command");
         }
-    }
-
-    toObject() {
-        return {
-            name: this.name,
-            parent: this.parent,
-            subcommand: this.subcommand,
-            subcommands: structuredClone(this.subcommands)
-        };
     }
 }
 

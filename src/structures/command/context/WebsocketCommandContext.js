@@ -1,15 +1,21 @@
 import BaseCommandContext from "./BaseCommandContext.js";
 
 class WebsocketCommandContext extends BaseCommandContext {
+    static defaultValues = {
+        ...BaseCommandContext.defaultValues,
+        handler: null,
+        socket: null,
+        id: null,
+        clientId: null,
+        args: null
+    };
+
+    static dataProps = [...BaseCommandContext.dataProps, "handler", "socket", "id", "clientId", "args"];
+
     constructor(data) {
         super(data);
 
-        this.handler = this.data.handler;
-        this.socket = this.data.socket;
-        this.id = this.data.id;
-        this.clientId = this.data.clientId;
-
-        this.args = this._parseArgs(data.args);
+        this.args = this._parseArgs(this.args ?? data.args);
     }
 
     async reply(status, data) {

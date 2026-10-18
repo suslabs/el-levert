@@ -1,6 +1,6 @@
 import Manager from "../Manager.js";
 
-import BaseCommand from "../../structures/command/Command.js";
+import BaseCommand from "../../structures/command/BaseCommand.js";
 import CommandLoader from "../../loaders/command/CommandLoader.js";
 
 import { getConfig, getLogger } from "../../LevertClient.js";
@@ -143,10 +143,6 @@ class BaseCommandManager extends Manager {
 
     unload() {
         return this.deleteCommands();
-    }
-
-    get _commandDefaultValues() {
-        return this.constructor.commandClass.defaultValues;
     }
 
     get _commandInvalidValues() {

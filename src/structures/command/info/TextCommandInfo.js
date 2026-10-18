@@ -31,21 +31,6 @@ class TextCommandInfo extends BaseCommandInfo {
         "prefix",
         "arguments"
     ];
-
-    toObject() {
-        return {
-            ...super.toObject(),
-            args: this.args,
-            description: this.description,
-            usage: this.usage,
-            parser: structuredClone(this.parser),
-            aliases: structuredClone(this.aliases),
-            helpArgs: structuredClone(this.helpArgs),
-            category: this.category,
-            prefix: this.prefix,
-            arguments: structuredClone(this.arguments)
-        };
-    }
 }
 
 export default TextCommandInfo;

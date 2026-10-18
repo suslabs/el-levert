@@ -75,8 +75,8 @@ class Command extends TextCommand {
         return super.getHelpText(true);
     }
 
-    getArgsHelp(args) {
-        return super.getArgsHelp(args, true);
+    getArgsHelp(args, discord = true) {
+        return super.getArgsHelp(args, discord);
     }
 
     getSubcmdHelp(perm) {

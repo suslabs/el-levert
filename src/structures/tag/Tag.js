@@ -2,6 +2,8 @@ import { Buffer } from "node:buffer";
 
 import { escapeMarkdown, bold, codeBlock, time } from "discord.js";
 
+import BaseStructure from "../BaseStructure.js";
+
 import TagBitField from "./TagBitField.js";
 import { resolveVMLanguage } from "../vm/VMLanguages.js";
 
@@ -18,7 +20,7 @@ import { ScriptCommandType } from "../../parsers/command/type/index.js";
 
 import TagError from "../../errors/TagError.js";
 
-class Tag {
+class Tag extends BaseStructure {
     static invalidValues = {
         owner: "0"
     };
@@ -33,6 +35,7 @@ class Tag {
     };
 
     static dataProps = ["aliasName", "name", "body", "bin", "owner", "args", "registered", "lastEdited", "type"];
+    static nullableDataProps = ["aliasName", "args", "body", "bin"];
 
     static emulatableFields = Object.freeze([
         Object.freeze({
@@ -68,14 +71,6 @@ class Tag {
             type: "string"
         })
     ]);
-
-    static from(data, nullable = false, ...args) {
-        if (nullable && data === null) {
-            return null;
-        }
-
-        return data instanceof this ? data : new this(data, ...args);
-    }
 
     static getFlag(names) {
         names = ArrayUtil.guaranteeArray(names, null, true);
@@ -157,7 +152,7 @@ class Tag {
 
         if (typeof data.hops === "string") {
             const hopString = data.hops,
-                hops = hopString.split(this.constructor._hopsSeparator);
+                hops = hopString.split(Tag._hopsSeparator);
 
             if (
                 !Util.nonemptyString(aliasName) &&
@@ -167,16 +162,16 @@ class Tag {
             ) {
                 aliasName = hopString;
             } else if (!Util.nonemptyString(aliasName)) {
-                aliasName = hops[1] ?? this.constructor.defaultValues.aliasName;
+                aliasName = hops[1] ?? Tag.defaultValues.aliasName;
             }
         } else if (Array.isArray(data.hops) && !Util.nonemptyString(aliasName)) {
-            aliasName = data.hops[1] ?? this.constructor.defaultValues.aliasName;
+            aliasName = data.hops[1] ?? Tag.defaultValues.aliasName;
         }
 
         delete data.hops;
         delete data.meta;
 
-        ObjectUtil.setValuesWithDefaults(this, data, this.constructor.defaultValues);
+        super(data);
 
         this.aliasName = aliasName ?? this.aliasName;
         this._fetched = false;
@@ -362,35 +357,28 @@ class Tag {
         return this;
     }
 
-    getData(prefix = "", nullable = true, props = this.constructor.dataProps) {
-        const db = !Util.empty(prefix),
-            data = ObjectUtil.filterObject(this, key => props.includes(key));
+    getData(data, prefix = "", nullable = true, props = this.constructor.dataProps) {
+        const db = !Util.empty(prefix);
 
-        if (props.includes("type")) {
+        if (props == null || props.includes("type")) {
             data.type = db ? this.type.toBuffer() : this.type.toHex();
         }
 
         if (this.isBinary) {
             const binaryBody = this.body instanceof Uint8Array ? this.body : new Uint8Array(this.bin ?? []);
 
-            if (props.includes("body")) {
+            if (props == null || props.includes("body")) {
                 data.body = db ? null : binaryBody;
             }
 
-            if (props.includes("bin")) {
+            if (props == null || props.includes("bin")) {
                 data.bin = db ? (this.bin ?? Buffer.from(this.body ?? [])) : binaryBody;
             }
-        } else if (props.includes("bin")) {
+        } else if (props == null || props.includes("bin")) {
             data.bin = null;
         }
 
-        if (nullable) {
-            for (const prop of this.constructor._nullableDataProps.filter(prop => props.includes(prop))) {
-                data[prop] ||= null;
-            }
-        }
-
-        return Object.fromEntries(Object.entries(data).map(entry => [prefix + entry[0], entry[1]]));
+        return data;
     }
 
     getSize() {
@@ -617,8 +605,6 @@ class Tag {
             return info;
         })();
     }
-
-    static _nullableDataProps = ["aliasName", "args", "bin"];
 
     static _hopsSeparator = ",";
     static _argsSeparator = " ";

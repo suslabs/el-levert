@@ -1,9 +1,11 @@
+import BaseStructure from "./BaseStructure.js";
+
 import Util from "../util/Util.js";
 import ObjectUtil from "../util/ObjectUtil.js";
 
 import EventError from "../errors/EventError.js";
 
-class BotEvent {
+class BotEvent extends BaseStructure {
     static defaultValues = {
         once: false
     };
@@ -17,23 +19,9 @@ class BotEvent {
             throw new EventError("Event must have a listener function");
         }
 
-        ObjectUtil.setValuesWithDefaults(this, options, this.constructor.defaultValues);
+        super(options);
 
         this.registered = false;
-    }
-
-    getData(prefix = "", nullable = true, props = null) {
-        const data = ObjectUtil.filterObject(this, key => (props == null ? !key.startsWith("_") : props.includes(key)));
-
-        if (nullable) {
-            for (const prop of this.constructor._nullableDataProps.filter(
-                prop => props == null || props.includes(prop)
-            )) {
-                data[prop] ||= null;
-            }
-        }
-
-        return Object.fromEntries(Object.entries(data).map(entry => [prefix + entry[0], entry[1]]));
     }
 
     register(client) {
@@ -58,8 +46,6 @@ class BotEvent {
         this.client.removeListener(this.name, this.listener);
         this.registered = false;
     }
-
-    static _nullableDataProps = [];
 }
 
 export default BotEvent;

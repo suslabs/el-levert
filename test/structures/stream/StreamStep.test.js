@@ -39,4 +39,19 @@ describe("StreamStep", () => {
         const placeholderStep = StreamStep.parse("my_tag prefix $");
         expect(placeholderStep.formatArgs("input_text", false)).toBe("prefix input_text");
     });
+
+    test("supports BaseStructure getData and clone", () => {
+        const step = StreamStep.parse("echo_tag $ bar");
+
+        expect(step.getData()).toEqual({
+            name: "echo_tag",
+            args: "$ bar",
+            raw: "echo_tag $ bar"
+        });
+
+        const cloned = step.clone({ args: "new_args" });
+        expect(cloned).toBeInstanceOf(StreamStep);
+        expect(cloned.args).toBe("new_args");
+        expect(cloned.name).toBe("echo_tag");
+    });
 });

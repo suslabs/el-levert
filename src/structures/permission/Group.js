@@ -1,9 +1,10 @@
 import { escapeMarkdown, bold } from "discord.js";
 
-import Util from "../../util/Util.js";
-import ObjectUtil from "../../util/ObjectUtil.js";
+import BaseStructure from "../BaseStructure.js";
 
-class Group {
+import Util from "../../util/Util.js";
+
+class Group extends BaseStructure {
     static defaultValues = {
         name: "",
         level: 0,
@@ -12,28 +13,8 @@ class Group {
 
     static dataProps = ["name", "level"];
 
-    static from(data, nullable = false, ...args) {
-        if (nullable && data === null) {
-            return null;
-        }
-
-        return data instanceof this ? data : new this(data, ...args);
-    }
-
     constructor(data) {
-        ObjectUtil.setValuesWithDefaults(this, data, this.constructor.defaultValues);
-    }
-
-    getData(prefix = "", nullable = true, props = this.constructor.dataProps) {
-        const data = ObjectUtil.filterObject(this, key => props.includes(key));
-
-        if (nullable) {
-            for (const prop of this.constructor._nullableDataProps.filter(prop => props.includes(prop))) {
-                data[prop] ||= null;
-            }
-        }
-
-        return Object.fromEntries(Object.entries(data).map(entry => [prefix + entry[0], entry[1]]));
+        super(data);
     }
 
     setName(name) {
@@ -91,8 +72,6 @@ class Group {
             return `${formattedName} - ${formattedLevel}`;
         }
     }
-
-    static _nullableDataProps = [];
 
     static _indentation = 4;
     static _spaces = " ".repeat(this._indentation);

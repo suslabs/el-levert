@@ -1,3 +1,5 @@
+import BaseStructure from "../BaseStructure.js";
+
 import PositionalCommandReader from "../../parsers/command/reader/PositionalCommandReader.js";
 
 import { getClient } from "../../LevertClient.js";
@@ -9,7 +11,15 @@ import StreamOperatorRegistry from "../../util/commands/stream/StreamOperatorReg
 
 import TagError from "../../errors/TagError.js";
 
-class StreamStep {
+class StreamStep extends BaseStructure {
+    static defaultValues = {
+        name: "",
+        args: "",
+        raw: ""
+    };
+
+    static dataProps = ["name", "args", "raw"];
+
     static parse(stepText) {
         if (!Util.nonemptyString(stepText)) {
             throw new TagError("Empty step in pipeline");
@@ -30,11 +40,7 @@ class StreamStep {
     }
 
     constructor(data = {}) {
-        data = ObjectUtil.guaranteeObject(data);
-
-        this.name = data.name ?? "";
-        this.args = data.args ?? "";
-        this.raw = data.raw ?? "";
+        super(data);
     }
 
     isOperator() {

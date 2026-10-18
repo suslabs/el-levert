@@ -6,6 +6,12 @@ import ObjectUtil from "../../../util/ObjectUtil.js";
 import CommandError from "../../../errors/CommandError.js";
 
 class TextCommandContext extends BaseCommandContext {
+    static defaultValues = {
+        ...BaseCommandContext.defaultValues
+    };
+
+    static dataProps = [...BaseCommandContext.dataProps];
+
     parseArgs() {
         this._parsedSession ??= this.command.parser.parse(this);
         return this._parsedSession;

@@ -1,10 +1,11 @@
+import BaseStructure from "../BaseStructure.js";
+
 import Util from "../../util/Util.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
-import ObjectUtil from "../../util/ObjectUtil.js";
 
 import RevisionError from "../../errors/RevisionError.js";
 
-class RevisionTargetSpec {
+class RevisionTargetSpec extends BaseStructure {
     static defaultValues = {
         target: "",
         key: [],
@@ -16,9 +17,10 @@ class RevisionTargetSpec {
         label: null
     };
 
+    static dataProps = ["target", "key", "staticFields", "trackedFields", "liveFields", "encode", "decode", "label"];
+
     constructor(options) {
-        options = ObjectUtil.guaranteeObject(options);
-        ObjectUtil.setValuesWithDefaults(this, options, this.constructor.defaultValues);
+        super(options);
 
         this.key = ArrayUtil.guaranteeArray(this.key, null, true);
         this.staticFields = ArrayUtil.guaranteeArray(this.staticFields, null, true);

@@ -76,4 +76,37 @@ describe("BaseCommandContext vs CommandContext separation", () => {
         expect(cloned.isEdit).toBeUndefined();
         expect(cloned.processingReplySent).toBeUndefined();
     });
+
+    test("CommandContext handles getters and filters getter keys from data without throwing", () => {
+        const mockMsg = { id: "msg-123", author: { id: "u-1" }, channel: { id: "c-1" } };
+        const mockInteraction = { id: "int-123" };
+        const mockInteractionCtx = { interaction: mockInteraction, isAuthor: false };
+
+        const ctxWithMsg = new CommandContext({ msg: mockMsg });
+        expect(ctxWithMsg.message).toBe(mockMsg);
+        expect(ctxWithMsg.msg).toBe(mockMsg);
+        expect(ctxWithMsg.author).toBe(mockMsg.author);
+        expect(ctxWithMsg.channel).toBe(mockMsg.channel);
+        expect(ctxWithMsg.interaction).toBeNull();
+        expect(ctxWithMsg.isInteraction).toBe(false);
+        expect(ctxWithMsg.isAuthor).toBe(true);
+
+        const ctxWithInteraction = new CommandContext({
+            interactionContext: mockInteractionCtx,
+            interaction: mockInteraction,
+            isAuthor: false
+        });
+        expect(ctxWithInteraction.isInteraction).toBe(true);
+        expect(ctxWithInteraction.interaction).toBe(mockInteraction);
+        expect(ctxWithInteraction.isAuthor).toBe(false);
+
+        const cloned = ctxWithMsg.clone({
+            interactionContext: mockInteractionCtx,
+            interaction: mockInteraction,
+            isAuthor: false
+        });
+        expect(cloned.isInteraction).toBe(true);
+        expect(cloned.interaction).toBe(mockInteraction);
+        expect(cloned.isAuthor).toBe(false);
+    });
 });

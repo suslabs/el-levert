@@ -59,5 +59,10 @@ describe("revision structures", () => {
         expect(spec.getKey({ name: "alpha" })).toEqual({ name: "alpha" });
         expect(spec.getStaticSnapshot({ registered: 5 })).toEqual({ registered: 5 });
         expect(spec.getSnapshot({ name: "alpha", body: "text" })).toEqual({ name: "alpha", body: "TEXT" });
+
+        const clonedSpec = spec.clone({ target: "tag_copy" });
+        expect(clonedSpec).toBeInstanceOf(RevisionTargetSpec);
+        expect(clonedSpec.target).toBe("tag_copy");
+        expect(clonedSpec.key).toEqual(["name"]);
     });
 });

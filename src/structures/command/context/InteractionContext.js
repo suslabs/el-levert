@@ -1,30 +1,78 @@
+import BaseCommandContext from "./BaseCommandContext.js";
+
+import Util from "../../../util/Util.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
 
-class InteractionContext {
+class InteractionContext extends BaseCommandContext {
+    static defaultValues = {
+        ...BaseCommandContext.defaultValues,
+        interaction: null,
+        handler: null,
+        session: null,
+        commandContext: null,
+        user: null,
+        author: null,
+        channel: null,
+        guild: null,
+        message: null,
+        customId: "",
+        action: "",
+        isAuthor: true,
+        ephemeral: false,
+        updated: false
+    };
+
+    static dataProps = [
+        ...BaseCommandContext.dataProps,
+        "interaction",
+        "handler",
+        "session",
+        "commandContext",
+        "user",
+        "author",
+        "channel",
+        "guild",
+        "message",
+        "customId",
+        "action",
+        "isAuthor",
+        "ephemeral",
+        "updated"
+    ];
+
     constructor(data) {
+        super(data);
+
         data = ObjectUtil.guaranteeObject(data);
-        this.data = data;
 
-        this.interaction = data.interaction ?? null;
-        this.handler = data.handler ?? null;
-        this.session = data.session ?? null;
-        this.commandContext = data.commandContext ?? (this.session != null ? this.session.context : null);
+        this.commandContext ??= this.session?.context ?? null;
+        this._parentContext = data._parentContext ?? this.commandContext ?? null;
 
-        this.user = this.interaction != null ? this.interaction.user : null;
+        this.user = this.interaction?.user ?? this.user ?? null;
         this.author = this.user;
-        this.channel = this.interaction != null ? this.interaction.channel : null;
-        this.guild = this.interaction != null ? this.interaction.guild : null;
-        this.message = this.interaction != null ? this.interaction.message : null;
+        this.channel = this.interaction?.channel ?? this.channel ?? null;
+        this.guild = this.interaction?.guild ?? this.guild ?? null;
+        this.message = this.interaction?.message ?? this.message ?? null;
 
-        this.customId = this.interaction != null ? this.interaction.customId : "";
-        this.action = data.action ?? "";
+        if (this.interaction != null && Util.empty(this.customId)) {
+            this.customId = this.interaction.customId ?? "";
+        }
 
-        this.isAuthor =
-            data.isAuthor ??
-            (this.session != null && this.user != null ? this.user.id === this.session.authorId : true);
+        if (typeof data.isAuthor === "undefined" && this.session != null && this.user != null) {
+            this.isAuthor = this.user.id === this.session.authorId;
+        }
+    }
 
-        this.replied = false;
-        this.updated = false;
+    get isInteraction() {
+        return true;
+    }
+
+    clone(context, overrides) {
+        overrides = ObjectUtil.guaranteeObject(overrides);
+
+        context.updated = overrides.updated ?? this.updated;
+
+        return context;
     }
 
     async reply(data, options) {
@@ -45,6 +93,7 @@ class InteractionContext {
         options = ObjectUtil.guaranteeObject(options);
 
         this.updated = true;
+        this.markReplied();
 
         if (this.handler != null) {
             return await this.handler.interactionUpdate(this.interaction, data, options);

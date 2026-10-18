@@ -1,3 +1,5 @@
+import BaseStructure from "../BaseStructure.js";
+
 import BaseCommandInfo from "./info/BaseCommandInfo.js";
 import BaseCommandContext from "./context/BaseCommandContext.js";
 
@@ -6,12 +8,12 @@ import ObjectUtil from "../../util/ObjectUtil.js";
 
 import CommandError from "../../errors/CommandError.js";
 
-class BaseCommand {
+class BaseCommand extends BaseStructure {
     static infoClass = BaseCommandInfo;
     static contextClass = BaseCommandContext;
 
-    static get defaultValues() {
-        return this.infoClass.defaultValues;
+    static get dataProps() {
+        return this.infoClass.dataProps;
     }
 
     static get invalidValues() {
@@ -23,6 +25,8 @@ class BaseCommand {
     }
 
     constructor(info) {
+        super();
+
         this.info = new this.constructor.infoClass(info);
 
         if (!Object.hasOwn(this.constructor.prototype, "handler")) {
@@ -51,31 +55,8 @@ class BaseCommand {
         });
     }
 
-    getData(prefix = "", nullable = true, props = null) {
-        const infoData = this.info.toObject();
-
-        const keys =
-            props ??
-            Array.from(
-                new Set([
-                    ...Object.keys(infoData),
-                    ...Object.keys(this).filter(key => !key.startsWith("_") && key !== "info")
-                ])
-            );
-
-        const data = Object.fromEntries(
-            keys.map(key => [key, Object.hasOwn(infoData, key) ? infoData[key] : this[key]])
-        );
-
-        if (nullable) {
-            for (const prop of this.constructor._nullableDataProps.filter(
-                prop => props == null || props.includes(prop)
-            )) {
-                data[prop] ||= null;
-            }
-        }
-
-        return Object.fromEntries(Object.entries(data).map(entry => [prefix + entry[0], entry[1]]));
+    getData(data, prefix = "", nullable = true, props = null) {
+        return this.info.getData("", false, props);
     }
 
     matches(name) {
@@ -162,8 +143,6 @@ class BaseCommand {
     equals(cmd) {
         return this.name === cmd.name && this._sameParent(cmd);
     }
-
-    static _nullableDataProps = [];
 
     static _infoGetter(prop) {
         return {

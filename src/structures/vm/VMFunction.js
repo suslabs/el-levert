@@ -1,3 +1,7 @@
+import BaseStructure from "../BaseStructure.js";
+
+import { FuncTypes, validFuncTypes, ExecutionTypes } from "./FuncTypes.js";
+
 import Util from "../../util/Util.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 import FunctionUtil from "../../util/misc/FunctionUtil.js";
@@ -5,12 +9,10 @@ import getRegisterCode from "../../util/vm/getRegisterCode.js";
 import VMUtil from "../../util/vm/VMUtil.js";
 import TypeTester from "../../util/TypeTester.js";
 
-import { FuncTypes, validFuncTypes, ExecutionTypes } from "./FuncTypes.js";
-
 import VMError from "../../errors/VMError.js";
 import ExitError from "../../vm/isolated-vm/functionErrors/ExitError.js";
 
-class VMFunction {
+class VMFunction extends BaseStructure {
     static defaultValues = {
         singleContext: true,
         parent: "",
@@ -45,7 +47,7 @@ class VMFunction {
             throw new VMError("VM function must have a reference function");
         }
 
-        ObjectUtil.setValuesWithDefaults(this, options, this.constructor.defaultValues);
+        super(options);
 
         this.type = TypeTester.normalizeEnum(this.type, validFuncTypes, "function type", VMError, {
             message: value => "Invalid function type provided: " + value
@@ -80,20 +82,6 @@ class VMFunction {
         }
     }
 
-    getData(prefix = "", nullable = true, props = null) {
-        const data = ObjectUtil.filterObject(this, key => (props == null ? !key.startsWith("_") : props.includes(key)));
-
-        if (nullable) {
-            for (const prop of this.constructor._nullableDataProps.filter(
-                prop => props == null || props.includes(prop)
-            )) {
-                data[prop] ||= null;
-            }
-        }
-
-        return Object.fromEntries(Object.entries(data).map(entry => [prefix + entry[0], entry[1]]));
-    }
-
     async register(evalContext, propertyMap) {
         if (this.singleContext && this.registered) {
             throw new VMError("VM function has already been registered", this.name);
@@ -120,8 +108,6 @@ class VMFunction {
             this.registered = true;
         }
     }
-
-    static _nullableDataProps = [];
 
     static _resolveReference(ref, propertyMap) {
         if (typeof ref === "function") {

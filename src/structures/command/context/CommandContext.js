@@ -3,33 +3,44 @@ import TextCommandContext from "./TextCommandContext.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
 
 class CommandContext extends TextCommandContext {
+    static defaultValues = {
+        ...TextCommandContext.defaultValues,
+        handler: null,
+        message: null,
+        author: null,
+        channel: null,
+        perm: null,
+        replyMsg: null,
+        isEdit: false,
+        processingReplySent: false,
+        interactionContext: null
+    };
+
+    static dataProps = [
+        ...TextCommandContext.dataProps,
+        "handler",
+        "message",
+        "author",
+        "channel",
+        "perm",
+        "replyMsg",
+        "isEdit",
+        "processingReplySent",
+        "interactionContext"
+    ];
+
     constructor(data) {
-        super(data);
+        data = ObjectUtil.guaranteeObject(data);
 
-        this.handler = this.data.handler ?? null;
+        // eslint-disable-next-line no-unused-vars, unused-imports/no-unused-vars
+        const { interaction, isInteraction, isAuthor, msg, ...rest } = data;
 
-        this.message = this.data.message ?? this.data.msg ?? null;
-        this.author = this.data.author ?? this.message?.author;
-        this.channel = this.data.channel ?? this.message?.channel;
+        super(rest);
+        this.data = data;
 
-        this.perm = this.data.perm;
-
-        this.replyMsg = this.data.replyMsg ?? null;
-
-        this.isEdit = this.data.isEdit ?? false;
-        this.processingReplySent = this.data.processingReplySent ?? false;
-
-        this.interactionContext = this.data.interactionContext ?? null;
-    }
-
-    clone(context, overrides) {
-        overrides = ObjectUtil.guaranteeObject(overrides);
-
-        context.replyMsg = overrides.replyMsg ?? this.replyMsg;
-        context.isEdit = overrides.isEdit ?? this.isEdit;
-        context.processingReplySent = overrides.processingReplySent ?? this.processingReplySent;
-
-        return context;
+        this.message = this.message ?? data.msg ?? null;
+        this.author = this.author ?? this.message?.author;
+        this.channel = this.channel ?? this.message?.channel;
     }
 
     get msg() {
@@ -46,6 +57,17 @@ class CommandContext extends TextCommandContext {
 
     get isAuthor() {
         return this.data.isAuthor ?? this.interactionContext?.isAuthor ?? true;
+    }
+
+    clone(context, overrides) {
+        overrides = ObjectUtil.guaranteeObject(overrides);
+
+        context.replyMsg = overrides.replyMsg ?? this.replyMsg;
+        context.isEdit = overrides.isEdit ?? this.isEdit;
+        context.processingReplySent = overrides.processingReplySent ?? this.processingReplySent;
+        context.interactionContext = overrides.interactionContext ?? this.interactionContext;
+
+        return context;
     }
 
     getReply() {
