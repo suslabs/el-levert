@@ -41,8 +41,13 @@ function stringifyEmbeds(embeds, options) {
         return "";
     }
 
+    const embedOptions = {
+        urls: false,
+        ...options
+    };
+
     return embeds
-        .map(embed => DiscordUtil.stringifyEmbed(embed, options))
+        .map(embed => DiscordUtil.stringifyEmbed(embed, embedOptions))
         .filter(str => !Util.empty(str))
         .join("\n\n");
 }
@@ -118,7 +123,10 @@ async function resolveMessageFromUrl(text) {
 }
 
 async function unembed(input, args, msg, options) {
-    const embedOptions = options?.embedOptions ?? options?.options?.embedOptions;
+    const embedOptions = {
+        urls: false,
+        ...(options?.embedOptions ?? options?.options?.embedOptions)
+    };
 
     let target = input;
 
@@ -173,6 +181,10 @@ async function unembed(input, args, msg, options) {
                 return result;
             }
         }
+    }
+
+    if (typeof input === "string" && (Util.validUrl(input.trim()) || !Util.empty(DiscordUtil.findMessageUrls(input)))) {
+        return "";
     }
 
     return String(input ?? "");

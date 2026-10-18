@@ -5,8 +5,58 @@ import { getClient, getEmoji } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 
+function bold(str, discord = true) {
+    return discord ? `**${str}**` : str;
+}
+
+function italic(str, discord = true) {
+    return discord ? `*${str}*` : str;
+}
+
+function code(str, discord = true) {
+    return discord ? `\`${str}\`` : str;
+}
+
 function codeblock(str) {
     return `\`\`\`json\n${str}\`\`\``;
+}
+
+function formatInfo(tag, info, discord = true) {
+    const timeInfo = tag.getTimeInfo(false, discord);
+
+    const hopsStr =
+        Array.isArray(info.hops) && !Util.empty(info.hops)
+            ? info.hops.map(h => italic(h, discord)).join(" -> ")
+            : "none";
+
+    const lines = [
+        `${bold("Hops", discord)}: ${hopsStr}`,
+        `${bold("Is alias", discord)}: ${info.isAlias}`,
+        `${bold("Name", discord)}: ${italic(info.name, discord)}`,
+        `${bold("Alias name", discord)}: ${info.aliasName}`,
+        `${bold("Body", discord)}: ${info.body}`,
+        `${bold("Size", discord)}: ${Util.formatSize(info.size * Util.dataBytes.kilobyte, {
+            unit: "kilobyte",
+            short: true,
+            digits: 2
+        })}`,
+        `${bold("Uses", discord)}: ${Util.formatNumber(info.uses)}`,
+        `${bold("Is script", discord)}: ${info.isScript}`,
+        `${bold("Is binary", discord)}: ${info.isBinary}`,
+        `${bold("Is hidden", discord)}: ${info.isHidden}`,
+        `${bold("Owner", discord)}: ${info.owner} (${code(info.ownerId, discord)})`,
+        `${bold("Args", discord)}: ${info.args}`,
+        `${bold("Registered", discord)}: ${timeInfo.registered}`,
+        `${bold("Last edited", discord)}: ${timeInfo.lastEdited}`,
+        `${bold("Registered timestamp", discord)}: ${info.registeredTimestamp}`,
+        `${bold("Last edited timestamp", discord)}: ${info.lastEditedTimestamp}`,
+        `${bold("Type", discord)}: ${info.type}`,
+        info.isScript ? `${bold("Language", discord)}: ${info.language}` : null,
+        `${bold("Version", discord)}: ${info.version}`,
+        `${bold("Type int", discord)}: ${info.typeInt}`
+    ];
+
+    return lines.filter(Boolean).join("\n");
 }
 
 class TagInfoCommand {
@@ -76,74 +126,18 @@ class TagInfoCommand {
 
         if (mode === "default") {
             const info = await tag.getInfo(false),
-                timeInfo = tag.getTimeInfo(false, true);
+                desc = formatInfo(tag, info, true);
 
-            const hopsStr =
-                Array.isArray(info.hops) && !Util.empty(info.hops) ? info.hops.map(h => `*${h}*`).join(" -> ") : "none";
-
-            const lines = [
-                `**Hops**: ${hopsStr}`,
-                `**Is alias**: ${info.isAlias}`,
-                `**Name**: *${info.name}*`,
-                `**Alias name**: ${info.aliasName}`,
-                `**Body**: ${info.body}`,
-                `**Size**: ${Util.formatSize(info.size * Util.dataBytes.kilobyte, {
-                    unit: "kilobyte",
-                    short: true,
-                    digits: 2
-                })}`,
-                `**Is script**: ${info.isScript}`,
-                `**Is binary**: ${info.isBinary}`,
-                `**Is hidden**: ${info.isHidden}`,
-                `**Owner**: ${info.owner} (\`${info.ownerId}\`)`,
-                `**Args**: ${info.args}`,
-                `**Registered**: ${timeInfo.registered}`,
-                `**Last edited**: ${timeInfo.lastEdited}`,
-                `**Registered timestamp**: ${info.registeredTimestamp}`,
-                `**Last edited timestamp**: ${info.lastEditedTimestamp}`,
-                `**Type**: ${info.type}`,
-                info.isScript ? `**Language**: ${info.language}` : null,
-                `**Version**: ${info.version}`,
-                `**Type int**: ${info.typeInt}`
-            ];
-
-            const embed = new EmbedBuilder().setDescription(lines.filter(Boolean).join("\n"));
+            const embed = new EmbedBuilder().setDescription(desc);
 
             const embedLimits = ctx.handler != null ? ctx.handler.getLimits().embed : [DiscordUtil.embedCharLimit];
 
             if (DiscordUtil.overSizeLimits(embed, ...embedLimits)) {
-                const plainTimeInfo = tag.getTimeInfo(false, false),
-                    plainHops = Array.isArray(info.hops) && !Util.empty(info.hops) ? info.hops.join(" -> ") : "none";
-
-                const plainLines = [
-                    `Hops: ${plainHops}`,
-                    `Is alias: ${info.isAlias}`,
-                    `Name: ${info.name}`,
-                    `Alias name: ${info.aliasName}`,
-                    `Body: ${info.body}`,
-                    `Size: ${Util.formatSize(info.size * Util.dataBytes.kilobyte, {
-                        unit: "kilobyte",
-                        short: true,
-                        digits: 2
-                    })}`,
-                    `Is script: ${info.isScript}`,
-                    `Is binary: ${info.isBinary}`,
-                    `Is hidden: ${info.isHidden}`,
-                    `Owner: ${info.owner} (${info.ownerId})`,
-                    `Args: ${info.args}`,
-                    `Registered: ${plainTimeInfo.registered}`,
-                    `Last edited: ${plainTimeInfo.lastEdited}`,
-                    `Registered timestamp: ${info.registeredTimestamp}`,
-                    `Last edited timestamp: ${info.lastEditedTimestamp}`,
-                    `Type: ${info.type}`,
-                    info.isScript ? `Language: ${info.language}` : null,
-                    `Version: ${info.version}`,
-                    `Type int: ${info.typeInt}`
-                ];
+                const plainText = formatInfo(tag, info, false);
 
                 return {
                     content: header,
-                    ...DiscordUtil.getFileAttach(plainLines.filter(Boolean).join("\n"), "tag_info.txt")
+                    ...DiscordUtil.getFileAttach(plainText, "tag_info.txt")
                 };
             }
 

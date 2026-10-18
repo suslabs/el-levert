@@ -1,7 +1,9 @@
 const LeaderboardTypes = Object.freeze({
     count: "count",
     size: "size",
-    usage: "usage"
+    uses: "uses",
+    usage: "usage",
+    user: "user"
 });
 
 const validLeaderboardTypes = new Set(Object.values(LeaderboardTypes));

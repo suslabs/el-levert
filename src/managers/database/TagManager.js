@@ -151,6 +151,18 @@ class TagManager extends DBManager {
             : tag;
     }
 
+    async fetchUsage(name, validate = false) {
+        if (validate) {
+            name = this.checkName(name);
+        }
+
+        if (FakeTagRegistry.has(name)) {
+            return 0;
+        }
+
+        return (await this.tag_db.usageFetch(name)) ?? 0;
+    }
+
     async fetchAlias(tag, options = true) {
         options = typeof options === "boolean" ? { aliasOriginal: options } : ObjectUtil.guaranteeObject(options);
 
@@ -996,6 +1008,7 @@ class TagManager extends DBManager {
             case "size":
                 leaderboard = await this.tag_db.sizeLeaderboard(limit);
                 break;
+            case "uses":
             case "usage":
                 leaderboard = await this.tag_db.usageLeaderboard(limit);
                 break;
@@ -1030,6 +1043,7 @@ class TagManager extends DBManager {
                     })
                 );
                 break;
+            case "uses":
             case "usage":
                 const names = leaderboard.map(entry => entry.name),
                     exists = await this.exists(names);
@@ -1039,6 +1053,25 @@ class TagManager extends DBManager {
         }
 
         return leaderboard;
+    }
+
+    async userLeaderboard(user, limit = 50) {
+        if (!Util.nonemptyString(user)) {
+            return null;
+        }
+
+        const stats = await this.tag_db.quotaUserLeaderboard(user);
+
+        if (stats === null || stats.count <= 0) {
+            return null;
+        }
+
+        const tags = limit > 0 ? await this.tag_db.topUserTags(user, limit) : [];
+
+        return {
+            ...stats,
+            tags
+        };
     }
 
     async getQuota(user) {

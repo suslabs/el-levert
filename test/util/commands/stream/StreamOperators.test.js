@@ -143,6 +143,46 @@ describe("StreamOperatorRegistry", () => {
         expect(plainOut).toBe("plain string");
     });
 
+    test("unembed operator outputs only text and excludes URLs", async () => {
+        const embedWithUrls = {
+            embeds: [
+                {
+                    title: "Embed Title",
+                    url: "https://example.com/title-url",
+                    description: "Embed Description",
+                    author: {
+                        name: "Author Name",
+                        icon_url: "https://example.com/author-icon.png"
+                    },
+                    thumbnail: {
+                        url: "https://example.com/thumb.png"
+                    },
+                    image: {
+                        url: "https://example.com/image.png"
+                    },
+                    footer: {
+                        text: "Footer Text",
+                        icon_url: "https://example.com/footer-icon.png"
+                    }
+                }
+            ]
+        };
+
+        const out = await StreamOperatorRegistry.execute("unembed", embedWithUrls);
+        expect(out).toContain("Embed Title");
+        expect(out).toContain("Embed Description");
+        expect(out).toContain("Author Name");
+        expect(out).toContain("Footer Text");
+        expect(out).not.toContain("https://");
+        expect(out).not.toContain("example.com");
+
+        const urlInput = await StreamOperatorRegistry.execute(
+            "unembed",
+            "https://discord.com/channels/123456789012345678/123456789012345678/123456789012345678"
+        );
+        expect(urlInput).toBe("");
+    });
+
     test("unembed operator extracts embeds from input msg.embeds", async () => {
         const mockMsg = {
             embeds: [

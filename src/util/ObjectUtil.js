@@ -35,10 +35,6 @@ const ObjectUtil = Object.freeze({
         return Object.fromEntries(Object.entries(obj).map(([key, value]) => [value, key]));
     },
 
-    groupBy: (items, callback) => {
-        return ArrayUtil.groupBy(items, callback);
-    },
-
     guaranteeObject: (obj, fallback = {}) => {
         return TypeTester.isObject(obj) ? obj : fallback;
     },
@@ -47,18 +43,10 @@ const ObjectUtil = Object.freeze({
         source = ObjectUtil.guaranteeObject(source);
         const values = {};
 
-        for (const key of Object.keys(defaults)) {
-            if (source[key] != null) {
-                continue;
+        for (const [key, defaultValue] of Object.entries(defaults)) {
+            if (source[key] == null) {
+                values[key] = typeof defaultValue === "function" ? defaultValue : structuredClone(defaultValue);
             }
-
-            let defaultValue = defaults[key];
-
-            if (typeof defaultValue !== "function") {
-                defaultValue = structuredClone(defaultValue);
-            }
-
-            values[key] = defaultValue;
         }
 
         return Object.assign(target, source, values);

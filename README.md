@@ -273,6 +273,7 @@ Main actions:
 - `hide (name)` hides a tag from search, suggestions, and fullsearch
 - `unhide (name)` unhides a hidden tag (binary tags cannot be unhidden)
 - `raw (name)` shows the stored body exactly as saved
+- `uses (name)` shows how many times a tag has been used
 - `info (name) [raw]` shows stored tag details for moderators
 - `owner (name)` shows the owner
 - `list [user]` lists your tags or another user's tags
@@ -280,7 +281,7 @@ Main actions:
 - `fullsearch (query) [max_results / all]` searches inside tag bodies
 - `random (prefix)` picks a random matching tag
 - `count [all/new/script/me/user]` shows counts by scope or type
-- `leaderboard (count/size/usage) [limit]` shows tag leaderboards
+- `leaderboard (count/size/uses/user) [user|limit] [mode]` shows tag leaderboards or user leaderboard stats
 - `quota` shows how much tag space you are using
 - `dump [inline/full] [spaces]` exports tags. `full` sends a JSON file
 - `alias (name) (target) [args]` creates an alias-style tag
@@ -306,6 +307,11 @@ Examples:
 - `%tag stream echo hello world | upper` pipes echoed text through the `upper` operator
 - `%tag stream source_tag | echo prefix $ suffix` uses `$` to interpolate piped input
 - `%tag alias shout stream echo_tag $ | upper` creates an alias tag using a pipeline
+- `%tag leaderboard count` shows global tag count rankings per user
+- `%tag leaderboard user` shows your leaderboard positions and tags
+- `%tag leaderboard user example_user` shows leaderboard positions and tags for `example_user`
+- `%tag leaderboard user uses` shows your tags ranked by usage
+- `%tag uses example` shows how many times `example` has been used
 
 Tag audit options:
 

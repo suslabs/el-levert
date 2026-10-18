@@ -20,24 +20,7 @@ class PermissionDatabase extends RevisionDatabase {
     }
 
     async groupExists(name) {
-        if (Array.isArray(name)) {
-            if (Util.empty(name)) {
-                return [];
-            }
-
-            const rows = await this.groupQueries.existsMultiple.all({
-                    $names: JSON.stringify(name)
-                }),
-                existing = new Set(rows.map(row => row.name));
-
-            return name.map(groupName => existing.has(groupName));
-        } else {
-            const row = await this.groupQueries.exists.get({
-                $name: name
-            });
-
-            return typeof row._data !== "undefined";
-        }
+        return await DatabaseUtil.exists(name, this.groupQueries.exists, this.groupQueries.existsMultiple, "name");
     }
 
     async fetchGroup(name) {
@@ -85,24 +68,7 @@ class PermissionDatabase extends RevisionDatabase {
     }
 
     async userExists(id) {
-        if (Array.isArray(id)) {
-            if (Util.empty(id)) {
-                return [];
-            }
-
-            const rows = await this.userQueries.existsMultiple.all({
-                    $users: JSON.stringify(id)
-                }),
-                existing = new Set(rows.map(row => row.user));
-
-            return id.map(userId => existing.has(userId));
-        } else {
-            const row = await this.userQueries.exists.get({
-                $user: id
-            });
-
-            return typeof row._data !== "undefined";
-        }
+        return await DatabaseUtil.exists(id, this.userQueries.exists, this.userQueries.existsMultiple, "user");
     }
 
     async fetch(id) {

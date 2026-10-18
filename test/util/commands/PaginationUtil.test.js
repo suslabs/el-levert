@@ -219,7 +219,8 @@ describe("PaginationUtil", () => {
             paginationSpec: mainSession.spec,
             interaction: {
                 customId: "page:next:sess1",
-                isRepliable: () => true
+                isRepliable: () => true,
+                isModalSubmit: () => false
             },
             update: updateSpy
         };
@@ -257,7 +258,8 @@ describe("PaginationUtil", () => {
             interaction: {
                 customId: "page:next:main_sess",
                 user: { id: "other_user" },
-                isRepliable: () => true
+                isRepliable: () => true,
+                isModalSubmit: () => false
             },
             clone: overrides => ({
                 ...ctx,

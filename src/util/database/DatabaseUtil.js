@@ -191,6 +191,28 @@ const DatabaseUtil = Object.freeze({
 
     getEventId() {
         return crypto.randomBytes(4).toString("hex");
+    },
+
+    async exists(value, query, multiQuery, paramName, fieldName = paramName) {
+        if (Array.isArray(value)) {
+            if (Util.empty(value)) {
+                return [];
+            }
+
+            const rows = await multiQuery.all({
+                [`$${paramName}s`]: JSON.stringify(value)
+            });
+
+            const existing = new Set(rows.map(row => row[fieldName]));
+
+            return value.map(item => existing.has(item));
+        }
+
+        const row = await query.get({
+            [`$${paramName}`]: value
+        });
+
+        return typeof row._data !== "undefined";
     }
 });
 

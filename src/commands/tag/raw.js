@@ -1,8 +1,12 @@
-import { escapeMarkdown, bold } from "discord.js";
+import { escapeMarkdown } from "discord.js";
 
 import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+
+function bold(str) {
+    return `**${str}**`;
+}
 
 class TagRawCommand {
     static info = {

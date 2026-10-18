@@ -138,6 +138,25 @@ describe("TagDatabase", () => {
             expect.objectContaining({ user: "u2", quota: 2.5 })
         ]);
 
+        expect(await db.quotaUserLeaderboard("u1")).toEqual({
+            count: 1,
+            quota: 4.5,
+            countPos: 2,
+            sizePos: 1
+        });
+        expect(await db.quotaUserLeaderboard("u2")).toEqual({
+            count: 3,
+            quota: 2.5,
+            countPos: 1,
+            sizePos: 2
+        });
+        expect(await db.quotaUserLeaderboard("missing")).toBeNull();
+
+        const topTags = await db.topUserTags("u1", 5);
+        expect(topTags.length).toBeGreaterThan(0);
+        expect(topTags[0].owner).toBe("u1");
+        expect(typeof topTags[0].uses).toBe("number");
+
         await db.delete(await db.fetch("script1"));
         expect(await db.fetch("script1")).toBeNull();
         expect(await db.usageFetch("script1")).toBe(0);

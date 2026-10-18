@@ -28,24 +28,7 @@ class TagDatabase extends RevisionDatabase {
     }
 
     async exists(name) {
-        if (Array.isArray(name)) {
-            if (Util.empty(name)) {
-                return [];
-            }
-
-            const rows = await this.tagQueries.existsMultiple.all({
-                    $names: JSON.stringify(name)
-                }),
-                existing = new Set(rows.map(row => row.name));
-
-            return name.map(tagName => existing.has(tagName));
-        } else {
-            const row = await this.tagQueries.exists.get({
-                $name: name
-            });
-
-            return typeof row._data !== "undefined";
-        }
+        return await DatabaseUtil.exists(name, this.tagQueries.exists, this.tagQueries.existsMultiple, "name");
     }
 
     async fetch(name) {
@@ -190,6 +173,16 @@ class TagDatabase extends RevisionDatabase {
         return tags;
     }
 
+    async topUserTags(user, limit = 50) {
+        const rows = await this.tagQueries.topUserTags.all({
+                $user: user,
+                $limit: limit
+            }),
+            tags = DatabaseUtil.rowEntity(rows, Tag);
+
+        return tags;
+    }
+
     async count(user = null, flag = null) {
         if (user !== null && flag === null) {
             const cached = await this.quotaCountFetch(user);
@@ -276,6 +269,23 @@ class TagDatabase extends RevisionDatabase {
         return await this.quotaQueries.countLeaderboard.all({
             $limit: limit
         });
+    }
+
+    async quotaUserLeaderboard(user) {
+        const row = await this.quotaQueries.userLeaderboard.get({
+            $user: user
+        });
+
+        if (typeof row._data === "undefined") {
+            return null;
+        }
+
+        return {
+            count: row.count,
+            quota: row.quota,
+            countPos: row.countPos,
+            sizePos: row.sizePos
+        };
     }
 
     async usageFetch(name) {

@@ -218,9 +218,11 @@ describe("Tag", () => {
                 owner: "alice(ally)",
                 type: "text",
                 language: undefined,
-                typeInt: 1
+                typeInt: 1,
+                uses: 0
             })
         );
+        expect(await plain.getUsage()).toBe(0);
         expect(plain.formatType()).toBe("text (new)");
         expect(Tag.formatType(plain.type)).toBe("text (new)");
         expect(Tag.formatType(new Tag({ meta: { type: "ivm", language: "ts" } }).type)).toBe("ivm [ts] (new)");

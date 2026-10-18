@@ -422,6 +422,12 @@ class Tag extends BaseStructure {
         return owner.user.username + (owner.nickname ? `(${owner.nickname})` : "");
     }
 
+    async getUsage() {
+        const { getClient } = await import("../../LevertClient.js");
+
+        return (await getClient().tagManager?.fetchUsage(this.name)) ?? 0;
+    }
+
     async formatOwner(discord = false, options = {}) {
         const { getClient } = await import("../../LevertClient.js");
 
@@ -588,6 +594,7 @@ class Tag extends BaseStructure {
                 aliasName,
                 body,
                 size: this.getSize(),
+                uses: await this.getUsage(),
                 isScript: this.isScript,
                 isBinary: this.isBinary,
                 isHidden: this.isHidden,

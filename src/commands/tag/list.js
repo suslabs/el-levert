@@ -66,7 +66,7 @@ class TagListCommand {
 
         if (tags.count < 1) {
             if (user === ctx.msg.author) {
-                return `${getEmoji("info")} You don't have any tags. If you want to see the list of all available tags, use \`${this.getSubcmd("dump").getArgsHelp()}\`.`;
+                return `${getEmoji("info")} You don't have any tags. If you want to see the list of all available tags, use \`${this.getSubcmd("dump").getArgsHelp("", false)}\`.`;
             }
 
             return `${getEmoji("info")} User \`${user.username}\` has **no** tags.`;

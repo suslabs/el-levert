@@ -19,24 +19,7 @@ class ReminderDatabase extends SqlDatabase {
     }
 
     async exists(user) {
-        if (Array.isArray(user)) {
-            if (Util.empty(user)) {
-                return [];
-            }
-
-            const rows = await this.queries.existsMultiple.all({
-                    $users: JSON.stringify(user)
-                }),
-                existing = new Set(rows.map(row => row.user));
-
-            return user.map(userId => existing.has(userId));
-        } else {
-            const row = await this.queries.exists.get({
-                $user: user
-            });
-
-            return typeof row._data !== "undefined";
-        }
+        return await DatabaseUtil.exists(user, this.queries.exists, this.queries.existsMultiple, "user");
     }
 
     async fetch(user) {

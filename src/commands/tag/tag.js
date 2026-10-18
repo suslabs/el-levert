@@ -50,6 +50,7 @@ Subcommands:
 - rename <name> <new_name>: Rename a tag.
 - alias <name> <target> [args]: Create an alias to another tag or stream.
 - raw <name>: Show the stored body/script of a tag without executing it.
+- uses <name>: Show how many times a tag has been used.
 - stream <tag1 > tag2 > ...>: Execute a pipeline of tags/operators.
 - audit [tag_name] [revision_id] [--options]: View revision history or diff.
 - audit_clear [tag_name] [revision_id] [end_revision_id] [--options]: Clear tag audit history (owner only).
@@ -105,7 +106,8 @@ Subcommands:
             "search",
             "set_type",
             "stream",
-            "unhide"
+            "unhide",
+            "uses"
         ]
     };
 

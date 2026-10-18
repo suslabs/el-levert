@@ -32,11 +32,12 @@ class ReminderRemoveCommand {
             return `${getEmoji("info")} ${this.getArgsHelp("index")}`;
         }
 
-        let index = idxRes.value - 1;
+        let index = idxRes.value,
+            dbIdx = index - 1;
 
         {
             let err;
-            [index, err] = getClient().reminderManager.checkIndex(index, false);
+            [dbIdx, err] = getClient().reminderManager.checkIndex(dbIdx, false);
 
             if (err !== null) {
                 return `${getEmoji("warn")} ${err}.`;
@@ -46,7 +47,7 @@ class ReminderRemoveCommand {
         let removed = false;
 
         try {
-            const reminder = await getClient().reminderManager.remove(ctx.msg.author.id, index);
+            const reminder = await getClient().reminderManager.remove(ctx.msg.author.id, dbIdx);
             removed = reminder !== null;
         } catch (err) {
             if (err.name !== "ReminderError") {

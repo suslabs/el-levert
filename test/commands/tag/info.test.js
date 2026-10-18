@@ -42,6 +42,7 @@ describe("tag info command", () => {
         expect(out.embeds).toHaveLength(1);
         expect(out.embeds[0].data.title).toBeUndefined();
         expect(out.embeds[0].data.description).toContain("**Owner**: name-user-1 (`user-1`)");
+        expect(out.embeds[0].data.description).toContain("**Uses**: 0");
         expect(out.embeds[0].data.description).toContain("**Type**: text");
         expect(out.embeds[0].data.description).toContain("**Version**: new");
         expect(out.embeds[0].data.description).toContain("**Type int**: 1");
@@ -54,6 +55,7 @@ describe("tag info command", () => {
 
         expect(out).toContain("Tag info for **alpha**");
         expect(out).toContain('"name": "alpha"');
+        expect(out).toContain('"uses": 0');
         expect(out).toContain('"typeInt": 1');
     });
 
@@ -88,6 +90,7 @@ describe("tag info command", () => {
 
         const content = out.files[0].attachment.toString();
         expect(content).toContain("Owner: name-user-1 (user-1)");
+        expect(content).toContain("Uses: 0");
         expect(content).toContain("Type: text");
         expect(content).not.toContain("**");
         expect(content).not.toContain("`");
