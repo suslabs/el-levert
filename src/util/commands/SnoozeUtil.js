@@ -39,18 +39,15 @@ let SnoozeUtil = {
     },
 
     createSession: (user, reminder) => {
-        const snoozeCmd = getClient().commandManager.searchCommands("reminder").subcmds.get("snooze");
+        const snoozeCmd = getClient().commandManager.searchCommands("reminder").subcmds.get("snooze"),
+            ctx = snoozeCmd.createContext({ author: user });
 
-        const session = new ComponentSession(
-            {
-                author: user,
-                command: snoozeCmd
-            },
-            {
-                interactionMode: InteractionModes.authorOnly,
-                spec: { reminder }
-            }
-        );
+        const session = new ComponentSession(ctx, {
+            interactionMode: InteractionModes.authorOnly,
+            spec: { reminder }
+        });
+
+        ctx.snoozeSession = session;
 
         const handler = getClient().interactionHandler;
 
@@ -62,16 +59,21 @@ let SnoozeUtil = {
     },
 
     handleInteraction: async ctx => {
-        const session = ctx.paginationSession ?? ctx.interactionContext?.session;
+        const session = ctx.snoozeSession ?? ctx.interactionContext?.session;
 
         if (session == null) {
             return false;
         }
 
-        const reminder = session.spec?.reminder,
-            interaction = ctx.interactionContext?.interaction ?? ctx.interaction;
+        const reminder = session.spec?.reminder;
 
-        if (reminder == null || interaction == null) {
+        if (reminder == null) {
+            return false;
+        }
+
+        const interaction = ctx.interaction;
+
+        if (interaction == null) {
             return false;
         }
 
@@ -121,8 +123,8 @@ let SnoozeUtil = {
         const snoozed = await getClient().reminderManager.snooze(interaction.user.id, reminder, duration);
         await session.destroy(true);
 
-        const format = snoozed.format(),
-            content = `${getEmoji("info")} Reminder snoozed until ${format}${format.endsWith('"') ? "" : "."}`;
+        const format = snoozed.format(false),
+            content = `${getEmoji("info")} Reminder snoozed until ${format}.`;
 
         if (interaction.replied || interaction.deferred) {
             await interaction.followUp({ content, ephemeral: true });

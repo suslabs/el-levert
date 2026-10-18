@@ -171,7 +171,20 @@ function buildDefaultManagers() {
         },
         commandManager: {
             searchCommands: () => ({
-                subcmds: new Map([["snooze", {}]])
+                subcmds: new Map([
+                    [
+                        "snooze",
+                        {
+                            createContext: (data = {}) => ({
+                                ...data,
+                                clone: (overrides = {}) => ({
+                                    ...data,
+                                    ...overrides
+                                })
+                            })
+                        }
+                    ]
+                ])
             })
         }
     };

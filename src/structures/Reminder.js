@@ -55,14 +55,14 @@ class Reminder extends BaseStructure {
         });
     }
 
-    format(discord = true) {
+    format(includeMsg = true, discord = true) {
         let format = this.getTimestamp(discord);
 
         if (this.isRecurring) {
             format += ` (every ${DateUtil.formatInterval(this.interval)})`;
         }
 
-        if (this.hasMessage) {
+        if (includeMsg && this.hasMessage) {
             const formattedMsg = discord ? bold(escapeMarkdown(this.msg)) : this.msg;
             format += ` with the message:\n${formattedMsg}`;
         }

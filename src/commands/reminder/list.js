@@ -6,7 +6,7 @@ import Util from "../../util/Util.js";
 import PaginationUtil from "../../util/commands/PaginationUtil.js";
 
 function formatReminders(reminders, startIndex = 0, discord = true) {
-    return reminders.map((reminder, i) => `${startIndex + i + 1}. On ${reminder.format(discord)}`).join("\n");
+    return reminders.map((reminder, i) => `${startIndex + i + 1}. On ${reminder.format(true, discord)}`).join("\n");
 }
 
 class ReminderListCommand {

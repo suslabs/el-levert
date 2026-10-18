@@ -25,6 +25,8 @@ describe("Reminder", () => {
         expect(reminder.getTimestamp(false)).toContain("1970");
         expect(reminder.format()).toContain("with the message:");
         expect(reminder.format()).toContain("hello");
+        expect(reminder.format(false)).not.toContain("with the message:");
+        expect(reminder.format(false)).not.toContain("hello");
 
         const dayMs = Util.durationSeconds.day / Util.durationSeconds.milli,
             recurring = new Reminder({

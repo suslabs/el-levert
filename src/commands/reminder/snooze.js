@@ -68,8 +68,8 @@ class ReminderSnoozeCommand {
             }
         }
 
-        const format = reminder.format();
-        return `${getEmoji("info")} Reminder snoozed until ${format}${format.endsWith('"') ? "" : "."}`;
+        const format = reminder.format(false);
+        return `${getEmoji("info")} Reminder snoozed until ${format}.`;
     }
 
     async interactionHandler(ctx) {
