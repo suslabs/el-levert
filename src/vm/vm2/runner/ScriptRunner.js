@@ -22,7 +22,7 @@ function funcsResolved() {
 
 function func_cb(socket, name, args) {
     return new Promise((resolve, reject) => {
-        const uniqueName = name + "-" + crypto.randomBytes(5).toString("hex");
+        const uniqueName = name + "-" + Util.bytesToHex(crypto.randomBytes(5));
 
         VMUtil.sockWrite(socket, "funcCall", {
             funcCall: {
@@ -118,7 +118,7 @@ function listener(socket) {
 }
 
 const server = net.createServer(listener),
-    socketName = crypto.randomBytes(20).toString("hex");
+    socketName = Util.bytesToHex(crypto.randomBytes(20));
 
 server.on("listening", _ => {
     console.log(`/tmp/vm2-${socketName}.sock`);

@@ -49,7 +49,7 @@ describe("Tag", () => {
 
         const stored = new Tag({ name: "stored", body: "x", type: Buffer.from([3]) });
         expect(stored.type).toBeInstanceOf(TagBitField);
-        expect(stored.getData().type).toBe("03");
+        expect(stored.getData().type).toBe(3);
         expect(stored.getData("$").$type).toEqual(Buffer.from([3]));
     });
 
@@ -218,7 +218,7 @@ describe("Tag", () => {
                 owner: "alice(ally)",
                 type: "text",
                 language: undefined,
-                typeInt: 1,
+                rawType: 1,
                 uses: 0
             })
         );

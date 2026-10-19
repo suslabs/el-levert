@@ -723,7 +723,7 @@ let DiscordUtil = {
 
         if (isBinary) {
             const hexSlice = buf.subarray(0, byteLimit),
-                hexStr = hexSlice.toString("hex");
+                hexStr = Util.bytesToHex(hexSlice);
 
             res.data = buf.length > byteLimit ? `${hexStr}...` : hexStr;
         } else {

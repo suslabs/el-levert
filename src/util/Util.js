@@ -1,3 +1,5 @@
+import { Buffer } from "node:buffer";
+
 import { LengthTypes } from "./LengthTypes.js";
 import { CountTypes } from "./CountTypes.js";
 
@@ -684,6 +686,44 @@ let Util = {
         }
 
         return num;
+    },
+
+    bytesToHex: bytes => {
+        if (bytes == null) {
+            return "";
+        }
+
+        if (Buffer.isBuffer(bytes)) {
+            return bytes.toString("hex");
+        } else if (ArrayBuffer.isView(bytes)) {
+            return Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength).toString("hex");
+        } else if (Array.isArray(bytes)) {
+            return Buffer.from(bytes).toString("hex");
+        }
+
+        return "";
+    },
+
+    hexToBytes: hex => {
+        if (hex == null) {
+            return Buffer.alloc(0);
+        }
+
+        if (Buffer.isBuffer(hex)) {
+            return hex;
+        } else if (ArrayBuffer.isView(hex)) {
+            return Buffer.from(hex.buffer, hex.byteOffset, hex.byteLength);
+        } else if (Array.isArray(hex)) {
+            return Buffer.from(hex);
+        } else if (typeof hex !== "string") {
+            return Buffer.alloc(0);
+        }
+
+        const cleanHex = hex.startsWith("0x") || hex.startsWith("0X") ? hex.slice(2) : hex;
+
+        const normalizedHex = cleanHex.length % 2 === 0 ? cleanHex : `0${cleanHex}`;
+
+        return Buffer.from(normalizedHex, "hex");
     },
 
     urlRegex: /(\S*?):\/\/(?:([^/.]+)\.)?([^/.]+)\.([^/\s]+)\/?(\S*)?/,

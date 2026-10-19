@@ -190,7 +190,7 @@ const DatabaseUtil = Object.freeze({
     },
 
     getEventId() {
-        return crypto.randomBytes(4).toString("hex");
+        return Util.bytesToHex(crypto.randomBytes(4));
     },
 
     async exists(value, query, multiQuery, paramName, fieldName = paramName) {

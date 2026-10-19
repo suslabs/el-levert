@@ -53,7 +53,7 @@ function formatInfo(tag, info, discord = true) {
         `${bold("Type", discord)}: ${info.type}`,
         info.isScript ? `${bold("Language", discord)}: ${info.language}` : null,
         `${bold("Version", discord)}: ${info.version}`,
-        `${bold("Type int", discord)}: ${info.typeInt}`
+        `${bold("Raw type", discord)}: ${tag.type.toHex()}`
     ];
 
     return lines.filter(Boolean).join("\n");

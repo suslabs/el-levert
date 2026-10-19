@@ -361,7 +361,7 @@ class Tag extends BaseStructure {
         const db = !Util.empty(prefix);
 
         if (props == null || props.includes("type")) {
-            data.type = db ? this.type.toBuffer() : this.type.toHex();
+            data.type = db ? this.type.toBuffer() : this.type.toNumber();
         }
 
         if (this.isBinary) {
@@ -610,7 +610,7 @@ class Tag extends BaseStructure {
                 type: this.getScriptType(),
                 language: this.getScriptLanguage(),
                 version: this.getVersion(),
-                typeInt: this.type.toNumber()
+                rawType: this.type.toNumber()
             };
 
             return info;

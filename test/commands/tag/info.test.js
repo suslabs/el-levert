@@ -45,7 +45,7 @@ describe("tag info command", () => {
         expect(out.embeds[0].data.description).toContain("**Uses**: 0");
         expect(out.embeds[0].data.description).toContain("**Type**: text");
         expect(out.embeds[0].data.description).toContain("**Version**: new");
-        expect(out.embeds[0].data.description).toContain("**Type int**: 1");
+        expect(out.embeds[0].data.description).toContain("**Raw type**: 01");
         expect(out.embeds[0].data.description).toMatch(/\*\*Registered\*\*: <t:\d+>/);
     });
 
@@ -56,7 +56,7 @@ describe("tag info command", () => {
         expect(out).toContain("Tag info for **alpha**");
         expect(out).toContain('"name": "alpha"');
         expect(out).toContain('"uses": 0');
-        expect(out).toContain('"typeInt": 1');
+        expect(out).toContain('"rawType": 1');
     });
 
     test("returns tag info in raw mode", async () => {

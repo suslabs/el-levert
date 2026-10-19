@@ -21,10 +21,12 @@ class TagRevisionManager {
     static encodeValue(field, value) {
         switch (field) {
             case "type":
-                if (typeof value?.toHex === "function") {
-                    return value.toHex();
+                if (typeof value?.toNumber === "function") {
+                    return value.toNumber();
+                } else if (typeof value === "number") {
+                    return value;
                 } else if (ArrayBuffer.isView(value)) {
-                    return Buffer.from(value).toString("hex");
+                    return Util.bytesToNumber(value);
                 }
 
                 return value;
@@ -42,7 +44,7 @@ class TagRevisionManager {
     static decodeValue(field, value) {
         switch (field) {
             case "type":
-                return Buffer.from(value ?? "00", "hex");
+                return typeof value === "number" ? Util.numberToBytes(value) : Util.hexToBytes(value ?? "00");
             case "bin":
                 return value == null ? null : Buffer.from(value, "base64");
             default:

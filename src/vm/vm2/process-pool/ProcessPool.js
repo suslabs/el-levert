@@ -85,7 +85,7 @@ class VM2ProcPool {
     }
 
     createPool() {
-        const ref = crypto.randomBytes(20).toString("hex"),
+        const ref = Util.bytesToHex(crypto.randomBytes(20)),
             kill = () => {
                 spawn("sh", ["-c", `pkill -9 -f ${ref}`]);
             };

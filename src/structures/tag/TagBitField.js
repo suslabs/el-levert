@@ -1,9 +1,8 @@
-import { Buffer } from "node:buffer";
-
 import BitField from "../../util/misc/BitField.js";
 
 import { TagTypes } from "./TagTypes.js";
 
+import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 
@@ -18,7 +17,7 @@ class TagBitField extends BitField {
     static query(data = null) {
         if (data === null) {
             return {
-                $types: JSON.stringify(this._getTypeData().map(type => type.toString("hex")))
+                $types: JSON.stringify(this._getTypeData().map(type => Util.bytesToHex(type)))
             };
         }
 
@@ -26,7 +25,7 @@ class TagBitField extends BitField {
 
         return {
             $types: JSON.stringify(
-                flag.isEmpty() ? this._getTypeData().map(type => type.toString("hex")) : this._getQueryTypes(flag)
+                flag.isEmpty() ? this._getTypeData().map(type => Util.bytesToHex(type)) : this._getQueryTypes(flag)
             )
         };
     }
@@ -185,7 +184,7 @@ class TagBitField extends BitField {
     static _getQueryTypes(filter) {
         return this._getTypeData()
             .filter(type => this._matchesFilter(type, filter))
-            .map(type => type.toString("hex"));
+            .map(type => Util.bytesToHex(type));
     }
 
     static _validateBitIndex(bit) {

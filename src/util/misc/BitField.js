@@ -150,7 +150,7 @@ class BitField {
     }
 
     toHex() {
-        return Buffer.from(this.buffer.buffer, this.buffer.byteOffset, this.buffer.byteLength).toString("hex");
+        return Util.bytesToHex(this.buffer);
     }
 
     toNumber() {

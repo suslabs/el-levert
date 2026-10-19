@@ -1,3 +1,5 @@
+import { Buffer } from "node:buffer";
+
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import Util from "../../src/util/Util.js";
@@ -117,6 +119,17 @@ describe("Util", () => {
         expect(Util.numberToBytes(0x1234)).toEqual(new Uint8Array([0x34, 0x12]));
         expect(Util.numberToBytes(-1)).toBeNull();
         expect(Util.bytesToNumber(new Uint8Array([0x34, 0x12]))).toBe(0x1234);
+        expect(Util.bytesToHex(new Uint8Array([0x34, 0x12]))).toBe("3412");
+        expect(Util.bytesToHex([0x34, 0x12])).toBe("3412");
+        expect(Util.bytesToHex(Buffer.from([0x34, 0x12]))).toBe("3412");
+        expect(Util.bytesToHex(null)).toBe("");
+        expect(Util.hexToBytes("3412")).toEqual(Buffer.from([0x34, 0x12]));
+        expect(Util.hexToBytes("0x3412")).toEqual(Buffer.from([0x34, 0x12]));
+        expect(Util.hexToBytes("312")).toEqual(Buffer.from([0x03, 0x12]));
+        expect(Util.hexToBytes([0x34, 0x12])).toEqual(Buffer.from([0x34, 0x12]));
+        expect(Util.hexToBytes(new Uint8Array([0x34, 0x12]))).toEqual(Buffer.from([0x34, 0x12]));
+        expect(Util.hexToBytes(Buffer.from([0x34, 0x12]))).toEqual(Buffer.from([0x34, 0x12]));
+        expect(Util.hexToBytes(null)).toEqual(Buffer.alloc(0));
         expect(Util.validUrl("https://example.com/test")).toBe(true);
         expect(Util.timeDelta(10n, 42n, 2n)).toBe(16n);
         expect(Util.duration(65_000)).toEqual({ minute: 1, second: 5 });
@@ -216,4 +229,3 @@ describe("Util", () => {
         expect(Util.getErrorMessage(null, "custom fallback")).toBe("custom fallback");
     });
 });
-
