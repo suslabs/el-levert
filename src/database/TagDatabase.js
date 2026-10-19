@@ -128,6 +128,14 @@ class TagDatabase extends RevisionDatabase {
             $name: name
         });
 
+        if (Util.empty(rows)) {
+            return null;
+        }
+
+        if (Util.first(rows).name === null) {
+            return [];
+        }
+
         return DatabaseUtil.rowEntity(rows, Tag);
     }
 
@@ -185,10 +193,10 @@ class TagDatabase extends RevisionDatabase {
 
     async count(user = null, flag = null) {
         if (user !== null && flag === null) {
-            const cached = await this.quotaCountFetch(user);
+            const cached = await this.quotaFetch(user);
 
             if (cached !== null) {
-                return cached;
+                return cached.count;
             }
         }
 
@@ -200,8 +208,8 @@ class TagDatabase extends RevisionDatabase {
         return res.count;
     }
 
-    async quotaFetchAll(user) {
-        const quota = await this.quotaQueries.fetchAll.get({
+    async quotaFetch(user) {
+        const quota = await this.quotaQueries.fetch.get({
             $user: user
         });
 
@@ -221,40 +229,10 @@ class TagDatabase extends RevisionDatabase {
         });
     }
 
-    async quotaSizeFetch(user) {
-        const quota = await this.quotaQueries.sizeFetch.get({
-            $user: user
-        });
-
-        if (typeof quota._data === "undefined") {
-            return null;
-        }
-
-        return quota.quota;
-    }
-
-    async quotaSizeSet(user, quota) {
-        return await this.quotaQueries.sizeSet.run({
+    async quotaSet(user, quota, count) {
+        return await this.quotaQueries.set.run({
             $user: user,
-            $quota: quota
-        });
-    }
-
-    async quotaCountFetch(user) {
-        const count = await this.quotaQueries.countFetch.get({
-            $user: user
-        });
-
-        if (typeof count._data === "undefined") {
-            return null;
-        }
-
-        return count.count;
-    }
-
-    async quotaCountSet(user, count) {
-        return await this.quotaQueries.countSet.run({
-            $user: user,
+            $quota: quota,
             $count: count
         });
     }
@@ -297,7 +275,7 @@ class TagDatabase extends RevisionDatabase {
             return null;
         }
 
-        return usage.count;
+        return usage.count ?? 0;
     }
 
     async usageCreate(name) {
@@ -326,9 +304,15 @@ class TagDatabase extends RevisionDatabase {
     }
 
     async usageLeaderboard(limit) {
-        return await this.usageQueries.leaderboard.all({
+        const rows = await this.usageQueries.leaderboard.all({
             $limit: limit
         });
+
+        return rows.map(row => ({
+            name: row.name,
+            count: row.count,
+            exists: Boolean(row.exists)
+        }));
     }
 }
 

@@ -73,6 +73,9 @@ describe("PermissionDatabase", () => {
         await db.add(member, user);
         await expect(db.add(member, user)).rejects.toThrow();
         expect(await db.userExists("42")).toBe(true);
+        expect(await db.isInGroup("member", "42")).toBe(true);
+        expect(await db.isInGroup("mod", "42")).toBe(false);
+        expect(await db.isInGroup("member", "missing")).toBe(false);
         expect((await db.fetch("42")).map(group => group.name)).toEqual(["member"]);
         expect(await db.listUsers()).toEqual([expect.objectContaining({ id: 1, user: "42", group: "member" })]);
 

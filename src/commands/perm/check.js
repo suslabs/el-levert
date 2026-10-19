@@ -63,7 +63,7 @@ class PermCheckCommand {
                 : `${getEmoji("info")} User \`${user.username}\` has the following permissions:`;
 
         const format = formatGroups(groups),
-            maxLevel = await getClient().permManager.maxLevel(user.id);
+            maxLevel = await getClient().permManager.maxLevel(groups);
 
         const embed = new EmbedBuilder().setTitle(`Level: **${maxLevel}**`).setDescription(codeblock(format));
 

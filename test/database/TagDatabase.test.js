@@ -39,10 +39,8 @@ describe("TagDatabase", () => {
 
         await db.quotaCreate("u1");
         await db.quotaCreate("u2");
-        await db.quotaSizeSet("u1", 4.5);
-        await db.quotaSizeSet("u2", 2.5);
-        await db.quotaCountSet("u1", 0);
-        await db.quotaCountSet("u2", 0);
+        await db.quotaSet("u1", 4.5, 0);
+        await db.quotaSet("u2", 2.5, 0);
 
         const plain = new Tag({ name: "plain", body: "body", owner: "u1" });
         const alias = new Tag({ name: "alias", owner: "u1" });
@@ -117,8 +115,8 @@ describe("TagDatabase", () => {
         expect(await db.searchWithPrefix("pl")).toEqual(["plain2"]);
         expect((await db.list("u2")).map(tag => tag.name)).toEqual(["oldie", "plain2", "script1"]);
 
-        await db.quotaCountSet("u1", 1);
-        await db.quotaCountSet("u2", 3);
+        await db.quotaSet("u1", 4.5, 1);
+        await db.quotaSet("u2", 2.5, 3);
 
         expect(await db.count()).toBe(4);
         expect(await db.count("u2")).toBe(3);
@@ -130,9 +128,8 @@ describe("TagDatabase", () => {
             expect.objectContaining({ user: "u1", count: 1 })
         ]);
 
-        expect(await db.quotaSizeFetch("missing")).toBeNull();
-        expect(await db.quotaSizeFetch("u1")).toBe(4.5);
-        expect(await db.quotaCountFetch("u1")).toBe(1);
+        expect(await db.quotaFetch("missing")).toBeNull();
+        expect(await db.quotaFetch("u1")).toEqual({ quota: 4.5, count: 1 });
         expect(await db.sizeLeaderboard(5)).toEqual([
             expect.objectContaining({ user: "u1", quota: 4.5 }),
             expect.objectContaining({ user: "u2", quota: 2.5 })
@@ -200,8 +197,8 @@ describe("TagDatabase", () => {
 
         await db.quotaCreate("u1");
         await db.quotaCreate("u2");
-        await db.quotaCountSet("u1", 99);
-        await db.quotaCountSet("u2", 5);
+        await db.quotaSet("u1", 0, 99);
+        await db.quotaSet("u2", 0, 5);
 
         await db.add(new Tag({ name: "alpha", body: "body", owner: "u1" }));
         await db.add(new Tag({ name: "script1", body: "console.log(1)", owner: "u1", meta: { type: "ivm" } }));
@@ -576,11 +573,11 @@ describe("TagDatabase", () => {
             });
             expect(t3.type.buffer).toEqual(new Uint8Array([3]));
 
-            expect(await db.quotaFetchAll("u1")).toMatchObject({
+            expect(await db.quotaFetch("u1")).toMatchObject({
                 count: 2,
                 quota: 10.0
             });
-            expect(await db.quotaFetchAll("u2")).toMatchObject({
+            expect(await db.quotaFetch("u2")).toMatchObject({
                 count: 1,
                 quota: 5.0
             });

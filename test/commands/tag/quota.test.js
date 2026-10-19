@@ -52,7 +52,7 @@ describe("Merged Branch Coverage", () => {
             const command = getCommand(runtime, "tag");
 
             await addTag(runtime, "alpha", "body one", msg.author.id);
-            runtime.client.tagManager.getQuota = async () => 0;
+            runtime.client.tagManager.getQuota = async () => ({ quota: 0, count: 1 });
 
             await expect(executeCommand(command, "quota", { msg })).resolves.toContain(
                 "aren't using any of the available storage"

@@ -203,10 +203,10 @@ describe("DBImporter", () => {
 
             await importer.fix();
 
-            expect(await liveRuntime.client.tagManager.tag_db.quotaFetchAll("ghost")).toBeNull();
-            expect(await liveRuntime.client.tagManager.tag_db.quotaCountFetch("u1")).toBe(2);
-            expect(await liveRuntime.client.tagManager.tag_db.quotaCountFetch("u2")).toBe(1);
-            expect(await liveRuntime.client.tagManager.tag_db.quotaCountFetch("u3")).toBeNull();
+            expect(await liveRuntime.client.tagManager.tag_db.quotaFetch("ghost")).toBeNull();
+            expect((await liveRuntime.client.tagManager.tag_db.quotaFetch("u1")).count).toBe(2);
+            expect((await liveRuntime.client.tagManager.tag_db.quotaFetch("u2")).count).toBe(1);
+            expect(await liveRuntime.client.tagManager.tag_db.quotaFetch("u3")).toBeNull();
             expect(await liveRuntime.client.tagManager.tag_db.usageFetch("alpha")).toBe(1);
             expect(await liveRuntime.client.tagManager.tag_db.usageFetch("beta")).toBeNull();
             expect(await liveRuntime.client.tagManager.tag_db.usageFetch("delta")).toBe(1);

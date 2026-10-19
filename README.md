@@ -285,6 +285,7 @@ Main actions:
 - `quota` shows how much tag space you are using
 - `dump [inline/full] [spaces]` exports tags. `full` sends a JSON file
 - `alias (name) (target) [args]` creates an alias-style tag
+- `aliases (name)` lists all aliases pointing to a tag
 - `chown (name) (new_owner)` transfers ownership
 - `set_type (name) (type|version)` changes script metadata for moderators
 - `audit [tag_name] [revision_id] [--options]` shows recent tag changes or a full revision diff for moderators
@@ -307,6 +308,7 @@ Examples:
 - `%tag stream echo hello world | upper` pipes echoed text through the `upper` operator
 - `%tag stream source_tag | echo prefix $ suffix` uses `$` to interpolate piped input
 - `%tag alias shout stream echo_tag $ | upper` creates an alias tag using a pipeline
+- `%tag aliases example` lists all aliases pointing to `example`
 - `%tag leaderboard count` shows global tag count rankings per user
 - `%tag leaderboard user` shows your leaderboard positions and tags
 - `%tag leaderboard user example_user` shows leaderboard positions and tags for `example_user`

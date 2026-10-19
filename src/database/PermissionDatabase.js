@@ -83,6 +83,15 @@ class PermissionDatabase extends RevisionDatabase {
         return DatabaseUtil.rowEntity(rows, Group);
     }
 
+    async isInGroup(name, id) {
+        const row = await this.userQueries.isInGroup.get({
+            $user: id,
+            $group: name
+        });
+
+        return typeof row._data !== "undefined";
+    }
+
     async fetchUsersByGroup(name) {
         const rows = await this.userQueries.fetchByGroup.all({
             $name: name

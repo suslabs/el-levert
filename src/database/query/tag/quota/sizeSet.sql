@@ -1,1 +1,0 @@
-UPDATE Quotas SET quota = $quota WHERE user = $user;

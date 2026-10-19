@@ -160,7 +160,31 @@ class TagManager extends DBManager {
             return 0;
         }
 
-        return (await this.tag_db.usageFetch(name)) ?? 0;
+        const usage = await this.tag_db.usageFetch(name);
+
+        return validate && usage === null
+            ? (() => {
+                  throw new TagError("Tag doesn't exist", name);
+              })()
+            : usage;
+    }
+
+    async fetchAliases(name, validate = false) {
+        if (validate) {
+            name = this.checkName(name);
+        }
+
+        if (FakeTagRegistry.has(name)) {
+            return [];
+        }
+
+        const aliases = await this.tag_db.fetchAliases(name);
+
+        return validate && aliases === null
+            ? (() => {
+                  throw new TagError("Tag doesn't exist", name);
+              })()
+            : aliases;
     }
 
     async fetchAlias(tag, options = true) {
@@ -1043,13 +1067,6 @@ class TagManager extends DBManager {
                     })
                 );
                 break;
-            case "uses":
-            case "usage":
-                const names = leaderboard.map(entry => entry.name),
-                    exists = await this.exists(names);
-
-                leaderboard.forEach((entry, idx) => (entry.exists = exists[idx]));
-                break;
         }
 
         return leaderboard;
@@ -1067,15 +1084,12 @@ class TagManager extends DBManager {
         }
 
         const tags = limit > 0 ? await this.tag_db.topUserTags(user, limit) : [];
-
-        return {
-            ...stats,
-            tags
-        };
+        return { ...stats, tags };
     }
 
     async getQuota(user) {
-        return await this.tag_db.quotaSizeFetch(user);
+        const quota = await this.tag_db.quotaFetch(user);
+        return quota ?? { quota: 0, count: 0 };
     }
 
     async downloadBody(t_args, msg, type) {
@@ -1367,7 +1381,7 @@ class TagManager extends DBManager {
     }
 
     async _updateQuota(user, sizeDiff, countDiff, tx) {
-        let userQuota = await tx.quotaFetchAll(user);
+        let userQuota = await tx.quotaFetch(user);
 
         if (userQuota === null) {
             await tx.quotaCreate(user);
@@ -1398,13 +1412,7 @@ class TagManager extends DBManager {
             });
         }
 
-        if (sizeDiff !== 0) {
-            await tx.quotaSizeSet(user, newQuota);
-        }
-
-        if (countDiff !== 0) {
-            await tx.quotaCountSet(user, newCount);
-        }
+        await tx.quotaSet(user, newQuota, newCount);
 
         getLogger().debug(`Updated quota for: ${user} size diff: ${sizeDiff} count diff: ${countDiff}`);
     }

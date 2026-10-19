@@ -49,6 +49,7 @@ Subcommands:
 - delete <name>: Delete a tag.
 - rename <name> <new_name>: Rename a tag.
 - alias <name> <target> [args]: Create an alias to another tag or stream.
+- aliases <name>: List all aliases pointing to a tag.
 - raw <name>: Show the stored body/script of a tag without executing it.
 - uses <name>: Show how many times a tag has been used.
 - stream <tag1 > tag2 > ...>: Execute a pipeline of tags/operators.
@@ -84,6 +85,7 @@ Subcommands:
         subcommands: [
             "add",
             "alias",
+            "aliases",
             "audit",
             "audit_clear",
             "chown",

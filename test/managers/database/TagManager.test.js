@@ -105,8 +105,8 @@ describe("TagManager", () => {
 
         expect(await manager.count()).toBe(8);
         expect(await manager.count("u1")).toBe(2);
-        expect(await manager.tag_db.quotaCountFetch("u1")).toBe(2);
-        expect(await manager.tag_db.quotaCountFetch("u9")).toBe(1);
+        expect((await manager.tag_db.quotaFetch("u1")).count).toBe(2);
+        expect((await manager.tag_db.quotaFetch("u9")).count).toBe(1);
         expect(await manager.tag_db.usageFetch("plain_alias")).toBe(1);
         expect(await manager.tag_db.usageFetch("script_ivm")).toBe(2);
         expect(await manager.tag_db.usageFetch("script_vm2")).toBe(1);

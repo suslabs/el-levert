@@ -264,9 +264,9 @@ class PermissionManager extends DBManager {
             return this.disabledLevel;
         }
 
-        const groups = await this.fetch(id);
+        const groups = Array.isArray(id) ? id : await this.fetch(id);
 
-        if (groups === null) {
+        if (groups === null || Util.empty(groups)) {
             return this.getLevels().default;
         }
 
@@ -285,12 +285,19 @@ class PermissionManager extends DBManager {
     async isInGroup(name, id, validate = false) {
         if (!this.enabled) {
             return false;
-        } else if (validate) {
+        }
+
+        if (validate) {
             name = this.checkName(name);
         }
 
-        const currentPerms = await getClient().permManager.fetch(id);
-        return currentPerms && currentPerms.find(group => group.name === name);
+        if (this.isOwner(id)) {
+            return name === OwnerGroup.name;
+        } else if (name === OwnerGroup.name) {
+            return false;
+        }
+
+        return await this.perm_db.isInGroup(name, id);
     }
 
     async fetchGroup(name, validate = false) {

@@ -68,7 +68,11 @@ describe("PermissionManager", () => {
         await manager.add(mods, "404", true);
 
         expect(await manager.maxLevel("123")).toBe(8);
+        expect(await manager.maxLevel(await manager.fetch("123"))).toBe(8);
         expect(await manager.isInGroup("mods", "123", true)).toBeTruthy();
+        expect(await manager.isInGroup(OwnerGroup.name, "owner-id")).toBe(true);
+        expect(await manager.isInGroup("mods", "owner-id")).toBe(false);
+        expect(await manager.isInGroup(OwnerGroup.name, "123")).toBe(false);
 
         const users = await manager.listUsers(true);
         expect(users.find(user => user.user === "123").username).toBe("name-123");

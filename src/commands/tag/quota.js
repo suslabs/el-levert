@@ -12,13 +12,11 @@ class TagQuotaCommand {
     };
 
     async handler(ctx) {
-        const count = await getClient().tagManager.count(ctx.msg.author.id);
+        const { quota, count } = await getClient().tagManager.getQuota(ctx.msg.author.id);
 
         if (count <= 0) {
             return `${getEmoji("info")} You have **no** tags.`;
         }
-
-        const quota = await getClient().tagManager.getQuota(ctx.msg.author.id);
 
         if (quota <= 0) {
             return `${getEmoji("info")} You aren't using any of the available storage.`;
