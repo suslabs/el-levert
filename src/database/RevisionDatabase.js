@@ -25,18 +25,21 @@ class RevisionDatabase extends SqlDatabase {
     }
 
     async setup(mode) {
-        if (mode === "load") {
-            await this.db.migrate({
-                migrationsPath: revisionMigrationsPath,
-                table: revisionMigrationsTable
-            });
-        } else if (mode === "create") {
-            const migrations = await this._loadMigrations(revisionMigrationsPath);
-            await this._seedAppliedMigrations(
-                migrations.map(m => m.id),
-                revisionMigrationsPath,
-                revisionMigrationsTable
-            );
+        switch (mode) {
+            case "load":
+                await this.db.migrate({
+                    migrationsPath: revisionMigrationsPath,
+                    table: revisionMigrationsTable
+                });
+                break;
+            case "create":
+                const migrations = await this._loadMigrations(revisionMigrationsPath);
+                await this._seedAppliedMigrations(
+                    migrations.map(m => m.id),
+                    revisionMigrationsPath,
+                    revisionMigrationsTable
+                );
+                break;
         }
     }
 

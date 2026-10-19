@@ -117,10 +117,13 @@ class WebsocketCommandParser {
 
         let message = `Validation error for field "${propName}": ${error.message}`;
 
-        if (error.keyword === "required") {
-            message = `Missing required ${this.isResponse ? "response field" : "parameter"}: ${propName}`;
-        } else if (error.keyword === "type") {
-            message = `Invalid type for field "${propName}": ${error.message}`;
+        switch (error.keyword) {
+            case "required":
+                message = `Missing required ${this.isResponse ? "response field" : "parameter"}: ${propName}`;
+                break;
+            case "type":
+                message = `Invalid type for field "${propName}": ${error.message}`;
+                break;
         }
 
         return new WebsocketCommandValidationIssue(error.keyword, message, {

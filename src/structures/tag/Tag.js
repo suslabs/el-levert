@@ -746,11 +746,14 @@ class Tag extends BaseStructure {
         }
 
         for (const [flag, config] of TagTypes.flags.entries) {
-            if (config.accessors === "write") {
-                this._registerFunc(this._getFlagFunc, flag, true);
-                this._registerFunc(this._setFlagFunc, flag, "both");
-            } else if (config.accessors === "read") {
-                this._registerFunc(this._getFlagFunc, flag, true);
+            switch (config.accessors) {
+                case "write":
+                    this._registerFunc(this._getFlagFunc, flag, true);
+                    this._registerFunc(this._setFlagFunc, flag, "both");
+                    break;
+                case "read":
+                    this._registerFunc(this._getFlagFunc, flag, true);
+                    break;
             }
         }
 

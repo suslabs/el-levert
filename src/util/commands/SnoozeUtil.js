@@ -80,44 +80,48 @@ let SnoozeUtil = {
         const parts = interaction.customId.split(":"),
             action = parts[1];
 
-        if (action === "custom") {
-            const modal = new ModalBuilder().setCustomId(`snooze:modal:${session.id}`).setTitle("Snooze Reminder");
-
-            const durationInput = new TextInputBuilder()
-                .setCustomId("duration")
-                .setLabel("Snooze duration (e.g. 10m, 2h, 1d)")
-                .setStyle(TextInputStyle.Short)
-                .setRequired(true);
-
-            const row = new ActionRowBuilder().addComponents(durationInput);
-            modal.addComponents(row);
-
-            await interaction.showModal(modal);
-            return true;
-        }
-
         let duration = null;
 
-        if (action === "5m") {
-            duration = (5 * Util.durationSeconds.minute) / Util.durationSeconds.milli;
-        } else if (action === "15m") {
-            duration = (15 * Util.durationSeconds.minute) / Util.durationSeconds.milli;
-        } else if (action === "1h") {
-            duration = Util.durationSeconds.hour / Util.durationSeconds.milli;
-        } else if (action === "modal") {
-            const durationStr = interaction.fields.getTextInputValue("duration");
-            duration = DateUtil.parseInterval(durationStr);
+        switch (action) {
+            case "custom":
+                const modal = new ModalBuilder().setCustomId(`snooze:modal:${session.id}`).setTitle("Snooze Reminder");
 
-            if (duration === null || duration <= 0) {
-                await interaction.reply({
-                    content: `${getEmoji("warn")} Invalid duration: \`${durationStr}\`.`,
-                    ephemeral: true
-                });
+                const durationInput = new TextInputBuilder()
+                    .setCustomId("duration")
+                    .setLabel("Snooze duration (e.g. 10m, 2h, 1d)")
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true);
 
+                const row = new ActionRowBuilder().addComponents(durationInput);
+                modal.addComponents(row);
+
+                await interaction.showModal(modal);
                 return true;
-            }
-        } else {
-            return false;
+            case "5m":
+                duration = (5 * Util.durationSeconds.minute) / Util.durationSeconds.milli;
+                break;
+            case "15m":
+                duration = (15 * Util.durationSeconds.minute) / Util.durationSeconds.milli;
+                break;
+            case "1h":
+                duration = Util.durationSeconds.hour / Util.durationSeconds.milli;
+                break;
+            case "modal":
+                const durationStr = interaction.fields.getTextInputValue("duration");
+                duration = DateUtil.parseInterval(durationStr);
+
+                if (duration === null || duration <= 0) {
+                    await interaction.reply({
+                        content: `${getEmoji("warn")} Invalid duration: \`${durationStr}\`.`,
+                        ephemeral: true
+                    });
+
+                    return true;
+                }
+
+                break;
+            default:
+                return false;
         }
 
         const snoozed = await getClient().reminderManager.snooze(interaction.user.id, reminder, duration);

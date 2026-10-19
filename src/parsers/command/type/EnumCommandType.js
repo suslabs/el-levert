@@ -14,29 +14,37 @@ class EnumCommandType extends BaseCommandType {
             return this._createInvalid("invalid_enum", "Enum has no valid values", input);
         }
 
-        let kind = typeof Util.first(values),
-            coerced;
+        const kind = typeof Util.first(values);
 
-        if (kind === "string") {
-            coerced = String(input);
-        } else if (kind === "number") {
-            coerced = Number(input);
+        let coerced;
 
-            if (Number.isNaN(coerced)) {
-                return this._createInvalid("invalid_enum", `Value must be one of: ${values.join(", ")}`, input);
-            }
-        } else if (kind === "boolean") {
-            if (typeof input === "boolean") {
-                coerced = input;
-            } else {
-                coerced = Util.parseBool(String(input), null);
+        switch (kind) {
+            case "string":
+                coerced = String(input);
+                break;
+            case "number":
+                coerced = Number(input);
 
-                if (coerced === null) {
+                if (Number.isNaN(coerced)) {
                     return this._createInvalid("invalid_enum", `Value must be one of: ${values.join(", ")}`, input);
                 }
-            }
-        } else {
-            coerced = input;
+
+                break;
+            case "boolean":
+                if (typeof input === "boolean") {
+                    coerced = input;
+                } else {
+                    coerced = Util.parseBool(String(input), null);
+
+                    if (coerced === null) {
+                        return this._createInvalid("invalid_enum", `Value must be one of: ${values.join(", ")}`, input);
+                    }
+                }
+
+                break;
+            default:
+                coerced = input;
+                break;
         }
 
         if (!values.includes(coerced)) {

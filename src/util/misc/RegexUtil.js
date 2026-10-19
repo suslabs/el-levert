@@ -84,15 +84,18 @@ const RegexUtil = Object.freeze({
         }
 
         return replacement.replace(RegexUtil._substituteRegex, (fullToken, token, groupName) => {
-            if (token === "$") {
-                return "$";
-            } else if (token === "&") {
-                return match[0];
-            } else if (token === "`") {
-                return str.slice(0, match.index);
-            } else if (token === "'") {
-                return str.slice(match.index + match[0].length);
-            } else if (groupName && match.groups) {
+            switch (token) {
+                case "$":
+                    return "$";
+                case "&":
+                    return match[0];
+                case "`":
+                    return str.slice(0, match.index);
+                case "'":
+                    return str.slice(match.index + match[0].length);
+            }
+
+            if (groupName && match.groups) {
                 return match.groups[groupName] ?? "";
             }
 
