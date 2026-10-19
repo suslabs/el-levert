@@ -90,7 +90,11 @@ class TagChownCommand {
             return `${getEmoji("warn")} ${err.message}.`;
         }
 
-        return `${getEmoji("ok")} Transferred tag **${escapeMarkdown(t_name)}** to ${DiscordUtil.formatUser(find.user, null, true)}.`;
+        const owner = DiscordUtil.formatUser(find, null, true, {
+            format: "owner"
+        });
+
+        return `${getEmoji("ok")} Transferred tag **${escapeMarkdown(t_name)}** to ${owner}.`;
     }
 }
 

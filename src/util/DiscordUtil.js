@@ -3,7 +3,7 @@ import path from "node:path";
 
 import axios from "axios";
 
-import { EmbedBuilder, ChannelType, AttachmentBuilder, inlineCode, codeBlock } from "discord.js";
+import { EmbedBuilder, ChannelType, AttachmentBuilder, inlineCode, codeBlock, bold, escapeMarkdown } from "discord.js";
 
 import Util from "./Util.js";
 import LoggerUtil from "./LoggerUtil.js";
@@ -42,32 +42,60 @@ let DiscordUtil = {
     formatUser: (user, id = null, discord = false, options) => {
         options = ObjectUtil.guaranteeObject(options);
 
-        const isDiscord = options.discord ?? discord,
+        const format = options.format ?? "default",
             possessive = options.possessive ?? false;
 
-        let username = null;
+        let username = null,
+            nickname = options.nickname ?? null;
 
         if (TypeTester.isObject(user)) {
-            username = user.username;
-            id = user.id;
+            const targetUser = user.user ?? user;
+
+            username = targetUser.username;
+            id = targetUser.id ?? id;
+            nickname ??= user.nickname ?? null;
         } else if (id !== null) {
             username = user;
         } else {
             id = user;
         }
 
-        if (Util.empty(id) || id === "0") {
+        if (id === "0" || (Util.empty(id) && Util.empty(username))) {
             return "invalid";
         }
 
-        const formattedId = isDiscord ? inlineCode(id) : id;
+        switch (format) {
+            case "owner": {
+                if (Util.empty(username)) {
+                    const formattedId = discord ? inlineCode(id) : id;
+                    return possessive ? `${formattedId}'s` : formattedId;
+                }
 
-        if (Util.nonemptyString(username)) {
-            const name = possessive ? `${username}'s` : username;
-            return `${name} (${formattedId})`;
+                const formattedUsername = discord ? inlineCode(username) : username,
+                    base = possessive ? `${formattedUsername}'s` : formattedUsername;
+
+                if (!Util.nonemptyString(nickname)) {
+                    return base;
+                }
+
+                const formattedNick = discord ? bold(escapeMarkdown(nickname)) : nickname;
+                return `${base} (also known as ${formattedNick})`;
+            }
+
+            case "default": {
+                const formattedId = discord ? inlineCode(id) : id;
+
+                if (Util.nonemptyString(username)) {
+                    const name = possessive ? `${username}'s` : username;
+                    return Util.nonemptyString(id) ? `${name} (${formattedId})` : name;
+                }
+
+                return possessive ? `${formattedId}'s` : formattedId;
+            }
+
+            default:
+                throw new UtilError("Invalid user format: " + format, format);
         }
-
-        return possessive ? `${formattedId}'s` : formattedId;
     },
 
     codeblockRegex: /(?<!\\)(?:`{3}([\S]+\n)?([\s\S]*?)`{3}|`([^`\n]+)`)/g,

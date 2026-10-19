@@ -322,4 +322,38 @@ describe("Tag", () => {
         expect(textTag.isHidden).toBe(false);
         expect(textTag.format()).toBe("hello");
     });
+
+    test("clones tags with deep copied data and runtime properties", () => {
+        const textTag = new Tag({
+            name: "text",
+            body: "content",
+            owner: "u1",
+            args: "arg1",
+            meta: { type: "ivm", language: "ts" }
+        });
+        textTag._hops = ["text", "orig"];
+        textTag._usageName = "aliasUsage";
+        textTag._fetched = true;
+
+        const clonedText = textTag.clone({ name: "cloned" });
+        expect(clonedText).toBeInstanceOf(Tag);
+        expect(clonedText.name).toBe("cloned");
+        expect(clonedText.body).toBe("content");
+        expect(clonedText.owner).toBe("u1");
+        expect(clonedText.getScriptLanguage()).toBe("ts");
+        expect(clonedText.hops).toEqual(["text", "orig"]);
+        expect(clonedText._usageName).toBe("aliasUsage");
+        expect(clonedText._fetched).toBe(true);
+
+        const binTag = new Tag({
+            name: "bin",
+            body: new Uint8Array([1, 2, 3]),
+            meta: { type: "binary" },
+            owner: "u1"
+        });
+        const clonedBin = binTag.clone();
+        expect(clonedBin.isBinary).toBe(true);
+        expect(clonedBin.body).toEqual(new Uint8Array([1, 2, 3]));
+        expect(clonedBin.bin).toEqual(Buffer.from([1, 2, 3]));
+    });
 });

@@ -4,6 +4,8 @@ import { ChannelType, EmbedBuilder, AttachmentBuilder } from "discord.js";
 import DiscordUtil from "../../src/util/DiscordUtil.js";
 import createHttpStubServer from "../helpers/httpStubServer.js";
 
+import UtilError from "../../src/errors/UtilError.js";
+
 let server;
 
 afterEach(async () => {
@@ -193,6 +195,25 @@ describe("DiscordUtil", () => {
         expect(DiscordUtil.formatUser(null)).toBe("invalid");
         expect(DiscordUtil.formatUser("alex", "12345", true, { possessive: true })).toBe("alex's (`12345`)");
         expect(DiscordUtil.formatUser("12345", null, true, { possessive: true })).toBe("`12345`'s");
+        expect(
+            DiscordUtil.formatUser({ user: { id: "12345", username: "alex" }, nickname: "ally" }, null, true, {
+                format: "owner"
+            })
+        ).toBe("`alex` (also known as **ally**)");
+        expect(DiscordUtil.formatUser({ id: "12345", username: "alex" }, null, true, { format: "owner" })).toBe(
+            "`alex`"
+        );
+        expect(
+            DiscordUtil.formatUser({ id: "12345", username: "alex", nickname: "ally" }, null, false, {
+                format: "owner"
+            })
+        ).toBe("alex (also known as ally)");
+        expect(DiscordUtil.formatUser("12345", null, true, { format: "owner" })).toBe("`12345`");
+        expect(DiscordUtil.formatUser("alex", "12345", true, { format: "default" })).toBe("alex (`12345`)");
+        expect(() => DiscordUtil.formatUser("alex", "12345", true, { format: "invalid" })).toThrow(
+            "Invalid user format: invalid"
+        );
+        expect(() => DiscordUtil.formatUser("alex", "12345", true, { format: "invalid" })).toThrow(UtilError);
     });
 
     test("formats error embed and overflows to file attachment when exceeding char limit", () => {

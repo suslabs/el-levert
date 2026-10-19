@@ -83,8 +83,7 @@ let TagTypes = {
         type: "text",
         version: "new",
         scriptType: "ivm",
-        language: VMLanguages.js,
-        flags: new Map()
+        language: VMLanguages.js
     }
 };
 
@@ -151,30 +150,46 @@ function addLanguageMetadata(languages) {
 }
 
 function addDefaultMetadata(defaults, versions, types, languages) {
-    const type = types[defaults.type],
-        version = versions[defaults.version],
-        language = languages[defaults.language];
+    Object.defineProperties(defaults, {
+        meta: {
+            get() {
+                return {
+                    version: this.version,
+                    type: this.type,
+                    language: this.language
+                };
+            },
 
-    defaults.meta = {
-        version: defaults.version,
-        type: defaults.type,
-        language: defaults.language
-    };
+            configurable: true,
+            enumerable: true
+        },
 
-    const flags = [
-        [version.flag, version.value],
-        ["script", type.script]
-    ];
+        flags: {
+            get() {
+                const type = types[this.type],
+                    version = versions[this.version],
+                    language = languages[this.language];
 
-    if (typeof type.flag !== "undefined") {
-        flags.push([type.flag, true]);
-    }
+                const flags = [
+                    [version.flag, version.value],
+                    ["script", type.script]
+                ];
 
-    if (typeof language.flag !== "undefined") {
-        flags.push([language.flag, language.value]);
-    }
+                if (typeof type.flag !== "undefined") {
+                    flags.push([type.flag, true]);
+                }
 
-    defaults.flags = new Map(flags);
+                if (typeof language.flag !== "undefined") {
+                    flags.push([language.flag, language.value]);
+                }
+
+                return new Map(flags);
+            },
+
+            configurable: true,
+            enumerable: true
+        }
+    });
 }
 
 addFlagMetadata(TagTypes.flags);

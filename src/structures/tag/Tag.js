@@ -176,6 +176,10 @@ class Tag extends BaseStructure {
         this.aliasName = aliasName ?? this.aliasName;
         this._fetched = false;
 
+        if (typeof type === "number") {
+            type = TagBitField.toUint8Array(type);
+        }
+
         this.type = TagBitField.from(type);
 
         if (meta != null) {
@@ -379,6 +383,14 @@ class Tag extends BaseStructure {
         }
 
         return data;
+    }
+
+    clone(instance, overrides) {
+        instance._hops = this._hops?.slice();
+        instance._usageName = this._usageName;
+        instance._fetched = this._fetched;
+
+        return instance;
     }
 
     getSize() {
