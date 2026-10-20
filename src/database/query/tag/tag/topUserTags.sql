@@ -1,4 +1,4 @@
-SELECT Tags.*, COALESCE(Usage.count, 0) AS uses
+SELECT Tags.name, Tags.aliasName, Tags.owner, Tags.args, Tags.registered, Tags.lastEdited, Tags.type, COALESCE(Usage.count, 0) AS uses
 FROM Tags
 LEFT JOIN Usage ON Tags.name = Usage.name
 WHERE Tags.owner = $user

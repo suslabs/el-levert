@@ -112,6 +112,8 @@ describe("TagDatabase", () => {
         expect(await db.dump()).toEqual(["alias2", "oldie", "plain2", "script1"]);
         expect(await db.dump(Tag.getFlag([false, "script"]))).toEqual(["alias2", "oldie"]);
         expect((await db.fullDump()).map(tag => tag.name)).toEqual(["alias2", "oldie", "plain2", "script1"]);
+        expect((await db.searchDump()).map(tag => tag.name).sort()).toEqual(["oldie", "plain2", "script1"]);
+        expect(["alias2", "oldie", "plain2", "script1"]).toContain((await db.random()).name);
         expect(await db.searchWithPrefix("pl")).toEqual(["plain2"]);
         expect((await db.list("u2")).map(tag => tag.name)).toEqual(["oldie", "plain2", "script1"]);
 

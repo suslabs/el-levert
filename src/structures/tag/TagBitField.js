@@ -47,7 +47,7 @@ class TagBitField extends BitField {
 
         if (data instanceof Map) {
             data = TagBitField._getMapData(data);
-        } else if (!ArrayBuffer.isView(data)) {
+        } else if (!TypeTester.isTypedArray(data)) {
             throw new TagError("Invalid type", data);
         }
 

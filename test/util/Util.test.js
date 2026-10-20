@@ -228,4 +228,45 @@ describe("Util", () => {
         expect(Util.getErrorMessage(null)).toBe("No error message available");
         expect(Util.getErrorMessage(null, "custom fallback")).toBe("custom fallback");
     });
+
+    test("compares primitives, buffers, and objects with sameValue", () => {
+        expect(Util.sameValue(1, 1)).toBe(true);
+        expect(Util.sameValue("str", "str")).toBe(true);
+        expect(Util.sameValue(true, true)).toBe(true);
+        expect(Util.sameValue(1, 2)).toBe(false);
+        expect(Util.sameValue("a", "b")).toBe(false);
+        expect(Util.sameValue(null, null)).toBe(true);
+        expect(Util.sameValue(null, undefined)).toBe(false);
+        expect(Util.sameValue(1, "1")).toBe(false);
+
+        const buf1 = Buffer.from([1, 2, 3]),
+            buf2 = Buffer.from([1, 2, 3]),
+            buf3 = Buffer.from([1, 2, 4]),
+            bufShort = Buffer.from([1, 2]);
+
+        expect(Util.sameValue(buf1, buf2)).toBe(true);
+        expect(Util.sameValue(buf1, buf3)).toBe(false);
+        expect(Util.sameValue(buf1, bufShort)).toBe(false);
+        expect(Util.sameValue(buf1, new Uint8Array([1, 2, 3]))).toBe(true);
+        expect(Util.sameValue(buf1, new Uint8Array([1, 2, 4]))).toBe(false);
+
+        const ab1 = new Uint8Array([1, 2, 3]).buffer,
+            ab2 = new Uint8Array([1, 2, 3]).buffer,
+            ab3 = new Uint8Array([1, 2, 4]).buffer;
+
+        expect(Util.sameValue(ab1, ab2)).toBe(true);
+        expect(Util.sameValue(ab1, ab3)).toBe(false);
+
+        const u1 = new Uint8Array([10, 20]),
+            u2 = new Uint8Array([10, 20]),
+            u3 = new Uint8Array([10, 30]);
+
+        expect(Util.sameValue(u1, u2)).toBe(true);
+        expect(Util.sameValue(u1, u3)).toBe(false);
+
+        expect(Util.sameValue({ a: 1, b: 2 }, { a: 1, b: 2 })).toBe(true);
+        expect(Util.sameValue({ a: 1 }, { a: 2 })).toBe(false);
+        expect(Util.sameValue([1, 2], [1, 2])).toBe(true);
+        expect(Util.sameValue([1, 2], [1, 3])).toBe(false);
+    });
 });

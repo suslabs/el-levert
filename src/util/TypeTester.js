@@ -13,6 +13,10 @@ const TypeTester = Object.freeze({
         return Array.isArray(arr) || ArrayBuffer.isView(arr);
     },
 
+    isTypedArray: arr => {
+        return ArrayBuffer.isView(arr) && !(arr instanceof DataView);
+    },
+
     isClass: obj => {
         if (typeof obj !== "function") {
             return false;

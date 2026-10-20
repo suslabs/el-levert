@@ -115,6 +115,7 @@ Subcommands:
 
     attachmentWarning =
         "**Heads-up! Discord-hosted images disappear if the original message that provided them is deleted.**";
+    localFileWarning = "**Heads-up! Tag content was loaded from a local file.**";
 
     matchesSubcmd(name, checkAliases = true) {
         return this.getSubcmdNames(checkAliases).includes(name) || FakeTagRegistry.has(name);
@@ -164,11 +165,14 @@ Subcommands:
                 meta: null,
                 attachment: false,
                 fromReply: false,
+                localFile: false,
                 err: `${getEmoji("warn")} Tag body is empty.`
             };
         }
 
         let parsed, downloaded;
+
+        let isLocalFile = false;
 
         if (hasAttachments) {
             try {
@@ -186,6 +190,8 @@ Subcommands:
                         body: null,
                         meta: null,
                         attachment: false,
+                        fromReply: false,
+                        localFile: false,
                         err: `${getEmoji("warn")} ${err.message}.`
                     };
                 } else {
@@ -193,6 +199,8 @@ Subcommands:
                         body: null,
                         meta: null,
                         attachment: false,
+                        fromReply: false,
+                        localFile: false,
                         err: DiscordUtil.formatErrorEmbed(`${getEmoji("error")} Downloading attachment failed:`, err, {
                             charLimit: getConfig().errorCharLimit
                         })
@@ -215,11 +223,14 @@ Subcommands:
                     body: null,
                     meta: null,
                     attachment: false,
+                    fromReply: false,
+                    localFile: false,
                     err: `${getEmoji(parsedBody.err.level)} ${parsedBody.err.message}.`
                 };
             }
 
             if (parsedBody.guessedPath) {
+                isLocalFile = true;
                 parsed = {
                     body: parsedBody.body,
                     meta: Tag.getParsedMeta(parsedBody, type)
@@ -236,6 +247,7 @@ Subcommands:
             meta: parsed.meta,
             attachment,
             fromReply,
+            localFile: isLocalFile,
             err: null
         };
     }

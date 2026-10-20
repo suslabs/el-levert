@@ -1,4 +1,5 @@
-SELECT * FROM Revisions
+SELECT id, target, subjectId, subjectIndex, operation, actor, created, key, changed, NULL AS snapshot, revertOf, restores, reason
+FROM Revisions
 WHERE ($target IS NULL OR target = $target)
     AND ($subjectId IS NULL OR subjectId = $subjectId)
     AND ($actor IS NULL OR actor = $actor)

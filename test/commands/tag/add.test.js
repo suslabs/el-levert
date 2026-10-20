@@ -119,9 +119,9 @@ describe("tag add command", () => {
             }
         });
 
-        await expect(executeCommand(command, `add alpha ${filePath}`, { msg: ownerMsg })).resolves.toContain(
-            "Created script tag **alpha**"
-        );
+        const ownerRes = await executeCommand(command, `add alpha ${filePath}`, { msg: ownerMsg });
+        expect(ownerRes).toContain("Created script tag **alpha**");
+        expect(ownerRes).toContain(command.localFileWarning);
 
         const alpha = await runtime.client.tagManager.fetch("alpha");
 
@@ -131,9 +131,9 @@ describe("tag add command", () => {
 
         await addAdmin(runtime, msg.author.id);
 
-        await expect(executeCommand(command, `add beta ${filePath}`, { msg })).resolves.toContain(
-            "Created tag **beta**"
-        );
+        const adminRes = await executeCommand(command, `add beta ${filePath}`, { msg });
+        expect(adminRes).toContain("Created tag **beta**");
+        expect(adminRes).not.toContain(command.localFileWarning);
 
         const beta = await runtime.client.tagManager.fetch("beta");
         expect(beta.body).toBe(filePath);

@@ -1,5 +1,3 @@
-import { Buffer } from "node:buffer";
-
 import { escapeMarkdown, bold, codeBlock, time } from "discord.js";
 
 import BaseStructure from "../BaseStructure.js";
@@ -187,8 +185,8 @@ class Tag extends BaseStructure {
         }
 
         if (this.isBinary) {
-            this.bin = Buffer.from(this.bin ?? this.body ?? []);
-            this.body = new Uint8Array(this.bin.buffer, this.bin.byteOffset, this.bin.byteLength);
+            this.bin = ArrayUtil.toBuffer(this.bin ?? this.body ?? []);
+            this.body = ArrayUtil.toUint8Array(this.bin);
         }
 
         if (this.isAlias) {
@@ -235,8 +233,8 @@ class Tag extends BaseStructure {
         }
 
         if (this.isBinary) {
-            this.bin = Buffer.from(this.bin ?? this.body ?? []);
-            this.body = new Uint8Array(this.bin.buffer, this.bin.byteOffset, this.bin.byteLength);
+            this.bin = ArrayUtil.toBuffer(this.bin ?? this.body ?? []);
+            this.body = ArrayUtil.toUint8Array(this.bin);
         } else {
             this.bin = null;
         }
@@ -304,8 +302,8 @@ class Tag extends BaseStructure {
         }
 
         if (type === "binary") {
-            this.bin = Buffer.from(this.bin ?? this.body ?? []);
-            this.body = new Uint8Array(this.bin.buffer, this.bin.byteOffset, this.bin.byteLength);
+            this.bin = ArrayUtil.toBuffer(this.bin ?? this.body ?? []);
+            this.body = ArrayUtil.toUint8Array(this.bin);
         } else if (this.bin != null) {
             this.bin = null;
             if (typeof this.body !== "string") {
@@ -369,20 +367,30 @@ class Tag extends BaseStructure {
         }
 
         if (this.isBinary) {
-            const binaryBody = this.body instanceof Uint8Array ? this.body : new Uint8Array(this.bin ?? []);
+            const binaryBody = this.body instanceof Uint8Array ? this.body : ArrayUtil.toUint8Array(this.bin ?? []);
 
             if (props == null || props.includes("body")) {
                 data.body = db ? null : binaryBody;
             }
 
             if (props == null || props.includes("bin")) {
-                data.bin = db ? (this.bin ?? Buffer.from(this.body ?? [])) : binaryBody;
+                data.bin = this.bin ?? ArrayUtil.toBuffer(binaryBody);
             }
         } else if (props == null || props.includes("bin")) {
             data.bin = null;
         }
 
         return data;
+    }
+
+    shallowProps(options) {
+        const shallow = ArrayUtil.guaranteeArray(options.shallow, null, true);
+
+        if (options.keepBody ?? true) {
+            shallow.push("body", "bin");
+        }
+
+        return shallow;
     }
 
     clone(instance, overrides) {
@@ -475,18 +483,11 @@ class Tag extends BaseStructure {
     }
 
     sameBody(tag) {
-        if (this.isBinary || tag.isBinary) {
-            if (this.isBinary !== tag.isBinary) {
-                return false;
-            }
-
-            const buf1 = Buffer.from(this.bin ?? this.body ?? []),
-                buf2 = Buffer.from(tag.bin ?? tag.body ?? []);
-
-            return buf1.equals(buf2) && this.args === tag.args;
+        if (this.isBinary !== tag.isBinary) {
+            return false;
         }
 
-        return this.body === tag.body && this.args === tag.args;
+        return Util.sameValue(this.bin ?? this.body, tag.bin ?? tag.body) && this.args === tag.args;
     }
 
     sameType(tag) {

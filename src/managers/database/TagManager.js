@@ -33,6 +33,7 @@ class TagManager extends DBManager {
     static loadPriority = 0;
 
     static getNameMap(tags) {
+        tags = ArrayUtil.guaranteeArray(tags, null, true);
         return new Map(tags.map(tag => [tag.name, tag]));
     }
 
@@ -91,7 +92,7 @@ class TagManager extends DBManager {
         let msg, ref;
 
         if (isBinary) {
-            if (!ArrayBuffer.isView(body) || body.byteLength === 0) {
+            if (!TypeTester.isTypedArray(body) || body.byteLength === 0) {
                 msg = "Tag body is empty";
             }
         } else {
@@ -564,7 +565,7 @@ class TagManager extends DBManager {
             this.checkName(tag.name);
         }
 
-        const oldTag = tag.clone(),
+        const oldTag = tag.clone({}, { keepBody: true }),
             oldOwner = tag.owner,
             tagSize = tag.getSize();
 
@@ -632,7 +633,7 @@ class TagManager extends DBManager {
         }
 
         await this.tag_db.transactionImmediate(async tx => {
-            const oldTag = tag.clone(),
+            const oldTag = tag.clone({}, { keepBody: true }),
                 aliasesBefore = await tx.fetchAliases(oldName);
 
             const res = await tx.rename(tag, newName),
@@ -641,7 +642,7 @@ class TagManager extends DBManager {
             if (updated) {
                 await tx.updateAliases(oldName, newName);
 
-                const aliasesAfter = await tx.fetchAliases(newName),
+                const aliasesAfter = (await tx.fetchAliases(newName)) ?? [],
                     aliasesByName = this.constructor.getNameMap(aliasesBefore),
                     revisionOptions = this._getRevisionOptions(options, oldTag.owner);
 
@@ -713,7 +714,7 @@ class TagManager extends DBManager {
             throw new TagError("Tag is already hidden", tag.name);
         }
 
-        const oldTag = tag.clone();
+        const oldTag = tag.clone({}, { keepBody: true });
         tag.setHidden();
         tag.setLastEdited();
 
@@ -755,7 +756,7 @@ class TagManager extends DBManager {
             throw new TagError("Tag is not hidden", tag.name);
         }
 
-        const oldTag = tag.clone();
+        const oldTag = tag.clone({}, { keepBody: true });
         tag.unsetHidden();
         tag.setLastEdited();
 
@@ -932,14 +933,8 @@ class TagManager extends DBManager {
         const maxResults = opts.maxResults ?? 20,
             offset = opts.offset ?? 0;
 
-        let tags = await this.dump(true, [false, "script", "hidden"]);
-
-        tags = tags
-            .filter(tag => !tag.isAlias)
-            .map(tag => ({
-                name: tag.name,
-                body: tag.body
-            }));
+        const flag = Tag.getFlag([false, "script", "hidden"]),
+            tags = await this.tag_db.searchDump(flag);
 
         const res = uFuzzySearch.search(tags, query, {
             searchKey: "body",
@@ -951,14 +946,8 @@ class TagManager extends DBManager {
     }
 
     async fullSearchSort(query) {
-        let tags = await this.dump(true, [false, "script", "hidden"]);
-
-        tags = tags
-            .filter(tag => !tag.isAlias)
-            .map(tag => ({
-                name: tag.name,
-                body: tag.body
-            }));
+        const flag = Tag.getFlag([false, "script", "hidden"]),
+            tags = await this.tag_db.searchDump(flag);
 
         return uFuzzySearch.sort(tags, query, {
             searchKey: "body"
@@ -967,8 +956,10 @@ class TagManager extends DBManager {
 
     async random(prefix, validate = false) {
         if (!Util.nonemptyString(prefix)) {
-            const tags = await this.dump();
-            return Util.randomElement(tags) ?? null;
+            const flag = Tag.getFlag(),
+                row = await this.tag_db.random(flag.isEmpty() ? null : flag);
+
+            return row?.name ?? null;
         } else if (validate) {
             this.checkName(prefix);
         }
@@ -1336,7 +1327,7 @@ class TagManager extends DBManager {
 
             await tx.updateAliases(current.name, restored.name);
 
-            const aliasesAfter = await tx.fetchAliases(restored.name),
+            const aliasesAfter = (await tx.fetchAliases(restored.name)) ?? [],
                 aliasesByName = this.constructor.getNameMap(aliasesBefore);
 
             for (const aliasAfter of aliasesAfter) {

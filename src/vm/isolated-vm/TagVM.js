@@ -10,7 +10,7 @@ import { getConfig, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
-import TypeTester from "../../util/TypeTester.js";
+import ArrayUtil from "../../util/ArrayUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 
 import LoggerUtil from "../../util/LoggerUtil.js";
@@ -290,17 +290,12 @@ class TagVM extends VM {
         const out = JSON.parse(msg);
 
         if (out.file != null) {
-            let { data, name } = out.file;
-
-            if (TypeTester.isObject(data)) {
-                data = Object.values(data);
-            }
-
-            const { file: _, ...outData } = out;
+            const { data, name } = out.file,
+                { file: _, ...outData } = out;
 
             return {
                 ...outData,
-                ...DiscordUtil.getFileAttach(data, name)
+                ...DiscordUtil.getFileAttach(ArrayUtil.toBuffer(data), name)
             };
         }
 

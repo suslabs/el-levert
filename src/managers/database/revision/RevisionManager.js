@@ -95,7 +95,7 @@ class RevisionManager {
         const oldKey = this.getKey(before),
             key = this.getKey(after);
 
-        if (!this._sameValue(oldKey, key)) {
+        if (!Util.sameValue(oldKey, key)) {
             await this.db.updateSubjectKey(subject, key);
         }
 
@@ -147,10 +147,6 @@ class RevisionManager {
 
     _changedFields(before, after) {
         return RevisionUtil.changedFields(before, after);
-    }
-
-    _sameValue(a, b) {
-        return RevisionUtil.sameValue(a, b);
     }
 
     async _ensureBaseline(subject, data, options) {

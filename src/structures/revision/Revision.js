@@ -1,5 +1,7 @@
 import BaseStructure from "../BaseStructure.js";
 
+import ObjectUtil from "../../util/ObjectUtil.js";
+
 class Revision extends BaseStructure {
     static defaultValues = {
         id: 0,
@@ -35,11 +37,38 @@ class Revision extends BaseStructure {
     static nullableDataProps = ["snapshot", "revertOf", "restores", "reason"];
 
     constructor(data) {
+        data = ObjectUtil.guaranteeObject(data);
+
+        const snapshot = data.snapshot ?? Revision.defaultValues.snapshot;
+        delete data.snapshot;
+
         super(data);
 
         this.key = this.constructor._parseJson(this.key, {});
         this.changed = this.constructor._parseJson(this.changed, []);
-        this.snapshot = this.snapshot === null ? null : this.constructor._parseJson(this.snapshot, {});
+
+        this._snapshot = snapshot;
+        this._parsedSnapshot = undefined;
+    }
+
+    get snapshot() {
+        if (typeof this._parsedSnapshot !== "undefined") {
+            return this._parsedSnapshot;
+        } else if (this._snapshot === null) {
+            this._parsedSnapshot = null;
+            return null;
+        } else {
+            this._parsedSnapshot = this.constructor._parseJson(this._snapshot, {});
+            return this._parsedSnapshot;
+        }
+    }
+
+    getData(data, prefix = "", nullable = true, props = this.constructor.dataProps) {
+        if (props == null || props.includes("snapshot")) {
+            data.snapshot = this.snapshot;
+        }
+
+        return data;
     }
 
     static _parseJson(value, fallback) {

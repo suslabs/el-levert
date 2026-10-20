@@ -67,7 +67,7 @@ class TagEditCommand {
         let parsed = await this.parentCmd.parseBase(t_args, ctx, {
                 allowFilePath: this.parentCmd.canUseFilePath(ctx)
             }),
-            { body, meta, attachment, fromReply } = parsed;
+            { body, meta, attachment, fromReply, localFile } = parsed;
 
         if (parsed.err !== null) {
             return parsed.err;
@@ -109,6 +109,8 @@ class TagEditCommand {
 
         if (attachment) {
             out += `\n${this.parentCmd.attachmentWarning}`;
+        } else if (localFile) {
+            out += `\n${this.parentCmd.localFileWarning}`;
         }
 
         return out;

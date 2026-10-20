@@ -6,6 +6,7 @@ import SqliteResult from "../../src/database/drivers/sqlite/SqliteResult.js";
 import Revision from "../../src/structures/revision/Revision.js";
 import RevisionSubject from "../../src/structures/revision/RevisionSubject.js";
 
+import Util from "../../src/util/Util.js";
 import RevisionUtil from "../../src/util/RevisionUtil.js";
 
 describe("RevisionUtil", () => {
@@ -60,9 +61,9 @@ describe("RevisionUtil", () => {
         const before = { name: "alpha", body: "v1", count: 1 };
         const after = { name: "alpha", body: "v2", count: 1, extra: "yes" };
 
-        expect(RevisionUtil.sameValue(1, 1)).toBe(true);
-        expect(RevisionUtil.sameValue({ a: 1 }, { a: 1 })).toBe(true);
-        expect(RevisionUtil.sameValue({ a: 1 }, { a: 2 })).toBe(false);
+        expect(Util.sameValue(1, 1)).toBe(true);
+        expect(Util.sameValue({ a: 1 }, { a: 1 })).toBe(true);
+        expect(Util.sameValue({ a: 1 }, { a: 2 })).toBe(false);
 
         const diff = RevisionUtil.diff(before, after);
         expect(diff).toEqual({

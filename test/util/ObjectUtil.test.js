@@ -25,6 +25,31 @@ describe("ObjectUtil", () => {
         expect(typeof target.b).toBe("function");
         expect(target.b()).toBe(5);
         expect(target.c).toEqual([1]);
+
+        class GetterTarget {
+            get computed() {
+                return "getter";
+            }
+        }
+
+        const getterTarget = new GetterTarget();
+        expect(ObjectUtil._isGetterOnly(getterTarget, "computed")).toBe(true);
+        expect(ObjectUtil._isGetterOnly(getterTarget, "regular")).toBe(false);
+
+        ObjectUtil.setValuesWithDefaults(
+            getterTarget,
+            { a: 1, computed: "ignored" },
+            { a: 2, computed: "ignored-def", b: 3 }
+        );
+        expect(getterTarget.a).toBe(1);
+        expect(getterTarget.b).toBe(3);
+        expect(getterTarget.computed).toBe("getter");
+
+        const filteredTarget = {};
+        ObjectUtil.setValuesWithDefaults(filteredTarget, { x: 1, y: 2 }, { x: 0, y: 0, z: 3 }, key => key !== "y");
+        expect(filteredTarget.x).toBe(1);
+        expect(filteredTarget.z).toBe(3);
+        expect("y" in filteredTarget).toBe(false);
         expect(ObjectUtil.getBooleanOptions(true, { a: false, b: false })).toEqual({ a: true, b: true });
         expect(ObjectUtil.getBooleanOptions(null, { a: false, b: true })).toEqual({ a: false, b: true });
         expect(ObjectUtil.getBooleanOptions({ a: true }, { a: false, b: false }, { a: false, b: true })).toEqual({

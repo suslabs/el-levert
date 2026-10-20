@@ -1,3 +1,5 @@
+import { Buffer } from "node:buffer";
+
 import Util from "./Util.js";
 import TypeTester from "./TypeTester.js";
 
@@ -18,6 +20,16 @@ const ArrayUtil = Object.freeze({
         return Array.isArray(obj)
             ? obj.concat(new Array(Util.clamp(length - obj.length, 0)).fill())
             : new Array(length).fill(obj);
+    },
+
+    guaranteeSet: obj => {
+        if (obj instanceof Set) {
+            return obj;
+        } else if (obj == null) {
+            return new Set();
+        }
+
+        return new Set(Array.isArray(obj) ? obj : [obj]);
     },
 
     guaranteeFirst: obj => {
@@ -324,6 +336,55 @@ const ArrayUtil = Object.freeze({
 
     maxLength: (array, lengthType = LengthTypes.string) => {
         return Math.max(...array.map(x => Util.getLength(x, lengthType)));
+    },
+
+    toBuffer: (data, encoding = "utf8") => {
+        if (data == null) {
+            return Buffer.alloc(0);
+        } else if (Buffer.isBuffer(data)) {
+            return data;
+        } else if (TypeTester.isTypedArray(data)) {
+            return Buffer.from(data.buffer, data.byteOffset, data.byteLength);
+        } else if (data instanceof ArrayBuffer) {
+            return Buffer.from(data);
+        } else if (typeof data === "string") {
+            return Buffer.from(data, encoding);
+        } else if (Array.isArray(data)) {
+            return Buffer.from(data);
+        } else if (TypeTester.isObject(data)) {
+            if (Array.isArray(data.data)) {
+                return Buffer.from(data.data);
+            } else {
+                return Buffer.from(Object.values(data));
+            }
+        } else {
+            return Buffer.from(data);
+        }
+    },
+
+    toUint8Array: (data, encoding = "utf8") => {
+        if (data == null) {
+            return new Uint8Array(0);
+        } else if (data.constructor === Uint8Array) {
+            return data;
+        } else if (TypeTester.isTypedArray(data)) {
+            return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+        } else if (data instanceof ArrayBuffer) {
+            return new Uint8Array(data);
+        } else if (typeof data === "string") {
+            const buf = Buffer.from(data, encoding);
+            return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+        } else if (Array.isArray(data)) {
+            return Uint8Array.from(data);
+        } else if (TypeTester.isObject(data)) {
+            if (Array.isArray(data.data)) {
+                return Uint8Array.from(data.data);
+            } else {
+                return Uint8Array.from(Object.values(data));
+            }
+        } else {
+            return Uint8Array.from(data);
+        }
     },
 
     _indexFunc: (array, item) => {

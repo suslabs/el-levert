@@ -56,9 +56,9 @@ describe("tag edit command", () => {
             }
         });
 
-        await expect(executeCommand(command, `edit alpha ${filePath}`, { msg: ownerMsg })).resolves.toContain(
-            "Edited script tag"
-        );
+        const ownerRes = await executeCommand(command, `edit alpha ${filePath}`, { msg: ownerMsg });
+        expect(ownerRes).toContain("Edited script tag");
+        expect(ownerRes).toContain(command.localFileWarning);
 
         const alpha = await runtime.client.tagManager.fetch("alpha");
 
@@ -68,9 +68,9 @@ describe("tag edit command", () => {
 
         await addAdmin(runtime, msg.author.id);
 
-        await expect(executeCommand(command, `edit alpha ${filePath}`, { msg })).resolves.toContain(
-            "Edited tag"
-        );
+        const adminRes = await executeCommand(command, `edit alpha ${filePath}`, { msg });
+        expect(adminRes).toContain("Edited tag");
+        expect(adminRes).not.toContain(command.localFileWarning);
 
         const alphaLiteral = await runtime.client.tagManager.fetch("alpha");
         expect(alphaLiteral.body).toBe(filePath);

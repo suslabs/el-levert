@@ -162,6 +162,14 @@ class TagDatabase extends RevisionDatabase {
         return tags;
     }
 
+    async searchDump(flag = null) {
+        return await this.tagQueries.searchDump.all(TagBitField.query(flag));
+    }
+
+    async random(flag = null) {
+        return await this.tagQueries.random.get(TagBitField.query(flag));
+    }
+
     async searchWithPrefix(prefix) {
         const rows = await this.tagQueries.searchWithPrefix.all({
                 $prefix: `${prefix}%`

@@ -22,7 +22,7 @@ class BitField {
 
             return bytes;
         } else if (TypeTester.isArray(bits)) {
-            return ArrayBuffer.isView(bits)
+            return TypeTester.isTypedArray(bits)
                 ? new Uint8Array(bits.buffer, bits.byteOffset, bits.byteLength)
                 : Uint8Array.from(bits);
         } else {
@@ -132,17 +132,7 @@ class BitField {
             return false;
         }
 
-        if (this.buffer.length !== other.buffer.length) {
-            return false;
-        }
-
-        for (let i = 0; i < this.buffer.length; i++) {
-            if (this.buffer[i] !== other.buffer[i]) {
-                return false;
-            }
-        }
-
-        return true;
+        return Util.sameValue(this.buffer, other.buffer);
     }
 
     toBuffer() {

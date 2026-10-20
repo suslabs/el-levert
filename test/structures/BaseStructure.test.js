@@ -26,6 +26,19 @@ class ChildHookStructure extends SampleStructure {
     }
 }
 
+class GetterStructure extends BaseStructure {
+    static defaultValues = {
+        name: "",
+        computed: "default"
+    };
+
+    static dataProps = ["name", "computed"];
+
+    get computed() {
+        return "from-getter";
+    }
+}
+
 describe("BaseStructure", () => {
     test("instantiates with defaults and supports from factory", () => {
         const item = new SampleStructure({ name: "item1" });
@@ -91,5 +104,26 @@ describe("BaseStructure", () => {
 
         const cloned = item.clone();
         expect(cloned.hookRan).toBe(true);
+    });
+
+    test("omits getter-only properties on prototype from default assignment", () => {
+        const item = new GetterStructure({ name: "test" });
+
+        expect(item.name).toBe("test");
+        expect(item.computed).toBe("from-getter");
+    });
+
+    test("shallowProps returns a Set and preserves references for shallow props in clone", () => {
+        const item = new SampleStructure({
+            name: "shallow-test",
+            metadata: { priority: 10 }
+        });
+
+        const shallowSet = item.shallowProps({ shallow: ["metadata"] });
+        expect(shallowSet).toBeInstanceOf(Set);
+        expect(shallowSet.has("metadata")).toBe(true);
+
+        const cloned = item.clone({}, { shallow: ["metadata"] });
+        expect(cloned.metadata).toBe(item.metadata);
     });
 });

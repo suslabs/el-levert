@@ -973,6 +973,30 @@ let Util = {
 
     getErrorMessage: (err, fallback = "No error message available") => {
         return (TypeTester.isObject(err) ? (err.stack ?? err.message) : err) ?? fallback;
+    },
+
+    sameValue: (a, b) => {
+        if (a === b) {
+            return true;
+        } else if (a == null || b == null || typeof a !== typeof b) {
+            return false;
+        } else if (
+            (ArrayBuffer.isView(a) || a instanceof ArrayBuffer) &&
+            (ArrayBuffer.isView(b) || b instanceof ArrayBuffer)
+        ) {
+            if (a.byteLength !== b.byteLength) {
+                return false;
+            }
+
+            const viewA = a instanceof Uint8Array ? a : new Uint8Array(a.buffer ?? a, a.byteOffset ?? 0, a.byteLength),
+                viewB = b instanceof Uint8Array ? b : new Uint8Array(b.buffer ?? b, b.byteOffset ?? 0, b.byteLength);
+
+            return Buffer.compare(viewA, viewB) === 0;
+        } else if (TypeTester.isObject(a) && TypeTester.isObject(b)) {
+            return JSON.stringify(a) === JSON.stringify(b);
+        } else {
+            return false;
+        }
     }
 };
 

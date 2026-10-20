@@ -1,6 +1,7 @@
 import Revision from "../structures/revision/Revision.js";
 import RevisionSubject from "../structures/revision/RevisionSubject.js";
 
+import Util from "./Util.js";
 import ObjectUtil from "./ObjectUtil.js";
 import ArrayUtil from "./ArrayUtil.js";
 import DatabaseUtil from "./database/DatabaseUtil.js";
@@ -8,8 +9,6 @@ import DatabaseUtil from "./database/DatabaseUtil.js";
 const RevisionUtil = Object.freeze({
     subject: row => DatabaseUtil.rowEntity(row, RevisionSubject),
     revision: row => DatabaseUtil.rowEntity(row, Revision),
-
-    sameValue: (a, b) => a === b || JSON.stringify(a) === JSON.stringify(b),
 
     diff: (before, after) => {
         before = ObjectUtil.guaranteeObject(before);
@@ -19,7 +18,7 @@ const RevisionUtil = Object.freeze({
 
         return Object.fromEntries(
             fields
-                .filter(field => !RevisionUtil.sameValue(before[field], after[field]))
+                .filter(field => !Util.sameValue(before[field], after[field]))
                 .map(field => [
                     field,
                     {

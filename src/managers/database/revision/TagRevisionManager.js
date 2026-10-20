@@ -10,6 +10,7 @@ import { getConfig } from "../../../LevertClient.js";
 
 import Util from "../../../util/Util.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
+import TypeTester from "../../../util/TypeTester.js";
 
 import TagError from "../../../errors/TagError.js";
 
@@ -25,13 +26,13 @@ class TagRevisionManager {
                     return value.toNumber();
                 } else if (typeof value === "number") {
                     return value;
-                } else if (ArrayBuffer.isView(value)) {
+                } else if (TypeTester.isTypedArray(value)) {
                     return Util.bytesToNumber(value);
                 }
 
                 return value;
             case "bin":
-                if (ArrayBuffer.isView(value)) {
+                if (TypeTester.isTypedArray(value)) {
                     return Buffer.from(value.buffer, value.byteOffset, value.byteLength).toString("base64");
                 }
 

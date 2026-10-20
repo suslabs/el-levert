@@ -1,4 +1,6 @@
 import ObjectUtil from "../util/ObjectUtil.js";
+import ArrayUtil from "../util/ArrayUtil.js";
+import TypeTester from "../util/TypeTester.js";
 
 function makeFilter(props) {
     return props == null
@@ -26,8 +28,11 @@ class BaseStructure {
 
         delete this.getData;
         delete this.clone;
+        delete this.shallowProps;
+
         delete this._childGetData;
         delete this._childClone;
+        delete this._childShallowProps;
 
         const proto = Object.getPrototypeOf(this);
 
@@ -36,6 +41,9 @@ class BaseStructure {
 
         this._childClone = proto.clone;
         this.clone = this._clone.bind(this);
+
+        this._childShallowProps = proto.shallowProps;
+        this.shallowProps = this._shallowProps.bind(this);
     }
 
     _getData(prefix = "", nullable = true, props = undefined) {
@@ -68,27 +76,36 @@ class BaseStructure {
         return Object.fromEntries(Object.entries(data).map(([key, val]) => [prefix + key, val]));
     }
 
-    _clone(overrides = {}) {
-        overrides = ObjectUtil.guaranteeObject(overrides);
+    _shallowProps(options) {
+        const shallow =
+            typeof this._childShallowProps === "function"
+                ? this._childShallowProps.call(this, options)
+                : options.shallow;
 
-        const data = this.getData("", false);
+        return ArrayUtil.guaranteeSet(shallow);
+    }
+
+    _clone(overrides = {}, options = {}) {
+        overrides = ObjectUtil.guaranteeObject(overrides);
+        options = ObjectUtil.guaranteeObject(options);
+
+        const data = this.getData("", false),
+            shallow = this.shallowProps(options);
 
         for (const [key, val] of Object.entries(data)) {
-            if (typeof val === "function" || val === null || typeof val !== "object") {
+            if (shallow.has(key) || !TypeTester.isObject(val)) {
                 continue;
             }
 
             try {
                 data[key] = structuredClone(val);
-            } catch (err) {
-                // Keep reference if unclonable
-            }
+            } catch (err) {}
         }
 
         const instance = new this.constructor({ ...data, ...overrides }, overrides);
 
         if (typeof this._childClone === "function") {
-            return this._childClone.call(this, instance, overrides) ?? instance;
+            return this._childClone.call(this, instance, overrides, options) ?? instance;
         }
 
         return instance;

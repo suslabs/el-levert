@@ -355,5 +355,10 @@ describe("Tag", () => {
         expect(clonedBin.isBinary).toBe(true);
         expect(clonedBin.body).toEqual(new Uint8Array([1, 2, 3]));
         expect(clonedBin.bin).toEqual(Buffer.from([1, 2, 3]));
+        expect(clonedBin.bin).toBe(binTag.bin);
+
+        const clonedDeep = binTag.clone({}, { keepBody: false });
+        expect(clonedDeep.bin).toEqual(binTag.bin);
+        expect(clonedDeep.bin).not.toBe(binTag.bin);
     });
 });

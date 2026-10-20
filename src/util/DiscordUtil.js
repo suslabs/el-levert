@@ -110,8 +110,11 @@ let DiscordUtil = {
     },
 
     getFileAttach: (data, name = "message.txt") => {
-        const attachment = new AttachmentBuilder(Buffer.from(data), { name });
-        return { files: [attachment] };
+        const attachment = new AttachmentBuilder(ArrayUtil.toBuffer(data), { name });
+
+        return {
+            files: [attachment]
+        };
     },
 
     formatErrorEmbed: (header, err, options) => {
@@ -728,9 +731,9 @@ let DiscordUtil = {
         if (Buffer.isBuffer(data)) {
             buf = data;
         } else if (typeof data === "string") {
-            buf = Buffer.from(data, "utf8");
-        } else if (data instanceof Uint8Array || data instanceof ArrayBuffer) {
-            buf = Buffer.from(data);
+            buf = ArrayUtil.toBuffer(data, "utf8");
+        } else if (TypeTester.isTypedArray(data) || data instanceof ArrayBuffer) {
+            buf = ArrayUtil.toBuffer(data);
         }
 
         if (buf === null) {

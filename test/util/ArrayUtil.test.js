@@ -9,6 +9,13 @@ describe("ArrayUtil", () => {
         expect(ArrayUtil.guaranteeArray("x")).toEqual(["x"]);
         expect(ArrayUtil.guaranteeArray(["x"], 3)).toEqual(["x", undefined, undefined]);
         expect(ArrayUtil.guaranteeArray(null, null, true)).toEqual([]);
+        const existingSet = new Set(["a", "b"]);
+        expect(ArrayUtil.guaranteeSet(existingSet)).toBe(existingSet);
+        expect(ArrayUtil.guaranteeSet(null)).toEqual(new Set());
+        expect(ArrayUtil.guaranteeSet(undefined)).toEqual(new Set());
+        expect(ArrayUtil.guaranteeSet(["x", "y"])).toEqual(new Set(["x", "y"]));
+        expect(ArrayUtil.guaranteeSet("single")).toEqual(new Set(["single"]));
+        expect(ArrayUtil.guaranteeSet(42)).toEqual(new Set([42]));
         expect(ArrayUtil.guaranteeFirst([1, 2])).toBe(1);
         expect(ArrayUtil.sum([{ n: 1 }, { n: 2 }], "n")).toBe(3);
         expect(ArrayUtil.concat(["a"], "b", "c")).toEqual(["a", "b", "c"]);
@@ -123,5 +130,32 @@ describe("ArrayUtil", () => {
         const wipeAsync = [1, 2, 3];
         await expect(ArrayUtil.wipeArray(wipeAsync, async value => value === 1)).resolves.toBe(1);
         expect(wipeAsync).toEqual([2, 3]);
+    });
+
+    test("converts buffers and views zero-copy where possible", () => {
+        const rawBuf = Buffer.from([1, 2, 3]);
+        expect(ArrayUtil.toBuffer(rawBuf)).toBe(rawBuf);
+
+        const u8 = new Uint8Array([4, 5, 6]);
+        const viewBuf = ArrayUtil.toBuffer(u8);
+        expect(Buffer.isBuffer(viewBuf)).toBe(true);
+        expect(viewBuf.buffer).toBe(u8.buffer);
+        expect(ArrayUtil.toUint8Array(u8)).toBe(u8);
+
+        const fromBufU8 = ArrayUtil.toUint8Array(rawBuf);
+        expect(fromBufU8.buffer).toBe(rawBuf.buffer);
+
+        expect(ArrayUtil.toBuffer(null).length).toBe(0);
+        expect(ArrayUtil.toUint8Array(null).length).toBe(0);
+
+        expect(ArrayUtil.toBuffer("hello").toString("utf8")).toBe("hello");
+        expect(ArrayUtil.toUint8Array("hello")).toEqual(new Uint8Array(Buffer.from("hello")));
+
+        expect(ArrayUtil.toBuffer([10, 20])).toEqual(Buffer.from([10, 20]));
+        expect(ArrayUtil.toUint8Array([10, 20])).toEqual(new Uint8Array([10, 20]));
+
+        expect(ArrayUtil.toBuffer({ 0: 65, 1: 66 })).toEqual(Buffer.from("AB"));
+        expect(ArrayUtil.toBuffer({ data: [65, 66] })).toEqual(Buffer.from("AB"));
+        expect(ArrayUtil.toUint8Array({ data: [65, 66] })).toEqual(new Uint8Array([65, 66]));
     });
 });

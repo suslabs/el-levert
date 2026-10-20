@@ -39,11 +39,37 @@ const ObjectUtil = Object.freeze({
         return TypeTester.isObject(obj) ? obj : fallback;
     },
 
-    setValuesWithDefaults: (target, source, defaults = {}) => {
+    _isGetterOnly: (obj, key) => {
+        return (
+            TypeTester.isObject(obj) &&
+            typeof obj.__lookupGetter__ === "function" &&
+            typeof obj.__lookupGetter__(key) === "function" &&
+            typeof obj.__lookupSetter__(key) === "undefined"
+        );
+    },
+
+    setValuesWithDefaults: (target, source, defaults = {}, filter = true) => {
         source = ObjectUtil.guaranteeObject(source);
+
+        const isFiltered = key => {
+            if (!filter) {
+                return false;
+            }
+
+            return ObjectUtil._isGetterOnly(target, key) || (typeof filter === "function" && !filter(key));
+        };
+
+        if (filter) {
+            source = ObjectUtil.filterObject(source, key => !isFiltered(key));
+        }
+
         const values = {};
 
         for (const [key, defaultValue] of Object.entries(defaults)) {
+            if (isFiltered(key)) {
+                continue;
+            }
+
             if (source[key] == null) {
                 values[key] = typeof defaultValue === "function" ? defaultValue : structuredClone(defaultValue);
             }

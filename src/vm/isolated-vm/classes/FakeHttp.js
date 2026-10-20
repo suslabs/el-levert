@@ -258,7 +258,7 @@ function createFakeAxios(options) {
 
             if (Buffer.isBuffer(transformedData)) {
                 bodyBuffer = transformedData;
-            } else if (ArrayBuffer.isView(transformedData)) {
+            } else if (TypeTester.isTypedArray(transformedData)) {
                 bodyBuffer = Buffer.from(
                     transformedData.buffer,
                     transformedData.byteOffset,

@@ -14,6 +14,13 @@ describe("TypeTester", () => {
         expect(TypeTester.isObject({})).toBe(true);
         expect(TypeTester.isObject(null)).toBe(false);
         expect(TypeTester.isArray(new Uint8Array([1, 2]))).toBe(true);
+        expect(TypeTester.isTypedArray(new Uint8Array([1, 2]))).toBe(true);
+        expect(TypeTester.isTypedArray(Buffer.from([1, 2]))).toBe(true);
+        expect(TypeTester.isTypedArray(new Int32Array([1, 2]))).toBe(true);
+        expect(TypeTester.isTypedArray(new DataView(new ArrayBuffer(4)))).toBe(false);
+        expect(TypeTester.isTypedArray(new ArrayBuffer(4))).toBe(false);
+        expect(TypeTester.isTypedArray([1, 2])).toBe(false);
+        expect(TypeTester.isTypedArray(null)).toBe(false);
         expect(TypeTester.isClass(Example)).toBe(true);
         expect(TypeTester.isClass(Legacy)).toBe(true);
         expect(TypeTester.isPromise(Promise.resolve())).toBe(true);
