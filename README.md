@@ -113,7 +113,7 @@ Important groups of settings:
 - Eval modes and execution: `enableEval`, `enableVM2`, `enableOtherLangs`
 - VM HTTP settings: `vmHttp` (`maxUploadSize`, `maxDownloadSize`, `maxRequests`, `rateLimitWindow`, `allowLocalhostRequests`, `allowFilesystemRequests`)
 - Inspector and debugging: `vmInspector` (`enable`, `enableUser`, `connectTimeout`, `userConnectTimeout`, `userActionTimeout`, `port`)
-- Tags and quotas: `maxTagNameLength`, `tagNameRegex`, `maxTagSize` (per-tag limits for `text`, `script`, and `binary`), `maxQuota`, `maxTagCount`
+- Tags and quotas: `maxTagNameLength`, `tagNameRegex`, `maxTagSize` (per-tag limits in kb for `text`, `script`, and `binary`; `-1` for unlimited), `maxQuota` (total storage quota in kb; `-1` for unlimited), `maxTagCount` (`-1` for unlimited)
 - Reply and output limits: `outCharLimit`, `outLineLimit`, `embedCharLimit`, `embedLineLimit`
 - Major features: `enablePreviews`, `enableSed`, `enablePermissions`, `enableReminders`
 - Logging and file paths: log files, log level, database path, command paths, Discord log settings
@@ -158,6 +158,7 @@ If reactions are enabled, the file defines the bracket reactions and the word-tr
 - If `allowLocalhostRequests` is off (the default), script HTTP requests (`request` / `fetch`) cannot connect to localhost, loopback, or private network IP addresses.
 - If `allowFilesystemRequests` is off (the default), script HTTP requests cannot access local files through `file://` URLs.
 - If inspector support is off, debug flows described in this README are not available.
+- For tag size and count limits (`maxTagSize.text`, `maxTagSize.script`, `maxTagSize.binary`, `maxQuota`, and `maxTagCount`), setting any limit to `-1` means unlimited. The `%tag quota` command reports both your stored tag quota (in kb) and registered tag count against these limits (or as unlimited when configured as `-1`).
 
 # Features
 
@@ -282,7 +283,7 @@ Main actions:
 - `random (prefix)` picks a random matching tag
 - `count [all/new/script/me/user]` shows counts by scope or type
 - `leaderboard (count/size/uses/user) [user|limit] [mode]` shows tag leaderboards or user leaderboard stats
-- `quota` shows how much tag space you are using
+- `quota` shows how much tag space (in kb) and how many tags you are using against allowed limits
 - `dump [inline/full] [spaces]` exports tags. `full` sends a JSON file
 - `alias (name) (target) [args]` creates an alias-style tag
 - `aliases (name)` lists all aliases pointing to a tag

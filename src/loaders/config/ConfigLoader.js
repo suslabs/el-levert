@@ -15,6 +15,7 @@ class ConfigLoader extends BaseConfigLoader {
 
     modify(config) {
         this._setBridgeBotConfig(config);
+        this._setTagLimits(config);
     }
 
     _parseBridgeBotFormat(format) {
@@ -95,6 +96,36 @@ class ConfigLoader extends BaseConfigLoader {
         }
 
         config.useBridgeBot = enabled;
+        return config;
+    }
+
+    _clampTagLimit(val, round = false) {
+        if (typeof val !== "number" || Number.isNaN(val)) {
+            return val;
+        }
+
+        if (round) {
+            val = Math.round(val);
+        }
+
+        return Util.clamp(val, -1);
+    }
+
+    _setTagLimits(config = this.data) {
+        if (TypeTester.isObject(config.maxTagSize)) {
+            for (const [type, limit] of Object.entries(config.maxTagSize)) {
+                config.maxTagSize[type] = this._clampTagLimit(limit);
+            }
+        }
+
+        if (typeof config.maxQuota !== "undefined") {
+            config.maxQuota = this._clampTagLimit(config.maxQuota);
+        }
+
+        if (typeof config.maxTagCount !== "undefined") {
+            config.maxTagCount = this._clampTagLimit(config.maxTagCount, true);
+        }
+
         return config;
     }
 }

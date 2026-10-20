@@ -59,6 +59,39 @@ describe("ConfigLoader", () => {
         expect(config.reminderSendInterval).toBe(3000000);
     });
 
+    test("clamps tag size, quota, and count limits while preserving -1 as unlimited", () => {
+        const loader = new ConfigLoader(null);
+
+        const config = {
+            maxTagSize: {
+                text: -1,
+                script: -50,
+                binary: 200
+            },
+            maxQuota: -1,
+            maxTagCount: 100.4
+        };
+
+        loader.data = config;
+        loader._modify();
+
+        expect(config.maxTagSize.text).toBe(-1);
+        expect(config.maxTagSize.script).toBe(-1);
+        expect(config.maxTagSize.binary).toBe(200);
+        expect(config.maxQuota).toBe(-1);
+        expect(config.maxTagCount).toBe(100);
+
+        const config2 = {
+            maxQuota: -50,
+            maxTagCount: -10
+        };
+        loader.data = config2;
+        loader._modify();
+
+        expect(config2.maxQuota).toBe(-1);
+        expect(config2.maxTagCount).toBe(-1);
+    });
+
     test("normalizes bridge bot formats into runtime regex config", () => {
         const logger = {
             warn: vi.fn()

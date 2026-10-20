@@ -46,6 +46,7 @@ we only access [0], no [1] or [2] access nearby
 its a single [0] access not 2 in a row
 its in places where we clearly only mean the first element. we follow this rule
 Always use Util.durationSeconds instead of hardcoded time / duration numbers (e.g. Util.durationSeconds.minute / Util.durationSeconds.milli, 5 \* Util.durationSeconds.minute / Util.durationSeconds.milli, etc.). Never write hardcoded millisecond or second numbers like 60000, 3600000, 86400000.
+In SQL queries, use clean, consistent 4-space indentation across all SQL files. Never mix 2-space and 4-space indentation. Avoid hyperexpanded formatting where every single column, field, or parameter is isolated onto its own line; group related columns and parameters naturally on balanced lines. Do not cram entire complex queries onto a single line either — keep major clauses (SELECT, FROM, WHERE, JOIN, ORDER BY, etc.) and CTE blocks cleanly structured and readable.
 
 Write tests for everything to cover as many edge cases as possible. Mock as little as possible, most of the logic should go through the full code path. Only do full test runs in extreme cases, because they take hours, otherwise only do localized test runs to test your work.
 When altering config options, make sure to also update the schema.

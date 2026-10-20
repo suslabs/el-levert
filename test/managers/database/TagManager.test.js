@@ -473,6 +473,29 @@ describe("Merged Branch Coverage", () => {
             await expect(manager.add("overflow", "third tag", "u1", { type: "text" })).rejects.toThrow(
                 "Maximum tag count quota of 2 has been exceeded"
             );
+
+            manager.maxTagCount = -1;
+            const unlimitedCountTag = await manager.add("overflow", "third tag", "u1", { type: "text" });
+            expect(unlimitedCountTag.name).toBe("overflow");
+
+            manager.maxTagSize = { text: 0.001, script: 100, binary: 100 };
+            await expect(manager.add("too_big", "x".repeat(500), "u1", { type: "text" })).rejects.toThrow(
+                "Tags can take up at most 0.001 kb"
+            );
+
+            manager.maxTagSize = { text: -1, script: 100, binary: 100 };
+            const unlimitedSizeTag = await manager.add("too_big", "x".repeat(500), "u1", { type: "text" });
+            expect(unlimitedSizeTag.name).toBe("too_big");
+            expect(manager._checkTagSize(unlimitedSizeTag)).toBe(unlimitedSizeTag.getSize());
+
+            manager.maxQuota = 0.0001;
+            await expect(manager.add("quota_overflow", "x".repeat(500), "u1", { type: "text" })).rejects.toThrow(
+                "Maximum quota of 0.0001 kb has been exceeded"
+            );
+
+            manager.maxQuota = -1;
+            const unlimitedQuotaTag = await manager.add("quota_overflow", "x".repeat(500), "u1", { type: "text" });
+            expect(unlimitedQuotaTag.name).toBe("quota_overflow");
         });
     });
 });

@@ -8,7 +8,7 @@ class TagQuotaCommand {
         parent: "tag",
         subcommand: true,
         description:
-            "Displays your current tag storage consumption in kilobytes and the percentage of the allowed limit."
+            "Displays your current tag storage consumption in kilobytes and tag count, along with the allowed limits."
     };
 
     async handler(ctx) {
@@ -18,16 +18,27 @@ class TagQuotaCommand {
             return `${getEmoji("info")} You have **no** tags.`;
         }
 
+        const maxQuota = getClient().tagManager.maxQuota,
+            maxTagCount = getClient().tagManager.maxTagCount;
+
+        const roundedOwnQuota = Util.smallRound(quota, 2),
+            tagsLabel = count === 1 ? "tag" : "tags";
+
+        const countStr =
+            maxTagCount === -1 || typeof maxTagCount !== "number"
+                ? `**${count}** ${tagsLabel}`
+                : `**${count}/${maxTagCount}** ${tagsLabel}`;
+
         if (quota <= 0) {
-            return `${getEmoji("info")} You aren't using any of the available storage.`;
+            return `${getEmoji("info")} You have ${countStr}, but aren't using any of the available storage.`;
+        } else if (maxQuota === -1) {
+            return `${getEmoji("info")} You're using **${roundedOwnQuota} kb** of the available storage across ${countStr}. (unlimited)`;
         }
 
-        const maxQuota = getClient().tagManager.maxQuota,
-            perc = Util.round((quota / maxQuota) * 100, 2),
-            roundedMaxQuota = Util.smallRound(maxQuota, 2),
-            roundedOwnQuota = Util.smallRound(quota, 2);
+        const perc = Util.round((quota / maxQuota) * 100, 2),
+            roundedMaxQuota = Util.smallRound(maxQuota, 2);
 
-        return `${getEmoji("info")} You're using **${roundedOwnQuota}/${roundedMaxQuota} kb** of the available storage. (**${perc}%**)`;
+        return `${getEmoji("info")} You're using **${roundedOwnQuota}/${roundedMaxQuota} kb** of the available storage across ${countStr}. (**${perc}%**)`;
     }
 }
 

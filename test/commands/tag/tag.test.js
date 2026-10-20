@@ -43,7 +43,9 @@ describe("tag command", () => {
             err: null
         });
 
-        await expect(executeCommand(command, "", { msg })).resolves.toContain("add|alias|audit|audit_clear|chown");
+        await expect(executeCommand(command, "", { msg })).resolves.toContain(
+            "add|alias|aliases|audit|audit_clear|chown"
+        );
         await expect(executeCommand(command, "bad*", { msg })).resolves.toContain("must consist");
 
         await expect(executeCommand(command, "add alpha body one", { msg })).resolves.toContain(
@@ -322,7 +324,7 @@ describe("Merged Branch Coverage", () => {
         test("covers the main tag handler for missing tags, alias failures, execution failures, and preview branches", async () => {
             await addTag(runtime, "alpha", "body one");
 
-            expect(await run("")).toContain("add|alias|audit|audit_clear|chown");
+            expect(await run("")).toContain("add|alias|aliases|audit|audit_clear|chown");
             expect(await run("bad*")).toContain("must consist");
 
             const missing = await run("alpah");
@@ -751,8 +753,8 @@ describe("Merged Branch Coverage", () => {
                 }
             ]);
 
-            expect(await run("leaderboard")).toContain("<count|size|usage> [limit]");
-            expect(await run("leaderboard nope")).toContain("Invalid leaderboard type");
+            expect(await run("leaderboard")).toContain("<count|size|uses|user>");
+            expect(await run("leaderboard nope")).toContain("has **no** tags");
             expect(await run("leaderboard count nope")).toContain("Invalid limit");
 
             vi.spyOn(runtime.client.tagManager, "leaderboard").mockResolvedValueOnce([]);

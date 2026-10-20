@@ -123,9 +123,10 @@ class TagDatabase extends RevisionDatabase {
         });
     }
 
-    async fetchAliases(name) {
+    async fetchAliases(name, targetExists = false) {
         const rows = await this.tagQueries.fetchAliases.all({
-            $name: name
+            $name: name,
+            $targetExists: targetExists ? 1 : 0
         });
 
         if (Util.empty(rows)) {

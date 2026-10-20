@@ -40,7 +40,12 @@ class TagManager extends DBManager {
         super(enabled, "tag", "tag_db", TagDatabase);
 
         this.maxTagSize = getConfig().maxTagSize;
-        this.maxQuota = getConfig().maxQuota ?? this.maxTagSize.text + this.maxTagSize.script + this.maxTagSize.binary;
+
+        const fallbackQuota = [this.maxTagSize.text, this.maxTagSize.script, this.maxTagSize.binary].includes(-1)
+            ? -1
+            : this.maxTagSize.text + this.maxTagSize.script + this.maxTagSize.binary;
+
+        this.maxQuota = getConfig().maxQuota ?? fallbackQuota;
         this.maxTagCount = getConfig().maxTagCount;
 
         this.maxTagNameLength = getConfig().maxTagNameLength;
@@ -174,11 +179,8 @@ class TagManager extends DBManager {
             name = this.checkName(name);
         }
 
-        if (FakeTagRegistry.has(name)) {
-            return [];
-        }
-
-        const aliases = await this.tag_db.fetchAliases(name);
+        const isFake = FakeTagRegistry.has(name),
+            aliases = await this.tag_db.fetchAliases(name, isFake);
 
         return validate && aliases === null
             ? (() => {
@@ -200,27 +202,7 @@ class TagManager extends DBManager {
             return tag;
         }
 
-        if (FakeTagRegistry.has(tag.aliasName)) {
-            const fakeTag = FakeTagRegistry.fetch(tag.aliasName),
-                hops = [tag.name, fakeTag.name];
-
-            fakeTag._setAliasProps(hops, tag.args ?? "", aliasOriginal);
-            fakeTag._usageName = Util.nonemptyString(tag.args) ? tag.name : fakeTag.name;
-
-            if (aliasOriginal) {
-                fakeTag._setOriginalProps(tag);
-            }
-
-            return fakeTag;
-        }
-
-        const rows = await this.tag_db.fetchAlias(tag.aliasName, Tag._argsSeparator);
-
-        if (Util.empty(rows)) {
-            throw new TagError("Hop not found", tag.aliasName);
-        }
-
-        let usageName = Util.nonemptyString(tag.args) ? tag.name : null,
+        const rows = await this.tag_db.fetchAlias(tag.aliasName, Tag._argsSeparator),
             hops = [tag.name];
 
         for (const row of rows) {
@@ -231,54 +213,36 @@ class TagManager extends DBManager {
             }
 
             hops.push(hop);
-
-            if (usageName === null && (row.aliasName === null || Util.nonemptyString(row.args))) {
-                usageName = hop;
-            }
         }
 
-        const lastRow = Util.last(rows);
+        const lastRow = Util.last(rows),
+            targetName = lastRow != null ? lastRow.aliasName : tag.aliasName;
 
-        if (lastRow.aliasName !== null) {
-            if (hops.includes(lastRow.aliasName)) {
-                throw new TagError("Tag recursion detected", hops.concat(lastRow.aliasName));
+        let targetTag;
+
+        if (targetName !== null) {
+            if (hops.includes(targetName)) {
+                throw new TagError("Tag recursion detected", hops.concat(targetName));
+            } else if (FakeTagRegistry.has(targetName)) {
+                targetTag = FakeTagRegistry.fetch(targetName);
+                hops.push(targetTag.name);
+            } else {
+                throw new TagError("Hop not found", targetName);
             }
-
-            if (FakeTagRegistry.has(lastRow.aliasName)) {
-                const fakeTag = FakeTagRegistry.fetch(lastRow.aliasName);
-                hops.push(fakeTag.name);
-
-                const collectedArgs = [tag.args, lastRow.collectedArgs]
-                    .filter(arg => Util.nonemptyString(arg))
-                    .join(Tag._argsSeparator);
-
-                fakeTag._setAliasProps(hops, collectedArgs, aliasOriginal);
-                fakeTag._usageName = usageName ?? fakeTag.name;
-
-                if (aliasOriginal) {
-                    fakeTag._setOriginalProps(tag);
-                }
-
-                return fakeTag;
-            }
-
-            throw new TagError("Hop not found", lastRow.aliasName);
+        } else {
+            targetTag = new Tag(lastRow);
         }
 
-        const lastTag = new Tag(lastRow);
+        const collectedArgs = [tag.args, lastRow?.collectedArgs].filter(Util.nonemptyString).join(Tag._argsSeparator);
 
-        const collectedArgs = [tag.args, lastRow.collectedArgs]
-            .filter(arg => Util.nonemptyString(arg))
-            .join(Tag._argsSeparator);
-
-        lastTag._setAliasProps(hops, collectedArgs, aliasOriginal);
-        lastTag._usageName = usageName;
+        targetTag._setAliasProps(hops, collectedArgs, aliasOriginal);
+        targetTag._usageName = this._resolveUsageName(tag, rows, targetTag);
 
         if (aliasOriginal) {
-            lastTag._setOriginalProps(tag);
+            targetTag._setOriginalProps(tag);
         }
 
-        return lastTag;
+        return targetTag;
     }
 
     async execute(tag, args, values, options) {
@@ -393,7 +357,7 @@ class TagManager extends DBManager {
             meta
         });
 
-        this._checkTagSize(newTag);
+        const newSize = this._checkTagSize(newTag);
 
         if (validate.checkExisting && tag.equivalent(newTag)) {
             throw new TagError("Can't update tag with the same body", tag);
@@ -412,7 +376,7 @@ class TagManager extends DBManager {
             }
 
             if (updated) {
-                const sizeDiff = newTag.getSize() - tag.getSize();
+                const sizeDiff = newSize - tag.getSize();
                 await this._updateQuota(tag.owner, sizeDiff, 0, tx);
                 await this.revisions.recordUpdate(tag, newTag, tx, this._getRevisionOptions(options, tag.owner));
             }
@@ -458,7 +422,7 @@ class TagManager extends DBManager {
             this.checkBody(tag.body, true, tag.isBinary);
         }
 
-        this._checkTagSize(tag);
+        const newSize = this._checkTagSize(tag);
 
         if (validate.checkExisting && name !== tag.name) {
             const existingTag = await this.fetch(tag.name);
@@ -483,8 +447,7 @@ class TagManager extends DBManager {
             }
 
             if (updated && (!validate.validateNew || !oldTag.sameBody(tag) || oldTag.owner !== tag.owner)) {
-                const oldSize = oldTag.getSize(),
-                    newSize = tag.getSize();
+                const oldSize = oldTag.getSize();
 
                 if (oldTag.owner === tag.owner) {
                     await this._updateQuota(tag.owner, newSize - oldSize, 0, tx);
@@ -601,7 +564,7 @@ class TagManager extends DBManager {
             this.checkName(tag.name);
         }
 
-        const oldTag = this._cloneTag(tag),
+        const oldTag = tag.clone(),
             oldOwner = tag.owner,
             tagSize = tag.getSize();
 
@@ -669,7 +632,7 @@ class TagManager extends DBManager {
         }
 
         await this.tag_db.transactionImmediate(async tx => {
-            const oldTag = this._cloneTag(tag),
+            const oldTag = tag.clone(),
                 aliasesBefore = await tx.fetchAliases(oldName);
 
             const res = await tx.rename(tag, newName),
@@ -750,7 +713,7 @@ class TagManager extends DBManager {
             throw new TagError("Tag is already hidden", tag.name);
         }
 
-        const oldTag = this._cloneTag(tag);
+        const oldTag = tag.clone();
         tag.setHidden();
         tag.setLastEdited();
 
@@ -792,7 +755,7 @@ class TagManager extends DBManager {
             throw new TagError("Tag is not hidden", tag.name);
         }
 
-        const oldTag = this._cloneTag(tag);
+        const oldTag = tag.clone();
         tag.unsetHidden();
         tag.setLastEdited();
 
@@ -1188,6 +1151,134 @@ class TagManager extends DBManager {
         });
     }
 
+    _resolveUsageName(tag, rows, targetTag) {
+        if (Util.nonemptyString(tag.args)) {
+            return tag.name;
+        }
+
+        const paramHop = rows.find(row => Util.nonemptyString(row.args));
+        return paramHop?.name ?? targetTag.name;
+    }
+
+    async _incrementUsage(name) {
+        await this.tag_db.transactionImmediate(async tx => {
+            const res = await tx.usageIncrement(name);
+
+            if (res.changes > 0) {
+                return;
+            }
+
+            await tx.usageCreate(name);
+            await tx.usageIncrement(name);
+        });
+    }
+
+    async _runScriptTag(tag, type, args, values, options) {
+        tag = Tag.from(tag);
+
+        const evalArgs = [args, tag.args].filter(Util.nonemptyString).join(" ");
+
+        const inputValues = {
+            tag,
+            args: Util.nonemptyString(evalArgs) ? evalArgs : undefined,
+            ...values
+        };
+
+        switch (type) {
+            case "ivm":
+                const ivm = getClient().checkComponent("VMs", "tagVM", {
+                    altName: TagVM.VMname
+                });
+
+                return await ivm.runScript(tag.body, inputValues, {
+                    ...options,
+                    language: tag.getScriptLanguage()
+                });
+            case "vm2":
+                const vm2 = getClient().checkComponent("VMs", "tagVM2", {
+                    altName: TagVM2.VMname
+                });
+
+                return await vm2.runScript(tag.body, inputValues);
+        }
+    }
+
+    _getMaxTagSize(isBinary, isScript) {
+        return isBinary ? this.maxTagSize.binary : isScript ? this.maxTagSize.script : this.maxTagSize.text;
+    }
+
+    _checkTagSize(tag) {
+        const tagSize = tag.getSize(),
+            typeLimit = this._getMaxTagSize(tag.isBinary, tag.isScript);
+
+        if (typeLimit !== -1 && tagSize > typeLimit) {
+            const typeName = tag.isBinary ? "Binary tag" : tag.isScript ? "Script tag" : "Tag";
+
+            throw new TagError(`${typeName}s can take up at most ${typeLimit} kb`, {
+                size: tagSize,
+                limit: typeLimit
+            });
+        }
+
+        return tagSize;
+    }
+
+    async _updateQuota(user, sizeDiff, countDiff, tx) {
+        let userQuota = await tx.quotaFetch(user);
+
+        if (userQuota === null) {
+            await tx.quotaCreate(user);
+            userQuota = {
+                quota: 0,
+                count: 0
+            };
+        }
+
+        if (sizeDiff === 0 && countDiff === 0) {
+            return;
+        }
+
+        const newQuota = userQuota.quota + sizeDiff,
+            newCount = userQuota.count + countDiff;
+
+        if (this.maxQuota !== -1 && newQuota > this.maxQuota) {
+            throw new TagError(`Maximum quota of ${this.maxQuota} kb has been exceeded`, {
+                quota: newQuota,
+                maxQuota: this.maxQuota
+            });
+        }
+
+        if (this.maxTagCount !== -1 && typeof this.maxTagCount === "number" && newCount > this.maxTagCount) {
+            throw new TagError(`Maximum tag count quota of ${this.maxTagCount} has been exceeded`, {
+                count: newCount,
+                maxTagCount: this.maxTagCount
+            });
+        }
+
+        await tx.quotaSet(user, newQuota, newCount);
+        getLogger().debug(`Updated quota for: ${user} size diff: ${sizeDiff} count diff: ${countDiff}`);
+    }
+
+    async _addPrepared(tag, tx, revisionOptions) {
+        tag = Tag.from(tag);
+
+        await this._updateQuota(tag.owner, 0, 0, tx);
+        await tx.add(tag);
+        await this.revisions.recordCreate(tag, tx, revisionOptions);
+
+        const bodyLogText = LoggerUtil.formatLog(
+            Util.trimString(tag.body, 300, null, {
+                showDiff: true
+            })
+        );
+
+        getLogger().info(`Added tag: "${tag.name}" with type: ${tag.type.toNumber()}, body:${bodyLogText}`);
+
+        const tagSize = this._checkTagSize(tag);
+
+        await this._updateQuota(tag.owner, tagSize, 1, tx);
+    }
+
     _getRevisionOptions(options, fallbackActor) {
         options = ObjectUtil.guaranteeObject(options);
 
@@ -1197,13 +1288,6 @@ class TagManager extends DBManager {
             restores: options.restores,
             reason: options.reason
         });
-    }
-
-    _cloneTag(tag) {
-        const data = tag.getData();
-        data.type = tag.type.toBuffer();
-
-        return new Tag(data);
     }
 
     _getRevertedTag(subject, target, previous, tx) {
@@ -1326,126 +1410,6 @@ class TagManager extends DBManager {
             changed,
             aliasUpdates
         };
-    }
-
-    async _addPrepared(tag, tx, revisionOptions) {
-        tag = Tag.from(tag);
-
-        await this._updateQuota(tag.owner, 0, 0, tx);
-        await tx.add(tag);
-        await this.revisions.recordCreate(tag, tx, revisionOptions);
-
-        const bodyLogText = LoggerUtil.formatLog(
-            Util.trimString(tag.body, 300, null, {
-                showDiff: true
-            })
-        );
-
-        getLogger().info(`Added tag: "${tag.name}" with type: ${tag.type.toHex()}, body:${bodyLogText}`);
-
-        this._checkTagSize(tag);
-
-        const tagSize = tag.getSize();
-
-        await this._updateQuota(tag.owner, tagSize, 1, tx);
-    }
-
-    async _runScriptTag(tag, type, args, values, options) {
-        tag = Tag.from(tag);
-
-        const evalArgs = [args, tag.args].filter(Util.nonemptyString).join(" ");
-
-        const inputValues = {
-            tag,
-            args: Util.nonemptyString(evalArgs) ? evalArgs : undefined,
-            ...values
-        };
-
-        switch (type) {
-            case "ivm":
-                const ivm = getClient().checkComponent("VMs", "tagVM", {
-                    altName: TagVM.VMname
-                });
-
-                return await ivm.runScript(tag.body, inputValues, {
-                    ...options,
-                    language: tag.getScriptLanguage()
-                });
-            case "vm2":
-                const vm2 = getClient().checkComponent("VMs", "tagVM2", {
-                    altName: TagVM2.VMname
-                });
-
-                return await vm2.runScript(tag.body, inputValues);
-        }
-    }
-
-    async _updateQuota(user, sizeDiff, countDiff, tx) {
-        let userQuota = await tx.quotaFetch(user);
-
-        if (userQuota === null) {
-            await tx.quotaCreate(user);
-            userQuota = {
-                quota: 0,
-                count: 0
-            };
-        }
-
-        if (sizeDiff === 0 && countDiff === 0) {
-            return;
-        }
-
-        const newQuota = userQuota.quota + sizeDiff,
-            newCount = userQuota.count + countDiff;
-
-        if (newQuota > this.maxQuota) {
-            throw new TagError(`Maximum quota of ${this.maxQuota} kb has been exceeded`, {
-                quota: newQuota,
-                maxQuota: this.maxQuota
-            });
-        }
-
-        if (typeof this.maxTagCount === "number" && newCount > this.maxTagCount) {
-            throw new TagError(`Maximum tag count quota of ${this.maxTagCount} has been exceeded`, {
-                count: newCount,
-                maxTagCount: this.maxTagCount
-            });
-        }
-
-        await tx.quotaSet(user, newQuota, newCount);
-
-        getLogger().debug(`Updated quota for: ${user} size diff: ${sizeDiff} count diff: ${countDiff}`);
-    }
-
-    async _incrementUsage(name) {
-        await this.tag_db.transactionImmediate(async tx => {
-            const res = await tx.usageIncrement(name);
-
-            if (res.changes > 0) {
-                return;
-            }
-
-            await tx.usageCreate(name);
-            await tx.usageIncrement(name);
-        });
-    }
-
-    _getMaxTagSize(isBinary, isScript) {
-        return isBinary ? this.maxTagSize.binary : isScript ? this.maxTagSize.script : this.maxTagSize.text;
-    }
-
-    _checkTagSize(tag) {
-        const tagSize = tag.getSize(),
-            typeLimit = this._getMaxTagSize(tag.isBinary, tag.isScript);
-
-        if (tagSize > typeLimit) {
-            const typeName = tag.isBinary ? "Binary tag" : tag.isScript ? "Script tag" : "Tag";
-
-            throw new TagError(`${typeName}s can take up at most ${typeLimit} kb`, {
-                size: tagSize,
-                limit: typeLimit
-            });
-        }
     }
 }
 export default TagManager;

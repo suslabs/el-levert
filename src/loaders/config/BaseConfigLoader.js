@@ -17,28 +17,10 @@ class BaseConfigLoader extends JsonLoader {
         }
 
         for (const [key, def] of Object.entries(defaults)) {
-            if (this._isDescriptor(def)) {
-                let val = data[key] ?? def.base ?? def.min ?? 0;
-
-                if (def.mult != null) {
-                    val *= def.mult;
-                }
-
-                if (def.round) {
-                    val = Math.round(val);
-                }
-
-                if (def.min != null || def.max != null) {
-                    val = Util.clamp(val, def.min, def.max);
-                }
-
-                data[key] = val;
-            } else if (TypeTester.isObject(def) && !Array.isArray(def) && !Util.empty(Object.keys(def))) {
-                if (data[key] != null) {
-                    this.applyDefaults(data[key], def);
-                }
-            } else if (data[key] == null) {
-                data[key] = typeof def === "object" && def !== null ? structuredClone(def) : def;
+            if (this._isSection(def)) {
+                data[key] = this.applyDefaults(data[key] ?? {}, def);
+            } else {
+                data[key] = this._applyDescriptor(data[key], def);
             }
         }
 
@@ -74,11 +56,30 @@ class BaseConfigLoader extends JsonLoader {
         return LoadStatus.successful;
     }
 
-    static _isDescriptor(obj) {
-        return (
-            TypeTester.isObject(obj) &&
-            ("min" in obj || "max" in obj || "round" in obj || "mult" in obj || "base" in obj)
-        );
+    static _isSection(def) {
+        return TypeTester.isObject(def) && Object.values(def).some(TypeTester.isObject);
+    }
+
+    static _applyDescriptor(val, def) {
+        if (!TypeTester.isObject(def) || Array.isArray(def) || Util.empty(Object.keys(def))) {
+            return val ?? (typeof def === "object" && def !== null ? structuredClone(def) : def);
+        }
+
+        val = val ?? def.base ?? def.min ?? 0;
+
+        if (def.mult != null) {
+            val *= def.mult;
+        }
+
+        if (def.round) {
+            val = Math.round(val);
+        }
+
+        if (def.min != null || def.max != null) {
+            val = Util.clamp(val, def.min, def.max);
+        }
+
+        return val;
     }
 
     _modify() {

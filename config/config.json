@@ -32,7 +32,7 @@
         "script": 100,
         "binary": 100
     },
-    "maxQuota": 1024,
+    "maxQuota": 1024000,
     "maxTagCount": 10000,
     "memLimit": 250,
     "timeLimit": 15,

@@ -52,6 +52,47 @@ describe("BaseConfigLoader", () => {
         expect(data.nested.scaled).toBe(21);
     });
 
+    test("applyDefaults clamps between -1 and real values and scales negative numbers properly", () => {
+        const schema = {
+            limit: {
+                min: -1,
+                max: 5000
+            },
+            offset: {
+                min: -1000,
+                mult: 10
+            },
+            count: {
+                min: -1,
+                round: true
+            },
+            clampedUnder: {
+                min: -1,
+                max: 100
+            },
+            clampedOver: {
+                min: -1,
+                max: 100
+            }
+        };
+
+        const data = {
+            limit: -1,
+            offset: -1,
+            count: -1,
+            clampedUnder: -50,
+            clampedOver: 200
+        };
+
+        BaseConfigLoader.applyDefaults(data, schema);
+
+        expect(data.limit).toBe(-1);
+        expect(data.offset).toBe(-10);
+        expect(data.count).toBe(-1);
+        expect(data.clampedUnder).toBe(-1);
+        expect(data.clampedOver).toBe(100);
+    });
+
     test("applyDefaults uses base value when property is missing or nullish", () => {
         const schema = {
             timeout: {

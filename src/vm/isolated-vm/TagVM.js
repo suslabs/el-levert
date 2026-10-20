@@ -99,6 +99,7 @@ class TagVM extends VM {
 
         try {
             context = await this._getEvalContext(values, inspectorInfo);
+
             this._pushContext(context);
             pushed = true;
 

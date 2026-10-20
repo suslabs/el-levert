@@ -58,5 +58,29 @@ describe("Merged Branch Coverage", () => {
                 "aren't using any of the available storage"
             );
         });
+
+        test("reports unlimited storage when maxQuota is -1", async () => {
+            const command = getCommand(runtime, "tag");
+
+            await addTag(runtime, "alpha", "body one", msg.author.id);
+            runtime.client.tagManager.maxQuota = -1;
+
+            const out = await executeCommand(command, "quota", { msg });
+            expect(out).toContain("available storage");
+            expect(out).toContain("(unlimited)");
+            expect(out).toContain("across **1/");
+            expect(out).not.toContain("%");
+        });
+
+        test("reports unlimited count when maxTagCount is -1", async () => {
+            const command = getCommand(runtime, "tag");
+
+            await addTag(runtime, "alpha", "body one", msg.author.id);
+            runtime.client.tagManager.maxTagCount = -1;
+
+            const out = await executeCommand(command, "quota", { msg });
+            expect(out).toContain("across **1** tag");
+            expect(out).not.toContain("across **1/");
+        });
     });
 });
