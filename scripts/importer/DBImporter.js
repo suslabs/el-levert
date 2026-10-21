@@ -26,8 +26,8 @@ import ImporterError from "../../src/errors/ImporterError.js";
 
 class DBImporter {
     static maintenanceSql = Object.freeze({
-        deleteQuotas: "DELETE FROM Quotas WHERE 1=1;",
-        insertQuota: "INSERT INTO Quotas (user, quota, count) VALUES ($user, $quota, $count);",
+        deleteQuotas: "DELETE FROM Quotas WHERE user NOT IN (SELECT DISTINCT owner FROM Tags);",
+        insertQuota: "INSERT OR REPLACE INTO Quotas (user, quota, count) VALUES ($user, $quota, $count);",
         pruneUsage: "DELETE FROM Usage WHERE count <= 0;"
     });
 
