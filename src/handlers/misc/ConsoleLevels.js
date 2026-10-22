@@ -1,4 +1,6 @@
-const ConsoleLevels = Object.freeze({
+import createEnum from "../../util/createEnum.js";
+
+const ConsoleLevels = createEnum({
     debug: "debug",
     info: "info",
     log: "log",
@@ -6,6 +8,4 @@ const ConsoleLevels = Object.freeze({
     error: "error"
 });
 
-const validConsoleLevels = new Set(Object.values(ConsoleLevels));
-
-export { ConsoleLevels, validConsoleLevels };
+export default ConsoleLevels;

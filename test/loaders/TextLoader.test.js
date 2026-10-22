@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import "../../setupGlobals.js";
 import { LoadStatus } from "../../src/loaders/LoadStatus.js";
 import TextLoader from "../../src/loaders/TextLoader.js";
-import { WriteModes } from "../../src/loaders/WriteModes.js";
+import WriteModes from "../../src/loaders/WriteModes.js";
 
 let tempDir;
 let filePath;

@@ -11,9 +11,9 @@ import TypeTester from "./TypeTester.js";
 import ObjectUtil from "./ObjectUtil.js";
 import ArrayUtil from "./ArrayUtil.js";
 
-import { EmbedCountAreas, validEmbedCountAreas } from "./EmbedCountAreas.js";
-import { CountTypes } from "./CountTypes.js";
-import { validBinaryExtensions, validTextExtensions } from "./misc/FileExtensions.js";
+import EmbedCountAreas from "./EmbedCountAreas.js";
+import CountTypes from "./CountTypes.js";
+import { BinaryExtensions, TextExtensions } from "./misc/FileExtensions.js";
 
 import UtilError from "../errors/UtilError.js";
 
@@ -413,10 +413,10 @@ let DiscordUtil = {
         let size = 0;
 
         if (countAreas === EmbedCountAreas.all) {
-            countAreas = Array.from(validEmbedCountAreas);
+            countAreas = Array.from(EmbedCountAreas.valid);
         } else {
             countAreas = ArrayUtil.guaranteeArray(countAreas).map(area =>
-                TypeTester.normalizeEnum(area, validEmbedCountAreas, "count areas", UtilError)
+                TypeTester.normalizeEnum(area, EmbedCountAreas, "count areas", UtilError)
             );
         }
 
@@ -694,9 +694,9 @@ let DiscordUtil = {
     _isBinaryAttachment: (buf, name = "") => {
         const ext = path.extname(name).toLowerCase();
 
-        if (validBinaryExtensions.has(ext)) {
+        if (BinaryExtensions.has(ext)) {
             return true;
-        } else if (validTextExtensions.has(ext)) {
+        } else if (TextExtensions.has(ext)) {
             return false;
         }
 

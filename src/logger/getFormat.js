@@ -1,12 +1,13 @@
 import winston from "winston";
 
+import InvalidFormats from "./InvalidFormats.js";
+
 import TypeTester from "../util/TypeTester.js";
 import ArrayUtil from "../util/ArrayUtil.js";
-import { invalidFormats } from "./InvalidFormats.js";
 
 import LoggerError from "../errors/LoggerError.js";
 
-const validFormats = new Set(Object.getOwnPropertyNames(winston.format).filter(name => !invalidFormats.has(name)));
+const validFormats = new Set(Object.getOwnPropertyNames(winston.format).filter(name => !InvalidFormats.has(name)));
 
 function getFormat(config) {
     if (config == null) {

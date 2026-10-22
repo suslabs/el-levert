@@ -77,7 +77,7 @@ describe("tag command", () => {
         await runtime.client.tagManager.add("mybintag", new Uint8Array([1, 2, 3]), msg.author.id, { type: "binary" });
 
         const execOut = await executeCommand(command, "mybintag", { msg });
-        expect(execOut).toContain("Tag is a binary tag and the content cannot be displayed");
+        expect(execOut).toContain("Tag **mybintag** is a binary tag.");
 
         const missing = await executeCommand(command, "mybinta", { msg });
         expect(missing).not.toContain("mybintag");

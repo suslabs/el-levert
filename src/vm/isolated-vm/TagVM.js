@@ -4,7 +4,7 @@ import EvalContext from "./context/EvalContext.js";
 import { initFakeAxios, resetFakeAxios } from "./classes/FakeHttp.js";
 
 import InspectorServer from "./inspector/InspectorServer.js";
-import { InspectorModes } from "./inspector/InspectorModes.js";
+import InspectorModes from "./inspector/InspectorModes.js";
 
 import { getConfig, getLogger } from "../../LevertClient.js";
 

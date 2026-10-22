@@ -1,4 +1,6 @@
-const BinaryExtensions = Object.freeze({
+import createEnum from "../createEnum.js";
+
+const BinaryExtensions = createEnum({
     bin: ".bin",
     png: ".png",
     jpg: ".jpg",
@@ -30,7 +32,7 @@ const BinaryExtensions = Object.freeze({
     wasm: ".wasm"
 });
 
-const TextExtensions = Object.freeze({
+const TextExtensions = createEnum({
     txt: ".txt",
     js: ".js",
     mjs: ".mjs",
@@ -60,7 +62,4 @@ const TextExtensions = Object.freeze({
     rs: ".rs"
 });
 
-const validBinaryExtensions = new Set(Object.values(BinaryExtensions)),
-    validTextExtensions = new Set(Object.values(TextExtensions));
-
-export { BinaryExtensions, TextExtensions, validBinaryExtensions, validTextExtensions };
+export { BinaryExtensions, TextExtensions };

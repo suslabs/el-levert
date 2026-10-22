@@ -1,9 +1,9 @@
 import { Buffer } from "node:buffer";
 
-import { LengthTypes } from "./LengthTypes.js";
-import { CountTypes } from "./CountTypes.js";
+import LengthTypes from "./LengthTypes.js";
+import CountTypes from "./CountTypes.js";
 
-import { truthyStrings, falsyStrings } from "./BoolStrings.js";
+import BoolStrings from "./BoolStrings.js";
 
 import TypeTester from "./TypeTester.js";
 import ObjectUtil from "./ObjectUtil.js";
@@ -60,9 +60,9 @@ let Util = {
 
         str = str.trim().toLowerCase();
 
-        if (truthyStrings.has(str)) {
+        if (BoolStrings.truthy.has(str)) {
             return true;
-        } else if (falsyStrings.has(str)) {
+        } else if (BoolStrings.falsy.has(str)) {
             return false;
         } else {
             return defaultValue ?? null;

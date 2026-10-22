@@ -3,7 +3,7 @@ import SqliteDatabase from "./drivers/sqlite/SqliteDatabase.js";
 import QueryLoader from "../loaders/query/QueryLoader.js";
 import MigrationLoader from "../loaders/migration/MigrationLoader.js";
 
-import { OpenModes } from "./drivers/sqlite/OpenModes.js";
+import OpenModes from "./drivers/sqlite/OpenModes.js";
 import { LoadStatus } from "../loaders/LoadStatus.js";
 
 import Util from "../util/Util.js";

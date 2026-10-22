@@ -3,7 +3,7 @@ import { Buffer } from "node:buffer";
 import Util from "./Util.js";
 import TypeTester from "./TypeTester.js";
 
-import { LengthTypes } from "./LengthTypes.js";
+import LengthTypes from "./LengthTypes.js";
 
 const ArrayUtil = Object.freeze({
     withLength: (length, callback) => {

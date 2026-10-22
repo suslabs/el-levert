@@ -1,9 +1,10 @@
 import axios from "axios";
 
-import { ReturnCodes, pendingReturnCodes } from "./ReturnCodes.js";
-import VMError from "../../errors/VMError.js";
+import ReturnCodes from "./ReturnCodes.js";
 
 import { getConfig } from "../../LevertClient.js";
+
+import VMError from "../../errors/VMError.js";
 
 class ExternalVM {
     static $name = "externalVM";
@@ -58,7 +59,7 @@ class ExternalVM {
             const interval = setInterval(async () => {
                 const status = (await axios.get(this.base + token + this.statusUrl)).data.status_id;
 
-                if (!pendingReturnCodes.has(status)) {
+                if (!ReturnCodes.pending.has(status)) {
                     clearInterval(interval);
                     resolve(status);
                 }

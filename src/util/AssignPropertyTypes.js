@@ -1,10 +1,10 @@
-const AssignPropertyTypes = Object.freeze({
+import createEnum from "./createEnum.js";
+
+const AssignPropertyTypes = createEnum({
     enum: "enum",
     nonenum: "nonenum",
     both: "both",
     keys: "keys"
 });
 
-const validAssignPropertyTypes = new Set(Object.values(AssignPropertyTypes));
-
-export { AssignPropertyTypes, validAssignPropertyTypes };
+export default AssignPropertyTypes;

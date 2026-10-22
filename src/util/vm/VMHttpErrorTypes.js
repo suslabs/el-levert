@@ -1,6 +1,8 @@
-const VMHttpErrorTypes = Object.freeze({
+import createEnum from "../createEnum.js";
+
+const VMHttpErrorTypes = createEnum({
     legacy: "legacy",
     value: "value"
 });
 
-export { VMHttpErrorTypes };
+export default VMHttpErrorTypes;

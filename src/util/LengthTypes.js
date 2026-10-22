@@ -1,6 +1,8 @@
-const LengthTypes = Object.freeze({
+import createEnum from "./createEnum.js";
+
+const LengthTypes = createEnum({
     array: "array",
     string: "string"
 });
 
-export { LengthTypes };
+export default LengthTypes;

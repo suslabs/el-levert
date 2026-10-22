@@ -1,4 +1,4 @@
-import OverclockingModes, { validModes } from "./OverclockingModes.js";
+import OverclockingModes from "./OverclockingModes.js";
 
 import { OverclockingValues, modeValues, tiers, tierByName } from "../../../structures/OverclockingValues.js";
 
@@ -97,7 +97,7 @@ class Overclocking {
     }
 
     static isValidMode(mode) {
-        return typeof mode === "string" && validModes.has(mode.toLowerCase());
+        return typeof mode === "string" && OverclockingModes.has(mode.toLowerCase());
     }
 
     static parseDuration(input) {
@@ -396,7 +396,7 @@ class Overclocking {
     }
 
     _validate() {
-        this.mode = TypeTester.normalizeEnum(this.mode, validModes, "recipe mode", OCError);
+        this.mode = TypeTester.normalizeEnum(this.mode, OverclockingModes, "recipe mode", OCError);
 
         if (this.eu == null) {
             throw new OCError("EU cost is required", {

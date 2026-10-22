@@ -3,8 +3,9 @@ import { Buffer } from "node:buffer";
 import RevisionManager from "./RevisionManager.js";
 
 import RevisionTargetSpec from "../../../structures/revision/RevisionTargetSpec.js";
-import { RevisionOperationTypes } from "../../../structures/revision/RevisionOperationTypes.js";
 import Tag from "../../../structures/tag/Tag.js";
+
+import RevisionOperationTypes from "../../../structures/revision/RevisionOperationTypes.js";
 
 import { getConfig } from "../../../LevertClient.js";
 

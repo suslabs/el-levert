@@ -1,8 +1,9 @@
-import UtilError from "../../errors/UtilError.js";
-
+import createEnum from "../../util/createEnum.js";
 import TypeTester from "../../util/TypeTester.js";
 
-const VMLanguages = Object.freeze({
+import UtilError from "../../errors/UtilError.js";
+
+const VMLanguages = createEnum({
     js: "js",
     ts: "ts"
 });

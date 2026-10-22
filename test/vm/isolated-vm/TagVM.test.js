@@ -7,7 +7,7 @@ import "../../../setupGlobals.js";
 
 import VMError from "../../../src/errors/VMError.js";
 import { VMErrors } from "../../../src/vm/isolated-vm/VMErrors.js";
-import { InspectorModes } from "../../../src/vm/isolated-vm/inspector/InspectorModes.js";
+import InspectorModes from "../../../src/vm/isolated-vm/inspector/InspectorModes.js";
 import { createDiscordChannel, createDiscordMessage, createDiscordUser } from "../../helpers/discordStubs.js";
 import { addTag } from "../../helpers/commandHarness.js";
 import { cleanupRuntime, createRuntime } from "../../helpers/runtimeHarness.js";
@@ -44,6 +44,14 @@ describe("TagVM", () => {
             "3"
         );
         await expect(vm.runScript("({ alpha: 1, beta: [2, 3] })", { msg })).resolves.toBe('{"alpha":1,"beta":[2,3]}');
+
+        const guildMsg = createDiscordMessage("hello", {
+            guildId: "guild-1"
+        });
+
+        await expect(
+            vm.runScript("msg.author.guildId === msg.guildId && msg.author.displayName === 'alex'", { msg: guildMsg })
+        ).resolves.toBe("true");
 
         const context = await vm._getEvalContext({
             msg: createDiscordMessage("hello")
@@ -101,7 +109,7 @@ describe("TagVM", () => {
         );
 
         await expect(vm.runScript("(async () => (await util.fetchTag('scripted')).type)()", { msg })).resolves.toBe(
-            "03"
+            "3"
         );
 
         await expect(
@@ -129,7 +137,7 @@ describe("TagVM", () => {
             vm.runScript("(async () => (await util.dumpTags(true)).find(tag => tag.name === 'scripted').type)()", {
                 msg
             })
-        ).resolves.toBe("03");
+        ).resolves.toBe("3");
 
         await expect(vm.runScript("util.executeTag('plain')", { msg })).resolves.toBe("alpha body");
 

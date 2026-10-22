@@ -1,4 +1,4 @@
-import { RevisionOperationTypes } from "../../../structures/revision/RevisionOperationTypes.js";
+import RevisionOperationTypes from "../../../structures/revision/RevisionOperationTypes.js";
 
 import { getConfig } from "../../../LevertClient.js";
 

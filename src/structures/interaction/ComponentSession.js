@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { InteractionModes } from "./InteractionModes.js";
+import InteractionModes from "./InteractionModes.js";
 
 import { getConfig, getEmoji, getLogger } from "../../LevertClient.js";
 

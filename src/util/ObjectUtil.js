@@ -2,7 +2,7 @@ import Util from "./Util.js";
 import TypeTester from "./TypeTester.js";
 import ArrayUtil from "./ArrayUtil.js";
 
-import { AssignPropertyTypes, validAssignPropertyTypes } from "./AssignPropertyTypes.js";
+import AssignPropertyTypes from "./AssignPropertyTypes.js";
 
 import UtilError from "../errors/UtilError.js";
 
@@ -98,7 +98,7 @@ const ObjectUtil = Object.freeze({
             both = true;
         } else {
             options = ArrayUtil.guaranteeArray(options).map(option =>
-                TypeTester.normalizeEnum(option, validAssignPropertyTypes, "property options", UtilError)
+                TypeTester.normalizeEnum(option, AssignPropertyTypes, "property options", UtilError)
             );
 
             both = options.includes(AssignPropertyTypes.both);

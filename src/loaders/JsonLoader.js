@@ -5,7 +5,7 @@ import Ajv from "ajv";
 import TextLoader from "./TextLoader.js";
 
 import { LoadStatus } from "./LoadStatus.js";
-import { WriteModes } from "./WriteModes.js";
+import WriteModes from "./WriteModes.js";
 
 import Util from "../util/Util.js";
 import FileUtil from "../util/misc/FileUtil.js";

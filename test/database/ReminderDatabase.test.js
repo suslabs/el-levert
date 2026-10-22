@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import "../../setupGlobals.js";
 
 import ReminderDatabase from "../../src/database/ReminderDatabase.js";
-import { OpenModes } from "../../src/database/drivers/sqlite/OpenModes.js";
+import OpenModes from "../../src/database/drivers/sqlite/OpenModes.js";
 import Reminder from "../../src/structures/Reminder.js";
 
 import Util from "../../src/util/Util.js";

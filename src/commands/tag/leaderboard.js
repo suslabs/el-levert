@@ -2,7 +2,7 @@ import { EmbedBuilder } from "discord.js";
 
 import PositionalCommandReader from "../../parsers/command/reader/PositionalCommandReader.js";
 
-import { validLeaderboardTypes } from "../../util/commands/LeaderboardTypes.js";
+import LeaderboardTypes from "../../util/commands/LeaderboardTypes.js";
 
 import { getClient, getEmoji } from "../../LevertClient.js";
 
@@ -117,7 +117,7 @@ class TagLeaderboardCommand {
                 userQuery = part1;
                 showUsage = part2 === "uses" || part2 === "usage";
             }
-        } else if (!validLeaderboardTypes.has(l_type)) {
+        } else if (!LeaderboardTypes.has(l_type)) {
             isUserMode = true;
             userQuery = l_type;
             showUsage = part1 === "uses" || part1 === "usage";

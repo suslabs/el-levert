@@ -2,7 +2,7 @@ import Util from "../Util.js";
 import TypeTester from "../TypeTester.js";
 import ObjectUtil from "../ObjectUtil.js";
 
-import { VMHttpErrorTypes } from "./VMHttpErrorTypes.js";
+import VMHttpErrorTypes from "./VMHttpErrorTypes.js";
 
 import UtilError from "../../errors/UtilError.js";
 
@@ -24,7 +24,7 @@ function normalizeRequestNumber(value, min = 0) {
 }
 
 function normalizeRequestErrorType(value) {
-    return Object.values(VMHttpErrorTypes).includes(value) ? value : undefined;
+    return VMHttpErrorTypes.has(value) ? value : undefined;
 }
 
 let VMUtil = {

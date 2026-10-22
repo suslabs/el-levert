@@ -1,12 +1,12 @@
 import Overclocking from "./Overclocking.js";
-import OverclockingModes, { modeNames, validModes } from "./OverclockingModes.js";
+import OverclockingModes from "./OverclockingModes.js";
 
 import Util from "../../Util.js";
 
 import ParserError from "../../../errors/ParserError.js";
 
 class OverclockArgumentParser {
-    static modes = modeNames;
+    static modes = OverclockingModes.values;
 
     static baseFields = Object.freeze([
         { name: "eu", type: "number", required: true },
@@ -64,7 +64,7 @@ class OverclockArgumentParser {
     _resolveMode(tokens) {
         const first = String(Util.first(tokens)).toLowerCase();
 
-        if (validModes.has(first)) {
+        if (OverclockingModes.has(first)) {
             return [first, tokens.slice(1)];
         }
 

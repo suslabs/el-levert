@@ -78,7 +78,7 @@ function buildDefaultConfig(tempDir, overrides = {}) {
             maxDownloadSize: 50 * Util.dataBytes.megabyte,
             maxRequests: 20,
             rateLimitWindow: 1000,
-            allowLocalhostRequests: false,
+            allowLocalhostRequests: true,
             allowFilesystemRequests: false,
             ...overrides.vmHttp
         },

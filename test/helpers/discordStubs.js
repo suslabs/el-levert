@@ -61,15 +61,40 @@ function createDiscordChannel(overrides = {}) {
     };
 }
 
+function createDiscordMember(user, overrides = {}) {
+    user = user ?? createDiscordUser();
+
+    const guildId = overrides.guildId ?? overrides.guild?.id ?? null;
+
+    return {
+        user,
+        guildId,
+        guild: guildId != null ? { id: guildId } : null,
+        displayName: overrides.displayName ?? user.globalName ?? user.username,
+        nickname: overrides.nickname ?? null,
+        joinedTimestamp: overrides.joinedTimestamp ?? Date.now(),
+        premiumSinceTimestamp: overrides.premiumSinceTimestamp ?? null,
+        pending: false,
+        communicationDisabledUntilTimestamp: null,
+        _roles: overrides.roles ?? overrides._roles ?? [],
+        ...overrides
+    };
+}
+
 function createDiscordMessage(content, overrides = {}) {
-    const channel = overrides.channel ?? createDiscordChannel(),
-        author = overrides.author ?? createDiscordUser();
+    const guildId = overrides.guildId ?? "guild-1",
+        guild = overrides.guild ?? (guildId != null ? { id: guildId, name: "Test Guild" } : null),
+        channel = overrides.channel ?? createDiscordChannel({ guild }),
+        author = overrides.author ?? createDiscordUser(),
+        member = overrides.member ?? (guildId != null ? createDiscordMember(author, { guildId }) : null);
 
     return {
         id: "msg-1",
         content,
         channelId: channel.id,
-        guildId: null,
+        guildId,
+        member,
+        guild,
         createdTimestamp: Date.now(),
         editedTimestamp: null,
         type: 0,
@@ -111,4 +136,4 @@ function createDiscordMessage(content, overrides = {}) {
     };
 }
 
-export { createDiscordChannel, createDiscordMessage, createDiscordUser, defaultReplyValue };
+export { createDiscordChannel, createDiscordMember, createDiscordMessage, createDiscordUser, defaultReplyValue };

@@ -1,6 +1,6 @@
 import BaseStructure from "../BaseStructure.js";
 
-import { FuncTypes, validFuncTypes, ExecutionTypes } from "./FuncTypes.js";
+import { FuncTypes, ExecutionTypes } from "./FuncTypes.js";
 
 import Util from "../../util/Util.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
@@ -49,7 +49,7 @@ class VMFunction extends BaseStructure {
 
         super(options);
 
-        this.type = TypeTester.normalizeEnum(this.type, validFuncTypes, "function type", VMError, {
+        this.type = TypeTester.normalizeEnum(this.type, FuncTypes, "function type", VMError, {
             message: value => "Invalid function type provided: " + value
         });
 

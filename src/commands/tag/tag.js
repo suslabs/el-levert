@@ -1,6 +1,6 @@
 import { escapeMarkdown } from "discord.js";
 
-import { MessageLimitTypes } from "../../handlers/discord/MessageLimitTypes.js";
+import MessageLimitTypes from "../../handlers/discord/MessageLimitTypes.js";
 
 import Tag from "../../structures/tag/Tag.js";
 import { TagTypes } from "../../structures/tag/TagTypes.js";
@@ -372,6 +372,8 @@ Subcommands:
     }
 
     formatError(err, tag) {
+        const tagName = TypeTester.isObject(tag) ? tag.name : tag;
+
         switch (err.name) {
             case "TagError":
                 switch (err.message) {
@@ -379,20 +381,25 @@ Subcommands:
                         return `${getEmoji("warn")} Epic recursion fail: **${err.ref.map(name => escapeMarkdown(name)).join("** -> **")}**`;
                     case "Hop not found":
                         return `${getEmoji("warn")} Tag **${escapeMarkdown(err.ref)}** doesn't exist.`;
+                    case "Tag is a binary tag": {
+                        const name = err.ref ?? tagName,
+                            target = Util.nonemptyString(name) ? ` **${escapeMarkdown(name)}**` : "";
+
+                        return `${getEmoji("warn")} Tag${target} is a binary tag.`;
+                    }
                     default:
                         return `${getEmoji("warn")} ${err.message}.`;
                 }
             case "ClientError":
                 return `${getEmoji("error")} Can't execute script tag. ${err.message}.`;
-            default:
-                const tagName = TypeTester.isObject(tag) ? tag.name : tag,
-                    header = Util.nonemptyString(tagName)
-                        ? `${getEmoji("error")} Encountered exception while executing tag **${escapeMarkdown(tagName)}**:`
-                        : `${getEmoji("error")} Encountered exception while executing tag:`;
+            default: {
+                const target = Util.nonemptyString(tagName) ? ` **${escapeMarkdown(tagName)}**` : "",
+                    header = `${getEmoji("error")} Encountered exception while executing tag${target}:`;
 
                 return DiscordUtil.formatErrorEmbed(header, err, {
                     charLimit: getConfig().errorCharLimit
                 });
+            }
         }
     }
 

@@ -3,7 +3,7 @@ import Handler from "../Handler.js";
 import { getClient, getLogger } from "../../LevertClient.js";
 
 import CLICommandContext from "../../structures/command/context/CLICommandContext.js";
-import { validConsoleLevels } from "./ConsoleLevels.js";
+import ConsoleLevels from "./ConsoleLevels.js";
 
 import Util from "../../util/Util.js";
 
@@ -18,7 +18,7 @@ class CLICommandHandler extends Handler {
     }
 
     reply(level, ...data) {
-        if (validConsoleLevels.has(level)) {
+        if (ConsoleLevels.has(level)) {
             console[level](...data);
         } else {
             console.log(level, ...data);

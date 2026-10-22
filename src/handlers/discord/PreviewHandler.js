@@ -1,7 +1,7 @@
 import { ChannelType, EmbedBuilder, hyperlink } from "discord.js";
 
 import MessageHandler from "./MessageHandler.js";
-import { MessageLimitTypes } from "./MessageLimitTypes.js";
+import MessageLimitTypes from "./MessageLimitTypes.js";
 
 import { getClient, getConfig, getEmoji, getLogger } from "../../LevertClient.js";
 

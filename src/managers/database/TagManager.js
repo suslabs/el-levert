@@ -11,7 +11,7 @@ import TagVM from "../../vm/isolated-vm/TagVM.js";
 import TagVM2 from "../../vm/vm2/TagVM2.js";
 
 import { TagTypes } from "../../structures/tag/TagTypes.js";
-import { RevisionOperationTypes } from "../../structures/revision/RevisionOperationTypes.js";
+import RevisionOperationTypes from "../../structures/revision/RevisionOperationTypes.js";
 import { fileContentTypes, scriptContentTypes, binaryContentTypes, binaryExtensions } from "./TagContentTypes.js";
 
 import { getClient, getConfig, getLogger } from "../../LevertClient.js";
@@ -255,7 +255,7 @@ class TagManager extends DBManager {
         tag = await this.fetchAlias(tag);
 
         if (tag.isBinary) {
-            throw new TagError("Tag is a binary tag and the content cannot be displayed");
+            throw new TagError("Tag is a binary tag", tag.name);
         }
 
         const usageName = tag._usageName ?? tag.name;

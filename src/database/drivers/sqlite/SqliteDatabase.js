@@ -12,7 +12,7 @@ import { PoolEvents } from "./PoolEvents.js";
 import { ConnectionEvents } from "./ConnectionEvents.js";
 import { EventPrefixes } from "./EventPrefixes.js";
 import { DatabaseEvents } from "./DatabaseEvents.js";
-import { OpenModes } from "./OpenModes.js";
+import OpenModes from "./OpenModes.js";
 
 import Util from "../../../util/Util.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";

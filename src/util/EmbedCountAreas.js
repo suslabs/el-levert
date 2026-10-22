@@ -1,11 +1,14 @@
-const EmbedCountAreas = Object.freeze({
-    body: "body",
-    content: "content",
-    details: "details",
-    fields: "fields",
-    all: "all"
-});
+import createEnum from "./createEnum.js";
 
-const validEmbedCountAreas = new Set(Object.values(EmbedCountAreas).filter(area => area !== EmbedCountAreas.all));
+const EmbedCountAreas = createEnum(
+    {
+        body: "body",
+        content: "content",
+        details: "details",
+        fields: "fields",
+        all: "all"
+    },
+    obj => new Set(obj.values.filter(area => area !== obj.all))
+);
 
-export { EmbedCountAreas, validEmbedCountAreas };
+export default EmbedCountAreas;

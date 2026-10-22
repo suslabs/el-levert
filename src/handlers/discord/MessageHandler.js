@@ -16,8 +16,8 @@ import { isErrorCode } from "../../util/discord/ErrorCodes.js";
 import VMUtil from "../../util/vm/VMUtil.js";
 import RateLimiter from "../../util/misc/RateLimiter.js";
 
-import { MessageLimitTypes } from "./MessageLimitTypes.js";
-import { EmbedCountAreas } from "../../util/EmbedCountAreas.js";
+import MessageLimitTypes from "./MessageLimitTypes.js";
+import EmbedCountAreas from "../../util/EmbedCountAreas.js";
 
 class MessageHandler extends Handler {
     static _rateLimiter = null;

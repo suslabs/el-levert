@@ -434,9 +434,7 @@ describe("Merged Branch Coverage", () => {
             expect(binTag.isBinary).toBe(true);
             expect(binTag.isHidden).toBe(true);
 
-            await expect(manager.execute(binTag)).rejects.toThrow(
-                "Tag is a binary tag and the content cannot be displayed"
-            );
+            await expect(manager.execute(binTag)).rejects.toThrow("Tag is a binary tag");
 
             const fetchedBin = await manager.fetch("mybin");
             expect(fetchedBin.isBinary).toBe(true);

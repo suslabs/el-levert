@@ -1,17 +1,20 @@
-const BoolStrings = Object.freeze({
-    true: "true",
-    yes: "yes",
-    y: "y",
-    t: "t",
-    false: "false",
-    no: "no",
-    n: "n",
-    f: "f"
-});
+import createEnum from "./createEnum.js";
 
-const validBoolStrings = new Set(Object.values(BoolStrings));
+const BoolStrings = createEnum(
+    {
+        true: "true",
+        yes: "yes",
+        y: "y",
+        t: "t",
+        false: "false",
+        no: "no",
+        n: "n",
+        f: "f"
+    },
+    obj => {
+        obj.truthy = new Set([obj.true, obj.yes, obj.y, obj.t]);
+        obj.falsy = new Set([obj.false, obj.no, obj.n, obj.f]);
+    }
+);
 
-const truthyStrings = new Set([BoolStrings.true, BoolStrings.yes, BoolStrings.y, BoolStrings.t]),
-    falsyStrings = new Set([BoolStrings.false, BoolStrings.no, BoolStrings.n, BoolStrings.f]);
-
-export { BoolStrings, validBoolStrings, truthyStrings, falsyStrings };
+export default BoolStrings;

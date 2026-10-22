@@ -6,7 +6,7 @@ import { WebSocketServer } from "ws";
 
 import InspectorSession from "./InspectorSession.js";
 
-import { InspectorModes } from "./InspectorModes.js";
+import InspectorModes from "./InspectorModes.js";
 
 import { getLogger } from "../../../LevertClient.js";
 

@@ -1,4 +1,6 @@
-const LeaderboardTypes = Object.freeze({
+import createEnum from "../createEnum.js";
+
+const LeaderboardTypes = createEnum({
     count: "count",
     size: "size",
     uses: "uses",
@@ -6,6 +8,4 @@ const LeaderboardTypes = Object.freeze({
     user: "user"
 });
 
-const validLeaderboardTypes = new Set(Object.values(LeaderboardTypes));
-
-export { LeaderboardTypes, validLeaderboardTypes };
+export default LeaderboardTypes;

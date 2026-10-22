@@ -6,7 +6,7 @@ import { DisabledGroup, OwnerGroup, OwnerUser } from "../../structures/permissio
 import Group from "../../structures/permission/Group.js";
 import User from "../../structures/permission/User.js";
 
-import { RevisionOperationTypes } from "../../structures/revision/RevisionOperationTypes.js";
+import RevisionOperationTypes from "../../structures/revision/RevisionOperationTypes.js";
 
 import { getClient, getConfig, getLogger } from "../../LevertClient.js";
 

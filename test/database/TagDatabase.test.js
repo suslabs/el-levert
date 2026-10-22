@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import "../../setupGlobals.js";
 
 import TagDatabase from "../../src/database/TagDatabase.js";
-import { OpenModes } from "../../src/database/drivers/sqlite/OpenModes.js";
+import OpenModes from "../../src/database/drivers/sqlite/OpenModes.js";
 import Tag from "../../src/structures/tag/Tag.js";
 
 const queryPath = path.resolve(projRoot, "src/database/query/tag");

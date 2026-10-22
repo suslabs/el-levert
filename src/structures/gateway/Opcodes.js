@@ -1,4 +1,6 @@
-const Opcodes = Object.freeze({
+import createEnum from "../../util/createEnum.js";
+
+const Opcodes = createEnum({
     IDENTIFY: 0,
     CONNECT: 1,
     HEARTBEAT: 2,

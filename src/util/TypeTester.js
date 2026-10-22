@@ -108,6 +108,8 @@ const TypeTester = Object.freeze({
     _normalizeEnumValues(valid) {
         if (valid instanceof Set) {
             return valid;
+        } else if (valid?.valid instanceof Set) {
+            return valid.valid;
         } else if (TypeTester.isArray(valid)) {
             return new Set(valid);
         } else if (TypeTester.isObject(valid)) {

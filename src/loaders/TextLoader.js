@@ -5,7 +5,7 @@ import path from "node:path";
 import FileLoader from "./FileLoader.js";
 
 import { LoadStatus } from "./LoadStatus.js";
-import { WriteModes } from "./WriteModes.js";
+import WriteModes from "./WriteModes.js";
 
 import Util from "../util/Util.js";
 import FileUtil from "../util/misc/FileUtil.js";

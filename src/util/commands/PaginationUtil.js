@@ -10,7 +10,7 @@ import {
 
 import ComponentSession from "../../structures/interaction/ComponentSession.js";
 
-import { InteractionModes } from "../../structures/interaction/InteractionModes.js";
+import InteractionModes from "../../structures/interaction/InteractionModes.js";
 
 import { getClient, getEmoji } from "../../LevertClient.js";
 

@@ -1,8 +1,8 @@
-const InvalidFormats = Object.freeze({
+import createEnum from "../util/createEnum.js";
+
+const InvalidFormats = createEnum({
     length: "length",
     combine: "combine"
 });
 
-const invalidFormats = new Set(Object.values(InvalidFormats));
-
-export { InvalidFormats, invalidFormats };
+export default InvalidFormats;

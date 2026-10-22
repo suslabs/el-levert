@@ -3,8 +3,8 @@ import { Buffer } from "node:buffer";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import Util from "../../src/util/Util.js";
-import { LengthTypes } from "../../src/util/LengthTypes.js";
-import { CountTypes } from "../../src/util/CountTypes.js";
+import LengthTypes from "../../src/util/LengthTypes.js";
+import CountTypes from "../../src/util/CountTypes.js";
 
 afterEach(async () => {
     vi.restoreAllMocks();

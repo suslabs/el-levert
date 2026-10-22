@@ -1,4 +1,6 @@
-const MessageLimitTypes = Object.freeze({
+import createEnum from "../../util/createEnum.js";
+
+const MessageLimitTypes = createEnum({
     default: "default",
     none: "none",
     error: "error",
@@ -6,4 +8,4 @@ const MessageLimitTypes = Object.freeze({
     trim: "trim"
 });
 
-export { MessageLimitTypes };
+export default MessageLimitTypes;

@@ -10,7 +10,7 @@ import PermissionDatabase from "../../src/database/PermissionDatabase.js";
 import Group from "../../src/structures/permission/Group.js";
 import User from "../../src/structures/permission/User.js";
 
-import { OpenModes } from "../../src/database/drivers/sqlite/OpenModes.js";
+import OpenModes from "../../src/database/drivers/sqlite/OpenModes.js";
 
 const permissionQueryPath = path.resolve(projRoot, "src/database/query/permission");
 const permissionMigrationsPath = path.resolve(projRoot, "src/database/migrations/permission");

@@ -1,4 +1,6 @@
-const RevisionOperationTypes = Object.freeze({
+import createEnum from "../../util/createEnum.js";
+
+const RevisionOperationTypes = createEnum({
     import: "import",
     create: "create",
     update: "update",
@@ -6,4 +8,4 @@ const RevisionOperationTypes = Object.freeze({
     revert: "revert"
 });
 
-export { RevisionOperationTypes };
+export default RevisionOperationTypes;

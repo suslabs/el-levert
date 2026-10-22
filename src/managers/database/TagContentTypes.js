@@ -1,4 +1,6 @@
-const TagContentTypes = Object.freeze({
+import createEnum from "../../util/createEnum.js";
+
+const TagContentTypes = createEnum({
     scriptJavascript: "application/javascript",
     scriptTextJavascript: "text/javascript",
     plainText: "text/plain",

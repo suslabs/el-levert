@@ -1,4 +1,6 @@
-const OverclockingModes = Object.freeze({
+import createEnum from "../../createEnum.js";
+
+const OverclockingModes = createEnum({
     standard: "standard",
     ebf: "ebf",
     lcr: "lcr",
@@ -6,9 +8,4 @@ const OverclockingModes = Object.freeze({
     macerator: "macerator"
 });
 
-const modeNames = Object.freeze(Object.values(OverclockingModes));
-
-const validModes = new Set(modeNames);
-
-export { modeNames, validModes };
 export default OverclockingModes;

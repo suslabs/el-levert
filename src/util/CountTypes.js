@@ -1,6 +1,8 @@
-const CountTypes = Object.freeze({
+import createEnum from "./createEnum.js";
+
+const CountTypes = createEnum({
     chars: "chars",
     lines: "lines"
 });
 
-export { CountTypes };
+export default CountTypes;

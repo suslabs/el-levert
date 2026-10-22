@@ -1,9 +1,9 @@
-const InspectorModes = Object.freeze({
+import createEnum from "../../../util/createEnum.js";
+
+const InspectorModes = createEnum({
     off: "off",
     console: "console",
     user: "user"
 });
 
-const validInspectorModes = new Set(Object.values(InspectorModes));
-
-export { InspectorModes, validInspectorModes };
+export default InspectorModes;
