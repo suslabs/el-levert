@@ -63,6 +63,42 @@ describe("isolated-vm fake classes", () => {
     test("covers FakeMsg construction and reply formatting", () => {
         expect(new FakeMsg().fixedMsg).toEqual({});
 
+        const user = {
+            id: "user-1",
+            bot: false,
+            system: false,
+            flags: {
+                bitfield: 1
+            },
+            username: "tester",
+            discriminator: "0001",
+            avatar: "avatar",
+            banner: "banner",
+            accentColor: 1,
+            createdTimestamp: 200,
+            defaultAvatarURL: "default-avatar",
+            hexAccentColor: "#111111",
+            tag: "tester#0001",
+            globalName: "Tester",
+            avatarURL: () => "avatar-url",
+            displayAvatarURL: () => "display-avatar-url",
+            bannerURL: () => "banner-url"
+        };
+
+        const member = {
+            guild: {
+                id: "guild-1"
+            },
+            joinedTimestamp: 10,
+            premiumSinceTimestamp: 20,
+            nickname: "nick",
+            pending: false,
+            communicationDisabledUntilTimestamp: 30,
+            displayName: "Display",
+            _roles: ["role-1"],
+            user
+        };
+
         const msg = {
             channelId: "channel-1",
             guildId: "guild-1",
@@ -71,27 +107,8 @@ describe("isolated-vm fake classes", () => {
             type: 0,
             system: false,
             content: "hello",
-            author: {
-                id: "user-1",
-                bot: false,
-                system: false,
-                flags: {
-                    bitfield: 1
-                },
-                username: "tester",
-                discriminator: "0001",
-                avatar: "avatar",
-                banner: "banner",
-                accentColor: 1,
-                createdTimestamp: 200,
-                defaultAvatarURL: "default-avatar",
-                hexAccentColor: "#111111",
-                tag: "tester#0001",
-                globalName: "Tester",
-                avatarURL: () => "avatar-url",
-                displayAvatarURL: () => "display-avatar-url",
-                bannerURL: () => "banner-url"
-            },
+            author: user,
+            member,
             pinned: false,
             tts: false,
             nonce: "nonce",
@@ -168,6 +185,13 @@ describe("isolated-vm fake classes", () => {
         expect(fakeMsg.fixedMsg).toMatchObject({
             id: "message-1",
             content: "hello",
+            author: {
+                id: "user-1",
+                guildId: "guild-1",
+                displayName: "Display",
+                nickname: "nick",
+                roles: ["role-1"]
+            },
             channel: {
                 id: "channel-1",
                 messages: ["message-0"]
@@ -179,6 +203,22 @@ describe("isolated-vm fake classes", () => {
                 id: "guild-1"
             }
         });
+        expect(fakeMsg.fixedMsg.author.guildId).toBe(fakeMsg.fixedMsg.guildId);
+
+        const dmMsg = {
+            ...msg,
+            member: null,
+            guildId: null,
+            guild: null
+        };
+        const fakeDMMsg = new FakeMsg(dmMsg);
+
+        expect(fakeDMMsg.fixedMsg.author).toMatchObject({
+            id: "user-1",
+            username: "tester"
+        });
+        expect(fakeDMMsg.fixedMsg.author.guildId).toBeUndefined();
+        expect(fakeDMMsg.fixedMsg.author.roles).toBeUndefined();
 
         expect(fakeMsg.fixedMsg.replyMsg).toBeNull();
         expect(fakeMsg.fixedMsg.referencedMessage).toBeNull();

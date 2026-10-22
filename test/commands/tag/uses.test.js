@@ -45,14 +45,6 @@ describe("tag uses command", () => {
         expect(out).toContain("Tag **alpha** has been used **3** times.");
     });
 
-    test("works with usage alias", async () => {
-        const command = getCommand(runtime, "tag");
-        await executeCommand(command, "alpha");
-
-        const out = await executeCommand(command, "usage alpha");
-        expect(out).toContain("Tag **alpha** has been used **1** time.");
-    });
-
     test("returns warning for non-existent tag", async () => {
         const command = getCommand(runtime, "tag");
         const out = await executeCommand(command, "uses nonexistent");

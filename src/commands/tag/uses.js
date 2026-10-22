@@ -7,7 +7,7 @@ import Util from "../../util/Util.js";
 class TagUsesCommand {
     static info = {
         name: "uses",
-        aliases: ["usage"],
+        aliases: [],
         parent: "tag",
         subcommand: true,
         args: "<name>",

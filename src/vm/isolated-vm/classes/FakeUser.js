@@ -29,7 +29,7 @@ class FakeUser {
             avatarURL: user.avatarURL(),
             displayAvatarURL: user.displayAvatarURL(),
             bannerURL: user.bannerURL(),
-            guildId: member.guild?.id,
+            guildId: member.guild?.id ?? member.guildId,
             joinedTimestamp: member.joinedTimestamp,
             premiumSinceTimestamp: member.premiumSinceTimestamp,
             nickname: member.nickname,

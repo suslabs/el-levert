@@ -87,7 +87,7 @@ class FakeMsg {
                 rateLimitPerUser: channel?.rateLimitPerUser
             },
 
-            author: new FakeUser(msg.author).fixedUser,
+            author: new FakeUser(msg.member ?? msg.author).fixedUser,
 
             guild: {
                 id: guild?.id,
