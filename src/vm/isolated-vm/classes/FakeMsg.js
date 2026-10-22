@@ -6,7 +6,7 @@ import VMUtil from "../../../util/vm/VMUtil.js";
 class FakeMsg {
     static messageCount = 50;
 
-    constructor(msg, isReply = false) {
+    constructor(msg, isReply = false, replyMsg = null) {
         this.msg = msg ?? undefined;
 
         if (typeof this.msg === "undefined") {
@@ -23,13 +23,13 @@ class FakeMsg {
             .slice(1)
             .map(msg => msg.id);
 
-        let replyMsg = null;
+        let fixedReplyMsg = null;
 
         if (!isReply) {
-            const reply = msg.replyMsg ?? msg.referencedMessage ?? null;
+            const reply = replyMsg ?? msg.replyMsg ?? msg.referencedMessage ?? null;
 
             if (reply !== null) {
-                replyMsg = new FakeMsg(reply, true).fixedMsg;
+                fixedReplyMsg = new FakeMsg(reply, true).fixedMsg;
             }
         }
 
@@ -102,8 +102,8 @@ class FakeMsg {
             }
         });
 
-        fixedMsg.replyMsg = replyMsg;
-        fixedMsg.referencedMessage = replyMsg;
+        fixedMsg.replyMsg = fixedReplyMsg;
+        fixedMsg.referencedMessage = fixedReplyMsg;
 
         this.fixedMsg = fixedMsg;
     }

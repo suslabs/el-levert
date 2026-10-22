@@ -217,7 +217,8 @@ class EvalCommand {
                 out = await getClient().tagVM.runScript(
                     body,
                     {
-                        msg: ctx.msg
+                        msg: ctx.msg,
+                        replyMsg: ctx.replyMsg
                     },
                     {
                         commandContext: ctx,
@@ -235,7 +236,14 @@ class EvalCommand {
                 return;
             }
 
-            out = await getClient().tagVM.runScript(body, { msg: ctx.msg }, { commandContext: ctx });
+            out = await getClient().tagVM.runScript(
+                body,
+                {
+                    msg: ctx.msg,
+                    replyMsg: ctx.replyMsg
+                },
+                { commandContext: ctx }
+            );
         } catch (err) {
             const header = `${getEmoji("error")} Encountered exception while executing script:`,
                 errorOut = DiscordUtil.formatErrorEmbed(header, err, {

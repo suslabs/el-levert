@@ -170,9 +170,9 @@ Subcommands:
             };
         }
 
-        let parsed, downloaded;
-
-        let isLocalFile = false;
+        let parsed,
+            downloaded,
+            isLocalFile = false;
 
         if (hasAttachments) {
             try {
@@ -332,7 +332,8 @@ Subcommands:
                 tag,
                 t_args,
                 {
-                    msg: ctx.msg
+                    msg: ctx.msg,
+                    replyMsg: ctx.replyMsg
                 },
                 {
                     commandContext: ctx,

@@ -109,4 +109,23 @@ describe("BaseCommandContext vs CommandContext separation", () => {
         expect(cloned.interaction).toBe(mockInteraction);
         expect(cloned.isAuthor).toBe(false);
     });
+
+    test("preserves replyMsg in constructor and clone without mutating message", () => {
+        const mockMsg = { id: "msg-123" },
+            replyMsg = { id: "reply-123" };
+
+        const ctx = new CommandContext({
+            message: mockMsg,
+            replyMsg
+        });
+
+        expect(ctx.replyMsg).toBe(replyMsg);
+        expect(mockMsg.replyMsg).toBeUndefined();
+
+        const newReply = { id: "reply-456" };
+        const cloned = ctx.clone({ replyMsg: newReply });
+
+        expect(cloned.replyMsg).toBe(newReply);
+        expect(cloned.msg.replyMsg).toBeUndefined();
+    });
 });

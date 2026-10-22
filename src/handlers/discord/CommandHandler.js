@@ -113,23 +113,31 @@ class CommandHandler extends MessageHandler {
     }
 
     async _resolveReplyMsg(msg) {
+        if (msg.referencedMessage != null) {
+            return msg.referencedMessage;
+        }
+
         const refId = msg.reference?.messageId;
 
         if (!Util.nonemptyString(refId)) {
             return null;
         }
 
-        const channelId = msg.channelId;
-
-        if (!Util.nonemptyString(channelId)) {
-            return null;
-        }
-
         try {
-            return await getClient().fetchMessage(channelId, refId);
+            if (typeof msg.channel?.messages?.fetch === "function") {
+                return await msg.channel.messages.fetch(refId);
+            }
+
+            const channelId = msg.channelId;
+
+            if (Util.nonemptyString(channelId)) {
+                return await getClient().fetchMessage(channelId, refId);
+            }
         } catch {
             return null;
         }
+
+        return null;
     }
 
     async _executeCommand(cmd, context) {

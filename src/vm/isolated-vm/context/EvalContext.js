@@ -187,9 +187,9 @@ class EvalContext {
         await this.vmObjects.set("util", Object, [FakeUtil.getInfo()]);
     }
 
-    async _setMsg(msg) {
+    async _setMsg(msg, replyMsg = null) {
         if (msg != null) {
-            await this.vmObjects.set("msg", FakeMsg, [msg], "fixedMsg");
+            await this.vmObjects.set("msg", FakeMsg, [msg, false, replyMsg], "fixedMsg");
         }
     }
 
@@ -211,7 +211,7 @@ class EvalContext {
     }
 
     async _setupContext(values) {
-        const { msg, tag, args } = values;
+        const { msg, tag, args, replyMsg } = values;
         const context = await this.isolate.createContext({
             inspector: this.enableInspector
         });
@@ -223,7 +223,7 @@ class EvalContext {
         this.eventLoop.setup();
 
         await this._setInfo();
-        await this._setMsg(msg);
+        await this._setMsg(msg, replyMsg);
         await this._setTag(tag, args);
         await this._setVM();
 
