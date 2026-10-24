@@ -23,7 +23,7 @@ import ArrayUtil from "../../util/ArrayUtil.js";
 import RegexUtil from "../../util/misc/RegexUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
-import diceSearch from "../../util/search/diceSearch.js";
+import DatabaseUtil from "../../util/database/DatabaseUtil.js";
 import uFuzzySearch from "../../util/search/uFuzzySearch.js";
 
 import TagError from "../../errors/TagError.js";
@@ -31,6 +31,11 @@ import TagError from "../../errors/TagError.js";
 class TagManager extends DBManager {
     static $name = "tagManager";
     static loadPriority = 0;
+
+    static defaultListLimit = 30;
+    static defaultSearchLimit = 20;
+    static defaultLeaderboardLimit = 10;
+    static defaultUserLeaderboardLimit = 50;
 
     static getNameMap(tags) {
         tags = ArrayUtil.guaranteeArray(tags, null, true);
@@ -53,6 +58,9 @@ class TagManager extends DBManager {
         this.tagNameRegex = new RegExp(getConfig().tagNameRegex);
 
         this.revisions = new TagRevisionManager(this);
+        this.nameSearcher = uFuzzySearch.createTagSearcher();
+        this.fullSearcher = uFuzzySearch.createFullSearcher();
+        this._tagNames = null;
     }
 
     isTagName(name) {
@@ -191,7 +199,7 @@ class TagManager extends DBManager {
     }
 
     async fetchAlias(tag, options = true) {
-        options = typeof options === "boolean" ? { aliasOriginal: options } : ObjectUtil.guaranteeObject(options);
+        options = ObjectUtil.guaranteeObject(options, "aliasOriginal");
 
         const aliasOriginal = options.aliasOriginal ?? true;
 
@@ -657,6 +665,7 @@ class TagManager extends DBManager {
                 }
 
                 getLogger().info(`Renamed tag: "${oldName}" to: "${newName}"`);
+                this._renameTagInNameCache(oldName, newName);
             } else if (validate.validateProvided) {
                 throw new TagError("Tag doesn't exist", tag.name);
             }
@@ -692,6 +701,7 @@ class TagManager extends DBManager {
             if (updated) {
                 await this._updateQuota(tag.owner, -tagSize, -1, tx);
                 await this.revisions.recordDelete(tag, tx, this._getRevisionOptions(options, tag.owner));
+                this._removeTagFromNameCache(tag.name);
             }
         });
 
@@ -730,6 +740,7 @@ class TagManager extends DBManager {
 
             if (updated) {
                 await this.revisions.recordUpdate(oldTag, tag, tx, this._getRevisionOptions(options, tag.owner));
+                this._removeTagFromNameCache(tag.name);
             }
         });
 
@@ -772,15 +783,18 @@ class TagManager extends DBManager {
 
             if (updated) {
                 await this.revisions.recordUpdate(oldTag, tag, tx, this._getRevisionOptions(options, tag.owner));
+                this._addTagToNameCache(tag.name);
             }
         });
 
         return tag;
     }
 
-    async audit(options) {
-        options = ObjectUtil.guaranteeObject(options);
-        return await this.revisions.list(options);
+    async audit(options = {}, pagination = {}) {
+        options = ObjectUtil.guaranteeObject(options, "name");
+        pagination = ObjectUtil.guaranteeObject(pagination, "limit");
+
+        return await this.revisions.list(options, pagination);
     }
 
     async auditDetail(id, tagName) {
@@ -894,12 +908,33 @@ class TagManager extends DBManager {
         }
     }
 
-    async list(user) {
-        const tags = await this.tag_db.list(user),
+    async list(options = {}, pagination = {}) {
+        options = ObjectUtil.guaranteeObject(options, "user");
+        pagination = ObjectUtil.guaranteeObject(pagination, "limit");
+
+        const user = options.user;
+
+        const totalCount = await this.tag_db.count(user);
+
+        if (totalCount === 0) {
+            return {
+                items: [],
+                totalCount: 0,
+                count: 0,
+                newTags: [],
+                oldTags: []
+            };
+        }
+
+        const { limit, offset } = DatabaseUtil.resolvePagination(pagination, TagManager.defaultListLimit);
+
+        const tags = await this.tag_db.list(user, { limit, offset }),
             [newTags, oldTags] = ArrayUtil.split(tags, tag => tag.isOld);
 
         return {
-            count: tags.length,
+            items: tags,
+            totalCount,
+            count: totalCount,
             newTags,
             oldTags
         };
@@ -914,29 +949,43 @@ class TagManager extends DBManager {
         return await this.tag_db.count(user, flag.isEmpty() ? null : flag);
     }
 
-    async search(query, maxResults = 20, minDist, validate = false) {
+    async search(query, options = {}, pagination = {}) {
+        options = ObjectUtil.guaranteeObject(options);
+        pagination = ObjectUtil.guaranteeObject(pagination, "limit");
+
+        const validate = options.validate ?? false;
+
         if (validate) {
             this.checkName(query);
         }
 
-        const tags = await this.dump(false, [false, "hidden"]);
+        const tags = await this._getTagNames();
 
-        return diceSearch(tags, query, {
-            maxResults,
-            minDist
+        const { limit, offset } = DatabaseUtil.resolvePagination(pagination, TagManager.defaultSearchLimit);
+
+        const res = this.nameSearcher.search(tags, query, {
+            maxResults: limit,
+            offset
         });
+
+        return {
+            results: res.results,
+            items: res.results,
+            totalCount: res.other.total ?? res.results.length,
+            other: res.other
+        };
     }
 
-    async fullSearch(query, options = 20) {
-        const opts = typeof options === "number" ? { maxResults: options } : ObjectUtil.guaranteeObject(options);
+    async fullSearch(query, options = {}) {
+        options = ObjectUtil.guaranteeObject(options, "maxResults");
 
-        const maxResults = opts.maxResults ?? 20,
-            offset = opts.offset ?? 0;
+        const maxResults = options.maxResults ?? options.limit ?? TagManager.defaultSearchLimit,
+            offset = options.offset ?? 0;
 
         const flag = Tag.getFlag([false, "script", "hidden"]),
             tags = await this.tag_db.searchDump(flag);
 
-        const res = uFuzzySearch.search(tags, query, {
+        const res = this.fullSearcher.search(tags, query, {
             searchKey: "body",
             maxResults,
             offset
@@ -949,7 +998,7 @@ class TagManager extends DBManager {
         const flag = Tag.getFlag([false, "script", "hidden"]),
             tags = await this.tag_db.searchDump(flag);
 
-        return uFuzzySearch.sort(tags, query, {
+        return this.fullSearcher.sort(tags, query, {
             searchKey: "body"
         });
     }
@@ -972,23 +1021,35 @@ class TagManager extends DBManager {
         return Util.randomElement(tags) ?? null;
     }
 
-    async leaderboard(type, limit = 20, resolveUsers = true) {
-        if (!Number.isInteger(limit) || limit < 1) {
+    async leaderboard(options = {}, pagination = {}) {
+        options = ObjectUtil.guaranteeObject(options, "type");
+        pagination = ObjectUtil.guaranteeObject(pagination, "limit");
+
+        const type = options.type,
+            resolveUsers = options.resolveUsers ?? true;
+
+        const { limit, offset } = DatabaseUtil.resolvePagination(pagination, TagManager.defaultLeaderboardLimit);
+
+        if (limit !== -1 && (!Number.isInteger(limit) || limit < 1)) {
             throw new TagError("Invalid leaderboard limit", limit);
         }
 
-        let leaderboard = [];
+        let leaderboard = [],
+            totalCount = 0;
 
         switch (type) {
             case "count":
-                leaderboard = await this.tag_db.countLeaderboard(limit);
+                totalCount = await this.tag_db.countLeaderboardTotal();
+                leaderboard = await this.tag_db.countLeaderboard({ limit, offset });
                 break;
             case "size":
-                leaderboard = await this.tag_db.sizeLeaderboard(limit);
+                totalCount = await this.tag_db.sizeLeaderboardTotal();
+                leaderboard = await this.tag_db.sizeLeaderboard({ limit, offset });
                 break;
             case "uses":
             case "usage":
-                leaderboard = await this.tag_db.usageLeaderboard(limit);
+                totalCount = await this.tag_db.usageLeaderboardTotal();
+                leaderboard = await this.tag_db.usageLeaderboard({ limit, offset });
                 break;
             default:
                 throw new TagError("Invalid leaderboard type: " + type, type);
@@ -998,7 +1059,11 @@ class TagManager extends DBManager {
             await this.resolveLeaderboardUsers(leaderboard, type);
         }
 
-        return leaderboard;
+        return {
+            items: leaderboard,
+            leaderboard,
+            totalCount
+        };
     }
 
     async resolveLeaderboardUsers(leaderboard, type) {
@@ -1026,7 +1091,13 @@ class TagManager extends DBManager {
         return leaderboard;
     }
 
-    async userLeaderboard(user, limit = 50) {
+    async userLeaderboard(options = {}, pagination = {}) {
+        options = ObjectUtil.guaranteeObject(options, "user");
+        pagination = ObjectUtil.guaranteeObject(pagination, "limit");
+
+        const user = options.user,
+            onlyUsed = options.onlyUsed ?? false;
+
         if (!Util.nonemptyString(user)) {
             return null;
         }
@@ -1037,8 +1108,18 @@ class TagManager extends DBManager {
             return null;
         }
 
-        const tags = limit > 0 ? await this.tag_db.topUserTags(user, limit) : [];
-        return { ...stats, tags };
+        const { limit, offset } = DatabaseUtil.resolvePagination(pagination, TagManager.defaultUserLeaderboardLimit);
+
+        const totalCount = await this.tag_db.topUserTagsTotal(user, { onlyUsed });
+
+        const tags = limit === 0 ? [] : await this.tag_db.topUserTags(user, { limit, offset, onlyUsed });
+
+        return {
+            ...stats,
+            tags,
+            items: tags,
+            totalCount
+        };
     }
 
     async getQuota(user) {
@@ -1268,6 +1349,10 @@ class TagManager extends DBManager {
         const tagSize = this._checkTagSize(tag);
 
         await this._updateQuota(tag.owner, tagSize, 1, tx);
+
+        if (!tag.isHidden) {
+            this._addTagToNameCache(tag.name);
+        }
     }
 
     _getRevisionOptions(options, fallbackActor) {
@@ -1320,6 +1405,18 @@ class TagManager extends DBManager {
             await this._updateQuota(restored.owner, newSize, 1, tx);
         }
 
+        if (current.name !== restored.name) {
+            this._renameTagInNameCache(current.name, restored.name);
+        }
+
+        if (current.isHidden !== restored.isHidden) {
+            if (restored.isHidden) {
+                this._removeTagFromNameCache(restored.name);
+            } else {
+                this._addTagToNameCache(restored.name);
+            }
+        }
+
         const aliasUpdates = [];
 
         if (current.name !== restored.name) {
@@ -1358,6 +1455,10 @@ class TagManager extends DBManager {
             setRegistered: false
         });
         await this._updateQuota(restored.owner, restored.getSize(), 1, tx);
+
+        if (!restored.isHidden) {
+            this._addTagToNameCache(restored.name);
+        }
     }
 
     async _deleteRevertedTag(current, tx) {
@@ -1372,6 +1473,7 @@ class TagManager extends DBManager {
         }
 
         await this._updateQuota(current.owner, -current.getSize(), -1, tx);
+        this._removeTagFromNameCache(current.name);
     }
 
     async _applyRevert(current, restored, tx) {
@@ -1402,5 +1504,42 @@ class TagManager extends DBManager {
             aliasUpdates
         };
     }
+
+    async _getTagNames() {
+        if (this._tagNames === null) {
+            this._tagNames = await this.dump(false, [false, "hidden"]);
+        }
+
+        return this._tagNames;
+    }
+
+    _addTagToNameCache(name) {
+        if (this._tagNames !== null && !this._tagNames.includes(name)) {
+            this._tagNames.push(name);
+        }
+    }
+
+    _removeTagFromNameCache(name) {
+        if (this._tagNames !== null) {
+            const idx = this._tagNames.indexOf(name);
+
+            if (idx !== -1) {
+                this._tagNames.splice(idx, 1);
+            }
+        }
+    }
+
+    _renameTagInNameCache(oldName, newName) {
+        if (this._tagNames !== null) {
+            const idx = this._tagNames.indexOf(oldName);
+
+            if (idx !== -1) {
+                this._tagNames[idx] = newName;
+            } else {
+                this._tagNames.push(newName);
+            }
+        }
+    }
 }
+
 export default TagManager;

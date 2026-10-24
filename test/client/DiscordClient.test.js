@@ -409,6 +409,116 @@ describe("DiscordClient", () => {
         ]);
     });
 
+    test("finds in current server first and falls back to other servers if not found", async () => {
+        const client = createClient();
+
+        const currentGuild = {
+            id: "current-guild",
+            members: {
+                fetch: vi.fn().mockResolvedValue(new Map([["10", { id: "10", displayName: "LocalUser" }]]))
+            }
+        };
+
+        const otherGuild = {
+            id: "other-guild",
+            members: {
+                fetch: vi.fn().mockResolvedValue(new Map([["20", { id: "20", displayName: "RemoteUser" }]]))
+            }
+        };
+
+        client.client.guilds.cache = new Map([
+            ["current-guild", currentGuild],
+            ["other-guild", otherGuild]
+        ]);
+        client.fetchGuild = vi.fn().mockImplementation(async id => {
+            if (id === "current-guild") return currentGuild;
+            if (id === "other-guild") return otherGuild;
+            return null;
+        });
+
+        const resLocal = await client.findUsers("Local", { sv_id: "current-guild" });
+        expect(resLocal).toEqual([{ id: "10", displayName: "LocalUser" }]);
+        expect(otherGuild.members.fetch).not.toHaveBeenCalled();
+
+        const resRemote = await client.findUsers("Remote", { sv_id: "current-guild" });
+        expect(resRemote).toEqual([{ id: "20", displayName: "RemoteUser" }]);
+        expect(otherGuild.members.fetch).toHaveBeenCalledWith({ query: "Remote", limit: 50 });
+    });
+
+    test("searches cached members first and processes other guilds in windows", async () => {
+        const client = createClient();
+
+        const currentGuild = {
+            id: "guild-0",
+            members: {
+                cache: new Map([["111111111111111111", { id: "111111111111111111", displayName: "CachedCurrent" }]]),
+                fetch: vi.fn()
+            }
+        };
+
+        const otherGuild1 = {
+            id: "guild-1",
+            members: {
+                cache: new Map([["222222222222222222", { id: "222222222222222222", displayName: "CachedRemote" }]]),
+                fetch: vi.fn()
+            }
+        };
+
+        const otherGuild2 = {
+            id: "guild-2",
+            members: {
+                cache: new Map(),
+                fetch: vi
+                    .fn()
+                    .mockResolvedValue(
+                        new Map([["333333333333333333", { id: "333333333333333333", displayName: "FetchedBatch1" }]])
+                    )
+            }
+        };
+
+        const otherGuild3 = {
+            id: "guild-3",
+            members: {
+                cache: new Map(),
+                fetch: vi
+                    .fn()
+                    .mockResolvedValue(
+                        new Map([["444444444444444444", { id: "444444444444444444", displayName: "FetchedBatch2" }]])
+                    )
+            }
+        };
+
+        client.client.guilds.cache = new Map([
+            ["guild-0", currentGuild],
+            ["guild-1", otherGuild1],
+            ["guild-2", otherGuild2],
+            ["guild-3", otherGuild3]
+        ]);
+        client.fetchGuild = vi.fn().mockImplementation(async id => client.client.guilds.cache.get(id) ?? null);
+
+        const resCurrentCached = await client.findUsers("CachedCurrent", { sv_id: "guild-0" });
+        expect(resCurrentCached).toEqual([{ id: "111111111111111111", displayName: "CachedCurrent" }]);
+        expect(currentGuild.members.fetch).not.toHaveBeenCalled();
+
+        const resOtherCached = await client.findUsers("CachedRemote", { sv_id: "guild-0" });
+        expect(resOtherCached).toEqual([{ id: "222222222222222222", displayName: "CachedRemote" }]);
+        expect(otherGuild1.members.fetch).not.toHaveBeenCalled();
+
+        const resWindowed = await client.findUsers("FetchedBatch1", {
+            sv_id: "guild-0",
+            window: 2
+        });
+        expect(resWindowed).toEqual([{ id: "333333333333333333", displayName: "FetchedBatch1" }]);
+        expect(otherGuild2.members.fetch).toHaveBeenCalled();
+        expect(otherGuild3.members.fetch).not.toHaveBeenCalled();
+
+        const resIdCached = await client.findUsers("111111111111111111", { sv_id: "guild-0" });
+        expect(resIdCached).toEqual([{ id: "111111111111111111", displayName: "CachedCurrent" }]);
+
+        const resRemoteIdCached = await client.findUsers("222222222222222222", { sv_id: "guild-0" });
+        expect(resRemoteIdCached).toEqual([{ id: "222222222222222222", displayName: "CachedRemote" }]);
+    });
+
     test("covers fetchMember, fetchChannel, fetchMessage, and fetchMessages error branches", async () => {
         const client = createClient();
 

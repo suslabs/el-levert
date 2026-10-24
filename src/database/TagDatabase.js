@@ -180,24 +180,49 @@ class TagDatabase extends RevisionDatabase {
         return tags;
     }
 
-    async list(user) {
-        const rows = await this.tagQueries.list.all({
-                $user: user
-            }),
-            tags = DatabaseUtil.rowEntity(rows, Tag);
+    async list(user, options = {}) {
+        options = ObjectUtil.guaranteeObject(options, "limit");
 
-        sortTags(tags);
-        return tags;
+        const limit = options.limit ?? -1,
+            offset = options.offset ?? 0;
+
+        const rows = await this.tagQueries.list.all({
+            $user: user,
+            $limit: limit,
+            $offset: offset
+        });
+
+        return DatabaseUtil.rowEntity(rows, Tag);
     }
 
-    async topUserTags(user, limit = 50) {
-        const rows = await this.tagQueries.topUserTags.all({
-                $user: user,
-                $limit: limit
-            }),
-            tags = DatabaseUtil.rowEntity(rows, Tag);
+    async topUserTags(user, options = {}) {
+        options = ObjectUtil.guaranteeObject(options, "limit");
 
-        return tags;
+        const limit = options.limit ?? 50,
+            offset = options.offset ?? 0,
+            onlyUsed = options.onlyUsed ? 1 : 0;
+
+        const rows = await this.tagQueries.topUserTags.all({
+            $user: user,
+            $onlyUsed: onlyUsed,
+            $limit: limit,
+            $offset: offset
+        });
+
+        return DatabaseUtil.rowEntity(rows, Tag);
+    }
+
+    async topUserTagsTotal(user, options = {}) {
+        options = ObjectUtil.guaranteeObject(options, "onlyUsed");
+
+        const onlyUsed = options.onlyUsed ? 1 : 0;
+
+        const row = await this.tagQueries.topUserTagsTotal.get({
+            $user: user,
+            $onlyUsed: onlyUsed
+        });
+
+        return row.count;
     }
 
     async count(user = null, flag = null) {
@@ -246,16 +271,38 @@ class TagDatabase extends RevisionDatabase {
         });
     }
 
-    async sizeLeaderboard(limit) {
+    async sizeLeaderboard(options = {}) {
+        options = ObjectUtil.guaranteeObject(options, "limit");
+
+        const limit = options.limit ?? 20,
+            offset = options.offset ?? 0;
+
         return await this.quotaQueries.sizeLeaderboard.all({
-            $limit: limit
+            $limit: limit,
+            $offset: offset
         });
     }
 
-    async countLeaderboard(limit) {
+    async sizeLeaderboardTotal() {
+        const row = await this.quotaQueries.sizeLeaderboardTotal.get();
+        return row.count;
+    }
+
+    async countLeaderboard(options = {}) {
+        options = ObjectUtil.guaranteeObject(options, "limit");
+
+        const limit = options.limit ?? 20,
+            offset = options.offset ?? 0;
+
         return await this.quotaQueries.countLeaderboard.all({
-            $limit: limit
+            $limit: limit,
+            $offset: offset
         });
+    }
+
+    async countLeaderboardTotal() {
+        const row = await this.quotaQueries.countLeaderboardTotal.get();
+        return row.count;
     }
 
     async quotaUserLeaderboard(user) {
@@ -312,9 +359,15 @@ class TagDatabase extends RevisionDatabase {
         });
     }
 
-    async usageLeaderboard(limit) {
+    async usageLeaderboard(options = {}) {
+        options = ObjectUtil.guaranteeObject(options, "limit");
+
+        const limit = options.limit ?? 20,
+            offset = options.offset ?? 0;
+
         const rows = await this.usageQueries.leaderboard.all({
-            $limit: limit
+            $limit: limit,
+            $offset: offset
         });
 
         return rows.map(row => ({
@@ -322,6 +375,11 @@ class TagDatabase extends RevisionDatabase {
             count: row.count,
             exists: Boolean(row.exists)
         }));
+    }
+
+    async usageLeaderboardTotal() {
+        const row = await this.usageQueries.total.get();
+        return row.count;
     }
 }
 

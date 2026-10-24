@@ -78,7 +78,7 @@ describe("PermissionManager", () => {
         expect(users.find(user => user.user === "123").username).toBe("name-123");
         expect(users.find(user => user.user === "404").username).toBe("NOT FOUND");
 
-        const groups = await manager.listGroups(true);
+        const { items: groups } = await manager.listGroups({ fetchUsernames: true }, { all: true });
         expect(
             groups
                 .find(group => group.name === "mods")

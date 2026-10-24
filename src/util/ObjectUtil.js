@@ -35,8 +35,21 @@ const ObjectUtil = Object.freeze({
         return Object.fromEntries(Object.entries(obj).map(([key, value]) => [value, key]));
     },
 
-    guaranteeObject: (obj, fallback = {}) => {
-        return TypeTester.isObject(obj) ? obj : fallback;
+    guaranteeObject: (obj, fallback = {}, key = null) => {
+        if (TypeTester.isObject(obj)) {
+            return obj;
+        }
+
+        if (typeof fallback === "string") {
+            key = fallback;
+            fallback = {};
+        }
+
+        if (Util.nonemptyString(key) && obj != null) {
+            return { [key]: obj };
+        }
+
+        return fallback;
     },
 
     _isGetterOnly: (obj, key) => {

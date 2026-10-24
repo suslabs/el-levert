@@ -2,6 +2,8 @@ import { EmbedBuilder } from "discord.js";
 
 import { getClient, getEmoji } from "../../LevertClient.js";
 
+import PermissionManager from "../../managers/database/PermissionManager.js";
+
 import Util from "../../util/Util.js";
 import PaginationUtil from "../../util/commands/PaginationUtil.js";
 
@@ -13,7 +15,7 @@ function formatGroups(groups, startIndex = 0, discord = true) {
 }
 
 class PermListCommand {
-    static defaultLimit = 10;
+    static defaultLimit = PermissionManager.defaultGroupLimit;
     static maxLimit = 50;
 
     static info = {
@@ -29,17 +31,62 @@ class PermListCommand {
     };
 
     async handler(ctx) {
-        const groups = await getClient().permManager.listGroups(true);
+        const paginationOpts = PaginationUtil.getPaginationOptions(ctx, {
+            defaultLimit: PermListCommand.defaultLimit,
+            maxLimit: PermListCommand.maxLimit
+        });
 
-        if (Util.empty(groups)) {
+        if (paginationOpts.all) {
+            const allRes = await getClient().permManager.listGroups({ fetchUsernames: true }, { all: true });
+
+            if (allRes === null || Util.empty(allRes.items)) {
+                return `${getEmoji("info")} **No** permissions are registered.`;
+            }
+
+            const allGroups = allRes.items;
+
+            const header = `${getEmoji("info")} Registered permissions:`;
+
+            return await PaginationUtil.paginate(ctx, {
+                items: allGroups,
+                defaultLimit: PermListCommand.defaultLimit,
+
+                render: (items, { page }) => {
+                    const startIndex = (page - 1) * ctx.pageSize,
+                        format = formatGroups(items, startIndex, true);
+
+                    return {
+                        content: header,
+                        embeds: [new EmbedBuilder().setDescription(format)]
+                    };
+                },
+
+                dumpHeader: header,
+                formatDump: (items, discord = true) => formatGroups(items, 0, discord),
+                filename: "permissions.txt"
+            });
+        }
+
+        const initialRes = await getClient().permManager.listGroups({ fetchUsernames: true }, paginationOpts);
+
+        if (initialRes === null || initialRes.totalCount === 0) {
             return `${getEmoji("info")} **No** permissions are registered.`;
         }
 
         const header = `${getEmoji("info")} Registered permissions:`;
 
         return await PaginationUtil.paginate(ctx, {
-            items: groups,
+            initialData: {
+                items: initialRes.items,
+                totalCount: initialRes.totalCount,
+                page: paginationOpts.page ?? 1
+            },
             defaultLimit: PermListCommand.defaultLimit,
+            maxLimit: PermListCommand.maxLimit,
+
+            fetch: async ({ page, limit, offset }) => {
+                return await getClient().permManager.listGroups({ fetchUsernames: true }, { page, limit, offset });
+            },
 
             render: (items, { page }) => {
                 const startIndex = (page - 1) * ctx.pageSize,
@@ -52,7 +99,13 @@ class PermListCommand {
             },
 
             dumpHeader: header,
-            formatDump: (items, discord = true) => formatGroups(items, 0, discord),
+            formatDump: async (items, discord = true) => {
+                const { items: allGroups } = await getClient().permManager.listGroups(
+                    { fetchUsernames: true },
+                    { all: true }
+                );
+                return formatGroups(allGroups, 0, discord);
+            },
             filename: "permissions.txt"
         });
     }

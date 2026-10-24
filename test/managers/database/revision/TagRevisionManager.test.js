@@ -62,11 +62,11 @@ describe("TagRevisionManager", () => {
 
         await manager.rename(await manager.fetch("alpha"), "beta", true, { actor: "u1" });
 
-        const betaRevisions = await manager.audit({ name: "beta", limit: 10 });
+        const { items: betaRevisions } = await manager.audit({ name: "beta" }, { limit: 10 });
         expect(betaRevisions.map(revision => revision.operation)).toEqual(expect.arrayContaining(["create", "update"]));
         expect(betaRevisions.some(revision => revision.changed.includes("name"))).toBe(true);
 
-        const aliasRevisions = await manager.audit({ name: "alias", limit: 10 });
+        const { items: aliasRevisions } = await manager.audit({ name: "alias" }, { limit: 10 });
         expect(aliasRevisions.some(revision => revision.changed.includes("aliasName"))).toBe(true);
 
         await manager.revert("beta", null, "u1", {
@@ -77,11 +77,11 @@ describe("TagRevisionManager", () => {
         expect(await manager.fetch("beta")).toBeNull();
         expect(await manager.fetch("alpha")).toMatchObject({ body: "two" });
         expect(await manager.fetch("alias")).toMatchObject({ aliasName: "alpha" });
-        expect((await manager.audit({ name: "alias", limit: 1 })).at(0).changed).toContain("aliasName");
+        expect((await manager.audit({ name: "alias" }, { limit: 1 })).items.at(0).changed).toContain("aliasName");
 
         await manager.delete(await manager.fetch("alpha"), true, { actor: "u1" });
         expect(await manager.fetch("alpha")).toBeNull();
-        expect((await manager.audit({ name: "alpha", limit: 1 })).at(0).operation).toBe("delete");
+        expect((await manager.audit({ name: "alpha" }, { limit: 1 })).items.at(0).operation).toBe("delete");
     });
 
     test("reverts the latest eligible user edit once and lets mods restore arbitrary revisions", async () => {
@@ -90,7 +90,7 @@ describe("TagRevisionManager", () => {
         const tag = await manager.add("alpha", "one", "u1", { type: "text" }, true, { actor: "u1" });
         await manager.edit(tag, "two", { type: "text" }, true, { actor: "u1" });
 
-        const editRevision = (await manager.audit({ name: "alpha", limit: 1 })).at(0);
+        const editRevision = (await manager.audit({ name: "alpha" }, { limit: 1 })).items.at(0);
         expect(editRevision.operation).toBe("update");
 
         const restored = await manager.revert("alpha", null, "u1", {
@@ -135,7 +135,7 @@ describe("TagRevisionManager", () => {
         try {
             await manager.add("disabled_rev", "one", "u1", { type: "text" });
             expect(await manager.revisions.findSubject("disabled_rev")).toBeNull();
-            expect(await manager.audit({ name: "disabled_rev" })).toHaveLength(0);
+            expect((await manager.audit({ name: "disabled_rev" })).items).toHaveLength(0);
 
             await expect(manager.revert("disabled_rev", 1, "u1")).rejects.toThrow("Tag revisions are disabled");
         } finally {
@@ -157,7 +157,7 @@ describe("TagRevisionManager", () => {
 
         await manager.edit(await manager.fetch("unv"), "edited body", {}, true, { actor: "u1" });
 
-        const editRevs = await manager.audit({ name: "unv" });
+        const { items: editRevs } = await manager.audit({ name: "unv" });
         expect(editRevs.map(r => r.operation)).toEqual(expect.arrayContaining(["import", "update"]));
 
         await manager.revert("unv", null, "u1", { actor: "u1" });

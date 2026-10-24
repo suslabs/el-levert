@@ -39,4 +39,39 @@ describe("tag search command", () => {
         const out = await executeCommand(command, "search alpha 2");
         expect(out).toContain("Found **no** similar tags");
     });
+
+    test("finds longer tags matching short query prefix and supports all flag", async () => {
+        await addTag(runtime, "ck_base2n", "one");
+        await addTag(runtime, "ck_fastgif", "two");
+
+        const command = getCommand(runtime, "tag");
+        const out = await executeCommand(command, "search ck all");
+
+        const content = out.content ?? out;
+        expect(content).toContain("Found **2** similar tags");
+        expect(content).toContain("ck_base2n");
+        expect(content).toContain("ck_fastgif");
+    });
+
+    test("matches tags at token boundaries and rejects mid-word matches", async () => {
+        await addTag(runtime, "ck_base2n", "one");
+        await addTag(runtime, "backpack", "two");
+
+        const command = getCommand(runtime, "tag");
+        const out = await executeCommand(command, "search ck all");
+
+        const content = out.content ?? out;
+        expect(content).toContain("ck_base2n");
+        expect(content).not.toContain("backpack");
+    });
+
+    test("tolerates single typos on longer tag names", async () => {
+        await addTag(runtime, "ck_font_customemoji", "one");
+
+        const command = getCommand(runtime, "tag");
+        const out = await executeCommand(command, "search customemji 5");
+
+        const content = out.content ?? out;
+        expect(content).toContain("ck_font_customemoji");
+    });
 });

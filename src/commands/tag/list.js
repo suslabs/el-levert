@@ -2,6 +2,8 @@ import { EmbedBuilder } from "discord.js";
 
 import { getClient, getEmoji } from "../../LevertClient.js";
 
+import TagManager from "../../managers/database/TagManager.js";
+
 import Util from "../../util/Util.js";
 import PaginationUtil from "../../util/commands/PaginationUtil.js";
 
@@ -28,7 +30,7 @@ function formatFullTags(tags) {
 }
 
 class TagListCommand {
-    static defaultLimit = 30;
+    static defaultLimit = TagManager.defaultListLimit;
 
     static info = {
         name: "list",
@@ -53,7 +55,7 @@ class TagListCommand {
         const u_name = ctx.arg("userName");
 
         if (Util.nonemptyString(u_name)) {
-            const find = Util.first(await getClient().findUsers(u_name));
+            const find = Util.first(await getClient().findUsers(u_name, { sv_id: ctx.guildId }));
 
             if (typeof find === "undefined") {
                 return `${getEmoji("warn")} User \`${u_name}\` not found.`;
@@ -62,9 +64,52 @@ class TagListCommand {
             user = find.user;
         }
 
-        const tags = await getClient().tagManager.list(user.id);
+        const paginationOpts = PaginationUtil.getPaginationOptions(ctx, {
+            defaultLimit: TagListCommand.defaultLimit
+        });
 
-        if (tags.count < 1) {
+        if (paginationOpts.all) {
+            const tags = await getClient().tagManager.list({ user: user.id }, { all: true });
+
+            if (tags.totalCount < 1) {
+                if (user === ctx.msg.author) {
+                    return `${getEmoji("info")} You don't have any tags. If you want to see the list of all available tags, use \`${this.getSubcmd("dump").getArgsHelp("", false)}\`.`;
+                }
+
+                return `${getEmoji("info")} User \`${user.username}\` has **no** tags.`;
+            }
+
+            const allTags = [...tags.newTags, ...tags.oldTags];
+
+            const s = Util.single(allTags) ? "" : "s",
+                footer = `${tags.totalCount} total tag${s}`;
+
+            const header = `${getEmoji("info")} ${user === ctx.msg.author ? "You have" : `User \`${user.username}\` has`} the following tags:`;
+
+            return await PaginationUtil.paginate(ctx, {
+                items: allTags,
+                defaultLimit: TagListCommand.defaultLimit,
+
+                render: (items, { page }) => {
+                    const startIndex = (page - 1) * ctx.pageSize,
+                        desc = formatTagList(items, startIndex);
+
+                    return {
+                        content: header,
+                        embeds: [new EmbedBuilder().setDescription(desc).setFooter({ text: footer })]
+                    };
+                },
+
+                dumpHeader: header,
+                formatDump: () => formatFullTags(tags),
+                filename: "tags.txt"
+            });
+        }
+
+        const initialRes = await getClient().tagManager.list({ user: user.id }, paginationOpts),
+            totalCount = initialRes?.totalCount ?? initialRes?.count ?? 0;
+
+        if (totalCount < 1) {
             if (user === ctx.msg.author) {
                 return `${getEmoji("info")} You don't have any tags. If you want to see the list of all available tags, use \`${this.getSubcmd("dump").getArgsHelp("", false)}\`.`;
             }
@@ -72,16 +117,24 @@ class TagListCommand {
             return `${getEmoji("info")} User \`${user.username}\` has **no** tags.`;
         }
 
-        const allTags = [...tags.newTags, ...tags.oldTags];
-
-        const s = Util.single(allTags) ? "" : "s",
-            footer = `${tags.count} total tag${s}`;
+        const s = totalCount === 1 ? "" : "s",
+            footer = `${totalCount} total tag${s}`;
 
         const header = `${getEmoji("info")} ${user === ctx.msg.author ? "You have" : `User \`${user.username}\` has`} the following tags:`;
 
+        const fallbackItems = initialRes.items ?? [...(initialRes.newTags ?? []), ...(initialRes.oldTags ?? [])];
+
         return await PaginationUtil.paginate(ctx, {
-            items: allTags,
             defaultLimit: TagListCommand.defaultLimit,
+            initialData: {
+                ...initialRes,
+                items: fallbackItems,
+                totalCount
+            },
+
+            fetch: async ({ page, limit, offset }) => {
+                return await getClient().tagManager.list({ user: user.id }, { page, limit, offset });
+            },
 
             render: (items, { page }) => {
                 const startIndex = (page - 1) * ctx.pageSize,
@@ -94,7 +147,10 @@ class TagListCommand {
             },
 
             dumpHeader: header,
-            formatDump: () => formatFullTags(tags),
+            formatDump: async () => {
+                const allTags = await getClient().tagManager.list({ user: user.id }, { all: true });
+                return formatFullTags(allTags);
+            },
             filename: "tags.txt"
         });
     }

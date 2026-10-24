@@ -6,6 +6,8 @@ import LeaderboardTypes from "../../util/commands/LeaderboardTypes.js";
 
 import { getClient, getEmoji } from "../../LevertClient.js";
 
+import TagManager from "../../managers/database/TagManager.js";
+
 import Util from "../../util/Util.js";
 import PaginationUtil from "../../util/commands/PaginationUtil.js";
 
@@ -61,8 +63,8 @@ function formatUserTags(tags, startIndex = 0, discord = true) {
 }
 
 class TagLeaderboardCommand {
-    static defaultLimit = 10;
-    static maxLimit = 50;
+    static defaultLimit = TagManager.defaultLeaderboardLimit;
+    static maxLimit = TagManager.defaultUserLeaderboardLimit;
     static dumpLimit = 1000;
 
     static info = {
@@ -141,7 +143,7 @@ class TagLeaderboardCommand {
             let user = ctx.msg.author;
 
             if (!Util.empty(userQuery)) {
-                const find = Util.first(await getClient().findUsers(userQuery));
+                const find = Util.first(await getClient().findUsers(userQuery, { sv_id: ctx.guildId }));
 
                 user = find?.user ?? {
                     id: userQuery,
@@ -158,27 +160,72 @@ class TagLeaderboardCommand {
                     maxLimit: TagLeaderboardCommand.maxLimit
                 });
 
-                const fetchLimit = paginationOpts.all
-                    ? TagLeaderboardCommand.dumpLimit
-                    : TagLeaderboardCommand.maxLimit;
+                if (paginationOpts.all) {
+                    const stats = await getClient().tagManager.userLeaderboard(
+                        { user: user.id, onlyUsed: true },
+                        { all: true }
+                    );
 
-                const stats = await getClient().tagManager.userLeaderboard(user.id, fetchLimit);
+                    if (stats === null) {
+                        return `${getEmoji("info")} ${isSelf ? "You have" : `User \`${user.username}\` has`} **no** tags.`;
+                    }
 
-                if (stats === null) {
+                    if (Util.empty(stats.tags)) {
+                        return `${getEmoji("info")} ${isSelf ? "You have" : `User \`${user.username}\` has`} **no** tags with usage.`;
+                    }
+
+                    const header = `${getEmoji("info")} ${userLabel} tag usage:`;
+
+                    return await PaginationUtil.paginate(ctx, {
+                        items: stats.tags,
+                        defaultLimit: TagLeaderboardCommand.defaultLimit,
+
+                        render: (items, { page }) => {
+                            const startIndex = (page - 1) * ctx.pageSize,
+                                desc = formatUserTags(items, startIndex, true);
+
+                            return {
+                                content: header,
+                                embeds: [new EmbedBuilder().setDescription(desc)]
+                            };
+                        },
+
+                        dumpHeader: header,
+                        formatDump: (items, discord = true) => formatUserTags(items, 0, discord),
+                        filename: `usage_${user.username}.txt`
+                    });
+                }
+
+                const initialRes = await getClient().tagManager.userLeaderboard(
+                    { user: user.id, onlyUsed: true },
+                    paginationOpts
+                );
+
+                if (initialRes === null || initialRes.count <= 0) {
                     return `${getEmoji("info")} ${isSelf ? "You have" : `User \`${user.username}\` has`} **no** tags.`;
                 }
 
-                const usageTags = stats.tags.filter(tag => tag.uses > 0);
-
-                if (Util.empty(usageTags)) {
+                if (initialRes.totalCount === 0) {
                     return `${getEmoji("info")} ${isSelf ? "You have" : `User \`${user.username}\` has`} **no** tags with usage.`;
                 }
 
                 const header = `${getEmoji("info")} ${userLabel} tag usage:`;
 
                 return await PaginationUtil.paginate(ctx, {
-                    items: usageTags,
+                    initialData: {
+                        items: initialRes.tags,
+                        totalCount: initialRes.totalCount,
+                        page: paginationOpts.page ?? 1
+                    },
                     defaultLimit: TagLeaderboardCommand.defaultLimit,
+                    maxLimit: TagLeaderboardCommand.maxLimit,
+
+                    fetch: async ({ page, limit, offset }) => {
+                        return await getClient().tagManager.userLeaderboard(
+                            { user: user.id, onlyUsed: true },
+                            { page, limit, offset }
+                        );
+                    },
 
                     render: (items, { page }) => {
                         const startIndex = (page - 1) * ctx.pageSize,
@@ -191,12 +238,18 @@ class TagLeaderboardCommand {
                     },
 
                     dumpHeader: header,
-                    formatDump: (items, discord = true) => formatUserTags(items, 0, discord),
+                    formatDump: async (items, discord = true) => {
+                        const allStats = await getClient().tagManager.userLeaderboard(
+                            { user: user.id, onlyUsed: true },
+                            { all: true }
+                        );
+                        return formatUserTags(allStats.tags, 0, discord);
+                    },
                     filename: `usage_${user.username}.txt`
                 });
             }
 
-            const stats = await getClient().tagManager.userLeaderboard(user.id, 0);
+            const stats = await getClient().tagManager.userLeaderboard({ user: user.id }, { limit: 0 });
 
             if (stats === null) {
                 return `${getEmoji("info")} ${isSelf ? "You have" : `User \`${user.username}\` has`} **no** tags.`;
@@ -214,31 +267,87 @@ class TagLeaderboardCommand {
             maxLimit: TagLeaderboardCommand.maxLimit
         });
 
-        let fetchLimit = TagLeaderboardCommand.maxLimit;
+        let customLimit = null;
 
-        if (paginationOpts.all) {
-            fetchLimit = TagLeaderboardCommand.dumpLimit;
-        } else if (!Util.empty(part1)) {
+        if (!Util.empty(part1)) {
             const parsedLimit = Util.parseInt(part1);
 
             if (Number.isNaN(parsedLimit) || parsedLimit < 1) {
                 return `${getEmoji("warn")} Invalid limit: ${part1}`;
             }
 
-            fetchLimit = Util.clamp(parsedLimit, 1, TagLeaderboardCommand.maxLimit);
+            customLimit = Util.clamp(parsedLimit, 1, TagLeaderboardCommand.maxLimit);
         }
 
-        const leaderboard = await getClient().tagManager.leaderboard(l_type, fetchLimit, false);
+        const pageSize = customLimit ?? paginationOpts.limit ?? TagLeaderboardCommand.defaultLimit;
 
-        if (Util.empty(leaderboard)) {
+        if (paginationOpts.all) {
+            const allRes = await getClient().tagManager.leaderboard(
+                    { type: l_type, resolveUsers: false },
+                    { all: true }
+                ),
+                leaderboard = Array.isArray(allRes) ? allRes : (allRes?.items ?? []);
+
+            if (Util.empty(leaderboard)) {
+                return `${getEmoji("info")} There are **no** tags registered.`;
+            }
+
+            const header = `${getEmoji("info")} Tag ${l_type} leaderboard:`;
+
+            return await PaginationUtil.paginate(ctx, {
+                items: leaderboard,
+                defaultLimit: TagLeaderboardCommand.defaultLimit,
+
+                render: async (items, { page }) => {
+                    await getClient().tagManager.resolveLeaderboardUsers(items, l_type);
+
+                    const startIndex = (page - 1) * ctx.pageSize,
+                        desc = formatLeaderboard(items, l_type, startIndex, true);
+
+                    return {
+                        content: header,
+                        embeds: [new EmbedBuilder().setDescription(desc)]
+                    };
+                },
+
+                dumpHeader: header,
+                formatDump: async (items, discord = true) => {
+                    await getClient().tagManager.resolveLeaderboardUsers(items, l_type);
+                    return formatLeaderboard(items, l_type, 0, discord);
+                },
+                filename: `leaderboard_${l_type}.txt`
+            });
+        }
+
+        const initialRes = await getClient().tagManager.leaderboard(
+            { type: l_type, resolveUsers: false },
+            { page: paginationOpts.page ?? 1, limit: pageSize }
+        );
+
+        const items = Array.isArray(initialRes) ? initialRes : (initialRes?.items ?? []),
+            totalCount = initialRes?.totalCount ?? initialRes?.total ?? items.length;
+
+        if (totalCount === 0 || Util.empty(items)) {
             return `${getEmoji("info")} There are **no** tags registered.`;
         }
 
         const header = `${getEmoji("info")} Tag ${l_type} leaderboard:`;
 
         return await PaginationUtil.paginate(ctx, {
-            items: leaderboard,
-            defaultLimit: TagLeaderboardCommand.defaultLimit,
+            initialData: {
+                items,
+                totalCount,
+                page: paginationOpts.page ?? 1
+            },
+            defaultLimit: pageSize,
+            maxLimit: TagLeaderboardCommand.maxLimit,
+
+            fetch: async ({ page, limit, offset }) => {
+                return await getClient().tagManager.leaderboard(
+                    { type: l_type, resolveUsers: false },
+                    { page, limit, offset }
+                );
+            },
 
             render: async (items, { page }) => {
                 await getClient().tagManager.resolveLeaderboardUsers(items, l_type);
@@ -254,8 +363,14 @@ class TagLeaderboardCommand {
 
             dumpHeader: header,
             formatDump: async (items, discord = true) => {
-                await getClient().tagManager.resolveLeaderboardUsers(items, l_type);
-                return formatLeaderboard(items, l_type, 0, discord);
+                const allRes = await getClient().tagManager.leaderboard(
+                        { type: l_type, resolveUsers: false },
+                        { all: true }
+                    ),
+                    allLeaderboard = Array.isArray(allRes) ? allRes : (allRes?.items ?? []);
+
+                await getClient().tagManager.resolveLeaderboardUsers(allLeaderboard, l_type);
+                return formatLeaderboard(allLeaderboard, l_type, 0, discord);
             },
             filename: `leaderboard_${l_type}.txt`
         });

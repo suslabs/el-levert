@@ -25,6 +25,6 @@ afterEach(async () => {
 describe("reminder command", () => {
     test("shows the real reminder subcommand help", async () => {
         const command = getCommand(runtime, "reminder");
-        await expect(executeCommand(command, "", { msg })).resolves.toContain("add|list|remove|remove_all");
+        await expect(executeCommand(command, "", { msg })).resolves.toContain("add|edit|list|remove|remove_all|snooze");
     });
 });

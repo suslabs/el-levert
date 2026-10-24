@@ -61,7 +61,7 @@ describe("permission revert command", () => {
             await runtime.client.permManager.audit({
                 subject: "alice-id/moderators"
             })
-        ).find(revision => revision.operation === "create").id;
+        ).items.find(revision => revision.operation === "create").id;
 
         expect((await runtime.client.permManager.revisions.fetchRevision(membershipRevision)).snapshot).toEqual({
             user: "alice-id",

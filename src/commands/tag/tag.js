@@ -306,7 +306,7 @@ Subcommands:
 
         if (tag === null) {
             let out = `${getEmoji("warn")} Tag **${escapeMarkdown(t_name)}** doesn't exist.`,
-                { results: find } = await getClient().tagManager.search(t_name, 5, 0.3);
+                { results: find } = await getClient().tagManager.search(t_name, { minDist: 0.3 }, { limit: 5 });
 
             if (!Util.empty(find)) {
                 const names = `**${find.join("**, **")}**`;

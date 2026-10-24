@@ -42,7 +42,7 @@ class TagCountCommand {
             } else if (own) {
                 user = ctx.msg.author;
             } else {
-                const find = Util.first(await getClient().findUsers(u_name));
+                const find = Util.first(await getClient().findUsers(u_name, { sv_id: ctx.guildId }));
 
                 if (typeof find === "undefined") {
                     return `${getEmoji("warn")} User \`${u_name}\` not found.`;

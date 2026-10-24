@@ -18,6 +18,12 @@ describe("ObjectUtil", () => {
         expect(ObjectUtil.guaranteeObject({ a: 1 })).toEqual({ a: 1 });
         expect(ObjectUtil.guaranteeObject(null)).toEqual({});
         expect(ObjectUtil.guaranteeObject(null, { fallback: true })).toEqual({ fallback: true });
+        expect(ObjectUtil.guaranteeObject(5, "limit")).toEqual({ limit: 5 });
+        expect(ObjectUtil.guaranteeObject("plain", "name")).toEqual({ name: "plain" });
+        expect(ObjectUtil.guaranteeObject(true, "enabled")).toEqual({ enabled: true });
+        expect(ObjectUtil.guaranteeObject({ limit: 10 }, "limit")).toEqual({ limit: 10 });
+        expect(ObjectUtil.guaranteeObject(null, "limit")).toEqual({});
+        expect(ObjectUtil.guaranteeObject(null, { fallback: true }, "limit")).toEqual({ fallback: true });
 
         const target = {};
         ObjectUtil.setValuesWithDefaults(target, { a: 1 }, { a: 3, b: () => 5, c: [1] });

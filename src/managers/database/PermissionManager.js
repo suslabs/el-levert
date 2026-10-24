@@ -13,12 +13,15 @@ import { getClient, getConfig, getLogger } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
+import DatabaseUtil from "../../util/database/DatabaseUtil.js";
 
 import PermissionError from "../../errors/PermissionError.js";
 
 class PermissionManager extends DBManager {
     static $name = "permManager";
     static loadPriority = 1;
+
+    static defaultGroupLimit = 10;
 
     constructor(enabled) {
         super(enabled, "permission", "perm_db", PermissionDatabase);
@@ -623,18 +626,51 @@ class PermissionManager extends DBManager {
         return users;
     }
 
-    async listGroups(fetchUsernames = false) {
-        let groups = [];
+    async listGroups(options = {}, pagination = {}) {
+        options = ObjectUtil.guaranteeObject(options, "fetchUsernames");
+        pagination = ObjectUtil.guaranteeObject(pagination, "limit");
 
-        if (this.owner.user !== OwnerUser.user) {
-            groups = [OwnerGroup];
+        const fetchUsernames = options.fetchUsernames ?? false;
+
+        const hasOwner = this.owner.user !== OwnerUser.user,
+            dbCount = await this.perm_db.countGroups(),
+            totalCount = dbCount + (hasOwner ? 1 : 0);
+
+        if (totalCount === 0) {
+            return {
+                items: [],
+                totalCount: 0
+            };
         }
 
-        const groupList = await this.perm_db.listGroups();
-        groups = groups.concat(groupList);
+        const { limit, offset } = DatabaseUtil.resolvePagination(pagination, PermissionManager.defaultGroupLimit),
+            isAll = limit === -1;
 
-        if (Util.empty(groups)) {
-            return null;
+        let groups = [];
+
+        if (isAll) {
+            if (hasOwner) {
+                groups = [OwnerGroup];
+            }
+
+            const dbGroups = await this.perm_db.listGroups({ limit: -1, offset: 0 });
+            groups = groups.concat(dbGroups);
+        } else if (hasOwner) {
+            if (offset === 0) {
+                groups = [OwnerGroup];
+
+                if (limit > 1) {
+                    const dbGroups = await this.perm_db.listGroups({ limit: limit - 1, offset: 0 });
+                    groups = groups.concat(dbGroups);
+                }
+            } else {
+                const dbOffset = offset - 1,
+                    dbGroups = await this.perm_db.listGroups({ limit, offset: dbOffset });
+
+                groups = dbGroups;
+            }
+        } else {
+            groups = await this.perm_db.listGroups({ limit, offset });
         }
 
         const users = await this.listUsers(fetchUsernames),
@@ -644,12 +680,17 @@ class PermissionManager extends DBManager {
             group.setUsers(usersByGroup[group.name] ?? []);
         }
 
-        return groups;
+        return {
+            items: groups,
+            totalCount
+        };
     }
 
-    async audit(options) {
-        options = ObjectUtil.guaranteeObject(options);
-        return await this.revisions.list(options);
+    async audit(options = {}, pagination = {}) {
+        options = ObjectUtil.guaranteeObject(options, "subject");
+        pagination = ObjectUtil.guaranteeObject(pagination, "limit");
+
+        return await this.revisions.list(options, pagination);
     }
 
     async auditDetail(id) {

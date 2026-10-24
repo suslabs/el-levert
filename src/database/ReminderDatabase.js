@@ -22,19 +22,31 @@ class ReminderDatabase extends SqlDatabase {
         return await DatabaseUtil.exists(user, this.queries.exists, this.queries.existsMultiple, "user");
     }
 
-    async fetch(user) {
-        const rows = await this.queries.fetch.all({
+    async count(user) {
+        const row = await this.queries.count.get({
             $user: user
+        });
+
+        return row.count;
+    }
+
+    async fetch(user, options = {}) {
+        options = ObjectUtil.guaranteeObject(options, "limit");
+
+        const limit = options.limit ?? -1,
+            offset = options.offset ?? 0;
+
+        const rows = await this.queries.fetch.all({
+            $user: user,
+            $limit: limit,
+            $offset: offset
         });
 
         if (Util.empty(rows)) {
             return null;
         }
 
-        const reminders = DatabaseUtil.rowEntity(rows, Reminder);
-        reminders.sort((a, b) => a.end - b.end);
-
-        return reminders;
+        return DatabaseUtil.rowEntity(rows, Reminder);
     }
 
     async fetchById(id) {

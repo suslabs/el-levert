@@ -42,7 +42,7 @@ const FakeUtil = Object.freeze({
     },
 
     fetchTag: async (name, options) => {
-        options = typeof options === "boolean" ? { aliasOriginal: options } : ObjectUtil.guaranteeObject(options);
+        options = ObjectUtil.guaranteeObject(options, "aliasOriginal");
 
         const aliasOriginal = options.aliasOriginal ?? false;
 
@@ -141,8 +141,11 @@ const FakeUtil = Object.freeze({
         return new ExternalCopy(user).copyInto();
     },
 
-    findUsers: async query => {
+    findUsers: async (query, options) => {
+        options = ObjectUtil.guaranteeObject(options, "sv_id");
+
         let users = await getClient().findUsers(query, {
+            ...options,
             onlyMembers: true
         });
 

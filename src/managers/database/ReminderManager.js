@@ -6,8 +6,10 @@ import Reminder from "../../structures/Reminder.js";
 import { getClient, getConfig, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
+import DatabaseUtil from "../../util/database/DatabaseUtil.js";
 import Benchmark from "../../util/misc/Benchmark.js";
 import SnoozeUtil from "../../util/commands/SnoozeUtil.js";
 
@@ -22,6 +24,7 @@ class ReminderManager extends DBManager {
     static $name = "reminderManager";
     static loadPriority = 3;
 
+    static defaultListLimit = 5;
     static maxMsgLength = 512;
     static areWeChecking = false;
 
@@ -99,8 +102,29 @@ class ReminderManager extends DBManager {
         }
     }
 
-    async list(user) {
-        return await this.remind_db.fetch(user);
+    async list(options = {}, pagination = {}) {
+        options = ObjectUtil.guaranteeObject(options, "user");
+        pagination = ObjectUtil.guaranteeObject(pagination, "limit");
+
+        const user = options.user;
+
+        const totalCount = await this.remind_db.count(user);
+
+        if (totalCount === 0) {
+            return {
+                items: [],
+                totalCount: 0
+            };
+        }
+
+        const { limit, offset } = DatabaseUtil.resolvePagination(pagination, ReminderManager.defaultListLimit);
+
+        const items = (await this.remind_db.fetch(user, { limit, offset })) ?? [];
+
+        return {
+            items,
+            totalCount
+        };
     }
 
     async exists(user) {
@@ -142,10 +166,10 @@ class ReminderManager extends DBManager {
             index = this.checkIndex(index);
         }
 
-        const reminders = await this.list(user),
-            reminder = reminders?.[index];
+        const { items: reminders } = await this.list({ user }, { all: true }),
+            reminder = reminders[index];
 
-        if (reminders === null || typeof reminder === "undefined") {
+        if (typeof reminder === "undefined") {
             throw new ReminderError("Reminder doesn't exist");
         }
 
@@ -199,7 +223,7 @@ class ReminderManager extends DBManager {
                 });
             }
         } else {
-            const reminders = await this.list(user);
+            const { items: reminders } = await this.list({ user }, { all: true });
 
             if (Util.empty(reminders)) {
                 const lastSent = this._lastSentReminders.get(user);
@@ -248,12 +272,15 @@ class ReminderManager extends DBManager {
             index = this.checkIndex(index);
         }
 
-        const reminders = await this.list(user),
-            reminder = reminders?.[index];
+        const { items: reminders } = await this.list({ user }, { all: true });
 
-        if (reminders === null) {
+        if (Util.empty(reminders)) {
             return null;
-        } else if (typeof reminder === "undefined") {
+        }
+
+        const reminder = reminders[index];
+
+        if (typeof reminder === "undefined") {
             throw new ReminderError("Reminder doesn't exist");
         }
 

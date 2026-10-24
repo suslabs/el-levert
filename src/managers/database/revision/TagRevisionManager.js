@@ -12,11 +12,13 @@ import { getConfig } from "../../../LevertClient.js";
 import Util from "../../../util/Util.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
 import TypeTester from "../../../util/TypeTester.js";
+import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
 
 import TagError from "../../../errors/TagError.js";
 
 class TagRevisionManager {
     static target = "tag";
+    static defaultListLimit = 10;
 
     static revertAgeLimit = Util.durationSeconds.hour / Util.durationSeconds.milli;
 
@@ -120,8 +122,9 @@ class TagRevisionManager {
         return await tx.countRevertsOf(revision);
     }
 
-    async list(options = {}, tx = this.tagManager.tag_db) {
-        options = ObjectUtil.guaranteeObject(options);
+    async list(options = {}, pagination = {}, tx = this.tagManager.tag_db) {
+        options = ObjectUtil.guaranteeObject(options, "name");
+        pagination = ObjectUtil.guaranteeObject(pagination, "limit");
 
         let subjectId = options.subjectId;
 
@@ -130,11 +133,36 @@ class TagRevisionManager {
             subjectId = subject?.id ?? -1;
         }
 
-        return await tx.listRevisions({
+        const queryOpts = {
             target: this.spec.target,
-            ...options,
+            actor: options.actor ?? null,
+            operation: options.operation ?? null,
+            from: options.from ?? null,
+            to: options.to ?? null,
             subjectId
+        };
+
+        const totalCount = await tx.countRevisions(queryOpts);
+
+        if (totalCount === 0) {
+            return {
+                items: [],
+                totalCount: 0
+            };
+        }
+
+        const { limit, offset } = DatabaseUtil.resolvePagination(pagination, TagRevisionManager.defaultListLimit);
+
+        const items = await tx.listRevisions({
+            ...queryOpts,
+            limit,
+            offset
         });
+
+        return {
+            items,
+            totalCount
+        };
     }
 
     async clear(options, tx = this.tagManager.tag_db) {

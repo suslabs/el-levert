@@ -185,7 +185,9 @@ class TagFullSearchCommand {
         query = query.split(splitRegex).join(" ");
 
         if (isAll) {
-            const { results, ranges, other } = await getClient().tagManager.fullSearch(query, Infinity);
+            const { results, ranges, other } = await getClient().tagManager.fullSearch(query, {
+                maxResults: Infinity
+            });
 
             if (Util.empty(results)) {
                 return `${getEmoji("info")} Found **no** similar tags.`;

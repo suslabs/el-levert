@@ -8,7 +8,7 @@ import ArrayUtil from "../util/ArrayUtil.js";
 import ObjectUtil from "../util/ObjectUtil.js";
 import DiscordUtil from "../util/DiscordUtil.js";
 import { isErrorCode } from "../util/discord/ErrorCodes.js";
-import diceSearch from "../util/search/diceSearch.js";
+import uFuzzySearch from "../util/search/uFuzzySearch.js";
 
 import ClientError from "../errors/ClientError.js";
 
@@ -113,8 +113,8 @@ class DiscordClient {
     static defaultUsersOptions = {
         onlyMembers: false,
         searchMembers: true,
-        searchMinDist: 0,
-        limit: 10
+        limit: 10,
+        window: 5
     };
 
     static defaultUsersFetchOptions = {
@@ -881,33 +881,46 @@ class DiscordClient {
             throw new ClientError("No query provided");
         }
 
-        options = ObjectUtil.guaranteeObject(options);
+        options = ObjectUtil.guaranteeObject(options, "sv_id");
         ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultUsersOptions);
 
-        let guilds = null;
+        const sv_id = options.sv_id ?? options.guildId ?? options.guild?.id;
 
-        if (typeof options.sv_id === "string") {
-            guilds = [await this.fetchGuild(options.sv_id)].filter(Boolean);
-        } else {
-            guilds = Array.from(this.client.guilds.cache.values());
+        let currentGuild = null;
+
+        if (typeof sv_id === "string") {
+            currentGuild = await this.fetchGuild(sv_id);
         }
 
+        const currentGuildId = currentGuild?.id ?? (typeof sv_id === "string" ? sv_id : null);
+
+        const allGuilds = Array.from(this.client.guilds.cache.values());
+
+        const otherGuilds =
+            currentGuildId == null ? allGuilds : allGuilds.filter(guild => (guild.id ?? "") !== currentGuildId);
+
         const foundId = Util.first(DiscordUtil.findUserIds(query)),
-            foundMention = Util.first(DiscordUtil.findMentions(query)),
-            user_id = foundId ?? foundMention;
+            foundMention = Util.first(DiscordUtil.findMentions(query));
+
+        const user_id = foundId ?? foundMention;
 
         if (typeof user_id !== "undefined") {
-            let member = null;
-
             if (options.searchMembers) {
-                const members = await Promise.all(guilds.map(guild => this.fetchMember(guild, user_id)));
-                member = members.find(Boolean);
+                const member = await this._findMember(currentGuild, otherGuilds, user_id, options.window);
+
+                if (member != null) {
+                    return [member];
+                }
             }
 
-            if (member != null) {
-                return [member];
-            } else if (options.onlyMembers) {
+            if (options.onlyMembers) {
                 return [];
+            }
+
+            const cachedUser = this.client.users.cache?.get(user_id);
+
+            if (cachedUser != null) {
+                return ((cachedUser.user = cachedUser), [cachedUser]);
             }
 
             const user = await this.findUserById(user_id);
@@ -921,26 +934,30 @@ class DiscordClient {
         fetchOptions = ObjectUtil.guaranteeObject(fetchOptions);
         ObjectUtil.setValuesWithDefaults(fetchOptions, fetchOptions, this.constructor.defaultUsersFetchOptions);
 
-        const allMembers = (
-            await Promise.all(
-                guilds.map(guild =>
-                    guild.members
-                        .fetch({
-                            query,
-                            limit: fetchOptions.limit
-                        })
-                        .then(member => Array.from(member.values()))
-                )
-            )
-        ).flat();
+        if (currentGuild != null) {
+            const currentCached = this._getCachedGuildMembers(currentGuild);
+            const currentCachedRanked = this._rankMembers(currentCached, query, options.limit);
 
-        const uniqueMembers = ArrayUtil.unique(allMembers, "id");
+            if (!Util.empty(currentCachedRanked)) {
+                return currentCachedRanked;
+            }
 
-        return diceSearch(uniqueMembers, query, {
-            maxResults: options.limit,
-            minDist: options.searchMinDist,
-            searchKey: "displayName"
-        }).results;
+            const currentMembers = await this._searchGuildMembers(currentGuild, query, fetchOptions.limit);
+            const currentFetchedRanked = this._rankMembers(currentMembers, query, options.limit);
+
+            if (!Util.empty(currentFetchedRanked)) {
+                return currentFetchedRanked;
+            }
+        }
+
+        const otherCached = otherGuilds.flatMap(guild => this._getCachedGuildMembers(guild));
+        const otherCachedRanked = this._rankMembers(otherCached, query, options.limit);
+
+        if (!Util.empty(otherCachedRanked)) {
+            return otherCachedRanked;
+        }
+
+        return await this._searchGuildsInWindows(otherGuilds, query, options.limit, fetchOptions.limit, options.window);
     }
 
     killProcess() {
@@ -1018,6 +1035,93 @@ class DiscordClient {
         } else {
             throw new ClientError(`Invalid ${name} ID provided`, name);
         }
+    }
+
+    async _findMember(currentGuild, otherGuilds, user_id, windowSize) {
+        if (currentGuild != null) {
+            const cached = currentGuild.members?.cache?.get(user_id);
+
+            if (cached != null) {
+                return cached;
+            }
+        }
+
+        for (const guild of otherGuilds) {
+            const cached = guild.members?.cache?.get(user_id);
+
+            if (cached != null) {
+                return cached;
+            }
+        }
+
+        if (currentGuild != null) {
+            const member = await this.fetchMember(currentGuild, user_id);
+
+            if (member != null) {
+                return member;
+            }
+        }
+
+        for (let i = 0; i < otherGuilds.length; i += windowSize) {
+            const batch = otherGuilds.slice(i, i + windowSize);
+
+            const members = await Promise.all(batch.map(guild => this.fetchMember(guild, user_id)));
+            const member = members.find(Boolean);
+
+            if (member != null) {
+                return member;
+            }
+        }
+
+        return null;
+    }
+
+    _getCachedGuildMembers(guild) {
+        if (guild.members?.cache == null) {
+            return [];
+        }
+
+        return Array.from(guild.members.cache.values());
+    }
+
+    async _searchGuildMembers(guild, query, limit) {
+        try {
+            const members = await guild.members.fetch({ query, limit });
+            return Array.isArray(members) ? members : Array.from(members.values());
+        } catch {
+            return [];
+        }
+    }
+
+    _rankMembers(members, query, limit) {
+        if (Util.empty(members)) {
+            return [];
+        }
+
+        const uniqueMembers = ArrayUtil.unique(members, "id");
+
+        return uFuzzySearch.search(uniqueMembers, query, {
+            maxResults: limit,
+            searchKey: "displayName"
+        }).results;
+    }
+
+    async _searchGuildsInWindows(guilds, query, limit, fetchLimit, windowSize) {
+        for (let i = 0; i < guilds.length; i += windowSize) {
+            const batch = guilds.slice(i, i + windowSize);
+
+            const batchMembers = (
+                await Promise.all(batch.map(guild => this._searchGuildMembers(guild, query, fetchLimit)))
+            ).flat();
+
+            const ranked = this._rankMembers(batchMembers, query, limit);
+
+            if (!Util.empty(ranked)) {
+                return ranked;
+            }
+        }
+
+        return [];
     }
 }
 

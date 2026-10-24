@@ -9,12 +9,14 @@ import { getConfig } from "../../../LevertClient.js";
 
 import Util from "../../../util/Util.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
+import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
 
 import PermissionError from "../../../errors/PermissionError.js";
 
 class PermissionRevisionManager {
     static groupTarget = PermissionRevisionTargets.group;
     static userTarget = PermissionRevisionTargets.user;
+    static defaultListLimit = 10;
 
     constructor(permissionManager) {
         this.permissionManager = permissionManager;
@@ -111,8 +113,9 @@ class PermissionRevisionManager {
         return await tx.countRevertsOf(revision);
     }
 
-    async list(options = {}, tx = this.permissionManager.perm_db) {
-        options = ObjectUtil.guaranteeObject(options);
+    async list(options = {}, pagination = {}, tx = this.permissionManager.perm_db) {
+        options = ObjectUtil.guaranteeObject(options, "subject");
+        pagination = ObjectUtil.guaranteeObject(pagination, "limit");
 
         let subjectId = options.subjectId;
 
@@ -126,10 +129,39 @@ class PermissionRevisionManager {
             subjectId = subject?.id ?? -1;
         }
 
-        return await tx.listRevisions({
-            ...options,
+        const queryOpts = {
+            target: options.target ?? null,
+            actor: options.actor ?? null,
+            operation: options.operation ?? null,
+            from: options.from ?? null,
+            to: options.to ?? null,
             subjectId
+        };
+
+        const totalCount = await tx.countRevisions(queryOpts);
+
+        if (totalCount === 0) {
+            return {
+                items: [],
+                totalCount: 0
+            };
+        }
+
+        const { limit, offset } = DatabaseUtil.resolvePagination(
+            pagination,
+            PermissionRevisionManager.defaultListLimit
+        );
+
+        const items = await tx.listRevisions({
+            ...queryOpts,
+            limit,
+            offset
         });
+
+        return {
+            items,
+            totalCount
+        };
     }
 
     async clear(options, tx = this.permissionManager.perm_db) {

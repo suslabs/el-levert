@@ -32,7 +32,7 @@ class PermRemoveAllCommand {
             return `${getEmoji("info")} ${this.getArgsHelp()}`;
         }
 
-        const find = Util.first(await getClient().findUsers(u_name));
+        const find = Util.first(await getClient().findUsers(u_name, { sv_id: ctx.guildId }));
 
         if (typeof find === "undefined") {
             if (getClient().permManager.isOwner(ctx.msg.author.id)) {

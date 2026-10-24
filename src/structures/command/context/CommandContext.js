@@ -59,6 +59,14 @@ class CommandContext extends TextCommandContext {
         return this.data.isAuthor ?? this.interactionContext?.isAuthor ?? true;
     }
 
+    get guildId() {
+        return this.message?.guildId ?? this.channel?.guildId ?? this.interaction?.guildId ?? null;
+    }
+
+    get guild() {
+        return this.message?.guild ?? this.channel?.guild ?? this.interaction?.guild ?? null;
+    }
+
     clone(context, overrides) {
         overrides = ObjectUtil.guaranteeObject(overrides);
 

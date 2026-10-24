@@ -31,7 +31,7 @@ describe("reminder edit command", () => {
         expect(out).toContain("Updated reminder **1**");
         expect(out).toContain("Original task");
 
-        const reminders = await runtime.client.reminderManager.list(msg.author.id);
+        const { items: reminders } = await runtime.client.reminderManager.list({ user: msg.author.id }, { all: true });
         expect(reminders[0].msg).toBe("Original task");
         expect(reminders[0].end).toBeGreaterThan(Date.now() + 3_600_000);
         expect(reminders[0].interval).toBe(86_400_000);
@@ -44,14 +44,14 @@ describe("reminder edit command", () => {
         expect(outEvery).toContain("Updated reminder **1**");
         expect(outEvery).toContain("(every 2 days)");
 
-        let reminders = await runtime.client.reminderManager.list(msg.author.id);
+        let { items: reminders } = await runtime.client.reminderManager.list({ user: msg.author.id }, { all: true });
         expect(reminders[0].interval).toBe(172_800_000);
 
         const outClear = await executeCommand(command, "edit 1 --clear-every", { msg });
         expect(outClear).toContain("Updated reminder **1**");
         expect(outClear).not.toContain("every");
 
-        reminders = await runtime.client.reminderManager.list(msg.author.id);
+        ({ items: reminders } = await runtime.client.reminderManager.list({ user: msg.author.id }, { all: true }));
         expect(reminders[0].interval).toBeNull();
     });
 
@@ -62,7 +62,8 @@ describe("reminder edit command", () => {
         expect(out).toContain("Updated reminder **1**");
         expect(out).toContain("(every 5 hours)");
 
-        const reminders = await runtime.client.reminderManager.list(msg.author.id);
+        const { items: reminders } = await runtime.client.reminderManager.list({ user: msg.author.id }, { all: true });
+
         expect(reminders[0].msg).toBe("Original task");
         expect(reminders[0].end).toBeGreaterThan(Date.now() + 7_200_000);
         expect(reminders[0].interval).toBe(18_000_000);

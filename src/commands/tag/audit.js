@@ -2,6 +2,8 @@ import { escapeMarkdown } from "discord.js";
 
 import { getClient, getConfig, getEmoji } from "../../LevertClient.js";
 
+import TagRevisionManager from "../../managers/database/revision/TagRevisionManager.js";
+
 import Util from "../../util/Util.js";
 import RevisionAuditUtil from "../../util/commands/RevisionAuditUtil.js";
 import PaginationUtil from "../../util/commands/PaginationUtil.js";
@@ -32,7 +34,7 @@ async function getDetail(revisionId, tagName) {
 }
 
 class TagAuditCommand {
-    static defaultLimit = 10;
+    static defaultLimit = TagRevisionManager.defaultListLimit;
     static maxLimit = 20;
     static dumpLimit = 1000;
 
@@ -126,35 +128,81 @@ Calling without a tag name shows the full audit log across all tags. Providing a
             return `${getEmoji("warn")} ${dates.error}`;
         }
 
-        const paginationOpts = PaginationUtil.getPaginationOptions(ctx, {
-                defaultLimit: TagAuditCommand.defaultLimit,
-                maxLimit: TagAuditCommand.maxLimit
-            }),
-            fetchLimit = paginationOpts.all ? TagAuditCommand.dumpLimit : 100;
-
         const { from, to } = dates;
 
-        const revisions = await getClient().tagManager.audit({
+        const filterOpts = {
             name: tagName,
             actor: ctx.arg("user") ?? null,
             operation: ctx.arg("operation") ?? null,
             from,
-            to,
-            limit: fetchLimit,
-            offset: 0
-        });
+            to
+        };
 
-        if (Util.empty(revisions)) {
-            return `${getEmoji("info")} Found **no** tag revisions.`;
-        }
+        const paginationOpts = PaginationUtil.getPaginationOptions(ctx, {
+            defaultLimit: TagAuditCommand.defaultLimit,
+            maxLimit: TagAuditCommand.maxLimit
+        });
 
         const isPerSubject = Util.nonemptyString(tagName),
             scopeLabel = isPerSubject ? ` for **${escapeMarkdown(tagName)}**` : "";
 
+        if (paginationOpts.all) {
+            const { items: allRevisions } = await getClient().tagManager.audit(filterOpts, { all: true });
+
+            if (Util.empty(allRevisions)) {
+                return `${getEmoji("info")} Found **no** tag revisions.`;
+            }
+
+            return await PaginationUtil.paginate(ctx, {
+                items: allRevisions,
+                defaultLimit: TagAuditCommand.defaultLimit,
+                maxLimit: TagAuditCommand.maxLimit,
+
+                render: async (items, { page }) => {
+                    const header = `${getEmoji("info")} Tag audit page **${page}**${scopeLabel}:`,
+                        embed = await RevisionAuditUtil.createListEmbed(
+                            items,
+                            page,
+                            revision => revision.key.name ?? "unknown",
+                            {
+                                perSubject: isPerSubject
+                            }
+                        );
+
+                    return {
+                        content: header,
+                        embeds: [embed]
+                    };
+                },
+
+                dumpHeader: `${getEmoji("info")} Tag audit${scopeLabel}:`,
+                formatDump: (items, discord = true) =>
+                    RevisionAuditUtil.formatRevisionList(items, revision => revision.key.name ?? "unknown", {
+                        perSubject: isPerSubject,
+                        discord
+                    }),
+                filename: "tag_audit.txt"
+            });
+        }
+
+        const initialRes = await getClient().tagManager.audit(filterOpts, paginationOpts);
+
+        if (initialRes.totalCount === 0) {
+            return `${getEmoji("info")} Found **no** tag revisions.`;
+        }
+
         return await PaginationUtil.paginate(ctx, {
-            items: revisions,
+            initialData: {
+                items: initialRes.items,
+                totalCount: initialRes.totalCount,
+                page: paginationOpts.page ?? 1
+            },
             defaultLimit: TagAuditCommand.defaultLimit,
             maxLimit: TagAuditCommand.maxLimit,
+
+            fetch: async ({ page, limit, offset }) => {
+                return await getClient().tagManager.audit(filterOpts, { page, limit, offset });
+            },
 
             render: async (items, { page }) => {
                 const header = `${getEmoji("info")} Tag audit page **${page}**${scopeLabel}:`,
@@ -174,11 +222,13 @@ Calling without a tag name shows the full audit log across all tags. Providing a
             },
 
             dumpHeader: `${getEmoji("info")} Tag audit${scopeLabel}:`,
-            formatDump: (items, discord = true) =>
-                RevisionAuditUtil.formatRevisionList(items, revision => revision.key.name ?? "unknown", {
+            formatDump: async (items, discord = true) => {
+                const { items: allRevisions } = await getClient().tagManager.audit(filterOpts, { all: true });
+                return RevisionAuditUtil.formatRevisionList(allRevisions, revision => revision.key.name ?? "unknown", {
                     perSubject: isPerSubject,
                     discord
-                }),
+                });
+            },
             filename: "tag_audit.txt"
         });
     }

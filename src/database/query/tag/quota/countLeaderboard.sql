@@ -1,1 +1,1 @@
-SELECT user, count FROM Quotas WHERE count > 0 ORDER BY count DESC LIMIT $limit;
+SELECT user, count FROM Quotas WHERE count > 0 ORDER BY count DESC LIMIT $limit OFFSET $offset;

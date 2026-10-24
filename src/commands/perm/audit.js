@@ -1,6 +1,7 @@
 import { escapeMarkdown } from "discord.js";
 
 import PermissionRevisionTargets from "../../managers/database/revision/PermissionRevisionTargets.js";
+import PermissionRevisionManager from "../../managers/database/revision/PermissionRevisionManager.js";
 
 import { getClient, getConfig, getEmoji } from "../../LevertClient.js";
 
@@ -44,7 +45,7 @@ async function getDetail(revisionId) {
 }
 
 class PermAuditCommand {
-    static defaultLimit = 10;
+    static defaultLimit = PermissionRevisionManager.defaultListLimit;
     static maxLimit = 20;
     static dumpLimit = 1000;
 
@@ -130,7 +131,7 @@ class PermAuditCommand {
             const parts = subject.split("/");
 
             if (parts.length === 2 && Util.nonemptyString(parts[0]) && Util.nonemptyString(parts[1])) {
-                const find = Util.first(await getClient().findUsers(parts[0]));
+                const find = Util.first(await getClient().findUsers(parts[0], { sv_id: ctx.guildId }));
 
                 if (typeof find !== "undefined") {
                     subject = `${find.id}/${parts[1]}`;
@@ -144,36 +145,77 @@ class PermAuditCommand {
             return `${getEmoji("warn")} ${dates.error}`;
         }
 
-        const paginationOpts = PaginationUtil.getPaginationOptions(ctx, {
-                defaultLimit: PermAuditCommand.defaultLimit,
-                maxLimit: PermAuditCommand.maxLimit
-            }),
-            fetchLimit = paginationOpts.all ? PermAuditCommand.dumpLimit : 100;
-
         const { from, to } = dates;
 
-        const revisions = await getClient().permManager.audit({
+        const filterOpts = {
             subject,
             target: ctx.arg("target") ?? null,
             actor: ctx.arg("user") ?? null,
             operation: ctx.arg("operation") ?? null,
             from,
-            to,
-            limit: fetchLimit,
-            offset: 0
-        });
+            to
+        };
 
-        if (Util.empty(revisions)) {
-            return `${getEmoji("info")} Found **no** permission revisions.`;
-        }
+        const paginationOpts = PaginationUtil.getPaginationOptions(ctx, {
+            defaultLimit: PermAuditCommand.defaultLimit,
+            maxLimit: PermAuditCommand.maxLimit
+        });
 
         const isPerSubject = Util.nonemptyString(subject),
             scopeLabel = isPerSubject ? ` for **${escapeMarkdown(subject)}**` : "";
 
+        if (paginationOpts.all) {
+            const { items: allRevisions } = await getClient().permManager.audit(filterOpts, { all: true });
+
+            if (Util.empty(allRevisions)) {
+                return `${getEmoji("info")} Found **no** permission revisions.`;
+            }
+
+            return await PaginationUtil.paginate(ctx, {
+                items: allRevisions,
+                defaultLimit: PermAuditCommand.defaultLimit,
+                maxLimit: PermAuditCommand.maxLimit,
+
+                render: async (items, { page }) => {
+                    const header = `${getEmoji("info")} Permission audit page **${page}**${scopeLabel}:`,
+                        embed = await RevisionAuditUtil.createListEmbed(items, page, getLabel, {
+                            perSubject: isPerSubject
+                        });
+
+                    return {
+                        content: header,
+                        embeds: [embed]
+                    };
+                },
+
+                dumpHeader: `${getEmoji("info")} Permission audit${scopeLabel}:`,
+                formatDump: (items, discord = true) =>
+                    RevisionAuditUtil.formatRevisionList(items, getLabel, {
+                        perSubject: isPerSubject,
+                        discord
+                    }),
+                filename: "permission_audit.txt"
+            });
+        }
+
+        const initialRes = await getClient().permManager.audit(filterOpts, paginationOpts);
+
+        if (initialRes.totalCount === 0) {
+            return `${getEmoji("info")} Found **no** permission revisions.`;
+        }
+
         return await PaginationUtil.paginate(ctx, {
-            items: revisions,
+            initialData: {
+                items: initialRes.items,
+                totalCount: initialRes.totalCount,
+                page: paginationOpts.page ?? 1
+            },
             defaultLimit: PermAuditCommand.defaultLimit,
             maxLimit: PermAuditCommand.maxLimit,
+
+            fetch: async ({ page, limit, offset }) => {
+                return await getClient().permManager.audit(filterOpts, { page, limit, offset });
+            },
 
             render: async (items, { page }) => {
                 const header = `${getEmoji("info")} Permission audit page **${page}**${scopeLabel}:`,
@@ -188,11 +230,13 @@ class PermAuditCommand {
             },
 
             dumpHeader: `${getEmoji("info")} Permission audit${scopeLabel}:`,
-            formatDump: (items, discord = true) =>
-                RevisionAuditUtil.formatRevisionList(items, getLabel, {
+            formatDump: async (items, discord = true) => {
+                const { items: allRevisions } = await getClient().permManager.audit(filterOpts, { all: true });
+                return RevisionAuditUtil.formatRevisionList(allRevisions, getLabel, {
                     perSubject: isPerSubject,
                     discord
-                }),
+                });
+            },
             filename: "permission_audit.txt"
         });
     }

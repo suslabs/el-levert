@@ -15,9 +15,9 @@ const FakeUtil = Object.freeze({
         reply.reply = format;
     },
 
-    findUsers: name => {
+    findUsers: (name, options) => {
         const func = getClient().findUsers.bind(getClient());
-        return func(name);
+        return func(name, options);
     },
 
     dumpTags: () => {
@@ -26,7 +26,7 @@ const FakeUtil = Object.freeze({
     },
 
     fetchTag: async (name, options) => {
-        options = typeof options === "boolean" ? { aliasOriginal: options } : ObjectUtil.guaranteeObject(options);
+        options = ObjectUtil.guaranteeObject(options, "aliasOriginal");
 
         const aliasOriginal = options.aliasOriginal ?? false;
 

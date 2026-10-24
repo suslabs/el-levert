@@ -59,11 +59,23 @@ class PermissionDatabase extends RevisionDatabase {
         });
     }
 
-    async listGroups() {
-        const rows = await this.groupQueries.list.all(),
+    async countGroups() {
+        const row = await this.groupQueries.count.get();
+        return row.count;
+    }
+
+    async listGroups(options = {}) {
+        options = ObjectUtil.guaranteeObject(options, "limit");
+
+        const limit = options.limit ?? -1,
+            offset = options.offset ?? 0;
+
+        const rows = await this.groupQueries.list.all({
+                $limit: limit,
+                $offset: offset
+            }),
             groups = DatabaseUtil.rowEntity(rows, Group);
 
-        groups.sort((a, b) => b.level - a.level);
         return groups;
     }
 

@@ -1,11 +1,13 @@
 import { getClient, getEmoji } from "../../LevertClient.js";
 
+import TagManager from "../../managers/database/TagManager.js";
+
 import Util from "../../util/Util.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import PaginationUtil from "../../util/commands/PaginationUtil.js";
 
 class TagSearchCommand {
-    static defaultResultLimit = 20;
+    static defaultResultLimit = TagManager.defaultSearchLimit;
     static maxResultLimit = 100;
 
     static info = {
@@ -60,33 +62,31 @@ class TagSearchCommand {
 
         const isAll = paginationOpts.all || all;
 
-        let maxResults = Infinity;
+        let customLimit = null;
 
         if (!Util.empty(m_text) && !isAll) {
-            maxResults = Util.parseInt(m_text);
+            const parsed = Util.parseInt(m_text);
 
-            if (Number.isNaN(maxResults) || maxResults < 1) {
+            if (Number.isNaN(parsed) || parsed < 1) {
                 return `${getEmoji("warn")} Invalid number: ${m_text}`;
             }
 
-            maxResults = Util.clamp(maxResults, 1, TagSearchCommand.maxResultLimit);
+            customLimit = Util.clamp(parsed, 1, TagSearchCommand.maxResultLimit);
         }
 
-        const {
-            results: find,
-            other: { oversized }
-        } = await getClient().tagManager.search(t_name, maxResults, 0.6);
+        const pageSize = customLimit ?? paginationOpts.limit ?? TagSearchCommand.defaultResultLimit;
 
-        if (Util.empty(find)) {
-            return `${getEmoji("info")} Found **no** similar tags.`;
-        }
+        if (isAll) {
+            const { results: find } = await getClient().tagManager.search(t_name, {}, { all: true });
 
-        const plus = oversized ? "+" : "",
-            s = Util.single(find) ? "" : "s",
-            count = Util.formatNumber(find.length) + plus,
-            header = `${getEmoji("info")} Found **${count}** similar tag${s}:`;
+            if (Util.empty(find)) {
+                return `${getEmoji("info")} Found **no** similar tags.`;
+            }
 
-        if (isAll || find.length <= TagSearchCommand.defaultResultLimit) {
+            const s = Util.single(find) ? "" : "s",
+                count = Util.formatNumber(find.length),
+                header = `${getEmoji("info")} Found **${count}** similar tag${s}:`;
+
             if (find.length > 2 * TagSearchCommand.defaultResultLimit) {
                 return {
                     content: header,
@@ -97,16 +97,48 @@ class TagSearchCommand {
             return `${header} **${find.join("**, **")}**`;
         }
 
+        const initialRes = await getClient().tagManager.search(
+            t_name,
+            {},
+            { page: paginationOpts.page ?? 1, limit: pageSize }
+        );
+
+        const totalCount = initialRes.totalCount ?? initialRes.other?.total ?? initialRes.results?.length ?? 0;
+
+        if (totalCount === 0) {
+            return `${getEmoji("info")} Found **no** similar tags.`;
+        }
+
+        const plus = initialRes.other?.oversized ? "+" : "",
+            s = totalCount === 1 ? "" : "s",
+            count = Util.formatNumber(totalCount) + plus,
+            header = `${getEmoji("info")} Found **${count}** similar tag${s}:`;
+
+        if (totalCount <= TagSearchCommand.defaultResultLimit && totalCount <= pageSize) {
+            return `${header} **${initialRes.results.join("**, **")}**`;
+        }
+
         return await PaginationUtil.paginate(ctx, {
-            items: find,
-            defaultLimit: TagSearchCommand.defaultResultLimit,
+            initialData: {
+                items: initialRes.results,
+                totalCount,
+                page: paginationOpts.page ?? 1
+            },
+            defaultLimit: pageSize,
+
+            fetch: async ({ page, limit, offset }) => {
+                return await getClient().tagManager.search(t_name, {}, { page, limit, offset });
+            },
 
             render: items => ({
                 content: `${header} **${items.join("**, **")}**`
             }),
 
             dumpHeader: header,
-            formatDump: items => items.join("\n"),
+            formatDump: async () => {
+                const { results } = await getClient().tagManager.search(t_name, {}, { all: true });
+                return results.join("\n");
+            },
             filename: "tags.txt"
         });
     }

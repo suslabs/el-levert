@@ -69,7 +69,10 @@ describe("ReminderManager", () => {
         expect(await manager.exists("u1")).toBe(true);
         expect(await manager.exists("ghost")).toBe(false);
         expect(await manager.exists(["u1", "ghost", "u2"])).toEqual([true, false, true]);
-        expect((await manager.list("u1")).map(reminder => reminder.msg)).toEqual(["second", "first"]);
+        expect((await manager.list({ user: "u1" }, { all: true })).items.map(reminder => reminder.msg)).toEqual([
+            "second",
+            "first"
+        ]);
 
         const removed = await manager.remove("u1", 0, true);
         expect(removed.msg).toBe("second");
@@ -104,7 +107,10 @@ describe("ReminderManager", () => {
 
         expect(await manager.remove("nobody", 0, false)).toBeNull();
 
-        manager.list = () => [new Reminder({ id: 999, user: "ghost", end: now, msg: "ghost" })];
+        manager.list = () => ({
+            items: [new Reminder({ id: 999, user: "ghost", end: now, msg: "ghost" })],
+            totalCount: 1
+        });
         const stale = await manager.remove("ghost", 0, false);
         expect(stale.msg).toBe("ghost");
 
@@ -125,7 +131,7 @@ describe("ReminderManager", () => {
 
         await manager._sendReminders();
         expect(sendSpy).toHaveBeenCalledTimes(1);
-        expect(await manager.list("u7")).toBeNull();
+        expect(await manager.list({ user: "u7" })).toEqual({ items: [], totalCount: 0 });
 
         manager.startSendLoop();
         expect(manager._sendTimer).not.toBeNull();
@@ -190,7 +196,7 @@ describe("ReminderManager", () => {
         expect(past).toHaveLength(1);
         expect(past[0].msg).toBe("recurring");
 
-        const remaining = await manager.list("u1");
+        const { items: remaining } = await manager.list({ user: "u1" }, { all: true });
         expect(remaining).toHaveLength(1);
         expect(remaining[0].end).toBeGreaterThan(now);
         expect(remaining[0].end).toBe(now - 100 + interval);

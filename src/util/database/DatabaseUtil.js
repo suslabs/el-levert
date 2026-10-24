@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import sqlite from "sqlite3";
 
 import Util from "../Util.js";
+import ObjectUtil from "../ObjectUtil.js";
 
 import DatabaseError from "../../errors/DatabaseError.js";
 
@@ -17,6 +18,23 @@ const DatabaseUtil = Object.freeze({
         } else {
             return new _class(row);
         }
+    },
+
+    resolvePagination: (pagination = {}, defaultLimit = 10) => {
+        pagination = ObjectUtil.guaranteeObject(pagination, "limit");
+
+        if (pagination.all === true) {
+            return {
+                limit: -1,
+                offset: 0
+            };
+        }
+
+        const limit = pagination.limit ?? defaultLimit,
+            page = pagination.page != null ? Math.max(1, pagination.page) : 1,
+            offset = pagination.offset ?? (page - 1) * limit;
+
+        return { limit, offset };
     },
 
     getEventValues: events => {

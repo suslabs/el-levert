@@ -112,16 +112,16 @@ describe("TagManager", () => {
         expect(await manager.tag_db.usageFetch("script_vm2")).toBe(1);
         expect(await manager.tag_db.usageFetch("plain")).toBeNull();
         expect(await manager.tag_db.usageFetch("plain_renamed")).toBe(0);
-        expect(await manager.search("plain", 5, 0)).toMatchObject({
+        expect(await manager.search("plain", { minDist: 0 }, { limit: 5 })).toMatchObject({
             results: expect.arrayContaining(["plain_alias", "plain_renamed"])
         });
-        expect(await manager.fullSearch("moved", 10)).toMatchObject({
+        expect(await manager.fullSearch("moved", { maxResults: 10 })).toMatchObject({
             other: {
                 hasInfo: true
             }
         });
 
-        const sizeLeaderboard = await manager.leaderboard("size", 10);
+        const { items: sizeLeaderboard } = await manager.leaderboard({ type: "size" }, { limit: 10 });
         expect(sizeLeaderboard.some(entry => entry.user.username === "NOT FOUND")).toBe(true);
 
         await manager.execute(await manager.fetch("roll1"), "");
@@ -129,7 +129,7 @@ describe("TagManager", () => {
         expect(await manager.count("u3")).toBe(1);
         expect(await manager.tag_db.usageFetch("roll1")).toBe(1);
 
-        const usageLeaderboard = await manager.leaderboard("usage", 10);
+        const { items: usageLeaderboard } = await manager.leaderboard({ type: "usage" }, { limit: 10 });
         expect(usageLeaderboard).toEqual(
             expect.arrayContaining([
                 expect.objectContaining({ name: "plain_alias", count: 1, exists: true }),

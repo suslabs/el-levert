@@ -1,6 +1,5 @@
 import { getClient } from "../../LevertClient.js";
 
-
 class StopCommand {
     static info = {
         name: "stop",

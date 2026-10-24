@@ -181,8 +181,23 @@ class RevisionDatabase extends SqlDatabase {
         return RevisionUtil.revision(row);
     }
 
-    async listRevisions(options) {
+    async countRevisions(options) {
         options = ObjectUtil.guaranteeObject(options);
+
+        const row = await this.revisionQueries.count.get({
+            $target: options.target ?? null,
+            $subjectId: options.subjectId ?? null,
+            $actor: options.actor ?? null,
+            $operation: options.operation ?? null,
+            $from: options.from ?? null,
+            $to: options.to ?? null
+        });
+
+        return row.count;
+    }
+
+    async listRevisions(options) {
+        options = ObjectUtil.guaranteeObject(options, "limit");
 
         const rows = await this.revisionQueries.list.all({
             $target: options.target ?? null,

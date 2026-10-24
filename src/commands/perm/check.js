@@ -38,8 +38,9 @@ class PermCheckCommand {
         let user = ctx.msg.author;
 
         if (!Util.empty(ctx.argsText)) {
-            const u_name = ctx.arg("userName"),
-                find = Util.first(await getClient().findUsers(u_name));
+            const u_name = ctx.arg("userName");
+
+            const find = Util.first(await getClient().findUsers(u_name, { sv_id: ctx.guildId }));
 
             user = find?.user ?? {
                 id: u_name,

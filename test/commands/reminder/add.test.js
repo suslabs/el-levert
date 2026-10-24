@@ -103,7 +103,10 @@ describe("Merged Branch Coverage", () => {
                 "You will be reminded"
             );
 
-            const savedReminder = await runtime.client.reminderManager.list(msg.author.id);
+            const { items: savedReminder } = await runtime.client.reminderManager.list(
+                { user: msg.author.id },
+                { all: true }
+            );
             expect(savedReminder.at(0).msg).toBe('say "hi"');
 
             runtime.client.reminderManager.add = async () => {

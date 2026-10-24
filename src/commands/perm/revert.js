@@ -49,7 +49,7 @@ class PermRevertCommand {
         const { revisionId, subject } = args,
             targetType = ctx.arg("targetType");
 
-        const target = await this._getTarget(targetType, subject);
+        const target = await this._getTarget(targetType, subject, ctx);
 
         if (target === null) {
             return targetType === "membership"
@@ -106,7 +106,7 @@ class PermRevertCommand {
         return Number.isInteger(revisionId) ? { subject, revisionId } : null;
     }
 
-    async _getTarget(targetType, subject) {
+    async _getTarget(targetType, subject, ctx) {
         switch (targetType) {
             case "group":
                 return {
@@ -114,13 +114,13 @@ class PermRevertCommand {
                     name: subject
                 };
             case "membership":
-                return await this._getMembershipTarget(subject);
+                return await this._getMembershipTarget(subject, ctx);
             default:
                 return null;
         }
     }
 
-    async _getMembershipTarget(subject) {
+    async _getMembershipTarget(subject, ctx) {
         if (Util.empty(subject)) {
             return null;
         }
@@ -136,7 +136,8 @@ class PermRevertCommand {
 
         let userId = userText;
 
-        const find = Util.first(await getClient().findUsers(userText));
+        const sv_id = ctx?.guildId,
+            find = Util.first(await getClient().findUsers(userText, sv_id ? { sv_id } : {}));
 
         if (typeof find !== "undefined") {
             userId = find.id;

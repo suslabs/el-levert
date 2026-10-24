@@ -13,7 +13,8 @@ describe("uFuzzySearch", () => {
         expect(out.ranges).toHaveLength(2);
         expect(out.other).toEqual({
             oversized: false,
-            hasInfo: true
+            hasInfo: true,
+            total: 2
         });
 
         const objOut = uFuzzySearch.search([{ name: "alice" }, { name: "bob" }], "ali", { searchKey: "name" });
@@ -27,7 +28,8 @@ describe("uFuzzySearch", () => {
             ranges: [],
             other: {
                 oversized: false,
-                hasInfo: undefined
+                hasInfo: false,
+                total: 0
             }
         });
 
@@ -40,19 +42,29 @@ describe("uFuzzySearch", () => {
         expect(out.ranges).toEqual([]);
         expect(out.other).toEqual({
             oversized: true,
-            hasInfo: false
+            hasInfo: false,
+            total: 2
         });
     });
 
-    test("normalizes invalid haystacks and options", () => {
+    test("normalizes invalid haystacks and options, and supports negative limit for unlimited", () => {
         expect(uFuzzySearch.search(null, "alp", 5)).toEqual({
             results: [],
             ranges: [],
             other: {
                 oversized: false,
-                hasInfo: undefined
+                hasInfo: false,
+                total: 0
             }
         });
+
+        const allOut = uFuzzySearch.search(["alpha", "alpine"], "al", {
+            limit: -1
+        });
+
+        expect(allOut.results).toEqual(["alpha", "alpine"]);
+        expect(allOut.other.oversized).toBe(false);
+        expect(allOut.other.total).toBe(2);
     });
 
     test("supports smaller functions: filter, sort, and slice", () => {
@@ -69,5 +81,30 @@ describe("uFuzzySearch", () => {
         expect(sliced.results).toHaveLength(2);
         expect(sliced.ranges).toHaveLength(2);
         expect(sliced.other.oversized).toBe(false);
+    });
+
+    test("supports factory pattern with create, createTagSearcher, and createFullSearcher", () => {
+        const customSearcher = uFuzzySearch.create({ alpha: "a-z" });
+        expect(customSearcher).toBeInstanceOf(uFuzzySearch);
+
+        const fullSearcher = uFuzzySearch.createFullSearcher();
+        expect(fullSearcher).toBeInstanceOf(uFuzzySearch);
+
+        const res = fullSearcher.search(["alpha", "beta"], "alp");
+        expect(res.results).toEqual(["alpha"]);
+
+        const tagSearcher = uFuzzySearch.createTagSearcher();
+        const tagHaystack = ["ck_base2n", "backpack", "ck_font_customemoji", "tagname", "tag_name"];
+
+        const ckMatch = tagSearcher.search(tagHaystack, "ck");
+        expect(ckMatch.results).toContain("ck_base2n");
+        expect(ckMatch.results).not.toContain("backpack");
+
+        const typoMatch = tagSearcher.search(tagHaystack, "customemji");
+        expect(typoMatch.results).toContain("ck_font_customemoji");
+
+        const boundaryMatch = tagSearcher.search(tagHaystack, "name");
+        expect(boundaryMatch.results).toContain("tag_name");
+        expect(boundaryMatch.results).not.toContain("tagname");
     });
 });

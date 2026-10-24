@@ -58,7 +58,7 @@ class TagChownCommand {
             return `${getEmoji("warn")} Invalid target user. You must specifically mention the target user.`;
         }
 
-        const find = Util.first(await getClient().findUsers(t_args));
+        const find = Util.first(await getClient().findUsers(t_args, { sv_id: ctx.guildId }));
 
         if (typeof find === "undefined") {
             return `${getEmoji("warn")} User \`${t_args}\` not found.`;

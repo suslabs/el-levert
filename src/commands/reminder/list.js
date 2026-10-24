@@ -2,6 +2,8 @@ import { EmbedBuilder } from "discord.js";
 
 import { getClient, getEmoji } from "../../LevertClient.js";
 
+import ReminderManager from "../../managers/database/ReminderManager.js";
+
 import Util from "../../util/Util.js";
 import PaginationUtil from "../../util/commands/PaginationUtil.js";
 
@@ -10,7 +12,7 @@ function formatReminders(reminders, startIndex = 0, discord = true) {
 }
 
 class ReminderListCommand {
-    static defaultLimit = 5;
+    static defaultLimit = ReminderManager.defaultListLimit;
 
     static info = {
         name: "list",
@@ -23,28 +25,80 @@ class ReminderListCommand {
     };
 
     async handler(ctx) {
-        const reminders = await getClient().reminderManager.list(ctx.msg.author.id);
+        const paginationOpts = PaginationUtil.getPaginationOptions(ctx, {
+            defaultLimit: ReminderListCommand.defaultLimit
+        });
 
-        if (Util.empty(reminders)) {
+        if (paginationOpts.all) {
+            const { items: allReminders } = await getClient().reminderManager.list(
+                { user: ctx.msg.author.id },
+                { all: true }
+            );
+
+            if (Util.empty(allReminders)) {
+                return `${getEmoji("info")} You have **no** reminders.`;
+            }
+
+            const header = `${getEmoji("info")} Your reminders:`;
+
+            return await PaginationUtil.paginate(ctx, {
+                items: allReminders,
+                defaultLimit: ReminderListCommand.defaultLimit,
+
+                render: (items, { page }) => {
+                    const startIndex = (page - 1) * ctx.pageSize,
+                        format = formatReminders(items, startIndex, true);
+
+                    return {
+                        content: header,
+                        embeds: [new EmbedBuilder().setDescription(format)]
+                    };
+                },
+
+                dumpHeader: header,
+                formatDump: (items, discord = true) => formatReminders(items, 0, discord),
+                filename: "reminders.txt"
+            });
+        }
+
+        const initialRes = await getClient().reminderManager.list({ user: ctx.msg.author.id }, paginationOpts);
+
+        if (initialRes.totalCount === 0) {
             return `${getEmoji("info")} You have **no** reminders.`;
         }
 
+        const header = `${getEmoji("info")} Your reminders:`;
+
         return await PaginationUtil.paginate(ctx, {
-            items: reminders,
+            initialData: {
+                items: initialRes.items,
+                totalCount: initialRes.totalCount,
+                page: paginationOpts.page ?? 1
+            },
             defaultLimit: ReminderListCommand.defaultLimit,
+
+            fetch: async ({ page, limit, offset }) => {
+                return await getClient().reminderManager.list({ user: ctx.msg.author.id }, { page, limit, offset });
+            },
 
             render: (items, { page }) => {
                 const startIndex = (page - 1) * ctx.pageSize,
                     format = formatReminders(items, startIndex, true);
 
                 return {
-                    content: `${getEmoji("info")} Your reminders:`,
+                    content: header,
                     embeds: [new EmbedBuilder().setDescription(format)]
                 };
             },
 
-            dumpHeader: `${getEmoji("info")} Your reminders:`,
-            formatDump: (items, discord = true) => formatReminders(items, 0, discord),
+            dumpHeader: header,
+            formatDump: async (items, discord = true) => {
+                const { items: allReminders } = await getClient().reminderManager.list(
+                    { user: ctx.msg.author.id },
+                    { all: true }
+                );
+                return formatReminders(allReminders, 0, discord);
+            },
             filename: "reminders.txt"
         });
     }
