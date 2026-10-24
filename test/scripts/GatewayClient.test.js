@@ -6,7 +6,7 @@ import { createRuntime, cleanupRuntime } from "../helpers/runtimeHarness.js";
 import GatewayClient from "../../scripts/GatewayClient.js";
 
 const port = Math.floor(20000 + Math.random() * 10000),
-    url = `ws://localhost:${port}`;
+    url = `ws://127.0.0.1:${port}`;
 
 describe("Gateway protocol and GatewayClient", () => {
     let runtime;
@@ -18,6 +18,7 @@ describe("Gateway protocol and GatewayClient", () => {
             loadVMs: true,
             config: {
                 enableWebsocket: true,
+                serverHost: "127.0.0.1",
                 websocketPort: port
             }
         });

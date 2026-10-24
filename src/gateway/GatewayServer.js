@@ -4,13 +4,19 @@ import { WebSocketServer } from "ws";
 
 import { getLogger } from "../LevertClient.js";
 
+import ObjectUtil from "../util/ObjectUtil.js";
+
 class GatewayServer extends EventEmitter {
+    static defaultHost = "127.0.0.1";
     static defaultPort = 8081;
 
-    constructor(port, options = {}) {
+    constructor(host, port, options) {
         super();
 
-        this.port = port ?? this.constructor.defaultPort;
+        options = ObjectUtil.guaranteeObject(options);
+
+        this.host = host ?? GatewayServer.defaultHost;
+        this.port = port ?? GatewayServer.defaultPort;
         this.options = options;
 
         this.websocketServer = null;
@@ -24,9 +30,10 @@ class GatewayServer extends EventEmitter {
             return;
         }
 
-        getLogger().info(`Starting WebSocket server on port ${this.port}...`);
+        getLogger().info(`Starting WebSocket server on ${this.host}:${this.port}...`);
 
         this.websocketServer = new WebSocketServer({
+            host: this.host,
             port: this.port
         });
 

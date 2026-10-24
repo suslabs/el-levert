@@ -30,18 +30,20 @@ class GatewayManager extends Manager {
     static packetLimit = 100;
     static rateLimitWindow = Util.durationSeconds.second / Util.durationSeconds.milli;
 
-    constructor(enabled, port, options) {
+    constructor(enabled, host, port, options) {
         options = ObjectUtil.guaranteeObject(options);
         super(enabled, options);
 
-        this.port = port;
+        this.host = host ?? GatewayServer.defaultHost;
+        this.port = port ?? GatewayServer.defaultPort;
+
         this.handleMessage = this.options.handleMessage;
 
         const packetLimit = this.options.packetLimit ?? this.constructor.packetLimit,
             rateLimitWindow = this.options.rateLimitWindow ?? this.constructor.rateLimitWindow;
 
         this.rateLimiter = new RateLimiter(packetLimit, rateLimitWindow);
-        this.gatewayServer = new GatewayServer(this.port, options);
+        this.gatewayServer = new GatewayServer(this.host, this.port, options);
         this.sessions = new Map();
 
         this._connectionCounter = 1;

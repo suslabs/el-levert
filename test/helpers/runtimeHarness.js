@@ -29,6 +29,7 @@ function buildDefaultConfig(tempDir, overrides = {}) {
         enableSed: true,
         enableCliCommands: false,
         enableWebsocket: false,
+        serverHost: "127.0.0.1",
         websocketPort: 0,
         enableGlobalHandler: false,
         logToDiscord: false,
@@ -208,7 +209,7 @@ async function loadRuntimeManagers(client, Managers, config) {
             interactionManager: [],
             gatewayManager: {
                 enabled: config.enableWebsocket,
-                args: [true, config.websocketPort]
+                args: [true, config.serverHost, config.websocketPort]
             },
             inputManager: {
                 enabled: config.enableCliCommands,

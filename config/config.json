@@ -11,6 +11,7 @@
     "enableCliCommands": true,
     "cliCmdPrefix": ".",
     "enableWebsocket": true,
+    "serverHost": "127.0.0.1",
     "websocketPort": 8081,
     "outCharLimit": 2000,
     "outLineLimit": 16,

@@ -7,7 +7,7 @@ import net from "node:net";
 import ivm from "isolated-vm";
 import WebSocket from "ws";
 
-import { InspectorModes } from "../../../../src/vm/isolated-vm/inspector/InspectorModes.js";
+import InspectorModes from "../../../../src/vm/isolated-vm/inspector/InspectorModes.js";
 
 const mocked = vi.hoisted(() => ({
     logger: {
@@ -183,7 +183,7 @@ describe("InspectorServer", () => {
         const { default: InspectorServer } =
                 await import("../../../../src/vm/isolated-vm/inspector/InspectorServer.js"),
             port = await getOpenPort(),
-            server = new InspectorServer(true, port, {
+            server = new InspectorServer(true, "127.0.0.1", port, {
                 mode: InspectorModes.console
             }),
             baseUrl = `http://127.0.0.1:${port}`;
@@ -213,7 +213,7 @@ describe("InspectorServer", () => {
                 type: "node"
             });
             expect(list[0].webSocketDebuggerUrl).toContain(`/${session.uuid}`);
-            expect(server.inspectorUrl).toContain(`localhost%3A${port}%2F${session.uuid}`);
+            expect(server.inspectorUrl).toContain(`127.0.0.1%3A${port}%2F${session.uuid}`);
 
             const client = createProtocolClient(list[0].webSocketDebuggerUrl);
 
@@ -234,7 +234,7 @@ describe("InspectorServer", () => {
         const { default: InspectorServer } =
                 await import("../../../../src/vm/isolated-vm/inspector/InspectorServer.js"),
             port = await getOpenPort(),
-            server = new InspectorServer(true, port, {
+            server = new InspectorServer(true, "127.0.0.1", port, {
                 mode: InspectorModes.user
             }),
             baseUrl = `http://127.0.0.1:${port}`;
@@ -307,7 +307,7 @@ describe("InspectorServer", () => {
         const { default: InspectorServer } =
                 await import("../../../../src/vm/isolated-vm/inspector/InspectorServer.js"),
             port = await getOpenPort(),
-            server = new InspectorServer(true, port, {
+            server = new InspectorServer(true, "127.0.0.1", port, {
                 mode: InspectorModes.user
             });
 

@@ -40,6 +40,9 @@
         "enableWebsocket": {
             "type": "boolean"
         },
+        "serverHost": {
+            "type": "string"
+        },
         "websocketPort": {
             "type": "number"
         },
@@ -294,6 +297,7 @@
         "enableCliCommands",
         "cliCmdPrefix",
         "enableWebsocket",
+        "serverHost",
         "websocketPort",
         "outCharLimit",
         "outLineLimit",

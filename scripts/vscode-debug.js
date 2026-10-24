@@ -14,12 +14,14 @@ try {
     config = JSON.parse(readFileSync("./config/config.json", "utf-8"));
 } catch (err) {
     config = {
+        serverHost: "127.0.0.1",
         websocketPort: 8081
     };
 }
 
-const port = config.websocketPort ?? 8081,
-    url = `ws://localhost:${port}`;
+const host = config.serverHost ?? "127.0.0.1",
+    port = config.websocketPort ?? 8081,
+    url = `ws://${host}:${port}`;
 
 const argv = yargs(hideBin(process.argv))
     .usage("Usage: node ./scripts/vscode-debug.js <file> [payload]")

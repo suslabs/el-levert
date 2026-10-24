@@ -17,9 +17,13 @@ import { getHttpStatusText, httpStatusCodes } from "../../../util/misc/HttpStatu
 import VMError from "../../../errors/VMError.js";
 
 class InspectorServer {
-    constructor(enabled, port = 8080, options) {
+    static defaultHost = "127.0.0.1";
+    static defaultPort = 8080;
+
+    constructor(enabled, host, port, options) {
         this.enabled = enabled;
-        this.port = port;
+        this.host = host ?? InspectorServer.defaultHost;
+        this.port = port ?? InspectorServer.defaultPort;
 
         options = ObjectUtil.guaranteeObject(options);
         this.options = options;
@@ -40,7 +44,7 @@ class InspectorServer {
     }
 
     get inspectorUrl() {
-        return this._consoleSession?.getAttachInfo(`localhost:${this.port}`).devtoolsUrl ?? "";
+        return this._consoleSession?.getAttachInfo(`${this.host}:${this.port}`).devtoolsUrl ?? "";
     }
 
     setup() {
@@ -66,7 +70,7 @@ class InspectorServer {
             getLogger().info(`## Inspector:\n${this.inspectorUrl}`);
         }
 
-        this.httpServer.listen(this.port);
+        this.httpServer.listen(this.port, this.host);
         this.running = true;
     }
 
@@ -125,7 +129,7 @@ class InspectorServer {
         return this._consoleSession;
     }
 
-    getSessionInfo(session, host = `127.0.0.1:${this.port}`) {
+    getSessionInfo(session, host = `${this.host}:${this.port}`) {
         return session?.getAttachInfo(host) ?? null;
     }
 
@@ -165,7 +169,7 @@ class InspectorServer {
     }
 
     _getReqUrl(req) {
-        const host = req.headers.host ?? `127.0.0.1:${this.port}`;
+        const host = req.headers.host ?? `${this.host}:${this.port}`;
         return new URL(req.url, `http://${host}`);
     }
 
@@ -238,7 +242,7 @@ class InspectorServer {
             return;
         }
 
-        const host = req.headers.host ?? `127.0.0.1:${this.port}`,
+        const host = req.headers.host ?? `${this.host}:${this.port}`,
             versionPath = this._getSessionPath(session, "version"),
             listPath = this._getSessionPath(session, "list");
 

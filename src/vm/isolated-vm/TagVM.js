@@ -154,7 +154,8 @@ class TagVM extends VM {
             return;
         }
 
-        const inspectorPort = getConfig().vmInspector.port;
+        const serverHost = getConfig().serverHost,
+            inspectorPort = getConfig().vmInspector.port;
 
         const options = {
             logPackets: TagVM.logInspectorPackets,
@@ -162,7 +163,7 @@ class TagVM extends VM {
             userInspectorActionTimeout: getConfig().vmInspector.userActionTimeout
         };
 
-        const server = new InspectorServer(this.enableInspector, inspectorPort, options);
+        const server = new InspectorServer(this.enableInspector, serverHost, inspectorPort, options);
         server.setup();
 
         this._inspectorServer = server;

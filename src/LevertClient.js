@@ -587,7 +587,7 @@ class LevertClient extends DiscordClient {
             websocketCommandManager: this.config.enableWebsocket,
             gatewayManager: {
                 enabled: this.config.enableWebsocket,
-                args: [true, this.config.websocketPort]
+                args: [true, this.config.serverHost, this.config.websocketPort]
             },
             inputManager: {
                 enabled: this.config.enableCliCommands,
