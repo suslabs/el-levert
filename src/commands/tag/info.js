@@ -132,7 +132,7 @@ class TagInfoCommand {
 
             const embedLimits = ctx.handler != null ? ctx.handler.getLimits().embed : [DiscordUtil.embedCharLimit];
 
-            if (DiscordUtil.overSizeLimits(embed, ...embedLimits)) {
+            if (DiscordUtil.embedOverSizeLimit(embed, ...embedLimits)) {
                 const plainText = formatInfo(tag, info, false);
 
                 return {

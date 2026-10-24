@@ -473,7 +473,7 @@ let DiscordUtil = {
         return size + fieldsSize;
     },
 
-    overSizeLimits: (embed, charLimit, lineLimit, options) => {
+    embedOverSizeLimit: (embed, charLimit, lineLimit, options) => {
         if (!TypeTester.isObject(embed)) {
             return false;
         }
@@ -577,13 +577,13 @@ let DiscordUtil = {
         let oversized = options.oversized;
 
         if (oversized === true) {
-            oversized = DiscordUtil.overSizeLimits(embedData, charLimit, lineLimit, {
+            oversized = DiscordUtil.embedOverSizeLimit(embedData, charLimit, lineLimit, {
                 areas: EmbedCountAreas.body
             });
         }
 
         if (oversized == null) {
-            oversized = DiscordUtil.overSizeLimits(embedData, charLimit, lineLimit, {
+            oversized = DiscordUtil.embedOverSizeLimit(embedData, charLimit, lineLimit, {
                 areas: EmbedCountAreas.body
             });
         }
@@ -596,7 +596,7 @@ let DiscordUtil = {
         }
 
         if (
-            DiscordUtil.overSizeLimits(embedData, charLimit, lineLimit, {
+            DiscordUtil.embedOverSizeLimit(embedData, charLimit, lineLimit, {
                 areas: EmbedCountAreas.fields
             })
         ) {

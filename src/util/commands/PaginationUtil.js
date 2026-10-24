@@ -29,6 +29,16 @@ function makePaginationArg(name, options) {
 }
 
 async function fetchPageData(spec, page, limit, ctx) {
+    if (spec.initialData != null && (page === 1 || page === spec.initialData.page)) {
+        const initial = spec.initialData,
+            items = initial.items ?? (Array.isArray(initial) ? initial : []),
+            totalCount = initial.totalCount ?? initial.total ?? initial.count ?? items.length;
+
+        delete spec.initialData;
+
+        return { items, totalCount };
+    }
+
     if (Array.isArray(spec.items)) {
         const offset = (page - 1) * limit;
 
@@ -42,8 +52,12 @@ async function fetchPageData(spec, page, limit, ctx) {
         const offset = (page - 1) * limit,
             fetchRes = await spec.fetch({ page, limit, offset }, ctx);
 
-        const items = fetchRes.items ?? [],
-            totalCount = fetchRes.totalCount ?? fetchRes.total ?? items.length;
+        if (fetchRes == null) {
+            return { items: [], totalCount: 0 };
+        }
+
+        const items = fetchRes.items ?? (Array.isArray(fetchRes) ? fetchRes : []),
+            totalCount = fetchRes.totalCount ?? fetchRes.total ?? fetchRes.count ?? items.length;
 
         return { items, totalCount };
     }
@@ -79,7 +93,7 @@ async function handleRenderOverflow(rendered, items, spec, ctx) {
 
     const embedLimits = ctx.handler != null ? ctx.handler.getLimits().embed : [DiscordUtil.embedCharLimit];
 
-    const isOversized = embeds.some(embed => DiscordUtil.overSizeLimits(embed, ...embedLimits));
+    const isOversized = embeds.some(embed => DiscordUtil.embedOverSizeLimit(embed, ...embedLimits));
 
     if (!isOversized) {
         return rendered;
@@ -206,15 +220,18 @@ const PaginationUtil = Object.freeze({
 
         return [
             makePaginationArg(pageName, {
+                shorthand: "p",
                 aliases: ["p"],
                 type: "integer"
             }),
             makePaginationArg(limitName, {
+                shorthand: "l",
                 aliases: ["l"],
                 type: "integer",
                 defaultValue: defaultLimit
             }),
             makePaginationArg(allName, {
+                shorthand: "a",
                 aliases: ["a"],
                 type: "boolean"
             })
@@ -235,14 +252,16 @@ const PaginationUtil = Object.freeze({
             rawAll = hasArg ? (ctx.arg(allName) ?? ctx.arg("all")) : null,
             commandName = ctx.commandName ?? "";
 
-        const all = Boolean(rawAll) || commandName.endsWith("all") || commandName.endsWith("_all");
+        const all =
+            Boolean(rawAll) || options.all === true || commandName.endsWith("all") || commandName.endsWith("_all");
 
-        const rawLimit = hasArg ? (ctx.arg(limitName) ?? ctx.arg("limit") ?? defaultLimit) : defaultLimit,
+        const rawLimit =
+                options.limit ?? (hasArg ? (ctx.arg(limitName) ?? ctx.arg("limit") ?? defaultLimit) : defaultLimit),
             limit = Util.clamp(rawLimit, 1, maxLimit);
 
-        const rawPage = hasArg ? (ctx.arg(pageName) ?? ctx.arg("page") ?? 1) : 1,
+        const rawPage = options.page ?? (hasArg ? (ctx.arg(pageName) ?? ctx.arg("page") ?? 1) : 1),
             page = Math.max(1, rawPage),
-            offset = (page - 1) * limit;
+            offset = options.offset ?? (page - 1) * limit;
 
         return { page, limit, offset, all };
     },

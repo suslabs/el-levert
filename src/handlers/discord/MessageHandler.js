@@ -491,13 +491,14 @@ class MessageHandler extends Handler {
             return out;
         }
 
-        let countAreas = useTrim ? EmbedCountAreas.body : EmbedCountAreas.all,
-            embedOversized;
+        const countAreas = useTrim ? EmbedCountAreas.body : EmbedCountAreas.all;
+
+        let embedOversized;
 
         const newEmbeds = [];
 
         for (const [i, embed] of embeds.entries()) {
-            embedOversized = DiscordUtil.overSizeLimits(embed, ...embedLimits, {
+            embedOversized = DiscordUtil.embedOverSizeLimit(embed, ...embedLimits, {
                 areas: countAreas
             });
 
