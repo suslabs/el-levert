@@ -147,8 +147,12 @@ class TagDatabase extends RevisionDatabase {
     }
 
     async dump(flag = null) {
-        const rows = await this.tagQueries.dump.all(TagBitField.query(flag)),
-            tags = rows.map(row => row.name);
+        const rows = await this.tagQueries.dump.all(TagBitField.query(flag));
+
+        const tags = rows.map(row => {
+            const isHidden = TagBitField.hasFlag(row.type, "hidden");
+            return isHidden ? `${row.name} (hidden)` : row.name;
+        });
 
         sortTags(tags);
         return tags;
@@ -180,7 +184,7 @@ class TagDatabase extends RevisionDatabase {
         return tags;
     }
 
-    async list(user, options = {}) {
+    async list(user, flag = null, options = {}) {
         options = ObjectUtil.guaranteeObject(options, "limit");
 
         const limit = options.limit ?? -1,
@@ -189,7 +193,8 @@ class TagDatabase extends RevisionDatabase {
         const rows = await this.tagQueries.list.all({
             $user: user,
             $limit: limit,
-            $offset: offset
+            $offset: offset,
+            ...TagBitField.query(flag)
         });
 
         return DatabaseUtil.rowEntity(rows, Tag);

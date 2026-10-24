@@ -897,15 +897,15 @@ class TagManager extends DBManager {
         });
     }
 
-    async dump(full = false, flags) {
+    async dump(full = false, flags = [false, "hidden"]) {
+        if (full) {
+            return await this.tag_db.fullDump(null);
+        }
+
         const bitFlag = Tag.getFlag(flags),
             flag = bitFlag.isEmpty() ? null : bitFlag;
 
-        if (full) {
-            return await this.tag_db.fullDump(flag);
-        } else {
-            return await this.tag_db.dump(flag);
-        }
+        return await this.tag_db.dump(flag);
     }
 
     async list(options = {}, pagination = {}) {
@@ -914,7 +914,11 @@ class TagManager extends DBManager {
 
         const user = options.user;
 
-        const totalCount = await this.tag_db.count(user);
+        const all = options.all ?? pagination.all ?? false;
+
+        const flag = all ? null : Tag.getFlag([false, "hidden"]);
+
+        const totalCount = await this.tag_db.count(user, flag);
 
         if (totalCount === 0) {
             return {
@@ -928,8 +932,9 @@ class TagManager extends DBManager {
 
         const { limit, offset } = DatabaseUtil.resolvePagination(pagination, TagManager.defaultListLimit);
 
-        const tags = await this.tag_db.list(user, { limit, offset }),
-            [newTags, oldTags] = ArrayUtil.split(tags, tag => tag.isOld);
+        const tags = await this.tag_db.list(user, flag, { limit, offset });
+
+        const [newTags, oldTags] = ArrayUtil.split(tags, tag => tag.isOld);
 
         return {
             items: tags,

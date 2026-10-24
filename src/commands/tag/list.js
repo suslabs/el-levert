@@ -68,8 +68,13 @@ class TagListCommand {
             defaultLimit: TagListCommand.defaultLimit
         });
 
+        const listOptions = {
+            user: user.id,
+            all: Boolean(paginationOpts.all)
+        };
+
         if (paginationOpts.all) {
-            const tags = await getClient().tagManager.list({ user: user.id }, { all: true });
+            const tags = await getClient().tagManager.list(listOptions, { all: true });
 
             if (tags.totalCount < 1) {
                 if (user === ctx.msg.author) {
@@ -106,7 +111,7 @@ class TagListCommand {
             });
         }
 
-        const initialRes = await getClient().tagManager.list({ user: user.id }, paginationOpts),
+        const initialRes = await getClient().tagManager.list(listOptions, paginationOpts),
             totalCount = initialRes?.totalCount ?? initialRes?.count ?? 0;
 
         if (totalCount < 1) {
@@ -133,7 +138,7 @@ class TagListCommand {
             },
 
             fetch: async ({ page, limit, offset }) => {
-                return await getClient().tagManager.list({ user: user.id }, { page, limit, offset });
+                return await getClient().tagManager.list(listOptions, { page, limit, offset });
             },
 
             render: (items, { page }) => {
@@ -148,7 +153,7 @@ class TagListCommand {
 
             dumpHeader: header,
             formatDump: async () => {
-                const allTags = await getClient().tagManager.list({ user: user.id }, { all: true });
+                const allTags = await getClient().tagManager.list(listOptions, { all: true });
                 return formatFullTags(allTags);
             },
             filename: "tags.txt"

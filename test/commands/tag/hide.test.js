@@ -34,7 +34,10 @@ describe("tag hide command", () => {
         expect(tag.isHidden).toBe(true);
 
         const listOut = await executeCommand(command, "list", { msg });
-        const listText = Util.first(listOut.embeds).data.description;
+        expect(listOut).toContain("You don't have any tags");
+
+        const listAllOut = await executeCommand(command, "list --all", { msg });
+        const listText = Util.first(listAllOut.embeds).data.description;
         expect(listText).toContain("alpha (hidden)");
 
         const searchRes = await runtime.client.tagManager.search("alpha");

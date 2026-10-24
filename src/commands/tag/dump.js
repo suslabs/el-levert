@@ -9,11 +9,16 @@ class TagDumpCommand {
         aliases: ["all", "list_all"],
         parent: "tag",
         subcommand: true,
-        args: "[inline|full] [spaces]",
+        args: "[inline|full] [spaces] [--all]",
         description:
             "Exports registered tags from the database. When called with 'full', exports a complete JSON file containing tag metadata and content. Without arguments or with 'inline', outputs tag names.",
-        usage: "- [inline|full]: Dump format mode ('full' for JSON export, 'inline' for name list).\n- [spaces]: Number of indentation spaces for full JSON dump.",
+        usage: "- [inline|full]: Dump format mode ('full' for JSON export, 'inline' for name list).\n- [spaces]: Number of indentation spaces for full JSON dump.\n- [--all]: Include hidden tags in name dump.",
         arguments: [
+            {
+                name: "all",
+                kind: "option",
+                type: "boolean"
+            },
             {
                 name: "dumpType",
                 kind: "positional",
@@ -31,11 +36,17 @@ class TagDumpCommand {
 
     async handler(ctx) {
         const d_type = ctx.arg("dumpType"),
-            s_text = ctx.arg("spacingText"),
-            full = d_type === "full",
+            s_text = ctx.arg("spacingText");
+
+        const full = d_type === "full",
             inline = d_type === "inline";
 
-        let tags = await getClient().tagManager.dump(full);
+        const commandName = ctx.commandName ?? "";
+
+        const all = Boolean(ctx.arg("all")) || commandName.endsWith("all") || commandName.endsWith("_all"),
+            flags = all ? null : [false, "hidden"];
+
+        let tags = await getClient().tagManager.dump(full, flags);
 
         if (Util.empty(tags)) {
             return `${getEmoji("info")} There are **no** tags registered.`;

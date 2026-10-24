@@ -458,6 +458,25 @@ describe("Merged Branch Coverage", () => {
             await manager.hide(textTag);
             expect((await manager.fetch("mytext")).isHidden).toBe(true);
 
+            expect(await manager.dump()).not.toContain("mytext");
+            expect(await manager.dump()).not.toContain("mybin");
+
+            const allDump = await manager.dump(false, null);
+            expect(allDump).toContain("mytext (hidden)");
+            expect(allDump).toContain("mybin (hidden)");
+
+            const fullDump = await manager.dump(true);
+            expect(fullDump.map(t => t.name)).toContain("mytext");
+            expect(fullDump.map(t => t.name)).toContain("mybin");
+
+            const defaultList = await manager.list("u1");
+            expect(defaultList.items.map(t => t.name)).not.toContain("mytext");
+            expect(defaultList.items.map(t => t.name)).not.toContain("mybin");
+
+            const allList = await manager.list({ user: "u1", all: true });
+            expect(allList.items.map(t => t.name)).toContain("mytext");
+            expect(allList.items.map(t => t.name)).toContain("mybin");
+
             textSearch = await manager.search("mytext");
             expect(textSearch.results).not.toContain("mytext");
 

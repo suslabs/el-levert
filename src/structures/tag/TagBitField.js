@@ -38,6 +38,16 @@ class TagBitField extends BitField {
         return filter.setFlags(names);
     }
 
+    static hasFlag(data, name) {
+        if (data instanceof TagBitField) {
+            return data.hasFlag(name);
+        } else if (data == null) {
+            return false;
+        }
+
+        return this._hasBit(data, name);
+    }
+
     constructor(data = TagTypes.defaults.flags, options) {
         data ??= TagTypes.defaults.flags;
         options = ObjectUtil.guaranteeObject(options);
