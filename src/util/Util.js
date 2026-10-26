@@ -336,31 +336,6 @@ let Util = {
         return Util.randomElement(Util.alphanumeric, 0, Util.alphanumeric.length, n).join("");
     },
 
-    utf8ByteLength: str => {
-        let i = 0,
-            len = Util.countChars(str);
-
-        let code,
-            length = 0;
-
-        for (; i < len; i++) {
-            code = str.codePointAt(i);
-
-            if (code <= 0x7f) {
-                length += 1;
-            } else if (code <= 0x7ff) {
-                length += 2;
-            } else if (code <= 0xffff) {
-                length += 3;
-            } else {
-                length += 4;
-                i++;
-            }
-        }
-
-        return length;
-    },
-
     countChars: str => {
         return str?.length ?? 0;
     },
@@ -695,10 +670,16 @@ let Util = {
 
         if (Buffer.isBuffer(bytes)) {
             return bytes.toString("hex");
-        } else if (ArrayBuffer.isView(bytes)) {
-            return Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength).toString("hex");
+        } else if (ArrayBuffer.isView(bytes) || bytes instanceof ArrayBuffer) {
+            return Buffer.from(bytes.buffer ?? bytes, bytes.byteOffset ?? 0, bytes.byteLength).toString("hex");
         } else if (Array.isArray(bytes)) {
-            return Buffer.from(bytes).toString("hex");
+            let hex = "";
+
+            for (let i = 0; i < bytes.length; i++) {
+                hex += bytes[i].toString(16).padStart(2, "0");
+            }
+
+            return hex;
         }
 
         return "";
@@ -711,8 +692,8 @@ let Util = {
 
         if (Buffer.isBuffer(hex)) {
             return hex;
-        } else if (ArrayBuffer.isView(hex)) {
-            return Buffer.from(hex.buffer, hex.byteOffset, hex.byteLength);
+        } else if (ArrayBuffer.isView(hex) || hex instanceof ArrayBuffer) {
+            return Buffer.from(hex.buffer ?? hex, hex.byteOffset ?? 0, hex.byteLength);
         } else if (Array.isArray(hex)) {
             return Buffer.from(hex);
         } else if (typeof hex !== "string") {
@@ -969,6 +950,30 @@ let Util = {
         );
 
         return Util._formatUnitDurations(durations, Util._byteNames, parsedOptions, true);
+    },
+
+    getByteLength: (data, encoding = "utf8") => {
+        if (data == null) {
+            return 0;
+        }
+
+        if (Buffer.isBuffer(data)) {
+            return data.length;
+        } else if (ArrayBuffer.isView(data) || data instanceof ArrayBuffer) {
+            return data.byteLength;
+        } else if (typeof data === "string") {
+            return Buffer.byteLength(data, encoding);
+        } else if (Array.isArray(data)) {
+            return data.length;
+        } else if (TypeTester.isObject(data) && data.type === "Buffer" && Array.isArray(data.data)) {
+            return data.data.length;
+        }
+
+        try {
+            return Buffer.byteLength(JSON.stringify(data) ?? "", encoding);
+        } catch {
+            return 0;
+        }
     },
 
     getErrorMessage: (err, fallback = "No error message available") => {

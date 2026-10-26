@@ -40,8 +40,10 @@ function logFinished(info) {
 
 function logOutput(out, dataType) {
     if (getLogger().isDebugEnabled()) {
-        const desc = dataType === "script" ? "output" : "data";
-        getLogger().debug(`Returning ${dataType} ${desc}:${LoggerUtil.formatLog(out)}`);
+        const desc = dataType === "script" ? "output" : "data",
+            log = dataType === "reply" ? DiscordUtil.formatMessageLog(out) : LoggerUtil.formatLog(out);
+
+        getLogger().debug(`Returning ${dataType} ${desc}:${log}`);
     }
 }
 

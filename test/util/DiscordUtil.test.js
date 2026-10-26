@@ -138,9 +138,55 @@ describe("DiscordUtil", () => {
         ).toEqual([null, expect.any(Number)]);
         expect(DiscordUtil.embedOverSizeLimit(built, 1, undefined, 5)).toEqual([expect.any(Number), null]);
 
+        expect(DiscordUtil.embedLimits).toMatchObject({
+            title: 256,
+            description: 4096,
+            author: 256,
+            footer: 2048,
+            fields: 25,
+            fieldName: 256,
+            fieldValue: 1024,
+            total: 6000
+        });
+
+        const components = DiscordUtil.getEmbedComponentsSize(built, countOptions);
+        expect(components.total).toBe(DiscordUtil.getEmbedSize(built, countOptions));
+        expect(components.title).toBeGreaterThan(0);
+        expect(components.fields).toHaveLength(1);
+        expect(components.fields[0].name).toBeGreaterThan(0);
+        expect(components.fields[0].value).toBeGreaterThan(0);
+
+        expect(DiscordUtil.getEmbedComponentsSize(null).total).toBe(0);
+
+        expect(DiscordUtil.embedComponentsOverSizeLimit(built)).toBe(false);
+        expect(DiscordUtil.embedComponentsOverSizeLimit(built, { total: 1 })).toMatchObject({
+            total: [expect.any(Number), 1]
+        });
+
         const trimmed = DiscordUtil.trimEmbed(built, 4, 1, { oversized: true });
         expect(trimmed.description.length).toBeGreaterThan(0);
         expect(() => DiscordUtil.trimEmbed(built, 4, 1, 5)).not.toThrow();
+
+        const oversizedFieldVal = {
+            fields: [{ name: "Valid", value: "a".repeat(1025) }]
+        };
+        expect(DiscordUtil.embedComponentsOverSizeLimit(oversizedFieldVal)).toEqual({
+            fields: [{ index: 0, value: [1025, 1024] }]
+        });
+
+        const oversizedFieldName = {
+            fields: [{ name: "a".repeat(257), value: "Valid" }]
+        };
+        expect(DiscordUtil.embedComponentsOverSizeLimit(oversizedFieldName)).toEqual({
+            fields: [{ index: 0, name: [257, 256] }]
+        });
+
+        const oversizedFieldsCount = {
+            fields: Array(26).fill({ name: "f", value: "v" })
+        };
+        expect(DiscordUtil.embedComponentsOverSizeLimit(oversizedFieldsCount)).toEqual({
+            fieldsCount: [26, 25]
+        });
     });
 
     test("fetches attachments with extension or content-type validation and rebinds messages", async () => {
@@ -284,5 +330,15 @@ describe("DiscordUtil", () => {
         const embed = new EmbedBuilder().setDescription("test description");
         const embedLog = DiscordUtil.formatMessageLog(embed);
         expect(embedLog).toContain("test description");
+
+        const jsonBufferAttach = {
+            name: "image.png",
+            attachment: { type: "Buffer", data: [0x89, 0x50, 0x4e, 0x47] }
+        };
+        const jsonBufferLog = DiscordUtil.formatMessageLog({ files: [jsonBufferAttach] });
+        expect(jsonBufferLog).toContain("image.png");
+        expect(jsonBufferLog).toContain('"size":4');
+        expect(jsonBufferLog).toContain("89504e47");
+        expect(jsonBufferLog).not.toContain('"type":"Buffer"');
     });
 });

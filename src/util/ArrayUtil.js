@@ -372,8 +372,7 @@ const ArrayUtil = Object.freeze({
         } else if (data instanceof ArrayBuffer) {
             return new Uint8Array(data);
         } else if (typeof data === "string") {
-            const buf = Buffer.from(data, encoding);
-            return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+            return new TextEncoder(encoding).encode(data);
         } else if (Array.isArray(data)) {
             return Uint8Array.from(data);
         } else if (TypeTester.isObject(data)) {

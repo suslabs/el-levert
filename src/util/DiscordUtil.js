@@ -473,6 +473,225 @@ let DiscordUtil = {
         return size + fieldsSize;
     },
 
+    embedLimits: Object.freeze({
+        title: 256,
+        description: 4096,
+        author: 256,
+        footer: 2048,
+        fields: 25,
+        fieldName: 256,
+        fieldValue: 1024,
+        total: 6000
+    }),
+
+    getEmbedComponentsSize: (embed, options) => {
+        options = ObjectUtil.guaranteeObject(options);
+
+        let countType = options.count ?? CountTypes.chars,
+            countAreas = options.areas ?? EmbedCountAreas.all,
+            countURLs = options.urls ?? false;
+
+        const embedData = DiscordUtil.getEmbedData(embed);
+
+        if (embedData == null) {
+            return {
+                title: 0,
+                description: 0,
+                author: 0,
+                footer: 0,
+                timestamp: 0,
+                fields: [],
+                total: 0
+            };
+        }
+
+        const count = Util._countFunc(countType);
+
+        if (countAreas === EmbedCountAreas.all) {
+            countAreas = Array.from(EmbedCountAreas.valid);
+        } else {
+            countAreas = ArrayUtil.guaranteeArray(countAreas).map(area =>
+                TypeTester.normalizeEnum(area, EmbedCountAreas, "count areas", UtilError)
+            );
+        }
+
+        const hasContent = countAreas.includes(EmbedCountAreas.content),
+            hasBody = countAreas.includes(EmbedCountAreas.body),
+            hasDetails = countAreas.includes(EmbedCountAreas.details),
+            hasFields = countAreas.includes(EmbedCountAreas.fields);
+
+        let title = 0,
+            description = 0;
+
+        if (hasContent) {
+            title = count(embedData.title);
+            description = count(embedData.description);
+        } else if (hasBody) {
+            description = count(embedData.description);
+        }
+
+        let author = 0,
+            footer = 0,
+            timestamp = 0;
+
+        let urls = null;
+
+        if (hasDetails) {
+            author = count(embedData.author?.name);
+            footer = count(embedData.footer?.text);
+            timestamp = count(embedData.timestamp);
+
+            if (countType === CountTypes.chars && countURLs) {
+                urls = {
+                    url: count(embedData.url),
+                    thumbnail: count(embedData.thumbnail?.url),
+                    image: count(embedData.image?.url),
+                    authorIcon: count(embedData.author?.icon_url),
+                    authorUrl: count(embedData.author?.url),
+                    footerIcon: count(embedData.footer?.icon_url)
+                };
+            }
+        }
+
+        let fields = [],
+            fieldsSize = 0;
+
+        if (hasFields) {
+            fields = (embedData.fields ?? []).map((field, i) => {
+                const { name, value, inline } = field;
+
+                let nameSize = count(name),
+                    valueSize = count(value);
+
+                if (countType === CountTypes.lines && name) {
+                    nameSize++;
+                }
+
+                const total = countType === CountTypes.lines && i > 0 && inline ? 0 : nameSize + valueSize;
+
+                return {
+                    name: nameSize,
+                    value: valueSize,
+                    total
+                };
+            });
+
+            fieldsSize = fields.reduce((sum, field) => sum + field.total, 0);
+        }
+
+        let urlSize = 0;
+
+        if (urls != null) {
+            urlSize = Object.values(urls).reduce((sum, val) => sum + val, 0);
+        }
+
+        const total = title + description + author + footer + timestamp + urlSize + fieldsSize;
+
+        const res = {
+            title,
+            description,
+            author,
+            footer,
+            timestamp,
+            fields,
+            total
+        };
+
+        if (urls != null) {
+            res.urls = urls;
+        }
+
+        return res;
+    },
+
+    embedComponentsOverSizeLimit: (embed, limits, options) => {
+        if (!TypeTester.isObject(embed)) {
+            return false;
+        }
+
+        options = ObjectUtil.guaranteeObject(options);
+
+        limits = {
+            ...DiscordUtil.embedLimits,
+            ...ObjectUtil.guaranteeObject(limits)
+        };
+
+        const totalLimit = limits.total ?? limits.charLimit ?? DiscordUtil.embedLimits.total,
+            lineLimit = limits.totalLines ?? limits.lineLimit ?? limits.lines ?? null;
+
+        const components = DiscordUtil.getEmbedComponentsSize(embed, {
+            ...options,
+            count: CountTypes.chars
+        });
+
+        const embedData = DiscordUtil.getEmbedData(embed),
+            rawFields = embedData?.fields ?? [];
+
+        const oversized = {};
+
+        if (typeof limits.fields === "number" && rawFields.length > limits.fields) {
+            oversized.fieldsCount = [rawFields.length, limits.fields];
+        }
+
+        const oversizedFields = [];
+
+        for (const [i, fieldSize] of components.fields.entries()) {
+            const fieldViolations = {};
+
+            if (typeof limits.fieldName === "number" && fieldSize.name > limits.fieldName) {
+                fieldViolations.name = [fieldSize.name, limits.fieldName];
+            }
+
+            if (typeof limits.fieldValue === "number" && fieldSize.value > limits.fieldValue) {
+                fieldViolations.value = [fieldSize.value, limits.fieldValue];
+            }
+
+            if (!Util.empty(Object.keys(fieldViolations))) {
+                oversizedFields.push({
+                    index: i,
+                    ...fieldViolations
+                });
+            }
+        }
+
+        if (!Util.empty(oversizedFields)) {
+            oversized.fields = oversizedFields;
+        }
+
+        if (typeof limits.title === "number" && components.title > limits.title) {
+            oversized.title = [components.title, limits.title];
+        }
+
+        if (typeof limits.description === "number" && components.description > limits.description) {
+            oversized.description = [components.description, limits.description];
+        }
+
+        if (typeof limits.author === "number" && components.author > limits.author) {
+            oversized.author = [components.author, limits.author];
+        }
+
+        if (typeof limits.footer === "number" && components.footer > limits.footer) {
+            oversized.footer = [components.footer, limits.footer];
+        }
+
+        if (typeof totalLimit === "number" && components.total > totalLimit) {
+            oversized.total = [components.total, totalLimit];
+        }
+
+        if (typeof lineLimit === "number") {
+            const lineComponents = DiscordUtil.getEmbedComponentsSize(embed, {
+                ...options,
+                count: CountTypes.lines
+            });
+
+            if (lineComponents.total > lineLimit) {
+                oversized.totalLines = [lineComponents.total, lineLimit];
+            }
+        }
+
+        return Util.empty(Object.keys(oversized)) ? false : oversized;
+    },
+
     embedOverSizeLimit: (embed, charLimit, lineLimit, options) => {
         if (!TypeTester.isObject(embed)) {
             return false;
@@ -691,7 +910,7 @@ let DiscordUtil = {
         return LoggerUtil.formatLog(normalized, splitLength, maxLength);
     },
 
-    _isBinaryAttachment: (buf, name = "") => {
+    _isBinaryAttachment: (data, name = "") => {
         const ext = path.extname(name).toLowerCase();
 
         if (BinaryExtensions.has(ext)) {
@@ -700,8 +919,31 @@ let DiscordUtil = {
             return false;
         }
 
-        const sample = buf.subarray(0, 1024);
-        return sample.includes(0);
+        if (typeof data === "string") {
+            return false;
+        } else if (Buffer.isBuffer(data)) {
+            return data.subarray(0, 1024).includes(0);
+        } else if (ArrayBuffer.isView(data)) {
+            const view = Buffer.from(data.buffer, data.byteOffset, Math.min(data.byteLength, 1024));
+            return view.includes(0);
+        } else if (data instanceof ArrayBuffer) {
+            const view = Buffer.from(data, 0, Math.min(data.byteLength, 1024));
+            return view.includes(0);
+        }
+
+        const arr = data?.data ?? data;
+
+        if (Array.isArray(arr)) {
+            const limit = Math.min(arr.length, 1024);
+
+            for (let i = 0; i < limit; i++) {
+                if (arr[i] === 0) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     },
 
     _formatAttachment: (file, options) => {
@@ -726,40 +968,49 @@ let DiscordUtil = {
             return file;
         }
 
-        let buf = null;
+        if (typeof data === "string") {
+            const size = file.size ?? Util.getByteLength(data);
+
+            const text = Util.trimString(data, charLimit, null, {
+                showDiff: true
+            });
+
+            return { name, size, data: text };
+        }
+
+        const isBinary = DiscordUtil._isBinaryAttachment(data, name);
+
+        if (isBinary) {
+            const binary = LoggerUtil.formatBinary(data, {
+                byteLimit,
+                allowArray: true
+            });
+
+            if (binary !== null) {
+                const size = file.size ?? binary.size;
+                return { name, size, data: binary.data };
+            }
+        }
+
+        let size = file.size ?? Util.getByteLength(data);
+
+        let text = null;
 
         if (Buffer.isBuffer(data)) {
-            buf = data;
-        } else if (typeof data === "string") {
-            buf = ArrayUtil.toBuffer(data, "utf8");
-        } else if (TypeTester.isTypedArray(data) || data instanceof ArrayBuffer) {
-            buf = ArrayUtil.toBuffer(data);
+            const sample = data.length > charLimit ? data.subarray(0, charLimit * 2) : data;
+            text = sample.toString("utf8");
+        } else if (ArrayBuffer.isView(data)) {
+            const view = Buffer.from(data.buffer, data.byteOffset, Math.min(data.byteLength, charLimit * 2));
+            text = view.toString("utf8");
+        } else if (TypeTester.isObject(data)) {
+            text = data.constructor.name;
+        } else if (data != null) {
+            text = String(data);
         }
-
-        if (buf === null) {
-            const size = file.size ?? 0,
-                res = { name, size };
-
-            if (data != null) {
-                res.data = typeof data === "object" ? data.constructor.name : String(data);
-            }
-
-            return res;
-        }
-
-        const size = file.size ?? buf.length,
-            isBinary = DiscordUtil._isBinaryAttachment(buf, name);
 
         const res = { name, size };
 
-        if (isBinary) {
-            const hexSlice = buf.subarray(0, byteLimit),
-                hexStr = Util.bytesToHex(hexSlice);
-
-            res.data = buf.length > byteLimit ? `${hexStr}...` : hexStr;
-        } else {
-            const text = buf.toString("utf8");
-
+        if (text !== null) {
             res.data = Util.trimString(text, charLimit, null, {
                 showDiff: true
             });
@@ -771,7 +1022,12 @@ let DiscordUtil = {
     _formatMessagePayload: (data, options) => {
         if (data == null) {
             return null;
-        } else if (data instanceof AttachmentBuilder || Buffer.isBuffer(data)) {
+        } else if (
+            data instanceof AttachmentBuilder ||
+            Buffer.isBuffer(data) ||
+            ArrayBuffer.isView(data) ||
+            data instanceof ArrayBuffer
+        ) {
             return DiscordUtil._formatAttachment(data, options);
         } else if (data instanceof EmbedBuilder) {
             return DiscordUtil.getBuiltEmbed(data);

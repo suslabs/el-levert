@@ -22,9 +22,7 @@ class BitField {
 
             return bytes;
         } else if (TypeTester.isArray(bits)) {
-            return TypeTester.isTypedArray(bits)
-                ? new Uint8Array(bits.buffer, bits.byteOffset, bits.byteLength)
-                : Uint8Array.from(bits);
+            return ArrayUtil.toUint8Array(bits);
         } else {
             throw new BitFieldError("Invalid bitfield data", bits);
         }
@@ -136,7 +134,7 @@ class BitField {
     }
 
     toBuffer() {
-        return Buffer.from(this.buffer);
+        return ArrayUtil.toBuffer(this.buffer);
     }
 
     toHex() {

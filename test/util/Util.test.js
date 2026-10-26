@@ -62,8 +62,15 @@ describe("Util", () => {
     });
 
     test("counts and trims content", () => {
-        expect(Util.utf8ByteLength("A")).toBe(1);
-        expect(Util.utf8ByteLength("é")).toBe(2);
+        expect(Util.getByteLength("A")).toBe(1);
+        expect(Util.getByteLength("é")).toBe(2);
+        expect(Util.getByteLength(Buffer.from([1, 2, 3]))).toBe(3);
+        expect(Util.getByteLength(new Uint8Array([1, 2]))).toBe(2);
+        expect(Util.getByteLength(new ArrayBuffer(4))).toBe(4);
+        expect(Util.getByteLength([1, 2, 3])).toBe(3);
+        expect(Util.getByteLength({ type: "Buffer", data: [1, 2] })).toBe(2);
+        expect(Util.getByteLength({ a: 1 })).toBe(Buffer.byteLength(JSON.stringify({ a: 1 })));
+        expect(Util.getByteLength(null)).toBe(0);
         expect(Util.countChars("abc")).toBe(3);
         expect(Util.countLines("a\nb\nc")).toBe(3);
         expect(Util.getCount("a\nb", CountTypes.lines)).toBe(2);
@@ -120,6 +127,7 @@ describe("Util", () => {
         expect(Util.numberToBytes(-1)).toBeNull();
         expect(Util.bytesToNumber(new Uint8Array([0x34, 0x12]))).toBe(0x1234);
         expect(Util.bytesToHex(new Uint8Array([0x34, 0x12]))).toBe("3412");
+        expect(Util.bytesToHex(new Uint8Array([0x34, 0x12]).buffer)).toBe("3412");
         expect(Util.bytesToHex([0x34, 0x12])).toBe("3412");
         expect(Util.bytesToHex(Buffer.from([0x34, 0x12]))).toBe("3412");
         expect(Util.bytesToHex(null)).toBe("");
@@ -128,6 +136,7 @@ describe("Util", () => {
         expect(Util.hexToBytes("312")).toEqual(Buffer.from([0x03, 0x12]));
         expect(Util.hexToBytes([0x34, 0x12])).toEqual(Buffer.from([0x34, 0x12]));
         expect(Util.hexToBytes(new Uint8Array([0x34, 0x12]))).toEqual(Buffer.from([0x34, 0x12]));
+        expect(Util.hexToBytes(new Uint8Array([0x34, 0x12]).buffer)).toEqual(Buffer.from([0x34, 0x12]));
         expect(Util.hexToBytes(Buffer.from([0x34, 0x12]))).toEqual(Buffer.from([0x34, 0x12]));
         expect(Util.hexToBytes(null)).toEqual(Buffer.alloc(0));
         expect(Util.validUrl("https://example.com/test")).toBe(true);

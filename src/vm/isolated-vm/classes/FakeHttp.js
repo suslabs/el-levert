@@ -11,6 +11,7 @@ const { ExternalCopy } = ivm;
 
 import { getLogger } from "../../../LevertClient.js";
 
+import Util from "../../../util/Util.js";
 import TypeTester from "../../../util/TypeTester.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
 import VMUtil from "../../../util/vm/VMUtil.js";
@@ -245,39 +246,22 @@ function createFakeAxios(options) {
     const client = axios.create(config);
 
     client.interceptors.request.use(reqConfig => {
-        let bodyBuffer = null;
+        let size = 0;
 
-        if (reqConfig.data == null) {
-            bodyBuffer = Buffer.alloc(0);
-        } else {
+        if (reqConfig.data != null) {
             const defaultTransform = axios.defaults.transformRequest,
                 transformedData = defaultTransform.reduce(
                     (data, func) => func(data, reqConfig.headers),
                     reqConfig.data
                 );
 
-            if (Buffer.isBuffer(transformedData)) {
-                bodyBuffer = transformedData;
-            } else if (TypeTester.isTypedArray(transformedData)) {
-                bodyBuffer = Buffer.from(
-                    transformedData.buffer,
-                    transformedData.byteOffset,
-                    transformedData.byteLength
-                );
-            } else if (transformedData instanceof ArrayBuffer) {
-                bodyBuffer = Buffer.from(transformedData);
-            } else if (typeof transformedData === "string") {
-                bodyBuffer = Buffer.from(transformedData, "utf8");
-            } else {
-                bodyBuffer = Buffer.from(JSON.stringify(transformedData) ?? "", "utf8");
-            }
+            size = Util.getByteLength(transformedData);
         }
 
-        if (bodyBuffer.byteLength > maxUploadSize) {
+        if (size > maxUploadSize) {
             throw new VMError(`Request body exceeds maximum upload size of ${maxUploadSize} bytes`);
         }
 
-        reqConfig.bodyBuffer = bodyBuffer;
         return reqConfig;
     });
 

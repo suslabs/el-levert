@@ -84,6 +84,28 @@ describe("TagVM", () => {
         delete vm._inspectorServer;
     });
 
+    test("logs reply data using hex formatting for binary attachments when debug is enabled", async () => {
+        const msg = createDiscordMessage("hello");
+
+        const debugSpy = vi.spyOn(runtime.client.logger, "debug"),
+            isDebugSpy = vi.spyOn(runtime.client.logger, "isDebugEnabled").mockReturnValue(true);
+
+        const script = 'msg.reply({ content: "", file: { data: [137, 80, 78, 71, 0, 1], name: "image.png" } })';
+
+        const res = await vm.runScript(script, { msg });
+        expect(res.files).toHaveLength(1);
+        expect(res.files[0].name).toBe("image.png");
+
+        const replyLogCall = debugSpy.mock.calls.find(call => call[0]?.startsWith("Returning reply data:"));
+        expect(replyLogCall).toBeDefined();
+        expect(replyLogCall[0]).toContain("image.png");
+        expect(replyLogCall[0]).toContain("89504e470001");
+        expect(replyLogCall[0]).not.toContain('"type":"Buffer"');
+
+        isDebugSpy.mockRestore();
+        debugSpy.mockRestore();
+    });
+
     test("bridges util tag helpers through the vm with real tag data", async () => {
         const msg = createDiscordMessage("hello");
 

@@ -402,15 +402,8 @@ class Tag extends BaseStructure {
     }
 
     getSize() {
-        if (this.isBinary) {
-            const binSize = this.bin?.byteLength ?? this.body?.byteLength ?? 0,
-                argsSize = Util.utf8ByteLength(this.args ?? "");
-
-            return (binSize + argsSize) / Util.dataBytes.kilobyte;
-        }
-
-        const sizes = [typeof this.body === "string" ? this.body : "", this.args].map(str => Util.utf8ByteLength(str));
-        return ArrayUtil.sum(sizes) / Util.dataBytes.kilobyte;
+        const body = this.isBinary ? (this.bin ?? this.body) : this.body;
+        return (Util.getByteLength(body) + Util.getByteLength(this.args)) / Util.dataBytes.kilobyte;
     }
 
     async getOwner(username = true, onlyMembers = false, sv_id) {
@@ -593,7 +586,7 @@ class Tag extends BaseStructure {
             let body;
 
             if (this.isBinary) {
-                body = `[binary data: ${this.body?.byteLength ?? 0} bytes]`;
+                body = `[binary data: ${Util.getByteLength(this.bin ?? this.body)} bytes]`;
             } else if (Util.empty(this.body)) {
                 body = "empty";
             } else {

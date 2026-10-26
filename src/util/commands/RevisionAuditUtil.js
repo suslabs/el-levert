@@ -79,7 +79,7 @@ const RevisionAuditUtil = Object.freeze({
             embed.setDescription(`${embed.data.description}\n\nNo tracked fields changed.`);
         }
 
-        if (DiscordUtil.getEmbedSize(embed) > 6000 || fields.some(field => field.value.length > 1024)) {
+        if (DiscordUtil.embedComponentsOverSizeLimit(embed)) {
             const diffText = await RevisionAuditUtil._formatDiff(diff, true, false);
 
             return {
@@ -190,7 +190,7 @@ const RevisionAuditUtil = Object.freeze({
             case "user":
                 return await RevisionAuditUtil.formatUser(value, discord);
             case "bin":
-                return `[binary data: ${value.byteLength ?? 0} bytes]`;
+                return `[binary data: ${Util.getByteLength(value)} bytes]`;
             default:
                 if (typeof value === "string") {
                     return full

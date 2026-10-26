@@ -100,7 +100,7 @@ class TagManager extends DBManager {
         let msg, ref;
 
         if (isBinary) {
-            if (!TypeTester.isTypedArray(body) || body.byteLength === 0) {
+            if (Util.getByteLength(body) === 0) {
                 msg = "Tag body is empty";
             }
         } else {
@@ -1174,7 +1174,7 @@ class TagManager extends DBManager {
                     maxSize
                 });
 
-                body = isBinary ? new Uint8Array(res.body) : res.body;
+                body = isBinary ? ArrayUtil.toUint8Array(res.body) : res.body;
             } catch (err) {
                 if (Util.hasPrefix(["Message doesn't have", "Invalid content type"], err.message)) {
                     isFile = false;

@@ -130,6 +130,57 @@ describe("MessageHandler", () => {
             content: ":warning: Embed is too long. (30 / 20)"
         });
 
+        expect(
+            handler._applyLimits(
+                {
+                    embeds: [
+                        {
+                            fields: [{ name: "Title", value: "x".repeat(1025) }]
+                        }
+                    ]
+                },
+                {
+                    limitType: MessageLimitTypes.error
+                }
+            )
+        ).toEqual({
+            content: ":warning: Embed field 1 value is too long. (1025 / 1024)"
+        });
+
+        expect(
+            handler._applyLimits(
+                {
+                    embeds: [
+                        {
+                            fields: [{ name: "x".repeat(257), value: "Content" }]
+                        }
+                    ]
+                },
+                {
+                    limitType: MessageLimitTypes.error
+                }
+            )
+        ).toEqual({
+            content: ":warning: Embed field 1 name is too long. (257 / 256)"
+        });
+
+        expect(
+            handler._applyLimits(
+                {
+                    embeds: [
+                        {
+                            fields: Array(26).fill({ name: "f", value: "v" })
+                        }
+                    ]
+                },
+                {
+                    limitType: MessageLimitTypes.error
+                }
+            )
+        ).toEqual({
+            content: ":warning: Embed has too many fields. (26 / 25)"
+        });
+
         expect(handler.getLimits(true, true)).toMatchObject({
             outTrim: [5, 2],
             embedTrim: [20, 2]

@@ -325,6 +325,51 @@ class MessageHandler extends Handler {
     static _mentionRegex = /@(everyone|here)/g;
     static _emptyMessage = "Cannot send an empty message";
 
+    static _embedOversizedRules = [
+        {
+            key: "fieldsCount",
+            message: "has too many fields."
+        },
+        {
+            key: "fields",
+            resolve: fields => {
+                const field = Util.first(fields);
+
+                if (field.value != null) {
+                    return [`field ${field.index + 1} value is too long.`, field.value];
+                } else if (field.name != null) {
+                    return [`field ${field.index + 1} name is too long.`, field.name];
+                }
+
+                return null;
+            }
+        },
+        {
+            key: "title",
+            message: "title is too long."
+        },
+        {
+            key: "description",
+            message: "description is too long."
+        },
+        {
+            key: "author",
+            message: "author name is too long."
+        },
+        {
+            key: "footer",
+            message: "footer text is too long."
+        },
+        {
+            key: "totalLines",
+            message: "has too many newlines."
+        },
+        {
+            key: "total",
+            message: "is too long."
+        }
+    ];
+
     static _escapeMentions(str) {
         if (typeof str !== "string") {
             return str;
@@ -408,6 +453,43 @@ class MessageHandler extends Handler {
         }
 
         return Util.empty(data);
+    }
+
+    static _resolveEmbedOversized(embedOversized) {
+        for (const rule of MessageHandler._embedOversizedRules) {
+            const data = embedOversized[rule.key];
+
+            if (Util.empty(data)) {
+                continue;
+            }
+
+            if (typeof rule.resolve === "function") {
+                const res = rule.resolve(data);
+
+                if (res !== null) {
+                    return res;
+                }
+            } else {
+                return [rule.message, data];
+            }
+        }
+
+        return ["is too long.", null];
+    }
+
+    static _formatEmbedOversized(embedOversized, n = "") {
+        if (!TypeTester.isObject(embedOversized)) {
+            return null;
+        }
+
+        const [message, stats] = MessageHandler._resolveEmbedOversized(embedOversized);
+
+        if (stats !== null) {
+            const [count, limit] = stats;
+            return `${getEmoji("warn")} Embed${n} ${message} (${count} / ${limit})`;
+        } else {
+            return `${getEmoji("warn")} Embed${n} ${message}`;
+        }
     }
 
     _sendTyping(msg) {
@@ -498,9 +580,16 @@ class MessageHandler extends Handler {
         const newEmbeds = [];
 
         for (const [i, embed] of embeds.entries()) {
-            embedOversized = DiscordUtil.embedOverSizeLimit(embed, ...embedLimits, {
-                areas: countAreas
-            });
+            embedOversized = DiscordUtil.embedComponentsOverSizeLimit(
+                embed,
+                {
+                    total: embedLimits[0],
+                    totalLines: embedLimits[1]
+                },
+                {
+                    areas: countAreas
+                }
+            );
 
             if (!useTrim && !embedOversized) {
                 newEmbeds.push(embed);
@@ -512,19 +601,9 @@ class MessageHandler extends Handler {
             switch (limitType) {
                 case MessageLimitTypes.default:
                 case MessageLimitTypes.error:
-                    const [chars, lines] = embedOversized;
-
-                    if (chars !== null) {
-                        return {
-                            content: `${getEmoji("warn")} Embed${n} is too long. (${chars} / ${embedLimits[0]})`
-                        };
-                    } else if (lines !== null) {
-                        return {
-                            content: `${getEmoji("warn")} Embed${n} has too many newlines. (${lines} / ${embedLimits[1]})`
-                        };
-                    }
-
-                    break;
+                    return {
+                        content: MessageHandler._formatEmbedOversized(embedOversized, n)
+                    };
                 case MessageLimitTypes.file:
                     const embedFormat = DiscordUtil.stringifyEmbed(embed);
                     addFile("end", embedFormat, `embed${n}.txt`);
@@ -532,7 +611,7 @@ class MessageHandler extends Handler {
                     break;
                 case MessageLimitTypes.trim:
                     DiscordUtil.trimEmbed(embed, ...limits.embedTrim, {
-                        oversized: embedOversized
+                        oversized: true
                     });
 
                     newEmbeds.push(embed);
