@@ -2,6 +2,8 @@ import typeSchema from "./typeSchema.js";
 import readerSchema from "./readerSchema.js";
 import validSchema from "./validSchema.js";
 
+import CommandReaderKinds from "../reader/CommandReaderKinds.js";
+
 const jsonSchema = {
     $id: "command-argument-schema",
     oneOf: [
@@ -19,7 +21,7 @@ const jsonSchema = {
                 type: typeSchema,
                 kind: {
                     type: "string",
-                    const: "group"
+                    const: CommandReaderKinds.group
                 },
                 properties: {
                     type: "object",

@@ -5,7 +5,7 @@ import ParserError from "../../../errors/ParserError.js";
 class BaseCommandReader {
     constructor(options = {}) {
         this.options = ObjectUtil.guaranteeObject(options);
-        this.kind = this.options.kind ?? null;
+        this.kind = this.constructor.kind ?? this.options.kind ?? null;
 
         if (typeof this.read !== "function") {
             throw new ParserError("Child class must have a read function");

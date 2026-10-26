@@ -2,6 +2,9 @@ import CommandQuotedValue from "./CommandQuotedValue.js";
 import CommandArgumentResult from "./CommandArgumentResult.js";
 import CommandValidationIssue from "./CommandValidationIssue.js";
 
+import CommandReaderKinds from "../reader/CommandReaderKinds.js";
+import CommandTypeNames from "../type/CommandTypeNames.js";
+
 import Util from "../../../util/Util.js";
 
 class CommandArgument {
@@ -87,7 +90,7 @@ class CommandArgument {
     }
 
     _coerceInput(input) {
-        if (this.reader?.kind === "list") {
+        if (this.reader?.kind === CommandReaderKinds.list) {
             return this._coerceListInput(input);
         }
 
@@ -193,15 +196,15 @@ class CommandArgument {
     }
 
     _getLengthValue(value) {
-        return this.typeName === "script" ? (value?.body ?? "") : String(value ?? "");
+        return this.typeName === CommandTypeNames.script ? (value?.body ?? "") : String(value ?? "");
     }
 
     _hasLength() {
-        return this.typeName === "string" || this.typeName === "script";
+        return this.typeName === CommandTypeNames.string || this.typeName === CommandTypeNames.script;
     }
 
     _isNumericType() {
-        return this.typeName === "integer" || this.typeName === "number";
+        return this.typeName === CommandTypeNames.integer || this.typeName === CommandTypeNames.number;
     }
 
     _isEmptyValue(value) {

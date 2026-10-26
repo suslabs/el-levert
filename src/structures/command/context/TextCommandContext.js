@@ -35,6 +35,10 @@ class TextCommandContext extends BaseCommandContext {
         const validate = options.validate ?? false;
 
         if (Util.empty(names)) {
+            if (!Util.empty(this._parsedSession.issues)) {
+                throw new CommandError(Util.first(this._parsedSession.issues).message);
+            }
+
             const obj = {};
 
             for (const [name, result] of this._parsedSession.results.entries()) {
@@ -50,6 +54,10 @@ class TextCommandContext extends BaseCommandContext {
             const result = this._parsedSession.results.get(name);
 
             if (!result) {
+                if (!Util.empty(this._parsedSession.issues)) {
+                    throw new CommandError(Util.first(this._parsedSession.issues).message);
+                }
+
                 throw new CommandError(`Unknown argument name: ${name}`);
             }
 

@@ -1,5 +1,10 @@
 import CommandParser from "../../../src/parsers/command/CommandParser.js";
 
+import CommandReaderKinds from "../../../src/parsers/command/reader/CommandReaderKinds.js";
+import CommandTypeNames from "../../../src/parsers/command/type/CommandTypeNames.js";
+
+import CommandError from "../../../src/errors/CommandError.js";
+
 describe("CommandParser", () => {
     test("parseInvocation parses basic command text", () => {
         const parsed = CommandParser.parseInvocation("!tag add alpha body", "!");
@@ -18,27 +23,27 @@ describe("CommandParser", () => {
             arguments: [
                 {
                     name: "debug",
-                    kind: "option",
+                    kind: CommandReaderKinds.option,
                     type: "boolean"
                 },
                 {
                     name: "user",
-                    kind: "option",
+                    kind: CommandReaderKinds.option,
                     type: "integer",
                     aliases: ["u"]
                 },
                 {
                     name: "title",
-                    kind: "option",
+                    kind: CommandReaderKinds.option,
                     type: "string"
                 },
                 {
                     name: "first",
-                    kind: "positional"
+                    kind: CommandReaderKinds.positional
                 },
                 {
                     name: "rest",
-                    kind: "rest"
+                    kind: CommandReaderKinds.rest
                 }
             ]
         });
@@ -60,13 +65,13 @@ describe("CommandParser", () => {
             arguments: [
                 {
                     name: "mode",
-                    kind: "option",
+                    kind: CommandReaderKinds.option,
                     syntax: "named",
                     type: "string"
                 },
                 {
                     name: "limit",
-                    kind: "option",
+                    kind: CommandReaderKinds.option,
                     syntax: "both",
                     type: "integer"
                 }
@@ -87,12 +92,12 @@ describe("CommandParser", () => {
             arguments: [
                 {
                     name: "debug",
-                    kind: "option",
+                    kind: CommandReaderKinds.option,
                     type: "boolean"
                 },
                 {
                     name: "first",
-                    kind: "positional"
+                    kind: CommandReaderKinds.positional
                 }
             ]
         });
@@ -111,7 +116,7 @@ describe("CommandParser", () => {
             arguments: [
                 {
                     name: "debug",
-                    kind: "option",
+                    kind: CommandReaderKinds.option,
                     type: "boolean"
                 }
             ]
@@ -132,16 +137,16 @@ describe("CommandParser", () => {
             arguments: [
                 {
                     name: "first",
-                    kind: "positional"
+                    kind: CommandReaderKinds.positional
                 },
                 {
                     name: "nums",
-                    kind: "list",
+                    kind: CommandReaderKinds.list,
                     type: "integer"
                 },
                 {
                     name: "rest",
-                    kind: "rest"
+                    kind: CommandReaderKinds.rest
                 }
             ]
         });
@@ -161,7 +166,7 @@ describe("CommandParser", () => {
             arguments: [
                 {
                     name: "body",
-                    kind: "rest",
+                    kind: CommandReaderKinds.rest,
                     type: "script"
                 }
             ]
@@ -196,7 +201,7 @@ describe("CommandParser", () => {
                 {
                     name: "date",
                     reader: {
-                        kind: "match",
+                        kind: CommandReaderKinds.match,
                         pattern,
                         index: 1
                     }
@@ -204,7 +209,7 @@ describe("CommandParser", () => {
                 {
                     name: "quote",
                     reader: {
-                        kind: "match",
+                        kind: CommandReaderKinds.match,
                         pattern,
                         index: 2
                     }
@@ -212,7 +217,7 @@ describe("CommandParser", () => {
                 {
                     name: "message",
                     reader: {
-                        kind: "match",
+                        kind: CommandReaderKinds.match,
                         pattern,
                         index: 3
                     }
@@ -236,7 +241,7 @@ describe("CommandParser", () => {
             arguments: [
                 {
                     name: "num",
-                    kind: "positional",
+                    kind: CommandReaderKinds.positional,
                     type: "integer",
                     required: true,
                     valid: {
@@ -274,7 +279,7 @@ describe("CommandParser", () => {
             arguments: [
                 {
                     name: "text",
-                    kind: "positional"
+                    kind: CommandReaderKinds.positional
                 }
             ]
         });
@@ -291,24 +296,166 @@ describe("CommandParser", () => {
 
     test("computes requireArgs from config and child arguments", () => {
         const noRequired = new CommandParser({
-            arguments: [{ name: "opt", kind: "option", type: "string" }]
+            arguments: [{ name: "opt", kind: CommandReaderKinds.option, type: "string" }]
         });
         expect(noRequired.requireArgs).toBe(false);
 
         const configRequired = new CommandParser({
             info: { parser: { requireArgs: true } },
-            arguments: [{ name: "opt", kind: "option", type: "string" }]
+            arguments: [{ name: "opt", kind: CommandReaderKinds.option, type: "string" }]
         });
         expect(configRequired.requireArgs).toBe(true);
 
         const argRequired = new CommandParser({
-            arguments: [{ name: "text", kind: "positional", required: true }]
+            arguments: [{ name: "text", kind: CommandReaderKinds.positional, required: true }]
         });
         expect(argRequired.requireArgs).toBe(true);
 
         const validRuleRequired = new CommandParser({
-            arguments: [{ name: "text", kind: "positional", valid: { required: true } }]
+            arguments: [{ name: "text", kind: CommandReaderKinds.positional, valid: { required: true } }]
         });
         expect(validRuleRequired.requireArgs).toBe(true);
+    });
+
+    test("parses tag add command arguments with embedded apostrophe (%t add test1234 a'b)", () => {
+        const parser = new CommandParser({
+            arguments: [
+                {
+                    name: "tagName",
+                    kind: CommandReaderKinds.positional,
+                    index: 0,
+                    lowercase: true
+                },
+                {
+                    name: "tagArgs",
+                    kind: CommandReaderKinds.positional,
+                    index: 1
+                }
+            ]
+        });
+
+        const session = parser.parse({
+            argsText: "test1234 a'b"
+        });
+
+        expect(session.valid).toBe(true);
+        expect(session.issues).toHaveLength(0);
+        expect(session.results.has("tagName")).toBe(true);
+        expect(session.results.get("tagName").value).toBe("test1234");
+        expect(session.results.has("tagArgs")).toBe(true);
+        expect(session.results.get("tagArgs").value).toBe("a'b");
+    });
+
+    test("parses tag add command arguments with contraction in tag body", () => {
+        const parser = new CommandParser({
+            arguments: [
+                {
+                    name: "tagName",
+                    kind: CommandReaderKinds.positional,
+                    index: 0,
+                    lowercase: true
+                },
+                {
+                    name: "tagArgs",
+                    kind: CommandReaderKinds.positional,
+                    index: 1
+                }
+            ]
+        });
+
+        const session = parser.parse({
+            argsText: "test1234 don't forget to star"
+        });
+
+        expect(session.valid).toBe(true);
+        expect(session.issues).toHaveLength(0);
+        expect(session.results.get("tagName").value).toBe("test1234");
+        expect(session.results.get("tagArgs").value).toBe("don't forget to star");
+    });
+
+    test("parses options alongside apostrophes in arguments", () => {
+        const parser = new CommandParser({
+            arguments: [
+                {
+                    name: "mode",
+                    kind: CommandReaderKinds.option,
+                    type: "string"
+                },
+                {
+                    name: "tag",
+                    kind: CommandReaderKinds.positional,
+                    index: 0
+                },
+                {
+                    name: "content",
+                    kind: CommandReaderKinds.positional,
+                    index: 1
+                }
+            ]
+        });
+
+        const session = parser.parse({
+            argsText: '--mode="strict" mytag it\'s working'
+        });
+
+        expect(session.valid).toBe(true);
+        expect(session.results.get("mode").value).toBe("strict");
+        expect(session.results.get("tag").value).toBe("mytag");
+        expect(session.results.get("content").value).toBe("it's working");
+    });
+
+    test("throws CommandError on unsupported reader kind", () => {
+        expect(() => {
+            new CommandParser({
+                arguments: [
+                    {
+                        name: "bad",
+                        kind: "unsupported_kind"
+                    }
+                ]
+            });
+        }).toThrow(CommandError);
+    });
+
+    test("throws CommandError on unsupported argument type", () => {
+        expect(() => {
+            new CommandParser({
+                arguments: [
+                    {
+                        name: "bad",
+                        kind: CommandReaderKinds.positional,
+                        type: "non_existent_type"
+                    }
+                ]
+            });
+        }).toThrow(CommandError);
+    });
+
+    test("expands schema shorthands such as type and validation constraints", () => {
+        const parser = new CommandParser({
+            arguments: [
+                {
+                    name: "lower",
+                    kind: CommandReaderKinds.positional,
+                    index: 0,
+                    lowercase: true
+                },
+                {
+                    name: "cnt",
+                    kind: CommandReaderKinds.positional,
+                    index: 1,
+                    type: "int",
+                    required: true
+                }
+            ]
+        });
+
+        const session = parser.parse({
+            argsText: "UPPERCASE 42"
+        });
+
+        expect(session.valid).toBe(true);
+        expect(session.results.get("lower").value).toBe("uppercase");
+        expect(session.results.get("cnt").value).toBe(42);
     });
 });

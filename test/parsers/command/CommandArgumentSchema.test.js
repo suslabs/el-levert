@@ -2,6 +2,9 @@ import { describe, expect, test } from "vitest";
 
 import CommandArgumentSchema from "../../../src/parsers/command/schema/CommandArgumentSchema.js";
 
+import CommandReaderKinds from "../../../src/parsers/command/reader/CommandReaderKinds.js";
+import CommandTypeNames from "../../../src/parsers/command/type/CommandTypeNames.js";
+
 import CommandError from "../../../src/errors/CommandError.js";
 
 describe("CommandArgumentSchema", () => {
@@ -9,8 +12,8 @@ describe("CommandArgumentSchema", () => {
         const schema = [
             {
                 name: "user",
-                kind: "option",
-                type: "string",
+                kind: CommandReaderKinds.option,
+                type: CommandTypeNames.string,
                 aliases: ["u"],
                 shorthand: "x"
             }
@@ -20,9 +23,9 @@ describe("CommandArgumentSchema", () => {
             {
                 name: "user",
                 from: "args",
-                type: "string",
+                type: CommandTypeNames.string,
                 reader: {
-                    kind: "option",
+                    kind: CommandReaderKinds.option,
                     aliases: ["u"],
                     shorthand: "x"
                 }
@@ -34,8 +37,8 @@ describe("CommandArgumentSchema", () => {
         const schema = [
             {
                 name: "count",
-                kind: "positional",
-                type: "integer",
+                kind: CommandReaderKinds.positional,
+                type: CommandTypeNames.integer,
                 required: true
             }
         ];
@@ -52,8 +55,8 @@ describe("CommandArgumentSchema", () => {
         const schema = [
             {
                 name: "count",
-                kind: "positional",
-                type: "integer",
+                kind: CommandReaderKinds.positional,
+                type: CommandTypeNames.integer,
                 required: false,
                 valid: {
                     required: true
@@ -68,8 +71,8 @@ describe("CommandArgumentSchema", () => {
         const schema = [
             {
                 name: "count",
-                kind: "positional",
-                type: "integer",
+                kind: CommandReaderKinds.positional,
+                type: CommandTypeNames.integer,
                 min: 1
             }
         ];
@@ -81,9 +84,9 @@ describe("CommandArgumentSchema", () => {
         const schema = [
             {
                 name: "user",
-                kind: "option",
+                kind: CommandReaderKinds.option,
                 reader: {
-                    kind: "rest"
+                    kind: CommandReaderKinds.rest
                 }
             }
         ];
@@ -97,7 +100,7 @@ describe("CommandArgumentSchema", () => {
                 name: "user",
                 aliases: ["user-id"],
                 reader: {
-                    kind: "option"
+                    kind: CommandReaderKinds.option
                 }
             }
         ];
@@ -110,7 +113,7 @@ describe("CommandArgumentSchema", () => {
             {
                 name: "user",
                 aliases: ["user-id"],
-                type: "string"
+                type: CommandTypeNames.string
             }
         ];
 
@@ -122,7 +125,7 @@ describe("CommandArgumentSchema", () => {
             {
                 name: "mode",
                 type: {
-                    name: "enum",
+                    name: CommandTypeNames.enum,
                     values: ["all", 42]
                 }
             }

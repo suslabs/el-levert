@@ -1,20 +1,23 @@
 import WebsocketCommandArgumentResult from "./WebsocketCommandArgumentResult.js";
 
+import CommandReaderKinds from "../../command/reader/CommandReaderKinds.js";
+import CommandTypeNames from "../../command/type/CommandTypeNames.js";
+
 import Util from "../../../util/Util.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
 
 const jsonTypeNames = {
-        string: "string",
-        integer: "integer",
-        number: "number",
-        boolean: "boolean",
-        script: "string",
-        array: "array",
-        object: "object",
-        group: "object"
+        [CommandTypeNames.string]: "string",
+        [CommandTypeNames.integer]: "integer",
+        [CommandTypeNames.number]: "number",
+        [CommandTypeNames.boolean]: "boolean",
+        [CommandTypeNames.script]: "string",
+        [CommandTypeNames.array]: "array",
+        [CommandTypeNames.object]: "object",
+        [CommandTypeNames.group]: "object"
     },
-    numericTypeNames = new Set(["integer", "number"]),
-    lengthTypeNames = new Set(["string", "script"]);
+    numericTypeNames = new Set([CommandTypeNames.integer, CommandTypeNames.number]),
+    lengthTypeNames = new Set([CommandTypeNames.string, CommandTypeNames.script]);
 
 class WebsocketCommandArgument {
     constructor(options = {}) {
@@ -64,11 +67,11 @@ class WebsocketCommandArgument {
     }
 
     _applyJsonType(schema) {
-        if (this.typeName === "any") {
+        if (this.typeName === CommandTypeNames.any) {
             return;
         }
 
-        const jsonType = jsonTypeNames[this.kind === "group" ? "group" : this.typeName];
+        const jsonType = jsonTypeNames[this.kind === CommandReaderKinds.group ? CommandTypeNames.group : this.typeName];
 
         if (typeof jsonType === "undefined") {
             return;
@@ -78,7 +81,7 @@ class WebsocketCommandArgument {
     }
 
     _applyProperties(schema) {
-        if (this.kind !== "group") {
+        if (this.kind !== CommandReaderKinds.group) {
             return;
         }
 
@@ -188,7 +191,7 @@ class WebsocketCommandArgument {
             return;
         }
 
-        if (this.typeName === "array") {
+        if (this.typeName === CommandTypeNames.array) {
             schema.minItems = 1;
         }
     }

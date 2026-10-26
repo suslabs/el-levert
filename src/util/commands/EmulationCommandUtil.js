@@ -4,6 +4,8 @@ import path from "node:path";
 import DiscordClient from "../../client/DiscordClient.js";
 import Tag from "../../structures/tag/Tag.js";
 
+import CommandReaderKinds from "../../parsers/command/reader/CommandReaderKinds.js";
+
 import { getClient } from "../../LevertClient.js";
 
 import Util from "../Util.js";
@@ -26,7 +28,7 @@ function makeObjectRule(properties, options) {
 function makeCliArg(name, options) {
     return Object.freeze({
         name,
-        kind: "option",
+        kind: CommandReaderKinds.option,
         aliases: [CaseUtil.toKebabCase(name)],
         ...ObjectUtil.guaranteeObject(options)
     });
@@ -52,7 +54,7 @@ function makeGroupProperties(fields) {
             field.name,
             Array.isArray(field.fields)
                 ? {
-                      kind: "group",
+                      kind: CommandReaderKinds.group,
                       properties: makeGroupProperties(field.fields)
                   }
                 : {

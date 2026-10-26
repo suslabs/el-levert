@@ -5,6 +5,7 @@ import CommandValidationIssue from "../structs/CommandValidationIssue.js";
 
 import CommandReaderKinds from "./CommandReaderKinds.js";
 import OptionSyntaxTypes from "./OptionSyntaxTypes.js";
+import CommandTypeNames from "../type/CommandTypeNames.js";
 
 import Util from "../../../util/Util.js";
 
@@ -17,14 +18,15 @@ class OptionCommandReader extends BaseCommandReader {
         super(options);
 
         this.syntax = this.options.syntax ?? OptionSyntaxTypes.dashed;
-        this.isBoolean = this.options.type === "boolean";
+        this.isBoolean = this.options.type === CommandTypeNames.boolean;
         this.spellings = this._compileSpellings();
     }
 
     read(session) {
         const text = this.getSourceText(session),
-            tokens = CommandTextLexer.lex(text),
-            matches = this._readMatches(tokens);
+            lexer = new CommandTextLexer(text);
+
+        const matches = this._readMatches(lexer.lex());
 
         if (Util.empty(matches)) {
             return undefined;
@@ -209,11 +211,11 @@ class OptionCommandReader extends BaseCommandReader {
     _getExactSpellings(spelling) {
         const exacts = [];
 
-        if (this.syntax === "dashed" || this.syntax === "both") {
+        if (this.syntax === OptionSyntaxTypes.dashed || this.syntax === OptionSyntaxTypes.both) {
             exacts.push(`${spelling.shorthand ? "-" : "--"}${spelling.value}`);
         }
 
-        if (this.syntax === "named" || this.syntax === "both") {
+        if (this.syntax === OptionSyntaxTypes.named || this.syntax === OptionSyntaxTypes.both) {
             exacts.push(spelling.value);
         }
 

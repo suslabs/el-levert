@@ -4,8 +4,10 @@ import ArrayUtil from "../../../util/ArrayUtil.js";
 class CommandParseSession {
     constructor(context) {
         this.context = context;
+
         this.argsText = String(context.argsText ?? "");
         this.remainingText = this.argsText;
+
         this.argsIndex = 0;
         this.matchCache = new Map();
         this.results = new Map();

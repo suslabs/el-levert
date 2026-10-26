@@ -103,7 +103,8 @@ class PositionalCommandReader extends BaseCommandReader {
             return [];
         }
 
-        return CommandTextLexer.lex(text, this.separators);
+        const lexer = new CommandTextLexer(text, this.separators);
+        return lexer.lex();
     }
 
     _getTokenValue(text, tokens) {

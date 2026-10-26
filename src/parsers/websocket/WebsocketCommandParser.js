@@ -3,7 +3,10 @@ import Ajv from "ajv";
 import PropertyWebsocketReader from "./reader/PropertyWebsocketReader.js";
 import WebsocketCommandSchema from "./WebsocketCommandSchema.js";
 
+import CommandReaderKinds from "../command/reader/CommandReaderKinds.js";
+
 import CommandTypeClasses from "../command/type/CommandTypeClasses.js";
+import CommandTypeNames from "../command/type/CommandTypeNames.js";
 import commandArgumentShorthands from "../command/schema/commandArgumentShorthands.js";
 
 import WebsocketCommandArgument from "./structs/WebsocketCommandArgument.js";
@@ -60,7 +63,9 @@ class WebsocketCommandParser {
 
     _createArgument(arg) {
         const typeName = this._normalizeTypeName(arg.type),
-            TypeClass = CommandTypeClasses.get(arg.kind === "group" ? "group" : typeName);
+            TypeClass = CommandTypeClasses.get(
+                arg.kind === CommandReaderKinds.group ? CommandTypeNames.group : typeName
+            );
 
         if (typeof TypeClass === "undefined") {
             throw new CommandError(`Unsupported websocket type: ${typeName}`);
@@ -138,7 +143,7 @@ class WebsocketCommandParser {
     }
 
     _normalizeTypeName(type) {
-        const name = typeof type === "string" ? type : (type?.name ?? "string");
+        const name = typeof type === "string" ? type : (type?.name ?? CommandTypeNames.string);
 
         return commandArgumentShorthands.type.fields[name] ?? name;
     }

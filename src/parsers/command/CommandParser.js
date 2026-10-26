@@ -1,8 +1,10 @@
 import { GroupCommandReader } from "./reader/index.js";
 import CommandReaderClasses from "./reader/CommandReaderClasses.js";
+import CommandReaderKinds from "./reader/CommandReaderKinds.js";
 
 import { GroupCommandType } from "./type/index.js";
 import CommandTypeClasses from "./type/CommandTypeClasses.js";
+import CommandTypeNames from "./type/CommandTypeNames.js";
 
 import CommandArgumentSchema from "./schema/CommandArgumentSchema.js";
 import commandArgumentShorthands from "./schema/commandArgumentShorthands.js";
@@ -97,7 +99,7 @@ class CommandParser {
     }
 
     _compileArgument(arg, compiled) {
-        if (arg.kind === "group") {
+        if (arg.kind === CommandReaderKinds.group) {
             this._compileGroupArgument(arg, compiled);
             return;
         }
@@ -127,13 +129,13 @@ class CommandParser {
                 arg.name,
                 arg.from ?? "args",
                 new GroupCommandReader({
-                    kind: "group",
+                    kind: CommandReaderKinds.group,
                     properties
                 }),
                 new GroupCommandType({}),
                 arg.valid,
                 null,
-                "group"
+                CommandTypeNames.group
             )
         );
     }
@@ -180,7 +182,7 @@ class CommandParser {
     }
 
     _normalizeTypeName(type) {
-        const name = typeof type === "string" ? type : (type?.name ?? "string");
+        const name = typeof type === "string" ? type : (type?.name ?? CommandTypeNames.string);
         return commandArgumentShorthands.type.fields[name] ?? name;
     }
 }

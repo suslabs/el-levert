@@ -15,7 +15,8 @@ class RestCommandReader extends BaseCommandReader {
             return text;
         }
 
-        const tokens = CommandTextLexer.lex(text);
+        const lexer = new CommandTextLexer(text),
+            tokens = lexer.lex();
 
         if (Util.empty(tokens)) {
             session.argsIndex = 0;

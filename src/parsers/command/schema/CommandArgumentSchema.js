@@ -4,6 +4,9 @@ import jsonSchema from "./jsonSchema.js";
 import arraySchema from "./arraySchema.js";
 import commandArgumentShorthands from "./commandArgumentShorthands.js";
 
+import CommandReaderKinds from "../reader/CommandReaderKinds.js";
+import CommandTypeNames from "../type/CommandTypeNames.js";
+
 import Util from "../../../util/Util.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
 
@@ -53,7 +56,7 @@ class CommandArgumentSchema {
         };
 
         arg.from ??= "args";
-        arg.type = this._normalizeType(arg.type ?? "string");
+        arg.type = this._normalizeType(arg.type ?? CommandTypeNames.string);
 
         this._normalizeValid(arg);
         this._normalizeGroup(arg);
@@ -91,16 +94,18 @@ class CommandArgumentSchema {
             throw new CommandError(`Argument "${arg.name}" cannot declare reader fields on a group argument`);
         }
 
-        if (Object.hasOwn(arg, "kind") && arg.kind !== "group") {
-            throw new CommandError(`Argument "${arg.name}" must declare kind "group" when using properties`);
+        if (Object.hasOwn(arg, "kind") && arg.kind !== CommandReaderKinds.group) {
+            throw new CommandError(
+                `Argument "${arg.name}" must declare kind "${CommandReaderKinds.group}" when using properties`
+            );
         }
 
         delete arg.reader;
-        arg.kind = "group";
+        arg.kind = CommandReaderKinds.group;
     }
 
     static _normalizeReader(arg) {
-        if (arg.kind === "group") {
+        if (arg.kind === CommandReaderKinds.group) {
             return;
         }
 
@@ -120,7 +125,7 @@ class CommandArgumentSchema {
     }
 
     static _normalizeGroupProperties(arg) {
-        if (arg.kind !== "group") {
+        if (arg.kind !== CommandReaderKinds.group) {
             return;
         }
 
@@ -199,7 +204,7 @@ class CommandArgumentSchema {
         for (const arg of args) {
             this._validateEnumType(arg);
 
-            if (arg.kind === "group") {
+            if (arg.kind === CommandReaderKinds.group) {
                 this._validateEnumTypes(Object.values(arg.properties ?? {}));
             }
         }
@@ -208,7 +213,7 @@ class CommandArgumentSchema {
     static _validateEnumType(arg) {
         const type = arg.type;
 
-        if (typeof type !== "object" || type === null || type.name !== "enum") {
+        if (typeof type !== "object" || type === null || type.name !== CommandTypeNames.enum) {
             return;
         }
 

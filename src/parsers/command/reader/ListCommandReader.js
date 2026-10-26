@@ -20,7 +20,8 @@ class ListCommandReader extends BaseCommandReader {
     }
 
     read(session) {
-        return CommandTextLexer.lex(this.getSourceText(session), this.separators).map(token => token.value);
+        const lexer = new CommandTextLexer(this.getSourceText(session), this.separators);
+        return lexer.lex().map(token => token.value);
     }
 }
 

@@ -2,6 +2,9 @@ import Ajv from "ajv";
 
 import commandArgumentShorthands from "../command/schema/commandArgumentShorthands.js";
 
+import CommandReaderKinds from "../command/reader/CommandReaderKinds.js";
+import CommandTypeNames from "../command/type/CommandTypeNames.js";
+
 import Util from "../../util/Util.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 
@@ -11,7 +14,7 @@ const typeSchema = {
     oneOf: [
         {
             type: "string",
-            enum: ["string", "integer", "number", "script", "boolean", "array", "object", "enum", "any"]
+            enum: Object.values(CommandTypeNames).filter(name => name !== CommandTypeNames.group)
         },
         {
             type: "object",
@@ -20,7 +23,7 @@ const typeSchema = {
             properties: {
                 name: {
                     type: "string",
-                    const: "enum"
+                    const: CommandTypeNames.enum
                 },
                 values: {
                     type: "array",
@@ -78,7 +81,7 @@ const jsonSchema = {
                 type: typeSchema,
                 kind: {
                     type: "string",
-                    const: "group"
+                    const: CommandReaderKinds.group
                 },
                 properties: {
                     type: "object",
@@ -167,7 +170,7 @@ class WebsocketCommandSchema {
             ...ObjectUtil.guaranteeObject(rawArg)
         };
 
-        arg.type = this._normalizeType(arg.type ?? "string");
+        arg.type = this._normalizeType(arg.type ?? CommandTypeNames.string);
 
         this._normalizeRequired(arg);
         this._normalizeGroup(arg);
@@ -213,11 +216,13 @@ class WebsocketCommandSchema {
             return;
         }
 
-        if (Object.hasOwn(arg, "kind") && arg.kind !== "group") {
-            throw new CommandError(`Argument "${arg.name}" must declare kind "group" when using properties`);
+        if (Object.hasOwn(arg, "kind") && arg.kind !== CommandReaderKinds.group) {
+            throw new CommandError(
+                `Argument "${arg.name}" must declare kind "${CommandReaderKinds.group}" when using properties`
+            );
         }
 
-        arg.kind = "group";
+        arg.kind = CommandReaderKinds.group;
     }
 
     static _normalizeItems(arg) {
@@ -232,7 +237,7 @@ class WebsocketCommandSchema {
     }
 
     static _normalizeProperties(arg) {
-        if (arg.kind !== "group") {
+        if (arg.kind !== CommandReaderKinds.group) {
             return;
         }
 
@@ -252,11 +257,11 @@ class WebsocketCommandSchema {
         for (const arg of args) {
             this._validateEnumType(arg);
 
-            if (arg.kind === "group") {
+            if (arg.kind === CommandReaderKinds.group) {
                 this._validateEnumTypes(Object.values(arg.properties ?? {}));
             }
 
-            if (arg.type === "array" && arg.items) {
+            if (arg.type === CommandTypeNames.array && arg.items) {
                 this._validateEnumType(arg.items);
             }
         }
@@ -265,7 +270,7 @@ class WebsocketCommandSchema {
     static _validateEnumType(arg) {
         const type = arg.type;
 
-        if (typeof type !== "object" || type === null || type.name !== "enum") {
+        if (typeof type !== "object" || type === null || type.name !== CommandTypeNames.enum) {
             return;
         }
 

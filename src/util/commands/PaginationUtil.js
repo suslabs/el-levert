@@ -12,6 +12,8 @@ import ComponentSession from "../../structures/interaction/ComponentSession.js";
 
 import InteractionModes from "../../structures/interaction/InteractionModes.js";
 
+import CommandReaderKinds from "../../parsers/command/reader/CommandReaderKinds.js";
+
 import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../Util.js";
@@ -22,7 +24,7 @@ import CaseUtil from "../misc/CaseUtil.js";
 function makePaginationArg(name, options) {
     return Object.freeze({
         name,
-        kind: "option",
+        kind: CommandReaderKinds.option,
         aliases: [CaseUtil.toKebabCase(name)],
         ...ObjectUtil.guaranteeObject(options)
     });
