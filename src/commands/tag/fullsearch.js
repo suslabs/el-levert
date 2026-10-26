@@ -6,7 +6,7 @@ import Util from "../../util/Util.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import RegexUtil from "../../util/misc/RegexUtil.js";
 import PaginationUtil from "../../util/commands/PaginationUtil.js";
-import uFuzzySearch from "../../util/search/uFuzzySearch.js";
+import createuFuzzySearch from "../../util/search/uFuzzySearch.js";
 
 const unavailable = "No text available";
 
@@ -230,7 +230,7 @@ class TagFullSearchCommand {
             header = `${getEmoji("info")} Found **${count}** matching tag${s}:`;
 
         if (sorted.total <= limit) {
-            const initialSlice = uFuzzySearch.slice(sorted, 0, sorted.total);
+            const initialSlice = createuFuzzySearch.slice(sorted, 0, sorted.total);
 
             const embed = new EmbedBuilder().setDescription(
                 formatSearchResults(
@@ -260,7 +260,7 @@ class TagFullSearchCommand {
             initialOffset = (initialStartPage - 1) * limit,
             initialCount = Math.min((initialEndPage - initialStartPage + 1) * limit, sorted.total - initialOffset);
 
-        const initialSlice = uFuzzySearch.slice(sorted, initialOffset, initialCount),
+        const initialSlice = createuFuzzySearch.slice(sorted, initialOffset, initialCount),
             initialRanges = initialSlice.ranges;
 
         let currentWindow = {
@@ -290,7 +290,7 @@ class TagFullSearchCommand {
                     fetchOffset = (newStartPage - 1) * pageSize,
                     fetchCount = Math.min((newEndPage - newStartPage + 1) * pageSize, sorted.total - fetchOffset);
 
-                const newSlice = uFuzzySearch.slice(sorted, fetchOffset, fetchCount),
+                const newSlice = createuFuzzySearch.slice(sorted, fetchOffset, fetchCount),
                     newRanges = newSlice.ranges;
 
                 const newWindow = {
@@ -335,7 +335,7 @@ class TagFullSearchCommand {
 
             dumpHeader: header,
             formatDump: (items, discord = true) => {
-                const allSlice = uFuzzySearch.slice(sorted, 0, sorted.total);
+                const allSlice = createuFuzzySearch.slice(sorted, 0, sorted.total);
                 return formatSearchResults(
                     this,
                     allSlice.results,

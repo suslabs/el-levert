@@ -8,7 +8,7 @@ import ArrayUtil from "../util/ArrayUtil.js";
 import ObjectUtil from "../util/ObjectUtil.js";
 import DiscordUtil from "../util/DiscordUtil.js";
 import { isErrorCode } from "../util/discord/ErrorCodes.js";
-import uFuzzySearch from "../util/search/uFuzzySearch.js";
+import createuFuzzySearch from "../util/search/uFuzzySearch.js";
 
 import ClientError from "../errors/ClientError.js";
 
@@ -120,6 +120,8 @@ class DiscordClient {
     static defaultUsersFetchOptions = {
         limit: 50
     };
+
+    static memberSearcher = createuFuzzySearch();
 
     static emulatableUserFields = Object.freeze([
         Object.freeze({
@@ -1100,7 +1102,7 @@ class DiscordClient {
 
         const uniqueMembers = ArrayUtil.unique(members, "id");
 
-        return uFuzzySearch.search(uniqueMembers, query, {
+        return this.constructor.memberSearcher.search(uniqueMembers, query, {
             maxResults: limit,
             searchKey: "displayName"
         }).results;

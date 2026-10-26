@@ -24,7 +24,7 @@ import RegexUtil from "../../util/misc/RegexUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
 import DatabaseUtil from "../../util/database/DatabaseUtil.js";
-import uFuzzySearch from "../../util/search/uFuzzySearch.js";
+import createuFuzzySearch from "../../util/search/uFuzzySearch.js";
 
 import TagError from "../../errors/TagError.js";
 
@@ -58,8 +58,19 @@ class TagManager extends DBManager {
         this.tagNameRegex = new RegExp(getConfig().tagNameRegex);
 
         this.revisions = new TagRevisionManager(this);
-        this.nameSearcher = uFuzzySearch.createTagSearcher();
-        this.fullSearcher = uFuzzySearch.createFullSearcher();
+
+        this.nameSearcher = createuFuzzySearch({
+            alpha: "a-z",
+            interLft: 2,
+            intraMode: 1,
+            intraSub: 1,
+            intraTrn: 1
+        });
+
+        this.fullSearcher = createuFuzzySearch({
+            alpha: "a-z"
+        });
+
         this._tagNames = null;
     }
 
