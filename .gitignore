@@ -140,4 +140,5 @@ dist
 # Other
 .VSCodeCounter
 .deploy/
+/scratch
 /test/**/canvaskit_*

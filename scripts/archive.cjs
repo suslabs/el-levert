@@ -89,7 +89,21 @@ function archive(options = {}) {
     const allExcludes = [...defaultExcludes, ...extraExcludes],
         excludeArgs = allExcludes.flatMap(item => ["--exclude", item]);
 
-    const tarArgs = [...excludeArgs, "-czf", outputPath, "."];
+    const outBasename = path.basename(outputPath);
+
+    const entries = fs.readdirSync(repoRoot).filter(entry => {
+        if (allExcludes.includes(entry)) {
+            return false;
+        }
+
+        if (entry.endsWith(".tar.gz") || entry.endsWith(".tgz") || entry === outBasename) {
+            return false;
+        }
+
+        return true;
+    });
+
+    const tarArgs = [...excludeArgs, "-czf", outputPath, ...entries];
 
     childProcess.execFileSync("tar", tarArgs, {
         cwd: repoRoot,

@@ -8,6 +8,7 @@ import CommandReaderKinds from "../reader/CommandReaderKinds.js";
 import CommandTypeNames from "../type/CommandTypeNames.js";
 
 import Util from "../../../util/Util.js";
+import TypeTester from "../../../util/TypeTester.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
 
 import CommandError from "../../../errors/CommandError.js";
@@ -213,7 +214,7 @@ class CommandArgumentSchema {
     static _validateEnumType(arg) {
         const type = arg.type;
 
-        if (typeof type !== "object" || type === null || type.name !== CommandTypeNames.enum) {
+        if (!TypeTester.isObject(type) || type.name !== CommandTypeNames.enum) {
             return;
         }
 

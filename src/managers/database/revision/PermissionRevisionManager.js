@@ -191,12 +191,13 @@ class PermissionRevisionManager {
     }
 
     async getDetail(id, tx = this.permissionManager.perm_db) {
-        const revision = await this.fetchRevision(id, tx),
-            spec = revision === null ? null : this.specs.get(revision.target);
+        const revision = await this.fetchRevision(id, tx);
 
-        if (revision === null || typeof spec === "undefined") {
+        if (revision === null || !this.specs.has(revision.target)) {
             throw new PermissionError("Revision doesn't exist", id);
         }
+
+        const spec = this.specs.get(revision.target);
 
         const subject = await tx.fetchSubjectById(revision.subjectId),
             previous = await this.fetchPrevious(revision, tx);

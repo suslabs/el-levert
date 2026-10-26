@@ -437,12 +437,12 @@ class Tag extends BaseStructure {
 
     async getUsage() {
         const { getClient } = await import("../../LevertClient.js");
-        return (await getClient().tagManager?.fetchUsage(this.name)) ?? 0;
+        return (await getClient().tagManager.fetchUsage(this.name)) ?? 0;
     }
 
     async getAliases() {
         const { getClient } = await import("../../LevertClient.js");
-        return (await getClient().tagManager?.fetchAliases(this.name)) ?? [];
+        return (await getClient().tagManager.fetchAliases(this.name)) ?? [];
     }
 
     async formatOwner(discord = false, options = {}) {

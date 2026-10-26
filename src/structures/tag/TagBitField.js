@@ -147,7 +147,7 @@ class TagBitField extends BitField {
     static _collectTypeData(data, idx, out) {
         if (idx >= TagTypes.flags.entries.length) {
             if (this._validData(data)) {
-                out.push(Buffer.from(data));
+                out.push(new Uint8Array(data));
             }
 
             return;

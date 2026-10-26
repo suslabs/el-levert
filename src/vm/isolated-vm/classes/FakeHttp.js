@@ -12,6 +12,7 @@ const { ExternalCopy } = ivm;
 import { getLogger } from "../../../LevertClient.js";
 
 import Util from "../../../util/Util.js";
+import ArrayUtil from "../../../util/ArrayUtil.js";
 import TypeTester from "../../../util/TypeTester.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
 import VMUtil from "../../../util/vm/VMUtil.js";
@@ -165,7 +166,7 @@ async function fsAdapter(req, maxDownloadSize = Infinity) {
             resData;
 
         if (req.responseType === "arraybuffer") {
-            resData = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+            resData = ArrayUtil.toUint8Array(data);
         } else {
             const json = VMUtil._jsonRequestRegex.test(req.url) || req.responseType === "json",
                 text = data.toString("utf8");

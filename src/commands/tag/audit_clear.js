@@ -46,7 +46,8 @@ class TagAuditClearCommand {
             return `${getEmoji("warn")} ${result.error}`;
         }
 
-        return `${getEmoji("ok")} Cleared ${result.count} tag audit revision${result.count === 1 ? "" : "s"}.`;
+        const s = result.count === 1 ? "" : "s";
+        return `${getEmoji("ok")} Cleared **${result.count}** tag audit revision${s}.`;
     }
 }
 

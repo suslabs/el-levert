@@ -54,9 +54,9 @@ class TagUsesCommand {
 
         const uses = await tag.getUsage(),
             useNum = Util.formatNumber(uses),
-            useSuffix = ` time${uses === 1 ? "" : "s"}`;
+            s = uses === 1 ? "" : "s";
 
-        return `${getEmoji("info")} Tag **${escapeMarkdown(tag.name)}** has been used **${useNum}**${useSuffix}.`;
+        return `${getEmoji("info")} Tag **${escapeMarkdown(tag.name)}** has been used **${useNum}** time${s}.`;
     }
 }
 

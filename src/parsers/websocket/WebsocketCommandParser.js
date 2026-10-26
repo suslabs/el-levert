@@ -13,6 +13,8 @@ import WebsocketCommandArgument from "./structs/WebsocketCommandArgument.js";
 import WebsocketCommandParseSession from "./structs/WebsocketCommandParseSession.js";
 import WebsocketCommandValidationIssue from "./structs/WebsocketCommandValidationIssue.js";
 
+import ObjectUtil from "../../util/ObjectUtil.js";
+
 import CommandError from "../../errors/CommandError.js";
 
 const ajv = new Ajv({
@@ -33,7 +35,7 @@ class WebsocketCommandParser {
     }
 
     parse(data, context) {
-        const source = typeof data === "object" && data !== null ? data : {},
+        const source = ObjectUtil.guaranteeObject(data),
             session = new WebsocketCommandParseSession(context),
             coercedData = { ...source };
 
@@ -76,7 +78,7 @@ class WebsocketCommandParser {
             reader: new PropertyWebsocketReader({
                 name: arg.name
             }),
-            type: new TypeClass(typeof arg.type === "object" ? arg.type : {}),
+            type: new TypeClass(ObjectUtil.guaranteeObject(arg.type)),
             valid: arg.valid,
             typeName,
             kind: arg.kind,

@@ -89,7 +89,8 @@ class TagListCommand {
             const s = Util.single(allTags) ? "" : "s",
                 footer = `${tags.totalCount} total tag${s}`;
 
-            const header = `${getEmoji("info")} ${user === ctx.msg.author ? "You have" : `User \`${user.username}\` has`} the following tags:`;
+            const userSubject = user === ctx.msg.author ? "You have" : `User \`${user.username}\` has`,
+                header = `${getEmoji("info")} ${userSubject} the following tags:`;
 
             return await PaginationUtil.paginate(ctx, {
                 items: allTags,
@@ -125,7 +126,8 @@ class TagListCommand {
         const s = totalCount === 1 ? "" : "s",
             footer = `${totalCount} total tag${s}`;
 
-        const header = `${getEmoji("info")} ${user === ctx.msg.author ? "You have" : `User \`${user.username}\` has`} the following tags:`;
+        const userSubject = user === ctx.msg.author ? "You have" : `User \`${user.username}\` has`,
+            header = `${getEmoji("info")} ${userSubject} the following tags:`;
 
         const fallbackItems = initialRes.items ?? [...(initialRes.newTags ?? []), ...(initialRes.oldTags ?? [])];
 

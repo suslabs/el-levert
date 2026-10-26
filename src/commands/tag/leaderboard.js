@@ -11,37 +11,41 @@ import TagManager from "../../managers/database/TagManager.js";
 import Util from "../../util/Util.js";
 import PaginationUtil from "../../util/commands/PaginationUtil.js";
 
+const isUses = type => type === "uses" || type === "usage";
+
 function formatLeaderboard(leaderboard, type, startIndex = 0, discord = true) {
     return leaderboard
         .map((entry, i) => {
             const index = `${startIndex + i + 1}. `;
 
-            const name =
-                type === "uses" || type === "usage" ? `${entry.name}${entry.exists ? "" : "*"}` : entry.user.username;
+            const name = isUses(type) ? `${entry.name}${entry.exists ? "" : "*"}` : entry.user.username;
 
             const label = discord ? `\`${name}\`: ` : `${name}: `;
 
             let value;
 
             switch (type) {
-                case "count":
+                case "count": {
                     const countNum = Util.formatNumber(entry.count),
-                        countSuffix = ` tag${entry.count > 1 ? "s" : ""}`;
+                        s = entry.count === 1 ? "" : "s";
 
-                    value = (discord ? `**${countNum}**` : countNum) + countSuffix;
+                    value = (discord ? `**${countNum}**` : countNum) + ` tag${s}`;
                     break;
-                case "size":
+                }
+                case "size": {
                     const quotaNum = Util.formatNumber(entry.quota, 2);
 
                     value = (discord ? `**${quotaNum}**` : quotaNum) + " kb";
                     break;
+                }
                 case "uses":
-                case "usage":
+                case "usage": {
                     const useNum = Util.formatNumber(entry.count),
-                        useSuffix = ` use${entry.count > 1 ? "s" : ""}`;
+                        s = entry.count === 1 ? "" : "s";
 
-                    value = (discord ? `**${useNum}**` : useNum) + useSuffix;
+                    value = (discord ? `**${useNum}**` : useNum) + ` use${s}`;
                     break;
+                }
             }
 
             return `${index}${label}${value}`;
@@ -55,9 +59,9 @@ function formatUserTags(tags, startIndex = 0, discord = true) {
             const index = `${startIndex + i + 1}. `,
                 name = discord ? `\`${tag.name}\`: ` : `${tag.name}: `,
                 useNum = Util.formatNumber(tag.uses),
-                useSuffix = ` use${tag.uses === 1 ? "" : "s"}`;
+                s = tag.uses === 1 ? "" : "s";
 
-            return `${index}${name}${discord ? `**${useNum}**` : useNum}${useSuffix}`;
+            return `${index}${name}${discord ? `**${useNum}**` : useNum} use${s}`;
         })
         .join("\n");
 }
@@ -112,18 +116,18 @@ class TagLeaderboardCommand {
         if (l_type === "user") {
             isUserMode = true;
 
-            if (part1 === "uses" || part1 === "usage") {
+            if (isUses(part1)) {
                 userQuery = part2;
                 showUsage = true;
             } else {
                 userQuery = part1;
-                showUsage = part2 === "uses" || part2 === "usage";
+                showUsage = isUses(part2);
             }
         } else if (!LeaderboardTypes.has(l_type)) {
             isUserMode = true;
             userQuery = l_type;
-            showUsage = part1 === "uses" || part1 === "usage";
-        } else if (l_type === "uses" || l_type === "usage") {
+            showUsage = isUses(part1);
+        } else if (isUses(l_type)) {
             if (part1 === "user") {
                 isUserMode = true;
                 userQuery = part2;
@@ -152,7 +156,8 @@ class TagLeaderboardCommand {
             }
 
             const isSelf = user === ctx.msg.author || user.id === ctx.msg.author.id,
-                userLabel = isSelf ? "Your" : `User \`${user.username}\`'s`;
+                userLabel = isSelf ? "Your" : `User \`${user.username}\`'s`,
+                userSubject = isSelf ? "You have" : `User \`${user.username}\` has`;
 
             if (showUsage) {
                 const paginationOpts = PaginationUtil.getPaginationOptions(ctx, {
@@ -167,11 +172,11 @@ class TagLeaderboardCommand {
                     );
 
                     if (stats === null) {
-                        return `${getEmoji("info")} ${isSelf ? "You have" : `User \`${user.username}\` has`} **no** tags.`;
+                        return `${getEmoji("info")} ${userSubject} **no** tags.`;
                     }
 
                     if (Util.empty(stats.tags)) {
-                        return `${getEmoji("info")} ${isSelf ? "You have" : `User \`${user.username}\` has`} **no** tags with usage.`;
+                        return `${getEmoji("info")} ${userSubject} **no** tags with usage.`;
                     }
 
                     const header = `${getEmoji("info")} ${userLabel} tag usage:`;
@@ -202,11 +207,11 @@ class TagLeaderboardCommand {
                 );
 
                 if (initialRes === null || initialRes.count <= 0) {
-                    return `${getEmoji("info")} ${isSelf ? "You have" : `User \`${user.username}\` has`} **no** tags.`;
+                    return `${getEmoji("info")} ${userSubject} **no** tags.`;
                 }
 
                 if (initialRes.totalCount === 0) {
-                    return `${getEmoji("info")} ${isSelf ? "You have" : `User \`${user.username}\` has`} **no** tags with usage.`;
+                    return `${getEmoji("info")} ${userSubject} **no** tags with usage.`;
                 }
 
                 const header = `${getEmoji("info")} ${userLabel} tag usage:`;
@@ -252,14 +257,14 @@ class TagLeaderboardCommand {
             const stats = await getClient().tagManager.userLeaderboard({ user: user.id }, { limit: 0 });
 
             if (stats === null) {
-                return `${getEmoji("info")} ${isSelf ? "You have" : `User \`${user.username}\` has`} **no** tags.`;
+                return `${getEmoji("info")} ${userSubject} **no** tags.`;
             }
 
             const countNum = Util.formatNumber(stats.count),
-                countSuffix = ` tag${stats.count === 1 ? "" : "s"}`,
-                quotaNum = Util.formatNumber(stats.quota, 2);
+                quotaNum = Util.formatNumber(stats.quota, 2),
+                s = stats.count === 1 ? "" : "s";
 
-            return `${getEmoji("info")} ${userLabel} leaderboard positions:\n- Count: **#${stats.countPos}** (${countNum}${countSuffix})\n- Size: **#${stats.sizePos}** (${quotaNum} kb)`;
+            return `${getEmoji("info")} ${userLabel} leaderboard positions:\n- Count: **#${stats.countPos}** (**${countNum}** tag${s})\n- Size: **#${stats.sizePos}** (**${quotaNum} kb**)`;
         }
 
         const paginationOpts = PaginationUtil.getPaginationOptions(ctx, {
@@ -281,6 +286,9 @@ class TagLeaderboardCommand {
 
         const pageSize = customLimit ?? paginationOpts.limit ?? TagLeaderboardCommand.defaultLimit;
 
+        const emptyDesc = isUses(l_type) ? "with usage" : "registered",
+            emptyMsg = `${getEmoji("info")} There are **no** tags ${emptyDesc}.`;
+
         if (paginationOpts.all) {
             const allRes = await getClient().tagManager.leaderboard(
                     { type: l_type, resolveUsers: false },
@@ -289,7 +297,7 @@ class TagLeaderboardCommand {
                 leaderboard = Array.isArray(allRes) ? allRes : (allRes?.items ?? []);
 
             if (Util.empty(leaderboard)) {
-                return `${getEmoji("info")} There are **no** tags registered.`;
+                return emptyMsg;
             }
 
             const header = `${getEmoji("info")} Tag ${l_type} leaderboard:`;
@@ -328,7 +336,7 @@ class TagLeaderboardCommand {
             totalCount = initialRes?.totalCount ?? initialRes?.total ?? items.length;
 
         if (totalCount === 0 || Util.empty(items)) {
-            return `${getEmoji("info")} There are **no** tags registered.`;
+            return emptyMsg;
         }
 
         const header = `${getEmoji("info")} Tag ${l_type} leaderboard:`;

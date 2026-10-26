@@ -150,11 +150,17 @@ const RevisionAuditUtil = Object.freeze({
     },
 
     parseRevisionId: value => {
+        if (typeof value === "number") {
+            return Number.isInteger(value) && value > 0 ? value : null;
+        }
+
+        value = value?.trim?.();
+
         if (Util.empty(value)) {
             return null;
         }
 
-        const id = Util.parseInt(String(value));
+        const id = Util.parseInt(value);
         return Number.isInteger(id) && id > 0 ? id : null;
     },
 

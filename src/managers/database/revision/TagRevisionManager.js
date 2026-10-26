@@ -10,6 +10,7 @@ import RevisionOperationTypes from "../../../structures/revision/RevisionOperati
 import { getConfig } from "../../../LevertClient.js";
 
 import Util from "../../../util/Util.js";
+import ArrayUtil from "../../../util/ArrayUtil.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
 import TypeTester from "../../../util/TypeTester.js";
 import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
@@ -36,7 +37,7 @@ class TagRevisionManager {
                 return value;
             case "bin":
                 if (TypeTester.isTypedArray(value)) {
-                    return Buffer.from(value.buffer, value.byteOffset, value.byteLength).toString("base64");
+                    return ArrayUtil.toBuffer(value).toString("base64");
                 }
 
                 return value;

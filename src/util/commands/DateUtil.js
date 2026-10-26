@@ -6,6 +6,8 @@ import UtilError from "../../errors/UtilError.js";
 
 let DateUtil = {
     parse: value => {
+        value = value?.trim?.();
+
         if (Util.empty(value)) {
             return null;
         }
@@ -22,21 +24,25 @@ let DateUtil = {
     _intervalTokenRegex: /(\d+(?:\.\d+)?)\s*([a-zA-Z]+)/g,
 
     parseInterval: value => {
-        if (typeof value === "number" && !isNaN(value) && value > 0) {
-            return Math.round(value);
-        } else if (Util.empty(value) || typeof value !== "string") {
+        if (typeof value === "number") {
+            return value > 0 ? Math.round(value) : null;
+        }
+
+        value = value?.trim?.();
+
+        if (Util.empty(value)) {
             return null;
         }
 
-        const trimmed = value.trim().toLowerCase();
+        value = value.toLowerCase();
 
-        if (Object.hasOwn(DateUtil._namedIntervals, trimmed)) {
-            return DateUtil._namedIntervals[trimmed];
-        } else if (Object.hasOwn(DateUtil._units, trimmed)) {
-            return DateUtil._units[trimmed];
+        if (Object.hasOwn(DateUtil._namedIntervals, value)) {
+            return DateUtil._namedIntervals[value];
+        } else if (Object.hasOwn(DateUtil._units, value)) {
+            return DateUtil._units[value];
         }
 
-        const matches = Array.from(trimmed.matchAll(DateUtil._intervalTokenRegex));
+        const matches = Array.from(value.matchAll(DateUtil._intervalTokenRegex));
 
         if (Util.empty(matches)) {
             return null;
@@ -55,7 +61,7 @@ let DateUtil = {
             totalMs += Math.round(num * DateUtil._units[unit]);
         }
 
-        const nonDelim = trimmed.replace(DateUtil._intervalTokenRegex, "").replace(/[\s,and]+/g, "");
+        const nonDelim = value.replace(DateUtil._intervalTokenRegex, "").replace(/[\s,and]+/g, "");
 
         if (!Util.empty(nonDelim)) {
             return null;
@@ -75,11 +81,11 @@ let DateUtil = {
     _unitPrefixRegex: /^([a-zA-Z]+)\s+(.+)$/,
 
     parseDateRecurring: (value, intervalOverride) => {
-        if (Util.empty(value) || typeof value !== "string") {
+        value = value?.trim?.();
+
+        if (Util.empty(value)) {
             return null;
         }
-
-        const trimmed = value.trim();
 
         if (Util.nonemptyString(intervalOverride)) {
             const interval = DateUtil.parseInterval(intervalOverride);
@@ -88,7 +94,7 @@ let DateUtil = {
                 return null;
             }
 
-            let date = DateUtil.parse(trimmed);
+            let date = DateUtil.parse(value);
 
             if (date === null) {
                 return null;
@@ -109,7 +115,7 @@ let DateUtil = {
             };
         }
 
-        const trailingEvery = trimmed.match(DateUtil._trailingEveryRegex);
+        const trailingEvery = value.match(DateUtil._trailingEveryRegex);
 
         if (trailingEvery !== null) {
             const interval = DateUtil.parseInterval(trailingEvery[2].trim());
@@ -135,7 +141,7 @@ let DateUtil = {
             }
         }
 
-        const namedPrefix = trimmed.match(DateUtil._namedPrefixRegex);
+        const namedPrefix = value.match(DateUtil._namedPrefixRegex);
 
         if (namedPrefix !== null) {
             const interval = DateUtil._namedIntervals[namedPrefix[1].toLowerCase()];
@@ -167,8 +173,8 @@ let DateUtil = {
             }
         }
 
-        if (DateUtil._everyPrefixRegex.test(trimmed)) {
-            const rest = trimmed.replace(DateUtil._everyPrefixRegex, "").trim();
+        if (DateUtil._everyPrefixRegex.test(value)) {
+            const rest = value.replace(DateUtil._everyPrefixRegex, "").trim();
 
             const sepMatch = rest.match(DateUtil._everySepRegex);
 
@@ -269,7 +275,7 @@ let DateUtil = {
             return null;
         }
 
-        const date = DateUtil.parse(trimmed);
+        const date = DateUtil.parse(value);
 
         if (date === null) {
             return null;

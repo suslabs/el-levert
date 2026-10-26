@@ -921,14 +921,8 @@ let DiscordUtil = {
 
         if (typeof data === "string") {
             return false;
-        } else if (Buffer.isBuffer(data)) {
-            return data.subarray(0, 1024).includes(0);
-        } else if (ArrayBuffer.isView(data)) {
-            const view = Buffer.from(data.buffer, data.byteOffset, Math.min(data.byteLength, 1024));
-            return view.includes(0);
-        } else if (data instanceof ArrayBuffer) {
-            const view = Buffer.from(data, 0, Math.min(data.byteLength, 1024));
-            return view.includes(0);
+        } else if (Buffer.isBuffer(data) || ArrayBuffer.isView(data) || data instanceof ArrayBuffer) {
+            return ArrayUtil.toUint8Array(data).subarray(0, 1024).includes(0);
         }
 
         const arr = data?.data ?? data;
@@ -996,12 +990,11 @@ let DiscordUtil = {
 
         let text = null;
 
-        if (Buffer.isBuffer(data)) {
-            const sample = data.length > charLimit ? data.subarray(0, charLimit * 2) : data;
+        if (Buffer.isBuffer(data) || ArrayBuffer.isView(data) || data instanceof ArrayBuffer) {
+            const buf = ArrayUtil.toBuffer(data),
+                sample = buf.length > charLimit * 2 ? buf.subarray(0, charLimit * 2) : buf;
+
             text = sample.toString("utf8");
-        } else if (ArrayBuffer.isView(data)) {
-            const view = Buffer.from(data.buffer, data.byteOffset, Math.min(data.byteLength, charLimit * 2));
-            text = view.toString("utf8");
         } else if (TypeTester.isObject(data)) {
             text = data.constructor.name;
         } else if (data != null) {

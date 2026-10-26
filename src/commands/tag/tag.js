@@ -266,8 +266,10 @@ Subcommands:
         }
 
         if (tag.owner !== ctx.msg.author.id && !getClient().permManager.allowed(ctx.perm, "mod")) {
-            const owner = await tag.getOwner();
-            return `${getEmoji("warn")} You can only ${action} your own tags.${owner === "not found" ? " Tag owner not found." : ` The tag is owned by \`${owner}\`.`}`;
+            const owner = await tag.getOwner(),
+                ownerText = owner === "not found" ? " Tag owner not found." : ` The tag is owned by \`${owner}\`.`;
+
+            return `${getEmoji("warn")} You can only ${action} your own tags.${ownerText}`;
         }
 
         return null;

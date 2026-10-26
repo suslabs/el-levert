@@ -124,7 +124,7 @@ class CommandHandler extends MessageHandler {
         }
 
         try {
-            if (typeof msg.channel?.messages?.fetch === "function") {
+            if (msg.channel != null && msg.channel.isTextBased()) {
                 return await msg.channel.messages.fetch(refId);
             }
 

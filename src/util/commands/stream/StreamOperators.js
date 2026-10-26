@@ -207,11 +207,13 @@ function upper(input) {
 }
 
 function parseLineCount(args, defaultCount = 10) {
-    if (Util.empty(args)) {
+    if (typeof args === "number") {
+        return Number.isFinite(args) && args >= 0 ? Math.floor(args) : defaultCount;
+    } else if (typeof args !== "string" || Util.empty(args.trim())) {
         return defaultCount;
     }
 
-    const match = String(args).match(/(?:-n\s+)?(\d+)/i);
+    const match = args.match(/(?:-n\s+)?(\d+)/i);
 
     if (match === null) {
         return defaultCount;

@@ -178,7 +178,7 @@ class CommandParser {
             throw new CommandError(`Unsupported command type: ${typeName}`);
         }
 
-        return new TypeClass(typeof arg.type === "object" ? arg.type : {});
+        return new TypeClass(ObjectUtil.guaranteeObject(arg.type));
     }
 
     _normalizeTypeName(type) {

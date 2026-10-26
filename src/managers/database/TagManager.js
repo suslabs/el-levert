@@ -527,7 +527,7 @@ class TagManager extends DBManager {
         }
 
         const newTag = new Tag({ name, owner });
-        newTag.aliasTo(aliasTag, args?.trim());
+        newTag.aliasTo(aliasTag, args?.trim?.());
 
         let sizeDiff = newTag.getSize();
 
@@ -1199,7 +1199,7 @@ class TagManager extends DBManager {
         }
 
         if (!isFile) {
-            const trimmedArgs = (t_args = t_args?.trimEnd() ?? "");
+            const trimmedArgs = (t_args = t_args?.trimEnd?.() ?? "");
 
             body = trimmedArgs + (Util.empty(trimmedArgs) ? "" : " ");
             body += (msg.attachments ?? []).map(at => at.url).join(" ");

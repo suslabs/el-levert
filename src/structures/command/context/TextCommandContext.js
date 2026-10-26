@@ -2,6 +2,7 @@ import BaseCommandContext from "./BaseCommandContext.js";
 
 import Util from "../../../util/Util.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
+import TypeTester from "../../../util/TypeTester.js";
 
 import CommandError from "../../../errors/CommandError.js";
 
@@ -26,7 +27,7 @@ class TextCommandContext extends BaseCommandContext {
         if (!Util.empty(args)) {
             const last = args[args.length - 1];
 
-            if (last && typeof last === "object" && !Array.isArray(last)) {
+            if (TypeTester.isObject(last) && !Array.isArray(last)) {
                 options = last;
                 names = args.slice(0, -1);
             }

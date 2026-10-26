@@ -39,7 +39,7 @@ class PermRemoveGroupCommand {
         const group = await getClient().permManager.fetchGroup(g_name);
 
         if (group === null) {
-            return `${getEmoji("warn")} Group **${g_name}** doesn't exist.`;
+            return `${getEmoji("warn")} Group **${escapeMarkdown(g_name)}** doesn't exist.`;
         }
 
         {

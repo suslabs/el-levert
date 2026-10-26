@@ -1,6 +1,6 @@
 import Util from "./Util.js";
-import ObjectUtil from "./ObjectUtil.js";
 import TypeTester from "./TypeTester.js";
+import ObjectUtil from "./ObjectUtil.js";
 
 const LoggerUtil = Object.freeze({
     _quotesExp: /^(["'`])[\s\S]*\1$/,

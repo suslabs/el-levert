@@ -46,7 +46,8 @@ class PermAuditClearCommand {
             return `${getEmoji("warn")} ${result.error}`;
         }
 
-        return `${getEmoji("ok")} Cleared ${result.count} permission audit revision${result.count === 1 ? "" : "s"}.`;
+        const s = result.count === 1 ? "" : "s";
+        return `${getEmoji("ok")} Cleared **${result.count}** permission audit revision${s}.`;
     }
 }
 

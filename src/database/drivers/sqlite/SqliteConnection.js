@@ -12,6 +12,7 @@ import SqliteStatement from "./SqliteStatement.js";
 import { ConnectionEvents } from "./ConnectionEvents.js";
 
 import Util from "../../../util/Util.js";
+import TypeTester from "../../../util/TypeTester.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
 import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
 import RegexUtil from "../../../util/misc/RegexUtil.js";
@@ -257,7 +258,7 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
 
         const firstRow = Util.first(rows);
 
-        if (typeof firstRow === "undefined" || typeof firstRow !== "object") {
+        if (!TypeTester.isObject(firstRow)) {
             return undefined;
         }
 

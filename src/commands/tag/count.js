@@ -55,13 +55,13 @@ class TagCountCommand {
         const flags = [newTags ? "new" : null, scriptTags ? "script" : null],
             count = await getClient().tagManager.count(user?.id, flags);
 
-        const registered = count > 0 ? Util.formatNumber(count) : "no",
-            tags = "tag" + (count > 1 ? "s" : "");
+        const s = count === 1 ? "" : "s",
+            registered = count > 0 ? Util.formatNumber(count) : "no";
 
         if (own) {
-            return `${getEmoji("info")} You have **${registered}** ${tags}.`;
+            return `${getEmoji("info")} You have **${registered}** tag${s}.`;
         } else if (typeof user !== "undefined") {
-            return `${getEmoji("info")} User \`${user.username}\` has **${registered}** ${tags}.`;
+            return `${getEmoji("info")} User \`${user.username}\` has **${registered}** tag${s}.`;
         } else {
             const are = count === 1 ? "is" : "are",
                 flagName = Util.first(flags.filter(name => name !== null)),

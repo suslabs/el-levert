@@ -15,7 +15,7 @@ import Benchmark from "../../util/misc/Benchmark.js";
 import normalizeText from "../../util/misc/normalizeText.js";
 
 function logParensUsage(msg, parens) {
-    const s = parens.total > 1 ? "e" : "i";
+    const s = parens.total === 1 ? "i" : "e";
 
     getLogger().info(
         `Reacting with ${parens.total} parenthes${s}s to message sent by user ${DiscordUtil.formatUser(msg.author)} in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)}).`

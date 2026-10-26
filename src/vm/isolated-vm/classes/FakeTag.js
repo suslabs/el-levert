@@ -3,7 +3,7 @@ import Util from "../../../util/Util.js";
 class FakeTag {
     constructor(tag, args) {
         this.tag = tag ?? undefined;
-        this.args = args?.trim();
+        this.args = args?.trim?.();
 
         const fixedTag = {};
 

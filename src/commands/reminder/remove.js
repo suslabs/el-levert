@@ -62,7 +62,11 @@ class ReminderRemoveCommand {
             }
         }
 
-        return `${getEmoji("info")} ${removed ? `Removed reminder **${index}**.` : "You don't have any reminders."}`;
+        if (!removed) {
+            return `${getEmoji("info")} You don't have any reminders.`;
+        }
+
+        return `${getEmoji("info")} Removed reminder **${index}**.`;
     }
 }
 

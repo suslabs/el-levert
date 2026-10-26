@@ -243,4 +243,13 @@ describe("StreamOperatorRegistry", () => {
         expect(out).toContain("Pipeline Embed");
         expect(out).toContain("From values.msg");
     });
+
+    test("head and tail handle numeric and string line counts", async () => {
+        const input = "1\n2\n3\n4\n5";
+
+        expect(await StreamOperatorRegistry.execute("head", input, 2)).toBe("1\n2");
+        expect(await StreamOperatorRegistry.execute("head", input, "-n 3")).toBe("1\n2\n3");
+        expect(await StreamOperatorRegistry.execute("tail", input, 2)).toBe("4\n5");
+        expect(await StreamOperatorRegistry.execute("tail", input, "-n 3")).toBe("3\n4\n5");
+    });
 });

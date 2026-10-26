@@ -58,15 +58,15 @@ class PermCheckCommand {
             return `${getEmoji("info")} User \`${user.username}\` has **no** permissions.`;
         }
 
-        const header =
-            user === ctx.msg.author
-                ? `${getEmoji("info")} You have the following permissions:`
-                : `${getEmoji("info")} User \`${user.username}\` has the following permissions:`;
-
         const format = formatGroups(groups),
             maxLevel = await getClient().permManager.maxLevel(groups);
 
-        const embed = new EmbedBuilder().setTitle(`Level: **${maxLevel}**`).setDescription(codeblock(format));
+        const header =
+            user === ctx.msg.author
+                ? `${getEmoji("info")} You have the following permissions (Level: **${maxLevel}**):`
+                : `${getEmoji("info")} User \`${user.username}\` has the following permissions (Level: **${maxLevel}**):`;
+
+        const embed = new EmbedBuilder().setDescription(codeblock(format));
 
         return {
             content: header,

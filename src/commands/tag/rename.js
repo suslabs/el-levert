@@ -97,11 +97,13 @@ class TagRenameCommand {
             }
 
             switch (err.message) {
-                case "Tag already exists":
+                case "Tag already exists": {
                     const existingTag = err.ref,
-                        owner = await existingTag.getOwner();
+                        owner = await existingTag.getOwner(),
+                        ownerText = owner === "not found" ? " tag owner not found." : ` and is owned by \`${owner}\`.`;
 
-                    return `${getEmoji("warn")} Tag **${escapeMarkdown(existingTag.name)}** already exists,${owner === "not found" ? " tag owner not found." : ` and is owned by \`${owner}\`.`}`;
+                    return `${getEmoji("warn")} Tag **${escapeMarkdown(existingTag.name)}** already exists,${ownerText}`;
+                }
                 default:
                     return `${getEmoji("warn")} ${err.message}.`;
             }

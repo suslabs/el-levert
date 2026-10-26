@@ -229,7 +229,7 @@ const Codegen = {
         if (arrow) {
             header += "=> ";
         } else {
-            name = name?.trim();
+            name = name?.trim?.();
 
             if (!Util.empty(name)) {
                 header = `${name}${header}`;

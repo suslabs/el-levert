@@ -2,6 +2,7 @@ import readline from "node:readline";
 
 import Util from "../Util.js";
 import ObjectUtil from "../ObjectUtil.js";
+import TypeTester from "../TypeTester.js";
 
 class ProgressTracker {
     static defaultOptions = Object.freeze({
@@ -17,7 +18,7 @@ class ProgressTracker {
     });
 
     constructor(totalWork = 0, options = {}) {
-        if (typeof totalWork === "object" && totalWork !== null) {
+        if (TypeTester.isObject(totalWork)) {
             options = totalWork;
             totalWork = options.totalWork ?? 0;
         }

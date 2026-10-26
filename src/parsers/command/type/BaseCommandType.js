@@ -3,6 +3,7 @@ import CommandValidationIssue from "../structs/CommandValidationIssue.js";
 import CommandTypeNames from "./CommandTypeNames.js";
 
 import ObjectUtil from "../../../util/ObjectUtil.js";
+import TypeTester from "../../../util/TypeTester.js";
 
 class BaseCommandType {
     static type = CommandTypeNames.any;
@@ -42,7 +43,7 @@ class BaseCommandType {
     }
 
     _unwrapInput(input) {
-        if (input && typeof input === "object" && "value" in input && "quote" in input) {
+        if (TypeTester.isObject(input) && "value" in input && "quote" in input) {
             return input.value;
         }
 

@@ -59,8 +59,10 @@ class ReminderSnoozeCommand {
             switch (err.message) {
                 case "No reminders to snooze":
                     return `${getEmoji("warn")} You don't have any reminders to snooze.`;
-                case "Reminder doesn't exist":
-                    return `${getEmoji("warn")} Reminder ${index !== null ? `**${index + 1}** ` : ""}doesn't exist.`;
+                case "Reminder doesn't exist": {
+                    const indexText = index !== null ? `**${index + 1}** ` : "";
+                    return `${getEmoji("warn")} Reminder ${indexText}doesn't exist.`;
+                }
                 case "Invalid reminder index":
                     return `${getEmoji("warn")} Invalid reminder index: **${index + 1}**.`;
                 default:

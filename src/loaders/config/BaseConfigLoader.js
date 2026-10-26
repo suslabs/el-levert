@@ -62,7 +62,7 @@ class BaseConfigLoader extends JsonLoader {
 
     static _applyDescriptor(val, def) {
         if (!TypeTester.isObject(def) || Array.isArray(def) || Util.empty(Object.keys(def))) {
-            return val ?? (typeof def === "object" && def !== null ? structuredClone(def) : def);
+            return val ?? (TypeTester.isObject(def) ? structuredClone(def) : def);
         }
 
         val = val ?? def.base ?? def.min ?? 0;

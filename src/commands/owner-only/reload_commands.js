@@ -21,7 +21,7 @@ class ReloadCommandsCommand {
             return `${getEmoji("info")} No commands were reloaded.`;
         } else {
             const { ok, bad, total } = res,
-                s = total > 1 ? "s" : "";
+                s = total === 1 ? "" : "s";
 
             return `${getEmoji("ok")} Reloaded **${total}** command${s}. **${ok}** successful, **${bad}** failed.`;
         }

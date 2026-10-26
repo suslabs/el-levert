@@ -424,7 +424,7 @@ let Util = {
 
                 const getSuffix = limit => {
                     const diff = chars - limit,
-                        s = diff > 1 ? "s" : "";
+                        s = diff === 1 ? "" : "s";
 
                     return ` ... (${diff} more character${s})`;
                 };
@@ -460,7 +460,7 @@ let Util = {
                     trimmed = split.slice(0, lineLimit).join("\n");
 
                 const diff = lines - lineLimit,
-                    s = diff > 1 ? "s" : "";
+                    s = diff === 1 ? "" : "s";
 
                 let suffix = ` ... (${diff} more line${s})`;
 

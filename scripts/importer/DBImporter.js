@@ -243,7 +243,7 @@ class DBImporter {
                     return;
                 }
 
-                db.all("SELECT owner, name, body, alias FROM Tags;", (queryErr, rows) => {
+                db.all("SELECT * FROM Tags;", (queryErr, rows) => {
                     db.close(closeErr => {
                         if (queryErr || closeErr) {
                             reject(queryErr ?? closeErr);
@@ -251,13 +251,14 @@ class DBImporter {
                         }
 
                         const tags = rows.map(row => {
-                            const isAlias = Boolean(row.alias);
+                            const isAlias = Boolean(row.alias || row.aliasName);
 
                             return {
+                                ...row,
                                 owner: String(row.owner ?? ""),
                                 name: String(row.name ?? ""),
-                                body: isAlias ? "" : String(row.body ?? ""),
-                                aliasName: isAlias ? String(row.body ?? "") : ""
+                                body: isAlias && !row.aliasName ? "" : String(row.body ?? ""),
+                                aliasName: String(row.aliasName ?? (isAlias ? row.body ?? "" : ""))
                             };
                         });
 

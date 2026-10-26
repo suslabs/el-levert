@@ -511,7 +511,7 @@ class DiscordClient {
 
         const channel = await this.fetchChannel(ch_id, options);
 
-        if (channel === null) {
+        if (channel === null || !channel.isTextBased()) {
             return null;
         }
 
@@ -1041,7 +1041,7 @@ class DiscordClient {
 
     async _findMember(currentGuild, otherGuilds, user_id, windowSize) {
         if (currentGuild != null) {
-            const cached = currentGuild.members?.cache?.get(user_id);
+            const cached = currentGuild.members.cache.get(user_id);
 
             if (cached != null) {
                 return cached;
@@ -1049,7 +1049,7 @@ class DiscordClient {
         }
 
         for (const guild of otherGuilds) {
-            const cached = guild.members?.cache?.get(user_id);
+            const cached = guild.members.cache.get(user_id);
 
             if (cached != null) {
                 return cached;

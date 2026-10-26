@@ -17,6 +17,7 @@ import CommandReaderKinds from "../../parsers/command/reader/CommandReaderKinds.
 import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../Util.js";
+import TypeTester from "../TypeTester.js";
 import ObjectUtil from "../ObjectUtil.js";
 import DiscordUtil from "../DiscordUtil.js";
 import CaseUtil from "../misc/CaseUtil.js";
@@ -83,7 +84,7 @@ function resolveTargetPage(action, currentPage, totalPages) {
 }
 
 async function handleRenderOverflow(rendered, items, spec, ctx) {
-    if (typeof rendered !== "object" || rendered === null) {
+    if (!TypeTester.isObject(rendered)) {
         return rendered;
     }
 
@@ -93,9 +94,8 @@ async function handleRenderOverflow(rendered, items, spec, ctx) {
         return rendered;
     }
 
-    const embedLimits = ctx.handler != null ? ctx.handler.getLimits().embed : [DiscordUtil.embedCharLimit];
-
-    const isOversized = embeds.some(embed => DiscordUtil.embedOverSizeLimit(embed, ...embedLimits));
+    const embedLimits = ctx.handler != null ? ctx.handler.getLimits().embed : [DiscordUtil.embedCharLimit],
+        isOversized = embeds.some(embed => DiscordUtil.embedOverSizeLimit(embed, ...embedLimits));
 
     if (!isOversized) {
         return rendered;

@@ -351,10 +351,10 @@ class Benchmark {
 
         const avg = sum / runs;
 
-        const minText = Math.round(min * 1000).toLocaleString(),
-            maxText = Math.round(max * 1000).toLocaleString();
+        const minText = Math.round(min / Util.durationSeconds.milli).toLocaleString(),
+            maxText = Math.round(max / Util.durationSeconds.milli).toLocaleString();
 
-        const avgText = Math.round(avg * 1000).toLocaleString(),
+        const avgText = Math.round(avg / Util.durationSeconds.milli).toLocaleString(),
             sumText = Util.duration(sum, {
                 unit: "second",
                 format: true,
