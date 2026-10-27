@@ -19,6 +19,10 @@ import RateLimiter from "../../util/misc/RateLimiter.js";
 import MessageLimitTypes from "./MessageLimitTypes.js";
 import EmbedCountAreas from "../../util/EmbedCountAreas.js";
 
+function hasReplies(replies) {
+    return Array.isArray(replies) ? !Util.empty(replies) : replies != null;
+}
+
 class MessageHandler extends Handler {
     static _rateLimiter = null;
 
@@ -125,17 +129,21 @@ class MessageHandler extends Handler {
             msgReply = Array(out.length);
 
             for (const [i, msgOut] of out.entries()) {
+                if (options.signal?.aborted) {
+                    break;
+                }
+
                 const replyFunc = this._getReplyFunc(msg, i);
-                msgReply[i] = await this._reply(msg, replyFunc, msgOut, i);
+                msgReply[i] = await this._reply(msg, replyFunc, msgOut, i, options);
             }
 
             msgReply = msgReply.filter(Boolean);
         } else {
             const replyFunc = this._getReplyFunc(msg);
-            msgReply = await this._reply(msg, replyFunc, out);
+            msgReply = await this._reply(msg, replyFunc, out, null, options);
         }
 
-        if (this.hasReplyTracker) {
+        if (this.hasReplyTracker && hasReplies(msgReply)) {
             this.replyTracker.addReply(msg, msgReply);
         }
 
@@ -165,7 +173,7 @@ class MessageHandler extends Handler {
             msgReply = await this._replyWithExecError(err, replyFunc, type, out);
         }
 
-        if (this.hasReplyTracker) {
+        if (this.hasReplyTracker && hasReplies(msgReply)) {
             this.replyTracker.addReply(msg, msgReply);
         }
 
@@ -191,8 +199,9 @@ class MessageHandler extends Handler {
         const out = this._getOutput(data, options);
 
         if (Array.isArray(out)) {
-            const [first, ...rest] = out,
-                edited = await this._editReply(msg, existing, first, i);
+            const [first, ...rest] = out;
+
+            const edited = await this._editReply(msg, existing, first, i, options);
 
             if (!Util.empty(rest)) {
                 await this.reply(msg, rest, options);
@@ -201,10 +210,10 @@ class MessageHandler extends Handler {
             return edited;
         }
 
-        return await this._editReply(msg, existing, out, i);
+        return await this._editReply(msg, existing, out, i, options);
     }
 
-    async editReplyWithError(msg, err, type, out, i = 0) {
+    async editReplyWithError(msg, err, type, out, i = 0, options) {
         const existing = this.getReply(msg, i);
 
         if (existing === null) {
@@ -212,7 +221,7 @@ class MessageHandler extends Handler {
         }
 
         const errorOut = this._getErrorOutput(err, out);
-        return await this._editReply(msg, existing, errorOut, i, type, out);
+        return await this._editReply(msg, existing, errorOut, i, options, type, out);
     }
 
     async editFromContext(context, ...args) {
@@ -492,6 +501,30 @@ class MessageHandler extends Handler {
         }
     }
 
+    static _attachAbortCleanup(promise, signal) {
+        promise
+            .then(res => {
+                if (signal.aborted && res != null) {
+                    const msgs = Array.isArray(res) ? res : [res];
+
+                    for (const msg of msgs) {
+                        msg.delete().catch(_ => {});
+                    }
+                }
+            })
+            .catch(_ => {});
+    }
+
+    static async _dispatchWithSignal(res, options) {
+        const promise = Promise.resolve(res);
+
+        if (options.deleteOnAbort && options.signal != null) {
+            MessageHandler._attachAbortCleanup(promise, options.signal);
+        }
+
+        return await Util.raceSignal(promise, options.signal);
+    }
+
     _sendTyping(msg) {
         msg.channel.sendTyping().catch(_ => {});
     }
@@ -672,8 +705,14 @@ class MessageHandler extends Handler {
         }
     }
 
-    async _runReplyFunc(replyFunc, data, i, type, out, handleEmptyMessage) {
+    async _runReplyFunc(replyFunc, data, i, type, out, handleEmptyMessage, options) {
         if (typeof replyFunc !== "function") {
+            return null;
+        }
+
+        options = ObjectUtil.guaranteeObject(options);
+
+        if (options.signal?.aborted) {
             return null;
         }
 
@@ -687,8 +726,12 @@ class MessageHandler extends Handler {
         }
 
         try {
-            return await replyFunc(data);
+            return await MessageHandler._dispatchWithSignal(replyFunc(data), options);
         } catch (err) {
+            if (options.signal?.aborted) {
+                return null;
+            }
+
             if (isErrorCode("emptyMessage", err)) {
                 return await handleEmptyMessage(handleError);
             }
@@ -697,23 +740,24 @@ class MessageHandler extends Handler {
         }
     }
 
-    async _reply(msg, replyFunc, data, i) {
+    async _reply(msg, replyFunc, data, i, options) {
         return await this._runReplyFunc(
             replyFunc,
             data,
             i,
             "reply",
             "sending reply",
-            async handleError => await this._replyWithEmptyMsg(replyFunc).catch(err => handleError(err))
+            async handleError => await this._replyWithEmptyMsg(replyFunc).catch(err => handleError(err)),
+            options
         );
     }
 
-    async _edit(msg, editFunc, data, i) {
-        return await this._runReplyFunc(editFunc, data, i, "edit", "editing reply", async () => await editFunc(" "));
+    async _edit(msg, editFunc, data, i, options, type = "edit", out = "editing reply") {
+        return await this._runReplyFunc(editFunc, data, i, type, out, async () => await editFunc(" "), options);
     }
 
-    async _editReply(msg, existing, data, i = 0, type = "reply", out = "editing reply") {
-        const edited = await this._edit(msg, existing.edit.bind(existing), data, i, type, out);
+    async _editReply(msg, existing, data, i = 0, options, type = "edit", out = "editing reply") {
+        const edited = await this._edit(msg, existing.edit.bind(existing), data, i, options, type, out);
 
         if (edited != null && this.hasReplyTracker) {
             this.replyTracker.editReply(msg, existing, edited);

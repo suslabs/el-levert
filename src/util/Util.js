@@ -143,6 +143,29 @@ let Util = {
         return Promise.race([res.finally(clearTimer), timeoutPromise]);
     },
 
+    raceSignal: async (promise, signal) => {
+        if (signal == null) {
+            return await promise;
+        }
+
+        if (signal.aborted) {
+            throw signal.reason ?? new UtilError("Operation aborted");
+        }
+
+        let onAbort;
+
+        const abortPromise = new Promise((_, reject) => {
+            onAbort = () => reject(signal.reason ?? new UtilError("Operation aborted"));
+            signal.addEventListener("abort", onAbort, { once: true });
+        });
+
+        try {
+            return await Promise.race([promise, abortPromise]);
+        } finally {
+            signal.removeEventListener("abort", onAbort);
+        }
+    },
+
     waitForCondition: (condition, timeoutError, timeout = 0, interval = 100) => {
         let [_timeout, _interval] = [null, null];
 

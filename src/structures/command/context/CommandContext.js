@@ -41,6 +41,8 @@ class CommandContext extends TextCommandContext {
         this.message = this.message ?? data.msg ?? null;
         this.author = this.author ?? this.message?.author;
         this.channel = this.channel ?? this.message?.channel;
+
+        this._processingAborter = data._processingAborter ?? new AbortController();
     }
 
     get msg() {
@@ -67,12 +69,21 @@ class CommandContext extends TextCommandContext {
         return this.message?.guild ?? this.channel?.guild ?? this.interaction?.guild ?? null;
     }
 
+    get processingSignal() {
+        return this._processingAborter.signal;
+    }
+
+    get processingAborted() {
+        return this._processingAborter.signal.aborted;
+    }
+
     clone(context, overrides) {
         overrides = ObjectUtil.guaranteeObject(overrides);
 
         context.replyMsg = overrides.replyMsg ?? this.replyMsg;
         context.isEdit = overrides.isEdit ?? this.isEdit;
         context.processingReplySent = overrides.processingReplySent ?? this.processingReplySent;
+        context._processingAborter = overrides._processingAborter ?? this._processingAborter;
         context.interactionContext = overrides.interactionContext ?? this.interactionContext;
 
         return context;
@@ -81,6 +92,28 @@ class CommandContext extends TextCommandContext {
     getReply() {
         if (this.handler != null && typeof this.handler.getReply === "function") {
             return this.handler.getReply(this.msg);
+        }
+
+        return null;
+    }
+
+    abortProcessing() {
+        this._processingAborter.abort();
+        return this;
+    }
+
+    async sendProcessingReply(data) {
+        if (this.replied || this.processingReplySent || this.processingAborted) {
+            return null;
+        }
+
+        this.processingReplySent = true;
+
+        if (this.handler != null) {
+            return await this.handler.reply(this.msg, data, {
+                signal: this.processingSignal,
+                deleteOnAbort: true
+            });
         }
 
         return null;

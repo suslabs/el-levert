@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import BaseCommandContext from "../../../../src/structures/command/context/BaseCommandContext.js";
 import CommandContext from "../../../../src/structures/command/context/CommandContext.js";
@@ -127,5 +127,49 @@ describe("BaseCommandContext vs CommandContext separation", () => {
 
         expect(cloned.replyMsg).toBe(newReply);
         expect(cloned.msg.replyMsg).toBeUndefined();
+    });
+
+    test("manages processing reply lifecycle and abort controller", async () => {
+        const replyMock = vi.fn(async () => ({ id: "proc-reply" }));
+
+        const mockHandler = { reply: replyMock };
+
+        const mockMsg = { id: "msg-1" };
+
+        const ctx = new CommandContext({
+            handler: mockHandler,
+            message: mockMsg
+        });
+
+        expect(ctx.processingSignal).toBeInstanceOf(AbortSignal);
+        expect(ctx.processingAborted).toBe(false);
+        expect(ctx.processingReplySent).toBe(false);
+
+        const replyRes = await ctx.sendProcessingReply("Processing...");
+
+        expect(replyRes).toEqual({ id: "proc-reply" });
+        expect(ctx.processingReplySent).toBe(true);
+        expect(replyMock).toHaveBeenCalledWith(
+            mockMsg,
+            "Processing...",
+            expect.objectContaining({
+                signal: ctx.processingSignal,
+                deleteOnAbort: true
+            })
+        );
+
+        expect(await ctx.sendProcessingReply("Duplicate")).toBeNull();
+
+        ctx.abortProcessing();
+        expect(ctx.processingAborted).toBe(true);
+        expect(ctx.processingSignal.aborted).toBe(true);
+
+        const freshCtx = new CommandContext({
+            handler: mockHandler,
+            message: mockMsg
+        });
+
+        freshCtx.abortProcessing();
+        expect(await freshCtx.sendProcessingReply("Aborted")).toBeNull();
     });
 });

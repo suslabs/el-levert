@@ -224,7 +224,8 @@ describe("MessageHandler", () => {
             {
                 content: "one"
             },
-            0
+            0,
+            {}
         );
         expect(handler._reply).toHaveBeenNthCalledWith(
             2,
@@ -233,7 +234,8 @@ describe("MessageHandler", () => {
             {
                 content: "two"
             },
-            1
+            1,
+            {}
         );
         expect(handler.replyTracker.addReply).toHaveBeenCalledWith(msg, ["first", "second"]);
 
@@ -438,5 +440,66 @@ describe("MessageHandler", () => {
         expect(handler.rateLimiter.getRemaining("user-123")).toBe(2);
 
         MessageHandler.resetRateLimiter();
+    });
+
+    test("supports cancellation via AbortSignal and cleans up aborted in-flight replies", async () => {
+        class TestMessageHandler extends MessageHandler {
+            static $name = "testMessageHandler";
+            execute() {}
+        }
+
+        const handler = new TestMessageHandler(true, true);
+        handler.load();
+
+        const controller = new AbortController();
+        controller.abort();
+
+        const dummyMsg = {
+            id: "msg-1",
+            reply: vi.fn()
+        };
+
+        const res1 = await handler.reply(dummyMsg, "Hello", { signal: controller.signal });
+
+        expect(res1).toBeNull();
+        expect(dummyMsg.reply).not.toHaveBeenCalled();
+        expect(handler.getReply(dummyMsg)).toBeNull();
+
+        const deleteSpy = vi.fn(async () => undefined);
+
+        let resolveReply;
+
+        const slowMsg = {
+            id: "msg-2",
+            reply: vi.fn(
+                () =>
+                    new Promise(resolve => {
+                        resolveReply = () =>
+                            resolve({
+                                id: "reply-slow",
+                                delete: deleteSpy
+                            });
+                    })
+            )
+        };
+
+        const activeController = new AbortController();
+
+        const replyPromise = handler.reply(slowMsg, "In flight", {
+            signal: activeController.signal,
+            deleteOnAbort: true
+        });
+
+        activeController.abort();
+        const res2 = await replyPromise;
+
+        expect(res2).toBeNull();
+        expect(handler.getReply(slowMsg)).toBeNull();
+
+        resolveReply();
+        await new Promise(resolve => setTimeout(resolve, 10));
+
+        expect(deleteSpy).toHaveBeenCalled();
+        handler.unload();
     });
 });

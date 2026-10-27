@@ -467,4 +467,107 @@ describe("CommandHandler", () => {
 
         MessageHandler.resetRateLimiter();
     });
+
+    test("fast commands do not trigger processing reply and send output directly", async () => {
+        handler.commandWaitTime = 50;
+
+        const msg = createDiscordMessage("%fast", {
+            reply: vi.fn(async data => ({
+                id: "reply-fast",
+                content: typeof data === "string" ? data : data.content
+            }))
+        });
+
+        runtime.client.commandManager = {
+            isCommand: vi.fn(() => true),
+            getCommand: vi.fn(() => [
+                {
+                    name: "fast",
+                    async execute() {
+                        return "Fast result";
+                    }
+                },
+                "fast",
+                "",
+                {
+                    raw: msg.content,
+                    content: "fast",
+                    name: "fast",
+                    argsText: ""
+                }
+            ])
+        };
+
+        expect(await handler.execute(msg)).toBe(true);
+        expect(msg.reply).toHaveBeenCalledTimes(1);
+        expect(msg.reply).toHaveBeenCalledWith({
+            content: "Fast result"
+        });
+    });
+
+    test("cancels and cleans up in-flight processing reply when command finishes before reply resolves", async () => {
+        handler.commandWaitTime = 1;
+
+        const deleteSpy = vi.fn(async () => undefined);
+
+        let resolveProcessing;
+
+        const msg = createDiscordMessage("%race", {
+            reply: vi.fn(data => {
+                const content = typeof data === "string" ? data : data.content;
+
+                if (content.includes("Processing command...")) {
+                    return new Promise(resolve => {
+                        resolveProcessing = () =>
+                            resolve({
+                                id: "processing-reply",
+                                content,
+                                delete: deleteSpy
+                            });
+                    });
+                }
+
+                return Promise.resolve({
+                    id: "final-reply",
+                    content
+                });
+            })
+        });
+
+        runtime.client.commandManager = {
+            isCommand: vi.fn(() => true),
+            getCommand: vi.fn(() => [
+                {
+                    name: "race",
+                    async execute() {
+                        await new Promise(resolve => setTimeout(resolve, 10));
+                        return "Race finished";
+                    }
+                },
+                "race",
+                "",
+                {
+                    raw: msg.content,
+                    content: "race",
+                    name: "race",
+                    argsText: ""
+                }
+            ])
+        };
+
+        expect(await handler.execute(msg)).toBe(true);
+
+        expect(msg.reply).toHaveBeenCalledWith(
+            expect.objectContaining({
+                content: "Race finished"
+            })
+        );
+
+        expect(typeof resolveProcessing === "function").toBe(true);
+
+        resolveProcessing();
+        await new Promise(resolve => setTimeout(resolve, 10));
+
+        expect(deleteSpy).toHaveBeenCalled();
+    });
 });

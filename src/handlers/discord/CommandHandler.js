@@ -157,7 +157,7 @@ class CommandHandler extends MessageHandler {
             outErr = err;
         } finally {
             context.setDisableTimeoutHook();
-            this._stopProcessingTimer(timer);
+            this._stopProcessingTimer(timer, context);
         }
 
         const outInfo = {
@@ -225,19 +225,18 @@ class CommandHandler extends MessageHandler {
         );
     }
 
-    _stopProcessingTimer(timer) {
+    _stopProcessingTimer(timer, context) {
         if (timer !== null) {
             clearTimeout(timer);
+        }
+
+        if (this.getReply(context.msg) === null) {
+            context.abortProcessing();
         }
     }
 
     async _sendProcessingReply(context) {
-        if (context.replied || context.processingReplySent) {
-            return null;
-        }
-
-        context.processingReplySent = true;
-        return await this.reply(context.msg, `${getEmoji("waiting")} Processing command...`);
+        return await context.sendProcessingReply(`${getEmoji("waiting")} Processing command...`);
     }
 }
 

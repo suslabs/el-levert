@@ -205,6 +205,27 @@ describe("Util", () => {
         ).resolves.toBe("late");
     });
 
+    test("races promises against AbortSignal", async () => {
+        await expect(Util.raceSignal(Promise.resolve("value"))).resolves.toBe("value");
+
+        const activeController = new AbortController();
+        await expect(Util.raceSignal(Promise.resolve("active"), activeController.signal)).resolves.toBe("active");
+
+        const abortedController = new AbortController();
+        abortedController.abort(new Error("already aborted"));
+        await expect(Util.raceSignal(Promise.resolve("noop"), abortedController.signal)).rejects.toThrow(
+            "already aborted"
+        );
+
+        const delayedController = new AbortController();
+        const slowPromise = new Promise(resolve => setTimeout(() => resolve("slow"), 100));
+
+        const racePromise = Util.raceSignal(slowPromise, delayedController.signal);
+        delayedController.abort(new Error("aborted in flight"));
+
+        await expect(racePromise).rejects.toThrow("aborted in flight");
+    });
+
     test("formats duration and handles units", () => {
         expect(Util.duration(5000)).toEqual({ second: 5 });
         expect(Util.duration(5000, { format: true })).toBe("5 seconds");

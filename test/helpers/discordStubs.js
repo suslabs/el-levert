@@ -54,6 +54,7 @@ function createDiscordChannel(overrides = {}) {
                 last: () => [{ id: "current" }, { id: "previous" }]
             }
         },
+        isTextBased: () => false,
         isDMBased: () => false,
         sendTyping: async () => undefined,
         send: async data => defaultReplyValue(data),
