@@ -415,4 +415,23 @@ describe("TagVM", () => {
         expect(thrownErr.stack).not.toContain("EvalContext._compileScript");
         expect(thrownErr.stack).not.toContain("TagVM.runScript");
     });
+
+    test("rewrites stack trace on script timeout to avoid leaking host stack", async () => {
+        const msg = createDiscordMessage("hello");
+
+        let thrownErr;
+
+        try {
+            await vm.runScript("while(true) {}", { msg });
+        } catch (err) {
+            thrownErr = err;
+        }
+
+        expect(thrownErr).toBeDefined();
+        expect(thrownErr.name).toBe("VMError");
+        expect(thrownErr.message).toBe("Script execution timed out");
+        expect(thrownErr.stack).toBe("VMError: Script execution timed out");
+        expect(thrownErr.stack).not.toContain("TagVM._handleScriptError");
+        expect(thrownErr.stack).not.toContain("TagVM.runScript");
+    });
 });

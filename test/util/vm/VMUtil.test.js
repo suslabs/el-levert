@@ -347,6 +347,19 @@ describe("VMUtil", () => {
         expect(errCompileHost.stack).toBe("SyntaxError: Unexpected token");
         expect(VMUtil._compileScript).toBe("compileScript");
 
+        const errTimeout = new Error("Script execution timed out.");
+        errTimeout.stack =
+            "Error: Script execution timed out.\n    at Isolate.run (isolated-vm.js:1:1)\n    at async EvalContext.runScript (EvalContext.js:1:1)";
+        VMUtil.rewriteIVMStackTrace(errTimeout);
+        expect(errTimeout.stack).toBe("Error: Script execution timed out.");
+
+        const errVMError = new Error("Script execution timed out");
+        errVMError.name = "VMError";
+        errVMError.stack =
+            "VMError: Script execution timed out\n    at TagVM._handleScriptError (TagVM.js:1:1)\n    at TagVM.runScript (TagVM.js:1:1)";
+        VMUtil.rewriteIVMStackTrace(errVMError);
+        expect(errVMError.stack).toBe("VMError: Script execution timed out");
+
         const errMultiLine = new Error("first line\nsecond line\nthird line");
         errMultiLine.stack =
             "Error: first line\nsecond line\nthird line\n    at first (file.js:1:1)\n    at (<isolated-vm boundary>)\n    at hidden (file.js:2:1)";

@@ -323,7 +323,11 @@ class TagVM extends VM {
             throw err;
         } else {
             getLogger().debug(`IVM error: ${out}.`);
-            throw new VMError(out);
+
+            const vmErr = new VMError(out);
+            VMUtil.rewriteIVMStackTrace(vmErr);
+
+            throw vmErr;
         }
     }
 }

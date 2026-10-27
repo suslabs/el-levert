@@ -4,6 +4,8 @@ import ObjectUtil from "../ObjectUtil.js";
 
 import VMHttpErrorTypes from "./VMHttpErrorTypes.js";
 
+import { vmErrorMessages } from "../../vm/isolated-vm/VMErrors.js";
+
 import UtilError from "../../errors/UtilError.js";
 
 function normalizeResponseType(value) {
@@ -330,6 +332,8 @@ let VMUtil = {
                 return [msgLine, stackFrames.slice(0, boundaryLine + 1)];
             } else if (hostLine >= 0) {
                 return [msgLine, stackFrames.slice(0, hostLine)];
+            } else if (err?.name === "VMError" || vmErrorMessages.has(err?.message)) {
+                return [msgLine, []];
             }
 
             return false;

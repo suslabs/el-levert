@@ -2,7 +2,7 @@ import ManevraError from "./functionErrors/ManevraError.js";
 
 import TypeTester from "../../util/TypeTester.js";
 
-let VMErrors = {
+const VMErrors = Object.freeze({
     timeout: {
         in: "Script execution timed out.",
         out: "Script execution timed out"
@@ -14,7 +14,7 @@ let VMErrors = {
     },
 
     custom: ["ExitError", TypeTester.className(ManevraError)]
-};
+});
 
 const vmErrorMessages = new Map(
     Object.entries(VMErrors)
@@ -22,5 +22,4 @@ const vmErrorMessages = new Map(
         .map(([, info]) => [info.in, info.out])
 );
 
-VMErrors = Object.freeze(VMErrors);
 export { VMErrors, vmErrorMessages };
