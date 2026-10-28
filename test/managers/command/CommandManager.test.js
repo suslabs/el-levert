@@ -39,6 +39,7 @@ beforeEach(async () => {
 
     runtime.client.config.commandsPath = tempDir;
     runtime.client.config.cliCommandsPath = path.join(tempDir, "cli");
+    runtime.client.config.websocketCommandsPath = path.join(tempDir, "websocket");
     new ConfigLoader(runtime.client.logger)._setBridgeBotConfig(runtime.client.config);
     runtime.client._setOtherConfigs();
 
@@ -67,6 +68,14 @@ describe("CommandManager", () => {
             "admin.js",
             'class AdminCommand { static info = { name: "admin", prefix: "!", description: "Admin", category: "owner_only", allowed: 5 }; async handler() { return "admin"; } }\n\nexport default AdminCommand;'
         );
+        await writeCommand(
+            "cli/cli_only.js",
+            'class CliOnlyCommand { static info = { name: "cli_only", prefix: "!" }; async handler() { return "cli"; } }\n\nexport default CliOnlyCommand;'
+        );
+        await writeCommand(
+            "websocket/ws_only.js",
+            'class WsOnlyCommand { static info = { name: "ws_only", prefix: "!" }; async handler() { return "ws"; } }\n\nexport default WsOnlyCommand;'
+        );
 
         manager = new CommandManager(true);
         await manager.load();
@@ -75,6 +84,8 @@ describe("CommandManager", () => {
         expect(manager.isCommand("bridge !help", { author: { id: "bridge" } })).toBe(true);
         expect(manager._getCommandContent("bridge !admin", { author: { id: "bridge" } })).toBe("admin");
         expect(manager.searchCommands("help").name).toBe("help");
+        expect(manager.searchCommands("cli_only")).toBeNull();
+        expect(manager.searchCommands("ws_only")).toBeNull();
         expect(manager.getCommands(0).map(command => command.name)).toEqual(["help"]);
         expect(
             manager

@@ -14,11 +14,14 @@ class CommandManager extends TextCommandManager {
 
     constructor(enabled) {
         const commandsDir = getConfig().commandsPath,
-            commandPrefix = getConfig().cmdPrefix,
-            excludeDir = getConfig().cliCommandsPath;
+            commandPrefix = getConfig().cmdPrefix;
 
+        // prettier-ignore
         super(enabled, commandsDir, commandPrefix, {
-            excludeDirs: [excludeDir]
+            excludeDirs: [
+                getConfig().cliCommandsPath,
+                getConfig().websocketCommandsPath
+            ]
         });
     }
 
