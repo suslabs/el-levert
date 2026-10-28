@@ -33,8 +33,12 @@ describe("tag count command", () => {
     test("counts tags from the real database", async () => {
         const command = getCommand(runtime, "tag");
 
+        await expect(executeCommand(command, "count", { msg })).resolves.toContain("There are **3** tags registered");
         await expect(executeCommand(command, "count me", { msg })).resolves.toContain("You have **2** tags");
-        await expect(executeCommand(command, "count all", { msg })).resolves.toContain("There are **3**");
+        await expect(executeCommand(command, "count all", { msg })).resolves.toContain(
+            "There are **3** tags registered"
+        );
+        await expect(executeCommand(command, "count script", { msg })).resolves.toContain("script tag");
     });
 
     test("uses the cached user count for user-specific queries", async () => {

@@ -1,5 +1,3 @@
-import { Buffer } from "node:buffer";
-
 import Util from "../Util.js";
 import ObjectUtil from "../ObjectUtil.js";
 import ArrayUtil from "../ArrayUtil.js";

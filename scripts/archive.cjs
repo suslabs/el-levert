@@ -17,6 +17,8 @@ const defaultExcludes = [
     "dist",
     "coverage",
     "scratch",
+    "stoat-compat",
+    "AGENTS.md",
     "config/auth.json",
     "config/auth.env",
     "*.log",

@@ -67,7 +67,7 @@ class TagCountCommand {
                 flagName = Util.first(flags.filter(name => name !== null)),
                 areType = flagName ? flagName + " " : "";
 
-            return `${getEmoji("info")} There ${are} **${registered}** ${areType}${tags} registered.`;
+            return `${getEmoji("info")} There ${are} **${registered}** ${areType}tag${s} registered.`;
         }
     }
 }
