@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { Buffer } from "node:buffer";
 
 import { cleanupRuntime, createRuntime } from "../../helpers/runtimeHarness.js";
@@ -13,6 +13,11 @@ beforeEach(async () => {
         loadManagers: false,
         loadVMs: false
     });
+
+    runtime.client.tagManager = {
+        fetchUsage: vi.fn().mockResolvedValue(0),
+        fetchAliases: vi.fn().mockResolvedValue([])
+    };
 
     ({ default: Tag } = await import("../../../src/structures/tag/Tag.js"));
     ({ TagTypes } = await import("../../../src/structures/tag/TagTypes.js"));

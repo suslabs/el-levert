@@ -235,13 +235,13 @@ describe("DBImporter", () => {
             await liveRuntime.client.tagManager.add("imported_one", "body", "u1", { type: "text" });
 
             expect(await liveRuntime.client.tagManager.revisions.findSubject("imported_one")).toBeNull();
-            expect(await liveRuntime.client.tagManager.audit({ name: "imported_one" })).toHaveLength(0);
+            expect((await liveRuntime.client.tagManager.audit({ name: "imported_one" })).items).toHaveLength(0);
 
             liveRuntime.client.config.enableAuditLog = true;
 
             await liveRuntime.client.tagManager.add("imported_two", "body", "u1", { type: "text" });
 
-            const revisions = await liveRuntime.client.tagManager.audit({ name: "imported_two" });
+            const { items: revisions } = await liveRuntime.client.tagManager.audit({ name: "imported_two" });
             expect(revisions).toHaveLength(1);
             expect(revisions[0].actor).toBe("u1");
         } finally {

@@ -34,13 +34,14 @@ describe("overclock command", () => {
         const command = getCommand(runtime, "overclock"),
             out = await executeCommand(command, "--help");
 
-        expect(typeof out).toBe("string");
-        expect(out).toContain("Description:");
-        expect(out).toContain("Usage:");
-        expect(out).toContain("--tape");
-        expect(out).toContain("--subtick");
-        expect(out).toContain("--rates");
-        expect(out).toContain("macerator");
+        expect(out.embeds).toHaveLength(1);
+        const description = out.embeds[0].data.description;
+        expect(description).toContain("Description:");
+        expect(description).toContain("Usage:");
+        expect(description).toContain("macerator");
+        expect(description).toContain("--tape");
+        expect(description).toContain("--subtick");
+        expect(description).toContain("--rates");
     });
 
     test("calculates standard recipe and formats embed table", async () => {

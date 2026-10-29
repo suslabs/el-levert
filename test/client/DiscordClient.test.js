@@ -218,6 +218,7 @@ describe("DiscordClient", () => {
         });
 
         const channel = {
+            isTextBased: () => true,
             messages: {
                 fetch: vi.fn()
             }
@@ -314,6 +315,7 @@ describe("DiscordClient", () => {
         ).toBeNull();
 
         client.fetchChannel = vi.fn().mockResolvedValue({
+            isTextBased: () => true,
             messages: {
                 fetch: vi.fn().mockRejectedValueOnce({
                     code: RESTJSONErrorCodes.UnknownMessage
@@ -347,6 +349,7 @@ describe("DiscordClient", () => {
                 "guild",
                 {
                     members: {
+                        cache: new Map(),
                         fetch: vi.fn().mockResolvedValue(
                             new Map([
                                 [
@@ -374,6 +377,7 @@ describe("DiscordClient", () => {
 
         client.fetchGuild = vi.fn().mockResolvedValue({
             members: {
+                cache: new Map(),
                 fetch: vi.fn().mockResolvedValue(new Map())
             }
         });
@@ -660,6 +664,7 @@ describe("DiscordClient", () => {
 
         const messageErrClient = createClient();
         messageErrClient.fetchChannel = vi.fn().mockResolvedValueOnce({
+            isTextBased: () => true,
             messages: {
                 fetch: vi.fn().mockRejectedValueOnce(new Error("message failed"))
             }
@@ -711,6 +716,7 @@ describe("DiscordClient", () => {
                 "guild",
                 {
                     members: {
+                        cache: new Map(),
                         fetch: vi.fn().mockResolvedValue(new Map())
                     }
                 }

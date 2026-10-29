@@ -18,7 +18,7 @@ describe("stoik command", () => {
     test("requires an equation and renders balance information", async () => {
         const command = getCommand(runtime, "stoik");
 
-        await expect(executeCommand(command, "")).resolves.toContain("No expression provided");
+        await expect(executeCommand(command, "")).resolves.toContain("<reactants> -> <products>");
 
         const out = await executeCommand(command, "H2 + O2 -> H2O");
         expect(out.content).toContain("balanced");

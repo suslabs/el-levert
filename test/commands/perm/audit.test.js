@@ -71,7 +71,7 @@ describe("permission audit command", () => {
         await run("add_group moderators 5");
 
         expect(await run("audit_clear")).toContain("Only the bot owner");
-        expect(await run("audit-clear", ownerMsg)).toContain("Cleared 3 permission audit revisions");
+        expect(await run("audit-clear", ownerMsg)).toContain("Cleared **3** permission audit revisions");
         expect(await run("audit moderators --limit 5")).toContain("Found **no** permission revisions");
     });
 
@@ -79,7 +79,7 @@ describe("permission audit command", () => {
         await run("add_group moderators 5");
         await run("add_group helpers 4");
 
-        expect(await run("audit_clear moderators", ownerMsg)).toContain("Cleared 1 permission audit revision");
+        expect(await run("audit_clear moderators", ownerMsg)).toContain("Cleared **1** permission audit revision");
         expect(await run("audit moderators --limit 5")).toContain("Found **no** permission revisions");
         expect(await run("audit helpers --limit 5")).not.toContain("Found **no** permission revisions");
     });

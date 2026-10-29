@@ -144,13 +144,13 @@ describe("tag audit command", () => {
         await run("add alpha one", userMsg);
 
         expect(await run("audit_clear")).toContain("Only the bot owner");
-        expect(await run("audit-clear", ownerMsg)).toContain("Cleared 1 tag audit revision");
+        expect(await run("audit-clear", ownerMsg)).toContain("Cleared **1** tag audit revision");
         expect(await run("audit alpha --limit 5")).toContain("Found **no** tag revisions");
     });
 
     test("resets autoincrement sequence when full audit_clear is called", async () => {
         expect(await run("add alpha one", userMsg)).toContain("Created tag **alpha**");
-        expect(await run("audit-clear", ownerMsg)).toContain("Cleared 1 tag audit revision");
+        expect(await run("audit-clear", ownerMsg)).toContain("Cleared **1** tag audit revision");
 
         expect(await run("add beta test", userMsg)).toContain("Created tag **beta**");
         const audit = await run("audit beta");
@@ -165,12 +165,14 @@ describe("tag audit command", () => {
         const audit = await run("audit alpha --limit 5"),
             ids = audit.embeds[0].data.description.match(/#(\d+)/g).map(value => Number(value.slice(1)));
 
-        expect(await run(`audit_clear alpha ${ids[0]} ${ids[1]}`, ownerMsg)).toContain("Cleared 2 tag audit revisions");
+        expect(await run(`audit_clear alpha ${ids[0]} ${ids[1]}`, ownerMsg)).toContain(
+            "Cleared **2** tag audit revisions"
+        );
         expect(await run("audit alpha --limit 5")).toContain("Found **no** tag revisions");
 
         await run("add beta one", userMsg);
         expect(await run('audit_clear beta --from "2000-01-01" --to "2100-01-01"', ownerMsg)).toContain(
-            "Cleared 1 tag audit revision"
+            "Cleared **1** tag audit revision"
         );
         expect(await run("audit beta --limit 5")).toContain("Found **no** tag revisions");
     });

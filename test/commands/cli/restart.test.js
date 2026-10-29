@@ -27,7 +27,7 @@ describe("cli restart command", () => {
         const command = getCliCommand(runtime, "restart");
         const restartSpy = vi.spyOn(runtime.client, "restart").mockImplementation(async callback => {
             const configs = await callback();
-            expect(configs).toHaveProperty("config");
+            expect(configs.configs).toHaveProperty("config");
             return 12.34;
         });
 

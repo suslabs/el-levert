@@ -72,7 +72,7 @@ describe("tag leaderboard command", () => {
 
         const defaultOut = await executeCommand(command, "leaderboard user");
         expect(defaultOut).toContain("Your leaderboard positions:");
-        expect(defaultOut).toContain("Count: **#1** (2 tags)");
+        expect(defaultOut).toContain("Count: **#1** (**2** tags)");
         expect(defaultOut).toContain("Size: **#1**");
 
         const otherUserOut = await executeCommand(command, "leaderboard user user-2");
