@@ -13,7 +13,7 @@ import ObjectUtil from "../ObjectUtil.js";
 import FileUtil from "../misc/FileUtil.js";
 import CaseUtil from "../misc/CaseUtil.js";
 
-import CommandError from "../../errors/CommandError.js";
+import CommandError from "@el-levert/common/errors/CommandError.js";
 
 function makeObjectRule(properties, options) {
     return Object.freeze({

@@ -5,7 +5,7 @@ import { getEmoji } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 import CleanroomUtil from "../../util/commands/CleanroomUtil.js";
 
-import ParserError from "../../errors/ParserError.js";
+import ParserError from "@el-levert/common/errors/ParserError.js";
 
 function parseDimensions(argsText) {
     const split = `${argsText ?? ""}`.split("x");

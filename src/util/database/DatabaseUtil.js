@@ -5,7 +5,7 @@ import sqlite from "sqlite3";
 import Util from "../Util.js";
 import ObjectUtil from "../ObjectUtil.js";
 
-import DatabaseError from "../../errors/DatabaseError.js";
+import DatabaseError from "@el-levert/common/errors/DatabaseError.js";
 
 const eventValuesCache = new WeakMap();
 

@@ -7,7 +7,7 @@ import { getClient, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 
-import CommandError from "../../errors/CommandError.js";
+import CommandError from "@el-levert/common/errors/CommandError.js";
 
 function getClientId(packet, socket) {
     return packet.clientId ?? socket.clientId ?? "unknown";

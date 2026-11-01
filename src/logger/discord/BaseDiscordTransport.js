@@ -8,7 +8,7 @@ import ObjectUtil from "../../util/ObjectUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import { isErrorCode } from "../../util/discord/ErrorCodes.js";
 
-import LoggerError from "../../errors/LoggerError.js";
+import LoggerError from "@el-levert/common/errors/LoggerError.js";
 
 class BaseDiscordTransport extends Transport {
     constructor(options) {

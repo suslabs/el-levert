@@ -15,7 +15,7 @@ import ObjectUtil from "../../util/ObjectUtil.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
 import DatabaseUtil from "../../util/database/DatabaseUtil.js";
 
-import PermissionError from "../../errors/PermissionError.js";
+import PermissionError from "@el-levert/common/errors/PermissionError.js";
 
 class PermissionManager extends DBManager {
     static $name = "permManager";

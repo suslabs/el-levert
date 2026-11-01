@@ -5,7 +5,7 @@ import CaseUtil from "../util/misc/CaseUtil.js";
 
 import { LoadStatus } from "./LoadStatus.js";
 
-import LoaderError from "../errors/LoaderError.js";
+import LoaderError from "@el-levert/common/errors/LoaderError.js";
 
 class Loader {
     constructor(name, logger, options) {

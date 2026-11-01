@@ -6,7 +6,7 @@ import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 
-import LoggerError from "../../errors/LoggerError.js";
+import LoggerError from "@el-levert/common/errors/LoggerError.js";
 
 class WebhookTransport extends BaseDiscordTransport {
     static $name = "discord.webhook";

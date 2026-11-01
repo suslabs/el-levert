@@ -3,7 +3,7 @@ import StreamOperators from "./StreamOperators.js";
 import Util from "../../Util.js";
 import TypeTester from "../../TypeTester.js";
 
-import UtilError from "../../../errors/UtilError.js";
+import UtilError from "@el-levert/common/errors/UtilError.js";
 
 class StreamOperatorRegistry {
     static register(operator, handler) {

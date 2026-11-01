@@ -3,7 +3,7 @@ import BaseStructure from "../../BaseStructure.js";
 import Util from "../../../util/Util.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
 
-import CommandError from "../../../errors/CommandError.js";
+import CommandError from "@el-levert/common/errors/CommandError.js";
 
 class BaseCommandInfo extends BaseStructure {
     static invalidValues = {};

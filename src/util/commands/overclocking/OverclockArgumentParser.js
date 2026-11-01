@@ -3,7 +3,7 @@ import OverclockingModes from "./OverclockingModes.js";
 
 import Util from "../../Util.js";
 
-import ParserError from "../../../errors/ParserError.js";
+import ParserError from "@el-levert/common/errors/ParserError.js";
 
 class OverclockArgumentParser {
     static modes = OverclockingModes.values;

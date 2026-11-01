@@ -4,7 +4,7 @@ import ReturnCodes from "./ReturnCodes.js";
 
 import { getConfig } from "../../LevertClient.js";
 
-import VMError from "../../errors/VMError.js";
+import VMError from "@el-levert/common/errors/VMError.js";
 
 class ExternalVM {
     static $name = "externalVM";

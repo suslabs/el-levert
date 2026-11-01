@@ -17,7 +17,7 @@ import ObjectUtil from "../../../util/ObjectUtil.js";
 import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
 import RegexUtil from "../../../util/misc/RegexUtil.js";
 
-import DatabaseError from "../../../errors/DatabaseError.js";
+import DatabaseError from "@el-levert/common/errors/DatabaseError.js";
 
 class SqliteConnection extends StatementDatabase(EventEmitter) {
     static transactionSql = Object.freeze({

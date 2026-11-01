@@ -10,7 +10,7 @@ import DiscordUtil from "../../util/DiscordUtil.js";
 import Benchmark from "../../util/misc/Benchmark.js";
 import { ignoredPreviewErrors } from "./PreviewErrorMessages.js";
 
-import HandlerError from "../../errors/HandlerError.js";
+import HandlerError from "@el-levert/common/errors/HandlerError.js";
 
 function logUsage(msg, str) {
     getLogger().info(

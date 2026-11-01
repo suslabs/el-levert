@@ -7,7 +7,7 @@ import WebsocketCommandParser from "../../parsers/websocket/WebsocketCommandPars
 
 import Util from "../../util/Util.js";
 
-import CommandError from "../../errors/CommandError.js";
+import CommandError from "@el-levert/common/errors/CommandError.js";
 
 class WebsocketCommand extends BaseCommand {
     static infoClass = WebsocketCommandInfo;

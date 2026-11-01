@@ -13,7 +13,7 @@ import Benchmark from "../../util/misc/Benchmark.js";
 
 import { ScriptCommandType } from "../../parsers/command/type/index.js";
 
-import HandlerError from "../../errors/HandlerError.js";
+import HandlerError from "@el-levert/common/errors/HandlerError.js";
 
 function logUsage(msg) {
     getLogger().info(

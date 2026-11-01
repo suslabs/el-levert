@@ -1,7 +1,7 @@
 import Util from "../util/Util.js";
 import ObjectUtil from "../util/ObjectUtil.js";
 
-import ManagerError from "../errors/ManagerError.js";
+import ManagerError from "@el-levert/common/errors/ManagerError.js";
 
 class Manager {
     constructor(enabled = true, options) {

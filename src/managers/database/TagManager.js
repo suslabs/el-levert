@@ -26,7 +26,7 @@ import LoggerUtil from "../../util/LoggerUtil.js";
 import DatabaseUtil from "../../util/database/DatabaseUtil.js";
 import createuFuzzySearch from "../../util/search/uFuzzySearch.js";
 
-import TagError from "../../errors/TagError.js";
+import TagError from "@el-levert/common/errors/TagError.js";
 
 class TagManager extends DBManager {
     static $name = "tagManager";

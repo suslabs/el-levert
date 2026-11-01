@@ -26,7 +26,7 @@ import ObjectUtil from "./util/ObjectUtil.js";
 import ModuleUtil from "./util/misc/ModuleUtil.js";
 import Benchmark from "./util/misc/Benchmark.js";
 
-import ClientError from "./errors/ClientError.js";
+import ClientError from "@el-levert/common/errors/ClientError.js";
 
 let token = null,
     client = null;

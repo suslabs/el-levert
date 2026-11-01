@@ -7,7 +7,7 @@ import DailyRotateFileTransport from "./DailyRotateFileTransport.js";
 
 import Util from "../util/Util.js";
 
-import LoggerError from "../errors/LoggerError.js";
+import LoggerError from "@el-levert/common/errors/LoggerError.js";
 
 function getFileTransport(config, logFile, level) {
     if (config == null) {

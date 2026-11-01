@@ -3,7 +3,7 @@ import CommandQuotedValue from "./structs/CommandQuotedValue.js";
 
 import ArrayUtil from "../../util/ArrayUtil.js";
 
-import ParserError from "../../errors/ParserError.js";
+import ParserError from "@el-levert/common/errors/ParserError.js";
 
 class CommandTextLexer {
     static quotes = ['"', "'"];

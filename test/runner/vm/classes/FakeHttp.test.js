@@ -1,0 +1,366 @@
+import { describe, expect, test, vi, beforeEach, afterEach } from "vitest";
+import "../../../../setupGlobals.js";
+import dns from "node:dns";
+import net from "node:net";
+
+vi.mock("../../../../src/LevertClient.js", () => {
+    return {
+        getLogger: () => ({
+            error: () => {},
+            info: () => {},
+            warn: () => {}
+        }),
+        getClient: () => null
+    };
+});
+
+vi.mock("isolated-vm", () => {
+    const ExternalCopy = class {
+        constructor(val) {
+            this.val = val;
+        }
+        copyInto() {
+            return this.val;
+        }
+    };
+    return {
+        default: {
+            ExternalCopy
+        },
+        ExternalCopy
+    };
+});
+
+import { FakeHttp, initFakeAxios, resetFakeAxios } from "@el-levert/runner/vm/classes/FakeHttp.js";
+
+describe("FakeHttp security checks", () => {
+    let lookupSpy;
+    let socketConnectSpy;
+
+    const originalConnect = net.Socket.prototype.connect;
+
+    beforeEach(() => {
+        resetFakeAxios();
+        initFakeAxios();
+        lookupSpy = vi.spyOn(dns, "lookup");
+        socketConnectSpy = vi.spyOn(net.Socket.prototype, "connect");
+
+        socketConnectSpy.mockImplementation(function (options, cb) {
+            const result = originalConnect.call(this, options, cb);
+            setTimeout(() => {
+                this.destroy(new Error("Connection allowed"));
+            }, 50);
+            return result;
+        });
+    });
+
+    afterEach(() => {
+        lookupSpy.mockRestore();
+        socketConnectSpy.mockRestore();
+    });
+
+    const localIPv4s = [
+        "127.0.0.1",
+        "127.0.0.2",
+        "127.255.255.255",
+        "10.0.0.1",
+        "10.255.255.255",
+        "172.16.0.1",
+        "172.31.255.255",
+        "192.168.1.1",
+        "192.168.255.255",
+        "169.254.1.1",
+        "0.0.0.0"
+    ];
+
+    const localIPv6s = [
+        "::1",
+        "0:0:0:0:0:0:0:1",
+        "::",
+        "fc00::1",
+        "fd00::1",
+        "fe80::1",
+        "::ffff:127.0.0.1",
+        "::ffff:192.168.1.1",
+        "::127.0.0.1",
+        "::192.168.1.1",
+        "::10.0.0.1",
+        "::172.16.0.1",
+        "::169.254.1.1",
+        "::0.0.0.0",
+        "::0.0.0.1"
+    ];
+
+    test("blocks requests to raw local IPv4 addresses", async () => {
+        for (const ip of localIPv4s) {
+            const data = {
+                url: `http://${ip}`,
+                errorType: "value"
+            };
+            const res = await FakeHttp.request(undefined, data);
+            expect(res.error).toBeDefined();
+            expect(res.error.message).toContain("Access to local/private IP addresses is blocked");
+        }
+    });
+
+    test("blocks requests to raw local IPv6 addresses", async () => {
+        for (const ip of localIPv6s) {
+            const url = ip.includes(":") ? `http://[${ip}]` : `http://${ip}`;
+            const data = {
+                url,
+                errorType: "value"
+            };
+            const res = await FakeHttp.request(undefined, data);
+            expect(res.error).toBeDefined();
+            expect(res.error.message).toContain("Access to local/private IP addresses is blocked");
+        }
+    });
+
+    test("blocks hostname resolutions that result in local IPs", async () => {
+        lookupSpy.mockImplementation((hostname, options, callback) => {
+            if (hostname === "attacker-domain.com") {
+                process.nextTick(() => {
+                    if (options.all) {
+                        callback(null, [{ address: "127.0.0.1", family: 4 }]);
+                    } else {
+                        callback(null, "127.0.0.1", 4);
+                    }
+                });
+            } else if (hostname === "attacker-ipv6.com") {
+                process.nextTick(() => {
+                    if (options.all) {
+                        callback(null, [{ address: "::1", family: 6 }]);
+                    } else {
+                        callback(null, "::1", 6);
+                    }
+                });
+            } else {
+                process.nextTick(() => {
+                    callback(new Error("Not found"));
+                });
+            }
+        });
+
+        const res1 = await FakeHttp.request(undefined, {
+            url: "http://attacker-domain.com",
+            errorType: "value"
+        });
+        expect(res1.error).toBeDefined();
+        expect(res1.error.message).toContain("Access to local/private IP addresses is blocked");
+
+        const res2 = await FakeHttp.request(undefined, {
+            url: "http://attacker-ipv6.com",
+            errorType: "value"
+        });
+        expect(res2.error).toBeDefined();
+        expect(res2.error.message).toContain("Access to local/private IP addresses is blocked");
+    });
+
+    test("blocks hostname resolutions with multiple IPs if any is local", async () => {
+        lookupSpy.mockImplementation((hostname, options, callback) => {
+            if (hostname === "attacker-mixed.com") {
+                process.nextTick(() => {
+                    callback(null, [
+                        { address: "8.8.8.8", family: 4 },
+                        { address: "10.0.0.1", family: 4 }
+                    ]);
+                });
+            } else {
+                process.nextTick(() => {
+                    callback(new Error("Not found"));
+                });
+            }
+        });
+
+        const res = await FakeHttp.request(undefined, {
+            url: "http://attacker-mixed.com",
+            errorType: "value"
+        });
+        expect(res.error).toBeDefined();
+        expect(res.error.message).toContain("Access to local/private IP addresses is blocked");
+    });
+
+    test("allows connection attempts to public IPs without blocking (eventually fails with connection error)", async () => {
+        lookupSpy.mockImplementation((hostname, options, callback) => {
+            if (hostname === "safe.com") {
+                process.nextTick(() => {
+                    if (options.all) {
+                        callback(null, [{ address: "9.9.9.9", family: 4 }]);
+                    } else {
+                        callback(null, "9.9.9.9", 4);
+                    }
+                });
+            } else {
+                process.nextTick(() => {
+                    callback(new Error("Not found"));
+                });
+            }
+        });
+
+        const res = await FakeHttp.request(undefined, {
+            url: "http://safe.com",
+            errorType: "value"
+        });
+
+        expect(res.error).toBeDefined();
+        expect(res.error.message).toContain("Connection allowed");
+    });
+
+    test("sanitizes malformed request config fields instead of crashing", async () => {
+        lookupSpy.mockImplementation((hostname, options, callback) => {
+            if (hostname === "safe.com") {
+                process.nextTick(() => {
+                    if (options.all) {
+                        callback(null, [{ address: "9.9.9.9", family: 4 }]);
+                    } else {
+                        callback(null, "9.9.9.9", 4);
+                    }
+                });
+            } else {
+                process.nextTick(() => {
+                    callback(new Error("Not found"));
+                });
+            }
+        });
+
+        const res = await FakeHttp.request(undefined, {
+            url: "http://safe.com/a/",
+            method: true,
+            headers: true,
+            params: true,
+            data: {},
+            auth: true,
+            responseType: true,
+            responseEncoding: true,
+            proxy: true,
+            decompress: "yes",
+            maxRedirects: "lots",
+            validateStatus: true,
+            errorType: "value"
+        });
+
+        expect(res.error).toBeDefined();
+        expect(res.error.message).toContain("Connection allowed");
+    });
+
+    test("is null before initialization and throws if not initialized", async () => {
+        resetFakeAxios();
+        expect(FakeHttp.client).toBeNull();
+        await expect(FakeHttp.request(undefined, { url: "http://example.com" })).rejects.toThrow(
+            "HTTP client is not initialized"
+        );
+
+        const client = initFakeAxios();
+        expect(client).not.toBeNull();
+        expect(FakeHttp.client).toBe(client);
+        expect(initFakeAxios()).toBe(client);
+
+        resetFakeAxios();
+        expect(FakeHttp.client).toBeNull();
+    });
+
+    test("allows localhost requests when allowLocalhostRequests is true", async () => {
+        resetFakeAxios();
+        initFakeAxios({
+            allowLocalhostRequests: true,
+            allowFilesystemRequests: false
+        });
+
+        const res = await FakeHttp.request(undefined, {
+            url: "http://127.0.0.1",
+            errorType: "value"
+        });
+
+        expect(res.error).toBeDefined();
+        expect(res.error.message).not.toContain("Access to local/private IP addresses is blocked");
+    });
+
+    test("allows filesystem requests when allowFilesystemRequests is true", async () => {
+        resetFakeAxios();
+        initFakeAxios({
+            allowLocalhostRequests: false,
+            allowFilesystemRequests: true
+        });
+
+        const res = await FakeHttp.request(undefined, {
+            url: "file:///C:/does_not_exist_test_file.txt",
+            errorType: "value"
+        });
+
+        expect(res.error).toBeDefined();
+        expect(res.error.message).toContain("File not found or unreadable");
+    });
+
+    test("enforces maxUploadSize by rejecting oversized request payloads", async () => {
+        resetFakeAxios();
+        initFakeAxios({
+            allowLocalhostRequests: true,
+            maxUploadSize: 50
+        });
+
+        const context = { id: "test-upload-ctx" };
+
+        await expect(
+            FakeHttp.request(context, {
+                url: "http://127.0.0.1",
+                data: "x".repeat(100),
+                errorType: "value"
+            })
+        ).rejects.toThrow("Request body exceeds maximum upload size of 50 bytes");
+    });
+
+    test("enforces maxDownloadSize in fsAdapter by rejecting oversized files", async () => {
+        resetFakeAxios();
+        initFakeAxios({
+            allowFilesystemRequests: true,
+            maxDownloadSize: 10
+        });
+
+        const thisFileUrl = new URL(import.meta.url).href;
+
+        const res = await FakeHttp.request(undefined, {
+            url: thisFileUrl,
+            errorType: "value"
+        });
+
+        expect(res.status).toBe(413);
+        expect(res.error).toBeDefined();
+        expect(res.error.message).toContain("File size exceeds maximum download size of 10 bytes");
+    });
+
+    test("enforces per-execution rate limit across calls and isolates scopes", async () => {
+        resetFakeAxios();
+        initFakeAxios({
+            allowLocalhostRequests: true,
+            maxRequests: 2,
+            rateLimitWindow: 2000
+        });
+
+        const rootA = { id: "exec-A" };
+        const contextA = { rootContext: rootA };
+
+        const rootB = { id: "exec-B" };
+        const contextB = { rootContext: rootB };
+
+        // 1st and 2nd requests for context A pass rate limit check
+        const resA1 = await FakeHttp.request(contextA, { url: "http://127.0.0.1", errorType: "value" });
+        expect(resA1).toBeDefined();
+
+        const resA2 = await FakeHttp.request(contextA, { url: "http://127.0.0.1", errorType: "value" });
+        expect(resA2).toBeDefined();
+
+        // 3rd request for context A exceeds rate limit
+        await expect(FakeHttp.request(contextA, { url: "http://127.0.0.1", errorType: "value" })).rejects.toThrow(
+            "HTTP request rate limit exceeded"
+        );
+
+        // Context B has its own independent rate limit quota
+        const resB1 = await FakeHttp.request(contextB, { url: "http://127.0.0.1", errorType: "value" });
+        expect(resB1).toBeDefined();
+
+        // After resetting context A, capacity is restored
+        FakeHttp.resetContext(contextA);
+        const resA3 = await FakeHttp.request(contextA, { url: "http://127.0.0.1", errorType: "value" });
+        expect(resA3).toBeDefined();
+    });
+});

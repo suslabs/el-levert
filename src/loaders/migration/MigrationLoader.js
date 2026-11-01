@@ -5,7 +5,7 @@ import { LoadStatus } from "../LoadStatus.js";
 
 import ObjectUtil from "../../util/ObjectUtil.js";
 
-import DatabaseError from "../../errors/DatabaseError.js";
+import DatabaseError from "@el-levert/common/errors/DatabaseError.js";
 
 class MigrationLoader extends DirectoryLoader {
     constructor(dirPath, logger, options) {

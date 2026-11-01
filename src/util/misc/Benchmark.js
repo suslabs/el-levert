@@ -3,7 +3,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import Util from "../Util.js";
 import CaseUtil from "./CaseUtil.js";
 
-import UtilError from "../../errors/UtilError.js";
+import UtilError from "@el-levert/common/errors/UtilError.js";
 
 class Benchmark {
     static data = Object.create(null);

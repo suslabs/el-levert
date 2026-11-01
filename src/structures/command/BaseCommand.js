@@ -6,7 +6,7 @@ import BaseCommandContext from "./context/BaseCommandContext.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 
-import CommandError from "../../errors/CommandError.js";
+import CommandError from "@el-levert/common/errors/CommandError.js";
 
 class BaseCommand extends BaseStructure {
     static infoClass = BaseCommandInfo;

@@ -15,7 +15,7 @@ import WebsocketCommandValidationIssue from "./structs/WebsocketCommandValidatio
 
 import ObjectUtil from "../../util/ObjectUtil.js";
 
-import CommandError from "../../errors/CommandError.js";
+import CommandError from "@el-levert/common/errors/CommandError.js";
 
 const ajv = new Ajv({
     coerceTypes: true,

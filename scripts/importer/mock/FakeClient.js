@@ -1,6 +1,6 @@
 import ObjectUtil from "../../../src/util/ObjectUtil.js";
 
-import ClientError from "../../../src/errors/ClientError.js";
+import ClientError from "@el-levert/common/errors/ClientError.js";
 
 let client = null;
 

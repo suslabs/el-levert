@@ -10,7 +10,7 @@ import ArrayUtil from "../../util/ArrayUtil.js";
 
 import { LoadStatus } from "../../loaders/LoadStatus.js";
 
-import CommandError from "../../errors/CommandError.js";
+import CommandError from "@el-levert/common/errors/CommandError.js";
 
 class BaseCommandManager extends Manager {
     static commandClass = BaseCommand;

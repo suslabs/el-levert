@@ -5,7 +5,7 @@ import TypeTester from "../../util/TypeTester.js";
 
 import { TokenType, TokenNames, TokenOps, Precedence } from "./Tokens.js";
 
-import StoikError from "../../errors/StoikError.js";
+import StoikError from "@el-levert/common/errors/StoikError.js";
 
 const Stoik = Object.freeze({
     tokenize: equation => {

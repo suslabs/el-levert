@@ -1,0 +1,40 @@
+import { describe, expect, test } from "vitest";
+
+import RegexUtil from "@el-levert/common/util/misc/RegexUtil.js";
+
+describe("RegexUtil", () => {
+    test("processes regex helpers", () => {
+        expect(RegexUtil.escapeRegex("a+b?")).toBe("a\\+b\\?");
+        expect(RegexUtil.escapeCharClass("a-]")).toBe("a\\-\\]");
+        expect(RegexUtil.validFlags("gi")).toBe(true);
+        expect(RegexUtil.validFlags("gg")).toBe(false);
+
+        const match = /(?<nameA>alpha)|(?<nameB>beta)/.exec("beta");
+        expect(RegexUtil.firstGroup(match, "name")).toBe("beta");
+        expect(RegexUtil.firstGroup(null, "name")).toBeNull();
+        expect(RegexUtil.firstGroup(/alpha/.exec("alpha"), "name")).toBeNull();
+        expect(RegexUtil.wordStart("hello-world", 6)).toBe(true);
+        expect(RegexUtil.wordEnd("hello", 4)).toBe(true);
+        expect(RegexUtil.getMergedRegex([])).toBeNull();
+        expect(RegexUtil.getMergedRegex([null, /dog/i]).source).toContain("dog");
+        expect("rabbit".match(RegexUtil.getWordRegex("rabbit"))).toEqual(["rabbit"]);
+        expect("cleveret rabbit".match(RegexUtil.getWordRegex(["leveret", "rabbit"]))).toEqual(["rabbit"]);
+        expect(RegexUtil.getMergedRegex([/cat/g, /dog/i]).source).toContain("cat");
+        expect(
+            RegexUtil.multipleReplace("abc123", [
+                [/[a-z]+/, "letters"],
+                [/\d+/, value => `[${value}]`]
+            ])
+        ).toBe("letters[123]");
+        expect(
+            RegexUtil.multipleReplace("foo bar foo bar", [
+                [/foo/, "FOO"],
+                [/bar/g, "BAR"]
+            ])
+        ).toBe("FOO BAR foo BAR");
+        expect(RegexUtil.multipleReplace("abc123def", [[/(?<=abc)\d+/, "XYZ"]])).toBe("abcXYZdef");
+        expect(RegexUtil.templateReplace("Hi {{ name }} and \\{{ skip }}", { name: "Alex" })).toBe(
+            "Hi Alex and \\{{ skip }}"
+        );
+    });
+});

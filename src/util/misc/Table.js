@@ -3,7 +3,7 @@ import ArrayUtil from "../ArrayUtil.js";
 import TypeTester from "../TypeTester.js";
 import ObjectUtil from "../ObjectUtil.js";
 
-import UtilError from "../../errors/UtilError.js";
+import UtilError from "@el-levert/common/errors/UtilError.js";
 
 // prettier-ignore
 const charsets = Object.freeze({

@@ -13,7 +13,7 @@ import DatabaseUtil from "../../util/database/DatabaseUtil.js";
 import Benchmark from "../../util/misc/Benchmark.js";
 import SnoozeUtil from "../../util/commands/SnoozeUtil.js";
 
-import ReminderError from "../../errors/ReminderError.js";
+import ReminderError from "@el-levert/common/errors/ReminderError.js";
 
 function logTime() {
     const elapsed = Benchmark.stopTiming("send_reminders", false);

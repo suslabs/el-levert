@@ -3,7 +3,7 @@ import ObjectUtil from "../ObjectUtil.js";
 import ArrayUtil from "../ArrayUtil.js";
 import TypeTester from "../TypeTester.js";
 
-import BitFieldError from "../../errors/BitFieldError.js";
+import BitFieldError from "@el-levert/common/errors/BitFieldError.js";
 
 class BitField {
     static from(bits = 0, options = {}) {

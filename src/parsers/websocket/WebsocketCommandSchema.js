@@ -9,7 +9,7 @@ import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 
-import CommandError from "../../errors/CommandError.js";
+import CommandError from "@el-levert/common/errors/CommandError.js";
 
 const typeSchema = {
     oneOf: [

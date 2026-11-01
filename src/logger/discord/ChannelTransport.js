@@ -3,7 +3,7 @@ import BaseDiscordTransport from "./BaseDiscordTransport.js";
 import Util from "../../util/Util.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 
-import LoggerError from "../../errors/LoggerError.js";
+import LoggerError from "@el-levert/common/errors/LoggerError.js";
 
 class ChannelTransport extends BaseDiscordTransport {
     static $name = "discord.channel";

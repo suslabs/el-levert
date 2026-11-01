@@ -5,7 +5,7 @@ import winston from "winston";
 import Util from "../util/Util.js";
 import ObjectUtil from "../util/ObjectUtil.js";
 
-import LoggerError from "../errors/LoggerError.js";
+import LoggerError from "@el-levert/common/errors/LoggerError.js";
 
 function getFilename(logFile, level, date) {
     const parsed = path.parse(logFile);

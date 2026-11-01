@@ -4,7 +4,7 @@ import FakeTag from "../../structures/tag/FakeTag.js";
 
 import Util from "../../util/Util.js";
 
-import TagError from "../../errors/TagError.js";
+import TagError from "@el-levert/common/errors/TagError.js";
 
 class FakeTagRegistry {
     static register(fakeTag) {

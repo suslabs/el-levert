@@ -15,7 +15,7 @@ import EmbedCountAreas from "./EmbedCountAreas.js";
 import CountTypes from "./CountTypes.js";
 import { BinaryExtensions, TextExtensions } from "./misc/FileExtensions.js";
 
-import UtilError from "../errors/UtilError.js";
+import UtilError from "@el-levert/common/errors/UtilError.js";
 
 let DiscordUtil = {
     msgCharLimit: 2000,

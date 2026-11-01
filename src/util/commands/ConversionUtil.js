@@ -4,7 +4,7 @@ import Util from "../Util.js";
 import ArrayUtil from "../ArrayUtil.js";
 import TypeTester from "../TypeTester.js";
 
-import UtilError from "../../errors/UtilError.js";
+import UtilError from "@el-levert/common/errors/UtilError.js";
 
 let ConversionUtil = {
     factors: {

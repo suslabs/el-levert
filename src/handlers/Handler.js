@@ -3,7 +3,7 @@ import { getConfig } from "../LevertClient.js";
 import Util from "../util/Util.js";
 import ObjectUtil from "../util/ObjectUtil.js";
 
-import HandlerError from "../errors/HandlerError.js";
+import HandlerError from "@el-levert/common/errors/HandlerError.js";
 
 class Handler {
     constructor(enabled = true, options) {

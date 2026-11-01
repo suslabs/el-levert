@@ -3,7 +3,7 @@ import TypeTester from "../../../util/TypeTester.js";
 import ArrayUtil from "../../../util/ArrayUtil.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
 
-import HandlerError from "../../../errors/HandlerError.js";
+import HandlerError from "@el-levert/common/errors/HandlerError.js";
 
 class Tracker {
     static itemName = "";

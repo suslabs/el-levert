@@ -1,6 +1,6 @@
 import ArrayUtil from "../../../util/ArrayUtil.js";
 
-import DatabaseError from "../../../errors/DatabaseError.js";
+import DatabaseError from "@el-levert/common/errors/DatabaseError.js";
 
 export default function (base) {
     class StatementDatabase extends base {

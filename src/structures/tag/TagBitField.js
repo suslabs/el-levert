@@ -6,7 +6,7 @@ import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 
-import TagError from "../../errors/TagError.js";
+import TagError from "@el-levert/common/errors/TagError.js";
 
 class TagBitField extends BitField {
     static from(data = TagTypes.defaults.flags, options) {

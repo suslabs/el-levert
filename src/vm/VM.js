@@ -1,7 +1,7 @@
 import Util from "../util/Util.js";
 import ObjectUtil from "../util/ObjectUtil.js";
 
-import VMError from "../errors/VMError.js";
+import VMError from "@el-levert/common/errors/VMError.js";
 
 class VM {
     static VMname = "vm";

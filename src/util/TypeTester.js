@@ -2,7 +2,7 @@ import Util from "./Util.js";
 import ArrayUtil from "./ArrayUtil.js";
 import ObjectUtil from "./ObjectUtil.js";
 
-import UtilError from "../errors/UtilError.js";
+import UtilError from "@el-levert/common/errors/UtilError.js";
 
 const TypeTester = Object.freeze({
     isObject: obj => {

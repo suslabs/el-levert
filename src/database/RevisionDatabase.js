@@ -8,7 +8,7 @@ import FileUtil from "../util/misc/FileUtil.js";
 
 import dbFilenames from "./config/dbFilenames.json" assert { type: "json" };
 
-import RevisionError from "../errors/RevisionError.js";
+import RevisionError from "@el-levert/common/errors/RevisionError.js";
 
 const revisionQueryPath = FileUtil.resolve(dbFilenames.queryPath, "revision"),
     revisionMigrationsPath = FileUtil.resolve(dbFilenames.migrationsPath, "revision");

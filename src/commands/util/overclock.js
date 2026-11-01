@@ -10,8 +10,8 @@ import Overclocking from "../../util/commands/overclocking/Overclocking.js";
 import OverclockingModes from "../../util/commands/overclocking/OverclockingModes.js";
 import OverclockArgumentParser from "../../util/commands/overclocking/OverclockArgumentParser.js";
 
-import ParserError from "../../errors/ParserError.js";
-import OCError from "../../errors/OCError.js";
+import ParserError from "@el-levert/common/errors/ParserError.js";
+import OCError from "@el-levert/common/errors/OCError.js";
 
 function codeblock(str) {
     return `\`\`\`lua\n${str}\`\`\``;

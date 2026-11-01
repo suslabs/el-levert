@@ -15,7 +15,7 @@ import ObjectUtil from "../../../util/ObjectUtil.js";
 import TypeTester from "../../../util/TypeTester.js";
 import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
 
-import TagError from "../../../errors/TagError.js";
+import TagError from "@el-levert/common/errors/TagError.js";
 
 class TagRevisionManager {
     static target = "tag";

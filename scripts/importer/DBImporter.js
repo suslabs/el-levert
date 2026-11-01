@@ -22,7 +22,7 @@ import ProgressTracker from "../../src/util/misc/ProgressTracker.js";
 
 import TagCommand from "../../src/commands/tag/tag.js";
 
-import ImporterError from "../../src/errors/ImporterError.js";
+import ImporterError from "@el-levert/common/errors/ImporterError.js";
 
 class DBImporter {
     static maintenanceSql = Object.freeze({

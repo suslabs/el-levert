@@ -1,0 +1,573 @@
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+
+import { createDiscordChannel, createDiscordMessage } from "../../helpers/discordStubs.js";
+import { cleanupRuntime, createRuntime } from "../../helpers/runtimeHarness.js";
+
+let runtime;
+let CommandHandler;
+let handler;
+
+beforeEach(async () => {
+    runtime = await createRuntime({
+        loadManagers: true,
+        loadVMs: true,
+        loadHandlers: true
+    });
+
+    ({ default: CommandHandler } = await import("../../../../src/handlers/discord/CommandHandler.js"));
+    handler = runtime.client.commandHandler;
+});
+
+afterEach(async () => {
+    await cleanupRuntime(runtime);
+    runtime = null;
+});
+
+describe("CommandHandler", () => {
+    test("ignores non-commands and executes real commands through the reply path", async () => {
+        const plainMsg = createDiscordMessage("hello there", {
+            reply: vi.fn(async data => ({ content: data }))
+        });
+
+        expect(await handler.execute(plainMsg)).toBe(false);
+        expect(plainMsg.reply).not.toHaveBeenCalled();
+
+        const addMsg = createDiscordMessage("%tag add alpha body", {
+            reply: vi.fn(async data => ({ content: typeof data === "string" ? data : data.content }))
+        });
+
+        expect(await handler.execute(addMsg)).toBe(true);
+        expect(addMsg.reply).toHaveBeenCalledWith({
+            content: ":white_check_mark: Created tag **alpha**."
+        });
+
+        const runMsg = createDiscordMessage("%tag alpha", {
+            reply: vi.fn(async data => ({ content: typeof data === "string" ? data : data.content }))
+        });
+
+        expect(await handler.execute(runMsg)).toBe(true);
+        expect(runMsg.reply).toHaveBeenCalledWith({
+            content: "body"
+        });
+    });
+
+    test("reports real execution failures through replyWithError", async () => {
+        const pingCmd = runtime.client.commandManager.searchCommands("ping");
+        vi.spyOn(pingCmd, "execute").mockRejectedValueOnce(new Error("Command crashed"));
+
+        const msg = createDiscordMessage("%ping", {
+            reply: vi.fn(async data => data)
+        });
+
+        expect(await handler.execute(msg)).toBe(true);
+
+        const [reply] = msg.reply.mock.calls[0];
+        expect(reply.content).toContain("Encountered exception while executing command **ping**");
+        expect(reply.files).toHaveLength(1);
+    });
+
+    test("reports tag execution failures through specialized error handler", async () => {
+        await runtime.client.tagManager.add("broken", "(", "user-1", { type: "ivm" });
+
+        const msg = createDiscordMessage("%tag broken", {
+            reply: vi.fn(async data => data)
+        });
+
+        expect(await handler.execute(msg)).toBe(true);
+
+        const [reply] = msg.reply.mock.calls[0];
+        expect(reply.content).toContain("Encountered exception while executing tag **broken**:");
+        expect(reply.embeds).toHaveLength(1);
+    });
+
+    test("supports stateful command-managed replies and edits", async () => {
+        const deleteSpy = vi.fn(async () => undefined);
+        const editSpy = vi.fn(async data => ({
+            id: "reply-1",
+            content: typeof data === "string" ? data : data.content,
+            edit: editSpy,
+            delete: deleteSpy
+        }));
+        const msg = createDiscordMessage("%stateful", {
+            reply: vi.fn(async data => ({
+                id: "reply-1",
+                content: typeof data === "string" ? data : data.content,
+                edit: editSpy,
+                delete: deleteSpy
+            }))
+        });
+
+        runtime.client.commandManager = {
+            isCommand: vi.fn(() => true),
+            getCommand: vi.fn(() => [
+                {
+                    name: "stateful",
+                    async execute(context) {
+                        await context.reply("First reply");
+                        await context.edit("Second reply");
+                    }
+                },
+                "stateful",
+                "",
+                {
+                    raw: msg.content,
+                    content: "stateful",
+                    name: "stateful",
+                    argsText: ""
+                }
+            ])
+        };
+
+        expect(await handler.execute(msg)).toBe(true);
+        expect(msg.reply).toHaveBeenCalledWith({
+            content: "First reply"
+        });
+        expect(editSpy).toHaveBeenCalledWith({
+            content: "Second reply"
+        });
+    });
+
+    test("shows a processing reply for slow commands and edits it with the final output", async () => {
+        handler.commandWaitTime = 1;
+
+        const deleteSpy = vi.fn(async () => undefined);
+        const editSpy = vi.fn(async data => ({
+            id: "reply-1",
+            content: typeof data === "string" ? data : data.content,
+            edit: editSpy,
+            delete: deleteSpy
+        }));
+        const msg = createDiscordMessage("%slow", {
+            reply: vi.fn(async data => ({
+                id: "reply-1",
+                content: typeof data === "string" ? data : data.content,
+                edit: editSpy,
+                delete: deleteSpy
+            }))
+        });
+
+        runtime.client.commandManager = {
+            isCommand: vi.fn(() => true),
+            getCommand: vi.fn(() => [
+                {
+                    name: "slow",
+                    async execute() {
+                        await new Promise(resolve => setTimeout(resolve, 10));
+                        return "Done";
+                    }
+                },
+                "slow",
+                "",
+                {
+                    raw: msg.content,
+                    content: "slow",
+                    name: "slow",
+                    argsText: ""
+                }
+            ])
+        };
+
+        expect(await handler.execute(msg)).toBe(true);
+        expect(msg.reply).toHaveBeenCalledWith({
+            content: ":hourglass_flowing_sand: Processing command..."
+        });
+        expect(editSpy).toHaveBeenCalledWith({
+            content: "Done"
+        });
+    });
+
+    test("times out slow commands and edits the processing reply with a warning", async () => {
+        handler.commandWaitTime = 1;
+        handler.globalTimeLimit = 5;
+
+        const deleteSpy = vi.fn(async () => undefined);
+        const editSpy = vi.fn(async data => ({
+            id: "reply-1",
+            content: typeof data === "string" ? data : data.content,
+            edit: editSpy,
+            delete: deleteSpy
+        }));
+        const msg = createDiscordMessage("%slow-timeout", {
+            reply: vi.fn(async data => ({
+                id: "reply-1",
+                content: typeof data === "string" ? data : data.content,
+                edit: editSpy,
+                delete: deleteSpy
+            }))
+        });
+
+        runtime.client.commandManager = {
+            isCommand: vi.fn(() => true),
+            getCommand: vi.fn(() => [
+                {
+                    name: "slow-timeout",
+                    async execute() {
+                        await new Promise(resolve => setTimeout(resolve, 20));
+                        return "Too late";
+                    }
+                },
+                "slow-timeout",
+                "",
+                {
+                    raw: msg.content,
+                    content: "slow-timeout",
+                    name: "slow-timeout",
+                    argsText: ""
+                }
+            ])
+        };
+
+        expect(await handler.execute(msg)).toBe(true);
+        expect(msg.reply).toHaveBeenCalledWith({
+            content: ":hourglass_flowing_sand: Processing command..."
+        });
+        expect(editSpy).toHaveBeenCalledWith({
+            content: ":no_entry_sign: Timed out executing command **slow-timeout**."
+        });
+    });
+
+    test("does not time out inspector-backed script commands after they disable the watchdog", async () => {
+        handler.commandWaitTime = 1;
+        handler.globalTimeLimit = 5;
+
+        const deleteSpy = vi.fn(async () => undefined);
+        const editSpy = vi.fn(async data => ({
+            id: "reply-1",
+            content: typeof data === "string" ? data : data.content,
+            edit: editSpy,
+            delete: deleteSpy
+        }));
+        const msg = createDiscordMessage("%eval ```js\n1 + 1\n```", {
+            reply: vi.fn(async data => ({
+                id: "reply-1",
+                content: typeof data === "string" ? data : data.content,
+                edit: editSpy,
+                delete: deleteSpy
+            }))
+        });
+
+        runtime.client.tagVM.runScript = async (_, values, options) => {
+            await new Promise(resolve => setTimeout(resolve, 2));
+            options.commandContext.disableTimeout();
+            await new Promise(resolve => setTimeout(resolve, 20));
+
+            return "debugged";
+        };
+
+        expect(await handler.execute(msg)).toBe(true);
+        expect(msg.reply).toHaveBeenCalledWith({
+            content: ":hourglass_flowing_sand: Processing command..."
+        });
+        expect(editSpy).toHaveBeenCalledWith({
+            content: "debugged"
+        });
+    });
+
+    test("resubmit reruns edited commands and removes prior tracked replies", async () => {
+        const firstDeleteSpy = vi.fn(async () => undefined);
+        const secondDeleteSpy = vi.fn(async () => undefined);
+        const replies = [
+            {
+                id: "reply-1",
+                content: "Initial",
+                edit: vi.fn(async data => ({
+                    id: "reply-1",
+                    content: typeof data === "string" ? data : data.content,
+                    edit: vi.fn(),
+                    delete: firstDeleteSpy
+                })),
+                delete: firstDeleteSpy
+            },
+            {
+                id: "reply-2",
+                content: "Edited",
+                edit: vi.fn(async data => ({
+                    id: "reply-2",
+                    content: typeof data === "string" ? data : data.content,
+                    edit: vi.fn(),
+                    delete: secondDeleteSpy
+                })),
+                delete: secondDeleteSpy
+            }
+        ];
+        const msg = createDiscordMessage("%demo first", {
+            id: "msg-1",
+            reply: vi.fn(async data => {
+                const reply = replies.shift();
+                return {
+                    ...reply,
+                    content: typeof data === "string" ? data : data.content
+                };
+            })
+        });
+        const executionFlags = [];
+
+        runtime.client.commandManager = {
+            isCommand: vi.fn(content => typeof content === "string" && content.startsWith("%")),
+            getCommand: vi.fn(content => {
+                const argsText = content.split(" ").slice(1).join(" ");
+
+                return [
+                    {
+                        name: "demo",
+                        async execute(context) {
+                            executionFlags.push(context.isEdit);
+                            return context.isEdit ? "Edited" : "Initial";
+                        }
+                    },
+                    "demo",
+                    argsText,
+                    {
+                        raw: content,
+                        content: content.slice(1),
+                        name: "demo",
+                        argsText
+                    }
+                ];
+            })
+        };
+
+        expect(await handler.execute(msg)).toBe(true);
+
+        msg.content = "%demo second";
+        expect(await handler.resubmit(msg)).toBe(true);
+
+        expect(firstDeleteSpy).toHaveBeenCalledTimes(1);
+        expect(msg.reply).toHaveBeenNthCalledWith(1, {
+            content: "Initial"
+        });
+        expect(msg.reply).toHaveBeenNthCalledWith(2, {
+            content: "Edited"
+        });
+        expect(executionFlags).toEqual([false, true]);
+    });
+
+    test("resubmit removes tracked replies when an edited message is no longer a command", async () => {
+        const deleteSpy = vi.fn(async () => undefined);
+        const msg = createDiscordMessage("%demo", {
+            id: "msg-2",
+            reply: vi.fn(async data => ({
+                id: "reply-1",
+                content: typeof data === "string" ? data : data.content,
+                edit: vi.fn(),
+                delete: deleteSpy
+            }))
+        });
+
+        runtime.client.commandManager = {
+            isCommand: vi.fn(content => typeof content === "string" && content.startsWith("%")),
+            getCommand: vi.fn(content => [
+                {
+                    name: "demo",
+                    async execute() {
+                        return "Initial";
+                    }
+                },
+                "demo",
+                "",
+                {
+                    raw: content,
+                    content: "demo",
+                    name: "demo",
+                    argsText: ""
+                }
+            ])
+        };
+
+        expect(await handler.execute(msg)).toBe(true);
+
+        msg.content = "not a command anymore";
+        expect(await handler.resubmit(msg)).toBe(true);
+
+        expect(deleteSpy).toHaveBeenCalledTimes(1);
+        expect(msg.reply).toHaveBeenCalledTimes(1);
+    });
+
+    test("populates replyMsg on context when message references another message", async () => {
+        const referencedMsg = createDiscordMessage("hello original", {
+            id: "msg-ref-1"
+        });
+
+        runtime.client.fetchMessage = vi.fn(async (chId, msgId) => {
+            if (msgId === "msg-ref-1") {
+                return referencedMsg;
+            }
+
+            return null;
+        });
+
+        let capturedContext = null;
+
+        runtime.client.commandManager = {
+            isCommand: vi.fn(() => true),
+            getCommand: vi.fn(content => [
+                {
+                    name: "testref",
+                    async execute(ctx) {
+                        capturedContext = ctx;
+                        return "ok";
+                    }
+                },
+                "testref",
+                "",
+                {
+                    raw: content,
+                    content: "testref",
+                    name: "testref",
+                    argsText: ""
+                }
+            ])
+        };
+
+        const msgWithRef = createDiscordMessage("%testref", {
+            id: "msg-cmd-1",
+            channel: createDiscordChannel({ id: "ch-1" }),
+            reference: { messageId: "msg-ref-1" },
+            reply: vi.fn(async data => data)
+        });
+
+        expect(await handler.execute(msgWithRef)).toBe(true);
+        expect(runtime.client.fetchMessage).toHaveBeenCalledWith("ch-1", "msg-ref-1");
+        expect(capturedContext.replyMsg).toBe(referencedMsg);
+
+        const msgWithoutRef = createDiscordMessage("%testref", {
+            id: "msg-cmd-2",
+            channel: createDiscordChannel({ id: "ch-1" }),
+            reply: vi.fn(async data => data)
+        });
+
+        expect(await handler.execute(msgWithoutRef)).toBe(true);
+        expect(capturedContext.replyMsg).toBeNull();
+    });
+
+    test("aborts command execution and warns if rate limited", async () => {
+        const RateLimiter = (await import("../../../../src/util/misc/RateLimiter.js")).default;
+        const MessageHandler = (await import("../../../../src/handlers/discord/MessageHandler.js")).default;
+
+        MessageHandler.rateLimiter = new RateLimiter(1, 5000);
+
+        const msg1 = createDiscordMessage("%tag list", {
+            author: { id: "user-rl" },
+            reply: vi.fn(async data => data)
+        });
+
+        expect(await handler.execute(msg1)).toBe(true);
+
+        const msg2 = createDiscordMessage("%tag list", {
+            author: { id: "user-rl" },
+            reply: vi.fn(async data => data)
+        });
+
+        expect(await handler.execute(msg2)).toBe(false);
+        expect(msg2.reply).toHaveBeenCalledWith(
+            expect.objectContaining({
+                content: expect.stringContaining("slow down")
+            })
+        );
+
+        MessageHandler.resetRateLimiter();
+    });
+
+    test("fast commands do not trigger processing reply and send output directly", async () => {
+        handler.commandWaitTime = 50;
+
+        const msg = createDiscordMessage("%fast", {
+            reply: vi.fn(async data => ({
+                id: "reply-fast",
+                content: typeof data === "string" ? data : data.content
+            }))
+        });
+
+        runtime.client.commandManager = {
+            isCommand: vi.fn(() => true),
+            getCommand: vi.fn(() => [
+                {
+                    name: "fast",
+                    async execute() {
+                        return "Fast result";
+                    }
+                },
+                "fast",
+                "",
+                {
+                    raw: msg.content,
+                    content: "fast",
+                    name: "fast",
+                    argsText: ""
+                }
+            ])
+        };
+
+        expect(await handler.execute(msg)).toBe(true);
+        expect(msg.reply).toHaveBeenCalledTimes(1);
+        expect(msg.reply).toHaveBeenCalledWith({
+            content: "Fast result"
+        });
+    });
+
+    test("cancels and cleans up in-flight processing reply when command finishes before reply resolves", async () => {
+        handler.commandWaitTime = 1;
+
+        const deleteSpy = vi.fn(async () => undefined);
+
+        let resolveProcessing;
+
+        const msg = createDiscordMessage("%race", {
+            reply: vi.fn(data => {
+                const content = typeof data === "string" ? data : data.content;
+
+                if (content.includes("Processing command...")) {
+                    return new Promise(resolve => {
+                        resolveProcessing = () =>
+                            resolve({
+                                id: "processing-reply",
+                                content,
+                                delete: deleteSpy
+                            });
+                    });
+                }
+
+                return Promise.resolve({
+                    id: "final-reply",
+                    content
+                });
+            })
+        });
+
+        runtime.client.commandManager = {
+            isCommand: vi.fn(() => true),
+            getCommand: vi.fn(() => [
+                {
+                    name: "race",
+                    async execute() {
+                        await new Promise(resolve => setTimeout(resolve, 10));
+                        return "Race finished";
+                    }
+                },
+                "race",
+                "",
+                {
+                    raw: msg.content,
+                    content: "race",
+                    name: "race",
+                    argsText: ""
+                }
+            ])
+        };
+
+        expect(await handler.execute(msg)).toBe(true);
+
+        expect(msg.reply).toHaveBeenCalledWith(
+            expect.objectContaining({
+                content: "Race finished"
+            })
+        );
+
+        expect(typeof resolveProcessing === "function").toBe(true);
+
+        resolveProcessing();
+        await new Promise(resolve => setTimeout(resolve, 10));
+
+        expect(deleteSpy).toHaveBeenCalled();
+    });
+});

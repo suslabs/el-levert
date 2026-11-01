@@ -2,7 +2,7 @@ import { DatabaseEvents } from "./DatabaseEvents.js";
 
 import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
 
-import DatabaseError from "../../../errors/DatabaseError.js";
+import DatabaseError from "@el-levert/common/errors/DatabaseError.js";
 
 class SqliteStatementContainer {
     constructor(db, sql, defaultParam = []) {

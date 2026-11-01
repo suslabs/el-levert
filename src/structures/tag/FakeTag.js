@@ -2,7 +2,7 @@ import Tag from "./Tag.js";
 
 import ObjectUtil from "../../util/ObjectUtil.js";
 
-import TagError from "../../errors/TagError.js";
+import TagError from "@el-levert/common/errors/TagError.js";
 
 class FakeTag extends Tag {
     constructor(data = {}) {

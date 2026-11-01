@@ -2,7 +2,7 @@ import { parseDate } from "chrono-node";
 
 import Util from "../Util.js";
 
-import UtilError from "../../errors/UtilError.js";
+import UtilError from "@el-levert/common/errors/UtilError.js";
 
 let DateUtil = {
     parse: value => {

@@ -1,4 +1,4 @@
-import StoikError from "../../errors/StoikError.js";
+import StoikError from "@el-levert/common/errors/StoikError.js";
 
 class Molecule extends Map {
     static validElement(element) {

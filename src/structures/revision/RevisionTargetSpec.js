@@ -3,7 +3,7 @@ import BaseStructure from "../BaseStructure.js";
 import Util from "../../util/Util.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
 
-import RevisionError from "../../errors/RevisionError.js";
+import RevisionError from "@el-levert/common/errors/RevisionError.js";
 
 class RevisionTargetSpec extends BaseStructure {
     static defaultValues = {

@@ -11,7 +11,7 @@ import Util from "../../../util/Util.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
 import DatabaseUtil from "../../../util/database/DatabaseUtil.js";
 
-import PermissionError from "../../../errors/PermissionError.js";
+import PermissionError from "@el-levert/common/errors/PermissionError.js";
 
 class PermissionRevisionManager {
     static groupTarget = PermissionRevisionTargets.group;

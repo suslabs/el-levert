@@ -3,7 +3,7 @@ import BaseStructure from "./BaseStructure.js";
 import Util from "../util/Util.js";
 import ObjectUtil from "../util/ObjectUtil.js";
 
-import EventError from "../errors/EventError.js";
+import EventError from "@el-levert/common/errors/EventError.js";
 
 class BotEvent extends BaseStructure {
     static defaultValues = {

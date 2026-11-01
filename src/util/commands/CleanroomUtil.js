@@ -1,6 +1,6 @@
 import Util from "../Util.js";
 
-import UtilError from "../../errors/UtilError.js";
+import UtilError from "@el-levert/common/errors/UtilError.js";
 
 const CleanroomUtil = Object.freeze({
     minSize: [3, 3, 3],

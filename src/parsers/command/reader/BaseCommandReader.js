@@ -1,6 +1,6 @@
 import ObjectUtil from "../../../util/ObjectUtil.js";
 
-import ParserError from "../../../errors/ParserError.js";
+import ParserError from "@el-levert/common/errors/ParserError.js";
 
 class BaseCommandReader {
     constructor(options = {}) {

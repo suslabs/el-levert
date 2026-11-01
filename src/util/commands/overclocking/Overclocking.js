@@ -7,7 +7,7 @@ import TypeTester from "../../TypeTester.js";
 import ObjectUtil from "../../ObjectUtil.js";
 import { drawTable } from "../../misc/Table.js";
 
-import OCError from "../../../errors/OCError.js";
+import OCError from "@el-levert/common/errors/OCError.js";
 
 class Overclocking {
     static defaultValues = Object.freeze({

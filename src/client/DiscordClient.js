@@ -10,7 +10,7 @@ import DiscordUtil from "../util/DiscordUtil.js";
 import { isErrorCode } from "../util/discord/ErrorCodes.js";
 import createuFuzzySearch from "../util/search/uFuzzySearch.js";
 
-import ClientError from "../errors/ClientError.js";
+import ClientError from "@el-levert/common/errors/ClientError.js";
 
 const {
     Client,

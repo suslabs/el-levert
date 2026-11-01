@@ -3,7 +3,7 @@ import StreamStep from "../../../structures/stream/StreamStep.js";
 import Util from "../../Util.js";
 import ObjectUtil from "../../ObjectUtil.js";
 
-import TagError from "../../../errors/TagError.js";
+import TagError from "@el-levert/common/errors/TagError.js";
 
 class StreamPipeline {
     static maxSteps = 30;
