@@ -2,7 +2,7 @@ import { getClient } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import EmulationCommandUtil from "../../util/commands/EmulationCommandUtil.js";
-import getInspectorAttachOutput from "../../util/vm/getInspectorAttachOutput.js";
+import getInspectorAttachOutput from "../../util/getInspectorAttachOutput.js";
 
 class VMEvalCommand {
     static info = {

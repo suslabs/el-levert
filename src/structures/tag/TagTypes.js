@@ -1,4 +1,4 @@
-import { VMLanguages } from "../vm/VMLanguages.js";
+import { VMLanguages } from "@el-levert/common/structures/VMLanguages.js";
 
 import Util from "../../util/Util.js";
 

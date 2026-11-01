@@ -1,0 +1,1049 @@
+import { Buffer } from "node:buffer";
+
+import LengthTypes from "./LengthTypes.js";
+import CountTypes from "./CountTypes.js";
+
+import BoolStrings from "./BoolStrings.js";
+
+import TypeTester from "./TypeTester.js";
+import ObjectUtil from "./ObjectUtil.js";
+
+import UtilError from "../errors/UtilError.js";
+
+let Util = {
+    durationSeconds: Object.freeze({
+        milli: 1 / 1000,
+        second: 1,
+        minute: 60,
+        hour: 3600,
+        day: 86400,
+        week: 604800,
+        month: 2592000,
+        year: 31536000
+    }),
+
+    dataBytes: Object.freeze({
+        byte: 1,
+        kilobyte: 1024,
+        megabyte: 1048576,
+        gigabyte: 1073741824,
+        terabyte: 1099511627776
+    }),
+
+    numbers: "0123456789",
+    alphabet: "abcdefghijklmnopqrstuvwxyz",
+
+    random: (a, b) => {
+        return a + ~~(Math.random() * (b - a));
+    },
+
+    parseInt: (str, radix = 10, defaultValue) => {
+        if (typeof str !== "string" || typeof radix !== "number" || radix < 2 || radix > 36) {
+            return defaultValue ?? NaN;
+        }
+
+        str = str.trim();
+        const exp = Util._validNumberRegexes.get(radix);
+
+        if (!exp.test(str)) {
+            return defaultValue ?? NaN;
+        }
+
+        str = str.replaceAll(",", "");
+        return Number.parseInt(str, radix);
+    },
+
+    parseBool: (str, defaultValue) => {
+        if (typeof str !== "string") {
+            return defaultValue ?? null;
+        }
+
+        str = str.trim().toLowerCase();
+
+        if (BoolStrings.truthy.has(str)) {
+            return true;
+        } else if (BoolStrings.falsy.has(str)) {
+            return false;
+        } else {
+            return defaultValue ?? null;
+        }
+    },
+
+    formatNumber: (num, digits) => {
+        const options = {
+            maximumFractionDigits: digits
+        };
+
+        if ((num !== 0 && Math.abs(num) < 1e-6) || Math.abs(num) >= 1e21) {
+            const str = num.toLocaleString("en-US", {
+                notation: "scientific",
+                useGrouping: false,
+                ...options
+            });
+
+            return str.toLowerCase();
+        }
+
+        return num.toLocaleString("en-US", options);
+    },
+
+    splitAt: (str, sep = " ") => {
+        const idx = str.indexOf(sep);
+
+        const first = idx === -1 ? str : str.slice(0, idx),
+            second = idx === -1 ? "" : str.slice(idx);
+
+        return [first, second];
+    },
+
+    delay: ms => {
+        ms = Math.round(ms);
+        return new Promise(resolve => setTimeout(resolve, ms));
+    },
+
+    runWithTimeout: (callback, timeoutError, timeout = 10 / Util.durationSeconds.milli, options) => {
+        if (typeof callback !== "function") {
+            throw new UtilError("Callback function required");
+        }
+
+        if (typeof timeoutError === "string") {
+            timeoutError = new Error(timeoutError);
+        } else if (!(timeoutError instanceof Error)) {
+            timeoutError = new UtilError("Operation timed out");
+        }
+
+        timeout = Util.clamp(timeout, 0);
+        options = ObjectUtil.guaranteeObject(options);
+
+        const res = callback();
+
+        if (timeout <= 0 || !TypeTester.isPromise(res)) {
+            return Promise.resolve(res);
+        }
+
+        let _timeout = null;
+
+        const clearTimer = () => {
+            clearTimeout(_timeout);
+            _timeout = null;
+        };
+
+        const timeoutData = {
+            clearTimer
+        };
+
+        if (typeof options.timeoutControls === "function") {
+            options.timeoutControls(timeoutData);
+        }
+
+        const timeoutPromise = new Promise((_, reject) => {
+            _timeout = setTimeout(() => reject(timeoutError), timeout);
+        });
+
+        return Promise.race([res.finally(clearTimer), timeoutPromise]);
+    },
+
+    raceSignal: async (promise, signal) => {
+        if (signal == null) {
+            return await promise;
+        }
+
+        if (signal.aborted) {
+            throw signal.reason ?? new UtilError("Operation aborted");
+        }
+
+        let onAbort;
+
+        const abortPromise = new Promise((_, reject) => {
+            onAbort = () => reject(signal.reason ?? new UtilError("Operation aborted"));
+            signal.addEventListener("abort", onAbort, { once: true });
+        });
+
+        try {
+            return await Promise.race([promise, abortPromise]);
+        } finally {
+            signal.removeEventListener("abort", onAbort);
+        }
+    },
+
+    waitForCondition: (condition, timeoutError, timeout = 0, interval = 100) => {
+        let [_timeout, _interval] = [null, null];
+
+        if (timeout > 0) {
+            if (typeof timeoutError === "string") {
+                timeoutError = new Error(timeoutError);
+            } else if (!(timeoutError instanceof Error)) {
+                timeoutError = new UtilError("Condition timed out");
+            }
+        }
+
+        const clearTimers = () => {
+            if (_timeout !== null) {
+                clearTimeout(_timeout);
+            }
+
+            clearInterval(_interval);
+
+            _timeout = _interval = null;
+        };
+
+        return new Promise((resolve, reject) => {
+            if (timeout > 0) {
+                _timeout = setTimeout(() => {
+                    clearTimers();
+                    reject(timeoutError);
+                }, timeout);
+            }
+
+            _interval = setInterval(async () => {
+                let val = null;
+
+                try {
+                    val = Boolean(await condition());
+                } catch (err) {
+                    clearTimers();
+                    reject(err);
+
+                    return;
+                }
+
+                if (val) {
+                    clearTimers();
+                    resolve();
+
+                    return;
+                }
+            }, interval);
+        });
+    },
+
+    maybeAsyncThen: (res, thenFn, errorFn) => {
+        if (TypeTester.isPromise(res)) {
+            return res.then(thenFn, errorFn);
+        }
+
+        try {
+            return typeof thenFn === "function" ? thenFn(res) : res;
+        } catch (err) {
+            return typeof errorFn === "function"
+                ? errorFn(err)
+                : (() => {
+                      throw err;
+                  })();
+        }
+    },
+
+    stripSpaces: str => {
+        return str.replace(/\s+/g, "");
+    },
+
+    splitChars: str => {
+        return [...str];
+    },
+
+    _leadingSpacesRegex: /^\s*/,
+    _trailingSpacesRegex: /\s*$/,
+    capitalize: str => {
+        str = String(str);
+
+        const leading = str.match(Util._leadingSpacesRegex)[0],
+            trailing = str.match(Util._trailingSpacesRegex)[0];
+
+        const content = str.slice(leading.length, str.length - trailing.length);
+
+        if (Util.empty(content)) {
+            return str;
+        } else {
+            return leading + content[0].toUpperCase() + content.slice(1) + trailing;
+        }
+    },
+
+    uncapitalize: str => {
+        str = String(str);
+
+        const leading = str.match(Util._leadingSpacesRegex)[0],
+            trailing = str.match(Util._trailingSpacesRegex)[0];
+
+        const content = str.slice(leading.length, str.length - trailing.length);
+
+        if (Util.empty(content)) {
+            return str;
+        } else {
+            return leading + content[0].toLowerCase() + content.slice(1) + trailing;
+        }
+    },
+
+    toggleCase: str => {
+        str = String(str);
+
+        return [...str].map(char => (char === char.toUpperCase() ? char.toLowerCase() : char.toUpperCase())).join("");
+    },
+
+    hasDuplicates: (str, sep = "") => {
+        if (Util.empty(str)) {
+            return false;
+        }
+
+        const split = sep === "" ? str : str.split(sep);
+        return new Set(split).size !== split.length;
+    },
+
+    unique: (str, sep = "") => {
+        if (Util.empty(str)) {
+            return str;
+        }
+
+        const split = sep === "" ? str : str.split(sep);
+        return [...new Set(split)].join(sep);
+    },
+
+    removeStringRange: (str, i, length = 1, end = false) => {
+        const last = end ? length : i + length;
+        return str.slice(0, i) + str.slice(last);
+    },
+
+    replaceStringRange: (str, replacement, i, length = 1, end = false) => {
+        const last = end ? length : i + length;
+        return str.slice(0, i) + replacement + str.slice(last);
+    },
+
+    maskRanges: (str, ranges, mask = " ") => {
+        if (!Util.nonemptyString(str) || Util.empty(ranges) || !Util.nonemptyString(mask)) {
+            return str;
+        }
+
+        const normalized = ranges
+            .filter(range => range.length >= 2)
+            .map(([start, end]) => {
+                start = Util.clamp(Math.trunc(start), 0, str.length);
+                end = Util.clamp(Math.trunc(end), 0, str.length);
+                return start <= end ? [start, end] : [end, start];
+            })
+            .filter(([start, end]) => end > start)
+            .sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+
+        if (Util.empty(normalized)) {
+            return str;
+        }
+
+        let out = [],
+            [maskStart, maskEnd] = normalized[0],
+            lastIndex = 0;
+
+        const pushMask = () => {
+            out.push(str.slice(lastIndex, maskStart));
+            out.push(mask.repeat(maskEnd - maskStart));
+            lastIndex = maskEnd;
+        };
+
+        for (let i = 1; i < normalized.length; i++) {
+            const [start, end] = normalized[i];
+
+            if (start <= maskEnd) {
+                maskEnd = Math.max(maskEnd, end);
+                continue;
+            }
+
+            pushMask();
+            maskStart = start;
+            maskEnd = end;
+        }
+
+        pushMask();
+        out.push(str.slice(lastIndex));
+
+        return out.join("");
+    },
+
+    randomString: n => {
+        return Util.randomElement(Util.alphanumeric, 0, Util.alphanumeric.length, n).join("");
+    },
+
+    countChars: str => {
+        return str?.length ?? 0;
+    },
+
+    countLines: str => {
+        if (typeof str !== "string") {
+            return 0;
+        }
+
+        let count = 1,
+            pos = 0;
+
+        while ((pos = str.indexOf("\n", pos)) !== -1) {
+            count++;
+            pos++;
+        }
+
+        return count;
+    },
+
+    _countFunc: countType => {
+        switch (countType) {
+            case CountTypes.chars:
+                return Util.countChars;
+            case CountTypes.lines:
+                return Util.countLines;
+            default:
+                throw new UtilError("Invalid count type: " + countType, countType);
+        }
+    },
+    getCount: (str, countType) => {
+        return Util._countFunc(countType)(str);
+    },
+
+    overSizeLimits: (str, charLimit, lineLimit) => {
+        if (typeof str !== "string") {
+            return false;
+        }
+
+        let count = null;
+
+        if (typeof charLimit === "number") {
+            count = Util.countChars(str);
+
+            if (count > charLimit) {
+                return [count, null];
+            }
+        }
+
+        if (typeof lineLimit === "number") {
+            count = Util.countLines(str);
+
+            if (count > lineLimit) {
+                return [null, count];
+            }
+        }
+
+        return false;
+    },
+
+    trimString: (str, charLimit, lineLimit, options) => {
+        if (typeof str !== "string") {
+            return str;
+        }
+
+        options = ObjectUtil.guaranteeObject(options);
+
+        const tight = options.tight ?? false,
+            showDiff = options.showDiff ?? false;
+
+        let oversized = options.oversized;
+
+        if (oversized == null) {
+            oversized = Util.overSizeLimits(str, charLimit, lineLimit);
+        }
+
+        if (!oversized) {
+            return str;
+        }
+
+        const [chars, lines] = oversized;
+
+        if (chars !== null) {
+            if (showDiff) {
+                let suffix, trimmed;
+
+                const getSuffix = limit => {
+                    const diff = chars - limit,
+                        s = diff === 1 ? "" : "s";
+
+                    return ` ... (${diff} more character${s})`;
+                };
+
+                if (tight) {
+                    let newLimit = charLimit;
+
+                    do {
+                        newLimit--;
+
+                        trimmed = str.slice(0, newLimit);
+                        suffix = getSuffix(newLimit);
+                    } while (trimmed.length + suffix.length > charLimit && newLimit > 0);
+
+                    if (suffix.length > charLimit) {
+                        suffix = "...";
+                    }
+                } else {
+                    trimmed = str.slice(0, charLimit);
+                    suffix = getSuffix(charLimit);
+                }
+
+                return (trimmed + suffix).trim();
+            } else {
+                const newLimit = tight ? Util.clamp(charLimit - 3, 0) : charLimit,
+                    trimmed = str.slice(0, newLimit);
+
+                return trimmed + "...";
+            }
+        } else if (lines !== null) {
+            if (showDiff) {
+                let split = str.split("\n"),
+                    trimmed = split.slice(0, lineLimit).join("\n");
+
+                const diff = lines - lineLimit,
+                    s = diff === 1 ? "" : "s";
+
+                let suffix = ` ... (${diff} more line${s})`;
+
+                if (tight) {
+                    if (suffix.length > charLimit) {
+                        suffix = "...";
+                    }
+
+                    const newLimit = Util.clamp(charLimit - suffix.length, 0);
+                    trimmed = trimmed.slice(0, newLimit);
+                }
+
+                return (trimmed + suffix).trim();
+            } else {
+                let split = str.split("\n"),
+                    trimmed = split.slice(0, lineLimit).join("\n");
+
+                if (tight) {
+                    const newLimit = Util.clamp(charLimit - 3, 0);
+                    trimmed = trimmed.slice(0, newLimit);
+                }
+
+                return trimmed + "...";
+            }
+        }
+    },
+
+    findNthCharacter: (str, char, n) => {
+        let idx = -1;
+
+        for (; n > 0; n--) {
+            idx = str.indexOf(char, idx + 1);
+
+            if (idx === -1) {
+                return -1;
+            }
+        }
+
+        return idx;
+    },
+
+    hasPrefix: (prefixes, str) => {
+        if (typeof str !== "string") {
+            return false;
+        }
+
+        prefixes = Array.isArray(prefixes) ? prefixes : [prefixes];
+        return prefixes.some(prefix => str.startsWith(prefix));
+    },
+
+    length: val => {
+        return val?.length ?? val?.size ?? 0;
+    },
+
+    stringLength: val => {
+        return val == null ? 0 : String(val).length;
+    },
+
+    _lengthFunc: lengthType => {
+        switch (lengthType) {
+            case LengthTypes.array:
+                return Util.length;
+            case LengthTypes.string:
+                return Util.stringLength;
+            default:
+                throw new UtilError("Invalid length type: " + lengthType, lengthType);
+        }
+    },
+    getLength: (val, lengthType) => {
+        return Util._lengthFunc(lengthType)(val);
+    },
+
+    nonemptyString: str => {
+        return typeof str === "string" && !Util.empty(str);
+    },
+
+    empty: val => {
+        return Util.length(val) === 0;
+    },
+
+    single: val => {
+        return Util.length(val) === 1;
+    },
+
+    multiple: val => {
+        return Util.length(val) > 1;
+    },
+
+    first: (val, start = 0, n = 1) => {
+        if (val == null) {
+            return n > 1 ? [] : undefined;
+        }
+
+        return n > 1 ? val.slice(start, start + n) : val[start];
+    },
+
+    last: (val, end = 0, n = 1) => {
+        return n > 1 ? val.slice(-end - n, -end || undefined) : val.at(-end - 1);
+    },
+
+    after: (val, start = 0, n = -1) => {
+        return n > 0 ? val.slice(start + 1, start + 1 + n) : val.slice(start + 1);
+    },
+
+    before: (val, end = 0, n = -1) => {
+        return n > 0 ? val.slice(Math.max(0, end - n), end) : val.slice(0, end);
+    },
+
+    randomElement: (val, a = 0, b = val.length, n = 1) => {
+        return n > 1 ? Array.from({ length: n }, () => val[Util.random(a, b)]) : val[Util.random(a, b)];
+    },
+
+    setFirst(array, value, start = 0) {
+        array[start] = value;
+        return array;
+    },
+
+    setLast(array, value, end = 0) {
+        array[array.length - end - 1] = value;
+        return array;
+    },
+
+    setAfter(array, value, start = 0) {
+        array.splice(start + 1, value.length, ...value);
+        return array;
+    },
+
+    setRandomElement(array, value, a = 0, b = array.length) {
+        array[a + ~~(Math.random() * (b - a))] = value;
+        return array;
+    },
+
+    clamp: (x, a, b) => {
+        a ??= -Infinity;
+        b ??= Infinity;
+
+        return Math.max(Math.min(x, b), a);
+    },
+
+    round: (num, digits) => {
+        const exp = 10 ** digits;
+        return Math.round((num + Number.EPSILON) * exp) / exp;
+    },
+
+    smallRound: (num, digits) => {
+        if (num === 0) {
+            return 0;
+        }
+
+        const tresh = 1 / 10 ** digits;
+
+        if (Math.abs(num) <= tresh) {
+            digits = -Math.floor(Math.log10(Math.abs(num)));
+        }
+
+        return Util.round(num, digits);
+    },
+
+    approxEquals: (a, b, epsilon = Number.EPSILON) => {
+        return Math.abs(a - b) <= epsilon;
+    },
+
+    deviate: (x, y) => {
+        return x + (Math.random() * (2 * y) - y);
+    },
+
+    countDigits: (num, base = 10) => {
+        if (num === 0) {
+            return 1;
+        }
+
+        const log = Math.log(Math.abs(num)) / Math.log(base);
+        return Math.floor(log) + 1;
+    },
+
+    numberToBytes: num => {
+        if (!Number.isSafeInteger(num) || num < 0) {
+            return null;
+        }
+
+        const bytes = new Uint8Array(num === 0 ? 0 : Math.ceil(Util.countDigits(num, 2) / 8));
+
+        for (let i = 0; i < bytes.length; i++) {
+            bytes[i] = num % 0x100;
+            num = Math.floor(num / 0x100);
+        }
+
+        return bytes;
+    },
+
+    bytesToNumber: bytes => {
+        let num = 0,
+            place = 1;
+
+        for (let i = 0; i < bytes.length; i++) {
+            num += bytes[i] * place;
+            place *= 0x100;
+        }
+
+        return num;
+    },
+
+    bytesToHex: bytes => {
+        if (bytes == null) {
+            return "";
+        }
+
+        if (Buffer.isBuffer(bytes)) {
+            return bytes.toString("hex");
+        } else if (ArrayBuffer.isView(bytes) || bytes instanceof ArrayBuffer) {
+            return Buffer.from(bytes.buffer ?? bytes, bytes.byteOffset ?? 0, bytes.byteLength).toString("hex");
+        } else if (Array.isArray(bytes)) {
+            let hex = "";
+
+            for (let i = 0; i < bytes.length; i++) {
+                hex += bytes[i].toString(16).padStart(2, "0");
+            }
+
+            return hex;
+        }
+
+        return "";
+    },
+
+    hexToBytes: hex => {
+        if (hex == null) {
+            return Buffer.alloc(0);
+        }
+
+        if (Buffer.isBuffer(hex)) {
+            return hex;
+        } else if (ArrayBuffer.isView(hex) || hex instanceof ArrayBuffer) {
+            return Buffer.from(hex.buffer ?? hex, hex.byteOffset ?? 0, hex.byteLength);
+        } else if (Array.isArray(hex)) {
+            return Buffer.from(hex);
+        } else if (typeof hex !== "string") {
+            return Buffer.alloc(0);
+        }
+
+        const cleanHex = hex.startsWith("0x") || hex.startsWith("0X") ? hex.slice(2) : hex;
+
+        const normalizedHex = cleanHex.length % 2 === 0 ? cleanHex : `0${cleanHex}`;
+
+        return Buffer.from(normalizedHex, "hex");
+    },
+
+    urlRegex: /(\S*?):\/\/(?:([^/.]+)\.)?([^/.]+)\.([^/\s]+)\/?(\S*)?/,
+
+    validUrl: url => {
+        return Util.validUrlRegex.test(url);
+    },
+
+    timeDelta: (d1, d2, div = 1) => {
+        let t1 = d1.getTime?.() ?? d1,
+            t2 = d2.getTime?.() ?? d2;
+
+        if ([typeof d1, typeof d2].includes("bigint")) {
+            t1 = BigInt(t1);
+            t2 = BigInt(t2);
+            div = BigInt(div);
+
+            const dt = (t2 - t1) / div;
+            return dt < 0n ? -dt : dt;
+        } else {
+            t1 = Number(t1);
+            t2 = Number(t2);
+
+            const dt = (t2 - t1) / div;
+            return Math.round(Math.abs(dt));
+        }
+    },
+
+    _resolveUnitDurations: (amount, scaleTable, options, defaultBlacklist = [], defaultFallback = "second") => {
+        options = ObjectUtil.guaranteeObject(options);
+
+        const format = options.format ?? false,
+            short = options.short ?? false;
+
+        const unit = options.unit,
+            largestOnly = options.largestOnly ?? false,
+            largestN = options.largestN ?? 0;
+
+        const whitelist = Array.isArray(options.whitelist) ? options.whitelist : [],
+            blacklist = Array.isArray(options.blacklist) ? options.blacklist : defaultBlacklist;
+
+        const digits = options.digits;
+
+        const parsedOptions = {
+            format,
+            short,
+            unit,
+            largestOnly,
+            largestN,
+            whitelist,
+            blacklist,
+            digits
+        };
+
+        if (unit != null) {
+            const scale = scaleTable[unit];
+
+            if (typeof scale === "undefined") {
+                throw new UtilError(`Invalid unit: "${unit}"`);
+            }
+
+            return {
+                options: parsedOptions,
+                durations: {
+                    [unit]: amount / scale
+                }
+            };
+        }
+
+        const availableUnits = Object.keys(scaleTable)
+            .filter(name => {
+                const inWhitelist = whitelist.length ? whitelist.includes(name) : true,
+                    inBlacklist = blacklist.includes(name);
+
+                return inWhitelist && !inBlacklist;
+            })
+            .reverse();
+
+        const durations = {};
+
+        if (amount < 1 && availableUnits.includes(defaultFallback)) {
+            durations[defaultFallback] = amount;
+        } else {
+            let hitFirst = false,
+                n = 0;
+
+            let rem = amount;
+
+            for (const name of availableUnits) {
+                const secs = scaleTable[name],
+                    duration = Math.floor(rem / secs);
+
+                if (duration > 0) {
+                    hitFirst = true;
+
+                    rem -= duration * secs;
+                    durations[name] = duration;
+
+                    if (largestOnly) {
+                        break;
+                    }
+                }
+
+                if (hitFirst) {
+                    n++;
+                }
+
+                if (largestN > 0 && n >= largestN) {
+                    break;
+                }
+            }
+        }
+
+        return {
+            options: parsedOptions,
+            durations
+        };
+    },
+
+    _formatUnitDurations: (durations, namesTable, parsedOptions, spaceOnShort = false) => {
+        if (!parsedOptions.format) {
+            return durations;
+        }
+
+        const formatted = Object.entries(durations).map(([name, val]) => {
+            const numText = Util.formatNumber(val, parsedOptions.digits);
+
+            if (parsedOptions.short) {
+                const shortName = namesTable[name]?.shortName ?? name,
+                    sep = spaceOnShort ? " " : "";
+
+                return `${numText}${sep}${shortName}`;
+            }
+
+            const nameInfo = namesTable[name],
+                label = nameInfo
+                    ? val === 1
+                        ? nameInfo.fullName
+                        : nameInfo.fullNamePlural
+                    : `${name}${val !== 1 ? "s" : ""}`;
+
+            return `${numText} ${label}`;
+        });
+
+        return formatted.join(", ");
+    },
+
+    _durationNames: Object.freeze({
+        milli: {
+            fullName: "millisecond",
+            fullNamePlural: "milliseconds",
+            shortName: "ms"
+        },
+        second: {
+            fullName: "second",
+            fullNamePlural: "seconds",
+            shortName: "s"
+        },
+        minute: {
+            fullName: "minute",
+            fullNamePlural: "minutes",
+            shortName: "m"
+        },
+        hour: {
+            fullName: "hour",
+            fullNamePlural: "hours",
+            shortName: "h"
+        },
+        day: {
+            fullName: "day",
+            fullNamePlural: "days",
+            shortName: "d"
+        },
+        week: {
+            fullName: "week",
+            fullNamePlural: "weeks",
+            shortName: "w"
+        },
+        month: {
+            fullName: "month",
+            fullNamePlural: "months",
+            shortName: "mo"
+        },
+        year: {
+            fullName: "year",
+            fullNamePlural: "years",
+            shortName: "y"
+        }
+    }),
+
+    duration: (delta, options) => {
+        const { options: parsedOptions, durations } = Util._resolveUnitDurations(
+            delta * Util.durationSeconds.milli,
+            Util.durationSeconds,
+            options,
+            ["milli"],
+            "second"
+        );
+
+        return Util._formatUnitDurations(durations, Util._durationNames, parsedOptions, false);
+    },
+
+    _byteNames: Object.freeze({
+        byte: {
+            fullName: "byte",
+            fullNamePlural: "bytes",
+            shortName: "B"
+        },
+        kilobyte: {
+            fullName: "kilobyte",
+            fullNamePlural: "kilobytes",
+            shortName: "KB"
+        },
+        megabyte: {
+            fullName: "megabyte",
+            fullNamePlural: "megabytes",
+            shortName: "MB"
+        },
+        gigabyte: {
+            fullName: "gigabyte",
+            fullNamePlural: "gigabytes",
+            shortName: "GB"
+        },
+        terabyte: {
+            fullName: "terabyte",
+            fullNamePlural: "terabytes",
+            shortName: "TB"
+        }
+    }),
+
+    formatSize: (size, options) => {
+        options = ObjectUtil.guaranteeObject(options);
+
+        const { options: parsedOptions, durations } = Util._resolveUnitDurations(
+            size,
+            Util.dataBytes,
+            {
+                format: true,
+                ...options
+            },
+            [],
+            "byte"
+        );
+
+        return Util._formatUnitDurations(durations, Util._byteNames, parsedOptions, true);
+    },
+
+    getByteLength: (data, encoding = "utf8") => {
+        if (data == null) {
+            return 0;
+        }
+
+        if (Buffer.isBuffer(data)) {
+            return data.length;
+        } else if (ArrayBuffer.isView(data) || data instanceof ArrayBuffer) {
+            return data.byteLength;
+        } else if (typeof data === "string") {
+            return Buffer.byteLength(data, encoding);
+        } else if (Array.isArray(data)) {
+            return data.length;
+        } else if (TypeTester.isObject(data) && data.type === "Buffer" && Array.isArray(data.data)) {
+            return data.data.length;
+        }
+
+        try {
+            return Buffer.byteLength(JSON.stringify(data) ?? "", encoding);
+        } catch {
+            return 0;
+        }
+    },
+
+    getErrorMessage: (err, fallback = "No error message available") => {
+        return (TypeTester.isObject(err) ? (err.stack ?? err.message) : err) ?? fallback;
+    },
+
+    sameValue: (a, b) => {
+        if (a === b) {
+            return true;
+        } else if (a == null || b == null || typeof a !== typeof b) {
+            return false;
+        } else if (
+            (ArrayBuffer.isView(a) || a instanceof ArrayBuffer) &&
+            (ArrayBuffer.isView(b) || b instanceof ArrayBuffer)
+        ) {
+            if (a.byteLength !== b.byteLength) {
+                return false;
+            }
+
+            const viewA = a instanceof Uint8Array ? a : new Uint8Array(a.buffer ?? a, a.byteOffset ?? 0, a.byteLength),
+                viewB = b instanceof Uint8Array ? b : new Uint8Array(b.buffer ?? b, b.byteOffset ?? 0, b.byteLength);
+
+            return Buffer.compare(viewA, viewB) === 0;
+        } else if (TypeTester.isObject(a) && TypeTester.isObject(b)) {
+            return JSON.stringify(a) === JSON.stringify(b);
+        } else {
+            return false;
+        }
+    }
+};
+
+{
+    Util.alphabetUpper = Util.alphabet.toUpperCase();
+    Util.alphanumericUpper = Util.numbers + Util.alphabetUpper;
+    Util.alphanumeric = Util.numbers + Util.alphabet + Util.alphabetUpper;
+
+    Util._validNumberRegexes = new Map();
+
+    for (let radix = 2; radix <= 36; radix++) {
+        const validChars = Util.alphanumericUpper.slice(0, radix),
+            exp = new RegExp(`^[+-]?[${validChars}]+(,[${validChars}]+)*$`, "i");
+
+        Util._validNumberRegexes.set(radix, exp);
+    }
+
+    Util.validUrlRegex = new RegExp(`^${Util.urlRegex.source}$`);
+}
+
+Util = Object.freeze(Util);
+export default Util;

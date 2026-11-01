@@ -37,7 +37,8 @@ function runNpm(cwd, args, options = {}) {
 }
 
 function compileSubmodule() {
-    runNpm(submodulePath, ["ci", "--build-from-source"]);
+    runNpm(submodulePath, ["ci", "--ignore-scripts"]);
+    runNpm(submodulePath, ["run", "install", "--build-from-source"]);
 }
 
 function linkSubmodule() {

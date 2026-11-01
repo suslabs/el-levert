@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import RunnerServer from "@el-levert/runner/RunnerServer.js";
 import GatewayClient from "@el-levert/common/gateway/GatewayClient.js";
-import RpcChannel from "@el-levert/common/gateway/rpc/RpcChannel.js";
+import RPCChannel from "@el-levert/common/gateway/rpc/RPCChannel.js";
 
 import Util from "@el-levert/common/util/Util.js";
 
@@ -20,7 +20,7 @@ describe("RunnerServer", () => {
 
         await new Promise(resolve => {
             client.on("open", socket => {
-                rpc = new RpcChannel(socket);
+                rpc = new RPCChannel(socket);
                 resolve();
             });
 

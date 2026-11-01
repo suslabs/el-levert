@@ -14,7 +14,7 @@ import TypeTester from "../../util/TypeTester.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 import EmulationCommandUtil from "../../util/commands/EmulationCommandUtil.js";
-import getInspectorAttachOutput from "../../util/vm/getInspectorAttachOutput.js";
+import getInspectorAttachOutput from "../../util/getInspectorAttachOutput.js";
 
 import PositionalCommandReader from "../../parsers/command/reader/PositionalCommandReader.js";
 

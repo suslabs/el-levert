@@ -3,7 +3,7 @@ import replEval from "../../util/commands/replEval.js";
 
 import { getClient } from "../../LevertClient.js";
 
-import VMUtil from "../../util/vm/VMUtil.js";
+import VMUtil from "@el-levert/common/util/VMUtil.js";
 
 class AdminEvalCommand {
     static info = {

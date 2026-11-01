@@ -3,7 +3,7 @@ import { escapeMarkdown, bold, codeBlock, time } from "discord.js";
 import BaseStructure from "../BaseStructure.js";
 
 import TagBitField from "./TagBitField.js";
-import { resolveVMLanguage } from "../vm/VMLanguages.js";
+import { resolveVMLanguage } from "@el-levert/common/structures/VMLanguages.js";
 
 import { TagTypes } from "./TagTypes.js";
 
@@ -16,7 +16,7 @@ import FunctionUtil from "../../util/misc/FunctionUtil.js";
 
 import { ScriptCommandType } from "../../parsers/command/type/index.js";
 
-import TagError from "../../errors/TagError.js";
+import TagError from "@el-levert/common/errors/TagError.js";
 
 class Tag extends BaseStructure {
     static invalidValues = {

@@ -4,8 +4,8 @@ import path from "node:path";
 
 import { NodeVM } from "vm2";
 
-import Util from "../../util/Util.js";
-import VMUtil from "../../util/VMUtil.js";
+import Util from "../../../util/Util.js";
+import VMUtil from "@el-levert/common/util/VMUtil.js";
 
 const pendingFuncs = {};
 

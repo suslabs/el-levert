@@ -9,7 +9,7 @@ import { getConfig, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
-import VMUtil from "../../util/vm/VMUtil.js";
+import VMUtil from "@el-levert/common/util/VMUtil.js";
 
 const defaultVMOptions = {
     allowAsync: true,

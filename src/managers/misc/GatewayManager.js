@@ -2,16 +2,16 @@ import { WebSocket } from "ws";
 
 import Manager from "../Manager.js";
 
-import GatewayServer from "../../gateway/GatewayServer.js";
-import PacketParser from "../../gateway/PacketParser.js";
-import PacketDispatcher from "../../gateway/PacketDispatcher.js";
+import GatewayServer from "@el-levert/common/gateway/GatewayServer.js";
+import PacketParser from "@el-levert/common/gateway/PacketParser.js";
+import PacketDispatcher from "@el-levert/common/gateway/PacketDispatcher.js";
 
 import {
     ConnectPacket,
     DispatchPacket,
     HeartbeatAckPacket,
     InvalidSessionPacket
-} from "../../structures/gateway/packets/index.js";
+} from "@el-levert/common/gateway/structures/packets/index.js";
 import { closeCodes } from "../../util/misc/WebsocketCloseCodes.js";
 
 import { getLogger } from "../../LevertClient.js";

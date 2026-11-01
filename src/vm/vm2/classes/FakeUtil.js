@@ -2,7 +2,7 @@ import { getClient } from "../../../LevertClient.js";
 
 import ObjectUtil from "../../../util/ObjectUtil.js";
 import DiscordUtil from "../../../util/DiscordUtil.js";
-import VMUtil from "../../../util/vm/VMUtil.js";
+import VMUtil from "@el-levert/common/util/VMUtil.js";
 
 const FakeUtil = Object.freeze({
     reply: (reply, text, options) => {

@@ -1,0 +1,21 @@
+{
+    "name": "@el-levert/runner",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "main": "index.js",
+    "exports": {
+        ".": "./index.js",
+        "./*": "./*"
+    },
+    "scripts": {
+        "start": "node index.js"
+    },
+    "dependencies": {
+        "@el-levert/common": "*",
+        "axios": "^1.16.0",
+        "isolated-vm": "^5.0.4",
+        "typescript": "^6.0.3",
+        "ws": "^8.21.0"
+    }
+}

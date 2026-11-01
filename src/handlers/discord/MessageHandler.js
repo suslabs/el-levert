@@ -13,7 +13,7 @@ import ObjectUtil from "../../util/ObjectUtil.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import { isErrorCode } from "../../util/discord/ErrorCodes.js";
-import VMUtil from "../../util/vm/VMUtil.js";
+import VMUtil from "@el-levert/common/util/VMUtil.js";
 import RateLimiter from "../../util/misc/RateLimiter.js";
 
 import MessageLimitTypes from "./MessageLimitTypes.js";

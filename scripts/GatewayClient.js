@@ -2,16 +2,16 @@ import { EventEmitter } from "node:events";
 
 import { WebSocket } from "ws";
 
-import PacketParser from "../src/gateway/PacketParser.js";
+import PacketParser from "@el-levert/common/gateway/PacketParser.js";
 
-import { closeCodes } from "../src/util/misc/WebsocketCloseCodes.js";
-import HeartbeatPacket from "../src/structures/gateway/packets/HeartbeatPacket.js";
-import IdentifyPacket from "../src/structures/gateway/packets/IdentifyPacket.js";
-import ResumePacket from "../src/structures/gateway/packets/ResumePacket.js";
+import { closeCodes } from "@el-levert/common/util/misc/WebsocketCloseCodes.js";
+import HeartbeatPacket from "@el-levert/common/gateway/structures/packets/HeartbeatPacket.js";
+import IdentifyPacket from "@el-levert/common/gateway/structures/packets/IdentifyPacket.js";
+import ResumePacket from "@el-levert/common/gateway/structures/packets/ResumePacket.js";
 
-import Util from "../src/util/Util.js";
+import Util from "@el-levert/common/util/Util.js";
 
-import ClientError from "../src/errors/ClientError.js";
+import ClientError from "@el-levert/common/errors/ClientError.js";
 
 class GatewayClient extends EventEmitter {
     static maxConnections = Infinity;

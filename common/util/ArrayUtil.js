@@ -1,0 +1,413 @@
+import { Buffer } from "node:buffer";
+
+import Util from "./Util.js";
+import TypeTester from "./TypeTester.js";
+
+import LengthTypes from "./LengthTypes.js";
+
+const ArrayUtil = Object.freeze({
+    withLength: (length, callback) => {
+        return Array.from({ length }, (_, i) => callback(i));
+    },
+
+    guaranteeArray: (obj, length, nullEmpty = false) => {
+        if (nullEmpty && obj == null) {
+            return [];
+        } else if (typeof length !== "number") {
+            return Array.isArray(obj) ? obj : [obj];
+        }
+
+        return Array.isArray(obj)
+            ? obj.concat(new Array(Util.clamp(length - obj.length, 0)).fill())
+            : new Array(length).fill(obj);
+    },
+
+    guaranteeSet: obj => {
+        if (obj instanceof Set) {
+            return obj;
+        } else if (obj == null) {
+            return new Set();
+        }
+
+        return new Set(Array.isArray(obj) ? obj : [obj]);
+    },
+
+    guaranteeFirst: obj => {
+        return Array.isArray(obj) ? obj[0] : obj;
+    },
+
+    sum: (array, callback) => {
+        const getValue = ArrayUtil._valueFunc(callback);
+        return array.reduce((total, item) => total + getValue(item), 0);
+    },
+
+    concat: (array, ...args) => {
+        return Array.isArray(array) ? array.concat(...args) : [array, ...args].join("");
+    },
+
+    frequency: (array, callback) => {
+        const getValue = ArrayUtil._valueFunc(callback);
+
+        return array.reduce((map, item) => {
+            const val = getValue(item);
+            map.set(val, (map.get(val) || 0) + 1);
+
+            return map;
+        }, new Map());
+    },
+
+    hasDuplicates: (array, callback) => {
+        const getValue = ArrayUtil._valueFunc(callback),
+            values = array.map(item => getValue(item));
+
+        return new Set(values).size !== values.length;
+    },
+
+    unique: (array, callback) => {
+        const getValue = ArrayUtil._valueFunc(callback),
+            seen = new Set();
+
+        return array.filter(item => {
+            const val = getValue(item);
+
+            if (seen.has(val)) {
+                return false;
+            } else {
+                seen.add(val);
+                return true;
+            }
+        });
+    },
+
+    sameElements(arr1, arr2, strict = true, callback) {
+        if (arr1.length !== arr2.length) {
+            return false;
+        }
+
+        if (strict) {
+            const getValue = ArrayUtil._valueFunc(callback);
+
+            return arr1.every((a, i) => {
+                const b = arr2[i];
+                return getValue(a) === getValue(b);
+            });
+        }
+
+        const aFreq = ArrayUtil.frequency(arr1, callback),
+            bFreq = ArrayUtil.frequency(arr2, callback);
+
+        if (aFreq.size !== bFreq.size) {
+            return false;
+        }
+
+        for (const [val, count] of aFreq) {
+            if (bFreq.get(val) !== count) {
+                return false;
+            }
+        }
+
+        return true;
+    },
+
+    diff: (oldArray, newArray, callback) => {
+        const getValue = ArrayUtil._valueFunc(callback),
+            counts = new Map();
+
+        const shared = [],
+            removed = [],
+            added = [];
+
+        for (const item of oldArray) {
+            const value = getValue(item);
+            counts.set(value, (counts.get(value) || 0) + 1);
+        }
+
+        for (const item of newArray) {
+            const value = getValue(item),
+                count = counts.get(value) || 0;
+
+            if (count > 0) {
+                counts.set(value, count - 1);
+                shared.push(item);
+            } else {
+                added.push(item);
+            }
+        }
+
+        for (const item of oldArray) {
+            const value = getValue(item),
+                count = counts.get(value) || 0;
+
+            if (count > 0) {
+                counts.set(value, count - 1);
+                removed.push(item);
+            }
+        }
+
+        return { shared, removed, added };
+    },
+
+    sort: (array, callback) => {
+        const getValue = ArrayUtil._valueFunc(callback);
+
+        return array.sort((a, b) => {
+            const a_val = getValue(a),
+                b_val = getValue(b);
+
+            if (typeof a_val === "number" && typeof b_val === "number") {
+                return a_val - b_val;
+            }
+
+            return a_val.localeCompare(b_val, undefined, {
+                numeric: true,
+                sensitivity: "base"
+            });
+        });
+    },
+
+    groupBy: (array, callback) => {
+        const getValue = ArrayUtil._valueFunc(callback),
+            groups = Object.create(null);
+
+        let i = 0;
+
+        for (const item of array) {
+            const key = getValue(item, i++);
+
+            groups[key] ??= [];
+            groups[key].push(item);
+        }
+
+        return groups;
+    },
+
+    groupByMap: (array, callback) => {
+        const getValue = ArrayUtil._valueFunc(callback),
+            groups = new Map();
+
+        let i = 0;
+
+        for (const item of array) {
+            const key = getValue(item, i++);
+            let group = groups.get(key);
+
+            if (typeof group === "undefined") {
+                group = [];
+                groups.set(key, group);
+            }
+
+            group.push(item);
+        }
+
+        return groups;
+    },
+
+    split: (array, callback) => {
+        return array.reduce(
+            (acc, item, i) => {
+                const idx = Number(callback(item, i));
+
+                while (acc.length <= idx) {
+                    acc.push([]);
+                }
+
+                acc[idx].push(item);
+                return acc;
+            },
+            [[], []]
+        );
+    },
+
+    zip: (arr1, arr2) => {
+        const len = Math.min(arr1.length, arr2.length);
+        return Array.from({ length: len }, (_, i) => [arr1[i], arr2[i]]);
+    },
+
+    removeItem: (array, item, callback) => {
+        const idx = ArrayUtil._indexFunc(array, item);
+
+        if (idx < 0 || idx >= array.length) {
+            return [false, undefined];
+        }
+
+        const getRemoved = () => array.splice(idx, 1)[0];
+
+        if (typeof callback !== "function") {
+            return [true, getRemoved()];
+        }
+
+        return Util.maybeAsyncThen(callback(idx, array), shouldDelete =>
+            shouldDelete ? [true, getRemoved()] : [false, undefined]
+        );
+    },
+
+    maybeAsyncForEach: (array, callback) => {
+        let length = array.length,
+            i = 0;
+
+        let ret,
+            loopPromise = false;
+
+        for (; i < length; i++) {
+            const item = array[i];
+            ret = callback(item, i);
+
+            if (TypeTester.isPromise(ret)) {
+                loopPromise = true;
+                i++;
+
+                break;
+            }
+        }
+
+        if (loopPromise) {
+            return (async () => {
+                ret = await ret;
+
+                for (; i < length; i++) {
+                    const item = array[i];
+                    await callback(item, i);
+                }
+            })();
+        }
+    },
+
+    wipeArray: (array, callback) => {
+        const length = array.length;
+
+        if (typeof callback !== "function") {
+            array.length = 0;
+            return length;
+        }
+
+        let loopPromise = false;
+
+        let i = 0,
+            j,
+            n = 0;
+
+        const keep = [],
+            wipeAndPush = () => {
+                array.length = 0;
+                array.push(...keep);
+            };
+
+        let item, ret;
+
+        const deleteItem = () => {
+            if (ret ?? true) {
+                n++;
+            } else {
+                keep.push(item);
+            }
+        };
+
+        for (; i < length; i++) {
+            item = array[i];
+            ret = callback(item, i);
+
+            if (TypeTester.isPromise(ret)) {
+                loopPromise = true;
+                j = i;
+
+                break;
+            }
+
+            deleteItem();
+        }
+
+        if (loopPromise) {
+            return (async () => {
+                for (; j < length; j++) {
+                    item = array[j];
+
+                    ret = await (j === i ? ret : callback(item, j));
+                    deleteItem();
+                }
+
+                wipeAndPush();
+                return n;
+            })();
+        } else {
+            wipeAndPush();
+            return n;
+        }
+    },
+
+    maxLength: (array, lengthType = LengthTypes.string) => {
+        return Math.max(...array.map(x => Util.getLength(x, lengthType)));
+    },
+
+    toBuffer: (data, encoding = "utf8") => {
+        if (data == null) {
+            return Buffer.alloc(0);
+        } else if (Buffer.isBuffer(data)) {
+            return data;
+        } else if (TypeTester.isTypedArray(data)) {
+            return Buffer.from(data.buffer, data.byteOffset, data.byteLength);
+        } else if (data instanceof ArrayBuffer) {
+            return Buffer.from(data);
+        } else if (typeof data === "string") {
+            return Buffer.from(data, encoding);
+        } else if (Array.isArray(data)) {
+            return Buffer.from(data);
+        } else if (TypeTester.isObject(data)) {
+            if (Array.isArray(data.data)) {
+                return Buffer.from(data.data);
+            } else {
+                return Buffer.from(Object.values(data));
+            }
+        } else {
+            return Buffer.from(data);
+        }
+    },
+
+    toUint8Array: (data, encoding = "utf8") => {
+        if (data == null) {
+            return new Uint8Array(0);
+        } else if (data.constructor === Uint8Array) {
+            return data;
+        } else if (TypeTester.isTypedArray(data)) {
+            return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+        } else if (data instanceof ArrayBuffer) {
+            return new Uint8Array(data);
+        } else if (typeof data === "string") {
+            return new TextEncoder(encoding).encode(data);
+        } else if (Array.isArray(data)) {
+            return Uint8Array.from(data);
+        } else if (TypeTester.isObject(data)) {
+            if (Array.isArray(data.data)) {
+                return Uint8Array.from(data.data);
+            } else {
+                return Uint8Array.from(Object.values(data));
+            }
+        } else {
+            return Uint8Array.from(data);
+        }
+    },
+
+    _indexFunc: (array, item) => {
+        switch (typeof item) {
+            case "number":
+                return item;
+            case "function":
+                const callback = item;
+                return array.findIndex(callback);
+            default:
+                return array.indexOf(item);
+        }
+    },
+    _valueFunc: callback => {
+        switch (typeof callback) {
+            case "string":
+                const propName = callback;
+                return obj => obj[propName];
+            case "function":
+                return callback;
+            default:
+                return val => val;
+        }
+    }
+});
+
+export default ArrayUtil;

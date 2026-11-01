@@ -3,13 +3,23 @@
     "main": "index.js",
     "type": "module",
     "private": true,
+    "workspaces": [
+        "common",
+        "runner",
+        "src"
+    ],
     "engines": {
         "node": ">=20 <22"
     },
     "scripts": {
-        "test": "vitest run",
-        "coverage": "vitest run --coverage",
         "start": "node --no-warnings=ExperimentalWarning index.js",
+        "start:bot": "npm run start --workspace=@el-levert/bot",
+        "start:runner": "npm run start --workspace=@el-levert/runner",
+        "test": "vitest run",
+        "test:common": "vitest run test/common",
+        "test:runner": "vitest run test/runner",
+        "test:src": "vitest run test/src",
+        "coverage": "vitest run --coverage",
         "postinstall": "node ./scripts/setup/install-sqlite.cjs",
         "format": "prettier --config .prettierrc --ignore-path .prettierignore --write **/*.{js,cjs,json}",
         "lint": "eslint . --config .eslintrc.cjs --ignore-path .gitignore --ext .js,.cjs",

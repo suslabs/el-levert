@@ -1,42 +1,22 @@
 import VM from "../VM.js";
 
-import EvalContext from "./context/EvalContext.js";
-import { initFakeAxios, resetFakeAxios } from "./classes/FakeHttp.js";
+import RunnerProcess from "./RunnerProcess.js";
+import GatewayClient from "@el-levert/common/gateway/GatewayClient.js";
+import RPCChannel from "@el-levert/common/gateway/rpc/RPCChannel.js";
+import FakeMsg from "./classes/FakeMsg.js";
+import FakeUser from "./classes/FakeUser.js";
 
-import InspectorServer from "./inspector/InspectorServer.js";
-import InspectorModes from "./inspector/InspectorModes.js";
+import { getConfig, getLogger, getClient } from "../../LevertClient.js";
 
-import { getConfig, getLogger } from "../../LevertClient.js";
-
-import Util from "../../util/Util.js";
-import ObjectUtil from "../../util/ObjectUtil.js";
-import ArrayUtil from "../../util/ArrayUtil.js";
+import Util from "@el-levert/common/util/Util.js";
+import ObjectUtil from "@el-levert/common/util/ObjectUtil.js";
+import ArrayUtil from "@el-levert/common/util/ArrayUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
-
 import LoggerUtil from "../../util/LoggerUtil.js";
 import Benchmark from "../../util/misc/Benchmark.js";
 
-import VMUtil from "../../util/vm/VMUtil.js";
-import { transpileScript } from "../../util/vm/transpileScript.js";
-
-import VMError from "../../errors/VMError.js";
-import { VMErrors, vmErrorMessages } from "./VMErrors.js";
-
-function logUsage(code) {
-    getLogger().isDebugEnabled() && getLogger().debug(`Running script:${LoggerUtil.formatLog(code)}`);
-}
-
-function logFinished(info) {
-    if (!info && !getLogger().isDebugEnabled()) {
-        Benchmark.stopTiming("vm_script", null);
-        return;
-    }
-
-    const elapsed = Benchmark.stopTiming("vm_script", false),
-        level = info ? "info" : "debug";
-
-    getLogger().log(level, `Script execution took ${Util.formatNumber(elapsed)} ms.`);
-}
+import VMError from "@el-levert/common/errors/VMError.js";
+import TagError from "@el-levert/common/errors/TagError.js";
 
 function logOutput(out, dataType) {
     if (getLogger().isDebugEnabled()) {
@@ -53,97 +33,138 @@ class TagVM extends VM {
 
     static loadPriority = 1;
 
-    static logInspectorPackets = false;
-
     constructor(enabled) {
         super(enabled);
 
-        this.memLimit = getConfig().memLimit;
-        this.timeLimit = getConfig().timeLimit;
+        const botConfig = getConfig();
+        const config = ObjectUtil.guaranteeObject(botConfig.vmRunner);
 
-        this.enableInspector = getConfig().vmInspector.enable;
-        this.enableUserInspector = this.enableInspector && (getConfig().vmInspector.enableUser ?? false);
-        this.inspectorMode = this._getInspectorMode();
+        const mode = config.mode ?? "local",
+            port = config.port ?? 9123,
+            host = config.host ?? "127.0.0.1";
 
-        this.vmHttp = getConfig().vmHttp;
+        this.mode = mode;
+        this.port = port;
+        this.host = host;
 
-        this._contextStack = [];
+        this.memLimit = botConfig.memLimit ?? config.memLimit ?? 128;
+        this.timeLimit =
+            botConfig.timeLimit ?? config.timeLimit ?? (10 * Util.durationSeconds.second) / Util.durationSeconds.milli;
+
+        this.runnerUrl =
+            this.mode === "remote" && Util.nonemptyString(config.remoteUrl)
+                ? config.remoteUrl
+                : `ws://${this.host}:${this.port}`;
+
+        this.runnerProcess = this.mode === "local" ? new RunnerProcess({ port: this.port, host: this.host }) : null;
+
+        this.gatewayClient = null;
+        this.rpc = null;
     }
 
     async runScript(code, values, options) {
+        if (!this.enabled || this.rpc === null) {
+            throw new VMError("VM runner is not connected");
+        }
+
         values = ObjectUtil.guaranteeObject(values);
         options = ObjectUtil.guaranteeObject(options);
 
-        code = transpileScript(code, options);
-        logUsage(code);
+        const fixedTag =
+            values.tag != null
+                ? {
+                      name: values.tag.name,
+                      args: values.tag.args,
+                      body: values.tag.body,
+                      owner: values.tag.owner
+                  }
+                : undefined;
 
-        const inspectorInfo = this._getInspectorInfo(values, options);
+        const fixedMsg = values.msg != null ? new FakeMsg(values.msg).fixedMsg : undefined;
 
-        if (inspectorInfo.enable) {
-            options.commandContext?.disableTimeout();
-        }
-
-        if (
-            inspectorInfo.mode === InspectorModes.console &&
-            this._inspectorServer?.inspectorConnected &&
-            Util.empty(this._contextStack)
-        ) {
-            getLogger().info("Can't run script: inspector is already connected.");
-            throw new VMError("Inspector is already connected.");
-        }
+        const sanitizedValues = {
+            args: values.args,
+            tag: fixedTag,
+            msg: fixedMsg
+        };
 
         Benchmark.startTiming("vm_script");
 
-        let out,
-            outErr = null,
-            context = null,
-            pushed = false;
+        let out, dataType;
 
         try {
-            context = await this._getEvalContext(values, inspectorInfo);
-
-            this._pushContext(context);
-            pushed = true;
-
-            if (inspectorInfo.createdSession) {
-                await options.onInspectorReady?.(this._inspectorServer.getSessionInfo(inspectorInfo.session));
-            }
-
-            [out, outErr] = await context.runScript(code);
-        } catch (err) {
-            outErr = err;
+            [out, dataType] = await this.rpc.call("runScript", code, sanitizedValues, {
+                language: options.language,
+                enableInspector: options.enableInspector,
+                memLimit: options.memLimit ?? this.memLimit,
+                timeLimit: options.timeLimit ?? this.timeLimit
+            });
         } finally {
-            if (pushed) {
-                this._popContext(context);
-            } else if (inspectorInfo.createdSession) {
-                this._inspectorServer.onSessionEmpty(inspectorInfo.session);
-            }
-
-            context?.dispose();
+            Benchmark.stopTiming("vm_script", false);
         }
 
-        logFinished(inspectorInfo.enable);
-
-        let dataType;
-        [out, dataType] = outErr ? this._handleScriptError(outErr) : this._handleScriptOuput(out);
+        if (dataType === "reply") {
+            out = this._processReply(out);
+        }
 
         logOutput(out, dataType);
         return out;
     }
 
-    load() {
-        initFakeAxios(this.vmHttp);
+    async load() {
+        if (this.runnerProcess !== null) {
+            await this.runnerProcess.start();
+        }
 
-        EvalContext.initFunctions();
-        this._setupInspectorServer();
+        const client = new GatewayClient(this.runnerUrl, {
+            logger: getLogger()
+        });
+
+        await new Promise((resolve, reject) => {
+            const timeout = setTimeout(
+                () => {
+                    reject(new VMError("Timeout connecting to VM runner daemon"));
+                },
+                (5 * Util.durationSeconds.second) / Util.durationSeconds.milli
+            );
+
+            client.on("open", socket => {
+                clearTimeout(timeout);
+                const rpc = new RPCChannel(socket);
+
+                this.rpc = rpc;
+                this._registerHostHandlers(rpc);
+
+                getLogger().info(`Connected to VM runner at ${this.runnerUrl}`);
+                resolve();
+            });
+
+            client.once("error", err => {
+                clearTimeout(timeout);
+                reject(err);
+            });
+
+            client.on("close", () => {
+                this.rpc = null;
+                getLogger().warn("Disconnected from VM runner daemon.");
+            });
+
+            client.connect();
+        });
+
+        this.gatewayClient = client;
     }
 
-    unload() {
-        resetFakeAxios();
+    async unload() {
+        if (this.gatewayClient !== null) {
+            this.gatewayClient.disconnect();
+            this.gatewayClient = null;
+        }
 
-        if (typeof this._inspectorServer !== "undefined") {
-            this._inspectorServer.close();
-            delete this._inspectorServer;
+        this.rpc = null;
+
+        if (this.runnerProcess !== null) {
+            await this.runnerProcess.stop();
         }
     }
 
@@ -151,146 +172,12 @@ class TagVM extends VM {
         return "Eval is disabled";
     }
 
-    _setupInspectorServer() {
-        if (!this.enabled || !this.enableInspector) {
-            return;
+    _processReply(out) {
+        if (typeof out === "string") {
+            try {
+                out = JSON.parse(out);
+            } catch {}
         }
-
-        const serverHost = getConfig().serverHost,
-            inspectorPort = getConfig().vmInspector.port;
-
-        const options = {
-            logPackets: TagVM.logInspectorPackets,
-            mode: this.inspectorMode,
-            userInspectorActionTimeout: getConfig().vmInspector.userActionTimeout
-        };
-
-        const server = new InspectorServer(this.enableInspector, serverHost, inspectorPort, options);
-        server.setup();
-
-        this._inspectorServer = server;
-    }
-
-    _getActiveContext() {
-        return this._contextStack.at(-1) ?? null;
-    }
-
-    async _getEvalContext(values, inspectorInfo) {
-        inspectorInfo = ObjectUtil.guaranteeObject(inspectorInfo, {
-            connectTimeout: 0,
-            enable: false,
-            session: null
-        });
-
-        const context = new EvalContext(
-            {
-                memLimit: this.memLimit,
-                timeLimit: this.timeLimit,
-                parent: this._getActiveContext()
-            },
-            {
-                connectTimeout: inspectorInfo.connectTimeout,
-                enable: inspectorInfo.enable,
-                inspectorSession: inspectorInfo.session,
-                sendReply: inspectorInfo.session?.sendReply
-            }
-        );
-
-        await context.getIsolate(values);
-        return context;
-    }
-
-    _pushContext(context) {
-        this._contextStack.push(context);
-        context.inspectorSession?.pushContext(context);
-    }
-
-    _popContext(context) {
-        const idx = this._contextStack.lastIndexOf(context);
-
-        if (idx !== -1) {
-            this._contextStack.splice(idx, 1);
-        }
-
-        context.inspectorSession?.popContext(context);
-    }
-
-    _getInspectorMode() {
-        if (!this.enableInspector) {
-            return InspectorModes.off;
-        }
-
-        return this.enableUserInspector ? InspectorModes.user : InspectorModes.console;
-    }
-
-    _getInspectorInfo(values, options) {
-        values = ObjectUtil.guaranteeObject(values);
-        options = ObjectUtil.guaranteeObject(options);
-
-        const parent = this._getActiveContext(),
-            parentSession = parent?.inspectorSession ?? null;
-
-        if (parentSession !== null) {
-            return {
-                connectTimeout: parent.inspector.connectTimeout,
-                createdSession: false,
-                enable: true,
-                mode: parentSession.mode,
-                session: parentSession
-            };
-        }
-
-        switch (this.inspectorMode) {
-            case InspectorModes.console:
-                return {
-                    connectTimeout: getConfig().vmInspector.connectTimeout,
-                    createdSession: false,
-                    enable: true,
-                    mode: InspectorModes.console,
-                    session: this._inspectorServer?.getConsoleSession() ?? null
-                };
-            case InspectorModes.user:
-                if (!options.enableInspector) {
-                    break;
-                }
-
-                return {
-                    connectTimeout: getConfig().vmInspector.userConnectTimeout,
-                    createdSession: true,
-                    enable: true,
-                    mode: InspectorModes.user,
-                    session: this._createUserInspectorSession(values, options)
-                };
-        }
-
-        return {
-            connectTimeout: 0,
-            createdSession: false,
-            enable: false,
-            mode: InspectorModes.off,
-            session: null
-        };
-    }
-
-    _createUserInspectorSession(values, options) {
-        values = ObjectUtil.guaranteeObject(values);
-        options = ObjectUtil.guaranteeObject(options);
-
-        const userId = options.commandContext?.msg.author.id ?? values.msg?.author.id ?? null;
-
-        return this._inspectorServer.createUserSession({
-            title: options.inspectorTitle,
-            url: options.inspectorSourceUrl,
-            userId
-        });
-    }
-
-    _handleScriptOuput(out) {
-        return [VMUtil.formatOutput(out), "script"];
-    }
-
-    _processReply(msg) {
-        const out = JSON.parse(msg);
 
         if (out.file != null) {
             const { data, name } = out.file,
@@ -305,30 +192,130 @@ class TagVM extends VM {
         return out;
     }
 
-    _handleScriptError(err) {
-        switch (err.name) {
-            case "VMError":
-                getLogger().debug(`IVM error: ${err.message}`);
-                throw err;
+    _registerHostHandlers(rpc) {
+        rpc.register("fetchTag", async (name, opts) => {
+            opts = ObjectUtil.guaranteeObject(opts, "aliasOriginal");
+            const aliasOriginal = opts.aliasOriginal ?? false;
 
-            case VMErrors.custom[0]:
-                return [err.exitData, "exit"];
-            case VMErrors.custom[1]:
-                return [this._processReply(err.message), "reply"];
-        }
+            const [, err] = getClient().tagManager.checkName(name, false);
 
-        const out = vmErrorMessages.get(err.message);
+            if (err !== null) {
+                return null;
+            }
 
-        if (typeof out === "undefined") {
-            throw err;
-        } else {
-            getLogger().debug(`IVM error: ${out}.`);
+            let tag = await getClient().tagManager.fetch(name);
 
-            const vmErr = new VMError(out);
-            VMUtil.rewriteIVMStackTrace(vmErr);
+            if (tag === null) {
+                return null;
+            } else if (tag.isAlias) {
+                tag = await getClient().tagManager.fetchAlias(tag, aliasOriginal);
+            }
 
-            throw vmErr;
-        }
+            return tag?.getData() ?? null;
+        });
+
+        rpc.register("findTags", async query => {
+            const tags = await getClient().tagManager.search(query);
+            return tags.map(tag => tag.getData());
+        });
+
+        rpc.register("dumpTags", async (full = false) => {
+            const tags = await getClient().tagManager.dump(full);
+            return full ? tags.map(tag => tag.getData()) : tags;
+        });
+
+        rpc.register("fetchMessage", async (user_id, default_id, ch_id, msg_id) => {
+            const targetChId = ch_id ?? default_id;
+
+            const msg = await getClient().fetchMessage(targetChId, msg_id, {
+                user_id,
+                checkAccess: true
+            });
+
+            return msg !== null ? new FakeMsg(msg).fixedMsg : null;
+        });
+
+        rpc.register("fetchMessages", async (user_id, default_id, ch_id, fetchOptions) => {
+            const targetChId = ch_id ?? default_id;
+
+            let msgs = await getClient().fetchMessages(
+                targetChId,
+                {
+                    user_id,
+                    checkAccess: true
+                },
+                fetchOptions
+            );
+
+            if (msgs === null) {
+                const before_id = targetChId;
+
+                msgs = await getClient().fetchMessages(
+                    default_id,
+                    {
+                        user_id,
+                        checkAccess: true
+                    },
+                    {
+                        before: before_id
+                    }
+                );
+            }
+
+            if (msgs === null) {
+                return null;
+            }
+
+            return msgs.map(msg => new FakeMsg(msg).fixedMsg);
+        });
+
+        rpc.register("findUserById", async user_id => {
+            const user = await getClient().findUserById(user_id);
+            return user !== null ? new FakeUser(user).fixedUser : null;
+        });
+
+        rpc.register("findUsers", async (query, options) => {
+            options = ObjectUtil.guaranteeObject(options, "sv_id");
+
+            const users = await getClient().findUsers(query, {
+                ...options,
+                onlyMembers: true
+            });
+
+            return users.map(user => new FakeUser(user).fixedUser);
+        });
+
+        rpc.register("prepareExecuteTag", async (name, args) => {
+            const tag = await getClient().tagManager.fetch(name);
+
+            if (tag === null) {
+                return null;
+            }
+
+            let evalArgs = tag.args ?? "";
+
+            if (args != null) {
+                args = Array.isArray(args) ? args.join(" ") : String(args);
+                evalArgs = args + " " + evalArgs;
+            }
+
+            return {
+                args: Util.empty(evalArgs) ? undefined : evalArgs,
+                body: tag.body,
+                isScript: tag.isScript,
+                name: tag.name
+            };
+        });
+
+        rpc.register("executeTagSafe", async (name, args, msg) => {
+            const tag = await getClient().tagManager.fetch(name);
+
+            if (tag === null) {
+                throw new TagError(`Tag ${name} doesn't exist`, name);
+            }
+
+            return await getClient().tagManager.execute(tag, args, { msg });
+        });
     }
 }
 

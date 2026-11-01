@@ -3,7 +3,7 @@ import { PassThrough } from "node:stream";
 
 import Util from "../Util.js";
 import ObjectUtil from "../ObjectUtil.js";
-import VMUtil from "../vm/VMUtil.js";
+import VMUtil from "@el-levert/common/util/VMUtil.js";
 
 const emptyCommand = {
     help: "",

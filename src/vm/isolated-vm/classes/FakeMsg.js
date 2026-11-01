@@ -1,7 +1,7 @@
 import FakeUser from "./FakeUser.js";
 
 import DiscordUtil from "../../../util/DiscordUtil.js";
-import VMUtil from "../../../util/vm/VMUtil.js";
+import ObjectUtil from "../../../util/ObjectUtil.js";
 
 class FakeMsg {
     static messageCount = 50;
@@ -14,14 +14,28 @@ class FakeMsg {
             return this;
         }
 
+        if (msg.fixedMsg != null) {
+            this.fixedMsg = msg.fixedMsg;
+            return this;
+        }
+
+        if (Array.isArray(msg.channel?.messages)) {
+            this.fixedMsg = msg;
+            return this;
+        }
+
         const mentions = msg.mentions,
             channel = msg.channel,
             guild = channel?.guild;
 
-        const messageIds = channel?.messages.cache
-            .last(FakeMsg.messageCount)
-            .slice(1)
-            .map(msg => msg.id);
+        const messageIds = channel?.messages?.cache
+            ? channel.messages.cache
+                  .last(FakeMsg.messageCount)
+                  .slice(1)
+                  .map(m => m.id)
+            : Array.isArray(channel?.messages)
+              ? channel.messages
+              : [];
 
         let fixedReplyMsg = null;
 
@@ -33,7 +47,7 @@ class FakeMsg {
             }
         }
 
-        const fixedMsg = VMUtil.removeCircularReferences({
+        const fixedMsg = ObjectUtil.removeCircularReferences({
             channelId: msg.channelId,
             guildId: msg.guildId,
             id: msg.id,
@@ -45,29 +59,63 @@ class FakeMsg {
             pinned: msg.pinned,
             tts: msg.tts,
             nonce: msg.nonce,
-            embeds: msg.embeds.map(embed => DiscordUtil.getEmbedData(embed)),
+            embeds: msg.embeds
+                ? Array.isArray(msg.embeds)
+                    ? msg.embeds.map(embed =>
+                          typeof embed?.toJSON === "function" ? DiscordUtil.getEmbedData(embed) : embed
+                      )
+                    : []
+                : [],
             components: msg.components,
-            attachments: msg.attachments && Array.from(msg.attachments.values()),
-            stickers: msg.stickers && Array.from(msg.stickers.values()),
+            attachments: msg.attachments
+                ? typeof msg.attachments.values === "function"
+                    ? Array.from(msg.attachments.values())
+                    : Array.from(msg.attachments)
+                : undefined,
+            stickers: msg.stickers
+                ? typeof msg.stickers.values === "function"
+                    ? Array.from(msg.stickers.values())
+                    : Array.from(msg.stickers)
+                : undefined,
             position: msg.position,
             roleSubscriptionData: msg.roleSubscriptionData,
             editedTimestamp: msg.editedTimestamp,
 
             mentions: {
                 everyone: mentions?.everyone,
-                users: mentions?.users && Array.from(mentions.users.values()),
-                roles: mentions?.roles && Array.from(mentions.roles.values()),
-                crosspostedChannels: mentions?.crosspostedChannels && Array.from(mentions.crosspostedChannels.values()),
+                users: mentions?.users
+                    ? typeof mentions.users.values === "function"
+                        ? Array.from(mentions.users.values())
+                        : Array.from(mentions.users)
+                    : undefined,
+                roles: mentions?.roles
+                    ? typeof mentions.roles.values === "function"
+                        ? Array.from(mentions.roles.values())
+                        : Array.from(mentions.roles)
+                    : undefined,
+                crosspostedChannels: mentions?.crosspostedChannels
+                    ? typeof mentions.crosspostedChannels.values === "function"
+                        ? Array.from(mentions.crosspostedChannels.values())
+                        : Array.from(mentions.crosspostedChannels)
+                    : undefined,
                 repliedUser: mentions?.repliedUser?.id,
-                members: mentions?.members && Array.from(mentions.members.values()),
-                channels: mentions?.channels && Array.from(mentions.channels.values())
+                members: mentions?.members
+                    ? typeof mentions.members.values === "function"
+                        ? Array.from(mentions.members.values())
+                        : Array.from(mentions.members)
+                    : undefined,
+                channels: mentions?.channels
+                    ? typeof mentions.channels.values === "function"
+                        ? Array.from(mentions.channels.values())
+                        : Array.from(mentions.channels)
+                    : undefined
             },
 
             webhookId: msg.webhookId,
             groupActivityApplicationId: msg.groupActivityApplicationId,
             applicationId: msg.applicationId,
             activity: msg.activity,
-            flags: msg.flags.bitfield,
+            flags: msg.flags?.bitfield ?? msg.flags,
             reference: msg.reference,
             interaction: msg.interaction,
             cleanContent: msg.content,
@@ -106,11 +154,6 @@ class FakeMsg {
         fixedMsg.referencedMessage = fixedReplyMsg;
 
         this.fixedMsg = fixedMsg;
-    }
-
-    static reply(text, msg) {
-        const formatted = VMUtil.formatReply(text, msg);
-        return JSON.stringify(formatted);
     }
 }
 

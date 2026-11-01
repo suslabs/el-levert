@@ -4,7 +4,7 @@ import ArrayUtil from "./ArrayUtil.js";
 
 import AssignPropertyTypes from "./AssignPropertyTypes.js";
 
-import UtilError from "../errors/UtilError.js";
+import UtilError from "@el-levert/common/errors/UtilError.js";
 
 const ObjectUtil = Object.freeze({
     filterObject: (obj, keyFunc, valFunc) => {
@@ -240,6 +240,35 @@ const ObjectUtil = Object.freeze({
         } else {
             return n;
         }
+    },
+
+    removeCircularReferences: obj => {
+        const pathMap = new Map();
+
+        const recRemove = (val, path) => {
+            if (!TypeTester.isObject(val)) {
+                return val;
+            }
+
+            const seenPath = pathMap.get(val);
+
+            if (seenPath) {
+                const joinedPath = seenPath.join(".");
+                return `[Circular reference${Util.empty(joinedPath) ? "" : `: ${joinedPath}`}]`;
+            }
+
+            pathMap.set(val, path);
+            const newVal = Array.isArray(val) ? [] : {};
+
+            for (const [key, value] of Object.entries(val)) {
+                newVal[key] = recRemove(value, path.concat(key));
+            }
+
+            pathMap.delete(val);
+            return newVal;
+        };
+
+        return recRemove(obj, []);
     }
 });
 

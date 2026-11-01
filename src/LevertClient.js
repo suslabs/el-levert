@@ -544,8 +544,8 @@ class LevertClient extends DiscordClient {
         this.logger.info("Unloaded InteractionDispatcher.");
     }
 
-    _loadHandlers() {
-        this.loadComponents(
+    async _loadHandlers() {
+        await this.loadComponents(
             "handlers",
             Handlers,
 
@@ -568,8 +568,8 @@ class LevertClient extends DiscordClient {
         this._loadInteractionDispatcher();
     }
 
-    _unloadHandlers() {
-        this.unloadComponents("handlers", {
+    async _unloadHandlers() {
+        await this.unloadComponents("handlers", {
             showUnloadingMessages: false
         });
 
@@ -606,20 +606,20 @@ class LevertClient extends DiscordClient {
         await this.unloadComponents("managers");
     }
 
-    _loadVMs() {
+    async _loadVMs() {
         const vmArgs = {
             tagVM: [this.config.enableEval],
             tagVM2: [this.config.enableVM2],
             externalVM: this.config.enableOtherLangs ? [] : false
         };
 
-        this.loadComponents("VMs", VMs, vmArgs, {
+        await this.loadComponents("VMs", VMs, vmArgs, {
             showLoadingMessages: false
         });
     }
 
-    _unloadVMs() {
-        this.unloadComponents("VMs", {
+    async _unloadVMs() {
+        await this.unloadComponents("VMs", {
             showUnloadingMessages: false
         });
     }
@@ -781,12 +781,12 @@ class LevertClient extends DiscordClient {
         this._setOtherConfigs();
 
         await this._loadManagers();
-        this._loadHandlers();
+        await this._loadHandlers();
 
         await this._loadEvents();
 
         await ModuleUtil.resolveBarrel(VMs);
-        this._loadVMs();
+        await this._loadVMs();
 
         await this.login(token, true);
 
@@ -826,10 +826,9 @@ class LevertClient extends DiscordClient {
 
         this._unloadEvents();
 
-        this._unloadHandlers();
+        await this._unloadHandlers();
         await this._unloadManagers();
-
-        this._unloadVMs();
+        await this._unloadVMs();
 
         this.logout(kill);
         this._setStopped();

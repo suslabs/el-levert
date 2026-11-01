@@ -336,13 +336,13 @@ async function cleanupRuntime(runtime) {
 
     try {
         if (client.components.get("handler")?.loaded) {
-            client._unloadHandlers();
+            await client._unloadHandlers();
         }
     } catch {}
 
     try {
         if (client.components.get("VM")?.loaded) {
-            client._unloadVMs();
+            await client._unloadVMs();
         }
     } catch {}
 

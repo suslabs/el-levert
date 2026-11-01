@@ -8,7 +8,7 @@ import BoolStrings from "./BoolStrings.js";
 import TypeTester from "./TypeTester.js";
 import ObjectUtil from "./ObjectUtil.js";
 
-import UtilError from "../errors/UtilError.js";
+import UtilError from "@el-levert/common/errors/UtilError.js";
 
 let Util = {
     durationSeconds: Object.freeze({
@@ -195,11 +195,11 @@ let Util = {
                 }, timeout);
             }
 
-            _interval = setInterval(() => {
+            _interval = setInterval(async () => {
                 let val = null;
 
                 try {
-                    val = !!condition();
+                    val = Boolean(await condition());
                 } catch (err) {
                     clearTimers();
                     reject(err);
