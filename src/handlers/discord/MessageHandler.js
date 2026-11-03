@@ -1,4 +1,4 @@
-import { bold } from "discord.js";
+import { bold, AttachmentBuilder } from "discord.js";
 
 import Handler from "../Handler.js";
 
@@ -70,28 +70,25 @@ class MessageHandler extends Handler {
     }
 
     async checkRateLimit(msg) {
-        const rateLimiter = this.rateLimiter;
-
-        if (rateLimiter === null) {
+        if (this.rateLimiter === null) {
             return false;
         }
 
-        const permManager = getClient().permManager;
-        let perm = permManager.getLevels().default;
+        let perm = getClient().permManager.getLevels().default;
 
-        if (permManager.enabled) {
-            perm = await permManager.maxLevel(msg.author.id);
+        if (getClient().permManager.enabled) {
+            perm = await getClient().permManager.maxLevel(msg.author.id);
         }
 
-        if (permManager.allowed(perm, "mod")) {
+        if (getClient().permManager.allowed(perm, "mod")) {
             return false;
         }
 
-        if (rateLimiter.check(msg.author.id)) {
+        if (this.rateLimiter.check(msg.author.id)) {
             return false;
         }
 
-        const waitMs = rateLimiter.getTimeToReset(msg.author.id),
+        const waitMs = this.rateLimiter.getTimeToReset(msg.author.id),
             waitStr = Util.duration(waitMs, {
                 format: true,
                 short: true,
@@ -199,9 +196,8 @@ class MessageHandler extends Handler {
         const out = this._getOutput(data, options);
 
         if (Array.isArray(out)) {
-            const [first, ...rest] = out;
-
-            const edited = await this._editReply(msg, existing, first, i, options);
+            const [first, ...rest] = out,
+                edited = await this._editReply(msg, existing, first, i, options);
 
             if (!Util.empty(rest)) {
                 await this.reply(msg, rest, options);
@@ -300,12 +296,14 @@ class MessageHandler extends Handler {
         this.constructor._rateLimiter?.clear();
     }
 
-    setLimits(limits) {
-        this._outCharLimit = getConfig().outCharLimit ?? this._outCharLimit;
-        this._outLineLimit = getConfig().outLineLimit ?? this._outLineLimit;
+    setLimits(limits = {}) {
+        this._outCharLimit = limits.outCharLimit ?? getConfig().outCharLimit ?? this._outCharLimit;
+        this._outLineLimit = limits.outLineLimit ?? getConfig().outLineLimit ?? this._outLineLimit;
 
-        this._embedCharLimit = getConfig().embedCharLimit ?? this._embedCharLimit;
-        this._embedLineLimit = getConfig().embedLineLimit ?? this._embedLineLimit;
+        this._embedCharLimit = limits.embedCharLimit ?? getConfig().embedCharLimit ?? this._embedCharLimit;
+        this._embedLineLimit = limits.embedLineLimit ?? getConfig().embedLineLimit ?? this._embedLineLimit;
+
+        this._maxFileSize = limits.maxFileSize ?? getConfig().maxFileSize ?? this._maxFileSize;
     }
 
     getLimits(useConfig = true, useTrim = false) {
@@ -486,6 +484,18 @@ class MessageHandler extends Handler {
         return ["is too long.", null];
     }
 
+    static _formatContentOversized(contentOversized, limits) {
+        const [chars, lines] = contentOversized;
+
+        if (chars !== null) {
+            return `${getEmoji("warn")} Content is too long. (${chars} / ${limits[0]})`;
+        } else if (lines !== null) {
+            return `${getEmoji("warn")} Content has too many newlines. (${lines} / ${limits[1]})`;
+        }
+
+        return `${getEmoji("warn")} Content is too long.`;
+    }
+
     static _formatEmbedOversized(embedOversized, n = "") {
         if (!TypeTester.isObject(embedOversized)) {
             return null;
@@ -499,6 +509,40 @@ class MessageHandler extends Handler {
         } else {
             return `${getEmoji("warn")} Embed${n} ${message}`;
         }
+    }
+
+    static _formatFileSizeOversized(size, limit) {
+        const limitStr = Util.formatSize(limit, { short: true }),
+            sizeStr = Util.formatSize(size, { short: true });
+
+        return `${getEmoji("warn")} Cannot send response over ${bold(limitStr)}. (${sizeStr} / ${limitStr})`;
+    }
+
+    static _getFileSize(file) {
+        if (file == null) {
+            return 0;
+        }
+
+        const data = file instanceof AttachmentBuilder ? file.attachment : (file.attachment ?? file.data ?? file);
+        return file.size ?? Util.getByteLength(data);
+    }
+
+    static _getFilesSize(files) {
+        if (files == null) {
+            return 0;
+        }
+
+        if (!Array.isArray(files)) {
+            return MessageHandler._getFileSize(files);
+        }
+
+        let total = 0;
+
+        for (const file of files) {
+            total += MessageHandler._getFileSize(file);
+        }
+
+        return total;
     }
 
     static _attachAbortCleanup(promise, signal) {
@@ -529,95 +573,90 @@ class MessageHandler extends Handler {
         msg.channel.sendTyping().catch(_ => {});
     }
 
-    _applyLimits(data, options) {
-        options = ObjectUtil.guaranteeObject(options);
-
-        const useConfig = options.useConfigLimits ?? this.useConfigLimits;
-
-        const limitType = options.limitType ?? MessageLimitTypes.default,
-            useTrim = limitType === MessageLimitTypes.trim;
-
-        const { out, content, embeds } = MessageHandler._formatOutput(data);
-
-        if (limitType === MessageLimitTypes.none) {
-            out.content = content;
-
-            if (!Util.empty(embeds)) {
-                out.embeds = embeds;
-            }
-
-            return out;
+    _attachOverflowFile(out, data, name, filesSize, where = "end") {
+        if (this._maxFileSize > 0 && filesSize + data.length > this._maxFileSize) {
+            return [
+                filesSize,
+                {
+                    content: MessageHandler._formatFileSizeOversized(filesSize + data.length, this._maxFileSize)
+                }
+            ];
         }
 
-        const addFile = (where, data, name) => {
-            const file = Util.first(DiscordUtil.getFileAttach(data, name).files);
+        const file = Util.first(DiscordUtil.getFileAttach(data, name).files),
+            size = file.attachment.length;
 
-            if (Array.isArray(out.files)) {
-                switch (where) {
-                    case "start":
-                        out.files.unshift(file);
-                        break;
-                    case "end":
-                        out.files.push(file);
-                        break;
+        if (this._maxFileSize > 0 && filesSize + size > this._maxFileSize) {
+            return [
+                filesSize,
+                {
+                    content: MessageHandler._formatFileSizeOversized(filesSize + size, this._maxFileSize)
                 }
-            } else {
-                out.files = [file];
-            }
-        };
+            ];
+        }
 
-        const limits = this.getLimits(useConfig, useTrim),
-            { out: outLimits, embed: embedLimits } = limits;
-
-        const contentOversized = Util.overSizeLimits(content, ...outLimits);
-
-        if (contentOversized) {
-            switch (limitType) {
-                case MessageLimitTypes.default:
-                case MessageLimitTypes.file:
-                    addFile("end", content);
+        if (Array.isArray(out.files)) {
+            switch (where) {
+                case "start":
+                    out.files.unshift(file);
                     break;
-                case MessageLimitTypes.error:
-                    const [chars, lines] = contentOversized;
-
-                    if (chars !== null) {
-                        return {
-                            content: `${getEmoji("warn")} Content is too long. (${chars} / ${outLimits[0]})`
-                        };
-                    } else if (lines !== null) {
-                        return {
-                            content: `${getEmoji("warn")} Content has too many newlines. (${lines} / ${outLimits[1]})`
-                        };
-                    }
-
-                    break;
-                case MessageLimitTypes.trim:
-                    out.content = Util.trimString(content, ...limits.outTrim, {
-                        oversized: contentOversized
-                    });
-
+                case "end":
+                    out.files.push(file);
                     break;
             }
         } else {
-            out.content = content;
+            out.files = [file];
         }
 
-        if (Util.empty(embeds)) {
-            return out;
+        return [filesSize + size, null];
+    }
+
+    _applyContentLimits(content, out, limits, limitType, filesSize) {
+        const oversized = Util.overSizeLimits(content, ...limits.out);
+
+        if (!oversized) {
+            return [content, null, filesSize];
         }
 
+        switch (limitType) {
+            case MessageLimitTypes.default:
+            case MessageLimitTypes.file: {
+                const [newSize, err] = this._attachOverflowFile(out, content, "message.txt", filesSize, "end");
+
+                if (err !== null) {
+                    return [null, err, filesSize];
+                }
+
+                return [null, null, newSize];
+            }
+
+            case MessageLimitTypes.error:
+                return [null, { content: MessageHandler._formatContentOversized(oversized, limits.out) }, filesSize];
+
+            case MessageLimitTypes.trim: {
+                const trimmed = Util.trimString(content, ...limits.outTrim, {
+                    oversized
+                });
+
+                return [trimmed, null, filesSize];
+            }
+        }
+
+        return [content, null, filesSize];
+    }
+
+    _applyEmbedLimits(embeds, out, limits, limitType, filesSize, useTrim) {
         const countAreas = useTrim ? EmbedCountAreas.body : EmbedCountAreas.all;
 
-        let embedOversized;
-
-        const newEmbeds = [];
+        let embedOversized,
+            newEmbeds = [];
 
         for (const [i, embed] of embeds.entries()) {
             embedOversized = DiscordUtil.embedComponentsOverSizeLimit(
                 embed,
                 {
-                    total: embedLimits[0],
-                    totalLines: embedLimits[1]
+                    total: limits.embed[0],
+                    totalLines: limits.embed[1]
                 },
                 {
                     areas: countAreas
@@ -634,14 +673,20 @@ class MessageHandler extends Handler {
             switch (limitType) {
                 case MessageLimitTypes.default:
                 case MessageLimitTypes.error:
-                    return {
-                        content: MessageHandler._formatEmbedOversized(embedOversized, n)
-                    };
-                case MessageLimitTypes.file:
-                    const embedFormat = DiscordUtil.stringifyEmbed(embed);
-                    addFile("end", embedFormat, `embed${n}.txt`);
+                    return [null, { content: MessageHandler._formatEmbedOversized(embedOversized, n) }, filesSize];
 
+                case MessageLimitTypes.file: {
+                    const embedFormat = DiscordUtil.stringifyEmbed(embed),
+                        [newSize, err] = this._attachOverflowFile(out, embedFormat, `embed${n}.txt`, filesSize, "end");
+
+                    if (err !== null) {
+                        return [null, err, filesSize];
+                    }
+
+                    filesSize = newSize;
                     break;
+                }
+
                 case MessageLimitTypes.trim:
                     DiscordUtil.trimEmbed(embed, ...limits.embedTrim, {
                         oversized: true
@@ -652,25 +697,78 @@ class MessageHandler extends Handler {
             }
         }
 
-        if (!Util.empty(newEmbeds)) {
-            out.embeds = newEmbeds;
+        return [newEmbeds, null, filesSize];
+    }
+
+    _applyLimits(data, options) {
+        options = ObjectUtil.guaranteeObject(options);
+
+        const useConfig = options.useConfigLimits ?? this.useConfigLimits;
+
+        const limitType = options.limitType ?? MessageLimitTypes.default,
+            useTrim = limitType === MessageLimitTypes.trim;
+
+        const { out, content, embeds } = MessageHandler._formatOutput(data);
+
+        let filesSize = MessageHandler._getFilesSize(out.files);
+
+        if (this._maxFileSize > 0 && filesSize > this._maxFileSize) {
+            return {
+                content: MessageHandler._formatFileSizeOversized(filesSize, this._maxFileSize)
+            };
+        }
+
+        if (limitType === MessageLimitTypes.none) {
+            out.content = content;
+
+            if (!Util.empty(embeds)) {
+                out.embeds = embeds;
+            }
+
+            return out;
+        }
+
+        const limits = this.getLimits(useConfig, useTrim);
+
+        const [contentRes, contentErr, newFilesSize] = this._applyContentLimits(
+            content,
+            out,
+            limits,
+            limitType,
+            filesSize
+        );
+
+        if (contentErr !== null) {
+            return contentErr;
+        } else if (contentRes !== null) {
+            out.content = contentRes;
+        }
+
+        filesSize = newFilesSize;
+
+        if (Util.empty(embeds)) {
+            return out;
+        }
+
+        const [embedsRes, embedsErr] = this._applyEmbedLimits(embeds, out, limits, limitType, filesSize, useTrim);
+
+        if (embedsErr !== null) {
+            return embedsErr;
+        } else if (!Util.empty(embedsRes)) {
+            out.embeds = embedsRes;
         }
 
         return out;
     }
 
     _getOutput(data, options) {
-        let out = "";
-
-        if (Array.isArray(data)) {
-            out = data.map(_out => this._applyLimits(_out, options));
-            out.forEach(_out => MessageHandler._stripPings(_out));
-        } else {
-            out = this._applyLimits(data, options);
+        const process = item => {
+            const out = this._applyLimits(item, options);
             MessageHandler._stripPings(out);
-        }
+            return out;
+        };
 
-        return out;
+        return Array.isArray(data) ? data.map(process) : process(data);
     }
 
     _getErrorOutput(err, out) {

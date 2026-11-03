@@ -18,6 +18,7 @@
     "embedCharLimit": 3000,
     "embedLineLimit": 40,
     "errorCharLimit": 1000,
+    "maxFileSize": 50,
     "commandRateLimit": 60,
     "commandRateLimitWindow": 60,
     "minResponseTime": 0.1,

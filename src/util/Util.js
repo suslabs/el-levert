@@ -799,46 +799,66 @@ let Util = {
 
         const availableUnits = Object.keys(scaleTable)
             .filter(name => {
-                const inWhitelist = whitelist.length ? whitelist.includes(name) : true,
+                const inWhitelist = Util.empty(whitelist) || whitelist.includes(name),
                     inBlacklist = blacklist.includes(name);
 
                 return inWhitelist && !inBlacklist;
             })
             .reverse();
 
+        if (amount < 1 && availableUnits.includes(defaultFallback)) {
+            return {
+                options: parsedOptions,
+                durations: {
+                    [defaultFallback]: amount
+                }
+            };
+        }
+
+        if (largestOnly) {
+            const unit = availableUnits.find(name => amount >= scaleTable[name]) ?? defaultFallback,
+                scale = scaleTable[unit];
+
+            const val = typeof digits === "number" ? amount / scale : Math.floor(amount / scale);
+
+            return {
+                options: parsedOptions,
+                durations: {
+                    [unit]: val
+                }
+            };
+        }
+
         const durations = {};
 
-        if (amount < 1 && availableUnits.includes(defaultFallback)) {
-            durations[defaultFallback] = amount;
-        } else {
-            let hitFirst = false,
-                n = 0;
+        let hitFirst = false,
+            n = 0;
 
-            let rem = amount;
+        let rem = amount;
 
-            for (const name of availableUnits) {
-                const secs = scaleTable[name],
-                    duration = Math.floor(rem / secs);
+        for (const name of availableUnits) {
+            const secs = scaleTable[name];
 
-                if (duration > 0) {
-                    hitFirst = true;
+            if (rem >= secs) {
+                hitFirst = true;
 
-                    rem -= duration * secs;
-                    durations[name] = duration;
+                const duration = Math.floor(rem / secs);
+                durations[name] = duration;
 
-                    if (largestOnly) {
-                        break;
-                    }
-                }
-
-                if (hitFirst) {
-                    n++;
-                }
-
-                if (largestN > 0 && n >= largestN) {
-                    break;
-                }
+                rem -= duration * secs;
             }
+
+            if (hitFirst) {
+                n++;
+            }
+
+            if (largestN > 0 && n >= largestN) {
+                break;
+            }
+        }
+
+        if (!hitFirst && availableUnits.includes(defaultFallback)) {
+            durations[defaultFallback] = amount;
         }
 
         return {
@@ -862,12 +882,15 @@ let Util = {
                 return `${numText}${sep}${shortName}`;
             }
 
-            const nameInfo = namesTable[name],
-                label = nameInfo
-                    ? val === 1
-                        ? nameInfo.fullName
-                        : nameInfo.fullNamePlural
-                    : `${name}${val !== 1 ? "s" : ""}`;
+            const nameInfo = namesTable[name];
+
+            let label;
+
+            if (nameInfo == null) {
+                label = `${name}${val !== 1 ? "s" : ""}`;
+            } else {
+                label = val === 1 ? nameInfo.fullName : nameInfo.fullNamePlural;
+            }
 
             return `${numText} ${label}`;
         });
@@ -919,8 +942,11 @@ let Util = {
     }),
 
     duration: (delta, options) => {
+        delta = Number(delta ?? 0);
+        const amount = (Number.isFinite(delta) ? Math.max(0, delta) : 0) * Util.durationSeconds.milli;
+
         const { options: parsedOptions, durations } = Util._resolveUnitDurations(
-            delta * Util.durationSeconds.milli,
+            amount,
             Util.durationSeconds,
             options,
             ["milli"],
@@ -961,11 +987,16 @@ let Util = {
     formatSize: (size, options) => {
         options = ObjectUtil.guaranteeObject(options);
 
+        size = Number(size ?? 0);
+        const amount = Number.isFinite(size) ? Math.max(0, size) : 0;
+
         const { options: parsedOptions, durations } = Util._resolveUnitDurations(
-            size,
+            amount,
             Util.dataBytes,
             {
                 format: true,
+                largestOnly: true,
+                digits: 2,
                 ...options
             },
             [],

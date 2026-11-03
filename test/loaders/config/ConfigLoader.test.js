@@ -33,7 +33,8 @@ describe("ConfigLoader", () => {
             },
             timeLimit: 800,
             otherTimeLimit: 1200,
-            reminderSendInterval: 3000
+            reminderSendInterval: 3000,
+            maxFileSize: 15
         };
 
         loader.data = config;
@@ -57,6 +58,7 @@ describe("ConfigLoader", () => {
         expect(config.timeLimit).toBe(800000);
         expect(config.otherTimeLimit).toBe(1200000);
         expect(config.reminderSendInterval).toBe(3000000);
+        expect(config.maxFileSize).toBe(15 * Util.dataBytes.megabyte);
     });
 
     test("clamps tag size, quota, and count limits while preserving -1 as unlimited", () => {

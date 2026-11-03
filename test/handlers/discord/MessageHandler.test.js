@@ -502,4 +502,104 @@ describe("MessageHandler", () => {
         expect(deleteSpy).toHaveBeenCalled();
         handler.unload();
     });
+
+    test("enforces maxFileSize on intended files and overflow files without excess allocation", () => {
+        const handler = createHandler();
+        handler._maxFileSize = 20;
+
+        const oversizedIntended = handler._applyLimits(
+            {
+                content: "small",
+                files: [{ attachment: Buffer.alloc(25) }]
+            },
+            {
+                limitType: MessageLimitTypes.none
+            }
+        );
+
+        expect(oversizedIntended.content).toContain("Cannot send response over **20 B**. (25 B / 20 B)");
+        expect(oversizedIntended.files).toBeUndefined();
+
+        const validIntended = handler._applyLimits(
+            {
+                content: "small",
+                files: [{ attachment: Buffer.alloc(10) }]
+            },
+            {
+                limitType: MessageLimitTypes.none
+            }
+        );
+
+        expect(validIntended.files).toHaveLength(1);
+
+        const oversizedOverflow = handler._applyLimits(
+            {
+                content: "a".repeat(30)
+            },
+            {
+                limitType: MessageLimitTypes.file
+            }
+        );
+
+        expect(oversizedOverflow.content).toContain("Cannot send response over **20 B**. (30 B / 20 B)");
+        expect(oversizedOverflow.files).toBeUndefined();
+
+        const validOverflow = handler._applyLimits(
+            {
+                content: "a".repeat(10)
+            },
+            {
+                limitType: MessageLimitTypes.file
+            }
+        );
+
+        expect(validOverflow.files).toHaveLength(1);
+
+        const oversizedEmbed = handler._applyLimits(
+            {
+                embeds: [
+                    {
+                        description: "a".repeat(30)
+                    }
+                ]
+            },
+            {
+                limitType: MessageLimitTypes.file
+            }
+        );
+
+        expect(oversizedEmbed.content).toContain("Cannot send response over **20 B**");
+        expect(oversizedEmbed.files).toBeUndefined();
+    });
+
+    test("setLimits reads from limits first, then config, and retains existing values", () => {
+        const handler = createHandler();
+
+        handler.setLimits({
+            outCharLimit: 123,
+            maxFileSize: 456
+        });
+
+        expect(handler._outCharLimit).toBe(123);
+        expect(handler._maxFileSize).toBe(456);
+        expect(handler._outLineLimit).toBe(2);
+    });
+
+    test("_attachOverflowFile attaches files to start or end properly", () => {
+        const handler = createHandler();
+        handler._maxFileSize = 100;
+
+        const out = {
+            files: [{ name: "existing.txt", attachment: Buffer.from("existing") }]
+        };
+
+        const [size1, err1] = handler._attachOverflowFile(out, "startContent", "start.txt", 8, "start");
+        expect(err1).toBeNull();
+        expect(size1).toBe(8 + 12);
+        expect(out.files[0].name).toBe("start.txt");
+
+        const [size2, err2] = handler._attachOverflowFile(out, "endContent", "end.txt", size1, "end");
+        expect(err2).toBeNull();
+        expect(out.files[out.files.length - 1].name).toBe("end.txt");
+    });
 });

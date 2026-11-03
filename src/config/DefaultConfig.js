@@ -23,6 +23,12 @@ const DefaultConfig = Object.freeze({
         min: 0,
         max: DiscordUtil.embedCharLimit
     },
+    maxFileSize: {
+        base: 0,
+        min: 0,
+        round: true,
+        mult: Util.dataBytes.megabyte
+    },
 
     commandRateLimit: {
         min: 0,

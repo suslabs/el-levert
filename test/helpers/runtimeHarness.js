@@ -87,6 +87,8 @@ function buildDefaultConfig(tempDir, overrides = {}) {
         outLineLimit: 30,
         embedCharLimit: 5900,
         embedLineLimit: 30,
+        errorCharLimit: 1000,
+        maxFileSize: 10 * Util.dataBytes.megabyte,
         commandRateLimit: 60,
         commandRateLimitWindow: 60000,
         minResponseTime: 100,
