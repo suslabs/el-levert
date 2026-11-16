@@ -211,6 +211,11 @@ describe("DiscordUtil", () => {
         });
         expect(typeof body).toBe("string");
 
+        const { body: unlimitedBody } = await DiscordUtil.fetchAttachment(message, "text", {
+            maxSize: -1
+        });
+        expect(typeof unlimitedBody).toBe("string");
+
         await expect(
             DiscordUtil.fetchAttachment(
                 {

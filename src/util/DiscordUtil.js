@@ -835,7 +835,7 @@ let DiscordUtil = {
 
         const ctypes = [].concat(options.allowedContentType, options.allowedContentTypes);
 
-        const maxSizeKb = Math.round(options.maxSize),
+        const maxSizeKb = options.maxSize === -1 ? Infinity : Math.round(options.maxSize),
             maxSize = maxSizeKb * Util.dataBytes.kilobyte;
 
         const maxSizeError = attachSize =>
