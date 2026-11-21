@@ -54,6 +54,7 @@
     "enablePreviews": true,
     "enableSed": true,
     "enableEval": true,
+    "enableAI": false,
     "enableOtherLangs": false,
     "enableVM2": false,
     "enablePermissions": true,
@@ -90,5 +91,17 @@
         "rateLimitWindow": 1,
         "allowLocalhostRequests": false,
         "allowFilesystemRequests": false
+    },
+    "ai": {
+        "endpoint": "https://generativelanguage.googleapis.com/v1beta",
+        "models": ["gemini-3.5-flash-lite", "gemini-flash-latest"],
+        "thinkingLevel": "minimal",
+        "maxSteps": 6,
+        "timeLimit": 45,
+        "requestTimeout": 20,
+        "maxDownloadSize": 10,
+        "maxToolOutput": 12000,
+        "allowLocalhostRequests": false,
+        "sources": []
     }
 }

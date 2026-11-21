@@ -11,6 +11,8 @@ const repoRoot = path.resolve(import.meta.dirname, "../..");
 function buildDefaultConfig(tempDir, overrides = {}) {
     const inspectorPort = overrides.inspectorPort ?? Math.floor(10000 + Math.random() * 50000);
 
+    const { vmInspector, vmHttp, ai, ...rest } = overrides;
+
     return {
         dbPath: tempDir,
         commandsPath: path.join(repoRoot, "src/commands"),
@@ -72,7 +74,21 @@ function buildDefaultConfig(tempDir, overrides = {}) {
             userConnectTimeout: 30000,
             userActionTimeout: 300000,
             port: inspectorPort,
-            ...overrides.vmInspector
+            ...vmInspector
+        },
+        enableAI: false,
+        ai: {
+            endpoint: "http://127.0.0.1:1/v1beta",
+            models: ["test-model"],
+            thinkingLevel: "minimal",
+            maxSteps: 6,
+            timeLimit: 10 / Util.durationSeconds.milli,
+            requestTimeout: 2 / Util.durationSeconds.milli,
+            maxDownloadSize: 10 * Util.dataBytes.megabyte,
+            maxToolOutput: 12000,
+            allowLocalhostRequests: true,
+            sources: [],
+            ...ai
         },
         vmHttp: {
             maxUploadSize: 50 * Util.dataBytes.megabyte,
@@ -81,7 +97,7 @@ function buildDefaultConfig(tempDir, overrides = {}) {
             rateLimitWindow: 1000,
             allowLocalhostRequests: true,
             allowFilesystemRequests: false,
-            ...overrides.vmHttp
+            ...vmHttp
         },
         outCharLimit: 1900,
         outLineLimit: 30,
@@ -101,7 +117,7 @@ function buildDefaultConfig(tempDir, overrides = {}) {
             waiting: ":hourglass_flowing_sand:",
             clock: ":clock3:"
         },
-        ...overrides
+        ...rest
     };
 }
 
@@ -197,7 +213,7 @@ async function importFresh(modulePath) {
     return await import(modulePath);
 }
 
-async function loadRuntimeManagers(client, Managers, config) {
+async function loadRuntimeManagers(client, Managers, config, auth) {
     await client.loadComponents(
         "managers",
         Managers.default ?? Managers,
@@ -222,6 +238,10 @@ async function loadRuntimeManagers(client, Managers, config) {
                         exitCmd: null
                     }
                 ]
+            },
+            aiManager: {
+                enabled: config.enableAI,
+                args: [true, auth.geminiKey]
             }
         },
         {
@@ -301,7 +321,7 @@ async function createRuntime(options = {}) {
     }
 
     if (options.loadManagers ?? true) {
-        await loadRuntimeManagers(client, Managers, config);
+        await loadRuntimeManagers(client, Managers, config, auth);
     }
 
     if (options.loadVMs ?? (config.enableEval || config.enableVM2 || config.enableOtherLangs)) {

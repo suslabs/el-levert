@@ -11,6 +11,10 @@
         "owner": {
             "type": "string",
             "title": "Owner id"
+        },
+        "geminiKey": {
+            "type": "string",
+            "title": "Gemini API key"
         }
     }
 }

@@ -39,6 +39,13 @@ let DiscordUtil = {
         return matches.map(match => match[1]);
     },
 
+    channelMentionRegex: /<#(\d{17,20})>/g,
+
+    findChannelIds: str => {
+        const mentions = Array.from(str.matchAll(DiscordUtil.channelMentionRegex)).map(match => match[1]);
+        return Util.empty(mentions) ? DiscordUtil.findUserIds(str) : mentions;
+    },
+
     formatUser: (user, id = null, discord = false, options) => {
         options = ObjectUtil.guaranteeObject(options);
 

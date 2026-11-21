@@ -1,8 +1,4 @@
-import dns from "node:dns";
 import fs from "node:fs/promises";
-import http from "node:http";
-import https from "node:https";
-import net from "node:net";
 import { fileURLToPath } from "node:url";
 
 import axios from "axios";
@@ -16,110 +12,12 @@ import ArrayUtil from "../../../util/ArrayUtil.js";
 import TypeTester from "../../../util/TypeTester.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
 import VMUtil from "../../../util/vm/VMUtil.js";
+import HttpUtil from "../../../util/misc/HttpUtil.js";
 
 import RateLimiter from "../../../util/misc/RateLimiter.js";
 import { getHttpStatusText, httpStatusCodes } from "../../../util/misc/HttpStatusCodes.js";
 
 import VMError from "../../../errors/VMError.js";
-
-function createBlocklist() {
-    const blocklist = new net.BlockList();
-
-    // IPv4 Localhost / Loopback
-    blocklist.addSubnet("127.0.0.0", 8, "ipv4");
-
-    // IPv4 Private Network Areas (RFC 1918)
-    blocklist.addSubnet("10.0.0.0", 8, "ipv4");
-    blocklist.addSubnet("172.16.0.0", 12, "ipv4");
-    blocklist.addSubnet("192.168.0.0", 16, "ipv4");
-
-    // IPv4 Link-Local
-    blocklist.addSubnet("169.254.0.0", 16, "ipv4");
-
-    // IPv4 This Host / Local Endpoint (0.0.0.0/8)
-    blocklist.addSubnet("0.0.0.0", 8, "ipv4");
-
-    // IPv6 Localhost / Loopback
-    blocklist.addAddress("::1", "ipv6");
-
-    // IPv6 Unique Local Addresses (ULA)
-    blocklist.addSubnet("fc00::", 7, "ipv6");
-
-    // IPv6 Link-Local
-    blocklist.addSubnet("fe80::", 10, "ipv6");
-
-    // IPv6 Local Endpoint
-    blocklist.addAddress("::", "ipv6");
-
-    // IPv4-compatible mapped local/private IPv6 ranges (::/96)
-    blocklist.addSubnet("::7f00:0", 104, "ipv6");
-    blocklist.addSubnet("::0a00:0", 104, "ipv6");
-    blocklist.addSubnet("::ac10:0", 108, "ipv6");
-    blocklist.addSubnet("::c0a8:0", 112, "ipv6");
-    blocklist.addSubnet("::a9fe:0", 112, "ipv6");
-    blocklist.addSubnet("::0000:0", 104, "ipv6");
-
-    return blocklist;
-}
-
-function checkIP(ip, blocklist) {
-    if (typeof ip !== "string") {
-        return false;
-    }
-
-    const version = net.isIP(ip);
-
-    if (version === 0) {
-        return false;
-    }
-
-    return blocklist.check(ip, `ipv${version}`);
-}
-
-function createSecureAgent(_class, blocklist) {
-    const agent = new _class();
-
-    const originalCreateConnection = agent.createConnection;
-
-    agent.createConnection = function (options, cb) {
-        const host = options.host ?? options.hostname;
-
-        if (checkIP(host, blocklist)) {
-            const err = new VMError("Access to local/private IP addresses is blocked");
-
-            if (typeof cb === "function") {
-                cb(err);
-                return;
-            } else {
-                throw err;
-            }
-        }
-
-        options.lookup = (hostname, lookupOpts, lookupCb) => {
-            dns.lookup(hostname, lookupOpts, (err, address, family) => {
-                if (err) {
-                    lookupCb(err);
-                    return;
-                }
-
-                const addresses = Array.isArray(address) ? address : [{ address, family }];
-
-                for (const addrInfo of addresses) {
-                    if (checkIP(addrInfo.address, blocklist)) {
-                        lookupCb(new VMError("Access to local/private IP addresses is blocked"));
-                        return;
-                    }
-                }
-
-                lookupCb(null, address, family);
-            });
-        };
-
-        return originalCreateConnection.call(this, options, cb);
-    };
-
-    return agent;
-}
 
 async function fsAdapter(req, maxDownloadSize = Infinity) {
     let filePath;
@@ -224,10 +122,7 @@ function createFakeAxios(options) {
     };
 
     if (!allowLocalhostRequests) {
-        const blocklist = createBlocklist();
-
-        config.httpAgent = createSecureAgent(http.Agent, blocklist);
-        config.httpsAgent = createSecureAgent(https.Agent, blocklist);
+        Object.assign(config, HttpUtil.createSecureAgents());
     }
 
     const originalAdapter = axios.getAdapter("http");

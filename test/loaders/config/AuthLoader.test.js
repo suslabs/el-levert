@@ -92,6 +92,58 @@ describe("AuthLoader", () => {
         ]);
     });
 
+    test("loads the optional gemini key from json or env", async () => {
+        await seedSchemaRoot();
+
+        await fs.writeFile(
+            path.join(tempRoot, "config/auth.json"),
+            JSON.stringify({
+                token: "json-token",
+                owner: "json-owner",
+                geminiKey: "json-gemini"
+            })
+        );
+
+        globalThis.projRoot = tempRoot;
+        globalThis.projRootUrl = pathToFileURL(tempRoot).href;
+
+        const { default: AuthLoader } = await import("../../../src/loaders/config/AuthLoader.js");
+
+        const jsonLoader = new AuthLoader(null, {
+            throwOnFailure: false,
+            processEnv: { LEVERET_GEMINI_KEY: "env-gemini" }
+        });
+
+        await expect(jsonLoader.load()).resolves.toEqual([
+            {
+                token: "json-token",
+                owner: "json-owner",
+                geminiKey: "json-gemini"
+            },
+            LoadStatus.successful
+        ]);
+
+        await fs.rm(path.join(tempRoot, "config/auth.json"));
+
+        const envLoader = new AuthLoader(null, {
+            throwOnFailure: false,
+            processEnv: {
+                LEVERET_TOKEN: "proc-token",
+                LEVERET_OWNER: "proc-owner",
+                LEVERET_GEMINI_KEY: "env-gemini"
+            }
+        });
+
+        await expect(envLoader.load()).resolves.toEqual([
+            {
+                token: "proc-token",
+                owner: "proc-owner",
+                geminiKey: "env-gemini"
+            },
+            LoadStatus.successful
+        ]);
+    });
+
     test("fails when neither json nor env provides auth", async () => {
         await seedSchemaRoot();
 

@@ -69,6 +69,9 @@ class ConvertCommand {
                 case "Invalid input unit":
                     errOut = `Invalid **input** unit: \`${inUnit}\`.`;
                     break;
+                case "Incompatible units":
+                    errOut = `Can't convert **${inUnit}** to a different kind of unit.`;
+                    break;
                 case "Invalid output units":
                     errOut = Util.single(err.ref)
                         ? `Invalid **output** unit: \`${Util.first(err.ref)}\`.`

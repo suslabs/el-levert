@@ -7,20 +7,30 @@ import TypeTester from "../TypeTester.js";
 import UtilError from "../../errors/UtilError.js";
 
 let ConversionUtil = {
+    ticksPerSecond: 20,
+
     factors: {
         rf: 1,
-        eu: 4
+        eu: 4,
+        ae: 2,
+        mb: 1,
+        b: 1000
+    },
+
+    dimensions: {
+        rf: "energy",
+        eu: "energy",
+        ae: "energy",
+        mb: "fluid",
+        b: "fluid"
     },
 
     convert: (inVal, inUnit, outUnits) => {
-        if (!Number.isFinite(inVal)) {
-            throw new UtilError("Invalid input value", inVal);
-        }
-
-        inUnit = typeof inUnit === "string" ? inUnit.toLowerCase() : "";
+        ConversionUtil._checkValue(inVal);
+        inUnit = ConversionUtil._lowercaseUnit(inUnit);
 
         outUnits = ArrayUtil.guaranteeArray(outUnits)
-            .map(unit => (typeof unit === "string" ? unit.toLowerCase() : ""))
+            .map(ConversionUtil._lowercaseUnit)
             .filter(unit => !Util.empty(unit));
         outUnits = ArrayUtil.unique(outUnits).filter(unit => unit !== inUnit);
 
@@ -28,33 +38,67 @@ let ConversionUtil = {
             throw new UtilError("No output units provided");
         }
 
-        inUnit = TypeTester.normalizeEnum(inUnit, ConversionUtil.validUnits, "input unit", UtilError, {
-            ref: false
-        });
+        inUnit = ConversionUtil._normalizeUnit(inUnit, "input unit");
 
         outUnits = TypeTester.normalizeEnums(outUnits, ConversionUtil.validUnits, "output units", UtilError, {
             collectInvalid: true,
             ref: false
         });
 
-        const inCount = ConversionUtil.factors[inUnit],
-            inSuffix = ConversionUtil._suffixes[inUnit];
+        ConversionUtil._checkDimensions(inUnit, outUnits);
 
-        const outCounts = outUnits.map(unit => ConversionUtil.factors[unit]),
-            outSuffixes = outUnits.map(unit => ConversionUtil._suffixes[unit]);
+        const outVals = outUnits.map(unit =>
+            ConversionUtil._formatValue(ConversionUtil._convert(inVal, inUnit, unit), ConversionUtil._suffixes[unit])
+        );
 
-        const normVal = inVal * inCount,
-            outVals = outCounts.map((count, i) => {
-                const val = normVal / count;
-                return ConversionUtil._formatValue(val, outSuffixes[i]);
-            });
+        return [ConversionUtil._formatValue(inVal, ConversionUtil._suffixes[inUnit])].concat(outVals);
+    },
 
-        return [ConversionUtil._formatValue(inVal, inSuffix)].concat(outVals);
+    convertValue: (inVal, inUnit, outUnit) => {
+        ConversionUtil._checkValue(inVal);
+
+        inUnit = ConversionUtil._normalizeUnit(ConversionUtil._lowercaseUnit(inUnit), "input unit");
+        outUnit = ConversionUtil._normalizeUnit(ConversionUtil._lowercaseUnit(outUnit), "output unit");
+
+        ConversionUtil._checkDimensions(inUnit, [outUnit]);
+        return ConversionUtil._convert(inVal, inUnit, outUnit);
     },
 
     _suffixes: {
         rf: " RF/t",
-        eu: " EU/t"
+        eu: " EU/t",
+        ae: " AE/t",
+        mb: " mB/t",
+        b: " B/t"
+    },
+
+    _checkValue: val => {
+        if (!Number.isFinite(val)) {
+            throw new UtilError("Invalid input value", val);
+        }
+    },
+
+    _lowercaseUnit: unit => {
+        return typeof unit === "string" ? unit.toLowerCase() : "";
+    },
+
+    _normalizeUnit: (unit, name) => {
+        return TypeTester.normalizeEnum(unit, ConversionUtil.validUnits, name, UtilError, {
+            ref: false
+        });
+    },
+
+    _convert: (inVal, inUnit, outUnit) => {
+        return (inVal * ConversionUtil.factors[inUnit]) / ConversionUtil.factors[outUnit];
+    },
+
+    _checkDimensions: (inUnit, outUnits) => {
+        const dimension = ConversionUtil.dimensions[inUnit],
+            incompatible = outUnits.filter(unit => ConversionUtil.dimensions[unit] !== dimension);
+
+        if (!Util.empty(incompatible)) {
+            throw new UtilError("Incompatible units");
+        }
     },
 
     _formatValue: (val, suffix) => {
@@ -70,6 +114,7 @@ let ConversionUtil = {
         ])
     );
     Object.assign(ConversionUtil.factors, factors);
+    Object.assign(ConversionUtil.dimensions, Object.fromEntries(Object.keys(factors).map(name => [name, "energy"])));
 
     ConversionUtil.validUnits = Object.keys(ConversionUtil.factors);
 

@@ -19,10 +19,12 @@ function createAuthData(jsonData, envData) {
 
     const envKeys = DefaultAuthConfig.envKeys;
 
-    return {
-        token: Util.nonemptyString(jsonData.token) ? jsonData.token : envData[envKeys.token],
-        owner: Util.nonemptyString(jsonData.owner) ? jsonData.owner : envData[envKeys.owner]
-    };
+    return Object.fromEntries(
+        Object.entries(envKeys).map(([key, envKey]) => [
+            key,
+            Util.nonemptyString(jsonData[key]) ? jsonData[key] : envData[envKey]
+        ])
+    );
 }
 
 class AuthLoader extends Loader {

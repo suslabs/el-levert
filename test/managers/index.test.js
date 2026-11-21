@@ -5,6 +5,7 @@ import managers from "../../src/managers/index.js";
 describe("managers index", () => {
     test("compiles the real manager exports by runtime names", () => {
         expect(Object.keys(managers).sort()).toEqual([
+            "aiManager",
             "cliCommandManager",
             "commandManager",
             "gatewayManager",
