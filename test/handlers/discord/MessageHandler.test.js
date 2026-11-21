@@ -319,6 +319,20 @@ describe("MessageHandler", () => {
         expect(handler.editReplyWithError).toHaveBeenCalledWith(msg, expect.any(Error), "command", "running");
     });
 
+    test("guarantees content is cleared to empty string when editing replies without content", async () => {
+        const handler = createHandler();
+        handler.hasReplyTracker = false;
+
+        const edit = vi.fn().mockResolvedValue("edited");
+        handler.getReply = vi.fn().mockReturnValue({ edit });
+
+        await handler.editReply({}, { embeds: [{ title: "test" }] });
+        expect(edit).toHaveBeenCalledWith({
+            content: "",
+            embeds: [expect.any(Object)]
+        });
+    });
+
     test("wraps reply failures into error attachments and handles empty-message branches", async () => {
         const handler = createHandler();
         handler.hasReplyTracker = false;

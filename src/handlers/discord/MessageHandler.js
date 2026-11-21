@@ -193,7 +193,11 @@ class MessageHandler extends Handler {
         }
 
         options = ObjectUtil.guaranteeObject(options);
-        const out = this._getOutput(data, options);
+
+        const out = this._getOutput(data, {
+            ...options,
+            defaultContent: ""
+        });
 
         if (Array.isArray(out)) {
             const [first, ...rest] = out,
@@ -718,8 +722,10 @@ class MessageHandler extends Handler {
             };
         }
 
+        const defaultContent = options.defaultContent ?? null;
+
         if (limitType === MessageLimitTypes.none) {
-            out.content = content;
+            out.content = content ?? defaultContent;
 
             if (!Util.empty(embeds)) {
                 out.embeds = embeds;
@@ -731,7 +737,7 @@ class MessageHandler extends Handler {
         const limits = this.getLimits(useConfig, useTrim);
 
         const [contentRes, contentErr, newFilesSize] = this._applyContentLimits(
-            content,
+            content ?? defaultContent,
             out,
             limits,
             limitType,
