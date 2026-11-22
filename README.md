@@ -600,7 +600,7 @@ Syntax:
 - The finished answer has a green border, the sources it used and up to three numbered follow-up questions, and a footer with the model and the tokens used (`Models: <model> | <tokens> tok, <reasoning> reasoning`).
 - The follow-ups have matching 1, 2, 3 buttons under the answer. Anyone can click one; the assistant answers it as the person who clicked, with the earlier questions and answers as context. The buttons are disabled after `interactionTimeout`.
 - Reply to a message with `%a` to ask about it, or attach an image.
-- Replying to one of the assistant's answers without a command asks the reply as a new `%a` question, with that answer as context.
+- Replying to one of the assistant's answers without a command asks the reply as a new `%a` question, with that answer as context. Replies can be chained, and an answer stops accepting replies once it's older than `interactionTimeout`.
 - Code, scripts and data the assistant writes are attached as files. If an answer is too long for the embed, the full answer is attached as `answer.md`.
 - Each user can ask `ai.maxRequests` questions (follow-up clicks included) every `ai.rateLimitWindow` seconds.
 - The prompts live in text files under `ai.promptsPath` (`system.txt` for the assistant, `finisher.txt` for the sources and follow-ups pass, `inspectImage.txt` for image descriptions) and can be edited without touching the code.

@@ -329,8 +329,15 @@ describe("a command", () => {
         expect(click.reply.payloads[0].content).toContain("expired");
     });
 
-    test("replying to an answer asks the reply as a new question with the answer as context", async () => {
-        const script = [answer(["First answer."]), extras([], []), answer(["Second answer."]), extras([], [])];
+    test("replies to answers chain as new questions until the answer expires", async () => {
+        const script = [
+            answer(["First answer."]),
+            extras([], []),
+            answer(["Second answer."]),
+            extras([], []),
+            answer(["Third answer."]),
+            extras([], [])
+        ];
 
         const messages = new Map(),
             botUser = createDiscordUser({ id: "bot-id", bot: true });
@@ -372,15 +379,25 @@ describe("a command", () => {
         const followUp = createUserMsg("q-2", "and then?", { reference: { messageId: "q-1-answer" } });
         await expect(handler.execute(followUp)).resolves.toBe(true);
 
-        expect(script).toEqual([]);
-
         const body = bodies[2].body;
 
         expect(body.contents.at(-1).parts[0].text).toBe("and then?");
         expect(body.systemInstruction.parts[0].text).toContain('"""First answer."""');
         expect(messages.get("q-2-answer").embeds[0].description).toBe("Second answer.");
 
-        const untracked = createUserMsg("q-3", "what about this?", { reference: { messageId: "someone-else" } });
+        const chained = createUserMsg("q-3", "and after that?", { reference: { messageId: "q-2-answer" } });
+        await expect(handler.execute(chained)).resolves.toBe(true);
+
+        expect(bodies[4].body.contents.at(-1).parts[0].text).toBe("and after that?");
+        expect(messages.get("q-3-answer").embeds[0].description).toBe("Third answer.");
+        expect(script).toEqual([]);
+
+        messages.get("q-3-answer").editedTimestamp = Date.now() - 2 * runtime.client.config.interactionTimeout;
+
+        const expired = createUserMsg("q-4", "still there?", { reference: { messageId: "q-3-answer" } });
+        await expect(handler.execute(expired)).resolves.toBe(false);
+
+        const untracked = createUserMsg("q-5", "what about this?", { reference: { messageId: "someone-else" } });
         await expect(handler.execute(untracked)).resolves.toBe(false);
     });
 
