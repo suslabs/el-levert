@@ -6,7 +6,7 @@ import { getClient, getConfig, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
-import { httpStatusCodes } from "../../util/misc/HttpStatusCodes.js";
+import { httpStatusCodes, isServerErrorStatus } from "../../util/misc/HttpStatusCodes.js";
 
 class AIReplyView {
     static statusEmoji = "▶️";
@@ -151,7 +151,7 @@ class AIReplyView {
         const tokens = Util.formatNumber(result.tokens),
             reasoning = Util.formatNumber(result.reasoning);
 
-        return `Models: ${result.model} | ${tokens} tok, ${reasoning} reasoning`;
+        return `Models: ${result.models.join(", ")} | ${tokens} tok, ${reasoning} reasoning`;
     }
 
     static _formatError(err) {
@@ -165,6 +165,8 @@ class AIReplyView {
             hint = "\nThe Gemini quota is used up for now. Try again in a minute.";
         } else if (ref.status === httpStatusCodes.UNAUTHORIZED || ref.status === httpStatusCodes.FORBIDDEN) {
             hint = "\nThe bot's Gemini API key was rejected.";
+        } else if (isServerErrorStatus(ref.status)) {
+            hint = "\nGemini is overloaded right now. Try again in a minute.";
         }
 
         return `${getEmoji("error")} ${Util.capitalize(err.message)}.${hint}`;

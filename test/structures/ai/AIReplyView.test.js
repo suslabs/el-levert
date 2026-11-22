@@ -75,7 +75,7 @@ describe("AIReplyView", () => {
                     sources: ["https://example.test/page"],
                     followUps: [],
                     files: [],
-                    model: "test-model",
+                    models: ["test-model"],
                     tokens: 1234567,
                     reasoning: 0
                 },
@@ -96,7 +96,7 @@ describe("AIReplyView", () => {
             session = new ComponentSession({ author: { id: "1" } }, { spec: { followUps, history: [] } });
 
         const payload = view.renderResult(
-            { answer: "Answer.", sources: [], followUps, files: [], model: "test-model", tokens: 1, reasoning: 0 },
+            { answer: "Answer.", sources: [], followUps, files: [], models: ["test-model"], tokens: 1, reasoning: 0 },
             session
         );
 

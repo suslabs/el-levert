@@ -1,3 +1,5 @@
+import { getLogger } from "../LevertClient.js";
+
 import Util from "../util/Util.js";
 import ObjectUtil from "../util/ObjectUtil.js";
 import SSEUtil from "../util/misc/SSEUtil.js";
@@ -24,13 +26,17 @@ class GeminiClient {
 
     createState() {
         return {
-            model: null,
             modelIdx: 0,
+            models: [],
             thinking: !Util.empty(this.thinkingLevel),
 
             tokens: 0,
             reasoning: 0
         };
+    }
+
+    getModel(state) {
+        return this.models[state.modelIdx] ?? null;
     }
 
     async generate(body, state, timeLeft) {
@@ -78,6 +84,12 @@ class GeminiClient {
         state.reasoning += usage?.thoughtsTokenCount ?? 0;
     }
 
+    static _useModel(state, model) {
+        if (!state.models.includes(model)) {
+            state.models.push(model);
+        }
+    }
+
     static _canFallback(status) {
         return (
             status === httpStatusCodes.TOO_MANY_REQUESTS ||
@@ -99,27 +111,24 @@ class GeminiClient {
     }
 
     async _send(body, state, timeLeft, stream) {
-        const models = state.model === null ? this.models.slice(state.modelIdx) : [state.model];
-        let lastErr = new AIError("No model available", { models: this.models });
+        let status = null;
 
-        for (const model of models) {
-            const res = await this._requestWithKeys(model, body, state, timeLeft, stream);
+        for (; state.modelIdx < this.models.length; state.modelIdx++) {
+            const model = this.models[state.modelIdx],
+                res = await this._requestWithKeys(model, body, state, timeLeft, stream);
 
             if (isSuccessStatus(res.status)) {
-                state.model = model;
+                GeminiClient._useModel(state, model);
                 return res;
+            } else if (!GeminiClient._canFallback(res.status)) {
+                throw this._createError(model, res);
             }
 
-            lastErr = this._createError(model, res);
-
-            if (state.model !== null || !GeminiClient._canFallback(res.status)) {
-                throw lastErr;
-            }
-
-            state.modelIdx++;
+            status = res.status;
+            getLogger().warn(`AI model ${model} is unavailable (HTTP ${status}), switching to the next one.`);
         }
 
-        throw lastErr;
+        throw new AIError("All models are unavailable right now", { models: this.models, status });
     }
 
     async _requestWithKeys(model, body, state, timeLeft, stream) {

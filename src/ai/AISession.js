@@ -40,6 +40,10 @@ class AISession {
         this.finishing = false;
     }
 
+    get model() {
+        return this.manager.gemini.getModel(this.state);
+    }
+
     get timeLeft() {
         return this.deadline - Date.now();
     }
@@ -168,7 +172,7 @@ class AISession {
             answer,
             ...extras,
             files: Array.from(this.files, ([name, content]) => ({ name, content })),
-            model: this.state.model,
+            models: this.state.models,
             tokens: this.state.tokens,
             reasoning: this.state.reasoning
         };

@@ -424,6 +424,49 @@ describe("a command", () => {
         expect(embedOf(recorder.sent.at(-1)).footer.text).toBe("Models: fallback-model | 15 tok, 0 reasoning");
     });
 
+    test("switches to the next model when one gets overloaded mid-answer", async () => {
+        const script = [
+            calls([call("unit_convert", { value: 1, from: "B", to: "mB" })], 10),
+            { statusCode: 503, json: { error: { message: "This model is currently experiencing high demand." } } },
+            answer(["1 B is 1000 mB."], 20),
+            extras([], [], 5)
+        ];
+
+        const bodies = await setup(script, { models: ["test-model", "fallback-model"] });
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("1 bucket in mB?", recorder));
+
+        expect(bodies.map(entry => entry.path)).toEqual([
+            streamPath("test-model"),
+            streamPath("test-model"),
+            streamPath("fallback-model"),
+            generatePath("fallback-model")
+        ]);
+
+        const embed = embedOf(recorder.sent.at(-1));
+
+        expect(embed.description).toBe("1 B is 1000 mB.");
+        expect(embed.footer.text).toBe("Models: test-model, fallback-model | 35 tok, 0 reasoning");
+    });
+
+    test("shows a short error without the raw response when every model is overloaded", async () => {
+        const overloaded = {
+            statusCode: 503,
+            json: { error: { message: "This model is currently experiencing high demand." } }
+        };
+        await setup([overloaded, overloaded], { models: ["test-model", "fallback-model"] });
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("hi", recorder));
+
+        const description = embedOf(recorder.sent.at(-1)).description;
+
+        expect(description).toContain("All models are unavailable right now.");
+        expect(description).toContain("Gemini is overloaded right now");
+        expect(description).not.toContain("high demand");
+    });
+
     test("tries the next API key when one runs out of quota and keeps using it", async () => {
         const script = [
             { statusCode: 429, json: { error: { message: "Resource exhausted." } } },
