@@ -1,7 +1,7 @@
 import VM from "../VM.js";
 
 import EvalContext from "./context/EvalContext.js";
-import { initFakeAxios, resetFakeAxios } from "./classes/FakeHttp.js";
+import { initFakeAxios, resetFakeAxios } from "./classes/FakeHTTP.js";
 
 import InspectorServer from "./inspector/InspectorServer.js";
 import InspectorModes from "./inspector/InspectorModes.js";

@@ -31,9 +31,9 @@ vi.mock("isolated-vm", () => {
     };
 });
 
-import { FakeHttp, initFakeAxios, resetFakeAxios } from "../../../../src/vm/isolated-vm/classes/FakeHttp.js";
+import { FakeHTTP, initFakeAxios, resetFakeAxios } from "../../../../src/vm/isolated-vm/classes/FakeHTTP.js";
 
-describe("FakeHttp security checks", () => {
+describe("FakeHTTP security checks", () => {
     let lookupSpy;
     let socketConnectSpy;
 
@@ -97,7 +97,7 @@ describe("FakeHttp security checks", () => {
                 url: `http://${ip}`,
                 errorType: "value"
             };
-            const res = await FakeHttp.request(undefined, data);
+            const res = await FakeHTTP.request(undefined, data);
             expect(res.error).toBeDefined();
             expect(res.error.message).toContain("Access to local/private IP addresses is blocked");
         }
@@ -110,7 +110,7 @@ describe("FakeHttp security checks", () => {
                 url,
                 errorType: "value"
             };
-            const res = await FakeHttp.request(undefined, data);
+            const res = await FakeHTTP.request(undefined, data);
             expect(res.error).toBeDefined();
             expect(res.error.message).toContain("Access to local/private IP addresses is blocked");
         }
@@ -141,14 +141,14 @@ describe("FakeHttp security checks", () => {
             }
         });
 
-        const res1 = await FakeHttp.request(undefined, {
+        const res1 = await FakeHTTP.request(undefined, {
             url: "http://attacker-domain.com",
             errorType: "value"
         });
         expect(res1.error).toBeDefined();
         expect(res1.error.message).toContain("Access to local/private IP addresses is blocked");
 
-        const res2 = await FakeHttp.request(undefined, {
+        const res2 = await FakeHTTP.request(undefined, {
             url: "http://attacker-ipv6.com",
             errorType: "value"
         });
@@ -172,7 +172,7 @@ describe("FakeHttp security checks", () => {
             }
         });
 
-        const res = await FakeHttp.request(undefined, {
+        const res = await FakeHTTP.request(undefined, {
             url: "http://attacker-mixed.com",
             errorType: "value"
         });
@@ -197,7 +197,7 @@ describe("FakeHttp security checks", () => {
             }
         });
 
-        const res = await FakeHttp.request(undefined, {
+        const res = await FakeHTTP.request(undefined, {
             url: "http://safe.com",
             errorType: "value"
         });
@@ -223,7 +223,7 @@ describe("FakeHttp security checks", () => {
             }
         });
 
-        const res = await FakeHttp.request(undefined, {
+        const res = await FakeHTTP.request(undefined, {
             url: "http://safe.com/a/",
             method: true,
             headers: true,
@@ -245,18 +245,18 @@ describe("FakeHttp security checks", () => {
 
     test("is null before initialization and throws if not initialized", async () => {
         resetFakeAxios();
-        expect(FakeHttp.client).toBeNull();
-        await expect(FakeHttp.request(undefined, { url: "http://example.com" })).rejects.toThrow(
+        expect(FakeHTTP.client).toBeNull();
+        await expect(FakeHTTP.request(undefined, { url: "http://example.com" })).rejects.toThrow(
             "HTTP client is not initialized"
         );
 
         const client = initFakeAxios();
         expect(client).not.toBeNull();
-        expect(FakeHttp.client).toBe(client);
+        expect(FakeHTTP.client).toBe(client);
         expect(initFakeAxios()).toBe(client);
 
         resetFakeAxios();
-        expect(FakeHttp.client).toBeNull();
+        expect(FakeHTTP.client).toBeNull();
     });
 
     test("allows localhost requests when allowLocalhostRequests is true", async () => {
@@ -266,7 +266,7 @@ describe("FakeHttp security checks", () => {
             allowFilesystemRequests: false
         });
 
-        const res = await FakeHttp.request(undefined, {
+        const res = await FakeHTTP.request(undefined, {
             url: "http://127.0.0.1",
             errorType: "value"
         });
@@ -282,7 +282,7 @@ describe("FakeHttp security checks", () => {
             allowFilesystemRequests: true
         });
 
-        const res = await FakeHttp.request(undefined, {
+        const res = await FakeHTTP.request(undefined, {
             url: "file:///C:/does_not_exist_test_file.txt",
             errorType: "value"
         });
@@ -301,7 +301,7 @@ describe("FakeHttp security checks", () => {
         const context = { id: "test-upload-ctx" };
 
         await expect(
-            FakeHttp.request(context, {
+            FakeHTTP.request(context, {
                 url: "http://127.0.0.1",
                 data: "x".repeat(100),
                 errorType: "value"
@@ -318,7 +318,7 @@ describe("FakeHttp security checks", () => {
 
         const thisFileUrl = new URL(import.meta.url).href;
 
-        const res = await FakeHttp.request(undefined, {
+        const res = await FakeHTTP.request(undefined, {
             url: thisFileUrl,
             errorType: "value"
         });
@@ -343,24 +343,24 @@ describe("FakeHttp security checks", () => {
         const contextB = { rootContext: rootB };
 
         // 1st and 2nd requests for context A pass rate limit check
-        const resA1 = await FakeHttp.request(contextA, { url: "http://127.0.0.1", errorType: "value" });
+        const resA1 = await FakeHTTP.request(contextA, { url: "http://127.0.0.1", errorType: "value" });
         expect(resA1).toBeDefined();
 
-        const resA2 = await FakeHttp.request(contextA, { url: "http://127.0.0.1", errorType: "value" });
+        const resA2 = await FakeHTTP.request(contextA, { url: "http://127.0.0.1", errorType: "value" });
         expect(resA2).toBeDefined();
 
         // 3rd request for context A exceeds rate limit
-        await expect(FakeHttp.request(contextA, { url: "http://127.0.0.1", errorType: "value" })).rejects.toThrow(
+        await expect(FakeHTTP.request(contextA, { url: "http://127.0.0.1", errorType: "value" })).rejects.toThrow(
             "HTTP request rate limit exceeded"
         );
 
         // Context B has its own independent rate limit quota
-        const resB1 = await FakeHttp.request(contextB, { url: "http://127.0.0.1", errorType: "value" });
+        const resB1 = await FakeHTTP.request(contextB, { url: "http://127.0.0.1", errorType: "value" });
         expect(resB1).toBeDefined();
 
         // After resetting context A, capacity is restored
-        FakeHttp.resetContext(contextA);
-        const resA3 = await FakeHttp.request(contextA, { url: "http://127.0.0.1", errorType: "value" });
+        FakeHTTP.resetContext(contextA);
+        const resA3 = await FakeHTTP.request(contextA, { url: "http://127.0.0.1", errorType: "value" });
         expect(resA3).toBeDefined();
     });
 });

@@ -2,7 +2,7 @@ import { FuncTypes, ExecutionTypes } from "../../../structures/vm/FuncTypes.js";
 
 import FakeMsg from "../classes/FakeMsg.js";
 import FakeUtil from "../classes/FakeUtil.js";
-import { FakeHttp } from "../classes/FakeHttp.js";
+import { FakeHTTP } from "../classes/FakeHTTP.js";
 import FakeVM from "../classes/FakeVM.js";
 
 import ManevraError from "../functionErrors/ManevraError.js";
@@ -89,7 +89,7 @@ const Functions = Object.freeze({
     http: {
         request: {
             type: FuncTypes.syncPromise,
-            ref: FakeHttp.request
+            ref: FakeHTTP.request
         }
     }
 });
