@@ -12,10 +12,6 @@ class AIResponseFinisher {
     static maxSources = 3;
     static maxCandidates = 40;
 
-    static instructions = `You finish a Discord assistant's answer. You get the user's question, the assistant's answer and the candidate sources its tools returned. Reply with JSON:
-- followUps: 1-3 short questions (under 70 characters each) the user is likely to ask next, phrased as the user would type them. Empty only for greetings, thanks, acknowledgments or answers that leave nothing to follow up on.
-- sources: the 1-3 candidate sources that best support the answer, copied exactly from the candidates. Empty when no candidate supports it.`;
-
     static schema = ToolParams.object(
         {
             followUps: ToolParams.stringArray("Next questions."),
@@ -24,11 +20,15 @@ class AIResponseFinisher {
         ["followUps", "sources"]
     );
 
+    constructor(instructions) {
+        this.instructions = instructions;
+    }
+
     async finish(session, question, answer) {
         const candidates = session.ledger.toArray().slice(0, AIResponseFinisher.maxCandidates);
 
         const text = await session.generateText({
-            systemInstruction: { parts: [{ text: AIResponseFinisher.instructions }] },
+            systemInstruction: { parts: [{ text: this.instructions }] },
             contents: [{ role: "user", parts: [{ text: JSON.stringify({ question, answer, candidates }) }] }],
             generationConfig: {
                 responseMimeType: "application/json",

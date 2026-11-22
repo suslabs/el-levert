@@ -1,6 +1,6 @@
-import { EmbedBuilder, escapeMarkdown } from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, escapeMarkdown } from "discord.js";
 
-import AIPhases from "../../ai/AIPhases.js";
+import AIPhases from "./AIPhases.js";
 
 import { getClient, getConfig, getEmoji } from "../../LevertClient.js";
 
@@ -33,17 +33,18 @@ class AIReplyView {
         return this._renderStatus(session.phase, session.steps, session.text, session.finishing);
     }
 
-    renderResult(result) {
-        const extras = [AIReplyView._formatSources(result.sources), AIReplyView._formatFollowUps(result.followUps)]
-            .filter(Util.nonemptyString)
-            .join("\n\n");
-
+    renderResult(result, session) {
         const embed = this._createEmbed(this.name)
             .setColor(AIReplyView.answerColor)
-            .setDescription(AIReplyView._fitDescription(result.answer.trim(), extras))
+            .setDescription(
+                AIReplyView._fitDescription(result.answer.trim(), AIReplyView._formatSources(result.sources))
+            )
             .setFooter({ text: AIReplyView._formatFooter(result) });
 
-        return { embeds: [embed] };
+        return {
+            embeds: [embed],
+            components: session === null ? [] : [AIReplyView._createFollowUpRow(session)]
+        };
     }
 
     renderError(err) {
@@ -80,19 +81,21 @@ class AIReplyView {
         return ["Sources:", ...sources.map((source, i) => `${i + 1}. ${source}`)].join("\n");
     }
 
-    static _formatFollowUps(followUps) {
-        return followUps
-            .map((followUp, i) => `${DiscordUtil.getKeycapEmoji(i + 1)} ${escapeMarkdown(followUp)}`)
-            .join("\n");
+    static _createFollowUpRow(session) {
+        const buttons = session.followUps.map((followUp, i) =>
+            new ButtonBuilder().setCustomId(session.getCustomId(i)).setLabel(followUp).setStyle(ButtonStyle.Secondary)
+        );
+
+        return new ActionRowBuilder().addComponents(buttons);
     }
 
-    static _fitDescription(answer, extras) {
-        if (Util.empty(extras)) {
+    static _fitDescription(answer, sources) {
+        if (Util.empty(sources)) {
             return Util.trimString(answer, DiscordUtil.embedCharLimit, null, { tight: true });
         }
 
-        const answerLimit = DiscordUtil.embedCharLimit - extras.length - 2;
-        return `${Util.trimString(answer, answerLimit, null, { tight: true })}\n\n${extras}`;
+        const answerLimit = DiscordUtil.embedCharLimit - sources.length - 2;
+        return `${Util.trimString(answer, answerLimit, null, { tight: true })}\n\n${sources}`;
     }
 
     static _formatFooter(result) {

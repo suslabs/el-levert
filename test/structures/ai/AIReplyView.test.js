@@ -4,13 +4,14 @@ import { cleanupRuntime, createCommandRuntime } from "../../helpers/commandHarne
 
 let runtime, view;
 
-let AIReplyView, AIPhases, AIError;
+let AIReplyView, AIFollowUpSession, AIPhases, AIError;
 
 beforeEach(async () => {
     runtime = await createCommandRuntime({ config: { enableAI: true }, auth: { geminiKey: "test-key" } });
 
     ({ default: AIReplyView } = await import("../../../src/structures/ai/AIReplyView.js"));
-    ({ default: AIPhases } = await import("../../../src/ai/AIPhases.js"));
+    ({ default: AIFollowUpSession } = await import("../../../src/structures/ai/AIFollowUpSession.js"));
+    ({ default: AIPhases } = await import("../../../src/structures/ai/AIPhases.js"));
     ({ default: AIError } = await import("../../../src/errors/AIError.js"));
 
     view = new AIReplyView();
@@ -67,21 +68,44 @@ describe("AIReplyView", () => {
         expect(lines.at(-1)).toBe("▶️ *Step 7...*");
     });
 
-    test("keeps sources and follow-ups when trimming a long answer", () => {
-        const embed = embedOf(
-            view.renderResult({
-                answer: "a".repeat(5000),
-                sources: ["https://example.test/page"],
-                followUps: ["One?", "Two_?"],
-                model: "test-model",
-                tokens: 1234567,
-                reasoning: 0
-            })
-        );
+    test("keeps sources when trimming a long answer", () => {
+        const payload = view.renderResult(
+                {
+                    answer: "a".repeat(5000),
+                    sources: ["https://example.test/page"],
+                    model: "test-model",
+                    tokens: 1234567,
+                    reasoning: 0
+                },
+                null
+            ),
+            embed = embedOf(payload);
 
         expect(embed.description.length).toBeLessThanOrEqual(4096);
-        expect(embed.description.endsWith("Sources:\n1. https://example.test/page\n\n1️⃣ One?\n2️⃣ Two\\_?")).toBe(true);
+        expect(embed.description.endsWith("Sources:\n1. https://example.test/page")).toBe(true);
         expect(embed.footer.text).toBe("Models: test-model | 1,234,567 tok, 0 reasoning");
+        expect(payload.components).toEqual([]);
+    });
+
+    test("renders follow-ups as buttons bound to their session", () => {
+        const followUps = new AIFollowUpSession({ author: { id: "1" } }, ["One?", "Two_?"], []);
+
+        const payload = view.renderResult(
+            { answer: "Answer.", sources: [], model: "test-model", tokens: 1, reasoning: 0 },
+            followUps
+        );
+
+        const buttons = payload.components[0].toJSON().components;
+
+        expect(embedOf(payload).description).toBe("Answer.");
+        expect(buttons.map(button => [button.label, button.custom_id])).toEqual([
+            ["One?", `ai_followup:0:${followUps.id}`],
+            ["Two_?", `ai_followup:1:${followUps.id}`]
+        ]);
+
+        expect(followUps.getFollowUp(buttons[1].custom_id)).toBe("Two_?");
+        expect(followUps.getFollowUp(`ai_followup:7:${followUps.id}`)).toBe(null);
+        expect(followUps.getFollowUp(`snooze:1:${followUps.id}`)).toBe(null);
     });
 
     test("renders errors with a red border and no footer", () => {

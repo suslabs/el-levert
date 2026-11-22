@@ -46,26 +46,6 @@ let DiscordUtil = {
         return matches.map(match => match[1]);
     },
 
-    keycapSuffix: "️⃣",
-    maxKeycapNumber: 9,
-
-    getKeycapEmoji: num => {
-        if (!Number.isInteger(num) || num < 0 || num > DiscordUtil.maxKeycapNumber) {
-            throw new UtilError("Keycap emojis only exist for digits", num);
-        }
-
-        return `${num}${DiscordUtil.keycapSuffix}`;
-    },
-
-    parseKeycapEmoji: emoji => {
-        if (typeof emoji !== "string" || !emoji.endsWith(DiscordUtil.keycapSuffix)) {
-            return null;
-        }
-
-        const num = Util.parseInt(emoji.slice(0, -DiscordUtil.keycapSuffix.length));
-        return Number.isNaN(num) ? null : num;
-    },
-
     formatUser: (user, id = null, discord = false, options) => {
         options = ObjectUtil.guaranteeObject(options);
 

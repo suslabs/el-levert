@@ -1,5 +1,5 @@
-import Util from "../util/Util.js";
-import TypeTester from "../util/TypeTester.js";
+import Util from "../../util/Util.js";
+import TypeTester from "../../util/TypeTester.js";
 
 class AISourceLedger {
     static sourceKeys = new Set(["source", "url"]);

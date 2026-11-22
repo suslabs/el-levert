@@ -1,10 +1,10 @@
-import AITool from "./AITool.js";
-import ToolParams from "./ToolParams.js";
+import AITool from "../AITool.js";
+import ToolParams from "../ToolParams.js";
 
-import AIPhases from "../AIPhases.js";
+import AIPhases from "../../../structures/ai/AIPhases.js";
 
-import Util from "../../util/Util.js";
-import HTTPUtil from "../../util/vm/HTTPUtil.js";
+import Util from "../../../util/Util.js";
+import HTTPUtil from "../../../util/vm/HTTPUtil.js";
 
 class HttpRequestTool extends AITool {
     static methods = ["GET", "HEAD"];

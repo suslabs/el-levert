@@ -7,7 +7,6 @@ describe("handlers index", () => {
         expect(Object.keys(handlers).sort()).toEqual([
             "cliCommandHandler",
             "commandHandler",
-            "followUpHandler",
             "interactionHandler",
             "previewHandler",
             "reactionHandler",

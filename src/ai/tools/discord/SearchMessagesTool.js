@@ -1,12 +1,12 @@
 import RE2 from "re2";
 
 import MessageHistoryTool from "./MessageHistoryTool.js";
-import ToolParams from "./ToolParams.js";
+import ToolParams from "../ToolParams.js";
 
-import AIPhases from "../AIPhases.js";
+import AIPhases from "../../../structures/ai/AIPhases.js";
 
-import Util from "../../util/Util.js";
-import RegexUtil from "../../util/misc/RegexUtil.js";
+import Util from "../../../util/Util.js";
+import RegexUtil from "../../../util/misc/RegexUtil.js";
 
 class SearchMessagesTool extends MessageHistoryTool {
     static info = {

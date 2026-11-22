@@ -95,6 +95,7 @@
     "ai": {
         "name": "Large Language Rabbit",
         "icon": null,
+        "promptsPath": "./src/ai/prompts",
         "endpoint": "https://generativelanguage.googleapis.com/v1beta",
         "models": [
             "gemini-3.5-flash-lite",

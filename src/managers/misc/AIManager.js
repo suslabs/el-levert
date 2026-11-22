@@ -4,11 +4,13 @@ import Manager from "../Manager.js";
 import GeminiClient from "../../ai/GeminiClient.js";
 import AISession from "../../ai/AISession.js";
 import AIToolRegistry from "../../ai/AIToolRegistry.js";
+import AIPrompt from "../../ai/AIPrompt.js";
 import AIResponseFinisher from "../../ai/AIResponseFinisher.js";
 import WebSearcher from "../../ai/WebSearcher.js";
 import KnowledgeBase from "../../ai/knowledge/KnowledgeBase.js";
+import PromptLoader from "../../loaders/ai/PromptLoader.js";
 
-import { getConfig } from "../../LevertClient.js";
+import { getConfig, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import HTTPUtil from "../../util/vm/HTTPUtil.js";
@@ -20,6 +22,7 @@ class AIManager extends Manager {
     static loadPriority = 4;
 
     static maxRedirects = 5;
+    static promptNames = ["system", "finisher", "inspectImage"];
 
     constructor(enabled, apiKey) {
         super(enabled);
@@ -40,12 +43,15 @@ class AIManager extends Manager {
         this.timeLimit = config.timeLimit;
         this.requestTimeout = config.requestTimeout;
         this.maxDownloadSize = config.maxDownloadSize;
+        this.maxToolOutput = config.maxToolOutput;
 
+        this.prompts = await this._loadPrompts(config.promptsPath);
         this.http = this._createHttp(config);
 
         this.gemini = new GeminiClient(this.http, this.apiKey, config);
-        this.tools = new AIToolRegistry(this, config.maxToolOutput);
-        this.finisher = new AIResponseFinisher();
+        this.tools = new AIToolRegistry(this);
+        this.prompt = new AIPrompt(this.prompts.system);
+        this.finisher = new AIResponseFinisher(this.prompts.finisher);
         this.webSearcher = new WebSearcher(this.http);
 
         this.knowledge = new KnowledgeBase(this.http, config.sources, config.requestTimeout);
@@ -55,6 +61,18 @@ class AIManager extends Manager {
     async ask(question, request, options) {
         const session = new AISession(this, request, options);
         return await session.run(question);
+    }
+
+    async _loadPrompts(promptsPath) {
+        const [prompts] = await new PromptLoader(promptsPath, getLogger()).load();
+
+        const missing = AIManager.promptNames.filter(name => !Util.nonemptyString(prompts[name]));
+
+        if (!Util.empty(missing)) {
+            throw new ManagerError(`Missing AI prompt files: ${missing.join(", ")}`, missing);
+        }
+
+        return prompts;
     }
 
     _createHttp(config) {

@@ -1,13 +1,13 @@
-import AITool from "./AITool.js";
-import ToolParams from "./ToolParams.js";
+import AITool from "../AITool.js";
+import ToolParams from "../ToolParams.js";
 
-import AIPhases from "../AIPhases.js";
+import AIPhases from "../../../structures/ai/AIPhases.js";
 
-import { getClient } from "../../LevertClient.js";
+import { getClient } from "../../../LevertClient.js";
 
-import Util from "../../util/Util.js";
-import TypeTester from "../../util/TypeTester.js";
-import DiscordUtil from "../../util/DiscordUtil.js";
+import Util from "../../../util/Util.js";
+import TypeTester from "../../../util/TypeTester.js";
+import DiscordUtil from "../../../util/DiscordUtil.js";
 
 class TagCallTool extends AITool {
     static info = {

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import AISourceLedger from "../../src/ai/AISourceLedger.js";
+import AISourceLedger from "../../../src/structures/ai/AISourceLedger.js";
 
 describe("AISourceLedger", () => {
     test("collects nested source and url values from tool output", () => {

@@ -1,4 +1,4 @@
-import createEnum from "../util/createEnum.js";
+import createEnum from "../../util/createEnum.js";
 
 const AIPhases = createEnum({
     thinking: "Thinking",

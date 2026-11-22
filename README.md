@@ -122,7 +122,7 @@ Important groups of settings:
 - Tags and quotas: `maxTagNameLength`, `tagNameRegex`, `maxTagSize` (per-tag limits in kb for `text`, `script`, and `binary`; `-1` for unlimited), `maxQuota` (total storage quota in kb; `-1` for unlimited), `maxTagCount` (`-1` for unlimited)
 - Reply and output limits: `outCharLimit`, `outLineLimit`, `embedCharLimit`, `embedLineLimit`
 - Major features: `enablePreviews`, `enableSed`, `enablePermissions`, `enableReminders`, `enableAI`
-- AI assistant: `ai` (`name` and `icon` for the embed header, `endpoint`, `models` (tried in order, falling back on rate limits), `thinkingLevel`, `maxSteps`, `timeLimit` and `requestTimeout` in seconds, `maxDownloadSize` in MB, `maxToolOutput` in characters, `allowLocalhostRequests`, `sources`)
+- AI assistant: `ai` (`name` and `icon` for the embed header, `promptsPath` for the prompt text files, `endpoint`, `models` (tried in order, falling back on rate limits), `thinkingLevel`, `maxSteps`, `timeLimit` and `requestTimeout` in seconds, `maxDownloadSize` in MB, `maxToolOutput` in characters, `allowLocalhostRequests`, `sources`)
 - Logging and file paths: log files, log level, database path, command paths, Discord log settings
 
 ## Reactions config
@@ -181,7 +181,7 @@ If reactions are enabled, the file defines the bracket reactions and the word-tr
 - Message link previews, sed-style replacements, and reaction triggers
 - CLI commands for local testing and tag/script emulation
 - WebSocket command API for external tools and editor integration
-- AI assistant (Gemini) that searches tags, quests, chat history, members and the web, with live streamed progress and numbered follow-up reactions
+- AI assistant (Gemini) that searches tags, quests, chat history, members and the web, with live streamed progress and follow-up buttons
 
 ## Updating the bot
 
@@ -597,9 +597,10 @@ Syntax:
 ```
 
 - The answer is a single embed headed by the assistant's name and icon (`ai.name`, `ai.icon`; with no icon the bot's avatar is used). While it works, the header shows the current phase (e.g. "Searching...") and the embed shows a status line for each tool it runs, then a preview of the answer as it is written and "Finishing response...".
-- The finished answer has a green border, the sources it used as a numbered list, up to three numbered follow-up questions, and a footer with the model and the tokens used (`Models: <model> | <tokens> tok, <reasoning> reasoning`).
-- The bot reacts with 1️⃣ 2️⃣ 3️⃣ for the follow-ups. Anyone can react with a number; the assistant answers that follow-up as the person who reacted, in a reply to the answer, with the earlier questions and answers as context. Their reaction is removed again (needs Manage Messages). Follow-ups stay active for `interactionTimeout`.
-- Reply to a message with `%a` to ask about it, or attach an image. Replying to one of the assistant's answers with `%a` continues that conversation.
+- The finished answer has a green border, the sources it used as a numbered list and a footer with the model and the tokens used (`Models: <model> | <tokens> tok, <reasoning> reasoning`).
+- Up to three suggested follow-up questions appear as buttons under the answer. Anyone can click one; the assistant answers it as the person who clicked, with the earlier questions and answers as context. The buttons are disabled after `interactionTimeout`.
+- Reply to a message with `%a` to ask about it, or attach an image.
+- The prompts live in text files under `ai.promptsPath` (`system.txt` for the assistant, `finisher.txt` for the sources and follow-ups pass, `inspectImage.txt` for image descriptions) and can be edited without touching the code.
 
 Tools the assistant can use:
 
@@ -612,7 +613,7 @@ Tools the assistant can use:
 - `fetch_recent_messages`, `search_messages`: chat history, limited to channels the asking user can see.
 - `inspect_image`: describes an attached or linked image.
 
-`tag_call` and `execute_javascript` are only offered for `%a` messages, not for follow-up reactions, because there is no user message for scripts to run as.
+`tag_call` and `execute_javascript` are only offered for `%a` messages, not for follow-up buttons, because there is no user message for scripts to run as.
 
 ### 11. Maintenance commands
 

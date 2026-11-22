@@ -18,7 +18,6 @@ import { registerGlobalErrorHandler, removeGlobalErrorHandler } from "./client/G
 
 import MessageDispatcher from "./client/MessageDispatcher.js";
 import InteractionDispatcher from "./client/InteractionDispatcher.js";
-import ReactionDispatcher from "./client/ReactionDispatcher.js";
 
 import Util from "./util/Util.js";
 import TypeTester from "./util/TypeTester.js";
@@ -547,18 +546,6 @@ class LevertClient extends DiscordClient {
         this.logger.info("Unloaded InteractionDispatcher.");
     }
 
-    _loadReactionDispatcher() {
-        this.reactionDispatcher = new ReactionDispatcher(this);
-
-        this.logger.info("Loaded ReactionDispatcher.");
-    }
-
-    _unloadReactionDispatcher() {
-        delete this.reactionDispatcher;
-
-        this.logger.info("Unloaded ReactionDispatcher.");
-    }
-
     _loadHandlers() {
         this.loadComponents(
             "handlers",
@@ -570,7 +557,6 @@ class LevertClient extends DiscordClient {
                 reactionHandler: this.reactions.enableReacts,
                 sedHandler: this.config.enableSed,
                 interactionHandler: [],
-                followUpHandler: this.config.enableAI,
                 cliCommandHandler: this.config.enableCliCommands,
                 websocketCommandHandler: this.config.enableWebsocket
             },
@@ -582,7 +568,6 @@ class LevertClient extends DiscordClient {
 
         this._loadMessageDispatcher();
         this._loadInteractionDispatcher();
-        this._loadReactionDispatcher();
     }
 
     _unloadHandlers() {
@@ -592,7 +577,6 @@ class LevertClient extends DiscordClient {
 
         this._unloadMessageDispatcher();
         this._unloadInteractionDispatcher();
-        this._unloadReactionDispatcher();
     }
 
     async _loadManagers() {

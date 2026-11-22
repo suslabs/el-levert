@@ -1,11 +1,11 @@
-import AITool from "./AITool.js";
+import AITool from "../AITool.js";
 
-import { getClient } from "../../LevertClient.js";
+import { getClient } from "../../../LevertClient.js";
 
-import Util from "../../util/Util.js";
-import DiscordUtil from "../../util/DiscordUtil.js";
+import Util from "../../../util/Util.js";
+import DiscordUtil from "../../../util/DiscordUtil.js";
 
-import AIError from "../../errors/AIError.js";
+import AIError from "../../../errors/AIError.js";
 
 class MessageHistoryTool extends AITool {
     static pageSize = 100;

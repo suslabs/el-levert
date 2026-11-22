@@ -296,6 +296,10 @@
                     "type": "string",
                     "minLength": 1
                 },
+                "promptsPath": {
+                    "type": "string",
+                    "minLength": 1
+                },
                 "icon": {
                     "type": ["string", "null"]
                 },
@@ -366,6 +370,7 @@
             "required": [
                 "name",
                 "icon",
+                "promptsPath",
                 "endpoint",
                 "models",
                 "thinkingLevel",

@@ -1,8 +1,8 @@
-import AITool from "./AITool.js";
+import AITool from "../AITool.js";
 
-import AIPhases from "../AIPhases.js";
+import AIPhases from "../../../structures/ai/AIPhases.js";
 
-import { getClient, getConfig } from "../../LevertClient.js";
+import { getClient, getConfig } from "../../../LevertClient.js";
 
 class BotProfileTool extends AITool {
     static info = {

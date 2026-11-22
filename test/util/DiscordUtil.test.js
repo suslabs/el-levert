@@ -389,16 +389,4 @@ describe("DiscordUtil", () => {
         expect(jsonBufferLog).toContain("89504e47");
         expect(jsonBufferLog).not.toContain('"type":"Buffer"');
     });
-
-    test("converts digits to keycap emojis and back", () => {
-        expect(DiscordUtil.getKeycapEmoji(1)).toBe("1️⃣");
-        expect(DiscordUtil.parseKeycapEmoji("3️⃣")).toBe(3);
-
-        expect(DiscordUtil.parseKeycapEmoji("👍")).toBe(null);
-        expect(DiscordUtil.parseKeycapEmoji("x️⃣")).toBe(null);
-        expect(DiscordUtil.parseKeycapEmoji(null)).toBe(null);
-
-        expect(() => DiscordUtil.getKeycapEmoji(10)).toThrow("Keycap emojis only exist for digits");
-        expect(() => DiscordUtil.getKeycapEmoji(1.5)).toThrow("Keycap emojis only exist for digits");
-    });
 });

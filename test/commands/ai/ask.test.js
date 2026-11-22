@@ -14,7 +14,7 @@ const streamPath = model => `/v1beta/models/${model}:streamGenerateContent`,
     generatePath = model => `/v1beta/models/${model}:generateContent`;
 
 const askerId = "100000000000000001",
-    reactorId = "100000000000000002";
+    clickerId = "100000000000000002";
 
 let runtime, server;
 
@@ -100,17 +100,6 @@ function createSentMessage(id) {
         guild: { id: "guild-1", name: "Test Guild" },
         channel: { id: "channel-1" },
         payloads: [],
-        reactions: [],
-        replies: [],
-        react: async emoji => msg.reactions.push(emoji),
-        reply: async data => {
-            const reply = createSentMessage(`${id}-reply`);
-
-            reply.payloads.push(data);
-            msg.replies.push(reply);
-
-            return reply;
-        },
         edit: async data => (msg.payloads.push(data), msg)
     };
 
@@ -147,20 +136,40 @@ function createAskContext(question, recorder, overrides = {}) {
     });
 }
 
-function createReaction(message, emoji, user) {
-    const removed = [];
+function createClick(customId, user, message) {
+    const reply = createSentMessage("followup-1");
 
-    const reaction = {
+    const interaction = {
+        customId,
+        user,
+        member: createDiscordMember(user, { guildId: "guild-1" }),
+        guild: message.guild,
+        channel: message.channel,
         message,
-        emoji: { name: emoji },
-        users: { remove: async id => removed.push(id) }
+        replied: false,
+        deferred: false,
+        isMessageComponent: () => true,
+        isModalSubmit: () => false,
+        isRepliable: () => true,
+        reply: async data => {
+            interaction.replied = true;
+            reply.payloads.push(data);
+
+            return reply;
+        },
+        editReply: async data => (reply.payloads.push(data), reply)
     };
 
-    return { reaction, user, removed };
+    return { interaction, reply };
+}
+
+function buttonsOf(payload) {
+    return payload.components.flatMap(row => row.toJSON().components);
 }
 
 function embedOf(payload) {
-    return payload.embeds[0].toJSON();
+    const embed = payload.embeds[0];
+    return typeof embed.toJSON === "function" ? embed.toJSON() : embed;
 }
 
 describe("a command", () => {
@@ -179,7 +188,7 @@ describe("a command", () => {
         expect(recorder.sent).toEqual([]);
     });
 
-    test("streams an answer with verified sources, numbered follow-ups and token usage", async () => {
+    test("streams an answer with verified sources, follow-up buttons and token usage", async () => {
         const script = [
             calls(
                 [
@@ -235,15 +244,27 @@ describe("a command", () => {
         expect(embedOf(recorder.sent.at(-1))).toEqual({
             author: { name: "Test Rabbit", icon_url: "https://example.test/icon.png" },
             color: 0x75fa4c,
-            description:
-                "Use the **EBF** to make steel. 144 mB/t is 2.88 B/s.\n\nSources:\n1. tag:steel\n\n1️⃣ What coils does the EBF need?",
+            description: "Use the **EBF** to make steel. 144 mB/t is 2.88 B/s.\n\nSources:\n1. tag:steel",
             footer: { text: "Models: test-model | 1,500 tok, 30 reasoning" }
         });
 
-        expect(recorder.msg.reactions).toEqual(["1️⃣"]);
+        const [button] = buttonsOf(recorder.sent.at(-1));
+
+        expect(button.label).toBe("What coils does the EBF need?");
+        expect(button.custom_id).toMatch(/^ai_followup:0:/);
     });
 
-    test("number reactions answer the follow-up as the reacting user with conversation history", async () => {
+    test("answers without follow-ups have no buttons", async () => {
+        await setup([answer(["Hi!"]), extras([], [])]);
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("hello", recorder));
+
+        expect(recorder.sent.at(-1).components).toEqual([]);
+        expect(runtime.client.interactionHandler.tracker.items.size).toBe(0);
+    });
+
+    test("follow-up buttons answer as the clicking user with conversation history", async () => {
         const script = [
             answer(["First answer."]),
             extras(["Tell me more", "Something else"], []),
@@ -256,24 +277,17 @@ describe("a command", () => {
         const recorder = createRecorder();
         await getCommand(runtime, "a").handler(createAskContext("hello", recorder));
 
-        expect(recorder.msg.reactions).toEqual(["1️⃣", "2️⃣"]);
+        const buttons = buttonsOf(recorder.sent.at(-1));
+        expect(buttons.map(button => button.label)).toEqual(["Tell me more", "Something else"]);
 
-        const reactor = createDiscordUser({ id: reactorId, username: "neeve" }),
-            dispatcher = runtime.client.reactionDispatcher;
+        const clicker = createDiscordUser({ id: clickerId, username: "neeve" }),
+            sessionId = buttons[0].custom_id.split(":").at(-1);
 
-        const bot = createReaction(recorder.msg, "1️⃣", createDiscordUser({ id: "bot-id", bot: true })),
-            other = createReaction(recorder.msg, "👍", reactor),
-            missing = createReaction(recorder.msg, "3️⃣", reactor),
-            unknown = createReaction(createSentMessage("other-msg"), "1️⃣", reactor);
+        const unknown = createClick(`ai_followup:5:${sessionId}`, clicker, recorder.msg);
+        await expect(runtime.client.interactionHandler.execute(unknown.interaction)).resolves.toBe(false);
 
-        for (const entry of [bot, other, missing, unknown]) {
-            await expect(dispatcher.processAdd(entry.reaction, entry.user)).resolves.toBe(false);
-        }
-
-        const first = createReaction(recorder.msg, "1️⃣", reactor);
-        await expect(dispatcher.processAdd(first.reaction, first.user)).resolves.toBe(true);
-
-        expect(first.removed).toEqual([reactorId]);
+        const click = createClick(buttons[0].custom_id, clicker, recorder.msg);
+        await expect(runtime.client.interactionHandler.execute(click.interaction)).resolves.toBe(true);
 
         const body = bodies[2].body,
             toolNames = body.tools[0].functionDeclarations.map(decl => decl.name);
@@ -281,35 +295,30 @@ describe("a command", () => {
         expect(body.contents.map(content => content.role)).toEqual(["user", "model", "user"]);
         expect(body.contents[1].parts[0].text).toBe("First answer.");
         expect(body.contents.at(-1).parts[0].text).toBe("Tell me more");
-        expect(body.systemInstruction.parts[0].text).toContain(`<@${reactorId}>`);
+        expect(body.systemInstruction.parts[0].text).toContain(`<@${clickerId}>`);
         expect(toolNames).not.toContain("execute_javascript");
         expect(toolNames).not.toContain("tag_call");
 
-        const reply = recorder.msg.replies[0];
+        const payloads = click.reply.payloads;
 
-        expect(embedOf(reply.payloads[0]).author.name).toBe("Test Rabbit - Thinking...");
-        expect(embedOf(reply.payloads.at(-1)).description).toBe("More details.");
-        expect(reply.reactions).toEqual([]);
+        expect(embedOf(payloads[0]).author.name).toBe("Test Rabbit - Thinking...");
+        expect(embedOf(payloads.at(-1)).description).toBe("More details.");
+        expect(payloads.at(-1).components).toEqual([]);
     });
 
-    test("replying to an answer with %a continues its conversation", async () => {
-        const script = [answer(["First answer."]), extras([], []), answer(["Second answer."]), extras([], [])];
-
-        const bodies = await setup(script);
+    test("follow-up buttons on expired answers report that they expired", async () => {
+        await setup([answer(["First answer."]), extras(["Tell me more"], [])]);
 
         const recorder = createRecorder();
         await getCommand(runtime, "a").handler(createAskContext("hello", recorder));
 
-        const replyMsg = createDiscordMessage("", {
-            id: "answer-1",
-            author: createDiscordUser({ id: "bot-id", bot: true }),
-            embeds: [{ description: "First answer.", fields: [] }]
-        });
+        const [button] = buttonsOf(recorder.sent.at(-1));
+        runtime.client.interactionHandler.unregisterSession(button.custom_id.split(":").at(-1));
 
-        await getCommand(runtime, "a").handler(createAskContext("and then?", createRecorder(), { replyMsg }));
+        const click = createClick(button.custom_id, createDiscordUser({ id: clickerId }), recorder.msg);
+        await expect(runtime.client.interactionHandler.execute(click.interaction)).resolves.toBe(false);
 
-        expect(bodies[2].body.contents.map(content => content.role)).toEqual(["user", "model", "user"]);
-        expect(bodies[2].body.contents.at(-1).parts[0].text).toBe("and then?");
+        expect(click.reply.payloads[0].content).toContain("expired");
     });
 
     test("runs scripts in the eval sandbox and reads history the user can access", async () => {

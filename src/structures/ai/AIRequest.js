@@ -1,6 +1,4 @@
-import { getClient } from "../LevertClient.js";
-
-import ObjectUtil from "../util/ObjectUtil.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
 
 class AIRequest {
     static fromCommand(ctx) {
@@ -14,12 +12,12 @@ class AIRequest {
         });
     }
 
-    static async fromReaction(msg, user) {
+    static fromInteraction(interaction) {
         return new AIRequest({
-            author: user,
-            member: msg.guild === null ? null : await getClient().fetchMember(msg.guild, user.id),
-            channel: msg.channel,
-            guild: msg.guild
+            author: interaction.user,
+            member: interaction.member,
+            channel: interaction.channel,
+            guild: interaction.guild
         });
     }
 

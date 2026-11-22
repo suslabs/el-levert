@@ -1,14 +1,14 @@
-import AITool from "./AITool.js";
-import ToolParams from "./ToolParams.js";
+import AITool from "../AITool.js";
+import ToolParams from "../ToolParams.js";
 
-import AIPhases from "../AIPhases.js";
+import AIPhases from "../../../structures/ai/AIPhases.js";
 
-import KnowledgeKinds from "../knowledge/KnowledgeKinds.js";
+import KnowledgeKinds from "../../knowledge/KnowledgeKinds.js";
 
-import { getClient } from "../../LevertClient.js";
+import { getClient } from "../../../LevertClient.js";
 
-import Util from "../../util/Util.js";
-import ArrayUtil from "../../util/ArrayUtil.js";
+import Util from "../../../util/Util.js";
+import ArrayUtil from "../../../util/ArrayUtil.js";
 
 class TriSearchTool extends AITool {
     static info = {

@@ -1,15 +1,38 @@
-import AIConversation from "./AIConversation.js";
+import AIRequest from "./AIRequest.js";
 import AIReplyUpdater from "./AIReplyUpdater.js";
 import AIReplyView from "./AIReplyView.js";
+import AIFollowUpSession from "./AIFollowUpSession.js";
+import AIInteractionTarget from "./AIInteractionTarget.js";
 
 import { getClient } from "../../LevertClient.js";
 
-import DiscordUtil from "../../util/DiscordUtil.js";
+import Util from "../../util/Util.js";
 
 class AIReply {
     static expectedErrors = new Set(["AIError", "AxiosError"]);
 
-    constructor(request, target) {
+    static fromCommand(ctx) {
+        return new AIReply(ctx, AIRequest.fromCommand(ctx), ctx);
+    }
+
+    static fromInteraction(ctx) {
+        return new AIReply(ctx, AIRequest.fromInteraction(ctx.interaction), new AIInteractionTarget(ctx));
+    }
+
+    static async handleFollowUp(ctx) {
+        const session = ctx.interactionContext.session,
+            question = session.getFollowUp(ctx.interaction.customId);
+
+        if (question === null) {
+            return false;
+        }
+
+        await AIReply.fromInteraction(ctx).answer(question, session.history);
+        return true;
+    }
+
+    constructor(ctx, request, target) {
+        this.ctx = ctx;
         this.request = request;
 
         this.view = new AIReplyView();
@@ -35,19 +58,20 @@ class AIReply {
             return await this.updater.finish(this.view.renderError(err));
         }
 
-        const msg = await this.updater.finish(this.view.renderResult(result));
+        const turns = [...history, { role: "user", text: question }, { role: "model", text: result.answer }],
+            session = Util.empty(result.followUps) ? null : this._createSession(result.followUps, turns);
 
-        await this._track(msg, question, result, history);
+        const msg = await this.updater.finish(this.view.renderResult(result, session));
+        session?.setMessage(msg);
+
         return msg;
     }
 
-    async _track(msg, question, result, history) {
-        const turns = [...history, { role: "user", text: question }, { role: "model", text: result.answer }];
-        getClient().followUpHandler.register(new AIConversation(msg, turns, result.followUps));
+    _createSession(followUps, history) {
+        const session = new AIFollowUpSession(this.ctx, followUps, history);
 
-        for (let i = 0; i < result.followUps.length; i++) {
-            await msg.react(DiscordUtil.getKeycapEmoji(i + 1));
-        }
+        getClient().interactionHandler.registerSession(session);
+        return session;
     }
 }
 

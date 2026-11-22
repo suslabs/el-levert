@@ -80,6 +80,7 @@ function buildDefaultConfig(tempDir, overrides = {}) {
         ai: {
             name: "Test Rabbit",
             icon: "https://example.test/icon.png",
+            promptsPath: path.join(repoRoot, "src/ai/prompts"),
             endpoint: "http://127.0.0.1:1/v1beta",
             models: ["test-model"],
             thinkingLevel: "minimal",
@@ -281,7 +282,6 @@ async function loadRuntimeHandlers(client, Handlers, config, reactions) {
             reactionHandler: reactions.enableReacts,
             sedHandler: config.enableSed,
             interactionHandler: [],
-            followUpHandler: config.enableAI,
             cliCommandHandler: config.enableCliCommands,
             websocketCommandHandler: config.enableWebsocket
         },
@@ -293,7 +293,6 @@ async function loadRuntimeHandlers(client, Handlers, config, reactions) {
 
     client._loadMessageDispatcher();
     client._loadInteractionDispatcher();
-    client._loadReactionDispatcher();
 }
 
 async function createRuntime(options = {}) {

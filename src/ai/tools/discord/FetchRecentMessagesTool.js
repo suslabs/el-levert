@@ -1,9 +1,9 @@
 import MessageHistoryTool from "./MessageHistoryTool.js";
-import ToolParams from "./ToolParams.js";
+import ToolParams from "../ToolParams.js";
 
-import AIPhases from "../AIPhases.js";
+import AIPhases from "../../../structures/ai/AIPhases.js";
 
-import Util from "../../util/Util.js";
+import Util from "../../../util/Util.js";
 
 class FetchRecentMessagesTool extends MessageHistoryTool {
     static info = {

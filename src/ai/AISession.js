@@ -1,7 +1,6 @@
-import AIPrompt from "./AIPrompt.js";
-import AISourceLedger from "./AISourceLedger.js";
+import AISourceLedger from "../structures/ai/AISourceLedger.js";
 
-import AIPhases from "./AIPhases.js";
+import AIPhases from "../structures/ai/AIPhases.js";
 
 import { getLogger } from "../LevertClient.js";
 
@@ -50,7 +49,7 @@ class AISession {
 
     async run(question) {
         const systemInstruction = {
-            parts: [{ text: AIPrompt.build(this.request, this.manager.tools.getNames(this)) }]
+            parts: [{ text: this.manager.prompt.build(this.request, this.manager.tools.getNames(this)) }]
         };
 
         this.contents = [
@@ -66,7 +65,9 @@ class AISession {
             const final = i === this.manager.maxSteps - 1 || this.timeLeft < this.manager.requestTimeout,
                 res = await this._stream(this._buildRequest(systemInstruction, final));
 
-            const calls = res.parts.filter(part => part.functionCall != null).map(part => part.functionCall);
+            const calls = res.parts
+                .filter(part => part.functionCall != null)
+                .map(part => ({ ...part.functionCall, args: ObjectUtil.guaranteeObject(part.functionCall.args) }));
 
             if (Util.empty(calls)) {
                 return await this._finish(question, res.finishReason);
