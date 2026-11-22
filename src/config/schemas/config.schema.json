@@ -171,6 +171,9 @@
         "enableEval": {
             "type": "boolean"
         },
+        "enableAI": {
+            "type": "boolean"
+        },
         "enableOtherLangs": {
             "type": "boolean"
         },
@@ -285,6 +288,96 @@
                 "allowFilesystemRequests"
             ],
             "additionalProperties": false
+        },
+        "ai": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "icon": {
+                    "type": ["string", "null"]
+                },
+                "endpoint": {
+                    "type": "string"
+                },
+                "models": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "minItems": 1
+                },
+                "thinkingLevel": {
+                    "type": "string"
+                },
+                "maxSteps": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "timeLimit": {
+                    "type": "number"
+                },
+                "requestTimeout": {
+                    "type": "number"
+                },
+                "maxDownloadSize": {
+                    "type": "number"
+                },
+                "maxToolOutput": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "allowLocalhostRequests": {
+                    "type": "boolean"
+                },
+                "sources": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "kind": {
+                                "enum": ["questbook", "domain", "glossary"]
+                            },
+                            "format": {
+                                "enum": ["json", "betterquesting"]
+                            },
+                            "url": {
+                                "type": "string"
+                            },
+                            "tag": {
+                                "type": "string"
+                            }
+                        },
+                        "required": ["kind", "format"],
+                        "oneOf": [
+                            {
+                                "required": ["url"]
+                            },
+                            {
+                                "required": ["tag"]
+                            }
+                        ],
+                        "additionalProperties": false
+                    }
+                }
+            },
+            "required": [
+                "name",
+                "icon",
+                "endpoint",
+                "models",
+                "thinkingLevel",
+                "maxSteps",
+                "timeLimit",
+                "requestTimeout",
+                "maxDownloadSize",
+                "maxToolOutput",
+                "allowLocalhostRequests",
+                "sources"
+            ],
+            "additionalProperties": false
         }
     },
     "required": [
@@ -332,6 +425,7 @@
         "enablePreviews",
         "enableSed",
         "enableEval",
+        "enableAI",
         "enableOtherLangs",
         "enableVM2",
         "enablePermissions",
@@ -349,7 +443,8 @@
         "logWebhook",
         "emoji",
         "bridgeBotIds",
-        "vmHttp"
+        "vmHttp",
+        "ai"
     ],
     "anyOf": [
         {

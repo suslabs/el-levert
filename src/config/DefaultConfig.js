@@ -122,6 +122,24 @@ const DefaultConfig = Object.freeze({
         mult: 1 / Util.durationSeconds.milli
     },
 
+    ai: {
+        timeLimit: {
+            min: 0,
+            round: true,
+            mult: 1 / Util.durationSeconds.milli
+        },
+        requestTimeout: {
+            min: 0,
+            round: true,
+            mult: 1 / Util.durationSeconds.milli
+        },
+        maxDownloadSize: {
+            min: 0,
+            round: true,
+            mult: Util.dataBytes.megabyte
+        }
+    },
+
     reminderSendInterval: {
         min: 0,
         round: true,

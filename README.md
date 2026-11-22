@@ -81,8 +81,9 @@ Supported environment variable names:
 
 - `LEVERET_TOKEN`
 - `LEVERET_OWNER`
+- `LEVERET_GEMINI_KEY` (optional, only needed when `enableAI` is on)
 
-If `config/auth.json` exists, the bot uses that file for `token` and `owner`.
+If `config/auth.json` exists, the bot uses that file for `token`, `owner` and `geminiKey`.
 
 If there is no `config/auth.json`, the bot looks for `config/auth.env` and then for the matching environment variables.
 
@@ -91,7 +92,8 @@ If there is no `config/auth.json`, the bot looks for `config/auth.env` and then 
 ```json
 {
     "token": "bot token",
-    "owner": "your discord id"
+    "owner": "your discord id",
+    "geminiKey": "optional Gemini API key"
 }
 ```
 
@@ -100,7 +102,10 @@ If there is no `config/auth.json`, the bot looks for `config/auth.env` and then 
 ```dotenv
 LEVERET_TOKEN=your bot token
 LEVERET_OWNER=your discord id
+LEVERET_GEMINI_KEY=optional Gemini API key
 ```
+
+The Gemini key lives in the credentials, not in a tag, so it can't be read with `%tag raw` or from scripts. Get a free key at https://aistudio.google.com/apikey.
 
 ## Main bot config
 
@@ -116,7 +121,8 @@ Important groups of settings:
 - Inspector and debugging: `vmInspector` (`enable`, `enableUser`, `connectTimeout`, `userConnectTimeout`, `userActionTimeout`, `port`)
 - Tags and quotas: `maxTagNameLength`, `tagNameRegex`, `maxTagSize` (per-tag limits in kb for `text`, `script`, and `binary`; `-1` for unlimited), `maxQuota` (total storage quota in kb; `-1` for unlimited), `maxTagCount` (`-1` for unlimited)
 - Reply and output limits: `outCharLimit`, `outLineLimit`, `embedCharLimit`, `embedLineLimit`
-- Major features: `enablePreviews`, `enableSed`, `enablePermissions`, `enableReminders`
+- Major features: `enablePreviews`, `enableSed`, `enablePermissions`, `enableReminders`, `enableAI`
+- AI assistant: `ai` (`name` and `icon` for the embed header, `endpoint`, `models` (tried in order, falling back on rate limits), `thinkingLevel`, `maxSteps`, `timeLimit` and `requestTimeout` in seconds, `maxDownloadSize` in MB, `maxToolOutput` in characters, `allowLocalhostRequests`, `sources`)
 - Logging and file paths: log files, log level, database path, command paths, Discord log settings
 
 ## Reactions config
@@ -159,6 +165,8 @@ If reactions are enabled, the file defines the bracket reactions and the word-tr
 - If `allowLocalhostRequests` is off (the default), script HTTP requests (`request` / `fetch`) cannot connect to localhost, loopback, or private network IP addresses.
 - If `allowFilesystemRequests` is off (the default), script HTTP requests cannot access local files through `file://` URLs.
 - If inspector support is off, debug flows described in this README are not available.
+- If `enableAI` is off, the `a` command is not available. If it's on, a Gemini key must be provided in the credentials or the bot refuses to start.
+- `ai.sources` adds questbook, domain or glossary knowledge for the AI's `tri_search` tool. Each source has a `kind` (`questbook`, `domain`, `glossary`), a `format` (`json` for `[{ "id", "title", "text", "chapter", "keywords", "tasks", "prereqs", "url" }]` or `{ "entries": [...] }`, `betterquesting` for a BetterQuesting `DefaultQuests.json` export) and either a `url` or a `tag` holding the JSON. Sources load once at startup.
 - For tag size and count limits (`maxTagSize.text`, `maxTagSize.script`, `maxTagSize.binary`, `maxQuota`, and `maxTagCount`), setting any limit to `-1` means unlimited. The `%tag quota` command reports both your stored tag quota (in kb) and registered tag count against these limits (or as unlimited when configured as `-1`).
 
 # Features
@@ -173,6 +181,7 @@ If reactions are enabled, the file defines the bracket reactions and the word-tr
 - Message link previews, sed-style replacements, and reaction triggers
 - CLI commands for local testing and tag/script emulation
 - WebSocket command API for external tools and editor integration
+- AI assistant (Gemini) that searches tags, quests, chat history, members and the web, with live streamed progress and numbered follow-up reactions
 
 ## Updating the bot
 
@@ -577,7 +586,35 @@ Examples:
 - `cleanroomcalc` / `crc <width>x<height>x<length>`: Calculates required filter casings, plascrete, and construction blocks for a GregTech cleanroom of given dimensions (e.g. `5x5x5`, `9x7x9`).
 - `stoik <reactants> -> <products>`: Balances chemical equations and verifies reaction stoichiometry.
 
-### 10. Maintenance commands
+### 10. AI assistant: `a` / `ai` / `ask`
+
+Asks the AI assistant (Google Gemini). Only available when `enableAI` is on.
+
+Syntax:
+
+```
+%a <question>
+```
+
+- The answer is a single embed headed by the assistant's name and icon (`ai.name`, `ai.icon`; with no icon the bot's avatar is used). While it works, the header shows the current phase (e.g. "Searching...") and the embed shows a status line for each tool it runs, then a preview of the answer as it is written and "Finishing response...".
+- The finished answer has a green border, the sources it used as a numbered list, up to three numbered follow-up questions, and a footer with the model and the tokens used (`Models: <model> | <tokens> tok, <reasoning> reasoning`).
+- The bot reacts with 1️⃣ 2️⃣ 3️⃣ for the follow-ups. Anyone can react with a number; the assistant answers that follow-up as the person who reacted, in a reply to the answer, with the earlier questions and answers as context. Their reaction is removed again (needs Manage Messages). Follow-ups stay active for `interactionTimeout`.
+- Reply to a message with `%a` to ask about it, or attach an image. Replying to one of the assistant's answers with `%a` continues that conversation.
+
+Tools the assistant can use:
+
+- `tri_search`: configured questbook/domain/glossary sources, then tags (name and body search), then the web.
+- `tag_get`, `tag_call`: read or run a tag as the asking user.
+- `search_web`, `fetch_web_page`, `http_request` (GET/HEAD API calls only): web access through the same private-network protection as script HTTP requests.
+- `execute_javascript`: runs in the eval sandbox with the same limits as `%eval` (needs `enableEval`).
+- `unit_convert`: energy and fluid rate conversions, per tick or per second.
+- `find_users`, `get_asking_user`, `get_bot_profile`: server members and profiles.
+- `fetch_recent_messages`, `search_messages`: chat history, limited to channels the asking user can see.
+- `inspect_image`: describes an attached or linked image.
+
+`tag_call` and `execute_javascript` are only offered for `%a` messages, not for follow-up reactions, because there is no user message for scripts to run as.
+
+### 11. Maintenance commands
 
 These are higher-privilege operational commands for moderators, admins, or the bot owner:
 
