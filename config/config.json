@@ -107,6 +107,7 @@
         "thinkingLevel": "minimal",
         "maxSteps": -1,
         "timeLimit": 45,
+        "unlimitedTimeForAdmins": true,
         "requestTimeout": 20,
         "maxDownloadSize": 10,
         "maxToolOutput": 12000,

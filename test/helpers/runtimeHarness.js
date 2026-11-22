@@ -86,6 +86,7 @@ function buildDefaultConfig(tempDir, overrides = {}) {
             thinkingLevel: "minimal",
             maxSteps: 6,
             timeLimit: 10 / Util.durationSeconds.milli,
+            unlimitedTimeForAdmins: true,
             requestTimeout: 2 / Util.durationSeconds.milli,
             maxDownloadSize: 10 * Util.dataBytes.megabyte,
             maxToolOutput: 12000,

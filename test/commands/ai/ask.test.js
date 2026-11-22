@@ -751,6 +751,30 @@ describe("a command", () => {
         expect(embedOf(recorder.sent.at(-1)).description).toBe("again");
     });
 
+    test("admins have no time limit when unlimitedTimeForAdmins is on", async () => {
+        const script = [answer(["Took a while."]), extras([], [])];
+
+        await setup(script, {
+            ai: { timeLimit: 1 },
+            auth: { geminiKey: "test-key", owner: askerId }
+        });
+
+        const ctx = createAskContext("slow question", createRecorder());
+        await getCommand(runtime, "a").handler(ctx);
+
+        expect(script).toEqual([]);
+        expect(ctx.timeoutDisabled).toBe(true);
+    });
+
+    test("other users still run out of time", async () => {
+        await setup([], { ai: { timeLimit: 1 } });
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("slow question", recorder));
+
+        expect(embedOf(recorder.sent.at(-1)).description).toContain("Ran out of time.");
+    });
+
     test("attaches files the model writes and the full answer when it doesn't fit", async () => {
         const longAnswer = "word ".repeat(1000).trim();
 

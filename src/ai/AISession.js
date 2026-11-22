@@ -28,7 +28,7 @@ class AISession {
         this.history = options.history ?? [];
         this.onProgress = options.onProgress ?? null;
 
-        this.deadline = Date.now() + manager.timeLimit;
+        this.deadline = Date.now() + (options.timeLimit ?? manager.timeLimit);
         this.state = manager.gemini.createState();
 
         this.ledger = new AISourceLedger();

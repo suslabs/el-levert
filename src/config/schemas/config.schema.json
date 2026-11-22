@@ -323,6 +323,9 @@
                 "timeLimit": {
                     "type": "number"
                 },
+                "unlimitedTimeForAdmins": {
+                    "type": "boolean"
+                },
                 "requestTimeout": {
                     "type": "number"
                 },
@@ -389,6 +392,7 @@
                 "thinkingLevel",
                 "maxSteps",
                 "timeLimit",
+                "unlimitedTimeForAdmins",
                 "requestTimeout",
                 "maxDownloadSize",
                 "maxToolOutput",

@@ -64,11 +64,18 @@ class AIReply {
     async answer(question, history) {
         const aiManager = getClient().aiManager;
 
-        const userId = this.request.author.id;
+        const userId = this.request.author.id,
+            isAdmin = await this._isAdmin(userId);
 
-        if (await this._isRateLimited(userId)) {
+        if (!isAdmin && !aiManager.rateLimiter.check(userId)) {
             const waitTime = aiManager.rateLimiter.getTimeToReset(userId);
             return await this.ctx.reply(this.view.renderCooldown(waitTime), { ephemeral: true });
+        }
+
+        const unlimitedTime = isAdmin && aiManager.unlimitedTimeForAdmins;
+
+        if (unlimitedTime) {
+            this.ctx.disableTimeout();
         }
 
         await this.updater.start(this.view.renderThinking());
@@ -78,6 +85,7 @@ class AIReply {
         try {
             result = await aiManager.ask(question, this.request, {
                 history,
+                timeLimit: unlimitedTime ? Infinity : aiManager.timeLimit,
                 onProgress: session => this.updater.update(this.view.renderProgress(session))
             });
         } catch (err) {
@@ -109,7 +117,7 @@ class AIReply {
         }
     }
 
-    async _isRateLimited(userId) {
+    async _isAdmin(userId) {
         const permManager = getClient().permManager;
 
         let perm = permManager.getLevels().default;
@@ -118,11 +126,7 @@ class AIReply {
             perm = await permManager.maxLevel(userId);
         }
 
-        if (permManager.allowed(perm, "admin")) {
-            return false;
-        }
-
-        return !getClient().aiManager.rateLimiter.check(userId);
+        return permManager.allowed(perm, "admin");
     }
 
     _createSession(followUps, history) {

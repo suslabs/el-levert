@@ -41,6 +41,7 @@ class AIManager extends Manager {
 
         this.maxSteps = config.maxSteps === -1 ? Infinity : config.maxSteps;
         this.timeLimit = config.timeLimit;
+        this.unlimitedTimeForAdmins = config.unlimitedTimeForAdmins;
         this.requestTimeout = config.requestTimeout;
         this.maxToolOutput = config.maxToolOutput;
 
