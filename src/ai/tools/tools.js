@@ -13,6 +13,7 @@ export { default as BotProfileTool } from "./discord/BotProfileTool.js";
 export { default as AskingUserTool } from "./discord/AskingUserTool.js";
 export { default as InspectImageTool } from "./web/InspectImageTool.js";
 export { default as ShowImageTool } from "./web/ShowImageTool.js";
+export { default as AttachImageTool } from "./web/AttachImageTool.js";
 export { default as FetchRecentMessagesTool } from "./discord/FetchRecentMessagesTool.js";
 export { default as SearchMessagesTool } from "./discord/SearchMessagesTool.js";
 export { default as HttpRequestTool } from "./web/HttpRequestTool.js";

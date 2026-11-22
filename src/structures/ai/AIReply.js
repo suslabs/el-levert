@@ -31,7 +31,59 @@ class AIReply {
         return turns;
     }
 
-    static async handleFollowUp(ctx) {
+    static async handleInteraction(ctx) {
+        switch (AIReplyView.getAction(ctx.interaction.customId)) {
+            case AIReplyView.followUpAction:
+                return await AIReply._handleFollowUp(ctx);
+            case AIReplyView.cancelAction:
+                return await AIReply._handleCancel(ctx);
+            default:
+                return false;
+        }
+    }
+
+    constructor(ctx) {
+        this.ctx = ctx;
+        this.request = ctx.isInteraction ? AIRequest.fromInteraction(ctx.interaction) : AIRequest.fromCommand(ctx);
+        this.replace = ctx.isInteraction && getConfig().ai.followUpsEditAnswer;
+
+        this.view = new AIReplyView();
+        this.updater = new AIReplyUpdater(ctx, this.replace);
+
+        this.controller = new AbortController();
+    }
+
+    async answer(question, history) {
+        const aiManager = getClient().aiManager;
+
+        const userId = this.request.author.id,
+            isAdmin = await this._isAdmin(userId);
+
+        if (!isAdmin && !aiManager.rateLimiter.check(userId)) {
+            const waitTime = aiManager.rateLimiter.getTimeToReset(userId);
+            return await this.ctx.reply(this.view.renderCooldown(waitTime), { ephemeral: true });
+        }
+
+        const unlimitedTime = isAdmin && aiManager.unlimitedTimeForAdmins;
+
+        if (unlimitedTime) {
+            this.ctx.disableTimeout();
+        }
+
+        const cancelSession = this._createSession({ reply: this }, InteractionModes.authorOnly);
+
+        try {
+            return await this._run(question, history, unlimitedTime ? Infinity : aiManager.timeLimit, cancelSession);
+        } finally {
+            getClient().interactionHandler.unregisterSession(cancelSession.id);
+        }
+    }
+
+    cancel() {
+        this.controller.abort();
+    }
+
+    static async _handleFollowUp(ctx) {
         const session = ctx.interactionContext.session,
             question = AIReplyView.getFollowUp(ctx.interaction.customId, session.spec.followUps);
 
@@ -52,41 +104,26 @@ class AIReply {
         return true;
     }
 
-    constructor(ctx) {
-        this.ctx = ctx;
-        this.request = ctx.isInteraction ? AIRequest.fromInteraction(ctx.interaction) : AIRequest.fromCommand(ctx);
-        this.replace = ctx.isInteraction && getConfig().ai.followUpsEditAnswer;
+    static async _handleCancel(ctx) {
+        await ctx.deferUpdate();
+        ctx.interactionContext.session.spec.reply.cancel();
 
-        this.view = new AIReplyView();
-        this.updater = new AIReplyUpdater(ctx, this.replace);
+        return true;
     }
 
-    async answer(question, history) {
+    async _run(question, history, timeLimit, cancelSession) {
         const aiManager = getClient().aiManager;
 
-        const userId = this.request.author.id,
-            isAdmin = await this._isAdmin(userId);
-
-        if (!isAdmin && !aiManager.rateLimiter.check(userId)) {
-            const waitTime = aiManager.rateLimiter.getTimeToReset(userId);
-            return await this.ctx.reply(this.view.renderCooldown(waitTime), { ephemeral: true });
-        }
-
-        const unlimitedTime = isAdmin && aiManager.unlimitedTimeForAdmins;
-
-        if (unlimitedTime) {
-            this.ctx.disableTimeout();
-        }
-
-        await this.updater.start(this.view.renderThinking());
+        await this.updater.start(this.view.renderThinking(cancelSession));
 
         let result;
 
         try {
             result = await aiManager.ask(question, this.request, {
                 history,
-                timeLimit: unlimitedTime ? Infinity : aiManager.timeLimit,
-                onProgress: session => this.updater.update(this.view.renderProgress(session))
+                timeLimit,
+                signal: this.controller.signal,
+                onProgress: session => this.updater.update(this.view.renderProgress(session, cancelSession))
             });
         } catch (err) {
             if (!AIReply.expectedErrors.has(err.name)) {
@@ -98,7 +135,7 @@ class AIReply {
         }
 
         const turns = [...history, { role: "user", text: question }, { role: "model", text: result.answer }],
-            session = Util.empty(result.followUps) ? null : this._createSession(result.followUps, turns);
+            session = Util.empty(result.followUps) ? null : this._createFollowUpSession(result.followUps, turns);
 
         const msg = await this.updater.finish(this.view.renderResult(result, session));
         session?.setMessage(msg);
@@ -129,11 +166,13 @@ class AIReply {
         return permManager.allowed(perm, "admin");
     }
 
-    _createSession(followUps, history) {
-        const session = new ComponentSession(this.ctx, {
-            interactionMode: getConfig().ai.followUpsAnyone ? InteractionModes.anyone : InteractionModes.authorOnly,
-            spec: { followUps, history }
-        });
+    _createFollowUpSession(followUps, history) {
+        const mode = getConfig().ai.followUpsAnyone ? InteractionModes.anyone : InteractionModes.authorOnly;
+        return this._createSession({ followUps, history }, mode);
+    }
+
+    _createSession(spec, interactionMode) {
+        const session = new ComponentSession(this.ctx, { interactionMode, spec });
 
         getClient().interactionHandler.registerSession(session);
         return session;

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import createHttpStubServer from "../../helpers/httpStubServer.js";
 import { createDiscordMember, createDiscordMessage, createDiscordUser } from "../../helpers/discordStubs.js";
@@ -383,7 +383,7 @@ describe("a command", () => {
 
         const thinking = Util.first(recorder.msg.payloads);
 
-        expect(thinking.components).toEqual([]);
+        expect(buttonsOf(thinking).map(button => button.label)).toEqual(["Cancel"]);
         expect(thinking.attachments).toEqual([]);
         expect(embedOf(recorder.msg.payloads.at(-1)).description).toBe("More.");
         expect(runtime.client.interactionHandler.getSession(sessionId)).toBeNull();
@@ -755,6 +755,69 @@ describe("a command", () => {
 
         expect(script).toEqual([]);
         expect(embedOf(recorder.sent.at(-1)).description).toBe("again");
+    });
+
+    test("the asker can cancel an answer with the cancel button", async () => {
+        let release;
+        const gate = new Promise(resolve => (release = resolve));
+
+        await setup([], {
+            routes: {
+                [`POST ${streamPath("test-model")}`]: async () => {
+                    await gate;
+                    return answer(["Too late."]);
+                }
+            }
+        });
+
+        const recorder = createRecorder(),
+            running = getCommand(runtime, "a").handler(createAskContext("slow question", recorder));
+
+        await vi.waitFor(() => expect(recorder.sent).toHaveLength(2));
+
+        const [cancel] = buttonsOf(recorder.sent[1]);
+        expect(cancel.label).toBe("Cancel");
+
+        const other = createClick(cancel.custom_id, createDiscordUser({ id: clickerId }), recorder.msg);
+        await runtime.client.interactionHandler.execute(other.interaction);
+
+        expect(other.reply.payloads[0].content).toContain("Only the command caller");
+
+        const asker = createClick(cancel.custom_id, createDiscordUser({ id: askerId }), recorder.msg);
+        await expect(runtime.client.interactionHandler.execute(asker.interaction)).resolves.toBe(true);
+
+        await running;
+        release();
+
+        const final = recorder.sent.at(-1);
+
+        expect(embedOf(final).description).toContain("Answer cancelled.");
+        expect(final.components).toEqual([]);
+        expect(runtime.client.interactionHandler.getSession(cancel.custom_id.split(":").at(-1))).toBeNull();
+    });
+
+    test("attaches images it downloads as files", async () => {
+        const script = [];
+        const png = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+
+        await setup(script, {
+            routes: { "GET /cat.png": () => ({ headers: { "content-type": "image/png" }, body: png }) }
+        });
+
+        script.push(
+            calls([call("attach_image", { url: `${server.url}/cat.png`, name: "my cat" })]),
+            answer(["Here's the cat."]),
+            extras([], [])
+        );
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("send me the cat picture", recorder));
+
+        const [file] = recorder.sent.at(-1).files;
+
+        expect(script).toEqual([]);
+        expect(file.name).toBe("my_cat.png");
+        expect(Buffer.compare(file.attachment, png)).toBe(0);
     });
 
     test("admins have no time limit when unlimitedTimeForAdmins is on", async () => {

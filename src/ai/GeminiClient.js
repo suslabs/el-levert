@@ -51,7 +51,10 @@ class GeminiClient {
     async stream(body, state, options) {
         for (;;) {
             const res = await this._send(body, state, options, true),
-                out = await GeminiClient._catchTimeout(this._readStream(res.data, state, options.onParts));
+                out = await GeminiClient._catchTimeout(
+                    this._readStream(res.data, state, options.onParts),
+                    options.signal
+                );
 
             if (out !== null) {
                 GeminiClient._useModel(state, this.getModel(state));
@@ -68,7 +71,7 @@ class GeminiClient {
     static _thinkingErrorRegex = /thinking/i;
     static _timeoutErrors = new Set(["CanceledError", "AbortError"]);
 
-    static async _catchTimeout(promise) {
+    static async _catchTimeout(promise, signal) {
         try {
             return await promise;
         } catch (err) {
@@ -76,8 +79,13 @@ class GeminiClient {
                 throw err;
             }
 
-            throw new AIError("Gemini took too long to respond");
+            throw new AIError(signal?.aborted ? "Answer cancelled" : "Gemini took too long to respond");
         }
+    }
+
+    static _createSignal(timeout, signal) {
+        const timeoutSignal = AbortSignal.timeout(timeout);
+        return signal == null ? timeoutSignal : AbortSignal.any([timeoutSignal, signal]);
     }
 
     static _addUsage(state, usage) {
@@ -210,9 +218,10 @@ class GeminiClient {
                 data: this._buildBody(body, state, options.thinkingLevel ?? this.thinkingLevel),
                 responseType: stream ? "stream" : "json",
                 timeout,
-                signal: AbortSignal.timeout(timeout),
+                signal: GeminiClient._createSignal(timeout, options.signal),
                 validateStatus: () => true
-            })
+            }),
+            options.signal
         );
 
         if (stream && !isSuccessStatus(res.status)) {

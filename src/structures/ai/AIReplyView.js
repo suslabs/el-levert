@@ -22,6 +22,12 @@ class AIReplyView {
 
     static customIdPrefix = "ai";
     static followUpAction = "followup";
+    static cancelAction = "cancel";
+
+    static getAction(customId) {
+        const [prefix, action] = customId.split(":");
+        return prefix === AIReplyView.customIdPrefix ? action : null;
+    }
 
     static getFollowUp(customId, followUps) {
         const [prefix, action, idxText] = customId.split(":");
@@ -44,12 +50,12 @@ class AIReplyView {
         this.icon = config.icon ?? getClient().client.user.displayAvatarURL();
     }
 
-    renderThinking() {
-        return this._renderStatus(AIPhases.thinking, [], "", false);
+    renderThinking(cancelSession) {
+        return this._renderStatus(AIPhases.thinking, [], "", false, cancelSession);
     }
 
-    renderProgress(session) {
-        return this._renderStatus(session.phase, session.steps, session.text, session.finishing);
+    renderProgress(session, cancelSession) {
+        return this._renderStatus(session.phase, session.steps, session.text, session.finishing, cancelSession);
     }
 
     renderResult(result, session) {
@@ -69,13 +75,10 @@ class AIReplyView {
             )
             .setFooter({ text: AIReplyView._formatFooter(result) });
 
-        if (result.image !== null) {
-            embed.setImage(result.image);
-        }
+        const components = session === null ? [] : [AIReplyView._createFollowUpRow(session)];
 
         return {
-            ...AIReplyView._createPayload(embed),
-            components: session === null ? [] : [AIReplyView._createFollowUpRow(session)],
+            ...AIReplyView._createPayload(AIReplyView._addImages(embed, result.images), components),
             files: AIReplyView._createFiles(result.files, answer, answerLimit)
         };
     }
@@ -99,11 +102,31 @@ class AIReplyView {
             .setColor(AIReplyView.errorColor)
             .setDescription(AIReplyView._formatError(err));
 
-        return AIReplyView._createPayload(embed);
+        return AIReplyView._createPayload([embed]);
     }
 
-    static _createPayload(embed) {
-        return { embeds: [embed], components: [], attachments: [] };
+    static _createPayload(embeds, components = []) {
+        return { embeds, components, attachments: [] };
+    }
+
+    static _addImages(embed, images) {
+        if (Util.empty(images)) {
+            return [embed];
+        }
+
+        const [first, ...rest] = images;
+        embed.setURL(first).setImage(first);
+
+        return [embed, ...rest.map(url => new EmbedBuilder().setURL(first).setImage(url))];
+    }
+
+    static _createCancelRow(session) {
+        const button = new ButtonBuilder()
+            .setCustomId(`${AIReplyView.customIdPrefix}:${AIReplyView.cancelAction}:${session.id}`)
+            .setLabel("Cancel")
+            .setStyle(ButtonStyle.Danger);
+
+        return new ActionRowBuilder().addComponents(button);
     }
 
     static _formatStatus(status) {
@@ -197,7 +220,7 @@ class AIReplyView {
         return new EmbedBuilder().setAuthor({ name: title, iconURL: this.icon });
     }
 
-    _renderStatus(phase, steps, text, finishing) {
+    _renderStatus(phase, steps, text, finishing, cancelSession) {
         const statuses = Util.empty(steps) ? [phase] : steps.map(step => step.status);
 
         const statusText = statuses.slice(-AIReplyView.maxStatusLines).map(AIReplyView._formatStatus).join("\n"),
@@ -207,7 +230,7 @@ class AIReplyView {
             [statusText, preview].filter(Util.nonemptyString).join("\n\n")
         );
 
-        return AIReplyView._createPayload(embed);
+        return AIReplyView._createPayload([embed], [AIReplyView._createCancelRow(cancelSession)]);
     }
 }
 

@@ -595,7 +595,7 @@ Syntax:
 %a <question>
 ```
 
-- The answer is a single embed headed by the assistant's name and icon (`ai.name`, `ai.icon`; with no icon the bot's avatar is used). While it works, the header shows the current phase (e.g. "Searching...") and the embed shows a status line for each tool it runs, then a preview of the answer as it is written and "Finishing response...".
+- The answer is a single embed headed by the assistant's name and icon (`ai.name`, `ai.icon`; with no icon the bot's avatar is used). While it works, the header shows the current phase (e.g. "Searching...") and the embed shows a status line for each tool it runs, then a preview of the answer as it is written and "Finishing response...". A red Cancel button under the progress lets the person who asked stop the answer.
 - The finished answer has a green border, the sources it used and up to three numbered follow-up questions, and a footer with the model and the tokens used (`Models: <models> | <tokens> tok, <reasoning> reasoning`, with the reasoning part left out when the model didn't reason).
 - The follow-ups have matching 1, 2, 3 buttons under the answer. Anyone can click one; the assistant answers it as the person who clicked, with the earlier questions and answers as context. The buttons are disabled after `interactionTimeout`. With `ai.followUpsAnyone` off, only the person who asked can use them. With `ai.followUpsEditAnswer` on, the follow-up answer replaces the message that was clicked instead of being sent as a new one. The clicked message's buttons are hidden while the assistant works.
 - Reply to a message with `%a` to ask about it, or attach an image.
@@ -615,8 +615,9 @@ Tools the assistant can use:
 - `find_users`, `get_asking_user`, `get_bot_profile`: server members and profiles.
 - `fetch_recent_messages`, `search_messages`: chat history, limited to channels the asking user can see.
 - `inspect_image`: describes an attached or linked image.
-- `attach_file`: attaches a text file to the answer (up to 3 files, 1 MB each).
-- `show_image`: shows an image from a direct URL in the answer embed.
+- `attach_file`: attaches a text file to the answer (1 MB each).
+- `show_image`: shows images from direct URLs in the answer embed (up to 4, as a grid).
+- `attach_image`: downloads an image and attaches it to the answer as a file. Text files and images share a limit of 10 attachments.
 
 `tag_call` and `execute_javascript` are only offered for `%a` messages, not for follow-up buttons, because there is no user message for scripts to run as.
 

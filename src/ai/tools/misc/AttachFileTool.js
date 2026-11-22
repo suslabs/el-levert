@@ -22,7 +22,6 @@ class AttachFileTool extends AITool {
         )
     };
 
-    static maxFiles = 3;
     static maxSize = Util.dataBytes.megabyte;
 
     static nameRegex = /^[\w-]+(\.[\w-]+)+$/;
@@ -42,11 +41,9 @@ class AttachFileTool extends AITool {
             throw new AIError("The file is empty");
         } else if (Util.getByteLength(content) > AttachFileTool.maxSize) {
             throw new AIError(`The file is larger than ${Util.formatSize(AttachFileTool.maxSize)}`);
-        } else if (!session.files.has(name) && session.files.size >= AttachFileTool.maxFiles) {
-            throw new AIError(`At most ${AttachFileTool.maxFiles} files can be attached`);
         }
 
-        session.files.set(name, content);
+        session.attachFile(name, content);
         return { attached: name };
     }
 }

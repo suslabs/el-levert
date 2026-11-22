@@ -12,6 +12,9 @@ import AIError from "../errors/AIError.js";
 class AISession {
     static minCallTime = 2 / Util.durationSeconds.milli;
 
+    static maxFiles = 10;
+    static maxImages = 4;
+
     static getText(parts) {
         return parts
             .filter(part => typeof part.text === "string" && !part.thought)
@@ -27,6 +30,7 @@ class AISession {
 
         this.history = options.history ?? [];
         this.onProgress = options.onProgress ?? null;
+        this.signal = options.signal ?? null;
 
         this.deadline = Date.now() + (options.timeLimit ?? manager.timeLimit);
         this.state = manager.gemini.createState();
@@ -34,7 +38,7 @@ class AISession {
         this.ledger = new AISourceLedger();
         this.contents = [];
         this.files = new Map();
-        this.image = null;
+        this.images = [];
 
         this.steps = [];
         this.text = "";
@@ -64,6 +68,7 @@ class AISession {
         ];
 
         for (let i = 0; i < this.manager.maxSteps; i++) {
+            this._checkCancelled();
             if (this.timeLeft < AISession.minCallTime) {
                 throw new AIError("Ran out of time", { steps: this.steps.length });
             }
@@ -87,8 +92,12 @@ class AISession {
     }
 
     async generateText(body) {
-        const data = await this.manager.gemini.generate(body, this.state, { timeLeft: this.timeLeft }),
-            parts = Util.first(data.candidates ?? [])?.content?.parts ?? [];
+        const data = await this.manager.gemini.generate(body, this.state, {
+            timeLeft: this.timeLeft,
+            signal: this.signal
+        });
+
+        const parts = Util.first(data.candidates ?? [])?.content?.parts ?? [];
 
         return AISession.getText(parts).trim();
     }
@@ -99,6 +108,24 @@ class AISession {
             AISession.minCallTime,
             this.manager.requestTimeout
         );
+    }
+
+    attachFile(name, content) {
+        if (!this.files.has(name) && this.files.size >= AISession.maxFiles) {
+            throw new AIError(`At most ${AISession.maxFiles} files can be attached`);
+        }
+
+        this.files.set(name, content);
+    }
+
+    showImage(url) {
+        if (this.images.includes(url)) {
+            return;
+        } else if (this.images.length >= AISession.maxImages) {
+            throw new AIError(`At most ${AISession.maxImages} images can be shown`);
+        }
+
+        this.images.push(url);
     }
 
     logError(toolName, err) {
@@ -127,6 +154,7 @@ class AISession {
     async _stream(body, final) {
         return await this.manager.gemini.stream(body, this.state, {
             timeLeft: this.timeLeft,
+            signal: this.signal,
             thinkingLevel: final ? this.manager.thinkingLevel : this.manager.toolThinkingLevel,
             onParts: parts => this._appendText(AISession.getText(parts)),
             onRestart: () => this._resetText()
@@ -176,12 +204,13 @@ class AISession {
         await this._reportProgress();
 
         const extras = await this._getExtras(question, answer);
+        this._checkCancelled();
 
         return {
             answer,
             ...extras,
             files: Array.from(this.files, ([name, content]) => ({ name, content })),
-            image: this.image,
+            images: this.images,
             models: this.state.models,
             tokens: this.state.tokens,
             reasoning: this.state.reasoning
@@ -198,6 +227,12 @@ class AISession {
 
             getLogger().warn(`Couldn't add sources and follow-ups to an AI answer: ${err.message}`);
             return { followUps: [], sources: [] };
+        }
+    }
+
+    _checkCancelled() {
+        if (this.signal?.aborted) {
+            throw new AIError("Answer cancelled");
         }
     }
 

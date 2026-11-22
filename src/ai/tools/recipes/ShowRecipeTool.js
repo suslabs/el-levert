@@ -36,10 +36,12 @@ class ShowRecipeTool extends RecipeTool {
 
         const recipes = this.manager.recipes;
 
-        session.image = await recipes.renderCard(itemId, args.idx, {
+        const card = await recipes.renderCard(itemId, args.idx, {
             mode: recipes.getMode(args.expert),
             timeout: session.toolTimeout()
         });
+
+        session.showImage(card);
 
         return { shown: true };
     }

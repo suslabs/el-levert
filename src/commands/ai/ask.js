@@ -39,7 +39,7 @@ class AskCommand {
     }
 
     async interactionHandler(ctx) {
-        return await AIReply.handleFollowUp(ctx);
+        return await AIReply.handleInteraction(ctx);
     }
 }
 

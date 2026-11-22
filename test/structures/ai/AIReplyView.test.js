@@ -1,3 +1,4 @@
+import { ButtonStyle } from "discord.js";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import { cleanupRuntime, createCommandRuntime } from "../../helpers/commandHarness.js";
@@ -24,6 +25,8 @@ afterEach(async () => {
 
 const embedOf = payload => payload.embeds[0].toJSON();
 
+const cancelSession = { id: "cancel-1" };
+
 const session = (steps, text = "", finishing = false) => ({
     phase: steps.at(-1)?.phase ?? AIPhases.thinking,
     steps,
@@ -38,7 +41,8 @@ describe("AIReplyView", () => {
                 session([
                     { phase: AIPhases.reading, status: 'Reading tag "steel"' },
                     { phase: AIPhases.searching, status: 'Searching the web for "test_*"' }
-                ])
+                ]),
+                cancelSession
             )
         );
 
@@ -49,7 +53,9 @@ describe("AIReplyView", () => {
 
     test("previews the streamed answer and the finishing step", () => {
         const steps = [{ phase: AIPhases.searching, status: 'Searching the web for "test"' }],
-            embed = embedOf(view.renderProgress(session(steps, `Here are the results: ${"x".repeat(300)}`, true)));
+            embed = embedOf(
+                view.renderProgress(session(steps, `Here are the results: ${"x".repeat(300)}`, true), cancelSession)
+            );
 
         const [status, preview] = embed.description.split("\n\n"),
             [text, finishing] = preview.split("\n");
@@ -60,16 +66,42 @@ describe("AIReplyView", () => {
         expect(finishing).toBe("*Finishing response...*");
     });
 
-    test("status updates clear old buttons and attachments", () => {
-        const payload = view.renderThinking();
+    test("status updates swap old buttons for a red cancel button and clear attachments", () => {
+        const payload = view.renderThinking(cancelSession),
+            [button] = payload.components[0].toJSON().components;
 
-        expect(payload.components).toEqual([]);
+        expect(button).toMatchObject({ label: "Cancel", style: ButtonStyle.Danger, custom_id: "ai:cancel:cancel-1" });
+        expect(AIReplyView.getAction(button.custom_id)).toBe(AIReplyView.cancelAction);
         expect(payload.attachments).toEqual([]);
+    });
+
+    test("shows several images as a grid of embeds sharing one URL", () => {
+        const images = ["https://img.test/a.png", "https://img.test/b.png"],
+            payload = view.renderResult(
+                {
+                    answer: "Pics.",
+                    sources: [],
+                    followUps: [],
+                    files: [],
+                    images,
+                    models: ["m"],
+                    tokens: 1,
+                    reasoning: 0
+                },
+                null
+            );
+
+        const embeds = payload.embeds.map(embed => embed.toJSON());
+
+        expect(embeds.map(embed => [embed.url, embed.image.url])).toEqual([
+            [images[0], images[0]],
+            [images[0], images[1]]
+        ]);
     });
 
     test("only shows the latest status lines", () => {
         const steps = Array.from({ length: 8 }, (_, i) => ({ phase: AIPhases.running, status: `Step ${i}` })),
-            lines = embedOf(view.renderProgress(session(steps))).description.split("\n");
+            lines = embedOf(view.renderProgress(session(steps), cancelSession)).description.split("\n");
 
         expect(lines).toHaveLength(AIReplyView.maxStatusLines);
         expect(lines.at(-1)).toBe("▶️ *Step 7...*");
@@ -82,7 +114,7 @@ describe("AIReplyView", () => {
                     sources: ["https://example.test/page"],
                     followUps: [],
                     files: [],
-                    image: null,
+                    images: [],
                     models: ["test-model"],
                     tokens: 1234567,
                     reasoning: 0
@@ -110,7 +142,7 @@ describe("AIReplyView", () => {
                 sources: [],
                 followUps,
                 files: [],
-                image: null,
+                images: [],
                 models: ["test-model"],
                 tokens: 1,
                 reasoning: 0

@@ -12,7 +12,7 @@ class ShowImageTool extends WebTool {
         name: "show_image",
         phase: AIPhases.looking,
         description:
-            "Show an image in your answer's embed, from a direct image URL (a found page's image, an attachment, a diagram). Only one image is shown; a later call replaces it.",
+            "Show an image inside your answer's embed from a direct image URL (a found page's image, an attachment, a diagram). Up to 4 images are shown as a grid.",
         parameters: ToolParams.object({ url: ToolParams.string("Direct http(s) image URL.") }, ["url"])
     };
 
@@ -33,7 +33,7 @@ class ShowImageTool extends WebTool {
             throw new AIError("URL is not an image");
         }
 
-        session.image = url;
+        session.showImage(url);
         return { shown: true };
     }
 }
