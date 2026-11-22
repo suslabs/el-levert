@@ -122,7 +122,7 @@ Important groups of settings:
 - Tags and quotas: `maxTagNameLength`, `tagNameRegex`, `maxTagSize` (per-tag limits in kb for `text`, `script`, and `binary`; `-1` for unlimited), `maxQuota` (total storage quota in kb; `-1` for unlimited), `maxTagCount` (`-1` for unlimited)
 - Reply and output limits: `outCharLimit`, `outLineLimit`, `embedCharLimit`, `embedLineLimit`
 - Major features: `enablePreviews`, `enableSed`, `enablePermissions`, `enableReminders`, `enableAI`
-- AI assistant: `ai` (`name` and `icon` for the embed header, `promptsPath` for the prompt text files, `endpoint`, `models` (the first one is used, the rest are fallbacks when it's rate limited or unavailable), `thinkingLevel` (`null` for models without thinking levels), `maxSteps`, `timeLimit` and `requestTimeout` in seconds, `maxDownloadSize` in MB, `maxToolOutput` in characters, `maxRequests` per user every `rateLimitWindow` seconds, `followUpsAnyone` and `followUpsEditAnswer` for the follow-up buttons, `allowLocalhostRequests`, `sources`)
+- AI assistant: `ai` (`name` and `icon` for the embed header, `promptsPath` for the prompt text files, `endpoint`, `models` (the first one is used, the rest are fallbacks when it's rate limited or unavailable), `thinkingLevel` (`null` for models without thinking levels), `maxSteps` (`-1` for no limit; `timeLimit` still applies), `timeLimit` and `requestTimeout` in seconds, `maxDownloadSize` in MB, `maxToolOutput` in characters, `maxRequests` per user every `rateLimitWindow` seconds, `followUpsAnyone` and `followUpsEditAnswer` for the follow-up buttons, `allowLocalhostRequests`, `sources`)
 - Logging and file paths: log files, log level, database path, command paths, Discord log settings
 
 ## Reactions config

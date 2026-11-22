@@ -318,7 +318,7 @@
                 },
                 "maxSteps": {
                     "type": "integer",
-                    "minimum": 1
+                    "anyOf": [{ "const": -1 }, { "minimum": 1 }]
                 },
                 "timeLimit": {
                     "type": "number"

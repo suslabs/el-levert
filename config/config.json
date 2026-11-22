@@ -105,7 +105,7 @@
             "gemini-flash-latest"
         ],
         "thinkingLevel": "minimal",
-        "maxSteps": 6,
+        "maxSteps": -1,
         "timeLimit": 45,
         "requestTimeout": 20,
         "maxDownloadSize": 10,

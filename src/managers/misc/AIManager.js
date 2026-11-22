@@ -39,7 +39,7 @@ class AIManager extends Manager {
 
         const config = getConfig().ai;
 
-        this.maxSteps = config.maxSteps;
+        this.maxSteps = config.maxSteps === -1 ? Infinity : config.maxSteps;
         this.timeLimit = config.timeLimit;
         this.requestTimeout = config.requestTimeout;
         this.maxToolOutput = config.maxToolOutput;

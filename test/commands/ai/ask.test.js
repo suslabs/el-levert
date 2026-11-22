@@ -524,6 +524,21 @@ describe("a command", () => {
         );
     });
 
+    test("keeps calling tools past the usual step limit when maxSteps is -1", async () => {
+        const rounds = Array.from({ length: 8 }, () =>
+            calls([call("unit_convert", { value: 1, from: "B", to: "mB" })])
+        );
+        const script = [...rounds, answer(["Done."]), extras([], [])];
+
+        await setup(script, { ai: { maxSteps: -1 } });
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("convert a lot", recorder));
+
+        expect(script).toEqual([]);
+        expect(embedOf(recorder.sent.at(-1)).description).toBe("Done.");
+    });
+
     test("forces a text answer on the last step", async () => {
         const script = [
             calls([call("unit_convert", { value: 1, from: "B", to: "mB" })]),
