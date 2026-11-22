@@ -144,6 +144,33 @@ describe("AuthLoader", () => {
         ]);
     });
 
+    test("accepts a list of gemini keys", async () => {
+        await seedSchemaRoot();
+
+        globalThis.projRoot = tempRoot;
+        globalThis.projRootUrl = pathToFileURL(tempRoot).href;
+
+        const { default: AuthLoader } = await import("../../../src/loaders/config/AuthLoader.js");
+
+        const load = async geminiKey => {
+            await fs.writeFile(
+                path.join(tempRoot, "config/auth.json"),
+                JSON.stringify({ token: "json-token", owner: "json-owner", geminiKey })
+            );
+
+            const loader = new AuthLoader(null, {
+                throwOnFailure: false,
+                processEnv: { LEVERET_GEMINI_KEY: "env-gemini" }
+            });
+
+            const [data] = await loader.load();
+            return data.geminiKey;
+        };
+
+        await expect(load(["key-1", "key-2"])).resolves.toEqual(["key-1", "key-2"]);
+        await expect(load("key-1")).resolves.toBe("key-1");
+    });
+
     test("fails when neither json nor env provides auth", async () => {
         await seedSchemaRoot();
 

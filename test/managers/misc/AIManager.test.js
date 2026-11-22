@@ -60,6 +60,7 @@ describe("AIManager", () => {
             "fetch_web_page",
             "execute_javascript",
             "unit_convert",
+            "attach_file",
             "find_users",
             "get_bot_profile",
             "get_asking_user",

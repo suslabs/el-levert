@@ -5,6 +5,7 @@ export { default as SearchWebTool } from "./web/SearchWebTool.js";
 export { default as FetchWebPageTool } from "./web/FetchWebPageTool.js";
 export { default as ExecuteJavascriptTool } from "./misc/ExecuteJavascriptTool.js";
 export { default as UnitConvertTool } from "./misc/UnitConvertTool.js";
+export { default as AttachFileTool } from "./misc/AttachFileTool.js";
 export { default as FindUsersTool } from "./discord/FindUsersTool.js";
 export { default as BotProfileTool } from "./discord/BotProfileTool.js";
 export { default as AskingUserTool } from "./discord/AskingUserTool.js";

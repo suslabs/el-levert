@@ -33,6 +33,7 @@ class AISession {
 
         this.ledger = new AISourceLedger();
         this.contents = [];
+        this.files = new Map();
 
         this.steps = [];
         this.text = "";
@@ -166,6 +167,7 @@ class AISession {
         return {
             answer,
             ...extras,
+            files: Array.from(this.files, ([name, content]) => ({ name, content })),
             model: this.state.model,
             tokens: this.state.tokens,
             reasoning: this.state.reasoning

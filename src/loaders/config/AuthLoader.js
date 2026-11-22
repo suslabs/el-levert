@@ -13,6 +13,10 @@ import ObjectUtil from "../../util/ObjectUtil.js";
 
 import { LoadStatus } from "../LoadStatus.js";
 
+function hasAuthValue(value) {
+    return Util.nonemptyString(value) || (Array.isArray(value) && !Util.empty(value));
+}
+
 function createAuthData(jsonData, envData) {
     jsonData = ObjectUtil.guaranteeObject(jsonData);
     envData = ObjectUtil.guaranteeObject(envData);
@@ -22,7 +26,7 @@ function createAuthData(jsonData, envData) {
     return Object.fromEntries(
         Object.entries(envKeys).map(([key, envKey]) => [
             key,
-            Util.nonemptyString(jsonData[key]) ? jsonData[key] : envData[envKey]
+            hasAuthValue(jsonData[key]) ? jsonData[key] : envData[envKey]
         ])
     );
 }

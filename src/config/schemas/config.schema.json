@@ -314,7 +314,7 @@
                     "minItems": 1
                 },
                 "thinkingLevel": {
-                    "type": "string"
+                    "type": ["string", "null"]
                 },
                 "maxSteps": {
                     "type": "integer",
@@ -332,6 +332,14 @@
                 "maxToolOutput": {
                     "type": "integer",
                     "minimum": 1
+                },
+                "maxRequests": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "rateLimitWindow": {
+                    "type": "number",
+                    "minimum": 0
                 },
                 "allowLocalhostRequests": {
                     "type": "boolean"
@@ -379,6 +387,8 @@
                 "requestTimeout",
                 "maxDownloadSize",
                 "maxToolOutput",
+                "maxRequests",
+                "rateLimitWindow",
                 "allowLocalhostRequests",
                 "sources"
             ],

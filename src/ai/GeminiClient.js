@@ -8,11 +8,13 @@ import AIError from "../errors/AIError.js";
 class GeminiClient {
     static minTimeout = 1 / Util.durationSeconds.milli;
 
-    constructor(http, apiKey, options) {
+    constructor(http, apiKeys, options) {
         options = ObjectUtil.guaranteeObject(options);
 
         this.http = http;
-        this.apiKey = apiKey;
+
+        this.apiKeys = apiKeys;
+        this.keyIdx = 0;
 
         this.endpoint = options.endpoint;
         this.models = options.models;
@@ -101,7 +103,7 @@ class GeminiClient {
         let lastErr = new AIError("No model available", { models: this.models });
 
         for (const model of models) {
-            const res = await this._request(model, body, state, timeLeft, stream);
+            const res = await this._requestWithKeys(model, body, state, timeLeft, stream);
 
             if (isSuccessStatus(res.status)) {
                 state.model = model;
@@ -118,6 +120,22 @@ class GeminiClient {
         }
 
         throw lastErr;
+    }
+
+    async _requestWithKeys(model, body, state, timeLeft, stream) {
+        let res;
+
+        for (let i = 0; i < this.apiKeys.length; i++) {
+            res = await this._request(model, body, state, timeLeft, stream);
+
+            if (res.status !== httpStatusCodes.TOO_MANY_REQUESTS) {
+                break;
+            }
+
+            this.keyIdx = (this.keyIdx + 1) % this.apiKeys.length;
+        }
+
+        return res;
     }
 
     async _request(model, body, state, timeLeft, stream) {
@@ -139,7 +157,7 @@ class GeminiClient {
             method: "post",
             headers: {
                 "content-type": "application/json",
-                "x-goog-api-key": this.apiKey
+                "x-goog-api-key": this.apiKeys[this.keyIdx]
             },
             data: this._buildBody(body, state),
             responseType: stream ? "stream" : "json",

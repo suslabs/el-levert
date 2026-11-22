@@ -7,7 +7,8 @@ const AIPhases = createEnum({
     running: "Running",
     calculating: "Calculating",
     looking: "Looking",
-    fetching: "Fetching"
+    fetching: "Fetching",
+    writing: "Writing"
 });
 
 export default AIPhases;

@@ -1,4 +1,4 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, escapeMarkdown } from "discord.js";
+import { ActionRowBuilder, bold, ButtonBuilder, ButtonStyle, EmbedBuilder, escapeMarkdown } from "discord.js";
 
 import AIPhases from "./AIPhases.js";
 
@@ -17,6 +17,8 @@ class AIReplyView {
 
     static maxStatusLines = 5;
     static maxPreviewLength = 200;
+
+    static answerFilename = "answer.md";
 
     static customIdPrefix = "ai";
     static followUpAction = "followup";
@@ -47,17 +49,37 @@ class AIReplyView {
     }
 
     renderResult(result, session) {
+        const answer = result.answer.trim(),
+            extras = [AIReplyView._formatSources(result.sources), AIReplyView._formatFollowUps(result.followUps)]
+                .filter(Util.nonemptyString)
+                .join("\n\n");
+
+        const answerLimit = AIReplyView._getAnswerLimit(extras);
+
         const embed = this._createEmbed(this.name)
             .setColor(AIReplyView.answerColor)
             .setDescription(
-                AIReplyView._fitDescription(result.answer.trim(), AIReplyView._formatSources(result.sources))
+                [Util.trimString(answer, answerLimit, null, { tight: true }), extras]
+                    .filter(Util.nonemptyString)
+                    .join("\n\n")
             )
             .setFooter({ text: AIReplyView._formatFooter(result) });
 
         return {
             embeds: [embed],
-            components: session === null ? [] : [AIReplyView._createFollowUpRow(session)]
+            components: session === null ? [] : [AIReplyView._createFollowUpRow(session)],
+            files: AIReplyView._createFiles(result.files, answer, answerLimit)
         };
+    }
+
+    renderCooldown(waitTime) {
+        const waitStr = Util.duration(waitTime, {
+            format: true,
+            short: true,
+            largestOnly: true
+        });
+
+        return `${getEmoji("clock")} You are asking too fast. Please slow down! (${bold(waitStr)})`;
     }
 
     renderError(err) {
@@ -94,24 +116,35 @@ class AIReplyView {
         return ["Sources:", ...sources.map((source, i) => `${i + 1}. ${source}`)].join("\n");
     }
 
+    static _formatFollowUps(followUps) {
+        if (Util.empty(followUps)) {
+            return "";
+        }
+
+        return ["Follow-ups:", ...followUps.map((followUp, i) => `${i + 1}. ${escapeMarkdown(followUp)}`)].join("\n");
+    }
+
     static _createFollowUpRow(session) {
-        const buttons = session.spec.followUps.map((followUp, i) =>
+        const buttons = session.spec.followUps.map((_, i) =>
             new ButtonBuilder()
                 .setCustomId(`${AIReplyView.customIdPrefix}:${AIReplyView.followUpAction}:${i}:${session.id}`)
-                .setLabel(followUp)
+                .setLabel(String(i + 1))
                 .setStyle(ButtonStyle.Secondary)
         );
 
         return new ActionRowBuilder().addComponents(buttons);
     }
 
-    static _fitDescription(answer, sources) {
-        if (Util.empty(sources)) {
-            return Util.trimString(answer, DiscordUtil.embedCharLimit, null, { tight: true });
+    static _getAnswerLimit(extras) {
+        return Util.empty(extras) ? DiscordUtil.embedCharLimit : DiscordUtil.embedCharLimit - extras.length - 2;
+    }
+
+    static _createFiles(files, answer, answerLimit) {
+        if (answer.length > answerLimit) {
+            files = [...files, { name: AIReplyView.answerFilename, content: answer }];
         }
 
-        const answerLimit = DiscordUtil.embedCharLimit - sources.length - 2;
-        return `${Util.trimString(answer, answerLimit, null, { tight: true })}\n\n${sources}`;
+        return files.flatMap(file => DiscordUtil.getFileAttach(file.content, file.name).files);
     }
 
     static _formatFooter(result) {

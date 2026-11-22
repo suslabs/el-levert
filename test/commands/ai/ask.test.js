@@ -84,7 +84,7 @@ async function setup(script, options = {}) {
                 ...options.ai
             }
         },
-        auth: { geminiKey: "test-key" },
+        auth: options.auth ?? { geminiKey: "test-key" },
         discordOverrides: {
             fetchMember: async (guild, id) => createDiscordMember(createDiscordUser({ id }), { guildId: guild.id }),
             ...options.discordOverrides
@@ -249,13 +249,14 @@ describe("a command", () => {
         expect(embedOf(recorder.sent.at(-1))).toEqual({
             author: { name: "Test Rabbit", icon_url: "https://example.test/icon.png" },
             color: 0x75fa4c,
-            description: "Use the **EBF** to make steel. 144 mB/t is 2.88 B/s.\n\nSources:\n1. tag:steel",
+            description:
+                "Use the **EBF** to make steel. 144 mB/t is 2.88 B/s.\n\nSources:\n1. tag:steel\n\nFollow-ups:\n1. What coils does the EBF need?",
             footer: { text: "Models: test-model | 1,500 tok, 30 reasoning" }
         });
 
         const [button] = buttonsOf(recorder.sent.at(-1));
 
-        expect(button.label).toBe("What coils does the EBF need?");
+        expect(button.label).toBe("1");
         expect(button.custom_id).toMatch(/^ai:followup:0:/);
     });
 
@@ -283,7 +284,7 @@ describe("a command", () => {
         await getCommand(runtime, "a").handler(createAskContext("hello", recorder));
 
         const buttons = buttonsOf(recorder.sent.at(-1));
-        expect(buttons.map(button => button.label)).toEqual(["Tell me more", "Something else"]);
+        expect(buttons.map(button => button.label)).toEqual(["1", "2"]);
 
         const clicker = createDiscordUser({ id: clickerId, username: "neeve" }),
             sessionId = buttons[0].custom_id.split(":").at(-1);
@@ -421,6 +422,64 @@ describe("a command", () => {
 
         expect(bodies[1].body.generationConfig).toBeUndefined();
         expect(embedOf(recorder.sent.at(-1)).footer.text).toBe("Models: fallback-model | 15 tok, 0 reasoning");
+    });
+
+    test("tries the next API key when one runs out of quota and keeps using it", async () => {
+        const script = [
+            { statusCode: 429, json: { error: { message: "Resource exhausted." } } },
+            answer(["ok"]),
+            extras([], []),
+            answer(["again"]),
+            extras([], [])
+        ];
+
+        const bodies = await setup(script, { auth: { geminiKey: ["key-1", "key-2"] } });
+
+        await getCommand(runtime, "a").handler(createAskContext("hi", createRecorder()));
+        await getCommand(runtime, "a").handler(createAskContext("hi again", createRecorder()));
+
+        expect(script).toEqual([]);
+        expect(bodies.map(entry => entry.key)).toEqual(["key-1", "key-2", "key-2", "key-2", "key-2"]);
+    });
+
+    test("limits how often each user can ask", async () => {
+        const bodies = await setup([answer(["ok"]), extras([], [])], {
+            ai: { maxRequests: 1, rateLimitWindow: 60 * 1000 }
+        });
+
+        await getCommand(runtime, "a").handler(createAskContext("hi", createRecorder()));
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("hi again", recorder));
+
+        expect(bodies).toHaveLength(2);
+        expect(recorder.sent).toHaveLength(1);
+        expect(recorder.sent[0]).toMatch(/You are asking too fast\. Please slow down! \(\*\*\d+s\*\*\)/);
+    });
+
+    test("attaches files the model writes and the full answer when it doesn't fit", async () => {
+        const longAnswer = "word ".repeat(1000).trim();
+
+        const script = [
+            calls([call("attach_file", { name: "script.js", content: "console.log(1);" })]),
+            answer([longAnswer]),
+            extras([], [])
+        ];
+
+        await setup(script);
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("write a script", recorder));
+
+        const final = recorder.sent.at(-1),
+            files = final.files.map(file => [file.name, file.attachment.toString()]);
+
+        expect(files).toEqual([
+            ["script.js", "console.log(1);"],
+            ["answer.md", longAnswer]
+        ]);
+
+        expect(embedOf(final).description.length).toBeLessThanOrEqual(4096);
     });
 
     test("reports quota, key and empty answer errors in the embed", async () => {

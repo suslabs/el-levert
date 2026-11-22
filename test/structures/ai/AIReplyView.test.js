@@ -68,11 +68,13 @@ describe("AIReplyView", () => {
         expect(lines.at(-1)).toBe("▶️ *Step 7...*");
     });
 
-    test("keeps sources when trimming a long answer", () => {
+    test("keeps sources and attaches the full answer when trimming a long one", () => {
         const payload = view.renderResult(
                 {
                     answer: "a".repeat(5000),
                     sources: ["https://example.test/page"],
+                    followUps: [],
+                    files: [],
                     model: "test-model",
                     tokens: 1234567,
                     reasoning: 0
@@ -85,6 +87,8 @@ describe("AIReplyView", () => {
         expect(embed.description.endsWith("Sources:\n1. https://example.test/page")).toBe(true);
         expect(embed.footer.text).toBe("Models: test-model | 1,234,567 tok, 0 reasoning");
         expect(payload.components).toEqual([]);
+        expect(payload.files.map(file => file.name)).toEqual(["answer.md"]);
+        expect(payload.files[0].attachment.toString()).toBe("a".repeat(5000));
     });
 
     test("renders follow-ups as buttons bound to their session", () => {
@@ -92,16 +96,16 @@ describe("AIReplyView", () => {
             session = new ComponentSession({ author: { id: "1" } }, { spec: { followUps, history: [] } });
 
         const payload = view.renderResult(
-            { answer: "Answer.", sources: [], model: "test-model", tokens: 1, reasoning: 0 },
+            { answer: "Answer.", sources: [], followUps, files: [], model: "test-model", tokens: 1, reasoning: 0 },
             session
         );
 
         const buttons = payload.components[0].toJSON().components;
 
-        expect(embedOf(payload).description).toBe("Answer.");
+        expect(embedOf(payload).description).toBe("Answer.\n\nFollow-ups:\n1. One?\n2. Two\\_?");
         expect(buttons.map(button => [button.label, button.custom_id])).toEqual([
-            ["One?", `ai:followup:0:${session.id}`],
-            ["Two_?", `ai:followup:1:${session.id}`]
+            ["1", `ai:followup:0:${session.id}`],
+            ["2", `ai:followup:1:${session.id}`]
         ]);
 
         expect(AIReplyView.getFollowUp(buttons[1].custom_id, followUps)).toBe("Two_?");

@@ -137,6 +137,11 @@ const DefaultConfig = Object.freeze({
             min: 0,
             round: true,
             mult: Util.dataBytes.megabyte
+        },
+        rateLimitWindow: {
+            min: 0,
+            round: true,
+            mult: 1 / Util.durationSeconds.milli
         }
     },
 

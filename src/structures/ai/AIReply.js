@@ -33,12 +33,19 @@ class AIReply {
     }
 
     async answer(question, history) {
+        const aiManager = getClient().aiManager,
+            userId = this.request.author.id;
+
+        if (!aiManager.checkCooldown(userId)) {
+            return await this.ctx.reply(this.view.renderCooldown(aiManager.getCooldown(userId)), { ephemeral: true });
+        }
+
         await this.updater.start(this.view.renderThinking());
 
         let result;
 
         try {
-            result = await getClient().aiManager.ask(question, this.request, {
+            result = await aiManager.ask(question, this.request, {
                 history,
                 onProgress: session => this.updater.update(this.view.renderProgress(session))
             });

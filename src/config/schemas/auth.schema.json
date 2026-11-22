@@ -13,8 +13,20 @@
             "title": "Owner id"
         },
         "geminiKey": {
-            "type": "string",
-            "title": "Gemini API key"
+            "title": "Gemini API key, or a list of keys used in turn when one runs out",
+            "oneOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "minItems": 1
+                }
+            ]
         }
     }
 }

@@ -83,7 +83,7 @@ Supported environment variable names:
 - `LEVERET_OWNER`
 - `LEVERET_GEMINI_KEY` (optional, only needed when `enableAI` is on)
 
-If `config/auth.json` exists, the bot uses that file for `token`, `owner` and `geminiKey`.
+If `config/auth.json` exists, the bot uses that file for `token`, `owner` and `geminiKey`. `geminiKey` can also be a list of keys: when one runs out of quota, the bot moves on to the next.
 
 If there is no `config/auth.json`, the bot looks for `config/auth.env` and then for the matching environment variables.
 
@@ -93,7 +93,7 @@ If there is no `config/auth.json`, the bot looks for `config/auth.env` and then 
 {
     "token": "bot token",
     "owner": "your discord id",
-    "geminiKey": "optional Gemini API key"
+    "geminiKey": "optional Gemini API key, or a list of keys"
 }
 ```
 
@@ -122,7 +122,7 @@ Important groups of settings:
 - Tags and quotas: `maxTagNameLength`, `tagNameRegex`, `maxTagSize` (per-tag limits in kb for `text`, `script`, and `binary`; `-1` for unlimited), `maxQuota` (total storage quota in kb; `-1` for unlimited), `maxTagCount` (`-1` for unlimited)
 - Reply and output limits: `outCharLimit`, `outLineLimit`, `embedCharLimit`, `embedLineLimit`
 - Major features: `enablePreviews`, `enableSed`, `enablePermissions`, `enableReminders`, `enableAI`
-- AI assistant: `ai` (`name` and `icon` for the embed header, `promptsPath` for the prompt text files, `endpoint`, `models` (tried in order, falling back on rate limits), `thinkingLevel`, `maxSteps`, `timeLimit` and `requestTimeout` in seconds, `maxDownloadSize` in MB, `maxToolOutput` in characters, `allowLocalhostRequests`, `sources`)
+- AI assistant: `ai` (`name` and `icon` for the embed header, `promptsPath` for the prompt text files, `endpoint`, `models` (the first one is used, the rest are fallbacks when it's rate limited or unavailable), `thinkingLevel` (`null` for models without thinking levels), `maxSteps`, `timeLimit` and `requestTimeout` in seconds, `maxDownloadSize` in MB, `maxToolOutput` in characters, `maxRequests` per user every `rateLimitWindow` seconds, `allowLocalhostRequests`, `sources`)
 - Logging and file paths: log files, log level, database path, command paths, Discord log settings
 
 ## Reactions config
@@ -597,9 +597,11 @@ Syntax:
 ```
 
 - The answer is a single embed headed by the assistant's name and icon (`ai.name`, `ai.icon`; with no icon the bot's avatar is used). While it works, the header shows the current phase (e.g. "Searching...") and the embed shows a status line for each tool it runs, then a preview of the answer as it is written and "Finishing response...".
-- The finished answer has a green border, the sources it used as a numbered list and a footer with the model and the tokens used (`Models: <model> | <tokens> tok, <reasoning> reasoning`).
-- Up to three suggested follow-up questions appear as buttons under the answer. Anyone can click one; the assistant answers it as the person who clicked, with the earlier questions and answers as context. The buttons are disabled after `interactionTimeout`.
+- The finished answer has a green border, the sources it used and up to three numbered follow-up questions, and a footer with the model and the tokens used (`Models: <model> | <tokens> tok, <reasoning> reasoning`).
+- The follow-ups have matching 1, 2, 3 buttons under the answer. Anyone can click one; the assistant answers it as the person who clicked, with the earlier questions and answers as context. The buttons are disabled after `interactionTimeout`.
 - Reply to a message with `%a` to ask about it, or attach an image.
+- Code, scripts and data the assistant writes are attached as files. If an answer is too long for the embed, the full answer is attached as `answer.md`.
+- Each user can ask `ai.maxRequests` questions (follow-up clicks included) every `ai.rateLimitWindow` seconds.
 - The prompts live in text files under `ai.promptsPath` (`system.txt` for the assistant, `finisher.txt` for the sources and follow-ups pass, `inspectImage.txt` for image descriptions) and can be edited without touching the code.
 
 Tools the assistant can use:
@@ -612,6 +614,7 @@ Tools the assistant can use:
 - `find_users`, `get_asking_user`, `get_bot_profile`: server members and profiles.
 - `fetch_recent_messages`, `search_messages`: chat history, limited to channels the asking user can see.
 - `inspect_image`: describes an attached or linked image.
+- `attach_file`: attaches a text file to the answer (up to 3 files, 1 MB each).
 
 `tag_call` and `execute_javascript` are only offered for `%a` messages, not for follow-up buttons, because there is no user message for scripts to run as.
 

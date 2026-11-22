@@ -13,6 +13,8 @@ import PromptLoader from "../../loaders/ai/PromptLoader.js";
 import { getConfig, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import ArrayUtil from "../../util/ArrayUtil.js";
+import RateLimiter from "../../util/misc/RateLimiter.js";
 import HTTPUtil from "../../util/vm/HTTPUtil.js";
 
 import ManagerError from "../../errors/ManagerError.js";
@@ -24,14 +26,14 @@ class AIManager extends Manager {
     static maxRedirects = 5;
     static promptNames = ["system", "finisher", "inspectImage"];
 
-    constructor(enabled, apiKey) {
+    constructor(enabled, apiKeys) {
         super(enabled);
 
-        this.apiKey = apiKey;
+        this.apiKeys = ArrayUtil.guaranteeArray(apiKeys, null, true).filter(Util.nonemptyString);
     }
 
     async load() {
-        if (!Util.nonemptyString(this.apiKey)) {
+        if (Util.empty(this.apiKeys)) {
             throw new ManagerError(
                 'AI is enabled but no Gemini API key was provided. Set "geminiKey" in auth.json or LEVERET_GEMINI_KEY in auth.env'
             );
@@ -45,10 +47,12 @@ class AIManager extends Manager {
         this.maxDownloadSize = config.maxDownloadSize;
         this.maxToolOutput = config.maxToolOutput;
 
+        this.rateLimiter = new RateLimiter(config.maxRequests, config.rateLimitWindow);
+
         this.prompts = await this._loadPrompts(config.promptsPath);
         this.http = this._createHttp(config);
 
-        this.gemini = new GeminiClient(this.http, this.apiKey, config);
+        this.gemini = new GeminiClient(this.http, this.apiKeys, config);
         this.tools = new AIToolRegistry(this);
         this.prompt = new AIPrompt(this.prompts.system);
         this.finisher = new AIResponseFinisher(this.prompts.finisher);
@@ -56,6 +60,18 @@ class AIManager extends Manager {
 
         this.knowledge = new KnowledgeBase(this.http, config.sources, config.requestTimeout);
         await this.knowledge.load();
+    }
+
+    unload() {
+        this.rateLimiter.destroy();
+    }
+
+    checkCooldown(userId) {
+        return this.rateLimiter.check(userId);
+    }
+
+    getCooldown(userId) {
+        return this.rateLimiter.getTimeToReset(userId);
     }
 
     async ask(question, request, options) {

@@ -89,6 +89,8 @@ function buildDefaultConfig(tempDir, overrides = {}) {
             requestTimeout: 2 / Util.durationSeconds.milli,
             maxDownloadSize: 10 * Util.dataBytes.megabyte,
             maxToolOutput: 12000,
+            maxRequests: 100,
+            rateLimitWindow: 60 / Util.durationSeconds.milli,
             allowLocalhostRequests: true,
             sources: [],
             ...ai
