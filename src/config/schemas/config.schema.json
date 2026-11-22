@@ -341,6 +341,12 @@
                     "type": "number",
                     "minimum": 0
                 },
+                "followUpsAnyone": {
+                    "type": "boolean"
+                },
+                "followUpsEditAnswer": {
+                    "type": "boolean"
+                },
                 "allowLocalhostRequests": {
                     "type": "boolean"
                 },
@@ -389,6 +395,8 @@
                 "maxToolOutput",
                 "maxRequests",
                 "rateLimitWindow",
+                "followUpsAnyone",
+                "followUpsEditAnswer",
                 "allowLocalhostRequests",
                 "sources"
             ],

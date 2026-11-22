@@ -91,6 +91,8 @@ function buildDefaultConfig(tempDir, overrides = {}) {
             maxToolOutput: 12000,
             maxRequests: 100,
             rateLimitWindow: 60 / Util.durationSeconds.milli,
+            followUpsAnyone: true,
+            followUpsEditAnswer: false,
             allowLocalhostRequests: true,
             sources: [],
             ...ai

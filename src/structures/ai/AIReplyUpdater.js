@@ -3,8 +3,9 @@ import Util from "../../util/Util.js";
 class AIReplyUpdater {
     static minInterval = 1.5 / Util.durationSeconds.milli;
 
-    constructor(ctx) {
+    constructor(ctx, replace = false) {
         this.ctx = ctx;
+        this.replace = replace;
 
         this.lastUpdate = 0;
         this.queue = Promise.resolve();
@@ -14,7 +15,7 @@ class AIReplyUpdater {
     }
 
     async start(payload) {
-        await this.ctx.deferReply();
+        await (this.replace ? this.ctx.deferUpdate() : this.ctx.deferReply());
 
         this.lastUpdate = Date.now();
         return await this.ctx.reply(payload);

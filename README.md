@@ -122,7 +122,7 @@ Important groups of settings:
 - Tags and quotas: `maxTagNameLength`, `tagNameRegex`, `maxTagSize` (per-tag limits in kb for `text`, `script`, and `binary`; `-1` for unlimited), `maxQuota` (total storage quota in kb; `-1` for unlimited), `maxTagCount` (`-1` for unlimited)
 - Reply and output limits: `outCharLimit`, `outLineLimit`, `embedCharLimit`, `embedLineLimit`
 - Major features: `enablePreviews`, `enableSed`, `enablePermissions`, `enableReminders`, `enableAI`
-- AI assistant: `ai` (`name` and `icon` for the embed header, `promptsPath` for the prompt text files, `endpoint`, `models` (the first one is used, the rest are fallbacks when it's rate limited or unavailable), `thinkingLevel` (`null` for models without thinking levels), `maxSteps`, `timeLimit` and `requestTimeout` in seconds, `maxDownloadSize` in MB, `maxToolOutput` in characters, `maxRequests` per user every `rateLimitWindow` seconds, `allowLocalhostRequests`, `sources`)
+- AI assistant: `ai` (`name` and `icon` for the embed header, `promptsPath` for the prompt text files, `endpoint`, `models` (the first one is used, the rest are fallbacks when it's rate limited or unavailable), `thinkingLevel` (`null` for models without thinking levels), `maxSteps`, `timeLimit` and `requestTimeout` in seconds, `maxDownloadSize` in MB, `maxToolOutput` in characters, `maxRequests` per user every `rateLimitWindow` seconds, `followUpsAnyone` and `followUpsEditAnswer` for the follow-up buttons, `allowLocalhostRequests`, `sources`)
 - Logging and file paths: log files, log level, database path, command paths, Discord log settings
 
 ## Reactions config
@@ -598,7 +598,7 @@ Syntax:
 
 - The answer is a single embed headed by the assistant's name and icon (`ai.name`, `ai.icon`; with no icon the bot's avatar is used). While it works, the header shows the current phase (e.g. "Searching...") and the embed shows a status line for each tool it runs, then a preview of the answer as it is written and "Finishing response...".
 - The finished answer has a green border, the sources it used and up to three numbered follow-up questions, and a footer with the model and the tokens used (`Models: <models> | <tokens> tok, <reasoning> reasoning`, with the reasoning part left out when the model didn't reason).
-- The follow-ups have matching 1, 2, 3 buttons under the answer. Anyone can click one; the assistant answers it as the person who clicked, with the earlier questions and answers as context. The buttons are disabled after `interactionTimeout`.
+- The follow-ups have matching 1, 2, 3 buttons under the answer. Anyone can click one; the assistant answers it as the person who clicked, with the earlier questions and answers as context. The buttons are disabled after `interactionTimeout`. With `ai.followUpsAnyone` off, only the person who asked can use them. With `ai.followUpsEditAnswer` on, the follow-up answer replaces the message that was clicked instead of being sent as a new one.
 - Reply to a message with `%a` to ask about it, or attach an image.
 - Replying to one of the assistant's answers without a command asks the reply as a new `%a` question, with the whole conversation so far as context. Replies can be chained, and an answer stops accepting replies once it's older than `interactionTimeout`.
 - Code, scripts and data the assistant writes are attached as files. If an answer is too long for the embed, the full answer is attached as `answer.md`.

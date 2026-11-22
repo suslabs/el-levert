@@ -5,7 +5,7 @@ import ComponentSession from "../interaction/ComponentSession.js";
 
 import InteractionModes from "../interaction/InteractionModes.js";
 
-import { getClient } from "../../LevertClient.js";
+import { getClient, getConfig } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 
@@ -39,16 +39,23 @@ class AIReply {
             return false;
         }
 
-        await new AIReply(ctx).answer(question, session.spec.history);
+        const reply = new AIReply(ctx);
+        await reply.answer(question, session.spec.history);
+
+        if (reply.replace) {
+            getClient().interactionHandler.unregisterSession(session.id);
+        }
+
         return true;
     }
 
     constructor(ctx) {
         this.ctx = ctx;
         this.request = ctx.isInteraction ? AIRequest.fromInteraction(ctx.interaction) : AIRequest.fromCommand(ctx);
+        this.replace = ctx.isInteraction && getConfig().ai.followUpsEditAnswer;
 
         this.view = new AIReplyView();
-        this.updater = new AIReplyUpdater(ctx);
+        this.updater = new AIReplyUpdater(ctx, this.replace);
     }
 
     async answer(question, history) {
@@ -106,7 +113,7 @@ class AIReply {
 
     _createSession(followUps, history) {
         const session = new ComponentSession(this.ctx, {
-            interactionMode: InteractionModes.anyone,
+            interactionMode: getConfig().ai.followUpsAnyone ? InteractionModes.anyone : InteractionModes.authorOnly,
             spec: { followUps, history }
         });
 

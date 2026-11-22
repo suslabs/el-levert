@@ -153,11 +153,16 @@ function createClick(customId, user, message) {
         message,
         replied: false,
         deferred: false,
+        updated: false,
         isMessageComponent: () => true,
         isModalSubmit: () => false,
         isRepliable: () => true,
         deferReply: async () => {
             interaction.deferred = true;
+        },
+        deferUpdate: async () => {
+            interaction.deferred = true;
+            interaction.updated = true;
         },
         reply: async data => {
             interaction.replied = true;
@@ -165,7 +170,12 @@ function createClick(customId, user, message) {
 
             return reply;
         },
-        editReply: async data => (reply.payloads.push(data), reply)
+        editReply: async data => {
+            const target = interaction.updated ? message : reply;
+            target.payloads.push(data);
+
+            return target;
+        }
     };
 
     return { interaction, reply };
@@ -318,6 +328,46 @@ describe("a command", () => {
         expect(embedOf(payloads[0]).author.name).toBe("Test Rabbit - Thinking...");
         expect(embedOf(payloads.at(-1)).description).toBe("More details.");
         expect(payloads.at(-1).components).toEqual([]);
+    });
+
+    test("only the asker can use the follow-up buttons when followUpsAnyone is off", async () => {
+        const script = [answer(["First answer."]), extras(["Tell me more"], []), answer(["More."]), extras([], [])];
+        const bodies = await setup(script, { ai: { followUpsAnyone: false } });
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("hello", recorder));
+
+        const [button] = buttonsOf(recorder.sent.at(-1));
+
+        const other = createClick(button.custom_id, createDiscordUser({ id: clickerId }), recorder.msg);
+        await runtime.client.interactionHandler.execute(other.interaction);
+
+        expect(bodies).toHaveLength(2);
+        expect(other.reply.payloads[0].content).toContain("Only the command caller");
+
+        const asker = createClick(button.custom_id, createDiscordUser({ id: askerId }), recorder.msg);
+        await expect(runtime.client.interactionHandler.execute(asker.interaction)).resolves.toBe(true);
+
+        expect(script).toEqual([]);
+        expect(embedOf(asker.reply.payloads.at(-1)).description).toBe("More.");
+    });
+
+    test("follow-ups replace the clicked answer when followUpsEditAnswer is on", async () => {
+        const script = [answer(["First answer."]), extras(["Tell me more"], []), answer(["More."]), extras([], [])];
+        await setup(script, { ai: { followUpsEditAnswer: true } });
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("hello", recorder));
+
+        const [button] = buttonsOf(recorder.sent.at(-1)),
+            sessionId = button.custom_id.split(":").at(-1);
+
+        const click = createClick(button.custom_id, createDiscordUser({ id: clickerId }), recorder.msg);
+        await expect(runtime.client.interactionHandler.execute(click.interaction)).resolves.toBe(true);
+
+        expect(click.reply.payloads).toEqual([]);
+        expect(embedOf(recorder.msg.payloads.at(-1)).description).toBe("More.");
+        expect(runtime.client.interactionHandler.getSession(sessionId)).toBeNull();
     });
 
     test("follow-up buttons on expired answers report that they expired", async () => {

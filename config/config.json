@@ -112,6 +112,8 @@
         "maxToolOutput": 12000,
         "maxRequests": 3,
         "rateLimitWindow": 60,
+        "followUpsAnyone": true,
+        "followUpsEditAnswer": false,
         "allowLocalhostRequests": false,
         "sources": []
     }
