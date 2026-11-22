@@ -51,7 +51,7 @@ class GeminiClient {
     async stream(body, state, timeLeft, handlers) {
         for (;;) {
             const res = await this._send(body, state, timeLeft, true),
-                out = await this._readStream(res.data, state, handlers.onParts);
+                out = await GeminiClient._catchTimeout(this._readStream(res.data, state, handlers.onParts));
 
             if (out !== null) {
                 GeminiClient._useModel(state, this.getModel(state));
@@ -66,6 +66,19 @@ class GeminiClient {
     }
 
     static _thinkingErrorRegex = /thinking/i;
+    static _timeoutErrors = new Set(["CanceledError", "AbortError"]);
+
+    static async _catchTimeout(promise) {
+        try {
+            return await promise;
+        } catch (err) {
+            if (!GeminiClient._timeoutErrors.has(err.name)) {
+                throw err;
+            }
+
+            throw new AIError("Gemini took too long to respond");
+        }
+    }
 
     static _addUsage(state, usage) {
         state.tokens += usage?.totalTokenCount ?? 0;
@@ -186,19 +199,21 @@ class GeminiClient {
     async _post(model, body, state, timeLeft, stream) {
         const timeout = Util.clamp(timeLeft, GeminiClient.minTimeout, this.requestTimeout);
 
-        const res = await this.http.request({
-            url: this._getUrl(model, stream),
-            method: "post",
-            headers: {
-                "content-type": "application/json",
-                "x-goog-api-key": this.apiKeys[this.keyIdx]
-            },
-            data: this._buildBody(body, state),
-            responseType: stream ? "stream" : "json",
-            timeout,
-            signal: AbortSignal.timeout(timeout),
-            validateStatus: () => true
-        });
+        const res = await GeminiClient._catchTimeout(
+            this.http.request({
+                url: this._getUrl(model, stream),
+                method: "post",
+                headers: {
+                    "content-type": "application/json",
+                    "x-goog-api-key": this.apiKeys[this.keyIdx]
+                },
+                data: this._buildBody(body, state),
+                responseType: stream ? "stream" : "json",
+                timeout,
+                signal: AbortSignal.timeout(timeout),
+                validateStatus: () => true
+            })
+        );
 
         if (stream && !isSuccessStatus(res.status)) {
             res.data = GeminiClient._parseError(await SSEUtil.readText(res.data));

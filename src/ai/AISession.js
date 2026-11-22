@@ -172,7 +172,7 @@ class AISession {
         this.finishing = true;
         await this._reportProgress();
 
-        const extras = await this.manager.finisher.finish(this, question, answer);
+        const extras = await this._getExtras(question, answer);
 
         return {
             answer,
@@ -182,6 +182,19 @@ class AISession {
             tokens: this.state.tokens,
             reasoning: this.state.reasoning
         };
+    }
+
+    async _getExtras(question, answer) {
+        try {
+            return await this.manager.finisher.finish(this, question, answer);
+        } catch (err) {
+            if (err.name !== "AIError") {
+                throw err;
+            }
+
+            getLogger().warn(`Couldn't add sources and follow-ups to an AI answer: ${err.message}`);
+            return { followUps: [], sources: [] };
+        }
     }
 
     async _reportProgress() {

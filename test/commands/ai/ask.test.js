@@ -10,6 +10,8 @@ import {
     getCommand
 } from "../../helpers/commandHarness.js";
 
+import Util from "../../../src/util/Util.js";
+
 const streamPath = model => `/v1beta/models/${model}:streamGenerateContent`,
     generatePath = model => `/v1beta/models/${model}:generateContent`;
 
@@ -179,10 +181,14 @@ function embedOf(payload) {
 }
 
 describe("a command", () => {
-    test("isn't loaded when AI is disabled", async () => {
-        runtime = await createCommandRuntime({});
-        expect(runtime.client.commandManager.searchCommands("a")).toBeFalsy();
-    });
+    test(
+        "isn't loaded when AI is disabled",
+        async () => {
+            runtime = await createCommandRuntime({});
+            expect(runtime.client.commandManager.searchCommands("a")).toBeFalsy();
+        },
+        30 / Util.durationSeconds.milli
+    );
 
     test("shows usage for an empty question", async () => {
         await setup([]);
@@ -613,6 +619,36 @@ describe("a command", () => {
         expect(bodies).toHaveLength(2);
         expect(recorder.sent).toHaveLength(1);
         expect(recorder.sent[0]).toMatch(/You are asking too fast\. Please slow down! \(\*\*\d+s\*\*\)/);
+    });
+
+    test("still posts the answer when sources and follow-ups can't be added", async () => {
+        const broken = { json: { candidates: [{ content: { parts: [{ text: "not json" }] } }] } };
+        await setup([answer(["The answer."]), broken]);
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("hi", recorder));
+
+        const final = recorder.sent.at(-1);
+
+        expect(embedOf(final).description).toBe("The answer.");
+        expect(final.components).toEqual([]);
+    });
+
+    test("reports a slow Gemini response as an error instead of crashing", async () => {
+        const slow = () => new Promise(resolve => setTimeout(() => resolve(answer(["late"])), 1500));
+
+        await setup([], {
+            ai: { requestTimeout: 100 },
+            routes: { [`POST ${streamPath("test-model")}`]: slow }
+        });
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("hi", recorder));
+
+        const embed = embedOf(recorder.sent.at(-1));
+
+        expect(embed.color).toBe(0xed4245);
+        expect(embed.description).toContain("Gemini took too long to respond.");
     });
 
     test("admins skip the cooldown", async () => {
