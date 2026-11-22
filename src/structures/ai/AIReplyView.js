@@ -153,10 +153,13 @@ class AIReplyView {
     }
 
     static _formatFooter(result) {
-        const tokens = Util.formatNumber(result.tokens),
-            reasoning = Util.formatNumber(result.reasoning);
+        const usage = [`${Util.formatNumber(result.tokens)} tok`];
 
-        return `Models: ${result.models.join(", ")} | ${tokens} tok, ${reasoning} reasoning`;
+        if (result.reasoning > 0) {
+            usage.push(`${Util.formatNumber(result.reasoning)} reasoning`);
+        }
+
+        return `Models: ${result.models.join(", ")} | ${usage.join(", ")}`;
     }
 
     static _formatError(err) {

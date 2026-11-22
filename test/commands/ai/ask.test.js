@@ -506,7 +506,7 @@ describe("a command", () => {
         ]);
 
         expect(bodies[1].body.generationConfig).toBeUndefined();
-        expect(embedOf(recorder.sent.at(-1)).footer.text).toBe("Models: fallback-model | 15 tok, 0 reasoning");
+        expect(embedOf(recorder.sent.at(-1)).footer.text).toBe("Models: fallback-model | 15 tok");
     });
 
     test("switches to the next model when one gets overloaded mid-answer", async () => {
@@ -532,7 +532,7 @@ describe("a command", () => {
         const embed = embedOf(recorder.sent.at(-1));
 
         expect(embed.description).toBe("1 B is 1000 mB.");
-        expect(embed.footer.text).toBe("Models: test-model, fallback-model | 35 tok, 0 reasoning");
+        expect(embed.footer.text).toBe("Models: test-model, fallback-model | 35 tok");
     });
 
     test("restarts an answer on the next model when the stream stops partway", async () => {
@@ -613,6 +613,23 @@ describe("a command", () => {
         expect(bodies).toHaveLength(2);
         expect(recorder.sent).toHaveLength(1);
         expect(recorder.sent[0]).toMatch(/You are asking too fast\. Please slow down! \(\*\*\d+s\*\*\)/);
+    });
+
+    test("admins skip the cooldown", async () => {
+        const script = [answer(["ok"]), extras([], []), answer(["again"]), extras([], [])];
+
+        await setup(script, {
+            ai: { maxRequests: 1, rateLimitWindow: 60 * 1000 },
+            auth: { geminiKey: "test-key", owner: askerId }
+        });
+
+        await getCommand(runtime, "a").handler(createAskContext("hi", createRecorder()));
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("hi again", recorder));
+
+        expect(script).toEqual([]);
+        expect(embedOf(recorder.sent.at(-1)).description).toBe("again");
     });
 
     test("attaches files the model writes and the full answer when it doesn't fit", async () => {

@@ -85,7 +85,7 @@ describe("AIReplyView", () => {
 
         expect(embed.description.length).toBeLessThanOrEqual(4096);
         expect(embed.description.endsWith("Sources:\n1. https://example.test/page")).toBe(true);
-        expect(embed.footer.text).toBe("Models: test-model | 1,234,567 tok, 0 reasoning");
+        expect(embed.footer.text).toBe("Models: test-model | 1,234,567 tok");
         expect(payload.components).toEqual([]);
         expect(payload.files.map(file => file.name)).toEqual(["answer.md"]);
         expect(payload.files[0].attachment.toString()).toBe("a".repeat(5000));

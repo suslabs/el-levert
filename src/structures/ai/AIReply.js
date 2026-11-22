@@ -56,7 +56,7 @@ class AIReply {
 
         const userId = this.request.author.id;
 
-        if (!aiManager.rateLimiter.check(userId)) {
+        if (await this._isRateLimited(userId)) {
             const waitTime = aiManager.rateLimiter.getTimeToReset(userId);
             return await this.ctx.reply(this.view.renderCooldown(waitTime), { ephemeral: true });
         }
@@ -86,6 +86,22 @@ class AIReply {
         session?.setMessage(msg);
 
         return msg;
+    }
+
+    async _isRateLimited(userId) {
+        const permManager = getClient().permManager;
+
+        let perm = permManager.getLevels().default;
+
+        if (permManager.enabled) {
+            perm = await permManager.maxLevel(userId);
+        }
+
+        if (permManager.allowed(perm, "admin")) {
+            return false;
+        }
+
+        return !getClient().aiManager.rateLimiter.check(userId);
     }
 
     _createSession(followUps, history) {

@@ -597,12 +597,12 @@ Syntax:
 ```
 
 - The answer is a single embed headed by the assistant's name and icon (`ai.name`, `ai.icon`; with no icon the bot's avatar is used). While it works, the header shows the current phase (e.g. "Searching...") and the embed shows a status line for each tool it runs, then a preview of the answer as it is written and "Finishing response...".
-- The finished answer has a green border, the sources it used and up to three numbered follow-up questions, and a footer with the model and the tokens used (`Models: <model> | <tokens> tok, <reasoning> reasoning`).
+- The finished answer has a green border, the sources it used and up to three numbered follow-up questions, and a footer with the model and the tokens used (`Models: <models> | <tokens> tok, <reasoning> reasoning`, with the reasoning part left out when the model didn't reason).
 - The follow-ups have matching 1, 2, 3 buttons under the answer. Anyone can click one; the assistant answers it as the person who clicked, with the earlier questions and answers as context. The buttons are disabled after `interactionTimeout`.
 - Reply to a message with `%a` to ask about it, or attach an image.
 - Replying to one of the assistant's answers without a command asks the reply as a new `%a` question, with the whole conversation so far as context. Replies can be chained, and an answer stops accepting replies once it's older than `interactionTimeout`.
 - Code, scripts and data the assistant writes are attached as files. If an answer is too long for the embed, the full answer is attached as `answer.md`.
-- Each user can ask `ai.maxRequests` questions (follow-up clicks included) every `ai.rateLimitWindow` seconds.
+- Each user can ask `ai.maxRequests` questions (follow-up clicks included) every `ai.rateLimitWindow` seconds. Admins aren't limited.
 - The prompts live in text files under `ai.promptsPath` (`system.txt` for the assistant, `finisher.txt` for the sources and follow-ups pass, `inspectImage.txt` for image descriptions) and can be edited without touching the code.
 
 Tools the assistant can use:
