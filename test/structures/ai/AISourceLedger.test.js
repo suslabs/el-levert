@@ -12,9 +12,9 @@ describe("AISourceLedger", () => {
             source: ""
         });
 
-        ledger.record([{ source: "questbook:q1" }, "loose string", null]);
+        ledger.record([{ source: "https://example.test/other" }, "loose string", null]);
 
-        expect(ledger.toArray()).toEqual(["tag:steel", "https://example.test/page", "questbook:q1"]);
+        expect(ledger.toArray()).toEqual(["tag:steel", "https://example.test/page", "https://example.test/other"]);
         expect(ledger.has("tag:steel")).toBe(true);
         expect(ledger.has("https://not-a-source.test")).toBe(false);
     });

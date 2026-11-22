@@ -122,7 +122,7 @@ Important groups of settings:
 - Tags and quotas: `maxTagNameLength`, `tagNameRegex`, `maxTagSize` (per-tag limits in kb for `text`, `script`, and `binary`; `-1` for unlimited), `maxQuota` (total storage quota in kb; `-1` for unlimited), `maxTagCount` (`-1` for unlimited)
 - Reply and output limits: `outCharLimit`, `outLineLimit`, `embedCharLimit`, `embedLineLimit`
 - Major features: `enablePreviews`, `enableSed`, `enablePermissions`, `enableReminders`, `enableAI`
-- AI assistant: `ai` (`name` and `icon` for the embed header, `promptsPath` for the prompt text files, `endpoint`, `models` (the first one is used, the rest are fallbacks when it's rate limited or unavailable), `thinkingLevel` (`null` for models without thinking levels), `maxSteps` (`-1` for no limit; `timeLimit` still applies), `timeLimit` and `requestTimeout` in seconds, `maxDownloadSize` in MB, `maxToolOutput` in characters, `maxRequests` per user every `rateLimitWindow` seconds, `followUpsAnyone` and `followUpsEditAnswer` for the follow-up buttons, `allowLocalhostRequests`, `recipes` (`enabled`, NomiCodex `searchUrls` tried in order, `shotUrl` for recipe cards, `siteUrl`, and the default `mode`, `normal` or `expert`), `sources`)
+- AI assistant: `ai` (`name` and `icon` for the embed header, `promptsPath` for the prompt text files, `endpoint`, `models` (the first one is used, the rest are fallbacks when it's rate limited or unavailable), `thinkingLevel` (`null` for models without thinking levels), `maxSteps` (`-1` for no limit; `timeLimit` still applies), `timeLimit` and `requestTimeout` in seconds, `maxDownloadSize` in MB, `maxToolOutput` in characters, `maxRequests` per user every `rateLimitWindow` seconds, `followUpsAnyone` and `followUpsEditAnswer` for the follow-up buttons, `allowLocalhostRequests`, `recipes` (`enabled`, NomiCodex `searchUrls` tried in order, `shotUrl` for recipe cards, `siteUrl`, and the default `mode`, `normal` or `expert`))
 - Logging and file paths: log files, log level, database path, command paths, Discord log settings
 
 ## Reactions config
@@ -166,7 +166,6 @@ If reactions are enabled, the file defines the bracket reactions and the word-tr
 - If `allowFilesystemRequests` is off (the default), script HTTP requests cannot access local files through `file://` URLs.
 - If inspector support is off, debug flows described in this README are not available.
 - If `enableAI` is off, the `a` command is not available. If it's on, a Gemini key must be provided in the credentials or the bot refuses to start.
-- `ai.sources` adds questbook, domain or glossary knowledge for the AI's `tri_search` tool. Each source has a `kind` (`questbook`, `domain`, `glossary`), a `format` (`json` for `[{ "id", "title", "text", "chapter", "keywords", "tasks", "prereqs", "url" }]` or `{ "entries": [...] }`, `betterquesting` for a BetterQuesting `DefaultQuests.json` export) and either a `url` or a `tag` holding the JSON. Sources load once at startup.
 - For tag size and count limits (`maxTagSize.text`, `maxTagSize.script`, `maxTagSize.binary`, `maxQuota`, and `maxTagCount`), setting any limit to `-1` means unlimited. The `%tag quota` command reports both your stored tag quota (in kb) and registered tag count against these limits (or as unlimited when configured as `-1`).
 
 # Features
@@ -181,7 +180,7 @@ If reactions are enabled, the file defines the bracket reactions and the word-tr
 - Message link previews, sed-style replacements, and reaction triggers
 - CLI commands for local testing and tag/script emulation
 - WebSocket command API for external tools and editor integration
-- AI assistant (Gemini) that searches tags, quests, chat history, members and the web, with live streamed progress and follow-up buttons
+- AI assistant (Gemini) that searches tags, recipes, chat history, members and the web, with live streamed progress and follow-up buttons
 
 ## Updating the bot
 
@@ -607,7 +606,7 @@ Syntax:
 
 Tools the assistant can use:
 
-- `tri_search`: configured questbook/domain/glossary sources, then tags (name and body search), then the web.
+- `search_tags`: searches tags by name and by the text in their bodies.
 - `search_recipes`, `show_recipe`: NomiCodex recipe lookups. The assistant picks the main production recipe (for example the Large Chemical Reactor recipe for polyethylene, or the Mixer recipe for signalum dust, not crafting it from tiny piles) and shows its card as the answer's image. Naming a machine ("steel ingot ebf") filters by it.
 - `tag_get`, `tag_call`: read or run a tag as the asking user.
 - `search_web`, `fetch_web_page`, `http_request` (GET/HEAD API calls only): web access through the same private-network protection as script HTTP requests.

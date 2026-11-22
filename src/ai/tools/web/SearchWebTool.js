@@ -12,7 +12,7 @@ class SearchWebTool extends AITool {
         name: "search_web",
         phase: AIPhases.searching,
         description:
-            "Web search for current, niche, disputed or external facts. Third priority after domain lookup and tags.",
+            "Web search for current, niche, disputed or external facts, and modpack questions the tags don't cover.",
         parameters: ToolParams.object(
             {
                 query: ToolParams.string("Short search query."),

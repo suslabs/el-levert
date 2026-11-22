@@ -14,7 +14,7 @@ class TagGetTool extends TagTool {
         name: "tag_get",
         phase: AIPhases.reading,
         description:
-            "Fetch a tag's body by exact name. Only use names returned by tri_search or given by the user. Tags are community-maintained.",
+            "Fetch a tag's body by exact name. Only use names returned by search_tags or given by the user. Tags are community-maintained.",
         parameters: ToolParams.object({ name: ToolParams.string("Exact tag name.") }, ["name"])
     };
 

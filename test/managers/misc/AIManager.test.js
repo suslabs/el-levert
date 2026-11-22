@@ -39,7 +39,7 @@ describe("AIManager", () => {
         }
     });
 
-    test("loads its config, tools and an empty knowledge base", async () => {
+    test("loads its config and tools", async () => {
         runtime = await createCommandRuntime({
             config: { enableAI: true },
             auth: { geminiKey: "test-key" }
@@ -48,12 +48,11 @@ describe("AIManager", () => {
         const manager = runtime.client.aiManager;
 
         expect(manager.maxSteps).toBe(6);
-        expect(manager.knowledge.kinds).toEqual([]);
         expect(manager.finisher.instructions).toContain("followUps");
         expect(manager.prompt.instructions).toContain("## ANSWER FORMAT");
         expect(manager.prompts.inspectImage).toContain("Describe this image");
         expect(Array.from(manager.tools.tools.keys())).toEqual([
-            "tri_search",
+            "search_tags",
             "search_recipes",
             "show_recipe",
             "tag_get",

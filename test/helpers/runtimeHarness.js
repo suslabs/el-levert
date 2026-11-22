@@ -101,7 +101,6 @@ function buildDefaultConfig(tempDir, overrides = {}) {
                 siteUrl: "http://127.0.0.1:1",
                 mode: "normal"
             },
-            sources: [],
             ...ai
         },
         vmHttp: {

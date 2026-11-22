@@ -215,7 +215,7 @@ describe("a command", () => {
         const script = [
             calls(
                 [
-                    call("tri_search", { query: "steel" }, { id: "c1" }),
+                    call("search_tags", { query: "steel" }, { id: "c1" }),
                     call("unit_convert", { value: 144, from: "mB/t", to: "B/s" }, { id: "c2" })
                 ],
                 1000,
@@ -248,7 +248,7 @@ describe("a command", () => {
         const [search, convert] = bodies[1].body.contents.at(-1).parts.map(part => part.functionResponse);
 
         expect(search.id).toBe("c1");
-        expect(search.response.results.tags[0]).toMatchObject({ source: "tag:steel", name: "steel" });
+        expect(Util.first(search.response.tags)).toMatchObject({ source: "tag:steel", name: "steel" });
         expect(convert.response).toMatchObject({ result: 2.88, output: "2.88 B/s" });
 
         const finishBody = bodies[2].body,
@@ -902,50 +902,5 @@ describe("a command", () => {
 
         expect(script).toEqual([]);
         expect(embedOf(recorder.sent.at(-1)).image.url).toBe(`${server.url}/cat.png`);
-    });
-
-    test("searches configured questbook sources and cites quest details", async () => {
-        const questbook = {
-            entries: [
-                {
-                    id: "q1",
-                    title: "Steel Age",
-                    text: "Make steel. ".repeat(40),
-                    tasks: ["16x steel ingot"],
-                    prereqs: ["q0"]
-                },
-                { id: "q0", title: "Iron Age", text: "Get iron." }
-            ]
-        };
-
-        const script = [
-            calls([call("tri_search", { query: "steel", scope: "questbook" })]),
-            calls([call("tri_search", { questDetails: ["q1"] })]),
-            answer(["Do **Steel Age**."]),
-            extras([], ["questbook:q1"])
-        ];
-
-        const bodies = await setup(script, {
-            sources: url => [{ kind: "questbook", format: "json", url: `${url}/questbook.json` }],
-            routes: { "GET /questbook.json": () => ({ json: questbook }) }
-        });
-
-        const recorder = createRecorder();
-        await getCommand(runtime, "a").handler(createAskContext("how do I get steel", recorder));
-
-        const search = bodies[1].body.contents.at(-1).parts[0].functionResponse.response,
-            details = bodies[2].body.contents.at(-1).parts[0].functionResponse.response;
-
-        expect(search.results).toEqual({
-            questbook: [expect.objectContaining({ source: "questbook:q1", title: "Steel Age", truncated: true })]
-        });
-
-        expect(details.entries[0]).toMatchObject({
-            source: "questbook:q1",
-            tasks: ["16x steel ingot"],
-            prereqs: [{ id: "q0", title: "Iron Age" }]
-        });
-
-        expect(embedOf(recorder.sent.at(-1)).description).toBe("Do **Steel Age**.\n\nSources:\n1. questbook:q1");
     });
 });

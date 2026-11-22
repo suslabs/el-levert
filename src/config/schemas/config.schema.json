@@ -378,36 +378,6 @@
                     },
                     "required": ["enabled", "searchUrls", "shotUrl", "siteUrl", "mode"],
                     "additionalProperties": false
-                },
-                "sources": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "kind": {
-                                "enum": ["questbook", "domain", "glossary"]
-                            },
-                            "format": {
-                                "enum": ["json", "betterquesting"]
-                            },
-                            "url": {
-                                "type": "string"
-                            },
-                            "tag": {
-                                "type": "string"
-                            }
-                        },
-                        "required": ["kind", "format"],
-                        "oneOf": [
-                            {
-                                "required": ["url"]
-                            },
-                            {
-                                "required": ["tag"]
-                            }
-                        ],
-                        "additionalProperties": false
-                    }
                 }
             },
             "required": [
@@ -427,8 +397,7 @@
                 "followUpsAnyone",
                 "followUpsEditAnswer",
                 "allowLocalhostRequests",
-                "recipes",
-                "sources"
+                "recipes"
             ],
             "additionalProperties": false
         }

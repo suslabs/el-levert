@@ -124,7 +124,6 @@
             "shotUrl": "https://nomi-codex.vercel.app/api/shot",
             "siteUrl": "https://sayaisha.github.io/NomiCodex",
             "mode": "normal"
-        },
-        "sources": []
+        }
     }
 }

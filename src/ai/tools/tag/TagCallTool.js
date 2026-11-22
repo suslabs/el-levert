@@ -14,7 +14,7 @@ class TagCallTool extends TagTool {
         name: "tag_call",
         phase: AIPhases.running,
         description:
-            "Execute a tag as the asking user and return its output. Only use names returned by tri_search or given by the user.",
+            "Execute a tag as the asking user and return its output. Only use names returned by search_tags or given by the user.",
         parameters: ToolParams.object(
             {
                 name: ToolParams.string("Exact tag name."),
