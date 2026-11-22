@@ -3,8 +3,8 @@ import Util from "../../util/Util.js";
 class AIReplyUpdater {
     static minInterval = 1.5 / Util.durationSeconds.milli;
 
-    constructor(target) {
-        this.target = target;
+    constructor(ctx) {
+        this.ctx = ctx;
 
         this.lastUpdate = 0;
         this.queue = Promise.resolve();
@@ -14,8 +14,10 @@ class AIReplyUpdater {
     }
 
     async start(payload) {
+        await this.ctx.deferReply();
+
         this.lastUpdate = Date.now();
-        return await this.target.reply(payload);
+        return await this.ctx.reply(payload);
     }
 
     update(payload) {
@@ -42,7 +44,7 @@ class AIReplyUpdater {
         this.cancel();
         await this.queue;
 
-        return await this.target.edit(payload);
+        return await this.ctx.reply(payload);
     }
 
     _flush() {
@@ -52,7 +54,7 @@ class AIReplyUpdater {
         this.pending = null;
 
         this.lastUpdate = Date.now();
-        this.queue = this.queue.then(() => this.target.edit(payload));
+        this.queue = this.queue.then(() => this.ctx.reply(payload));
     }
 }
 

@@ -181,4 +181,32 @@ describe("BaseCommandContext vs CommandContext separation", () => {
         freshCtx.abortProcessing();
         expect(await freshCtx.sendProcessingReply("Aborted")).toBeNull();
     });
+
+    test("deferReply sends the processing reply for messages and defers interactions", async () => {
+        const replyMock = vi.fn(async () => ({ id: "proc-reply" })),
+            mockMsg = { id: "msg-1" };
+
+        const ctx = new CommandContext({ handler: { reply: replyMock }, message: mockMsg });
+
+        await expect(ctx.deferReply()).resolves.toEqual({ id: "proc-reply" });
+        expect(ctx.processingReplySent).toBe(true);
+        expect(replyMock).toHaveBeenCalledWith(
+            mockMsg,
+            expect.stringContaining("Processing command..."),
+            expect.objectContaining({ deleteOnAbort: true })
+        );
+
+        await expect(ctx.deferReply()).resolves.toBeNull();
+        expect(replyMock).toHaveBeenCalledTimes(1);
+
+        const deferMock = vi.fn(async () => "deferred"),
+            interactionCtx = new CommandContext({
+                message: mockMsg,
+                interactionContext: { deferReply: deferMock }
+            });
+
+        await expect(interactionCtx.deferReply({ ephemeral: true })).resolves.toBe("deferred");
+        expect(deferMock).toHaveBeenCalledWith({ ephemeral: true });
+        expect(interactionCtx.processingReplySent).toBe(false);
+    });
 });

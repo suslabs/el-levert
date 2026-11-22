@@ -4,13 +4,13 @@ import { cleanupRuntime, createCommandRuntime } from "../../helpers/commandHarne
 
 let runtime, view;
 
-let AIReplyView, AIFollowUpSession, AIPhases, AIError;
+let AIReplyView, ComponentSession, AIPhases, AIError;
 
 beforeEach(async () => {
     runtime = await createCommandRuntime({ config: { enableAI: true }, auth: { geminiKey: "test-key" } });
 
     ({ default: AIReplyView } = await import("../../../src/structures/ai/AIReplyView.js"));
-    ({ default: AIFollowUpSession } = await import("../../../src/structures/ai/AIFollowUpSession.js"));
+    ({ default: ComponentSession } = await import("../../../src/structures/interaction/ComponentSession.js"));
     ({ default: AIPhases } = await import("../../../src/structures/ai/AIPhases.js"));
     ({ default: AIError } = await import("../../../src/errors/AIError.js"));
 
@@ -88,24 +88,25 @@ describe("AIReplyView", () => {
     });
 
     test("renders follow-ups as buttons bound to their session", () => {
-        const followUps = new AIFollowUpSession({ author: { id: "1" } }, ["One?", "Two_?"], []);
+        const followUps = ["One?", "Two_?"],
+            session = new ComponentSession({ author: { id: "1" } }, { spec: { followUps, history: [] } });
 
         const payload = view.renderResult(
             { answer: "Answer.", sources: [], model: "test-model", tokens: 1, reasoning: 0 },
-            followUps
+            session
         );
 
         const buttons = payload.components[0].toJSON().components;
 
         expect(embedOf(payload).description).toBe("Answer.");
         expect(buttons.map(button => [button.label, button.custom_id])).toEqual([
-            ["One?", `ai_followup:0:${followUps.id}`],
-            ["Two_?", `ai_followup:1:${followUps.id}`]
+            ["One?", `ai:followup:0:${session.id}`],
+            ["Two_?", `ai:followup:1:${session.id}`]
         ]);
 
-        expect(followUps.getFollowUp(buttons[1].custom_id)).toBe("Two_?");
-        expect(followUps.getFollowUp(`ai_followup:7:${followUps.id}`)).toBe(null);
-        expect(followUps.getFollowUp(`snooze:1:${followUps.id}`)).toBe(null);
+        expect(AIReplyView.getFollowUp(buttons[1].custom_id, followUps)).toBe("Two_?");
+        expect(AIReplyView.getFollowUp(`ai:followup:7:${session.id}`, followUps)).toBe(null);
+        expect(AIReplyView.getFollowUp(`snooze:1:${session.id}`, followUps)).toBe(null);
     });
 
     test("renders errors with a red border and no footer", () => {

@@ -319,10 +319,7 @@ class CommandHandler extends MessageHandler {
         }
 
         return setTimeout(
-            () =>
-                this._sendProcessingReply(context).catch(err =>
-                    getLogger().error("Could not send processing reply:", err)
-                ),
+            () => context.deferReply().catch(err => getLogger().error("Could not send processing reply:", err)),
             this.commandWaitTime
         );
     }
@@ -335,10 +332,6 @@ class CommandHandler extends MessageHandler {
         if (this.getReply(context.msg) === null) {
             context.abortProcessing();
         }
-    }
-
-    async _sendProcessingReply(context) {
-        return await context.sendProcessingReply(`${getEmoji("waiting")} Processing command...`);
     }
 }
 

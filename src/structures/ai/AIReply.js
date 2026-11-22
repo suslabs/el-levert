@@ -1,8 +1,9 @@
 import AIRequest from "./AIRequest.js";
 import AIReplyUpdater from "./AIReplyUpdater.js";
 import AIReplyView from "./AIReplyView.js";
-import AIFollowUpSession from "./AIFollowUpSession.js";
-import AIInteractionTarget from "./AIInteractionTarget.js";
+import ComponentSession from "../interaction/ComponentSession.js";
+
+import InteractionModes from "../interaction/InteractionModes.js";
 
 import { getClient } from "../../LevertClient.js";
 
@@ -11,32 +12,24 @@ import Util from "../../util/Util.js";
 class AIReply {
     static expectedErrors = new Set(["AIError", "AxiosError"]);
 
-    static fromCommand(ctx) {
-        return new AIReply(ctx, AIRequest.fromCommand(ctx), ctx);
-    }
-
-    static fromInteraction(ctx) {
-        return new AIReply(ctx, AIRequest.fromInteraction(ctx.interaction), new AIInteractionTarget(ctx));
-    }
-
     static async handleFollowUp(ctx) {
         const session = ctx.interactionContext.session,
-            question = session.getFollowUp(ctx.interaction.customId);
+            question = AIReplyView.getFollowUp(ctx.interaction.customId, session.spec.followUps);
 
         if (question === null) {
             return false;
         }
 
-        await AIReply.fromInteraction(ctx).answer(question, session.history);
+        await new AIReply(ctx).answer(question, session.spec.history);
         return true;
     }
 
-    constructor(ctx, request, target) {
+    constructor(ctx) {
         this.ctx = ctx;
-        this.request = request;
+        this.request = ctx.isInteraction ? AIRequest.fromInteraction(ctx.interaction) : AIRequest.fromCommand(ctx);
 
         this.view = new AIReplyView();
-        this.updater = new AIReplyUpdater(target);
+        this.updater = new AIReplyUpdater(ctx);
     }
 
     async answer(question, history) {
@@ -68,7 +61,10 @@ class AIReply {
     }
 
     _createSession(followUps, history) {
-        const session = new AIFollowUpSession(this.ctx, followUps, history);
+        const session = new ComponentSession(this.ctx, {
+            interactionMode: InteractionModes.anyone,
+            spec: { followUps, history }
+        });
 
         getClient().interactionHandler.registerSession(session);
         return session;

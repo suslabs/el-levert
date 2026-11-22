@@ -111,6 +111,7 @@ function createRecorder() {
         msg = createSentMessage("answer-1");
 
     const handler = {
+        reply: async (_, data) => (sent.push(data), msg),
         contextReply: async (_, data) => (sent.push(data), msg),
         editFromContext: async (_, data) => (sent.push(data), msg),
         getReply: () => null
@@ -151,6 +152,9 @@ function createClick(customId, user, message) {
         isMessageComponent: () => true,
         isModalSubmit: () => false,
         isRepliable: () => true,
+        deferReply: async () => {
+            interaction.deferred = true;
+        },
         reply: async data => {
             interaction.replied = true;
             reply.payloads.push(data);
@@ -235,8 +239,9 @@ describe("a command", () => {
         expect(finishInput.answer).toBe("Use the **EBF** to make steel. 144 mB/t is 2.88 B/s.");
         expect(finishInput.candidates).toContain("tag:steel");
 
-        expect(recorder.sent[0].content).toBeUndefined();
-        expect(embedOf(recorder.sent[0])).toEqual({
+        expect(recorder.sent[0]).toBe(":hourglass_flowing_sand: Processing command...");
+        expect(recorder.sent[1].content).toBeUndefined();
+        expect(embedOf(recorder.sent[1])).toEqual({
             author: { name: "Test Rabbit - Thinking...", icon_url: "https://example.test/icon.png" },
             description: "▶️ *Thinking...*"
         });
@@ -251,7 +256,7 @@ describe("a command", () => {
         const [button] = buttonsOf(recorder.sent.at(-1));
 
         expect(button.label).toBe("What coils does the EBF need?");
-        expect(button.custom_id).toMatch(/^ai_followup:0:/);
+        expect(button.custom_id).toMatch(/^ai:followup:0:/);
     });
 
     test("answers without follow-ups have no buttons", async () => {
@@ -283,7 +288,7 @@ describe("a command", () => {
         const clicker = createDiscordUser({ id: clickerId, username: "neeve" }),
             sessionId = buttons[0].custom_id.split(":").at(-1);
 
-        const unknown = createClick(`ai_followup:5:${sessionId}`, clicker, recorder.msg);
+        const unknown = createClick(`ai:followup:5:${sessionId}`, clicker, recorder.msg);
         await expect(runtime.client.interactionHandler.execute(unknown.interaction)).resolves.toBe(false);
 
         const click = createClick(buttons[0].custom_id, clicker, recorder.msg);

@@ -18,6 +18,19 @@ class AIReplyView {
     static maxStatusLines = 5;
     static maxPreviewLength = 200;
 
+    static customIdPrefix = "ai";
+    static followUpAction = "followup";
+
+    static getFollowUp(customId, followUps) {
+        const [prefix, action, idxText] = customId.split(":");
+
+        if (prefix !== AIReplyView.customIdPrefix || action !== AIReplyView.followUpAction) {
+            return null;
+        }
+
+        return followUps[Util.parseInt(idxText)] ?? null;
+    }
+
     constructor() {
         const config = getConfig().ai;
 
@@ -82,8 +95,11 @@ class AIReplyView {
     }
 
     static _createFollowUpRow(session) {
-        const buttons = session.followUps.map((followUp, i) =>
-            new ButtonBuilder().setCustomId(session.getCustomId(i)).setLabel(followUp).setStyle(ButtonStyle.Secondary)
+        const buttons = session.spec.followUps.map((followUp, i) =>
+            new ButtonBuilder()
+                .setCustomId(`${AIReplyView.customIdPrefix}:${AIReplyView.followUpAction}:${i}:${session.id}`)
+                .setLabel(followUp)
+                .setStyle(ButtonStyle.Secondary)
         );
 
         return new ActionRowBuilder().addComponents(buttons);
