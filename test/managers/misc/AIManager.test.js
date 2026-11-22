@@ -67,6 +67,7 @@ describe("AIManager", () => {
             "get_bot_profile",
             "get_asking_user",
             "inspect_image",
+            "show_image",
             "fetch_recent_messages",
             "search_messages",
             "http_request"

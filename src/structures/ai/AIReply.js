@@ -39,11 +39,14 @@ class AIReply {
             return false;
         }
 
-        const reply = new AIReply(ctx);
-        await reply.answer(question, session.spec.history);
+        const reply = new AIReply(ctx),
+            answer = () => reply.answer(question, session.spec.history);
 
         if (reply.replace) {
+            await answer();
             getClient().interactionHandler.unregisterSession(session.id);
+        } else {
+            await reply._hideButtonsWhile(session, answer);
         }
 
         return true;
@@ -93,6 +96,17 @@ class AIReply {
         session?.setMessage(msg);
 
         return msg;
+    }
+
+    async _hideButtonsWhile(session, callback) {
+        const hidden = session.message.edit({ components: [] });
+
+        try {
+            return await callback();
+        } finally {
+            await hidden;
+            await session.message.edit(this.view.renderFollowUps(session));
+        }
     }
 
     async _isRateLimited(userId) {

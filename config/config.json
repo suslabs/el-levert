@@ -116,6 +116,7 @@
         "followUpsEditAnswer": true,
         "allowLocalhostRequests": false,
         "recipes": {
+            "enabled": true,
             "searchUrls": [
                 "https://nomi-codex.vercel.app/api/search",
                 "https://nomicodex-search.cloudrender70.workers.dev/search"

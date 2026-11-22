@@ -351,37 +351,33 @@
                     "type": "boolean"
                 },
                 "recipes": {
-                    "oneOf": [
-                        {
-                            "type": "null"
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean"
                         },
-                        {
-                            "type": "object",
-                            "properties": {
-                                "searchUrls": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "string",
-                                        "minLength": 1
-                                    },
-                                    "minItems": 1
-                                },
-                                "shotUrl": {
-                                    "type": "string",
-                                    "minLength": 1
-                                },
-                                "siteUrl": {
-                                    "type": "string",
-                                    "minLength": 1
-                                },
-                                "mode": {
-                                    "enum": ["normal", "expert"]
-                                }
+                        "searchUrls": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "minLength": 1
                             },
-                            "required": ["searchUrls", "shotUrl", "siteUrl", "mode"],
-                            "additionalProperties": false
+                            "minItems": 1
+                        },
+                        "shotUrl": {
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "siteUrl": {
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "mode": {
+                            "enum": ["normal", "expert"]
                         }
-                    ]
+                    },
+                    "required": ["enabled", "searchUrls", "shotUrl", "siteUrl", "mode"],
+                    "additionalProperties": false
                 },
                 "sources": {
                     "type": "array",

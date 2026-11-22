@@ -94,7 +94,13 @@ function buildDefaultConfig(tempDir, overrides = {}) {
             followUpsAnyone: true,
             followUpsEditAnswer: false,
             allowLocalhostRequests: true,
-            recipes: null,
+            recipes: {
+                enabled: false,
+                searchUrls: ["http://127.0.0.1:1/api/search"],
+                shotUrl: "http://127.0.0.1:1/api/shot",
+                siteUrl: "http://127.0.0.1:1",
+                mode: "normal"
+            },
             sources: [],
             ...ai
         },

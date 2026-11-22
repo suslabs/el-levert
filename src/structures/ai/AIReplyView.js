@@ -74,10 +74,14 @@ class AIReplyView {
         }
 
         return {
-            embeds: [embed],
+            ...AIReplyView._createPayload(embed),
             components: session === null ? [] : [AIReplyView._createFollowUpRow(session)],
             files: AIReplyView._createFiles(result.files, answer, answerLimit)
         };
+    }
+
+    renderFollowUps(session) {
+        return { components: [AIReplyView._createFollowUpRow(session)] };
     }
 
     renderCooldown(waitTime) {
@@ -95,7 +99,11 @@ class AIReplyView {
             .setColor(AIReplyView.errorColor)
             .setDescription(AIReplyView._formatError(err));
 
-        return { embeds: [embed] };
+        return AIReplyView._createPayload(embed);
+    }
+
+    static _createPayload(embed) {
+        return { embeds: [embed], components: [], attachments: [] };
     }
 
     static _formatStatus(status) {
@@ -199,7 +207,7 @@ class AIReplyView {
             [statusText, preview].filter(Util.nonemptyString).join("\n\n")
         );
 
-        return { embeds: [embed] };
+        return AIReplyView._createPayload(embed);
     }
 }
 

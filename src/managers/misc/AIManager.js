@@ -61,7 +61,7 @@ class AIManager extends Manager {
         this.prompt = new AIPrompt(this.prompts.system);
         this.finisher = new AIResponseFinisher(this.prompts.finisher);
         this.webSearcher = new WebSearcher(this.http);
-        this.recipes = config.recipes === null ? null : new NomiCodexClient(this.http, config.recipes);
+        this.recipes = config.recipes.enabled ? new NomiCodexClient(this.http, config.recipes) : null;
 
         this.knowledge = new KnowledgeBase(this.http, config.sources, config.requestTimeout);
         await this.knowledge.load();

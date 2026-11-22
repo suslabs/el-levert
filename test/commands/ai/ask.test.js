@@ -85,7 +85,7 @@ async function setup(script, options = {}) {
                 endpoint: `${server.url}/v1beta`,
                 models: options.models ?? ["test-model"],
                 sources: options.sources?.(server.url) ?? [],
-                recipes: options.recipes?.(server.url) ?? null,
+                ...(typeof options.recipes === "function" ? { recipes: options.recipes(server.url) } : {}),
                 ...options.ai
             }
         },
@@ -330,6 +330,14 @@ describe("a command", () => {
         expect(embedOf(payloads[0]).author.name).toBe("Test Rabbit - Thinking...");
         expect(embedOf(payloads.at(-1)).description).toBe("More details.");
         expect(payloads.at(-1).components).toEqual([]);
+
+        const [hidden, restored] = recorder.msg.payloads;
+
+        expect(hidden).toEqual({ components: [] });
+        expect(restored.components.flatMap(row => row.toJSON().components).map(button => button.label)).toEqual([
+            "1",
+            "2"
+        ]);
     });
 
     test("only the asker can use the follow-up buttons when followUpsAnyone is off", async () => {
@@ -368,6 +376,11 @@ describe("a command", () => {
         await expect(runtime.client.interactionHandler.execute(click.interaction)).resolves.toBe(true);
 
         expect(click.reply.payloads).toEqual([]);
+
+        const thinking = Util.first(recorder.msg.payloads);
+
+        expect(thinking.components).toEqual([]);
+        expect(thinking.attachments).toEqual([]);
         expect(embedOf(recorder.msg.payloads.at(-1)).description).toBe("More.");
         expect(runtime.client.interactionHandler.getSession(sessionId)).toBeNull();
     });
@@ -823,6 +836,7 @@ describe("a command", () => {
 
         const bodies = await setup(script, {
             recipes: url => ({
+                enabled: true,
                 searchUrls: [`${url}/down`, `${url}/api/search`],
                 shotUrl: `${url}/api/shot`,
                 siteUrl: "https://codex.test",
@@ -861,6 +875,30 @@ describe("a command", () => {
 
         expect(embed.description).toBe("Signalum Dust is made in a **Mixer**.");
         expect(embed.image.url).toBe("https://codex.test/card.png");
+    });
+
+    test("shows an image the model picks in the answer embed", async () => {
+        const script = [];
+
+        await setup(script, {
+            routes: {
+                "HEAD /cat.png": () => ({ headers: { "content-type": "image/png" } }),
+                "HEAD /page": () => ({ headers: { "content-type": "text/html" } })
+            }
+        });
+
+        script.push(
+            calls([call("show_image", { url: `${server.url}/cat.png` })]),
+            calls([call("show_image", { url: `${server.url}/page` })]),
+            answer(["Here it is."]),
+            extras([], [])
+        );
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("show me a cat", recorder));
+
+        expect(script).toEqual([]);
+        expect(embedOf(recorder.sent.at(-1)).image.url).toBe(`${server.url}/cat.png`);
     });
 
     test("searches configured questbook sources and cites quest details", async () => {

@@ -60,6 +60,13 @@ describe("AIReplyView", () => {
         expect(finishing).toBe("*Finishing response...*");
     });
 
+    test("status updates clear old buttons and attachments", () => {
+        const payload = view.renderThinking();
+
+        expect(payload.components).toEqual([]);
+        expect(payload.attachments).toEqual([]);
+    });
+
     test("only shows the latest status lines", () => {
         const steps = Array.from({ length: 8 }, (_, i) => ({ phase: AIPhases.running, status: `Step ${i}` })),
             lines = embedOf(view.renderProgress(session(steps))).description.split("\n");
@@ -88,6 +95,7 @@ describe("AIReplyView", () => {
         expect(embed.description.endsWith("Sources:\n1. https://example.test/page")).toBe(true);
         expect(embed.footer.text).toBe("Models: test-model | 1,234,567 tok");
         expect(payload.components).toEqual([]);
+        expect(payload.attachments).toEqual([]);
         expect(payload.files.map(file => file.name)).toEqual(["answer.md"]);
         expect(payload.files[0].attachment.toString()).toBe("a".repeat(5000));
     });
@@ -97,7 +105,16 @@ describe("AIReplyView", () => {
             session = new ComponentSession({ author: { id: "1" } }, { spec: { followUps, history: [] } });
 
         const payload = view.renderResult(
-            { answer: "Answer.", sources: [], followUps, files: [], image: null, models: ["test-model"], tokens: 1, reasoning: 0 },
+            {
+                answer: "Answer.",
+                sources: [],
+                followUps,
+                files: [],
+                image: null,
+                models: ["test-model"],
+                tokens: 1,
+                reasoning: 0
+            },
             session
         );
 
