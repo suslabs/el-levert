@@ -570,7 +570,7 @@ Examples:
 
 #### Other utilities
 
-- `convert <value> <from_unit> <to_unit...>`: Converts between supported units (metric, imperial, digital, temp) and displays the conversion chain.
+- `convert <value> <from_unit> <to_unit...>`: Converts compatible energy (`rf`, `eu`, `ae`, voltage-tier amps) and fluid (`mb`, `b`) rates and displays the conversion chain.
 - `cleanroomcalc` / `crc <width>x<height>x<length>`: Calculates required filter casings, plascrete, and construction blocks for a GregTech cleanroom of given dimensions (e.g. `5x5x5`, `9x7x9`).
 - `stoik <reactants> -> <products>`: Balances chemical equations and verifies reaction stoichiometry.
 
