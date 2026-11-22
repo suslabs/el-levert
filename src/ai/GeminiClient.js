@@ -85,7 +85,7 @@ class GeminiClient {
 
     static _createSignal(timeout, signal) {
         const timeoutSignal = AbortSignal.timeout(timeout);
-        return signal == null ? timeoutSignal : AbortSignal.any([timeoutSignal, signal]);
+        return signal === null ? timeoutSignal : AbortSignal.any([timeoutSignal, signal]);
     }
 
     static _addUsage(state, usage) {

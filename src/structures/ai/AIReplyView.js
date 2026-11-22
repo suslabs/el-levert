@@ -30,12 +30,7 @@ class AIReplyView {
     }
 
     static getFollowUp(customId, followUps) {
-        const [prefix, action, idxText] = customId.split(":");
-
-        if (prefix !== AIReplyView.customIdPrefix || action !== AIReplyView.followUpAction) {
-            return null;
-        }
-
+        const [, , idxText] = customId.split(":");
         return followUps[Util.parseInt(idxText)] ?? null;
     }
 
@@ -60,18 +55,20 @@ class AIReplyView {
 
     renderResult(result, session) {
         const answer = result.answer.trim(),
-            extras = [AIReplyView._formatSources(result.sources), AIReplyView._formatFollowUps(result.followUps)]
-                .filter(Util.nonemptyString)
-                .join("\n\n");
+            extras = AIReplyView._joinSections(
+                AIReplyView._formatList("Sources:", result.sources),
+                AIReplyView._formatList(
+                    "Follow-ups:",
+                    result.followUps.map(followUp => escapeMarkdown(followUp))
+                )
+            );
 
         const answerLimit = AIReplyView._getAnswerLimit(extras);
 
         const embed = this._createEmbed(this.name)
             .setColor(AIReplyView.answerColor)
             .setDescription(
-                [Util.trimString(answer, answerLimit, null, { tight: true }), extras]
-                    .filter(Util.nonemptyString)
-                    .join("\n\n")
+                AIReplyView._joinSections(Util.trimString(answer, answerLimit, null, { tight: true }), extras)
             )
             .setFooter({ text: AIReplyView._formatFooter(result) });
 
@@ -120,9 +117,17 @@ class AIReplyView {
         return [embed, ...rest.map(url => new EmbedBuilder().setURL(first).setImage(url))];
     }
 
+    static _createCustomId(action, ...parts) {
+        return [AIReplyView.customIdPrefix, action, ...parts].join(":");
+    }
+
+    static _joinSections(...sections) {
+        return sections.filter(Util.nonemptyString).join("\n\n");
+    }
+
     static _createCancelRow(session) {
         const button = new ButtonBuilder()
-            .setCustomId(`${AIReplyView.customIdPrefix}:${AIReplyView.cancelAction}:${session.id}`)
+            .setCustomId(AIReplyView._createCustomId(AIReplyView.cancelAction, session.id))
             .setLabel("Cancel")
             .setStyle(ButtonStyle.Danger);
 
@@ -134,8 +139,9 @@ class AIReplyView {
     }
 
     static _formatPreview(text, finishing) {
-        const lines = [],
-            preview = text.trim();
+        const preview = text.trim();
+
+        const lines = [];
 
         if (!Util.empty(preview)) {
             lines.push(Util.trimString(preview, AIReplyView.maxPreviewLength, null, { tight: true }));
@@ -148,26 +154,18 @@ class AIReplyView {
         return lines.join("\n");
     }
 
-    static _formatSources(sources) {
-        if (Util.empty(sources)) {
+    static _formatList(header, items) {
+        if (Util.empty(items)) {
             return "";
         }
 
-        return ["Sources:", ...sources.map((source, i) => `${i + 1}. ${source}`)].join("\n");
-    }
-
-    static _formatFollowUps(followUps) {
-        if (Util.empty(followUps)) {
-            return "";
-        }
-
-        return ["Follow-ups:", ...followUps.map((followUp, i) => `${i + 1}. ${escapeMarkdown(followUp)}`)].join("\n");
+        return [header, ...items.map((item, i) => `${i + 1}. ${item}`)].join("\n");
     }
 
     static _createFollowUpRow(session) {
         const buttons = session.spec.followUps.map((_, i) =>
             new ButtonBuilder()
-                .setCustomId(`${AIReplyView.customIdPrefix}:${AIReplyView.followUpAction}:${i}:${session.id}`)
+                .setCustomId(AIReplyView._createCustomId(AIReplyView.followUpAction, i, session.id))
                 .setLabel(String(i + 1))
                 .setStyle(ButtonStyle.Secondary)
         );
@@ -227,7 +225,7 @@ class AIReplyView {
             preview = AIReplyView._formatPreview(text, finishing);
 
         const embed = this._createEmbed(`${this.name} - ${phase}...`).setDescription(
-            [statusText, preview].filter(Util.nonemptyString).join("\n\n")
+            AIReplyView._joinSections(statusText, preview)
         );
 
         return AIReplyView._createPayload([embed], [AIReplyView._createCancelRow(cancelSession)]);

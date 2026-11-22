@@ -1,6 +1,8 @@
 import RecipeTool from "./RecipeTool.js";
 import ToolParams from "../ToolParams.js";
 
+import NomiCodexClient from "../../recipes/NomiCodexClient.js";
+
 import { OverclockingValues } from "../../../structures/OverclockingValues.js";
 
 import AIPhases from "../../../structures/ai/AIPhases.js";
@@ -51,7 +53,7 @@ class SearchRecipesTool extends RecipeTool {
             timeout: session.toolTimeout()
         });
 
-        if (data.error === "not found") {
+        if (data.error === NomiCodexClient.notFoundError) {
             return { query, found: false, suggestions: (data.alternatives ?? []).map(alt => alt.name) };
         }
 

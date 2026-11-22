@@ -6,6 +6,9 @@ import AIError from "../../errors/AIError.js";
 class NomiCodexClient {
     static renderWait = 8;
 
+    static expertMode = "expert";
+    static notFoundError = "not found";
+
     constructor(http, options) {
         this.http = http;
 
@@ -17,7 +20,7 @@ class NomiCodexClient {
     }
 
     getMode(expert) {
-        return expert ? "expert" : this.mode;
+        return expert ? NomiCodexClient.expertMode : this.mode;
     }
 
     getItemUrl(itemId) {
