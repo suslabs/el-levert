@@ -69,7 +69,7 @@ class AISession {
             }
 
             const final = i === this.manager.maxSteps - 1 || this.timeLeft < this.manager.requestTimeout,
-                res = await this._stream(this._buildRequest(systemInstruction, final));
+                res = await this._stream(this._buildRequest(systemInstruction, final), final);
 
             const calls = res.parts
                 .filter(part => typeof part.functionCall !== "undefined")
@@ -87,7 +87,7 @@ class AISession {
     }
 
     async generateText(body) {
-        const data = await this.manager.gemini.generate(body, this.state, this.timeLeft),
+        const data = await this.manager.gemini.generate(body, this.state, { timeLeft: this.timeLeft }),
             parts = Util.first(data.candidates ?? [])?.content?.parts ?? [];
 
         return AISession.getText(parts).trim();
@@ -124,8 +124,10 @@ class AISession {
         };
     }
 
-    async _stream(body) {
-        return await this.manager.gemini.stream(body, this.state, this.timeLeft, {
+    async _stream(body, final) {
+        return await this.manager.gemini.stream(body, this.state, {
+            timeLeft: this.timeLeft,
+            thinkingLevel: final ? this.manager.thinkingLevel : this.manager.toolThinkingLevel,
             onParts: parts => this._appendText(AISession.getText(parts)),
             onRestart: () => this._resetText()
         });

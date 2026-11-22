@@ -84,6 +84,7 @@ function buildDefaultConfig(tempDir, overrides = {}) {
             endpoint: "http://127.0.0.1:1/v1beta",
             models: ["test-model"],
             thinkingLevel: "minimal",
+            toolThinkingLevel: "low",
             maxSteps: 6,
             timeLimit: 10 / Util.durationSeconds.milli,
             unlimitedTimeForAdmins: true,

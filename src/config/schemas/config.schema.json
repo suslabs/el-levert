@@ -316,6 +316,9 @@
                 "thinkingLevel": {
                     "type": ["string", "null"]
                 },
+                "toolThinkingLevel": {
+                    "type": ["string", "null"]
+                },
                 "maxSteps": {
                     "type": "integer",
                     "anyOf": [{ "const": -1 }, { "minimum": 1 }]
@@ -390,6 +393,7 @@
                 "endpoint",
                 "models",
                 "thinkingLevel",
+                "toolThinkingLevel",
                 "maxSteps",
                 "timeLimit",
                 "unlimitedTimeForAdmins",

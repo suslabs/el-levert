@@ -240,7 +240,8 @@ describe("a command", () => {
 
         expect(bodies[0].key).toBe("test-key");
         expect(bodies[0].body.toolConfig.functionCallingConfig.mode).toBe("AUTO");
-        expect(bodies[0].body.generationConfig.thinkingConfig.thinkingLevel).toBe("minimal");
+        expect(bodies[0].body.generationConfig.thinkingConfig.thinkingLevel).toBe("low");
+        expect(bodies[2].body.generationConfig.thinkingConfig.thinkingLevel).toBe("minimal");
         expect(bodies[0].body.systemInstruction.parts[0].text).toContain(`<@${askerId}>`);
         expect(bodies[0].body.systemInstruction.parts[0].text).toContain("## ANSWER FORMAT");
         expect(bodies[0].body.tools[0].functionDeclarations.map(decl => decl.name)).not.toContain("search_recipes");
@@ -557,7 +558,7 @@ describe("a command", () => {
         expect(embedOf(recorder.sent.at(-1)).description).toBe("Done.");
     });
 
-    test("forces a text answer on the last step", async () => {
+    test("forces a text answer on the last step and thinks harder while choosing tools", async () => {
         const script = [
             calls([call("unit_convert", { value: 1, from: "B", to: "mB" })]),
             answer(["1000 mB."]),
@@ -569,8 +570,13 @@ describe("a command", () => {
         const recorder = createRecorder();
         await getCommand(runtime, "a").handler(createAskContext("convert", recorder));
 
-        expect(bodies[0].body.toolConfig.functionCallingConfig.mode).toBe("AUTO");
-        expect(bodies[1].body.toolConfig.functionCallingConfig.mode).toBe("NONE");
+        const modeOf = entry => [
+            entry.body.toolConfig.functionCallingConfig.mode,
+            entry.body.generationConfig.thinkingConfig.thinkingLevel
+        ];
+
+        expect(modeOf(bodies[0])).toEqual(["AUTO", "low"]);
+        expect(modeOf(bodies[1])).toEqual(["NONE", "minimal"]);
         expect(embedOf(recorder.sent.at(-1)).description).toBe("1000 mB.");
     });
 

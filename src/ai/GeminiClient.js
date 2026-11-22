@@ -28,7 +28,7 @@ class GeminiClient {
         return {
             modelIdx: 0,
             models: [],
-            thinking: !Util.empty(this.thinkingLevel),
+            thinking: true,
 
             tokens: 0,
             reasoning: 0
@@ -39,8 +39,8 @@ class GeminiClient {
         return this.models[state.modelIdx] ?? null;
     }
 
-    async generate(body, state, timeLeft) {
-        const res = await this._send(body, state, timeLeft, false);
+    async generate(body, state, options) {
+        const res = await this._send(body, state, options, false);
 
         GeminiClient._addUsage(state, res.data.usageMetadata);
         GeminiClient._useModel(state, this.getModel(state));
@@ -48,10 +48,10 @@ class GeminiClient {
         return res.data;
     }
 
-    async stream(body, state, timeLeft, handlers) {
+    async stream(body, state, options) {
         for (;;) {
-            const res = await this._send(body, state, timeLeft, true),
-                out = await GeminiClient._catchTimeout(this._readStream(res.data, state, handlers.onParts));
+            const res = await this._send(body, state, options, true),
+                out = await GeminiClient._catchTimeout(this._readStream(res.data, state, options.onParts));
 
             if (out !== null) {
                 GeminiClient._useModel(state, this.getModel(state));
@@ -61,7 +61,7 @@ class GeminiClient {
             getLogger().warn(`AI model ${this.getModel(state)} stopped mid-answer, switching to the next one.`);
 
             state.modelIdx++;
-            await handlers.onRestart();
+            await options.onRestart();
         }
     }
 
@@ -111,12 +111,12 @@ class GeminiClient {
         }
     }
 
-    async _send(body, state, timeLeft, stream) {
+    async _send(body, state, options, stream) {
         let status = null;
 
         for (; state.modelIdx < this.models.length; state.modelIdx++) {
             const model = this.models[state.modelIdx],
-                res = await this._requestWithKeys(model, body, state, timeLeft, stream);
+                res = await this._requestWithKeys(model, body, state, options, stream);
 
             if (isSuccessStatus(res.status)) {
                 return res;
@@ -169,11 +169,11 @@ class GeminiClient {
         return { parts, finishReason };
     }
 
-    async _requestWithKeys(model, body, state, timeLeft, stream) {
+    async _requestWithKeys(model, body, state, options, stream) {
         let res;
 
         for (let i = 0; i < this.apiKeys.length; i++) {
-            res = await this._request(model, body, state, timeLeft, stream);
+            res = await this._request(model, body, state, options, stream);
 
             if (res.status !== httpStatusCodes.TOO_MANY_REQUESTS) {
                 break;
@@ -185,19 +185,19 @@ class GeminiClient {
         return res;
     }
 
-    async _request(model, body, state, timeLeft, stream) {
-        const res = await this._post(model, body, state, timeLeft, stream);
+    async _request(model, body, state, options, stream) {
+        const res = await this._post(model, body, state, options, stream);
 
         if (res.status === httpStatusCodes.BAD_REQUEST && state.thinking && this._isThinkingError(res)) {
             state.thinking = false;
-            return await this._post(model, body, state, timeLeft, stream);
+            return await this._post(model, body, state, options, stream);
         }
 
         return res;
     }
 
-    async _post(model, body, state, timeLeft, stream) {
-        const timeout = Util.clamp(timeLeft, GeminiClient.minTimeout, this.requestTimeout);
+    async _post(model, body, state, options, stream) {
+        const timeout = Util.clamp(options.timeLeft, GeminiClient.minTimeout, this.requestTimeout);
 
         const res = await GeminiClient._catchTimeout(
             this.http.request({
@@ -207,7 +207,7 @@ class GeminiClient {
                     "content-type": "application/json",
                     "x-goog-api-key": this.apiKeys[this.keyIdx]
                 },
-                data: this._buildBody(body, state),
+                data: this._buildBody(body, state, options.thinkingLevel ?? this.thinkingLevel),
                 responseType: stream ? "stream" : "json",
                 timeout,
                 signal: AbortSignal.timeout(timeout),
@@ -227,8 +227,8 @@ class GeminiClient {
         return stream ? `${base}:streamGenerateContent?alt=sse` : `${base}:generateContent`;
     }
 
-    _buildBody(body, state) {
-        if (!state.thinking) {
+    _buildBody(body, state, thinkingLevel) {
+        if (!state.thinking || thinkingLevel === null) {
             return body;
         }
 
@@ -236,7 +236,7 @@ class GeminiClient {
             ...body,
             generationConfig: {
                 ...body.generationConfig,
-                thinkingConfig: { thinkingLevel: this.thinkingLevel }
+                thinkingConfig: { thinkingLevel }
             }
         };
     }
