@@ -43,38 +43,26 @@ class GeminiClient {
         const res = await this._send(body, state, timeLeft, false);
 
         GeminiClient._addUsage(state, res.data.usageMetadata);
+        GeminiClient._useModel(state, this.getModel(state));
+
         return res.data;
     }
 
-    async stream(body, state, timeLeft, onParts) {
-        const res = await this._send(body, state, timeLeft, true);
+    async stream(body, state, timeLeft, handlers) {
+        for (;;) {
+            const res = await this._send(body, state, timeLeft, true),
+                out = await this._readStream(res.data, state, handlers.onParts);
 
-        const parts = [];
-        let usage = null;
-
-        let finishReason = null,
-            blockReason = null;
-
-        for await (const event of SSEUtil.readEvents(res.data)) {
-            const data = JSON.parse(event),
-                candidate = Util.first(data.candidates ?? []);
-
-            usage = data.usageMetadata ?? usage;
-            blockReason = data.promptFeedback?.blockReason ?? blockReason;
-
-            if (typeof candidate === "undefined") {
-                continue;
+            if (out !== null) {
+                GeminiClient._useModel(state, this.getModel(state));
+                return out;
             }
 
-            const chunkParts = candidate.content?.parts ?? [];
-            finishReason = candidate.finishReason ?? finishReason;
+            getLogger().warn(`AI model ${this.getModel(state)} stopped mid-answer, switching to the next one.`);
 
-            parts.push(...chunkParts);
-            await onParts(chunkParts);
+            state.modelIdx++;
+            await handlers.onRestart();
         }
-
-        GeminiClient._addUsage(state, usage);
-        return { parts, finishReason: blockReason ?? finishReason };
     }
 
     static _thinkingErrorRegex = /thinking/i;
@@ -118,7 +106,6 @@ class GeminiClient {
                 res = await this._requestWithKeys(model, body, state, timeLeft, stream);
 
             if (isSuccessStatus(res.status)) {
-                GeminiClient._useModel(state, model);
                 return res;
             } else if (!GeminiClient._canFallback(res.status)) {
                 throw this._createError(model, res);
@@ -129,6 +116,44 @@ class GeminiClient {
         }
 
         throw new AIError("All models are unavailable right now", { models: this.models, status });
+    }
+
+    async _readStream(stream, state, onParts) {
+        const parts = [];
+        let usage = null;
+
+        let finishReason = null,
+            blockReason = null,
+            interrupted = false;
+
+        for await (const event of SSEUtil.readEvents(stream)) {
+            const data = JSON.parse(event),
+                candidate = Util.first(data.candidates ?? []);
+
+            usage = data.usageMetadata ?? usage;
+            blockReason = data.promptFeedback?.blockReason ?? blockReason;
+            interrupted ||= typeof data.error !== "undefined";
+
+            if (typeof candidate === "undefined") {
+                continue;
+            }
+
+            const chunkParts = candidate.content?.parts ?? [];
+            finishReason = candidate.finishReason ?? finishReason;
+
+            parts.push(...chunkParts);
+            await onParts(chunkParts);
+        }
+
+        GeminiClient._addUsage(state, usage);
+
+        if (blockReason !== null) {
+            return { parts, finishReason: blockReason };
+        } else if (interrupted || finishReason === null) {
+            return null;
+        }
+
+        return { parts, finishReason };
     }
 
     async _requestWithKeys(model, body, state, timeLeft, stream) {

@@ -124,9 +124,10 @@ class AISession {
     }
 
     async _stream(body) {
-        return await this.manager.gemini.stream(body, this.state, this.timeLeft, parts =>
-            this._appendText(AISession.getText(parts))
-        );
+        return await this.manager.gemini.stream(body, this.state, this.timeLeft, {
+            onParts: parts => this._appendText(AISession.getText(parts)),
+            onRestart: () => this._resetText()
+        });
     }
 
     async _appendText(text) {
@@ -135,6 +136,11 @@ class AISession {
         }
 
         this.text += text;
+        await this._reportProgress();
+    }
+
+    async _resetText() {
+        this.text = "";
         await this._reportProgress();
     }
 

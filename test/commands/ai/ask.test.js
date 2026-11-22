@@ -63,11 +63,13 @@ async function setup(script, options = {}) {
         }
     });
 
+    const models = new Set(["test-model", "fallback-model", ...(options.models ?? [])]);
+
     server = await createHttpStubServer({
-        ...route(streamPath("test-model")),
-        ...route(generatePath("test-model")),
-        ...route(streamPath("fallback-model")),
-        ...route(generatePath("fallback-model")),
+        ...Object.assign(
+            {},
+            ...Array.from(models, model => ({ ...route(streamPath(model)), ...route(generatePath(model)) }))
+        ),
         ...options.routes
     });
 
@@ -503,6 +505,36 @@ describe("a command", () => {
 
         expect(embed.description).toBe("1 B is 1000 mB.");
         expect(embed.footer.text).toBe("Models: test-model, fallback-model | 35 tok, 0 reasoning");
+    });
+
+    test("restarts an answer on the next model when the stream stops partway", async () => {
+        const script = [
+            sse(chunk([{ text: "Jeffrey Epstein is widely" }])),
+            sse(chunk([{ text: "Half an" }]), { error: { code: 503, message: "Overloaded." } }),
+            answer(["A complete answer."], 20),
+            extras([], [], 5)
+        ];
+
+        const bodies = await setup(script, { models: ["test-model", "fallback-model", "third-model"] });
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("is he cool?", recorder));
+
+        expect(script).toEqual([]);
+        expect(bodies.map(entry => entry.path)).toEqual([
+            streamPath("test-model"),
+            streamPath("fallback-model"),
+            streamPath("third-model"),
+            generatePath("third-model")
+        ]);
+
+        const progress = recorder.sent.slice(1, -1).map(payload => embedOf(payload).description);
+        expect(progress.at(-1)).not.toContain("Half an");
+
+        const embed = embedOf(recorder.sent.at(-1));
+
+        expect(embed.description).toBe("A complete answer.");
+        expect(embed.footer.text).toMatch(/^Models: third-model \| /);
     });
 
     test("shows a short error without the raw response when every model is overloaded", async () => {
