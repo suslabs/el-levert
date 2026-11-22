@@ -41,12 +41,21 @@ class AIResponseFinisher {
         return {
             followUps: AIResponseFinisher._cleanList(out.followUps)
                 .slice(0, AIResponseFinisher.maxFollowUps)
-                .map(followUp => Util.trimString(followUp, AIResponseFinisher.maxFollowUpLength)),
+                .map(followUp =>
+                    AIResponseFinisher._formatFollowUp(Util.trimString(followUp, AIResponseFinisher.maxFollowUpLength))
+                ),
 
             sources: AIResponseFinisher._cleanList(out.sources)
                 .filter(source => session.ledger.has(source))
                 .slice(0, AIResponseFinisher.maxSources)
         };
+    }
+
+    static _endPunctuationRegex = /[.?!]$/;
+
+    static _formatFollowUp(followUp) {
+        const question = Util.capitalize(followUp);
+        return AIResponseFinisher._endPunctuationRegex.test(question) ? question : `${question}?`;
     }
 
     static _parse(text) {

@@ -293,7 +293,7 @@ describe("a command", () => {
     test("follow-up buttons answer as the clicking user with conversation history", async () => {
         const script = [
             answer(["First answer."]),
-            extras(["Tell me more", "Something else"], []),
+            extras(["tell me more", "Something else?"], []),
             answer(["More details."]),
             extras([], [])
         ];
@@ -305,6 +305,9 @@ describe("a command", () => {
 
         const buttons = buttonsOf(recorder.sent.at(-1));
         expect(buttons.map(button => button.label)).toEqual(["1", "2"]);
+        expect(embedOf(recorder.sent.at(-1)).description).toContain(
+            "Follow-ups:\n1. Tell me more?\n2. Something else?"
+        );
 
         const clicker = createDiscordUser({ id: clickerId, username: "neeve" }),
             sessionId = buttons[0].custom_id.split(":").at(-1);
@@ -320,7 +323,7 @@ describe("a command", () => {
 
         expect(body.contents.map(content => content.role)).toEqual(["user", "model", "user"]);
         expect(body.contents[1].parts[0].text).toBe("First answer.");
-        expect(body.contents.at(-1).parts[0].text).toBe("Tell me more");
+        expect(body.contents.at(-1).parts[0].text).toBe("Tell me more?");
         expect(body.systemInstruction.parts[0].text).toContain(`<@${clickerId}>`);
         expect(toolNames).not.toContain("execute_javascript");
         expect(toolNames).not.toContain("tag_call");
