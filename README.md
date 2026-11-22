@@ -122,7 +122,7 @@ Important groups of settings:
 - Tags and quotas: `maxTagNameLength`, `tagNameRegex`, `maxTagSize` (per-tag limits in kb for `text`, `script`, and `binary`; `-1` for unlimited), `maxQuota` (total storage quota in kb; `-1` for unlimited), `maxTagCount` (`-1` for unlimited)
 - Reply and output limits: `outCharLimit`, `outLineLimit`, `embedCharLimit`, `embedLineLimit`
 - Major features: `enablePreviews`, `enableSed`, `enablePermissions`, `enableReminders`, `enableAI`
-- AI assistant: `ai` (`name` and `icon` for the embed header, `promptsPath` for the prompt text files, `endpoint`, `models` (the first one is used, the rest are fallbacks when it's rate limited or unavailable), `thinkingLevel` (`null` for models without thinking levels), `maxSteps` (`-1` for no limit; `timeLimit` still applies), `timeLimit` and `requestTimeout` in seconds, `maxDownloadSize` in MB, `maxToolOutput` in characters, `maxRequests` per user every `rateLimitWindow` seconds, `followUpsAnyone` and `followUpsEditAnswer` for the follow-up buttons, `allowLocalhostRequests`, `sources`)
+- AI assistant: `ai` (`name` and `icon` for the embed header, `promptsPath` for the prompt text files, `endpoint`, `models` (the first one is used, the rest are fallbacks when it's rate limited or unavailable), `thinkingLevel` (`null` for models without thinking levels), `maxSteps` (`-1` for no limit; `timeLimit` still applies), `timeLimit` and `requestTimeout` in seconds, `maxDownloadSize` in MB, `maxToolOutput` in characters, `maxRequests` per user every `rateLimitWindow` seconds, `followUpsAnyone` and `followUpsEditAnswer` for the follow-up buttons, `allowLocalhostRequests`, `recipes` (NomiCodex `searchUrls` tried in order, `shotUrl` for recipe cards, `siteUrl`, and the default `mode`, `normal` or `expert`; `null` turns recipe lookups off), `sources`)
 - Logging and file paths: log files, log level, database path, command paths, Discord log settings
 
 ## Reactions config
@@ -608,6 +608,7 @@ Syntax:
 Tools the assistant can use:
 
 - `tri_search`: configured questbook/domain/glossary sources, then tags (name and body search), then the web.
+- `search_recipes`, `show_recipe`: NomiCodex recipe lookups. The assistant picks the main production recipe (for example the Large Chemical Reactor recipe for polyethylene, or the Mixer recipe for signalum dust, not crafting it from tiny piles) and shows its card as the answer's image. Naming a machine ("steel ingot ebf") filters by it.
 - `tag_get`, `tag_call`: read or run a tag as the asking user.
 - `search_web`, `fetch_web_page`, `http_request` (GET/HEAD API calls only): web access through the same private-network protection as script HTTP requests.
 - `execute_javascript`: runs in the eval sandbox with the same limits as `%eval` (needs `enableEval`).

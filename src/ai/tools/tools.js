@@ -1,4 +1,6 @@
 export { default as TriSearchTool } from "./knowledge/TriSearchTool.js";
+export { default as SearchRecipesTool } from "./recipes/SearchRecipesTool.js";
+export { default as ShowRecipeTool } from "./recipes/ShowRecipeTool.js";
 export { default as TagGetTool } from "./tag/TagGetTool.js";
 export { default as TagCallTool } from "./tag/TagCallTool.js";
 export { default as SearchWebTool } from "./web/SearchWebTool.js";

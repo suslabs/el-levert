@@ -69,6 +69,10 @@ class AIReplyView {
             )
             .setFooter({ text: AIReplyView._formatFooter(result) });
 
+        if (result.image !== null) {
+            embed.setImage(result.image);
+        }
+
         return {
             embeds: [embed],
             components: session === null ? [] : [AIReplyView._createFollowUpRow(session)],

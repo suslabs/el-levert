@@ -5,6 +5,7 @@ import AIToolRegistry from "../../ai/AIToolRegistry.js";
 import AIPrompt from "../../ai/AIPrompt.js";
 import AIResponseFinisher from "../../ai/AIResponseFinisher.js";
 import WebSearcher from "../../ai/WebSearcher.js";
+import NomiCodexClient from "../../ai/recipes/NomiCodexClient.js";
 import KnowledgeBase from "../../ai/knowledge/KnowledgeBase.js";
 import PromptLoader from "../../loaders/ai/PromptLoader.js";
 
@@ -60,6 +61,7 @@ class AIManager extends Manager {
         this.prompt = new AIPrompt(this.prompts.system);
         this.finisher = new AIResponseFinisher(this.prompts.finisher);
         this.webSearcher = new WebSearcher(this.http);
+        this.recipes = config.recipes === null ? null : new NomiCodexClient(this.http, config.recipes);
 
         this.knowledge = new KnowledgeBase(this.http, config.sources, config.requestTimeout);
         await this.knowledge.load();

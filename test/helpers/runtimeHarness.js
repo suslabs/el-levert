@@ -94,6 +94,7 @@ function buildDefaultConfig(tempDir, overrides = {}) {
             followUpsAnyone: true,
             followUpsEditAnswer: false,
             allowLocalhostRequests: true,
+            recipes: null,
             sources: [],
             ...ai
         },

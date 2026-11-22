@@ -85,6 +85,7 @@ async function setup(script, options = {}) {
                 endpoint: `${server.url}/v1beta`,
                 models: options.models ?? ["test-model"],
                 sources: options.sources?.(server.url) ?? [],
+                recipes: options.recipes?.(server.url) ?? null,
                 ...options.ai
             }
         },
@@ -242,6 +243,7 @@ describe("a command", () => {
         expect(bodies[0].body.generationConfig.thinkingConfig.thinkingLevel).toBe("minimal");
         expect(bodies[0].body.systemInstruction.parts[0].text).toContain(`<@${askerId}>`);
         expect(bodies[0].body.systemInstruction.parts[0].text).toContain("## ANSWER FORMAT");
+        expect(bodies[0].body.tools[0].functionDeclarations.map(decl => decl.name)).not.toContain("search_recipes");
 
         const [search, convert] = bodies[1].body.contents.at(-1).parts.map(part => part.functionResponse);
 
@@ -780,6 +782,85 @@ describe("a command", () => {
         expect(results[0].description).toContain("quota is used up");
         expect(results[1].description).toContain("AIza");
         expect(results[2].description).toContain("The model returned no answer (SAFETY)");
+    });
+
+    test("finds the main recipe, flags reshaping recipes and shows the recipe card", async () => {
+        const itemId = "i:nomilabs:meta_dust:10";
+
+        const recipe = (type, idx, ins) => ({
+            type,
+            idx,
+            eu: 1920,
+            dur: 300,
+            tier: "EV",
+            heat: 0,
+            ins,
+            outs: "Signalum Dust (4)"
+        });
+
+        const searchData = {
+            item: { id: itemId, name: "Signalum Dust" },
+            machineFilter: null,
+            hotChain: false,
+            recipes: [
+                recipe("Mixer", 0, "Annealed Copper Dust (4), Ardite Dust (2), Red Alloy Dust (2)"),
+                recipe("Crafting", 21, "Tiny Pile of Signalum Dust (9)"),
+                recipe("Sag Mill", 23, "Signalum Ingot (1)")
+            ],
+            uses: [],
+            alternatives: [{ name: "Signalum Ingot" }]
+        };
+
+        const script = [
+            calls([call("search_recipes", { query: "signalum dust" })]),
+            calls([call("show_recipe", { itemId, idx: 0 })]),
+            answer(["Signalum Dust is made in a **Mixer**."]),
+            extras([], [])
+        ];
+
+        const searches = [],
+            shots = [];
+
+        const bodies = await setup(script, {
+            recipes: url => ({
+                searchUrls: [`${url}/down`, `${url}/api/search`],
+                shotUrl: `${url}/api/shot`,
+                siteUrl: "https://codex.test",
+                mode: "normal"
+            }),
+            routes: {
+                "GET /down": () => ({ statusCode: 503, json: {} }),
+                "GET /api/search": ({ url }) => {
+                    searches.push(Object.fromEntries(url.searchParams));
+                    return { json: searchData };
+                },
+                "GET /api/shot": ({ url }) => {
+                    shots.push(Object.fromEntries(url.searchParams));
+                    return { json: { ok: true, abs: "https://codex.test/card.png" } };
+                }
+            }
+        });
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("how do I make signalum dust", recorder));
+
+        expect(script).toEqual([]);
+        expect(searches).toEqual([{ q: "signalum dust", mode: "normal" }]);
+        expect(shots).toEqual([{ item: itemId, mode: "normal", r: "1", sel: "card", format: "json", wait: "8" }]);
+
+        const found = bodies[1].body.contents.at(-1).parts[0].functionResponse.response;
+
+        expect(found.source).toBe(`https://codex.test/?item=${encodeURIComponent(itemId)}`);
+        expect(found.recipes.map(entry => [entry.machine, entry.idx, entry.seconds, entry.fromSameMaterial])).toEqual([
+            ["Mixer", 0, 15, false],
+            ["Crafting", 21, 15, true],
+            ["Sag Mill", 23, 15, true]
+        ]);
+
+        const embed = embedOf(recorder.sent.at(-1));
+
+        expect(embed.description).toBe("Signalum Dust is made in a **Mixer**.");
+        expect(embed.image.url).toBe("https://codex.test/card.png");
     });
 
     test("searches configured questbook sources and cites quest details", async () => {

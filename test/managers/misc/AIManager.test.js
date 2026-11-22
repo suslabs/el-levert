@@ -54,6 +54,8 @@ describe("AIManager", () => {
         expect(manager.prompts.inspectImage).toContain("Describe this image");
         expect(Array.from(manager.tools.tools.keys())).toEqual([
             "tri_search",
+            "search_recipes",
+            "show_recipe",
             "tag_get",
             "tag_call",
             "search_web",

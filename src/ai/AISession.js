@@ -34,6 +34,7 @@ class AISession {
         this.ledger = new AISourceLedger();
         this.contents = [];
         this.files = new Map();
+        this.image = null;
 
         this.steps = [];
         this.text = "";
@@ -178,6 +179,7 @@ class AISession {
             answer,
             ...extras,
             files: Array.from(this.files, ([name, content]) => ({ name, content })),
+            image: this.image,
             models: this.state.models,
             tokens: this.state.tokens,
             reasoning: this.state.reasoning
