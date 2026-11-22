@@ -30,14 +30,15 @@ class FetchRecentMessagesTool extends MessageHistoryTool {
     }
 
     async execute(args, session) {
-        const limit = Util.clamp(args.limit ?? FetchRecentMessagesTool.defaultLimit, 1, MessageHistoryTool.pageSize),
-            authorId = this.parseUserId(args.authorId);
+        const limit = Util.clamp(args.limit ?? FetchRecentMessagesTool.defaultLimit, 1, MessageHistoryTool.pageSize);
+
+        const authorId = this.parseUserId(args.authorId),
+            includeBots = args.includeBots ?? true;
 
         const since = Date.parse(args.since ?? ""),
             until = Date.parse(args.until ?? "");
 
-        const includeBots = args.includeBots ?? true,
-            filtered = authorId !== null || Number.isFinite(since) || Number.isFinite(until) || !includeBots;
+        const filtered = authorId !== null || Number.isFinite(since) || Number.isFinite(until) || !includeBots;
 
         const msgs = await this.fetchHistory(session, {
             channelId: args.channelId,

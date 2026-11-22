@@ -71,7 +71,7 @@ class AISession {
                 res = await this._stream(this._buildRequest(systemInstruction, final));
 
             const calls = res.parts
-                .filter(part => part.functionCall != null)
+                .filter(part => typeof part.functionCall !== "undefined")
                 .map(part => ({ ...part.functionCall, args: ObjectUtil.guaranteeObject(part.functionCall.args) }));
 
             if (Util.empty(calls)) {

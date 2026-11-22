@@ -40,8 +40,9 @@ class FindUsersTool extends AITool {
             throw new AIError("query is required");
         }
 
-        const limit = Util.clamp(args.limit ?? FindUsersTool.defaultLimit, 1, FindUsersTool.maxLimit),
-            found = await getClient().findUsers(query, { sv_id: session.request.guildId, limit });
+        const limit = Util.clamp(args.limit ?? FindUsersTool.defaultLimit, 1, FindUsersTool.maxLimit);
+
+        const found = await getClient().findUsers(query, { sv_id: session.request.guildId, limit });
 
         const lower = query.toLowerCase(),
             matches = found.map(member => this._formatUser(member, lower));

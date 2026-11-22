@@ -52,8 +52,9 @@ class AIReply {
     }
 
     async answer(question, history) {
-        const aiManager = getClient().aiManager,
-            userId = this.request.author.id;
+        const aiManager = getClient().aiManager;
+
+        const userId = this.request.author.id;
 
         if (!aiManager.rateLimiter.check(userId)) {
             const waitTime = aiManager.rateLimiter.getTimeToReset(userId);

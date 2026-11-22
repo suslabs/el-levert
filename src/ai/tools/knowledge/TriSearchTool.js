@@ -83,8 +83,9 @@ class TriSearchTool extends AITool {
             );
         }
 
-        const localHits = Object.values(out.results).reduce((sum, list) => sum + list.length, 0),
-            useWeb = (args.allowWeb ?? true) && (scope === "all" || scope === "web");
+        const localHits = Object.values(out.results).reduce((sum, list) => sum + list.length, 0);
+
+        const useWeb = (args.allowWeb ?? true) && (scope === "all" || scope === "web");
 
         if (localHits === 0 && useWeb) {
             out.notes.push("No local matches; fell back to web search.");

@@ -36,7 +36,7 @@ class InspectImageTool extends WebTool {
             timeout: session.toolTimeout()
         });
 
-        const mimeType = HTTPUtil.getContentType(res.headers).split(";")[0];
+        const mimeType = Util.first(HTTPUtil.getContentType(res.headers).split(";"));
 
         if (!mimeType.startsWith("image/")) {
             throw new AIError(`URL is not an image (${Util.empty(mimeType) ? "unknown type" : mimeType})`);
