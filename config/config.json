@@ -113,7 +113,7 @@
         "maxRequests": 3,
         "rateLimitWindow": 60,
         "followUpsAnyone": true,
-        "followUpsEditAnswer": false,
+        "followUpsEditAnswer": true,
         "allowLocalhostRequests": false,
         "sources": []
     }
