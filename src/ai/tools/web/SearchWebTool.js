@@ -5,6 +5,8 @@ import AIPhases from "../../../structures/ai/AIPhases.js";
 
 import Util from "../../../util/Util.js";
 
+import AIError from "../../../errors/AIError.js";
+
 class SearchWebTool extends AITool {
     static info = {
         name: "search_web",
@@ -31,7 +33,7 @@ class SearchWebTool extends AITool {
         const query = String(args.query ?? "").trim();
 
         if (Util.empty(query)) {
-            return { error: "query is required." };
+            throw new AIError("query is required");
         }
 
         const limit = Util.clamp(args.limit ?? SearchWebTool.defaultLimit, 1, SearchWebTool.maxLimit);

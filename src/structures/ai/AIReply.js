@@ -36,8 +36,9 @@ class AIReply {
         const aiManager = getClient().aiManager,
             userId = this.request.author.id;
 
-        if (!aiManager.checkCooldown(userId)) {
-            return await this.ctx.reply(this.view.renderCooldown(aiManager.getCooldown(userId)), { ephemeral: true });
+        if (!aiManager.rateLimiter.check(userId)) {
+            const waitTime = aiManager.rateLimiter.getTimeToReset(userId);
+            return await this.ctx.reply(this.view.renderCooldown(waitTime), { ephemeral: true });
         }
 
         await this.updater.start(this.view.renderThinking());

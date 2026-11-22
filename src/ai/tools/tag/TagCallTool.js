@@ -1,4 +1,4 @@
-import AITool from "../AITool.js";
+import TagTool from "./TagTool.js";
 import ToolParams from "../ToolParams.js";
 
 import AIPhases from "../../../structures/ai/AIPhases.js";
@@ -9,7 +9,7 @@ import Util from "../../../util/Util.js";
 import TypeTester from "../../../util/TypeTester.js";
 import DiscordUtil from "../../../util/DiscordUtil.js";
 
-class TagCallTool extends AITool {
+class TagCallTool extends TagTool {
     static info = {
         name: "tag_call",
         phase: AIPhases.running,
@@ -35,14 +35,8 @@ class TagCallTool extends AITool {
     }
 
     async execute(args, session) {
-        const tagManager = getClient().tagManager,
-            tag = await tagManager.fetch(String(args.name ?? "").trim());
-
-        if (tag === null) {
-            return { error: `Tag "${args.name}" doesn't exist.` };
-        }
-
-        const out = await tagManager.execute(tag, (args.args ?? []).join(" "), session.request.scriptValues);
+        const tag = await this.fetchTag(args.name),
+            out = await getClient().tagManager.execute(tag, (args.args ?? []).join(" "), session.request.scriptValues);
 
         return {
             source: `tag:${tag.name}`,

@@ -58,8 +58,8 @@ class AIResponseFinisher {
     }
 
     static _cleanList(list) {
-        const items = (Array.isArray(list) ? list : []).map(item => String(item ?? "").trim());
-        return ArrayUtil.unique(items.filter(item => !Util.empty(item)));
+        const items = ArrayUtil.guaranteeArray(list, null, true).map(item => String(item).trim());
+        return ArrayUtil.unique(items.filter(Util.nonemptyString));
     }
 }
 

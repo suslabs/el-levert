@@ -1,4 +1,4 @@
-import AITool from "../AITool.js";
+import WebTool from "./WebTool.js";
 import ToolParams from "../ToolParams.js";
 
 import AIPhases from "../../../structures/ai/AIPhases.js";
@@ -6,7 +6,9 @@ import AIPhases from "../../../structures/ai/AIPhases.js";
 import Util from "../../../util/Util.js";
 import HTTPUtil from "../../../util/vm/HTTPUtil.js";
 
-class InspectImageTool extends AITool {
+import AIError from "../../../errors/AIError.js";
+
+class InspectImageTool extends WebTool {
     static info = {
         name: "inspect_image",
         phase: AIPhases.looking,
@@ -26,11 +28,7 @@ class InspectImageTool extends AITool {
     }
 
     async execute(args, session) {
-        const url = String(args.url ?? "");
-
-        if (HTTPUtil.getHost(url) === null) {
-            return { error: "Only absolute http(s) image URLs are supported." };
-        }
+        const url = this.parseUrl(args.url);
 
         const res = await this.manager.http.request({
             url,
@@ -41,7 +39,7 @@ class InspectImageTool extends AITool {
         const mimeType = HTTPUtil.getContentType(res.headers).split(";")[0];
 
         if (!mimeType.startsWith("image/")) {
-            return { error: `URL is not an image (${Util.empty(mimeType) ? "unknown type" : mimeType}).` };
+            throw new AIError(`URL is not an image (${Util.empty(mimeType) ? "unknown type" : mimeType})`);
         }
 
         const data = Buffer.from(res.data);

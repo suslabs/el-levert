@@ -5,6 +5,8 @@ import AIPhases from "../../../structures/ai/AIPhases.js";
 
 import Util from "../../../util/Util.js";
 
+import AIError from "../../../errors/AIError.js";
+
 class AttachFileTool extends AITool {
     static info = {
         name: "attach_file",
@@ -35,13 +37,13 @@ class AttachFileTool extends AITool {
             content = String(args.content ?? "");
 
         if (name.length > AttachFileTool.maxNameLength || !AttachFileTool.nameRegex.test(name)) {
-            return { error: "Invalid file name. Use letters, digits, - and _ with an extension, e.g. script.js." };
+            throw new AIError("Invalid file name. Use letters, digits, - and _ with an extension, e.g. script.js");
         } else if (Util.empty(content)) {
-            return { error: "The file is empty." };
+            throw new AIError("The file is empty");
         } else if (Util.getByteLength(content) > AttachFileTool.maxSize) {
-            return { error: `The file is larger than ${Util.formatSize(AttachFileTool.maxSize)}.` };
+            throw new AIError(`The file is larger than ${Util.formatSize(AttachFileTool.maxSize)}`);
         } else if (!session.files.has(name) && session.files.size >= AttachFileTool.maxFiles) {
-            return { error: `At most ${AttachFileTool.maxFiles} files can be attached.` };
+            throw new AIError(`At most ${AttachFileTool.maxFiles} files can be attached`);
         }
 
         session.files.set(name, content);

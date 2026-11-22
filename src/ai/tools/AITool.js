@@ -75,7 +75,7 @@ class AITool {
                 session.logError(this.name, err);
             }
 
-            out = { error: Util.getErrorMessage(err) };
+            out = { error: err.message };
         }
 
         return this._limitOutput(out);

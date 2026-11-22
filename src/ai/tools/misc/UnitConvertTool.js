@@ -8,6 +8,8 @@ import AIPhases from "../../../structures/ai/AIPhases.js";
 import Util from "../../../util/Util.js";
 import ConversionUtil from "../../../util/commands/ConversionUtil.js";
 
+import AIError from "../../../errors/AIError.js";
+
 class UnitConvertTool extends AITool {
     static info = {
         name: "unit_convert",
@@ -46,9 +48,9 @@ class UnitConvertTool extends AITool {
         if (from === null || to === null) {
             const invalid = from === null ? args.from : args.to;
 
-            return {
-                error: `Unknown unit "${invalid}". Valid units: ${ConversionUtil.validUnits.join(", ")} (optionally /t or /s).`
-            };
+            throw new AIError(
+                `Unknown unit "${invalid}". Valid units: ${ConversionUtil.validUnits.join(", ")} (optionally /t or /s)`
+            );
         }
 
         const perTick = this._toPerTick(args.value, from),

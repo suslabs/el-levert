@@ -1,4 +1,4 @@
-import AITool from "../AITool.js";
+import WebTool from "./WebTool.js";
 import ToolParams from "../ToolParams.js";
 
 import AIPhases from "../../../structures/ai/AIPhases.js";
@@ -8,7 +8,9 @@ import HtmlUtil from "../../../util/misc/HtmlUtil.js";
 import HTTPUtil from "../../../util/vm/HTTPUtil.js";
 import { isSuccessStatus } from "../../../util/misc/HttpStatusCodes.js";
 
-class FetchWebPageTool extends AITool {
+import AIError from "../../../errors/AIError.js";
+
+class FetchWebPageTool extends WebTool {
     static info = {
         name: "fetch_web_page",
         phase: AIPhases.reading,
@@ -29,22 +31,14 @@ class FetchWebPageTool extends AITool {
     static maxChars = 8000;
 
     getStatus(args) {
-        return `Reading ${this.formatArg(HTTPUtil.getHost(String(args.url ?? "")) ?? args.url)}`;
+        return `Reading ${this.formatHost(args.url)}`;
     }
 
     async execute(args, session) {
-        const url = String(args.url ?? "");
-
-        if (HTTPUtil.getHost(url) === null) {
-            return { error: "Only absolute http(s) URLs are supported." };
-        }
+        const url = this.parseUrl(args.url);
 
         const wiki = url.match(FetchWebPageTool._wikipediaRegex),
             page = wiki === null ? await this._fetchPage(url, session) : await this._fetchWikipedia(wiki, session);
-
-        if (typeof page.error !== "undefined") {
-            return { url, ...page };
-        }
 
         const offset = Math.max(args.offset ?? 0, 0),
             maxChars = Util.clamp(
@@ -87,7 +81,7 @@ class FetchWebPageTool extends AITool {
         const page = Util.first(Object.values(res.data.query?.pages ?? {}));
 
         if (typeof page === "undefined" || typeof page.missing !== "undefined") {
-            return { error: "Wikipedia page not found." };
+            throw new AIError("Wikipedia page not found");
         }
 
         return { title: page.title, text: page.extract ?? "" };
@@ -103,13 +97,13 @@ class FetchWebPageTool extends AITool {
         });
 
         if (!isSuccessStatus(res.status)) {
-            return { status: res.status, error: `HTTP ${res.status}` };
+            throw new AIError(`HTTP ${res.status}`, res.status);
         }
 
         const contentType = HTTPUtil.getContentType(res.headers);
 
         if (contentType.startsWith("image/")) {
-            return { error: "This URL is an image; use inspect_image." };
+            throw new AIError("This URL is an image; use inspect_image");
         } else if (contentType.includes("html")) {
             return HtmlUtil.toText(res.data);
         } else {

@@ -1,4 +1,4 @@
-import AITool from "../AITool.js";
+import TagTool from "./TagTool.js";
 import ToolParams from "../ToolParams.js";
 
 import AIPhases from "../../../structures/ai/AIPhases.js";
@@ -7,7 +7,9 @@ import { getClient } from "../../../LevertClient.js";
 
 import Util from "../../../util/Util.js";
 
-class TagGetTool extends AITool {
+import AIError from "../../../errors/AIError.js";
+
+class TagGetTool extends TagTool {
     static info = {
         name: "tag_get",
         phase: AIPhases.reading,
@@ -23,18 +25,14 @@ class TagGetTool extends AITool {
     }
 
     async execute(args) {
-        const tagManager = getClient().tagManager;
+        let tag = await this.fetchTag(args.name);
 
-        let tag = await tagManager.fetch(String(args.name ?? "").trim());
-
-        if (tag === null) {
-            return { error: `Tag "${args.name}" doesn't exist.` };
-        } else if (tag.isAlias) {
-            tag = await tagManager.fetchAlias(tag);
+        if (tag.isAlias) {
+            tag = await getClient().tagManager.fetchAlias(tag);
         }
 
         if (tag.isBinary) {
-            return { error: `Tag "${tag.name}" is a binary tag.` };
+            throw new AIError(`Tag "${tag.name}" is a binary tag`);
         }
 
         return {

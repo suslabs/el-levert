@@ -1,5 +1,3 @@
-import axios from "axios";
-
 import Manager from "../Manager.js";
 import GeminiClient from "../../ai/GeminiClient.js";
 import AISession from "../../ai/AISession.js";
@@ -17,13 +15,13 @@ import ArrayUtil from "../../util/ArrayUtil.js";
 import RateLimiter from "../../util/misc/RateLimiter.js";
 import HTTPUtil from "../../util/vm/HTTPUtil.js";
 
+import AIError from "../../errors/AIError.js";
 import ManagerError from "../../errors/ManagerError.js";
 
 class AIManager extends Manager {
     static $name = "aiManager";
     static loadPriority = 4;
 
-    static maxRedirects = 5;
     static promptNames = ["system", "finisher", "inspectImage"];
 
     constructor(enabled, apiKeys) {
@@ -44,13 +42,18 @@ class AIManager extends Manager {
         this.maxSteps = config.maxSteps;
         this.timeLimit = config.timeLimit;
         this.requestTimeout = config.requestTimeout;
-        this.maxDownloadSize = config.maxDownloadSize;
         this.maxToolOutput = config.maxToolOutput;
 
         this.rateLimiter = new RateLimiter(config.maxRequests, config.rateLimitWindow);
 
         this.prompts = await this._loadPrompts(config.promptsPath);
-        this.http = this._createHttp(config);
+        this.http = HTTPUtil.createAxiosClient(
+            {
+                allowLocalhostRequests: config.allowLocalhostRequests,
+                maxDownloadSize: config.maxDownloadSize
+            },
+            AIError
+        );
 
         this.gemini = new GeminiClient(this.http, this.apiKeys, config);
         this.tools = new AIToolRegistry(this);
@@ -64,14 +67,6 @@ class AIManager extends Manager {
 
     unload() {
         this.rateLimiter.destroy();
-    }
-
-    checkCooldown(userId) {
-        return this.rateLimiter.check(userId);
-    }
-
-    getCooldown(userId) {
-        return this.rateLimiter.getTimeToReset(userId);
     }
 
     async ask(question, request, options) {
@@ -89,14 +84,6 @@ class AIManager extends Manager {
         }
 
         return prompts;
-    }
-
-    _createHttp(config) {
-        return axios.create({
-            maxContentLength: config.maxDownloadSize,
-            maxRedirects: AIManager.maxRedirects,
-            ...(config.allowLocalhostRequests ? {} : HTTPUtil.createSecureAgents())
-        });
     }
 }
 

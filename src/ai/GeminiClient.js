@@ -184,7 +184,7 @@ class GeminiClient {
     }
 
     async _post(model, body, state, timeLeft, stream) {
-        const timeout = Math.max(GeminiClient.minTimeout, Math.min(this.requestTimeout, timeLeft));
+        const timeout = Util.clamp(timeLeft, GeminiClient.minTimeout, this.requestTimeout);
 
         const res = await this.http.request({
             url: this._getUrl(model, stream),

@@ -39,7 +39,7 @@ class AIPrompt {
     }
 
     static _formatAttachments(msg) {
-        if (msg == null) {
+        if (msg === null) {
             return "";
         }
 

@@ -36,10 +36,6 @@ class KnowledgeBase {
         }
     }
 
-    has(kind) {
-        return this.indexes.has(kind);
-    }
-
     search(query, kind, limit) {
         return this.indexes.get(kind)?.search(query, limit) ?? [];
     }

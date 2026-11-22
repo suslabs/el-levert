@@ -8,6 +8,8 @@ import { getClient, getConfig } from "../../../LevertClient.js";
 import Util from "../../../util/Util.js";
 import TypeTester from "../../../util/TypeTester.js";
 
+import AIError from "../../../errors/AIError.js";
+
 class ExecuteJavascriptTool extends AITool {
     static info = {
         name: "execute_javascript",
@@ -36,7 +38,7 @@ class ExecuteJavascriptTool extends AITool {
         const code = String(args.code ?? "");
 
         if (Util.empty(code.trim())) {
-            return { error: "code is required." };
+            throw new AIError("code is required");
         }
 
         const out = await getClient().tagVM.runScript(code, session.request.scriptValues);

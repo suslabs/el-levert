@@ -1,4 +1,4 @@
-import AITool from "../AITool.js";
+import WebTool from "./WebTool.js";
 import ToolParams from "../ToolParams.js";
 
 import AIPhases from "../../../structures/ai/AIPhases.js";
@@ -6,7 +6,9 @@ import AIPhases from "../../../structures/ai/AIPhases.js";
 import Util from "../../../util/Util.js";
 import HTTPUtil from "../../../util/vm/HTTPUtil.js";
 
-class HttpRequestTool extends AITool {
+import AIError from "../../../errors/AIError.js";
+
+class HttpRequestTool extends WebTool {
     static methods = ["GET", "HEAD"];
 
     static info = {
@@ -37,21 +39,17 @@ class HttpRequestTool extends AITool {
     static maxBodyLength = 6000;
 
     getStatus(args) {
-        return `Requesting ${this.formatArg(HTTPUtil.getHost(String(args.url ?? "")) ?? args.url)}`;
+        return `Requesting ${this.formatHost(args.url)}`;
     }
 
     async execute(args, session) {
-        const url = String(args.url ?? ""),
-            host = HTTPUtil.getHost(url);
-
-        const method = String(args.method ?? "GET").toUpperCase();
+        const url = this.parseUrl(args.url),
+            method = String(args.method ?? "GET").toUpperCase();
 
         if (!HttpRequestTool.methods.includes(method)) {
-            return { error: `${method} requests aren't allowed; only ${HttpRequestTool.methods.join(" and ")}.` };
-        } else if (host === null) {
-            return { error: "Only absolute http(s) URLs are supported." };
-        } else if (host === HTTPUtil.getHost(this.manager.gemini.endpoint)) {
-            return { error: "That endpoint is reserved." };
+            throw new AIError(`${method} requests aren't allowed; only ${HttpRequestTool.methods.join(" and ")}`);
+        } else if (HTTPUtil.getHost(url) === HTTPUtil.getHost(this.manager.gemini.endpoint)) {
+            throw new AIError("That endpoint is reserved");
         }
 
         const res = await this.manager.http.request({
@@ -70,10 +68,7 @@ class HttpRequestTool extends AITool {
         const contentType = HTTPUtil.getContentType(res.headers);
 
         if (contentType.includes("text/html")) {
-            return {
-                status: res.status,
-                error: "This URL returned an HTML web page. http_request is for APIs only; use fetch_web_page."
-            };
+            throw new AIError("This URL returned an HTML web page; use fetch_web_page", res.status);
         }
 
         return {

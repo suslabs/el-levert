@@ -7,6 +7,8 @@ import { getClient } from "../../../LevertClient.js";
 
 import Util from "../../../util/Util.js";
 
+import AIError from "../../../errors/AIError.js";
+
 class FindUsersTool extends AITool {
     static info = {
         name: "find_users",
@@ -35,7 +37,7 @@ class FindUsersTool extends AITool {
             .replace(FindUsersTool._mentionPrefixRegex, "");
 
         if (Util.empty(query)) {
-            return { error: "query is required." };
+            throw new AIError("query is required");
         }
 
         const limit = Util.clamp(args.limit ?? FindUsersTool.defaultLimit, 1, FindUsersTool.maxLimit),

@@ -28,12 +28,8 @@ class BM25Index {
             throw new UtilError("At least one weighted field is required");
         }
 
-        options = ObjectUtil.guaranteeObject(options);
-
         this.fieldWeights = fieldWeights;
-
-        this.k1 = options.k1 ?? BM25Index.defaultValues.k1;
-        this.b = options.b ?? BM25Index.defaultValues.b;
+        ObjectUtil.setValuesWithDefaults(this, options, BM25Index.defaultValues);
 
         this.entries = [];
         this.docFreqs = new Map();

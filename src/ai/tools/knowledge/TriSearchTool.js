@@ -10,6 +10,8 @@ import { getClient } from "../../../LevertClient.js";
 import Util from "../../../util/Util.js";
 import ArrayUtil from "../../../util/ArrayUtil.js";
 
+import AIError from "../../../errors/AIError.js";
+
 class TriSearchTool extends AITool {
     static info = {
         name: "tri_search",
@@ -55,7 +57,7 @@ class TriSearchTool extends AITool {
         const query = String(args.query ?? "").trim();
 
         if (Util.empty(query)) {
-            return { error: "Provide query, or questDetails with IDs from earlier results." };
+            throw new AIError("Provide query, or questDetails with IDs from earlier results");
         }
 
         const scope = args.scope ?? "all",

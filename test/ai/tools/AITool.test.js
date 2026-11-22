@@ -62,8 +62,8 @@ describe("AITool", () => {
             session = createSession();
 
         await expect(tool.execute({ text: "hi" }, session)).resolves.toEqual({ text: "hi" });
-        expect((await tool.execute({ text: "fail" }, session)).error).toContain("Expected failure");
-        expect((await tool.execute({ text: "crash" }, session)).error).toContain("Unexpected failure");
+        await expect(tool.execute({ text: "fail" }, session)).resolves.toEqual({ error: "Expected failure" });
+        await expect(tool.execute({ text: "crash" }, session)).resolves.toEqual({ error: "Unexpected failure" });
 
         expect(session.logged).toEqual([["test_tool", "Unexpected failure"]]);
 

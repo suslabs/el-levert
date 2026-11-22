@@ -95,10 +95,11 @@ class AIReplyView {
     }
 
     static _formatPreview(text, finishing) {
-        const lines = [];
+        const lines = [],
+            preview = text.trim();
 
-        if (!Util.empty(text.trim())) {
-            lines.push(Util.trimString(text.trim(), AIReplyView.maxPreviewLength, null, { tight: true }));
+        if (!Util.empty(preview)) {
+            lines.push(Util.trimString(preview, AIReplyView.maxPreviewLength, null, { tight: true }));
         }
 
         if (finishing) {
@@ -155,21 +156,22 @@ class AIReplyView {
     }
 
     static _formatError(err) {
-        const ref = err.ref ?? {};
-        let hint = "";
+        const hint = AIReplyView._getErrorHint(err.ref ?? {});
+        return [`${getEmoji("error")} ${Util.capitalize(err.message)}.`, hint].filter(Util.nonemptyString).join("\n");
+    }
 
+    static _getErrorHint(ref) {
         if (ref.reason === "ACCESS_TOKEN_TYPE_UNSUPPORTED") {
-            hint =
-                "\nGoogle rejected the new-format (AQ.) key. Use a standard key (starts with AIza) from Google Cloud Console.";
+            return "Google rejected the new-format (AQ.) key. Use a standard key (starts with AIza) from Google Cloud Console.";
         } else if (ref.status === httpStatusCodes.TOO_MANY_REQUESTS) {
-            hint = "\nThe Gemini quota is used up for now. Try again in a minute.";
+            return "The Gemini quota is used up for now. Try again in a minute.";
         } else if (ref.status === httpStatusCodes.UNAUTHORIZED || ref.status === httpStatusCodes.FORBIDDEN) {
-            hint = "\nThe bot's Gemini API key was rejected.";
+            return "The bot's Gemini API key was rejected.";
         } else if (isServerErrorStatus(ref.status)) {
-            hint = "\nGemini is overloaded right now. Try again in a minute.";
+            return "Gemini is overloaded right now. Try again in a minute.";
+        } else {
+            return "";
         }
-
-        return `${getEmoji("error")} ${Util.capitalize(err.message)}.${hint}`;
     }
 
     _createEmbed(title) {

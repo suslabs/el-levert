@@ -8,6 +8,8 @@ import AIPhases from "../../../structures/ai/AIPhases.js";
 import Util from "../../../util/Util.js";
 import RegexUtil from "../../../util/misc/RegexUtil.js";
 
+import AIError from "../../../errors/AIError.js";
+
 class SearchMessagesTool extends MessageHistoryTool {
     static info = {
         name: "search_messages",
@@ -41,14 +43,10 @@ class SearchMessagesTool extends MessageHistoryTool {
         const query = String(args.query ?? "");
 
         if (Util.empty(query.trim())) {
-            return { error: "query is required. For author/time-only filtering use fetch_recent_messages." };
+            throw new AIError("query is required. For author/time-only filtering use fetch_recent_messages");
         }
 
         const matcher = this._createMatcher(query, args.isRegex ?? false);
-
-        if (typeof matcher === "string") {
-            return { error: matcher };
-        }
 
         const limit = Util.clamp(args.limit ?? SearchMessagesTool.defaultLimit, 1, SearchMessagesTool.maxLimit),
             scan = Util.clamp(
@@ -86,11 +84,11 @@ class SearchMessagesTool extends MessageHistoryTool {
         try {
             regex = new RE2(isRegex ? query : RegexUtil.escapeRegex(query), "i");
         } catch (err) {
-            return `Invalid regex: ${err.message}`;
+            throw new AIError(`Invalid regex: ${err.message}`);
         }
 
         if (regex.test("") || regex.test(" ")) {
-            return "Match-all regex isn't allowed; use a real text query.";
+            throw new AIError("Match-all regex isn't allowed; use a real text query");
         }
 
         return regex;
