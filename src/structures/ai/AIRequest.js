@@ -8,7 +8,7 @@ class AIRequest {
             channel: ctx.channel,
             guild: ctx.guild,
             msg: ctx.msg,
-            replyMsg: ctx.replyMsg
+            replyMsg: ctx.previousContext === null ? ctx.replyMsg : null
         });
     }
 

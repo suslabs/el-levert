@@ -33,6 +33,10 @@ class AIReplyView {
         return followUps[Util.parseInt(idxText)] ?? null;
     }
 
+    static getAnswerText(msg) {
+        return Util.first(msg.embeds)?.description ?? msg.content;
+    }
+
     constructor() {
         const config = getConfig().ai;
 

@@ -12,6 +12,25 @@ import Util from "../../util/Util.js";
 class AIReply {
     static expectedErrors = new Set(["AIError", "AxiosError"]);
 
+    static getHistory(ctx) {
+        const turns = [];
+
+        let previous = ctx.previousContext,
+            answerMsg = ctx.replyMsg;
+
+        while (previous !== null) {
+            turns.unshift(
+                { role: "user", text: previous.argsText },
+                { role: "model", text: AIReplyView.getAnswerText(answerMsg) }
+            );
+
+            answerMsg = previous.replyMsg;
+            previous = previous.previousContext;
+        }
+
+        return turns;
+    }
+
     static async handleFollowUp(ctx) {
         const session = ctx.interactionContext.session,
             question = AIReplyView.getFollowUp(ctx.interaction.customId, session.spec.followUps);

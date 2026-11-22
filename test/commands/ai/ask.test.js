@@ -329,7 +329,7 @@ describe("a command", () => {
         expect(click.reply.payloads[0].content).toContain("expired");
     });
 
-    test("replies to answers chain as new questions until the answer expires", async () => {
+    test("replies to answers continue the conversation with its history until the answer expires", async () => {
         const script = [
             answer(["First answer."]),
             extras([], []),
@@ -379,16 +379,27 @@ describe("a command", () => {
         const followUp = createUserMsg("q-2", "and then?", { reference: { messageId: "q-1-answer" } });
         await expect(handler.execute(followUp)).resolves.toBe(true);
 
-        const body = bodies[2].body;
+        const textsOf = body => body.contents.map(content => [content.role, content.parts[0].text]);
 
-        expect(body.contents.at(-1).parts[0].text).toBe("and then?");
-        expect(body.systemInstruction.parts[0].text).toContain('"""First answer."""');
+        expect(textsOf(bodies[2].body)).toEqual([
+            ["user", "hello"],
+            ["model", "First answer."],
+            ["user", "and then?"]
+        ]);
+
+        expect(bodies[2].body.systemInstruction.parts[0].text).not.toContain("The question replies to a message");
         expect(messages.get("q-2-answer").embeds[0].description).toBe("Second answer.");
 
         const chained = createUserMsg("q-3", "and after that?", { reference: { messageId: "q-2-answer" } });
         await expect(handler.execute(chained)).resolves.toBe(true);
 
-        expect(bodies[4].body.contents.at(-1).parts[0].text).toBe("and after that?");
+        expect(textsOf(bodies[4].body)).toEqual([
+            ["user", "hello"],
+            ["model", "First answer."],
+            ["user", "and then?"],
+            ["model", "Second answer."],
+            ["user", "and after that?"]
+        ]);
         expect(messages.get("q-3-answer").embeds[0].description).toBe("Third answer.");
         expect(script).toEqual([]);
 

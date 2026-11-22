@@ -35,7 +35,7 @@ class AskCommand {
             return `${getEmoji("info")} ${this.getArgsHelp("question")}`;
         }
 
-        await new AIReply(ctx).answer(question, []);
+        await new AIReply(ctx).answer(question, AIReply.getHistory(ctx));
     }
 
     async interactionHandler(ctx) {

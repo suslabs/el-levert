@@ -128,16 +128,22 @@ class CommandHandler extends MessageHandler {
         };
     }
 
-    async _resolveReplyInvocation(msg) {
+    async _resolveReplyInvocation(msg, checkExpiry) {
         const trigger = await this._fetchReplyTrigger(msg);
 
         if (trigger === null) {
             return null;
+        } else if (checkExpiry) {
+            const replyMsg = await this._resolveReplyMsg(msg);
+
+            if (this._isReplyExpired(replyMsg)) {
+                return null;
+            }
         }
 
-        const replyMsg = await this._resolveReplyMsg(msg);
+        const previousContext = await this._restoreContext(trigger);
 
-        if (this._isReplyExpired(replyMsg)) {
+        if (previousContext === null || !previousContext.command.continueOnReply) {
             return null;
         }
 
