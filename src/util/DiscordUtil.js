@@ -31,6 +31,13 @@ let DiscordUtil = {
         return matches.map(match => match[0]);
     },
 
+    channelMentionRegex: /<#(\d{17,20})>/g,
+
+    findChannelIds: str => {
+        const matches = Array.from(str.matchAll(DiscordUtil.channelMentionRegex));
+        return matches.map(match => match[1]);
+    },
+
     mentionRegex: /<@!?(\d{17,20})>/g,
     // mentionRegex: /<@([A-Za-z0-9]{24,30})>/g,
 

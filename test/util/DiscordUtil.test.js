@@ -14,6 +14,13 @@ afterEach(async () => {
 });
 
 describe("DiscordUtil", () => {
+    test("finds channel IDs only from channel mentions", () => {
+        expect(
+            DiscordUtil.findChannelIds("<#1268613021123608682> <@1268613021123608682> and 1268613021123608682")
+        ).toEqual(["1268613021123608682"]);
+        expect(DiscordUtil.findChannelIds("no channel mentions")).toEqual([]);
+    });
+
     test("finds user ids, codeblocks, and parses message or attachment urls", () => {
         expect(DiscordUtil.findUserIds("123456789012345678 and 987654321098765432")).toEqual([
             "123456789012345678",
