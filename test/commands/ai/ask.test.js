@@ -327,6 +327,61 @@ describe("a command", () => {
         expect(click.reply.payloads[0].content).toContain("expired");
     });
 
+    test("replying to an answer asks the reply as a new question with the answer as context", async () => {
+        const script = [answer(["First answer."]), extras([], []), answer(["Second answer."]), extras([], [])];
+
+        const messages = new Map(),
+            botUser = createDiscordUser({ id: "bot-id", bot: true });
+
+        const bodies = await setup(script, {
+            discordOverrides: { fetchMessage: async (_, id) => messages.get(id) ?? null }
+        });
+
+        const createSent = id => {
+            const sent = createDiscordMessage("", {
+                id,
+                author: botUser,
+                edit: async data => {
+                    sent.embeds = data.embeds.map(embed => ({ fields: [], ...embedOf({ embeds: [embed] }) }));
+                    return sent;
+                }
+            });
+
+            messages.set(id, sent);
+            return sent;
+        };
+
+        const createUserMsg = (id, content, extra = {}) => {
+            const msg = createDiscordMessage(content, {
+                id,
+                author: createDiscordUser({ id: askerId }),
+                reply: async () => createSent(`${id}-answer`),
+                ...extra
+            });
+
+            messages.set(id, msg);
+            return msg;
+        };
+
+        const handler = runtime.client.commandHandler;
+
+        await expect(handler.execute(createUserMsg("q-1", "%a hello"))).resolves.toBe(true);
+
+        const followUp = createUserMsg("q-2", "and then?", { reference: { messageId: "q-1-answer" } });
+        await expect(handler.execute(followUp)).resolves.toBe(true);
+
+        expect(script).toEqual([]);
+
+        const body = bodies[2].body;
+
+        expect(body.contents.at(-1).parts[0].text).toBe("and then?");
+        expect(body.systemInstruction.parts[0].text).toContain('"""First answer."""');
+        expect(messages.get("q-2-answer").embeds[0].description).toBe("Second answer.");
+
+        const untracked = createUserMsg("q-3", "what about this?", { reference: { messageId: "someone-else" } });
+        await expect(handler.execute(untracked)).resolves.toBe(false);
+    });
+
     test("runs scripts in the eval sandbox and reads history the user can access", async () => {
         const fetchCalls = [];
 

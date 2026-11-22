@@ -49,11 +49,13 @@ class AIPrompt {
     }
 
     static _replyLines(replyMsg) {
-        const embedText = replyMsg.embeds
-            .flatMap(embed => [embed.description, ...embed.fields.map(field => `${field.name}: ${field.value}`)])
-            .filter(Util.nonemptyString);
+        const embedText = replyMsg.embeds.flatMap(embed => [
+            embed.description,
+            ...embed.fields.map(field => `${field.name}: ${field.value}`)
+        ]);
 
-        const text = Util.trimString([replyMsg.content, ...embedText].join("\n"), AIPrompt.maxReplyLength),
+        const parts = [replyMsg.content, ...embedText].filter(Util.nonemptyString),
+            text = Util.trimString(parts.join("\n"), AIPrompt.maxReplyLength),
             lines = [`- The question replies to a message by <@${replyMsg.author.id}>: """${text}"""`];
 
         const attachments = AIPrompt._formatAttachments(replyMsg);

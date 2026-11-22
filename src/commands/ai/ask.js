@@ -9,6 +9,7 @@ class AskCommand {
         name: "a",
         aliases: ["ai", "ask"],
         category: "ai",
+        continueOnReply: true,
         args: "<question>",
         description:
             "Ask the AI assistant. It can search tags, quests, chat history, server members and the web, run calculations and look at images. Reply to a message or attach an image to ask about it.",

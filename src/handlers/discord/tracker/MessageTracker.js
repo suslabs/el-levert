@@ -13,6 +13,23 @@ class MessageTracker extends Tracker {
         this.trackLimit = trackLimit;
     }
 
+    findTriggerId(itemName, item) {
+        const listName = this.constructor.listNames[itemName],
+            itemId = this.constructor._getId(item);
+
+        if (!this.enableTracking || itemId == null) {
+            return null;
+        }
+
+        for (const [triggerId, data] of this.items) {
+            if (data[listName].some(entry => this.constructor._getId(entry) === itemId)) {
+                return triggerId;
+            }
+        }
+
+        return null;
+    }
+
     async deleteWithCallback(triggerMsg, itemName, callback) {
         const funcName = `delete${Util.capitalize(itemName)}`,
             items = this[funcName](triggerMsg);
