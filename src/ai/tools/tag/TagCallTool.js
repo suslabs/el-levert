@@ -14,7 +14,7 @@ class TagCallTool extends TagTool {
         name: "tag_call",
         phase: AIPhases.running,
         description:
-            "Execute a tag as the asking user and return its output. Only use names returned by search_tags or given by the user.",
+            "Run a tag as the asking user. Files the tag sends (like edited images) are attached to your answer. Image tags (caption, etc.) take the image from the question's attachments or the message it replies to on their own: pass only the text arguments, and add an image URL as the first argument only when the image isn't attached to either. Only use names returned by search_tags or given by the user.",
         parameters: ToolParams.object(
             {
                 name: ToolParams.string("Exact tag name."),
@@ -38,9 +38,16 @@ class TagCallTool extends TagTool {
         const tag = await this.fetchTag(args.name),
             out = await getClient().tagManager.execute(tag, (args.args ?? []).join(" "), session.request.scriptValues);
 
+        const files = TypeTester.isObject(out) ? (out.files ?? []) : [];
+
+        for (const file of files) {
+            session.attachFile(file.name, file.attachment);
+        }
+
         return {
             source: `tag:${tag.name}`,
             output: Util.trimString(this._formatOutput(out), TagCallTool.maxOutputLength),
+            attached: files.map(file => file.name),
             communityMaintained: true
         };
     }

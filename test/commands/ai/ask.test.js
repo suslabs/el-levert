@@ -796,6 +796,35 @@ describe("a command", () => {
         expect(runtime.client.interactionHandler.getSession(cancel.custom_id.split(":").at(-1))).toBeNull();
     });
 
+    test("runs image tags and attaches the files they send", async () => {
+        const script = [
+            calls([call("tag_call", { name: "caption", args: ["when the", "code works"] })]),
+            answer(["Captioned it."]),
+            extras([], [])
+        ];
+
+        const bodies = await setup(script, { loadVMs: true });
+
+        await addTag(
+            runtime,
+            "caption",
+            'msg.reply({ content: "captioned: " + tag.args, file: { data: [137, 80, 78, 71], name: "caption.png" } })',
+            "user-1",
+            { type: "ivm" }
+        );
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("caption this: when the code works", recorder));
+
+        const result = Util.first(bodies[1].body.contents.at(-1).parts).functionResponse.response,
+            [file] = recorder.sent.at(-1).files;
+
+        expect(script).toEqual([]);
+        expect(result).toMatchObject({ output: "captioned: when the code works", attached: ["caption.png"] });
+        expect(file.name).toBe("caption.png");
+        expect([...file.attachment]).toEqual([137, 80, 78, 71]);
+    });
+
     test("attaches images it downloads as files", async () => {
         const script = [];
         const png = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
