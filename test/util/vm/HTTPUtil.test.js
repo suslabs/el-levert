@@ -5,6 +5,20 @@ import { describe, expect, test } from "vitest";
 import HTTPUtil from "../../../src/util/vm/HTTPUtil.js";
 
 describe("HTTPUtil", () => {
+    test("joins URL parts, query parameters, and fragments", () => {
+        expect(HTTPUtil.joinUrl("https://", "example.com/", "/api/", "/item/")).toBe("https://example.com/api/item/");
+        expect(HTTPUtil.joinUrl("https://example.com/api/", "?a=1", "&b=2", "#section")).toBe(
+            "https://example.com/api?a=1&b=2#section"
+        );
+        expect(HTTPUtil.joinUrl("file:///", "folder", "file.txt")).toBe("file:///folder/file.txt");
+        expect(HTTPUtil.joinUrl("http://localhost:2358/submissions/", "token", "?base64_encoded=false")).toBe(
+            "http://localhost:2358/submissions/token?base64_encoded=false"
+        );
+        expect(HTTPUtil.joinUrl("https://example.com", "", "/path")).toBe("https://example.com/path");
+        expect(() => HTTPUtil.joinUrl("https://example.com", 123)).toThrow("URL part must be a string");
+        expect(() => HTTPUtil.joinUrl()).toThrow("URL part must be a string");
+    });
+
     test("blocks local and private addresses", () => {
         const blocklist = HTTPUtil.createBlocklist();
 

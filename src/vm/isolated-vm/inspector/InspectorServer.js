@@ -12,6 +12,7 @@ import { getLogger } from "../../../LevertClient.js";
 
 import Util from "../../../util/Util.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
+import HTTPUtil from "../../../util/vm/HTTPUtil.js";
 import { getHttpStatusText, httpStatusCodes } from "../../../util/misc/HttpStatusCodes.js";
 
 import VMError from "../../../errors/VMError.js";
@@ -170,7 +171,7 @@ class InspectorServer {
 
     _getReqUrl(req) {
         const host = req.headers.host ?? `${this.host}:${this.port}`;
-        return new URL(req.url, `http://${host}`);
+        return new URL(HTTPUtil.joinUrl("http://", host, req.url));
     }
 
     _getSessionPath(session, type) {

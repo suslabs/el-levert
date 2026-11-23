@@ -23,6 +23,7 @@ describe("DiscordUtil", () => {
     });
 
     test("finds user ids, codeblocks, and parses message or attachment urls", () => {
+        expect(DiscordUtil.getMessageUrl("@me", "123", "456")).toBe("https://www.discord.com/channels/@me/123/456");
         expect(DiscordUtil.findUserIds("123456789012345678 and 987654321098765432")).toEqual([
             "123456789012345678",
             "987654321098765432"

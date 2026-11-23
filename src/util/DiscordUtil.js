@@ -10,6 +10,7 @@ import LoggerUtil from "./LoggerUtil.js";
 import TypeTester from "./TypeTester.js";
 import ObjectUtil from "./ObjectUtil.js";
 import ArrayUtil from "./ArrayUtil.js";
+import HTTPUtil from "./vm/HTTPUtil.js";
 
 import EmbedCountAreas from "./EmbedCountAreas.js";
 import CountTypes from "./CountTypes.js";
@@ -147,7 +148,7 @@ let DiscordUtil = {
     },
 
     getMessageUrl: (sv_id, ch_id, msg_id) => {
-        return `https://www.discord.com/channels/${sv_id}/${ch_id}/${msg_id}`;
+        return HTTPUtil.joinUrl("https://www.discord.com/channels", sv_id, ch_id, msg_id);
     },
 
     msgUrlRegex:

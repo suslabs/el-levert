@@ -8,6 +8,7 @@ import { getLogger } from "../../../LevertClient.js";
 
 import Util from "../../../util/Util.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
+import HTTPUtil from "../../../util/vm/HTTPUtil.js";
 import { getCloseReason } from "../../../util/misc/WebsocketCloseCodes.js";
 
 class InspectorSession {
@@ -221,11 +222,11 @@ class InspectorSession {
     }
 
     _getWebSocketUrl(host) {
-        return `ws://${host}${this.wsPath}`;
+        return HTTPUtil.joinUrl("ws://", host, this.wsPath);
     }
 
     _getHttpUrl(host, pathname) {
-        return `http://${host}${pathname}`;
+        return HTTPUtil.joinUrl("http://", host, pathname);
     }
 
     _getDevtoolsUrl(host, compat = false) {

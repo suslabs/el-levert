@@ -27,6 +27,65 @@ function createFileResponseError(message, status, req) {
 }
 
 const HTTPUtil = Object.freeze({
+    protocolRegex: /^[^/:]+:\/*$/,
+    leadingSlashRegex: /^[/]+/,
+    trailingSlashRegex: /[/]+$/,
+    paramSlashRegex: /\/(\?|&|#[^!])/g,
+    paramSplitRegex: /(?:\?|&)+/,
+
+    joinUrl: (...parts) => {
+        const input = [...parts];
+
+        let firstPart = Util.first(input);
+
+        const result = [];
+
+        if (typeof firstPart !== "string") {
+            throw new UtilError("URL part must be a string");
+        }
+
+        if (HTTPUtil.protocolRegex.test(firstPart) && Util.multiple(input)) {
+            firstPart = input.shift() + input.shift();
+            input.unshift(firstPart);
+        }
+
+        input[0] = firstPart;
+
+        for (let i = 0; i < input.length; i++) {
+            let part = input[i];
+
+            if (typeof part !== "string") {
+                throw new UtilError("URL part must be a string");
+            }
+
+            if (Util.empty(part)) {
+                continue;
+            }
+
+            if (i > 0) {
+                part = part.replace(HTTPUtil.leadingSlashRegex, "");
+            }
+
+            part = part.replace(HTTPUtil.trailingSlashRegex, i === input.length - 1 ? "/" : "");
+            result.push(part);
+        }
+
+        let str = result.join("/");
+        str = str.replace(HTTPUtil.paramSlashRegex, "$1");
+
+        const [beforeHash, afterHash] = str.split("#"),
+            hash = Util.empty(afterHash) ? "" : "#" + afterHash;
+
+        let paramParts = beforeHash.split(HTTPUtil.paramSplitRegex);
+        paramParts = paramParts.filter(part => !Util.empty(part));
+
+        const beforeParams = paramParts.shift(),
+            params = (Util.empty(paramParts) ? "" : "?") + paramParts.join("&");
+
+        str = beforeParams + params + hash;
+        return str;
+    },
+
     webProtocols: new Set(["http:", "https:"]),
 
     blockedMessage: "Access to local/private IP addresses is blocked",

@@ -4,6 +4,8 @@ import ReturnCodes from "./ReturnCodes.js";
 
 import { getConfig } from "../../LevertClient.js";
 
+import HTTPUtil from "../../util/vm/HTTPUtil.js";
+
 import VMError from "../../errors/VMError.js";
 
 class ExternalVM {
@@ -57,7 +59,7 @@ class ExternalVM {
     checkCode(token) {
         return new Promise((resolve, reject) => {
             const interval = setInterval(async () => {
-                const status = (await axios.get(this.base + token + this.statusUrl)).data.status_id;
+                const status = (await axios.get(HTTPUtil.joinUrl(this.base, token, this.statusUrl))).data.status_id;
 
                 if (!ReturnCodes.pending.has(status)) {
                     clearInterval(interval);
@@ -70,7 +72,7 @@ class ExternalVM {
     }
 
     async getOutput(token) {
-        let data = (await axios.get(this.base + token + this.outputUrl)).data;
+        let data = (await axios.get(HTTPUtil.joinUrl(this.base, token, this.outputUrl))).data;
 
         data = Object.assign(
             {
