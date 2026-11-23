@@ -22,10 +22,11 @@ let DateUtil = {
     },
 
     _intervalTokenRegex: /(\d+(?:\.\d+)?)\s*([a-zA-Z]+)/g,
+    _calendarRegex: /^(?:([1-9]\d*)M)?(?:([1-9]\d*)D)?(?:\+([1-9]\d*))?$/,
 
-    parseInterval: value => {
+    parseInterval: (value, calendar = false) => {
         if (typeof value === "number") {
-            return value > 0 ? Math.round(value) : null;
+            return Number.isFinite(value) && value > 0 ? Math.round(value) : null;
         }
 
         value = value?.trim?.();
@@ -36,10 +37,16 @@ let DateUtil = {
 
         value = value.toLowerCase();
 
-        if (Object.hasOwn(DateUtil._namedIntervals, value)) {
-            return DateUtil._namedIntervals[value];
-        } else if (Object.hasOwn(DateUtil._units, value)) {
-            return DateUtil._units[value];
+        const intervalUnit = DateUtil._units.get(value);
+
+        if (typeof intervalUnit !== "undefined") {
+            if (calendar && typeof intervalUnit.calendar !== "undefined") {
+                return intervalUnit.calendar.months
+                    ? `${intervalUnit.calendar.months}M`
+                    : `${intervalUnit.calendar.days}D`;
+            }
+
+            return intervalUnit.multiplier;
         }
 
         const matches = Array.from(value.matchAll(DateUtil._intervalTokenRegex));
@@ -48,34 +55,163 @@ let DateUtil = {
             return null;
         }
 
-        let totalMs = 0;
+        let months = 0,
+            days = 0,
+            totalMs = 0;
 
         for (const match of matches) {
             const num = parseFloat(match[1]),
-                unit = match[2]?.toLowerCase();
+                unit = DateUtil._units.get(match[2]);
 
-            if (isNaN(num) || num <= 0 || !Object.hasOwn(DateUtil._units, unit)) {
+            if (!Number.isFinite(num) || num <= 0 || typeof unit === "undefined" || unit.named) {
                 return null;
             }
 
-            totalMs += Math.round(num * DateUtil._units[unit]);
+            if (calendar && typeof unit.calendar !== "undefined") {
+                const calendarUnit = unit.calendar;
+
+                if (calendarUnit.months > 0 && !Number.isInteger(num)) {
+                    return null;
+                }
+
+                const dayCount = num * calendarUnit.days,
+                    wholeDays = Math.floor(dayCount);
+
+                months += num * calendarUnit.months;
+                days += wholeDays;
+                totalMs += Math.round(((dayCount - wholeDays) * Util.durationSeconds.day) / Util.durationSeconds.milli);
+            } else {
+                totalMs += Math.round(num * unit.multiplier);
+            }
         }
 
-        const nonDelim = value.replace(DateUtil._intervalTokenRegex, "").replace(/[\s,and]+/g, "");
+        const nonDelim = value.replace(DateUtil._intervalTokenRegex, "").replace(/(?:\s|,|\band\b)+/g, "");
 
-        if (!Util.empty(nonDelim)) {
+        if (!Util.empty(nonDelim) || !Number.isFinite(months) || !Number.isFinite(days) || !Number.isFinite(totalMs)) {
             return null;
+        }
+
+        if (months > 0 || days > 0) {
+            const monthPart = months > 0 ? `${months}M` : "",
+                dayPart = days > 0 ? `${days}D` : "",
+                msPart = totalMs > 0 ? `+${totalMs}` : "";
+
+            return `${monthPart}${dayPart}${msPart}`;
         }
 
         return totalMs > 0 ? totalMs : null;
     },
 
-    formatInterval: ms => {
-        return Util.duration(ms, { format: true });
+    isValidInterval: interval => {
+        if (Number.isFinite(interval) && interval > 0) {
+            return true;
+        } else if (typeof interval !== "string") {
+            return false;
+        }
+
+        const match = interval.match(DateUtil._calendarRegex);
+
+        return (
+            match !== null &&
+            (typeof match[1] !== "undefined" || typeof match[2] !== "undefined") &&
+            match.slice(1).every(value => Number.isFinite(Number(value ?? 0)))
+        );
     },
 
-    _trailingEveryRegex: /^(.*?)\s+(?:repeat(?:ing)?\s+|recurr(?:ing)?\s+)?every\s+([^,]+)$/i,
-    _namedPrefixRegex: /^(hourly|daily|weekly|monthly|yearly)(?:\s+(?:at|from|starting|start|on))?(?:\s+(.+))?$/i,
+    getIntervalOccurrence: (start, interval, idx) => {
+        if (typeof interval === "number") {
+            return start + interval * idx;
+        }
+
+        const [, monthText, dayText, msText] = interval.match(DateUtil._calendarRegex),
+            months = Number(monthText ?? 0),
+            days = Number(dayText ?? 0),
+            ms = Number(msText ?? 0);
+
+        const date = new Date(start),
+            day = date.getDate();
+
+        date.setDate(1);
+        date.setMonth(date.getMonth() + months * idx);
+
+        const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+
+        date.setDate(Math.min(day, lastDay));
+        date.setDate(date.getDate() + days * idx);
+
+        return date.getTime() + ms * idx;
+    },
+
+    getIntervalIndex: (start, interval, date) => {
+        if (typeof interval === "number") {
+            return Math.floor((date - start) / interval);
+        } else if (date < start) {
+            return -1;
+        }
+
+        let min = 0,
+            max = 1;
+
+        while (DateUtil.getIntervalOccurrence(start, interval, max) <= date) {
+            min = max;
+            max *= 2;
+        }
+
+        while (max - min > 1) {
+            const mid = Math.floor((min + max) / 2);
+
+            if (DateUtil.getIntervalOccurrence(start, interval, mid) <= date) {
+                min = mid;
+            } else {
+                max = mid;
+            }
+        }
+
+        return min;
+    },
+
+    formatInterval: interval => {
+        let parts;
+
+        if (typeof interval === "number") {
+            parts = Util.duration(interval);
+        } else {
+            const [, monthText, dayText, msText] = interval.match(DateUtil._calendarRegex);
+
+            parts = {};
+
+            if (typeof monthText !== "undefined") {
+                const months = Number(monthText),
+                    years = Math.floor(months / 12),
+                    remainingMonths = months % 12;
+
+                if (years > 0) {
+                    parts.year = years;
+                }
+
+                if (remainingMonths > 0) {
+                    parts.month = remainingMonths;
+                }
+            }
+
+            if (typeof dayText !== "undefined") {
+                const duration = (Number(dayText) * Util.durationSeconds.day) / Util.durationSeconds.milli;
+                Object.assign(parts, Util.duration(duration, { whitelist: ["week", "day"] }));
+            }
+
+            if (typeof msText !== "undefined") {
+                Object.assign(parts, Util.duration(Number(msText), { whitelist: ["hour", "minute", "second"] }));
+            }
+        }
+
+        return Util.formatUnitDurations(parts, Util.durationNames, { format: true }).replace(
+            /^1 (millisecond|second|minute|hour|day|week|month|year)$/,
+            "$1"
+        );
+    },
+
+    _trailingEveryRegex: /^(.*?)\s+(?:repeat(?:ing)?\s+|recurr(?:ing)?\s+)?every\s+(.+)$/i,
+    _recurrenceEndRegex: /^(.*?)\s+(for|until)\s+(.+)$/i,
     _everyPrefixRegex: /^every\s+/i,
     _everySepRegex: /^(.*?)\s+(?:at|from|starting|start|begins?|on)\s+(.+)$/i,
     _unitPrefixRegex: /^([a-zA-Z]+)\s+(.+)$/,
@@ -87,56 +223,101 @@ let DateUtil = {
             return null;
         }
 
-        if (Util.nonemptyString(intervalOverride)) {
-            const interval = DateUtil.parseInterval(intervalOverride);
+        const endMatch = value.match(DateUtil._recurrenceEndRegex);
 
-            if (interval === null || interval <= 0) {
+        if (endMatch === null) {
+            return DateUtil._parseDateRecurring(value, intervalOverride);
+        }
+
+        const [, dateText, endType, endText] = endMatch,
+            parsed = DateUtil._parseDateRecurring(dateText.trim(), intervalOverride);
+
+        if (parsed === null || !parsed.isRecurring) {
+            return null;
+        }
+
+        let end;
+
+        if (endType.toLowerCase() === "for") {
+            const duration = DateUtil.parseInterval(endText, true);
+
+            if (duration === null) {
                 return null;
             }
 
-            let date = DateUtil.parse(value);
+            end = DateUtil.getIntervalOccurrence(parsed.date, duration, 1);
+        } else {
+            end = DateUtil._parseUntil(endText);
+        }
+
+        if (!Number.isFinite(end) || end < parsed.date) {
+            return null;
+        }
+
+        return { ...parsed, end };
+    },
+
+    _parseUntil: value => {
+        const yearMatch = value.trim().match(/^\d{4}$/);
+
+        if (yearMatch !== null) {
+            const year = Number(yearMatch[0]);
+            return new Date(year, 11, 31, 23, 59, 59, 999).getTime();
+        }
+
+        return DateUtil.parse(value);
+    },
+
+    _scheduleRecurring: (date, interval) => {
+        const now = Date.now();
+
+        date ??= now;
+
+        if (date < now) {
+            const idx = DateUtil.getIntervalIndex(date, interval, now) + 1;
+            date = DateUtil.getIntervalOccurrence(date, interval, idx);
+        }
+
+        return {
+            date,
+            interval,
+            isRecurring: true
+        };
+    },
+
+    _parseDateRecurring: (value, intervalOverride) => {
+        value = value?.trim?.();
+
+        if (Util.empty(value)) {
+            return null;
+        }
+
+        if (Util.nonemptyString(intervalOverride)) {
+            const interval = DateUtil.parseInterval(intervalOverride, true);
+
+            if (interval === null) {
+                return null;
+            }
+
+            const date = DateUtil.parse(value);
 
             if (date === null) {
                 return null;
             }
 
-            const now = Date.now();
-
-            if (date <= now) {
-                while (date <= now) {
-                    date += interval;
-                }
-            }
-
-            return {
-                date,
-                interval,
-                isRecurring: true
-            };
+            return DateUtil._scheduleRecurring(date, interval);
         }
 
         const trailingEvery = value.match(DateUtil._trailingEveryRegex);
 
         if (trailingEvery !== null) {
-            const interval = DateUtil.parseInterval(trailingEvery[2].trim());
+            const interval = DateUtil.parseInterval(trailingEvery[2].trim(), true);
 
-            if (interval !== null && interval > 0) {
-                let date = DateUtil.parse(trailingEvery[1].trim());
+            if (interval !== null) {
+                const date = DateUtil.parse(trailingEvery[1].trim());
 
                 if (date !== null) {
-                    const now = Date.now();
-
-                    if (date <= now) {
-                        while (date <= now) {
-                            date += interval;
-                        }
-                    }
-
-                    return {
-                        date,
-                        interval,
-                        isRecurring: true
-                    };
+                    return DateUtil._scheduleRecurring(date, interval);
                 }
             }
         }
@@ -144,32 +325,16 @@ let DateUtil = {
         const namedPrefix = value.match(DateUtil._namedPrefixRegex);
 
         if (namedPrefix !== null) {
-            const interval = DateUtil._namedIntervals[namedPrefix[1].toLowerCase()];
+            const interval = DateUtil.parseInterval(namedPrefix[1], true);
 
             if (Util.nonemptyString(namedPrefix[2])) {
-                let date = DateUtil.parse(namedPrefix[2].trim());
+                const date = DateUtil.parse(namedPrefix[2].trim());
 
                 if (date !== null) {
-                    const now = Date.now();
-
-                    if (date <= now) {
-                        while (date <= now) {
-                            date += interval;
-                        }
-                    }
-
-                    return {
-                        date,
-                        interval,
-                        isRecurring: true
-                    };
+                    return DateUtil._scheduleRecurring(date, interval);
                 }
             } else {
-                return {
-                    date: Date.now() + interval,
-                    interval,
-                    isRecurring: true
-                };
+                return DateUtil._scheduleRecurring(null, interval);
             }
         }
 
@@ -179,30 +344,19 @@ let DateUtil = {
             const sepMatch = rest.match(DateUtil._everySepRegex);
 
             if (sepMatch !== null) {
-                const interval = DateUtil.parseInterval(sepMatch[1].trim());
+                const interval = DateUtil.parseInterval(sepMatch[1].trim(), true);
 
-                if (interval !== null && interval > 0) {
-                    let date = DateUtil.parse(sepMatch[2].trim()) ?? DateUtil.parse(`at ${sepMatch[2].trim()}`);
+                if (interval !== null) {
+                    const date = DateUtil.parse(sepMatch[2].trim()) ?? DateUtil.parse(`at ${sepMatch[2].trim()}`);
 
                     if (date !== null) {
-                        const now = Date.now();
-
-                        if (date <= now) {
-                            while (date <= now) {
-                                date += interval;
-                            }
-                        }
-
-                        return {
-                            date,
-                            interval,
-                            isRecurring: true
-                        };
+                        return DateUtil._scheduleRecurring(date, interval);
                     }
                 }
             }
 
             const intervalMatches = Array.from(rest.matchAll(DateUtil._intervalTokenRegex));
+
             let lastEnd = 0;
 
             for (const match of intervalMatches) {
@@ -211,26 +365,14 @@ let DateUtil = {
                 if (match.index === lastEnd || Util.empty(between) || between === "and") {
                     lastEnd = match.index + match[0].length;
 
-                    const candidateInterval = DateUtil.parseInterval(rest.slice(0, lastEnd)),
+                    const candidateInterval = DateUtil.parseInterval(rest.slice(0, lastEnd), true),
                         candidateRest = rest.slice(lastEnd).trim();
 
                     if (candidateInterval !== null && Util.nonemptyString(candidateRest)) {
-                        let date = DateUtil.parse(candidateRest);
+                        const date = DateUtil.parse(candidateRest);
 
                         if (date !== null) {
-                            const now = Date.now();
-
-                            if (date <= now) {
-                                while (date <= now) {
-                                    date += candidateInterval;
-                                }
-                            }
-
-                            return {
-                                date,
-                                interval: candidateInterval,
-                                isRecurring: true
-                            };
+                            return DateUtil._scheduleRecurring(date, candidateInterval);
                         }
                     }
                 } else {
@@ -238,38 +380,23 @@ let DateUtil = {
                 }
             }
 
-            const unitMatch = rest.match(DateUtil._unitPrefixRegex);
+            const unitMatch = rest.match(DateUtil._unitPrefixRegex),
+                unit = unitMatch === null ? null : DateUtil._units.get(unitMatch[1].toLowerCase());
 
-            if (unitMatch !== null && Object.hasOwn(DateUtil._units, unitMatch[1].toLowerCase())) {
-                const interval = DateUtil._units[unitMatch[1].toLowerCase()];
+            if (unit != null && !unit.named) {
+                const interval = DateUtil.parseInterval(unitMatch[1], true);
 
-                let date = DateUtil.parse(unitMatch[2].trim());
+                const date = DateUtil.parse(unitMatch[2].trim());
 
                 if (date !== null) {
-                    const now = Date.now();
-
-                    if (date <= now) {
-                        while (date <= now) {
-                            date += interval;
-                        }
-                    }
-
-                    return {
-                        date,
-                        interval,
-                        isRecurring: true
-                    };
+                    return DateUtil._scheduleRecurring(date, interval);
                 }
             }
 
-            const fullInterval = DateUtil.parseInterval(rest);
+            const fullInterval = DateUtil.parseInterval(rest, true);
 
-            if (fullInterval !== null && fullInterval > 0) {
-                return {
-                    date: Date.now() + fullInterval,
-                    interval: fullInterval,
-                    isRecurring: true
-                };
+            if (fullInterval !== null) {
+                return DateUtil._scheduleRecurring(null, fullInterval);
             }
 
             return null;
@@ -305,34 +432,43 @@ let DateUtil = {
 };
 
 {
-    const unitAliases = [
-        [["ms", "milli", "millis", "millisecond", "milliseconds"], 1],
-        [["s", "sec", "secs", "second", "seconds"], Util.durationSeconds.second / Util.durationSeconds.milli],
-        [["m", "min", "mins", "minute", "minutes"], Util.durationSeconds.minute / Util.durationSeconds.milli],
-        [["h", "hr", "hrs", "hour", "hours"], Util.durationSeconds.hour / Util.durationSeconds.milli],
-        [["d", "day", "days"], Util.durationSeconds.day / Util.durationSeconds.milli],
-        [["w", "wk", "wks", "week", "weeks"], Util.durationSeconds.week / Util.durationSeconds.milli],
-        [["mo", "month", "months"], Util.durationSeconds.month / Util.durationSeconds.milli],
-        [["y", "yr", "yrs", "year", "years"], Util.durationSeconds.year / Util.durationSeconds.milli]
-    ];
+    const unitDefinitions = {
+        milli: { aliases: ["ms", "milli", "millis", "millisecond", "milliseconds"] },
+        second: { aliases: ["s", "sec", "secs", "second", "seconds"] },
+        minute: { aliases: ["m", "min", "mins", "minute", "minutes"] },
+        hour: { aliases: ["h", "hr", "hrs", "hour", "hours"], named: "hourly" },
+        day: { aliases: ["d", "day", "days"], named: "daily", calendar: { months: 0, days: 1 } },
+        week: {
+            aliases: ["w", "wk", "wks", "week", "weeks"],
+            named: "weekly",
+            calendar: { months: 0, days: Util.durationSeconds.week / Util.durationSeconds.day }
+        },
+        month: { aliases: ["mo", "month", "months"], named: "monthly", calendar: { months: 1, days: 0 } },
+        year: { aliases: ["y", "yr", "yrs", "year", "years"], named: "yearly", calendar: { months: 12, days: 0 } }
+    };
 
-    DateUtil._units = {};
+    DateUtil._units = new Map();
 
-    for (const [aliases, multiplier] of unitAliases) {
+    const namedIntervals = [];
+
+    for (const [name, definition] of Object.entries(unitDefinitions)) {
+        const { aliases, named, calendar } = definition,
+            unit = { multiplier: Util.durationSeconds[name] / Util.durationSeconds.milli, calendar };
+
         for (const alias of aliases) {
-            DateUtil._units[alias] = multiplier;
+            DateUtil._units.set(alias, unit);
+        }
+
+        if (typeof named !== "undefined") {
+            DateUtil._units.set(named, { ...unit, named: true });
+            namedIntervals.push(named);
         }
     }
 
-    DateUtil._units = Object.freeze(DateUtil._units);
-
-    DateUtil._namedIntervals = Object.freeze({
-        hourly: Util.durationSeconds.hour / Util.durationSeconds.milli,
-        daily: Util.durationSeconds.day / Util.durationSeconds.milli,
-        weekly: Util.durationSeconds.week / Util.durationSeconds.milli,
-        monthly: Util.durationSeconds.month / Util.durationSeconds.milli,
-        yearly: Util.durationSeconds.year / Util.durationSeconds.milli
-    });
+    DateUtil._namedPrefixRegex = new RegExp(
+        String.raw`^(${namedIntervals.join("|")})(?:\s+(?:at|from|starting|start|on))?(?:\s+(.+))?$`,
+        "i"
+    );
 }
 
 DateUtil = Object.freeze(DateUtil);

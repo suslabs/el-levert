@@ -759,9 +759,6 @@ let Util = {
     _resolveUnitDurations: (amount, scaleTable, options, defaultBlacklist = [], defaultFallback = "second") => {
         options = ObjectUtil.guaranteeObject(options);
 
-        const format = options.format ?? false,
-            short = options.short ?? false;
-
         const unit = options.unit,
             largestOnly = options.largestOnly ?? false,
             largestN = options.largestN ?? 0;
@@ -771,17 +768,6 @@ let Util = {
 
         const digits = options.digits;
 
-        const parsedOptions = {
-            format,
-            short,
-            unit,
-            largestOnly,
-            largestN,
-            whitelist,
-            blacklist,
-            digits
-        };
-
         if (unit != null) {
             const scale = scaleTable[unit];
 
@@ -789,12 +775,7 @@ let Util = {
                 throw new UtilError(`Invalid unit: "${unit}"`);
             }
 
-            return {
-                options: parsedOptions,
-                durations: {
-                    [unit]: amount / scale
-                }
-            };
+            return { [unit]: amount / scale };
         }
 
         const availableUnits = Object.keys(scaleTable)
@@ -807,12 +788,7 @@ let Util = {
             .reverse();
 
         if (amount < 1 && availableUnits.includes(defaultFallback)) {
-            return {
-                options: parsedOptions,
-                durations: {
-                    [defaultFallback]: amount
-                }
-            };
+            return { [defaultFallback]: amount };
         }
 
         if (largestOnly) {
@@ -821,12 +797,7 @@ let Util = {
 
             const val = typeof digits === "number" ? amount / scale : Math.floor(amount / scale);
 
-            return {
-                options: parsedOptions,
-                durations: {
-                    [unit]: val
-                }
-            };
+            return { [unit]: val };
         }
 
         const durations = {};
@@ -861,21 +832,25 @@ let Util = {
             durations[defaultFallback] = amount;
         }
 
-        return {
-            options: parsedOptions,
-            durations
-        };
+        return durations;
     },
 
-    _formatUnitDurations: (durations, namesTable, parsedOptions, spaceOnShort = false) => {
-        if (!parsedOptions.format) {
+    formatUnitDurations: (durations, namesTable, options) => {
+        options = ObjectUtil.guaranteeObject(options);
+
+        const format = options.format ?? false,
+            short = options.short ?? false,
+            spaceOnShort = options.spaceOnShort ?? false,
+            digits = options.digits;
+
+        if (!format) {
             return durations;
         }
 
         const formatted = Object.entries(durations).map(([name, val]) => {
-            const numText = Util.formatNumber(val, parsedOptions.digits);
+            const numText = Util.formatNumber(val, digits);
 
-            if (parsedOptions.short) {
+            if (short) {
                 const shortName = namesTable[name]?.shortName ?? name,
                     sep = spaceOnShort ? " " : "";
 
@@ -898,7 +873,7 @@ let Util = {
         return formatted.join(", ");
     },
 
-    _durationNames: Object.freeze({
+    durationNames: Object.freeze({
         milli: {
             fullName: "millisecond",
             fullNamePlural: "milliseconds",
@@ -942,18 +917,16 @@ let Util = {
     }),
 
     duration: (delta, options) => {
+        options = ObjectUtil.guaranteeObject(options);
+        options = { ...options };
+        delete options.spaceOnShort;
+
         delta = Number(delta ?? 0);
         const amount = (Number.isFinite(delta) ? Math.max(0, delta) : 0) * Util.durationSeconds.milli;
 
-        const { options: parsedOptions, durations } = Util._resolveUnitDurations(
-            amount,
-            Util.durationSeconds,
-            options,
-            ["milli"],
-            "second"
-        );
+        const durations = Util._resolveUnitDurations(amount, Util.durationSeconds, options, ["milli"], "second");
 
-        return Util._formatUnitDurations(durations, Util._durationNames, parsedOptions, false);
+        return Util.formatUnitDurations(durations, Util.durationNames, options);
     },
 
     _byteNames: Object.freeze({
@@ -986,24 +959,14 @@ let Util = {
 
     formatSize: (size, options) => {
         options = ObjectUtil.guaranteeObject(options);
+        options = { format: true, largestOnly: true, digits: 2, ...options, spaceOnShort: true };
 
         size = Number(size ?? 0);
         const amount = Number.isFinite(size) ? Math.max(0, size) : 0;
 
-        const { options: parsedOptions, durations } = Util._resolveUnitDurations(
-            amount,
-            Util.dataBytes,
-            {
-                format: true,
-                largestOnly: true,
-                digits: 2,
-                ...options
-            },
-            [],
-            "byte"
-        );
+        const durations = Util._resolveUnitDurations(amount, Util.dataBytes, options, [], "byte");
 
-        return Util._formatUnitDurations(durations, Util._byteNames, parsedOptions, true);
+        return Util.formatUnitDurations(durations, Util._byteNames, options);
     },
 
     getByteLength: (data, encoding = "utf8") => {

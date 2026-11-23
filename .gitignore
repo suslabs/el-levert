@@ -141,4 +141,5 @@ dist
 .VSCodeCounter
 .deploy/
 /scratch
+/.codex-done
 /test/**/canvaskit_*

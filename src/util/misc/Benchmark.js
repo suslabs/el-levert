@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 
 import Util from "../Util.js";
 import CaseUtil from "./CaseUtil.js";
+import IntervalLoop from "./IntervalLoop.js";
 
 import UtilError from "../../errors/UtilError.js";
 
@@ -384,7 +385,7 @@ class Benchmark {
     };
 
     static _timepointSweepInterval = 30 / Util.durationSeconds.milli;
-    static _timepointSweepTimer = null;
+    static _timepointSweepLoop = new IntervalLoop(() => this._sweepTimepoints(), this._timepointSweepInterval);
 
     static _formatTime(key, time) {
         return `${key}: ${time.toLocaleString()}ms`;
@@ -452,9 +453,9 @@ class Benchmark {
         }
 
         if (this._activeTimepoints.size < 1) {
-            this._stopSweepLoop();
+            this._timepointSweepLoop.stop();
         } else {
-            this._startSweepLoop();
+            this._timepointSweepLoop.start();
         }
     }
 
@@ -463,7 +464,7 @@ class Benchmark {
         this._defaultTimepoints = this._makeStore();
 
         this._activeTimepoints.clear();
-        this._stopSweepLoop();
+        this._timepointSweepLoop.stop();
     }
 
     static _sweepTimepoints() {
@@ -535,23 +536,6 @@ class Benchmark {
         }
 
         this._syncTimepoints(store);
-    }
-
-    static _startSweepLoop() {
-        if (this._timepointSweepTimer !== null) {
-            return;
-        }
-
-        this._timepointSweepTimer = setInterval(() => this._sweepTimepoints(), this._timepointSweepInterval);
-    }
-
-    static _stopSweepLoop() {
-        if (this._timepointSweepTimer === null) {
-            return;
-        }
-
-        clearInterval(this._timepointSweepTimer);
-        this._timepointSweepTimer = null;
     }
 }
 

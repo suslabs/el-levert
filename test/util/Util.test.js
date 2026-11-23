@@ -146,6 +146,18 @@ describe("Util", () => {
         expect(Util.duration(65_000, { largestOnly: true, format: true })).toBe("1 minute");
         expect(Util.duration(65_000, { largestN: 1, format: true, whitelist: ["minute", "second"] })).toBe("1 minute");
         expect(Util.duration(65_000, { format: true })).toBe("1 minute, 5 seconds");
+        expect(Util.formatUnitDurations({ year: 1, day: 2 }, Util.durationNames, { format: true })).toBe(
+            "1 year, 2 days"
+        );
+        expect(Util.formatUnitDurations({ minute: 2 }, Util.durationNames)).toEqual({ minute: 2 });
+        expect(Util.formatUnitDurations({ minute: 2 }, Util.durationNames, { format: true, short: true })).toBe("2m");
+        expect(
+            Util.formatUnitDurations({ minute: 2 }, Util.durationNames, {
+                format: true,
+                short: true,
+                spaceOnShort: true
+            })
+        ).toBe("2 m");
     });
 
     test("coordinates async helpers and timeouts", async () => {
@@ -227,10 +239,14 @@ describe("Util", () => {
     });
 
     test("formats duration and handles units", () => {
+        const options = { format: true, short: true, spaceOnShort: true };
+
         expect(Util.duration(5000)).toEqual({ second: 5 });
         expect(Util.duration(5000, { format: true })).toBe("5 seconds");
         expect(Util.duration(1000, { format: true })).toBe("1 second");
         expect(Util.duration(5000, { format: true, short: true })).toBe("5s");
+        expect(Util.duration(5000, options)).toBe("5s");
+        expect(options).toEqual({ format: true, short: true, spaceOnShort: true });
         expect(Util.duration(65000, { format: true, short: true })).toBe("1m, 5s");
         expect(Util.duration(65000, { format: true, short: true, largestOnly: true })).toBe("1m");
         expect(Util.duration(125000, { format: true, largestOnly: true, digits: 2 })).toBe("2.08 minutes");
@@ -248,9 +264,13 @@ describe("Util", () => {
     });
 
     test("formats byte sizes with formatSize", () => {
+        const options = { short: true, spaceOnShort: false };
+
         expect(Util.formatSize(1024)).toBe("1 kilobyte");
         expect(Util.formatSize(2048)).toBe("2 kilobytes");
         expect(Util.formatSize(1024, { short: true })).toBe("1 KB");
+        expect(Util.formatSize(1024, options)).toBe("1 KB");
+        expect(options).toEqual({ short: true, spaceOnShort: false });
         expect(Util.formatSize(1048576, { short: true })).toBe("1 MB");
         expect(Util.formatSize(1200000, { short: true })).toBe("1.14 MB");
         expect(Util.formatSize(null)).toBe("0 bytes");

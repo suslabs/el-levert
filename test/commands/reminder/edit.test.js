@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
+import Util from "../../../src/util/Util.js";
+
 import {
     cleanupRuntime,
     createCommandMessage,
@@ -33,7 +35,7 @@ describe("reminder edit command", () => {
 
         const { items: reminders } = await runtime.client.reminderManager.list({ user: msg.author.id }, { all: true });
         expect(reminders[0].msg).toBe("Original task");
-        expect(reminders[0].end).toBeGreaterThan(Date.now() + 3_600_000);
+        expect(reminders[0].start).toBeGreaterThan(Date.now() + 3_600_000);
         expect(reminders[0].interval).toBe(86_400_000);
     });
 
@@ -45,7 +47,7 @@ describe("reminder edit command", () => {
         expect(outEvery).toContain("(every 2 days)");
 
         let { items: reminders } = await runtime.client.reminderManager.list({ user: msg.author.id }, { all: true });
-        expect(reminders[0].interval).toBe(172_800_000);
+        expect(reminders[0].interval).toBe("2D");
 
         const outClear = await executeCommand(command, "edit 1 --clear-every", { msg });
         expect(outClear).toContain("Updated reminder **1**");
@@ -65,8 +67,41 @@ describe("reminder edit command", () => {
         const { items: reminders } = await runtime.client.reminderManager.list({ user: msg.author.id }, { all: true });
 
         expect(reminders[0].msg).toBe("Original task");
-        expect(reminders[0].end).toBeGreaterThan(Date.now() + 7_200_000);
+        expect(reminders[0].start).toBeGreaterThan(Date.now() + 7_200_000);
         expect(reminders[0].interval).toBe(18_000_000);
+    });
+
+    test("keeps the cutoff when changing the schedule and removes it only when requested", async () => {
+        const command = getCommand(runtime, "reminder");
+        const { items } = await runtime.client.reminderManager.list({ user: msg.author.id }, { all: true });
+        const reminder = Util.first(items);
+        reminder.end = reminder.start + (10 * Util.durationSeconds.day) / Util.durationSeconds.milli;
+        await runtime.client.reminderManager.remind_db.update(reminder);
+
+        expect(await executeCommand(command, "edit 1 in 2 hours --every 1d", { msg })).toContain("Updated reminder");
+        let saved = await runtime.client.reminderManager.remind_db.fetchById(reminder.id);
+        expect(saved.end).toBe(reminder.end);
+
+        expect(await executeCommand(command, "edit 1 --clear-end", { msg })).toContain("Updated reminder");
+        saved = await runtime.client.reminderManager.remind_db.fetchById(reminder.id);
+        expect(saved.end).toBeNull();
+    });
+
+    test("uses the next occurrence when converting a recurrence to a one-time reminder", async () => {
+        const command = getCommand(runtime, "reminder");
+        const { items } = await runtime.client.reminderManager.list({ user: msg.author.id }, { all: true });
+        const reminder = Util.first(items);
+        const day = Util.durationSeconds.day / Util.durationSeconds.milli;
+
+        reminder.start = Date.now() - day;
+        reminder.interval = "1D";
+        await runtime.client.reminderManager.remind_db.update(reminder);
+
+        expect(await executeCommand(command, "edit 1 --clear-every", { msg })).toContain("Updated reminder");
+
+        const saved = await runtime.client.reminderManager.remind_db.fetchById(reminder.id);
+        expect(saved.start).toBeGreaterThan(Date.now());
+        expect(saved.interval).toBeNull();
     });
 
     test("works with aliases change and modify", async () => {

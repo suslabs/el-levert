@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 
+import Util from "../../../src/util/Util.js";
 import RateLimiter from "../../../src/util/misc/RateLimiter.js";
 
 describe("RateLimiter", () => {
@@ -188,19 +189,20 @@ describe("RateLimiter", () => {
         expect(limiter.size).toBe(0);
     });
 
-    test("periodic sweep interval cleans up items and destroy clears timer", () => {
+    test("periodic sweep interval cleans up items and destroy stops the loop", () => {
         vi.useFakeTimers();
 
-        const limiter = new RateLimiter(5, 1000, { sweepInterval: 500 });
+        const interval = Util.durationSeconds.milli / Util.durationSeconds.milli;
+        const limiter = new RateLimiter(5, 5 * interval, { sweepInterval: interval });
 
         limiter.check("key1", Date.now());
         expect(limiter.size).toBe(1);
 
-        vi.advanceTimersByTime(1100);
+        vi.advanceTimersByTime(20 * interval);
         expect(limiter.size).toBe(0);
 
-        limiter.destroy();
-        expect(limiter._sweepTimer).toBeNull();
+        expect(limiter.destroy()).toBeUndefined();
+        expect(limiter._sweepLoop.running).toBe(false);
 
         vi.useRealTimers();
     });

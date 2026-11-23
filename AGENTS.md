@@ -79,3 +79,18 @@ Don't test after every little change. Only test after a major change set. Unders
     - Phase 3 — Audit: Perform a rigorous review pass on the diff. Inspect every changed line against requirements, interface completeness, layer boundaries, and error propagation.
     - Phase 4 — Fix, Optimize & Clean Up: Address any mistakes or gaps uncovered during the audit, eliminate redundancy, optimize data flow and async paths, and ensure zero dead remnants before concluding.
 - Don't test after every little change. Only test after a major change set. Understood?
+
+When reading option objects, normalize them with `options = ObjectUtil.guaranteeObject(options);`, then assign each option to a named local using `options.name ?? default`. Do not destructure options or pass `options.name` through downstream logic. When omission and explicit `null` have different meanings, preserve presence separately from the normalized value. For any convention these rules do not specify, inspect comparable repository code and follow its established pattern; do not invent a local style by preference.
+
+Do not stop at the smallest patch when the affected design is flawed. Step back, replace the affected path with a coherent design, update every caller and persisted representation that depends on it, and remove the obsolete implementation. Do not treat existing code as legacy that must be preserved. Keep the scope centered on the affected subsystem, but make every change needed for that subsystem to be correct and consistent.
+
+Do not create parallel implementations of the same concept. Keep one source of truth for state, calculations, validation, and behavior; extend or replace the existing owner and migrate all consumers instead of adding duplicate helpers, flags, timestamps, or fallback paths.
+
+Carry authorized work through completion. Continue investigating, implementing, auditing, and verifying until the requested behavior works and all known issues introduced by the work are resolved. Do not stop at a partial implementation or report unfinished work as the result when further progress is possible. If an external blocker makes completion impossible, state the blocker and what remains.
+
+## Execution and completion
+
+- Finish all requested work and resolve known defects before stopping; do not leave partial implementations or unverified changes when progress is possible.
+- Make reasonable choices for routine details and document material assumptions; do not pause for routine confirmation.
+- After a cohesive change set, run the relevant tests or build, investigate failures, and rerun until they pass.
+- Return control when the requested work and verification are complete, or when an external blocker prevents further progress; explain the blocker and remaining work.

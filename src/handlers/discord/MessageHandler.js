@@ -293,8 +293,7 @@ class MessageHandler extends Handler {
         }
 
         if (this.hasUserTracker) {
-            this.userTracker.clearUsers();
-            this.userTracker._stopSweepLoop();
+            this.userTracker.destroy();
         }
 
         this.constructor._rateLimiter?.clear();

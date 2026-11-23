@@ -35,11 +35,11 @@ describe("UserTracker", () => {
         tracker.clearUsers();
         tracker.addUser("old");
         tracker.findUser("old").timestamp = Date.now() - 100;
-        tracker._sweepUsers();
+        expect(tracker._sweepUsers()).toBeUndefined();
         expect(tracker.findUser("old")).toBeNull();
 
         tracker.clearUsers();
         expect(tracker.items.size).toBe(0);
-        tracker._stopSweepLoop();
+        expect(tracker.destroy()).toBeUndefined();
     });
 });

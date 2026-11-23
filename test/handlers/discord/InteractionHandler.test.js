@@ -6,6 +6,7 @@ import { cleanupRuntime, createRuntime } from "../../helpers/runtimeHarness.js";
 
 let runtime;
 let handler;
+let MessageHandler;
 
 beforeEach(async () => {
     runtime = await createRuntime({
@@ -15,6 +16,7 @@ beforeEach(async () => {
     });
 
     handler = runtime.client.interactionHandler;
+    ({ default: MessageHandler } = await import("../../../src/handlers/discord/MessageHandler.js"));
 });
 
 afterEach(async () => {
@@ -23,6 +25,16 @@ afterEach(async () => {
 });
 
 describe("InteractionHandler", () => {
+    test("runs the synchronous parent unload and stops its tracker", async () => {
+        const parentUnload = vi.spyOn(MessageHandler.prototype, "unload");
+
+        await handler.unload();
+
+        expect(parentUnload).toHaveBeenCalledOnce();
+        expect(handler.tracker._sweepLoop.running).toBe(false);
+        parentUnload.mockRestore();
+    });
+
     test("ignores non-component interactions", async () => {
         const interaction = {
             isMessageComponent: () => false,

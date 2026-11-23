@@ -35,6 +35,6 @@ describe("InteractionTracker", () => {
         expect(tracker.hasSession("1")).toBe(false);
         expect(destroyMock).toHaveBeenCalledWith(true);
 
-        tracker.destroy();
+        await tracker.destroy();
     });
 });

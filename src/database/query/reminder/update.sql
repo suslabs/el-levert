@@ -1,1 +1,1 @@
-UPDATE Reminders SET 'end' = $end, 'interval' = $interval WHERE id = $id;
+UPDATE Reminders SET 'start' = $start, 'end' = $end, 'interval' = $interval WHERE id = $id;

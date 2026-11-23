@@ -33,17 +33,18 @@ describe("reminder add command", () => {
         await expect(executeCommand(command, 'add in 1 hour "Pay rent"', { msg })).resolves.toContain(
             "You will be reminded"
         );
+        await expect(executeCommand(command, "add in 2 hours", { msg })).resolves.toContain("You will be reminded");
         await expect(executeCommand(command, 'add every 1d "Standup meeting"', { msg })).resolves.toContain(
-            "(every 1 day)"
+            "(every day)"
         );
         await expect(executeCommand(command, 'add every 10d 12:46 "Check backups"', { msg })).resolves.toContain(
             "(every 1 week, 3 days)"
         );
         await expect(executeCommand(command, 'add 12:46 every 1d "Standup"', { msg })).resolves.toContain(
-            "(every 1 day)"
+            "(every day)"
         );
         await expect(executeCommand(command, 'add 12:46 "Take meds" --every 1d', { msg })).resolves.toContain(
-            "(every 1 day)"
+            "(every day)"
         );
         await expect(executeCommand(command, 'add 12:46 "Test" --every invalid', { msg })).resolves.toContain(
             "Invalid recurring interval"
@@ -71,6 +72,18 @@ describe("reminder add command", () => {
         expect(res).toContain("You will be reminded");
         expect(res).toContain("Check this important task tomorrow");
         expect(res).toContain("https://discord.com/channels/guild-111/ch-67890/msg-12345");
+    });
+
+    test("stores a monthly schedule with its cutoff", async () => {
+        const command = getCommand(runtime, "reminder");
+        const result = await executeCommand(command, 'add every 1 month for 1 month "Monthly"', { msg });
+        const { items } = await runtime.client.reminderManager.list({ user: msg.author.id }, { all: true });
+        const reminder = items.find(item => item.msg === "Monthly");
+
+        expect(result).toContain("shortly and then on");
+        expect(result).toContain("every month until");
+        expect(reminder.interval).toBe("1M");
+        expect(reminder.end).toBe(reminder.getOccurrence(1));
     });
 });
 
@@ -110,7 +123,7 @@ describe("Merged Branch Coverage", () => {
             expect(savedReminder.at(0).msg).toBe('say "hi"');
 
             runtime.client.reminderManager.add = async () => {
-                const err = new Error("Invalid end time");
+                const err = new Error("Invalid start time");
                 err.name = "ReminderError";
                 throw err;
             };

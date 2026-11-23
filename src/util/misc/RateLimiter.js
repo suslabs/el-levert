@@ -1,6 +1,7 @@
 import Util from "../Util.js";
 import TypeTester from "../TypeTester.js";
 import ObjectUtil from "../ObjectUtil.js";
+import IntervalLoop from "./IntervalLoop.js";
 
 import UtilError from "../../errors/UtilError.js";
 
@@ -41,10 +42,10 @@ class RateLimiter {
         ObjectUtil.setValuesWithDefaults(this, options, this.constructor.defaultValues);
 
         this.items = new Map();
-        this._sweepTimer = null;
+        this._sweepLoop = new IntervalLoop(this._sweepItems, this.sweepInterval);
 
         if (this.sweepInterval > 0) {
-            this._startSweepLoop();
+            this._sweepLoop.start();
         }
     }
 
@@ -229,7 +230,7 @@ class RateLimiter {
     }
 
     destroy() {
-        this._stopSweepLoop();
+        this._sweepLoop.stop();
         this.clear();
     }
 
@@ -276,23 +277,6 @@ class RateLimiter {
             this._pruneBucket(id, now);
         }
     };
-
-    _startSweepLoop() {
-        if (this._sweepTimer !== null) {
-            this._stopSweepLoop();
-        }
-
-        this._sweepTimer = setInterval(this._sweepItems, this.sweepInterval);
-    }
-
-    _stopSweepLoop() {
-        if (this._sweepTimer === null) {
-            return;
-        }
-
-        clearInterval(this._sweepTimer);
-        this._sweepTimer = null;
-    }
 }
 
 export default RateLimiter;

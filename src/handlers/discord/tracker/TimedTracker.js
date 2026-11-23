@@ -3,6 +3,8 @@ import Tracker from "./Tracker.js";
 import { getLogger } from "../../../LevertClient.js";
 
 import Util from "../../../util/Util.js";
+import ArrayUtil from "../../../util/ArrayUtil.js";
+import IntervalLoop from "../../../util/misc/IntervalLoop.js";
 
 class TimedTracker extends Tracker {
     constructor(sweepInterval = 0, options) {
@@ -12,16 +14,20 @@ class TimedTracker extends Tracker {
         this.enableChecks = sweepInterval > 0;
         this.enableSweep = this.enableChecks;
 
-        this._sweepTimer = null;
+        this._sweepLoop = new IntervalLoop(this._sweepItems, this.sweepInterval, err =>
+            getLogger().error(`Error while sweeping ${this.constructor.itemName}s:`, err)
+        );
 
         if (this.enableChecks) {
-            this._startSweepLoop();
+            this._sweepLoop.start();
         }
     }
 
     destroy() {
-        this._stopSweepLoop();
+        const stopped = this._sweepLoop.stop();
+
         this.clearItems();
+        return stopped;
     }
 
     static _sweepFunc(itemName) {
@@ -45,17 +51,21 @@ class TimedTracker extends Tracker {
         }
     }
 
-    async _onExpire(item) {
-        if (typeof item?.destroy === "function") {
-            try {
-                await item.destroy(true);
-            } catch (err) {
-                getLogger().error(`Error while destroying expired ${this.constructor.itemName}:`, err);
-            }
+    _onExpire(item) {
+        if (typeof item.destroy !== "function") {
+            return;
+        }
+
+        const onError = err => getLogger().error(`Error while destroying expired ${this.constructor.itemName}:`, err);
+
+        try {
+            return Util.maybeAsyncThen(item.destroy(true), null, onError);
+        } catch (err) {
+            onError(err);
         }
     }
 
-    _sweepItems = async () => {
+    _sweepItems = () => {
         const now = Date.now(),
             expired = [];
 
@@ -71,28 +81,11 @@ class TimedTracker extends Tracker {
             }
         }
 
-        for (const [id, item] of expired) {
+        return ArrayUtil.maybeAsyncForEach(expired, ([id, item]) => {
             this.removeItem(id);
-            await this._onExpire(item);
-        }
+            return this._onExpire(item);
+        });
     };
-
-    _startSweepLoop() {
-        if (this._sweepTimer !== null) {
-            this._stopSweepLoop();
-        }
-
-        this._sweepTimer = setInterval(this._sweepItems, this.sweepInterval);
-    }
-
-    _stopSweepLoop() {
-        if (this._sweepTimer === null) {
-            return;
-        }
-
-        clearInterval(this._sweepTimer);
-        this._sweepTimer = null;
-    }
 }
 
 export default TimedTracker;

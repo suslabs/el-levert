@@ -29,8 +29,8 @@ describe("ChannelTransport", () => {
 
         expect(resolved.channel).toBe(cachedChannel);
         expect(resolved.getDisabledMessage()).toContain("Disabled");
-        resolved.close();
-        provided.close();
+        await resolved.close();
+        await provided.close();
     });
 });
 

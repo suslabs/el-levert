@@ -6,6 +6,7 @@ import { EmbedColors, defaultColor } from "./EmbedColors.js";
 import Util from "../../util/Util.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
+import IntervalLoop from "../../util/misc/IntervalLoop.js";
 import { isErrorCode } from "../../util/discord/ErrorCodes.js";
 
 import LoggerError from "../../errors/LoggerError.js";
@@ -41,9 +42,11 @@ class BaseDiscordTransport extends Transport {
         }
 
         this._buffer = [];
-        this._sendTimer = null;
+        this._sendLoop = new IntervalLoop(this._sendLogs, this.sendInterval, err => this._handleDiscordError(err));
 
-        this._startSendLoop();
+        if (this.sendDelayed) {
+            this._sendLoop.start();
+        }
     }
 
     get sendDelayed() {
@@ -68,12 +71,13 @@ class BaseDiscordTransport extends Transport {
     }
 
     close() {
-        if (typeof this.onClose === "function") {
-            this.onClose();
-        }
-
         this.initialized = false;
-        this._stopSendLoop();
+
+        return Util.maybeAsyncThen(this._sendLoop.stop(), () => {
+            if (typeof this.onClose === "function") {
+                return this.onClose();
+            }
+        });
     }
 
     static _disableCodes = [];
@@ -157,7 +161,7 @@ class BaseDiscordTransport extends Transport {
         await this.sendLog(out);
     }
 
-    _sendLogs = () => {
+    _sendLogs = async () => {
         if (!this.initialized) {
             return;
         }
@@ -168,7 +172,7 @@ class BaseDiscordTransport extends Transport {
             return;
         }
 
-        this._logToDiscord(info).catch(err => this._handleDiscordError(err));
+        await this._logToDiscord(info);
     };
 
     _handleDiscordError(err) {
@@ -187,21 +191,6 @@ class BaseDiscordTransport extends Transport {
 
             this.close();
         }
-    }
-
-    _startSendLoop() {
-        if (this.sendDelayed) {
-            this._sendTimer = setInterval(this._sendLogs, this.sendInterval);
-        }
-    }
-
-    _stopSendLoop() {
-        if (this._sendTimer === null) {
-            return;
-        }
-
-        clearInterval(this._sendTimer);
-        this._sendTimer = null;
     }
 }
 

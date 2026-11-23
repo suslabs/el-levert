@@ -24,8 +24,6 @@ describe("Benchmark", () => {
     afterEach(() => {
         Benchmark.clear();
         Benchmark.maxTimepointAge = 5 * 60 * 1000;
-        Benchmark._timepointSweepInterval = 30 * 1000;
-
         vi.useRealTimers();
         vi.restoreAllMocks();
     });
@@ -38,6 +36,14 @@ describe("Benchmark", () => {
 
         expect(Benchmark.stopTiming("__t1__1")).toBe(9);
         expect(Benchmark.getTime("__t1__1", false)).toBe(9);
+    });
+
+    test("starts and stops its sweep loop with active timepoints", () => {
+        Benchmark.startTiming("active");
+        expect(Benchmark._timepointSweepLoop.running).toBe(true);
+
+        Benchmark.stopTiming("active", false);
+        expect(Benchmark._timepointSweepLoop.running).toBe(false);
     });
 
     test("supports string count names", () => {

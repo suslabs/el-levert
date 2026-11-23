@@ -46,12 +46,12 @@ afterEach(async () => {
 });
 
 describe("ReminderDatabase", () => {
-    test("stores reminders with generated ids and returns them sorted by end time", async () => {
+    test("stores reminders with generated ids and returns them sorted by start time", async () => {
         const db = await track(createReminderDb());
 
-        await db.add(new Reminder({ user: "42", end: 3000, msg: "late" }));
-        await db.add(new Reminder({ user: "42", end: 1000, msg: "early" }));
-        await db.add(new Reminder({ user: "99", end: 2000, msg: "other" }));
+        await db.add(new Reminder({ user: "42", start: 3000, msg: "late" }));
+        await db.add(new Reminder({ user: "42", start: 1000, msg: "early" }));
+        await db.add(new Reminder({ user: "99", start: 2000, msg: "other" }));
 
         expect(await db.exists("42")).toBe(true);
         expect(await db.exists("404")).toBe(false);
@@ -74,12 +74,12 @@ describe("ReminderDatabase", () => {
         expect((await db.list()).map(reminder => reminder.user)).toEqual(["99"]);
     });
 
-    test("fetches by id, updates end time and interval", async () => {
+    test("fetches by id, updates the static schedule, and interval", async () => {
         const db = await track(createReminderDb()),
             minuteMs = Util.durationSeconds.minute / Util.durationSeconds.milli,
             twoMinutesMs = (2 * Util.durationSeconds.minute) / Util.durationSeconds.milli;
 
-        await db.add(new Reminder({ user: "42", end: 1000, msg: "repeat", interval: minuteMs }));
+        await db.add(new Reminder({ user: "42", start: 1000, msg: "repeat", interval: minuteMs }));
         const list = await db.fetch("42");
         expect(list).toHaveLength(1);
 
@@ -91,16 +91,38 @@ describe("ReminderDatabase", () => {
         expect(fetched.msg).toBe("repeat");
         expect(fetched.interval).toBe(minuteMs);
 
-        reminder.end = 2000;
+        reminder.start = 2000;
+        reminder.end = 2000 + twoMinutesMs;
         reminder.interval = twoMinutesMs;
         await db.update(reminder);
 
         const updated = await db.fetchById(reminder.id);
-        expect(updated.end).toBe(2000);
+        expect(updated.start).toBe(2000);
+        expect(updated.end).toBe(2000 + twoMinutesMs);
         expect(updated.msg).toBe("repeat");
         expect(updated.interval).toBe(twoMinutesMs);
 
         expect(await db.fetchById(99999)).toBeNull();
+    });
+
+    test("sorts by the next occurrence before applying pagination", async () => {
+        const db = await track(createReminderDb());
+        const now = Date.now();
+        const minute = Util.durationSeconds.minute / Util.durationSeconds.milli;
+
+        await db.add(new Reminder({ user: "42", start: now - minute, msg: "recurring", interval: minute }));
+        await db.add(new Reminder({ user: "42", start: now + minute / 2, msg: "first" }));
+
+        expect((await db.fetch("42", { limit: 1 })).map(item => item.msg)).toEqual(["first"]);
+        expect((await db.fetch("42", { limit: 1, offset: 1 })).map(item => item.msg)).toEqual(["recurring"]);
+    });
+
+    test("persists a calendar interval", async () => {
+        const db = await track(createReminderDb());
+        const reminder = new Reminder({ user: "42", start: Date.now(), msg: "monthly", interval: "1M" });
+
+        await db.add(reminder);
+        expect((await db.fetchById(reminder.id)).interval).toBe("1M");
     });
 
     test("migrates a totally unmigrated database lacking interval column and migrations table", async () => {
@@ -131,20 +153,21 @@ describe("ReminderDatabase", () => {
         const migrationRows = Array.from(await rawDb.db.all("SELECT id FROM migrations ORDER BY id ASC;")).map(
             row => row.id
         );
-        expect(migrationRows).toEqual([1]);
+        expect(migrationRows).toEqual([1, 2]);
 
         const reminders = await rawDb.fetch("user1");
         expect(reminders).toHaveLength(1);
         expect(reminders[0]).toMatchObject({
             user: "user1",
-            end: 5000,
+            start: 5000,
+            end: null,
             msg: "legacy msg",
             interval: null
         });
 
         const newReminder = new Reminder({
             user: "user1",
-            end: 10000,
+            start: 10000,
             msg: "recurring msg",
             interval: (60 * Util.durationSeconds.minute) / Util.durationSeconds.milli
         });

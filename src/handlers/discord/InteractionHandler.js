@@ -101,7 +101,8 @@ class InteractionHandler extends MessageHandler {
     }
 
     unload() {
-        this.tracker.destroy();
+        super.unload();
+        return this.tracker.destroy();
     }
 
     _parseSessionId(customId) {

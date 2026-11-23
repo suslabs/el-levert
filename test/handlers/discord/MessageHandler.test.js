@@ -256,8 +256,7 @@ describe("MessageHandler", () => {
         handler.load();
 
         const clearTrackedMsgs = vi.spyOn(handler.replyTracker, "clearTrackedMsgs");
-        const clearUsers = vi.spyOn(handler.userTracker, "clearUsers");
-        const stopSweepLoop = vi.spyOn(handler.userTracker, "_stopSweepLoop");
+        const destroyUserTracker = vi.spyOn(handler.userTracker, "destroy");
 
         handler.replyTracker.deleteWithCallback = vi.fn().mockResolvedValueOnce(true);
         await expect(
@@ -266,11 +265,10 @@ describe("MessageHandler", () => {
             })
         ).resolves.toBe(true);
 
-        handler.unload();
+        await handler.unload();
 
         expect(clearTrackedMsgs).toHaveBeenCalledTimes(1);
-        expect(clearUsers).toHaveBeenCalledTimes(1);
-        expect(stopSweepLoop).toHaveBeenCalledTimes(1);
+        expect(destroyUserTracker).toHaveBeenCalledTimes(1);
 
         const untrackedHandler = createHandler();
         untrackedHandler.hasReplyTracker = false;
@@ -450,7 +448,7 @@ describe("MessageHandler", () => {
         expect(await handler.checkRateLimit(modMsg)).toBe(false);
         expect(await handler.checkRateLimit(modMsg)).toBe(false);
 
-        handler.unload();
+        await handler.unload();
         expect(handler.rateLimiter.getRemaining("user-123")).toBe(2);
 
         MessageHandler.resetRateLimiter();
@@ -514,7 +512,7 @@ describe("MessageHandler", () => {
         await new Promise(resolve => setTimeout(resolve, 10));
 
         expect(deleteSpy).toHaveBeenCalled();
-        handler.unload();
+        await handler.unload();
     });
 
     test("enforces maxFileSize on intended files and overflow files without excess allocation", () => {

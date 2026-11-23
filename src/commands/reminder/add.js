@@ -7,8 +7,6 @@ import DateUtil from "../../util/commands/DateUtil.js";
 const messageRegex = /(.+?)\s*(?:(?:(['"`])((?:[^\2\\]|\\.)*?)\2)|$)/;
 
 class ReminderAddCommand {
-    static minInterval = Util.durationSeconds.minute / Util.durationSeconds.milli;
-
     static info = {
         name: "add",
         aliases: ["set", "create"],
@@ -16,8 +14,8 @@ class ReminderAddCommand {
         subcommand: true,
         args: '<date> ["message"] [--every <interval>]',
         description:
-            "Create a scheduled or recurring reminder. The date can be a relative duration (e.g. 10m, 2h, 3d), a timestamp, or a recurring interval (e.g. every 10d 12:46, 12:46 every 1d, daily at 12:46). An initial date/time can also be combined with the --every option to schedule recurring notifications. When run as a reply with no message text, extracts the replied message content.",
-        usage: '- <date>: When to trigger the reminder (e.g. 1h, 30m, 12:46, tomorrow at 18:00, every 10d 12:46, 12:46 every 1d).\n- ["message"]: Optional message text enclosed in quotes (or reply to a message).\n- --every, --interval, -e <interval>: Recurrence interval for repeated reminders (e.g. 1d, 2h, 10d).',
+            "Create a scheduled or recurring reminder. The date can be a relative duration (e.g. 10m, 2h, 3d), a timestamp, or a recurring interval (e.g. every 10d 12:46, 12:46 every 1d, daily at 12:46). Recurrences can end after a duration or on a date (e.g. every 1 month for 1 month, every day until 2027). An initial date/time can also be combined with the --every option to schedule recurring notifications. When run as a reply with no message text, extracts the replied message content.",
+        usage: '- <date>: When to trigger the reminder (e.g. 1h, 30m, 12:46, tomorrow at 18:00, every 10d 12:46, 12:46 every 1d). Add `for <duration>` or `until <date>` to limit a recurrence.\n- ["message"]: Optional message text enclosed in quotes (or reply to a message).\n- --every, --interval, -e <interval>: Recurrence interval for repeated reminders (e.g. 1d, 2h, 10d).',
         parser: {
             requireArgs: true
         },
@@ -63,7 +61,7 @@ class ReminderAddCommand {
             return `${getEmoji("info")} ${this.getArgsHelp()}`;
         }
 
-        if (Util.nonemptyString(every) && DateUtil.parseInterval(every) === null) {
+        if (Util.nonemptyString(every) && DateUtil.parseInterval(every, true) === null) {
             return `${getEmoji("warn")} Invalid recurring interval: \`${every}\`.`;
         }
 
@@ -73,9 +71,10 @@ class ReminderAddCommand {
             return `${getEmoji("warn")} Invalid date: \`${date}\`.`;
         }
 
-        if (parsed.isRecurring && parsed.interval < ReminderAddCommand.minInterval) {
-            const minInterval = Util.duration(ReminderAddCommand.minInterval, { format: true });
-            return `${getEmoji("warn")} Repeat interval must be at least ${minInterval}.`;
+        const intervalError = this.parentCmd.checkInterval(parsed.interval);
+
+        if (intervalError !== null) {
+            return intervalError;
         }
 
         let message = ctx.arg("message"),
@@ -117,8 +116,9 @@ class ReminderAddCommand {
                 ctx.msg.author.id,
                 parsed.date,
                 message,
-                false,
-                parsed.interval
+                true,
+                parsed.interval,
+                parsed.end
             );
         } catch (err) {
             if (err.name !== "ReminderError") {
@@ -126,17 +126,21 @@ class ReminderAddCommand {
             }
 
             switch (err.message) {
-                case "Invalid end time":
+                case "Invalid start time":
                     return `${getEmoji("warn")} Can't add a reminder for a time in the past.`;
                 case "Invalid reminder interval":
                     return `${getEmoji("warn")} Invalid recurring interval.`;
+                case "Invalid reminder end time":
+                    return `${getEmoji("warn")} The repeat end date must be on or after the first reminder.`;
                 default:
                     return `${getEmoji("warn")} ${err.message}.`;
             }
         }
 
-        const format = reminder.format();
-        return `${getEmoji("info")} You will be reminded on ${format}`;
+        const format = reminder.format(),
+            when = parsed.isRecurring && parsed.date <= Date.now() ? "shortly and then on" : "on";
+
+        return `${getEmoji("info")} You will be reminded ${when} ${format}`;
     }
 }
 

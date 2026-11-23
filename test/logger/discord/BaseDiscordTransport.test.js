@@ -2,6 +2,8 @@ import { DiscordAPIError, RESTJSONErrorCodes } from "discord.js";
 import { describe, expect, test, vi, afterEach } from "vitest";
 import BaseDiscordTransport from "../../../src/logger/discord/BaseDiscordTransport.js";
 
+import Util from "../../../src/util/Util.js";
+
 class TestTransport extends BaseDiscordTransport {
     static $name = "discord.test";
     static _disableCodes = ["emptyMessage"];
@@ -53,7 +55,7 @@ describe("BaseDiscordTransport", () => {
         expect(transport.sent).toHaveLength(1);
         expect(transport.sent[0].embeds[0].data.description).toContain("hello");
 
-        transport.close();
+        await transport.close();
     });
 
     test("disables itself on configured Discord API errors", () => {
@@ -63,6 +65,43 @@ describe("BaseDiscordTransport", () => {
 
         transport._handleDiscordError(err);
         expect(transport.initialized).toBe(false);
+    });
+
+    test("serializes buffered sends and waits for an active send on close", async () => {
+        const interval = Util.durationSeconds.milli / Util.durationSeconds.milli;
+
+        let release;
+        const pending = new Promise(resolve => {
+            release = resolve;
+        });
+
+        let notifyStart;
+        const started = new Promise(resolve => {
+            notifyStart = resolve;
+        });
+
+        class SlowTransport extends BaseDiscordTransport {
+            static $name = "discord.slow";
+
+            async sendLog() {
+                notifyStart();
+                await pending;
+            }
+        }
+
+        const transport = new SlowTransport({ sendInterval: interval });
+        const send = vi.spyOn(transport, "sendLog");
+
+        transport.log({ level: "info", message: "first" }, () => {});
+        transport.log({ level: "info", message: "second" }, () => {});
+        await started;
+        await Util.delay(10 * interval);
+        expect(send).toHaveBeenCalledTimes(1);
+
+        const closing = transport.close();
+        release();
+        await closing;
+        expect(send).toHaveBeenCalledTimes(1);
     });
 });
 
@@ -160,8 +199,8 @@ describe("Merged Branch Coverage", () => {
 
             expect(closeSpy).not.toHaveBeenCalled();
 
-            transport._sendLogs();
-            transport.close();
+            await transport._sendLogs();
+            await transport.close();
         });
     });
 });

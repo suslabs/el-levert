@@ -29,7 +29,7 @@ describe("WebhookTransport", () => {
         expect(transport.webhookId).toBe("123");
         expect(transport.webhookToken).toBe("token_456");
 
-        transport.close();
+        await transport.close();
         expect(() => new WebhookTransport({ url: "bad-url" })).toThrow("Invalid webhook url");
     });
 });
