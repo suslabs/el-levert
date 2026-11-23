@@ -38,8 +38,10 @@ class AIReplyView {
         return Util.first(msg.embeds)?.description ?? msg.content;
     }
 
-    constructor() {
+    constructor(mention = null) {
         const config = getConfig().ai;
+
+        this.mention = mention;
 
         this.name = config.name;
         this.icon = config.icon ?? getClient().client.user.displayAvatarURL();
@@ -75,7 +77,7 @@ class AIReplyView {
         const components = session === null ? [] : [AIReplyView._createFollowUpRow(session)];
 
         return {
-            ...AIReplyView._createPayload(AIReplyView._addImages(embed, result.images), components),
+            ...this._createPayload(AIReplyView._addImages(embed, result.images), components),
             files: AIReplyView._createFiles(result.files, answer, answerLimit)
         };
     }
@@ -99,7 +101,7 @@ class AIReplyView {
             .setColor(AIReplyView.errorColor)
             .setDescription(`${getEmoji("error")} Thinking cancelled.`);
 
-        return AIReplyView._createPayload([embed]);
+        return this._createPayload([embed]);
     }
 
     renderError(err) {
@@ -107,11 +109,7 @@ class AIReplyView {
             .setColor(AIReplyView.errorColor)
             .setDescription(AIReplyView._formatError(err));
 
-        return AIReplyView._createPayload([embed]);
-    }
-
-    static _createPayload(embeds, components = []) {
-        return { embeds, components, attachments: [] };
+        return this._createPayload([embed]);
     }
 
     static _addImages(embed, images) {
@@ -223,6 +221,10 @@ class AIReplyView {
         }
     }
 
+    _createPayload(embeds, components = []) {
+        return { content: this.mention ?? "", embeds, components, attachments: [] };
+    }
+
     _createEmbed(title) {
         return new EmbedBuilder().setAuthor({ name: title, iconURL: this.icon });
     }
@@ -237,7 +239,7 @@ class AIReplyView {
             AIReplyView._joinSections(statusText, preview)
         );
 
-        return AIReplyView._createPayload([embed], [AIReplyView._createCancelRow(cancelSession)]);
+        return this._createPayload([embed], [AIReplyView._createCancelRow(cancelSession)]);
     }
 }
 

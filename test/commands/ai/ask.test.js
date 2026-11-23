@@ -279,7 +279,7 @@ describe("a command", () => {
         expect(finishInput.candidates).toContain("tag:steel");
 
         expect(recorder.sent[0]).toBe(":hourglass_flowing_sand: Processing command...");
-        expect(recorder.sent[1].content).toBeUndefined();
+        expect(recorder.sent[1].content).toBe("");
         expect(embedOf(recorder.sent[1])).toEqual({
             author: { name: "Test Rabbit - Thinking...", icon_url: "https://example.test/icon.png" },
             description: "▶️ *Thinking...*"
@@ -421,6 +421,7 @@ describe("a command", () => {
 
         expect(script).toEqual([]);
         expect(embedOf(click.reply.payloads.at(-1)).description).toBe("More.");
+        expect(click.reply.payloads.map(payload => payload.content)).toEqual([`<@${clickerId}>`, `<@${clickerId}>`]);
 
         const [hidden, restored] = recorder.msg.payloads;
 
