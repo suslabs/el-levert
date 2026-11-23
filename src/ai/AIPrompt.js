@@ -9,11 +9,12 @@ class AIPrompt {
         this.instructions = instructions;
     }
 
-    build(request, toolNames) {
-        return `${this.instructions}\n\n## RUNTIME CONTEXT\n${AIPrompt._runtimeLines(request, toolNames).join("\n")}`;
+    build(request, toolNames, effort) {
+        const lines = AIPrompt._runtimeLines(request, toolNames, effort);
+        return `${this.instructions}\n\n## RUNTIME CONTEXT\n${lines.join("\n")}`;
     }
 
-    static _runtimeLines(request, toolNames) {
+    static _runtimeLines(request, toolNames, effort) {
         const author = request.author;
 
         const lines = [
@@ -22,7 +23,8 @@ class AIPrompt {
             request.guild === null ? "- Location: direct messages" : `- Server: ${request.guild.name}`,
             `- Channel: <#${request.channel.id}>`,
             `- Asking user: ${author.globalName ?? author.username} — mention <@${author.id}>`,
-            `- Command prefix: ${getConfig().cmdPrefix}`
+            `- Command prefix: ${getConfig().cmdPrefix}`,
+            `- Effort: ${effort}`
         ];
 
         const attachments = AIPrompt._formatAttachments(request.msg);

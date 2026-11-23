@@ -323,6 +323,10 @@
                     "type": "integer",
                     "anyOf": [{ "const": -1 }, { "minimum": 1 }]
                 },
+                "quickMaxSteps": {
+                    "type": "integer",
+                    "minimum": 1
+                },
                 "timeLimit": {
                     "type": "number"
                 },
@@ -374,6 +378,7 @@
                 "thinkingLevel",
                 "toolThinkingLevel",
                 "maxSteps",
+                "quickMaxSteps",
                 "timeLimit",
                 "unlimitedTimeForAdmins",
                 "requestTimeout",

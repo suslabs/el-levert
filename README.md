@@ -602,6 +602,7 @@ Examples:
 Usage:
 
 - Attach an image, or reply to a message with `%a`, to ask about it.
+- Casual or simple questions get a short, quick answer. Detailed questions get a thorough one.
 - The reply shows what the assistant is doing as it works. Press **Cancel** to stop it.
 - Answers list the sources they used and a few follow-up questions. Click a number to ask that follow-up.
 - Reply to an answer without a command to keep the conversation going.

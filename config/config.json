@@ -105,8 +105,9 @@
             "gemini-flash-latest"
         ],
         "thinkingLevel": "minimal",
-        "toolThinkingLevel": "medium",
+        "toolThinkingLevel": "low",
         "maxSteps": -1,
+        "quickMaxSteps": 2,
         "timeLimit": 45,
         "unlimitedTimeForAdmins": true,
         "requestTimeout": 20,

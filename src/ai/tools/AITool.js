@@ -1,7 +1,11 @@
 import AIPhases from "../../structures/ai/AIPhases.js";
 
+import { getLogger } from "../../LevertClient.js";
+
 import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
+import LoggerUtil from "../../util/LoggerUtil.js";
+import AIUtil from "../../util/ai/AIUtil.js";
 
 import AIError from "../../errors/AIError.js";
 
@@ -83,6 +87,9 @@ class AITool {
     }
 
     async _execute(args, session) {
+        getLogger().debug(`AI tool "${this.name}" called with args:${LoggerUtil.formatLog(args)}`);
+
+        const startTime = Date.now();
         let out;
 
         try {
@@ -95,7 +102,12 @@ class AITool {
             out = { error: err.message };
         }
 
-        return this._limitOutput(out);
+        getLogger().debug(`AI tool "${this.name}" took ${AIUtil.formatElapsed(startTime)}.`);
+
+        const limited = this._limitOutput(out);
+        getLogger().debug(`AI tool "${this.name}" returned:${LoggerUtil.formatLog(limited)}`);
+
+        return limited;
     }
 
     _limitOutput(out) {

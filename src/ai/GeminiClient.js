@@ -4,12 +4,16 @@ import Util from "../util/Util.js";
 import ObjectUtil from "../util/ObjectUtil.js";
 import SSEUtil from "../util/misc/SSEUtil.js";
 import StreamUtil from "../util/misc/StreamUtil.js";
+import HTTPUtil from "../util/vm/HTTPUtil.js";
 import { httpStatusCodes, isServerErrorStatus, isSuccessStatus } from "../util/misc/HttpStatusCodes.js";
 
 import AIError from "../errors/AIError.js";
 
 class GeminiClient {
     static minTimeout = 1 / Util.durationSeconds.milli;
+
+    static generateMethod = "generateContent";
+    static streamMethod = "streamGenerateContent?alt=sse";
 
     constructor(http, apiKeys, options) {
         options = ObjectUtil.guaranteeObject(options);
@@ -133,8 +137,8 @@ class GeminiClient {
     }
 
     _getUrl(model, stream) {
-        const base = `${this.endpoint}/models/${encodeURIComponent(model)}`;
-        return stream ? `${base}:streamGenerateContent?alt=sse` : `${base}:generateContent`;
+        const method = stream ? GeminiClient.streamMethod : GeminiClient.generateMethod;
+        return HTTPUtil.joinUrl(this.endpoint, "models", `${encodeURIComponent(model)}:${method}`);
     }
 
     _buildBody(body, state, thinkingLevel) {

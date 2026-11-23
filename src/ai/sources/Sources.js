@@ -1,6 +1,8 @@
 import AISourceTypes from "../../structures/ai/AISourceTypes.js";
 import PackModes from "../../structures/ai/PackModes.js";
 
+import HTTPUtil from "../../util/vm/HTTPUtil.js";
+
 const nomiCeuOverrides = "https://raw.githubusercontent.com/Nomi-CEu/Nomi-CEu/main/overrides/config-overrides";
 
 const Sources = Object.freeze({
@@ -20,8 +22,8 @@ const Sources = Object.freeze({
         type: AISourceTypes.questbook,
         options: {
             urls: {
-                [PackModes.normal]: `${nomiCeuOverrides}/normal/betterquesting/DefaultQuests.json`,
-                [PackModes.expert]: `${nomiCeuOverrides}/expert/betterquesting/DefaultQuests.json`
+                [PackModes.normal]: HTTPUtil.joinUrl(nomiCeuOverrides, "normal/betterquesting/DefaultQuests.json"),
+                [PackModes.expert]: HTTPUtil.joinUrl(nomiCeuOverrides, "expert/betterquesting/DefaultQuests.json")
             },
             mode: PackModes.normal
         }

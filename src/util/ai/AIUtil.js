@@ -36,6 +36,10 @@ const AIUtil = Object.freeze({
         };
     },
 
+    formatElapsed: startTime => {
+        return `${Util.formatNumber(Util.timeDelta(Date.now(), startTime))} ms`;
+    },
+
     cleanList: list => {
         const items = ArrayUtil.guaranteeArray(list, null, true).map(item => String(item).trim());
         return ArrayUtil.unique(items.filter(Util.nonemptyString));
