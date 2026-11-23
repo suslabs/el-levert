@@ -8,8 +8,6 @@ import { getClient } from "../../../LevertClient.js";
 import Util from "../../../util/Util.js";
 import ArrayUtil from "../../../util/ArrayUtil.js";
 
-import AIError from "../../../errors/AIError.js";
-
 class SearchTagsTool extends TagTool {
     static info = {
         name: "search_tags",
@@ -36,13 +34,9 @@ class SearchTagsTool extends TagTool {
     }
 
     async execute(args) {
-        const query = String(args.query ?? "").trim();
+        const query = this.requireString(args, "query");
 
-        if (Util.empty(query)) {
-            throw new AIError("query is required");
-        }
-
-        const limit = Util.clamp(args.limit ?? SearchTagsTool.defaultLimit, 1, SearchTagsTool.maxLimit);
+        const limit = this.getLimit(args);
 
         const tagManager = getClient().tagManager;
 

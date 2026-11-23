@@ -28,6 +28,11 @@ class EchoTool extends AITool {
     }
 }
 
+class LimitedTool extends EchoTool {
+    static defaultLimit = 5;
+    static maxLimit = 8;
+}
+
 class GatedTool extends EchoTool {
     isAvailable(session) {
         return session.allowed;
@@ -94,5 +99,18 @@ describe("AITool", () => {
         expect(step.phase).toBe(AIPhases.running);
         expect(step.emoji).toBe("🧪");
         expect(step.status).toBe(`Echoing ${Util.trimString(`a b${"c".repeat(100)}`, AITool.maxStatusArgLength)}`);
+    });
+
+    test("requires trimmed string args and clamps limits to the tool's bounds", () => {
+        const tool = new LimitedTool(manager);
+
+        expect(tool.requireString({ query: "  steel " }, "query")).toBe("steel");
+        expect(() => tool.requireString({ query: "  " }, "query")).toThrow("query is required");
+        expect(() => tool.requireString({}, "title")).toThrow("title is required");
+
+        expect(tool.getLimit({})).toBe(5);
+        expect(tool.getLimit({ limit: 50 })).toBe(8);
+        expect(tool.getLimit({ limit: -3 })).toBe(1);
+        expect(tool.getLimit({ limit: 50 }, 20)).toBe(20);
     });
 });

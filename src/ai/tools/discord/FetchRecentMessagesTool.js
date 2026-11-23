@@ -3,8 +3,6 @@ import ToolParams from "../ToolParams.js";
 
 import AIPhases from "../../../structures/ai/AIPhases.js";
 
-import Util from "../../../util/Util.js";
-
 class FetchRecentMessagesTool extends MessageHistoryTool {
     static info = {
         name: "fetch_recent_messages",
@@ -31,7 +29,7 @@ class FetchRecentMessagesTool extends MessageHistoryTool {
     }
 
     async execute(args, session) {
-        const limit = Util.clamp(args.limit ?? FetchRecentMessagesTool.defaultLimit, 1, MessageHistoryTool.pageSize);
+        const limit = this.getLimit(args, MessageHistoryTool.pageSize);
 
         const authorId = this.parseUserId(args.authorId),
             includeBots = args.includeBots ?? true;

@@ -7,8 +7,10 @@ function createContext() {
 
     return {
         sent,
+        isInteraction: false,
         deferReply: async () => sent.push(["defer"]),
-        reply: async data => (sent.push(["reply", data]), "msg")
+        reply: async data => (sent.push(["reply", data]), "msg"),
+        edit: async data => (sent.push(["edit", data]), "msg")
     };
 }
 
@@ -21,7 +23,7 @@ afterEach(() => {
 });
 
 describe("AIReplyUpdater", () => {
-    test("defers, then coalesces rapid updates into one reply with the latest payload", async () => {
+    test("replies once, then coalesces rapid updates into one edit with the latest payload", async () => {
         const ctx = createContext(),
             updater = new AIReplyUpdater(ctx);
 
@@ -34,7 +36,7 @@ describe("AIReplyUpdater", () => {
         expect(ctx.sent).toEqual([["defer"], ["reply", "start"]]);
 
         await vi.advanceTimersByTimeAsync(1);
-        expect(ctx.sent).toEqual([["defer"], ["reply", "start"], ["reply", "b"]]);
+        expect(ctx.sent).toEqual([["defer"], ["reply", "start"], ["edit", "b"]]);
     });
 
     test("finish drops pending updates and returns the final message", async () => {
@@ -46,6 +48,16 @@ describe("AIReplyUpdater", () => {
 
         await expect(updater.finish("done")).resolves.toBe("msg");
         await vi.advanceTimersByTimeAsync(AIReplyUpdater.minInterval * 2);
+
+        expect(ctx.sent).toEqual([["defer"], ["reply", "start"], ["edit", "done"]]);
+    });
+
+    test("updates interactions through their deferred reply", async () => {
+        const ctx = { ...createContext(), isInteraction: true },
+            updater = new AIReplyUpdater(ctx);
+
+        await updater.start("start");
+        await updater.finish("done");
 
         expect(ctx.sent).toEqual([["defer"], ["reply", "start"], ["reply", "done"]]);
     });

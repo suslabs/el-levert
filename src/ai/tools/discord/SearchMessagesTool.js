@@ -49,7 +49,7 @@ class SearchMessagesTool extends MessageHistoryTool {
 
         const matcher = this._createMatcher(query, args.isRegex ?? false);
 
-        const limit = Util.clamp(args.limit ?? SearchMessagesTool.defaultLimit, 1, SearchMessagesTool.maxLimit),
+        const limit = this.getLimit(args),
             scan = Util.clamp(
                 args.scanLimit ?? SearchMessagesTool.defaultScan,
                 MessageHistoryTool.pageSize,

@@ -123,14 +123,30 @@ function createRecorder() {
     const sent = [],
         msg = createSentMessage("answer-1");
 
+    let replies = 0;
+
+    const send = data => {
+        replies++;
+        sent.push(data);
+
+        return msg;
+    };
+
     const handler = {
-        reply: async (_, data) => (sent.push(data), msg),
-        contextReply: async (_, data) => (sent.push(data), msg),
+        reply: async (_, data) => send(data),
+        contextReply: async (_, data) => send(data),
         editFromContext: async (_, data) => (sent.push(data), msg),
         getReply: () => null
     };
 
-    return { sent, msg, handler };
+    return {
+        sent,
+        msg,
+        handler,
+        get replies() {
+            return replies;
+        }
+    };
 }
 
 function createAskContext(question, recorder, overrides = {}) {
@@ -278,9 +294,10 @@ describe("a command", () => {
         expect(finishInput.answer).toBe("Use the **EBF** to make steel. 144 mB/t is 2.88 B/s.");
         expect(finishInput.candidates).toContain("tag:steel");
 
-        expect(recorder.sent[0]).toBe(":hourglass_flowing_sand: Processing command...");
-        expect(recorder.sent[1].content).toBe("");
-        expect(embedOf(recorder.sent[1])).toEqual({
+        expect(recorder.replies).toBe(1);
+        expect(recorder.sent).not.toContain(":hourglass_flowing_sand: Processing command...");
+        expect(recorder.sent[0].content).toBe("");
+        expect(embedOf(recorder.sent[0])).toEqual({
             author: { name: "Test Rabbit - Thinking...", icon_url: "https://example.test/icon.png" },
             description: "💭 *Thinking...*"
         });
@@ -462,17 +479,19 @@ describe("a command", () => {
             discordOverrides: { fetchMessage: async (_, id) => messages.get(id) ?? null }
         });
 
-        const createSent = id => {
+        const createSent = (id, data) => {
             const sent = createDiscordMessage("", {
                 id,
                 author: botUser,
-                edit: async data => {
-                    sent.embeds = data.embeds.map(embed => ({ fields: [], ...embedOf({ embeds: [embed] }) }));
-                    return sent;
-                }
+                edit: async payload => setEmbeds(payload)
             });
 
-            messages.set(id, sent);
+            const setEmbeds = payload => {
+                sent.embeds = payload.embeds.map(embed => ({ fields: [], ...embedOf({ embeds: [embed] }) }));
+                return sent;
+            };
+
+            messages.set(id, setEmbeds(data));
             return sent;
         };
 
@@ -480,7 +499,7 @@ describe("a command", () => {
             const msg = createDiscordMessage(content, {
                 id,
                 author: createDiscordUser({ id: askerId }),
-                reply: async () => createSent(`${id}-answer`),
+                reply: async data => createSent(`${id}-answer`, data),
                 ...extra
             });
 
@@ -491,9 +510,13 @@ describe("a command", () => {
         const handler = runtime.client.commandHandler;
         runtime.client.client.user = botUser;
 
-        const replyTo = messageId => ({
+        const replyTo = (messageId, ping = true) => ({
             reference: { messageId },
-            mentions: { ...createDiscordMessage("").mentions, repliedUser: botUser }
+            mentions: {
+                ...createDiscordMessage("").mentions,
+                users: new Map(ping ? [[botUser.id, botUser]] : []),
+                repliedUser: botUser
+            }
         });
 
         await expect(handler.execute(createUserMsg("q-1", "%a hello"))).resolves.toBe(true);
@@ -525,7 +548,7 @@ describe("a command", () => {
         expect(messages.get("q-3-answer").embeds[0].description).toBe("Third answer.");
         expect(script).toEqual([]);
 
-        const silent = createUserMsg("q-6", "no ping", { reference: { messageId: "q-3-answer" } });
+        const silent = createUserMsg("q-6", "no ping", replyTo("q-3-answer", false));
         await expect(handler.execute(silent)).resolves.toBe(false);
 
         messages.get("q-3-answer").editedTimestamp = Date.now() - 2 * runtime.client.config.interactionTimeout;
@@ -701,7 +724,7 @@ describe("a command", () => {
             generatePath("third-model")
         ]);
 
-        const progress = recorder.sent.slice(1, -1).map(payload => embedOf(payload).description);
+        const progress = recorder.sent.slice(0, -1).map(payload => embedOf(payload).description);
         expect(progress.at(-1)).not.toContain("Half an");
 
         const embed = embedOf(recorder.sent.at(-1));
@@ -823,9 +846,9 @@ describe("a command", () => {
         const recorder = createRecorder(),
             running = getCommand(runtime, "a").handler(createAskContext("slow question", recorder));
 
-        await vi.waitFor(() => expect(recorder.sent).toHaveLength(2));
+        await vi.waitFor(() => expect(recorder.sent).toHaveLength(1));
 
-        const [cancel] = buttonsOf(recorder.sent[1]);
+        const [cancel] = buttonsOf(recorder.sent[0]);
         expect(cancel.label).toBe("Cancel");
 
         const other = createClick(cancel.custom_id, createDiscordUser({ id: clickerId }), recorder.msg);
@@ -846,7 +869,7 @@ describe("a command", () => {
             description: ":no_entry_sign: Thinking cancelled."
         });
         expect(cancelled.components).toEqual([]);
-        expect(recorder.sent).toHaveLength(2);
+        expect(recorder.sent).toHaveLength(1);
         expect(runtime.client.interactionHandler.getSession(cancel.custom_id.split(":").at(-1))).toBeNull();
     });
 

@@ -48,6 +48,20 @@ class AITool {
         return typeof parameters === "undefined" ? { name, description } : { name, description, parameters };
     }
 
+    requireString(args, name) {
+        const value = String(args[name] ?? "").trim();
+
+        if (Util.empty(value)) {
+            throw new AIError(`${name} is required`);
+        }
+
+        return value;
+    }
+
+    getLimit(args, maxLimit = this.constructor.maxLimit) {
+        return Util.clamp(args.limit ?? this.constructor.defaultLimit, 1, maxLimit);
+    }
+
     formatArg(value) {
         return Util.trimString(String(value ?? "").replaceAll("\n", " "), AITool.maxStatusArgLength);
     }

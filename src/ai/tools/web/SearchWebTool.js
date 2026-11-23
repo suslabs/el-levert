@@ -3,10 +3,6 @@ import ToolParams from "../ToolParams.js";
 
 import AIPhases from "../../../structures/ai/AIPhases.js";
 
-import Util from "../../../util/Util.js";
-
-import AIError from "../../../errors/AIError.js";
-
 class SearchWebTool extends AITool {
     static info = {
         name: "search_web",
@@ -31,13 +27,9 @@ class SearchWebTool extends AITool {
     }
 
     async execute(args, session) {
-        const query = String(args.query ?? "").trim();
+        const query = this.requireString(args, "query"),
+            limit = this.getLimit(args);
 
-        if (Util.empty(query)) {
-            throw new AIError("query is required");
-        }
-
-        const limit = Util.clamp(args.limit ?? SearchWebTool.defaultLimit, 1, SearchWebTool.maxLimit);
         return await this.manager.webSearcher.search(query, limit, session.toolTimeout());
     }
 }

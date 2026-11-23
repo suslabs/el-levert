@@ -1,11 +1,9 @@
 import QuestTool from "./QuestTool.js";
-import ToolParams from "../ToolParams.js";
+import ToolParams from "../../ToolParams.js";
 
-import AIPhases from "../../../structures/ai/AIPhases.js";
+import AIPhases from "../../../../structures/ai/AIPhases.js";
 
-import Util from "../../../util/Util.js";
-
-import AIError from "../../../errors/AIError.js";
+import Util from "../../../../util/Util.js";
 
 class SearchQuestsTool extends QuestTool {
     static info = {
@@ -34,13 +32,9 @@ class SearchQuestsTool extends QuestTool {
     }
 
     execute(args) {
-        const query = String(args.query ?? "").trim();
+        const query = this.requireString(args, "query");
 
-        if (Util.empty(query)) {
-            throw new AIError("query is required");
-        }
-
-        const limit = Util.clamp(args.limit ?? SearchQuestsTool.defaultLimit, 1, SearchQuestsTool.maxLimit),
+        const limit = this.getLimit(args),
             quests = this.questbook.search(query, this.questbook.getMode(args.expert), limit);
 
         return {

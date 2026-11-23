@@ -1,16 +1,14 @@
 import RecipeTool from "./RecipeTool.js";
-import ToolParams from "../ToolParams.js";
+import ToolParams from "../../ToolParams.js";
 
-import NomiCodexClient from "../../sources/NomiCodexClient.js";
+import NomiCodexClient from "../../../sources/NomiCodexClient.js";
 
-import { OverclockingValues } from "../../../structures/OverclockingValues.js";
+import { OverclockingValues } from "../../../../structures/OverclockingValues.js";
 
-import AIPhases from "../../../structures/ai/AIPhases.js";
+import AIPhases from "../../../../structures/ai/AIPhases.js";
 
-import Util from "../../../util/Util.js";
-import HtmlUtil from "../../../util/misc/HtmlUtil.js";
-
-import AIError from "../../../errors/AIError.js";
+import Util from "../../../../util/Util.js";
+import HtmlUtil from "../../../../util/misc/HtmlUtil.js";
 
 class SearchRecipesTool extends RecipeTool {
     static info = {
@@ -40,11 +38,7 @@ class SearchRecipesTool extends RecipeTool {
     }
 
     async execute(args, session) {
-        const query = String(args.query ?? "").trim();
-
-        if (Util.empty(query)) {
-            throw new AIError("query is required");
-        }
+        const query = this.requireString(args, "query");
 
         const recipes = this.recipes;
 

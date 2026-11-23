@@ -1,6 +1,7 @@
 import BaseStructure from "../BaseStructure.js";
 import NomiCodexClient from "../../ai/sources/NomiCodexClient.js";
 import Questbook from "../../ai/sources/Questbook.js";
+import WikiClient from "../../ai/sources/WikiClient.js";
 
 import AISourceTypes from "./AISourceTypes.js";
 
@@ -42,6 +43,8 @@ class AISource extends BaseStructure {
                 return new NomiCodexClient(http, this.options);
             case AISourceTypes.questbook:
                 return new Questbook(http, this.options, timeout);
+            case AISourceTypes.wiki:
+                return new WikiClient(http, this.options);
         }
     }
 }

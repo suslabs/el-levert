@@ -1,7 +1,5 @@
 import TextCommandContext from "./TextCommandContext.js";
 
-import { getEmoji } from "../../../LevertClient.js";
-
 import ObjectUtil from "../../../util/ObjectUtil.js";
 
 class CommandContext extends TextCommandContext {
@@ -157,8 +155,6 @@ class CommandContext extends TextCommandContext {
         if (this.isInteraction) {
             return await this.interactionContext.deferReply(options);
         }
-
-        return await this.sendProcessingReply(`${getEmoji("waiting")} Processing command...`);
     }
 
     async deferUpdate(options) {

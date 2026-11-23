@@ -41,7 +41,7 @@ class FindUsersTool extends AITool {
             throw new AIError("query is required");
         }
 
-        const limit = Util.clamp(args.limit ?? FindUsersTool.defaultLimit, 1, FindUsersTool.maxLimit);
+        const limit = this.getLimit(args);
 
         const found = await getClient().findUsers(query, { sv_id: session.request.guildId, limit });
 

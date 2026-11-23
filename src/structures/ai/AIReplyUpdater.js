@@ -58,7 +58,7 @@ class AIReplyUpdater {
         this.cancel();
         await this.queue;
 
-        return await this.ctx.reply(payload);
+        return await this._edit(payload);
     }
 
     _flush() {
@@ -68,7 +68,11 @@ class AIReplyUpdater {
         this.pending = null;
 
         this.lastUpdate = Date.now();
-        this.queue = this.queue.then(() => this.ctx.reply(payload));
+        this.queue = this.queue.then(() => this._edit(payload));
+    }
+
+    async _edit(payload) {
+        return await (this.ctx.isInteraction ? this.ctx.reply(payload) : this.ctx.edit(payload));
     }
 }
 

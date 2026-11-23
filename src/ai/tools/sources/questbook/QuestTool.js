@@ -1,6 +1,6 @@
-import AITool from "../AITool.js";
+import AITool from "../../AITool.js";
 
-import AISourceTypes from "../../../structures/ai/AISourceTypes.js";
+import AISourceTypes from "../../../../structures/ai/AISourceTypes.js";
 
 class QuestTool extends AITool {
     get questbook() {

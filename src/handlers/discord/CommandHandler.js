@@ -212,7 +212,7 @@ class CommandHandler extends MessageHandler {
     }
 
     async _isActiveReply(msg) {
-        if (msg.mentions.repliedUser?.id !== getClient().client.user.id) {
+        if (!msg.mentions.users.has(getClient().client.user.id)) {
             return false;
         }
 
@@ -331,7 +331,10 @@ class CommandHandler extends MessageHandler {
         }
 
         return setTimeout(
-            () => context.deferReply().catch(err => getLogger().error("Could not send processing reply:", err)),
+            () =>
+                this._sendProcessingReply(context).catch(err =>
+                    getLogger().error("Could not send processing reply:", err)
+                ),
             this.commandWaitTime
         );
     }
@@ -344,6 +347,10 @@ class CommandHandler extends MessageHandler {
         if (this.getReply(context.msg) === null) {
             context.abortProcessing();
         }
+    }
+
+    async _sendProcessingReply(context) {
+        return await context.sendProcessingReply(`${getEmoji("waiting")} Processing command...`);
     }
 }
 

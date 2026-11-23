@@ -1,10 +1,9 @@
 import WebTool from "./WebTool.js";
 import ToolParams from "../ToolParams.js";
-import WebSearcher from "../../WebSearcher.js";
+import TextPager from "../TextPager.js";
 
 import AIPhases from "../../../structures/ai/AIPhases.js";
 
-import Util from "../../../util/Util.js";
 import HtmlUtil from "../../../util/misc/HtmlUtil.js";
 import HTTPUtil from "../../../util/vm/HTTPUtil.js";
 import { isSuccessStatus } from "../../../util/misc/HttpStatusCodes.js";
@@ -16,77 +15,25 @@ class FetchWebPageTool extends WebTool {
         name: "fetch_web_page",
         emoji: "📄",
         phase: AIPhases.reading,
-        description:
-            "Get the readable text of a public web page (including Wikipedia and search results). Use nextOffset to read further.",
+        description: "Get the readable text of a public web page from search results. Use nextOffset to read further.",
         parameters: ToolParams.object(
             {
                 url: ToolParams.string("Absolute http(s) URL."),
-                offset: ToolParams.integer("Character offset to continue from."),
-                maxChars: ToolParams.integer("Characters to return, 500-8000 (default 5000).")
+                ...TextPager.params
             },
             ["url"]
         )
     };
-
-    static defaultChars = 5000;
-    static minChars = 500;
-    static maxChars = 8000;
 
     getStatus(args) {
         return `Reading ${this.formatHost(args.url)}`;
     }
 
     async execute(args, session) {
-        const url = this.parseUrl(args.url);
+        const url = this.parseUrl(args.url),
+            page = await this._fetchPage(url, session);
 
-        const wiki = url.match(FetchWebPageTool._wikipediaRegex),
-            page = wiki === null ? await this._fetchPage(url, session) : await this._fetchWikipedia(wiki, session);
-
-        const offset = Math.max(args.offset ?? 0, 0),
-            maxChars = Util.clamp(
-                args.maxChars ?? FetchWebPageTool.defaultChars,
-                FetchWebPageTool.minChars,
-                FetchWebPageTool.maxChars
-            );
-
-        const end = offset + maxChars;
-
-        return {
-            source: url,
-            title: page.title,
-            text: page.text.slice(offset, end),
-            offset,
-            nextOffset: end < page.text.length ? end : null,
-            totalChars: page.text.length
-        };
-    }
-
-    static _wikipediaRegex = /^https?:\/\/([a-z-]+)\.(?:m\.)?wikipedia\.org\/wiki\/([^?#]+)/i;
-
-    async _fetchWikipedia(wiki, session) {
-        const [, lang, title] = wiki;
-
-        const res = await this.manager.http.request({
-            url: WebSearcher.getWikipediaUrl(lang, "w/api.php"),
-            params: {
-                action: "query",
-                prop: "extracts",
-                explaintext: 1,
-                redirects: 1,
-                format: "json",
-                titles: decodeURIComponent(title)
-            },
-            responseType: "json",
-            timeout: session.toolTimeout()
-        });
-
-        const page = Util.first(Object.values(res.data.query?.pages ?? {}));
-
-        if (typeof page === "undefined" || typeof page.missing !== "undefined") {
-            throw new AIError("Wikipedia page not found");
-        }
-
-        return { title: page.title, text: page.extract ?? "" };
+        return { source: url, title: page.title, ...TextPager.page(page.text, args) };
     }
 
     async _fetchPage(url, session) {

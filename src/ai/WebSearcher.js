@@ -9,57 +9,16 @@ class WebSearcher {
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 
     static duckDuckGoUrl = "https://html.duckduckgo.com/html/";
-    static defaultWikipediaLanguage = "en";
 
     static maxSnippetLength = 300;
-
-    static getWikipediaUrl(language, path) {
-        return `https://${language}.wikipedia.org/${path}`;
-    }
 
     constructor(http) {
         this.http = http;
     }
 
     async search(query, limit, timeout) {
-        const errors = [];
-
-        for (const [engine, searchFunc] of this._getEngines()) {
-            try {
-                const results = await searchFunc(query, limit, timeout);
-
-                if (!Util.empty(results)) {
-                    return { engine, query, results };
-                }
-
-                errors.push(`${engine}: no results`);
-            } catch (err) {
-                errors.push(`${engine}: ${Util.getErrorMessage(err)}`);
-            }
-        }
-
-        return { query, results: [], errors };
-    }
-
-    async searchWikipedia(query, limit, timeout, language = WebSearcher.defaultWikipediaLanguage) {
-        const res = await this.http.request({
-            url: WebSearcher.getWikipediaUrl(language, "w/api.php"),
-            params: {
-                action: "query",
-                list: "search",
-                srsearch: query,
-                srlimit: limit,
-                format: "json"
-            },
-            responseType: "json",
-            timeout
-        });
-
-        return (res.data.query?.search ?? []).map(result => ({
-            title: result.title,
-            url: WebSearcher.getWikipediaUrl(language, `wiki/${encodeURIComponent(result.title.replaceAll(" ", "_"))}`),
-            snippet: HtmlUtil.stripTags(result.snippet)
-        }));
+        const results = await this._searchDuckDuckGo(query, limit, timeout);
+        return { query, results };
     }
 
     static _resultSplitRegex = /class="result results_links/;
@@ -67,13 +26,6 @@ class WebSearcher {
     static _resultSnippetRegex = /class="result__snippet"[^>]*>([\s\S]*?)<\/a>/;
     static _redirectParamRegex = /[?&]uddg=([^&]+)/;
     static _adPath = "/y.js?";
-
-    _getEngines() {
-        return [
-            ["duckduckgo", this._searchDuckDuckGo.bind(this)],
-            ["wikipedia", this.searchWikipedia.bind(this)]
-        ];
-    }
 
     async _searchDuckDuckGo(query, limit, timeout) {
         const res = await this.http.request({

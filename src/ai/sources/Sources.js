@@ -25,6 +25,16 @@ const Sources = Object.freeze({
             },
             mode: PackModes.normal
         }
+    },
+
+    wikipedia: {
+        type: AISourceTypes.wiki,
+        options: {
+            name: "Wikipedia",
+            host: "wikipedia.org",
+            language: "en",
+            userAgent: "ElLevert/1.0 (Discord bot)"
+        }
     }
 });
 

@@ -122,7 +122,7 @@ Important groups of settings:
 - Tags and quotas: `maxTagNameLength`, `tagNameRegex`, `maxTagSize` (per-tag limits in kb for `text`, `script`, and `binary`; `-1` for unlimited), `maxQuota` (total storage quota in kb; `-1` for unlimited), `maxTagCount` (`-1` for unlimited)
 - Reply and output limits: `outCharLimit`, `outLineLimit`, `embedCharLimit`, `embedLineLimit`
 - Major features: `enablePreviews`, `enableSed`, `enablePermissions`, `enableReminders`, `enableAI`
-- AI assistant: `ai` (`name` and `icon` for the embed header, `promptsPath` for the prompt text files, `endpoint`, `models` (the first one is used, the rest are fallbacks when it's rate limited or unavailable), `thinkingLevel` for writing answers and `toolThinkingLevel` for the steps where the assistant can still call tools (`null` for models without thinking levels; a `null` `toolThinkingLevel` uses `thinkingLevel`), `maxSteps` (`-1` for no limit; `timeLimit` still applies), `timeLimit` and `requestTimeout` in seconds, `unlimitedTimeForAdmins` (admins and the owner get no time limit), `maxDownloadSize` in MB, `maxToolOutput` in characters, `maxRequests` per user every `rateLimitWindow` seconds, `followUpsAnyone` and `followUpsEditAnswer` for the follow-up buttons, `allowLocalhostRequests`, `sources` (which built-in data sources the assistant can use, by name: `nomiCodex` for NomiCodex recipes, `nomiQuestbook` for the Nomi-CEu questbook; their URLs and settings are defined in `src/ai/sources/Sources.js`))
+- AI assistant: `ai` (`name` and `icon` for the embed header, `promptsPath` for the prompt text files, `endpoint`, `models` (the first one is used, the rest are fallbacks when it's rate limited or unavailable), `thinkingLevel` for writing answers and `toolThinkingLevel` for the steps where the assistant can still call tools (`null` for models without thinking levels; a `null` `toolThinkingLevel` uses `thinkingLevel`), `maxSteps` (`-1` for no limit; `timeLimit` still applies), `timeLimit` and `requestTimeout` in seconds, `unlimitedTimeForAdmins` (admins and the owner get no time limit), `maxDownloadSize` in MB, `maxToolOutput` in characters, `maxRequests` per user every `rateLimitWindow` seconds, `followUpsAnyone` and `followUpsEditAnswer` for the follow-up buttons, `allowLocalhostRequests`, `sources` (which built-in data sources the assistant can use, by name: `nomiCodex` for NomiCodex recipes, `nomiQuestbook` for the Nomi-CEu questbook, `wikipedia` for Wikipedia; their URLs and settings are defined in `src/ai/sources/Sources.js`))
 - Logging and file paths: log files, log level, database path, command paths, Discord log settings
 
 ## Reactions config
@@ -604,7 +604,7 @@ Syntax:
 #### While it works
 
 - The reply is a single embed headed by the assistant's name and icon (`ai.name`, `ai.icon`; with no icon the bot's avatar is used). The header shows the current phase, like "Searching...".
-- Each tool call gets its own status line with an emoji for that tool (🔎 tags, 📜 questbook, 🧪 recipes, 🌐 web, 📚 Wikipedia, 🧮 conversions, ...), followed by a live preview of the answer as it's written and "Finishing response..." at the end.
+- Each tool call gets its own status line with an emoji for that tool (🔎 tags, 📜 questbook, 🧪 recipes, 📚 Wikipedia, 🌐 web, 🧮 conversions, ...), followed by a live preview of the answer as it's written and "Finishing response..." at the end.
 - A red **Cancel** button lets the person who asked stop the answer at any point. The embed then turns red and shows "🚫 Thinking cancelled."
 
 #### The answer
@@ -634,10 +634,11 @@ Syntax:
 
 #### Data sources
 
-Data sources are external datasets the assistant can search. `ai.sources` lists which ones are on by name. Their URLs and settings are defined in code, in `src/ai/sources/Sources.js`:
+Data sources are the knowledge bases the assistant can search, separate from its general tools. `ai.sources` lists which ones are on by name, and a source's tools are only offered when it's on. Their URLs and settings are defined in code, in `src/ai/sources/Sources.js`, the same way script functions are:
 
 - `nomiCodex`: the [NomiCodex](https://sayaisha.github.io/NomiCodex/) recipe viewer for NomiFactory CEu. The assistant picks the main production recipe (the Large Chemical Reactor recipe for polyethylene, the Mixer recipe for signalum dust, not crafting it from tiny piles) and shows its card. Naming a machine ("steel ingot ebf") filters by it.
 - `nomiQuestbook`: the NomiFactory CEu questbook (normal and expert), downloaded from the modpack's GitHub repository when the bot starts.
+- `wikipedia`: Wikipedia, in any language, for encyclopedic facts.
 
 #### Tools
 
@@ -647,7 +648,7 @@ Data sources are external datasets the assistant can search. `ai.sources` lists 
 | `search_quests`, `read_quest`                      | Search the questbook and read quests with their tasks and prerequisites (`nomiQuestbook`).                            |
 | `search_recipes`, `show_recipe`                    | Look up recipes and show a recipe card (`nomiCodex`).                                                                 |
 | `search_web`, `fetch_web_page`, `http_request`     | Web search, read pages, call APIs (GET/HEAD only), with the same private-network protection as script HTTP requests.  |
-| `search_wikipedia`                                 | Search Wikipedia in any language for encyclopedic facts; articles are read with `fetch_web_page`.                     |
+| `search_wikipedia`, `read_wikipedia`               | Search Wikipedia in any language and read articles as plain text (`wikipedia`).                                       |
 | `inspect_image`, `show_image`, `attach_image`      | Describe an image, show images in the embed, attach an image as a file.                                               |
 | `attach_file`                                      | Attach a text file (code, data) to the answer, up to 1 MB.                                                            |
 | `execute_javascript`                               | Run code in the eval sandbox with the same limits as `%eval` (needs `enableEval`).                                    |

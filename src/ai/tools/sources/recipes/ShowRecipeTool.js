@@ -1,11 +1,11 @@
 import RecipeTool from "./RecipeTool.js";
-import ToolParams from "../ToolParams.js";
+import ToolParams from "../../ToolParams.js";
 
-import AIPhases from "../../../structures/ai/AIPhases.js";
+import AIPhases from "../../../../structures/ai/AIPhases.js";
 
-import Util from "../../../util/Util.js";
+import Util from "../../../../util/Util.js";
 
-import AIError from "../../../errors/AIError.js";
+import AIError from "../../../../errors/AIError.js";
 
 class ShowRecipeTool extends RecipeTool {
     static info = {
