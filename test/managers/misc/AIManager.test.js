@@ -69,6 +69,7 @@ describe("AIManager", () => {
             "tag_get",
             "tag_call",
             "search_web",
+            "search_wikipedia",
             "fetch_web_page",
             "execute_javascript",
             "unit_convert",

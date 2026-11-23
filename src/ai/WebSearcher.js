@@ -9,10 +9,13 @@ class WebSearcher {
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 
     static duckDuckGoUrl = "https://html.duckduckgo.com/html/";
-    static wikipediaApiUrl = "https://en.wikipedia.org/w/api.php";
-    static wikipediaPageUrl = "https://en.wikipedia.org/wiki/";
+    static defaultWikipediaLanguage = "en";
 
     static maxSnippetLength = 300;
+
+    static getWikipediaUrl(language, path) {
+        return `https://${language}.wikipedia.org/${path}`;
+    }
 
     constructor(http) {
         this.http = http;
@@ -38,6 +41,27 @@ class WebSearcher {
         return { query, results: [], errors };
     }
 
+    async searchWikipedia(query, limit, timeout, language = WebSearcher.defaultWikipediaLanguage) {
+        const res = await this.http.request({
+            url: WebSearcher.getWikipediaUrl(language, "w/api.php"),
+            params: {
+                action: "query",
+                list: "search",
+                srsearch: query,
+                srlimit: limit,
+                format: "json"
+            },
+            responseType: "json",
+            timeout
+        });
+
+        return (res.data.query?.search ?? []).map(result => ({
+            title: result.title,
+            url: WebSearcher.getWikipediaUrl(language, `wiki/${encodeURIComponent(result.title.replaceAll(" ", "_"))}`),
+            snippet: HtmlUtil.stripTags(result.snippet)
+        }));
+    }
+
     static _resultSplitRegex = /class="result results_links/;
     static _resultLinkRegex = /class="result__a"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/;
     static _resultSnippetRegex = /class="result__snippet"[^>]*>([\s\S]*?)<\/a>/;
@@ -47,7 +71,7 @@ class WebSearcher {
     _getEngines() {
         return [
             ["duckduckgo", this._searchDuckDuckGo.bind(this)],
-            ["wikipedia", this._searchWikipedia.bind(this)]
+            ["wikipedia", this.searchWikipedia.bind(this)]
         ];
     }
 
@@ -101,27 +125,6 @@ class WebSearcher {
             url = redirect === null ? href : decodeURIComponent(redirect[1]);
 
         return url.startsWith("//") ? `https:${url}` : url;
-    }
-
-    async _searchWikipedia(query, limit, timeout) {
-        const res = await this.http.request({
-            url: WebSearcher.wikipediaApiUrl,
-            params: {
-                action: "query",
-                list: "search",
-                srsearch: query,
-                srlimit: limit,
-                format: "json"
-            },
-            responseType: "json",
-            timeout
-        });
-
-        return (res.data.query?.search ?? []).map(result => ({
-            title: result.title,
-            url: WebSearcher.wikipediaPageUrl + encodeURIComponent(result.title.replaceAll(" ", "_")),
-            snippet: HtmlUtil.stripTags(result.snippet)
-        }));
     }
 }
 

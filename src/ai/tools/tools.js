@@ -6,6 +6,7 @@ export { default as ShowRecipeTool } from "./recipes/ShowRecipeTool.js";
 export { default as TagGetTool } from "./tag/TagGetTool.js";
 export { default as TagCallTool } from "./tag/TagCallTool.js";
 export { default as SearchWebTool } from "./web/SearchWebTool.js";
+export { default as SearchWikipediaTool } from "./web/SearchWikipediaTool.js";
 export { default as FetchWebPageTool } from "./web/FetchWebPageTool.js";
 export { default as ExecuteJavascriptTool } from "./misc/ExecuteJavascriptTool.js";
 export { default as UnitConvertTool } from "./misc/UnitConvertTool.js";

@@ -604,7 +604,7 @@ Syntax:
 #### While it works
 
 - The reply is a single embed headed by the assistant's name and icon (`ai.name`, `ai.icon`; with no icon the bot's avatar is used). The header shows the current phase, like "Searching...".
-- Each tool call gets its own status line with an emoji for that tool (🔎 tags, 📜 questbook, 🧪 recipes, 🌐 web, 🧮 conversions, ...), followed by a live preview of the answer as it's written and "Finishing response..." at the end.
+- Each tool call gets its own status line with an emoji for that tool (🔎 tags, 📜 questbook, 🧪 recipes, 🌐 web, 📚 Wikipedia, 🧮 conversions, ...), followed by a live preview of the answer as it's written and "Finishing response..." at the end.
 - A red **Cancel** button lets the person who asked stop the answer at any point. The embed then turns red and shows "🚫 Thinking cancelled."
 
 #### The answer
@@ -647,6 +647,7 @@ Data sources are external datasets the assistant can search. `ai.sources` lists 
 | `search_quests`, `read_quest`                      | Search the questbook and read quests with their tasks and prerequisites (`nomiQuestbook`).                            |
 | `search_recipes`, `show_recipe`                    | Look up recipes and show a recipe card (`nomiCodex`).                                                                 |
 | `search_web`, `fetch_web_page`, `http_request`     | Web search, read pages, call APIs (GET/HEAD only), with the same private-network protection as script HTTP requests.  |
+| `search_wikipedia`                                 | Search Wikipedia in any language for encyclopedic facts; articles are read with `fetch_web_page`.                     |
 | `inspect_image`, `show_image`, `attach_image`      | Describe an image, show images in the embed, attach an image as a file.                                               |
 | `attach_file`                                      | Attach a text file (code, data) to the answer, up to 1 MB.                                                            |
 | `execute_javascript`                               | Run code in the eval sandbox with the same limits as `%eval` (needs `enableEval`).                                    |

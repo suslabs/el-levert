@@ -1,5 +1,6 @@
 import WebTool from "./WebTool.js";
 import ToolParams from "../ToolParams.js";
+import WebSearcher from "../../WebSearcher.js";
 
 import AIPhases from "../../../structures/ai/AIPhases.js";
 
@@ -66,7 +67,7 @@ class FetchWebPageTool extends WebTool {
         const [, lang, title] = wiki;
 
         const res = await this.manager.http.request({
-            url: `https://${lang}.wikipedia.org/w/api.php`,
+            url: WebSearcher.getWikipediaUrl(lang, "w/api.php"),
             params: {
                 action: "query",
                 prop: "extracts",
