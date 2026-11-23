@@ -398,15 +398,6 @@ class MessageHandler extends Handler {
         });
     }
 
-    static _applyPings(out) {
-        if (typeof out.pings === "undefined") {
-            return;
-        }
-
-        out.allowedMentions = getClient().getAllowedMentions(out.pings);
-        delete out.pings;
-    }
-
     static _stripPings(out) {
         out.content = MessageHandler._escapeMentions(out.content);
 
@@ -778,7 +769,6 @@ class MessageHandler extends Handler {
     _getOutput(data, options) {
         const process = item => {
             const out = this._applyLimits(item, options);
-
             MessageHandler._stripPings(out);
 
             if (typeof out.pings !== "undefined") {

@@ -6,17 +6,6 @@ const SSEUtil = Object.freeze({
     _eventSeparatorRegex: /\r?\n\r?\n/,
     _lineSeparatorRegex: /\r?\n/,
 
-    readText: async stream => {
-        const decoder = new TextDecoder();
-        let text = "";
-
-        for await (const chunk of stream) {
-            text += decoder.decode(chunk, { stream: true });
-        }
-
-        return text + decoder.decode();
-    },
-
     readEvents: async function* (stream) {
         const decoder = new TextDecoder();
         let buffer = "";

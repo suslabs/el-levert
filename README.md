@@ -622,8 +622,7 @@ Syntax:
 
 #### Conversations
 
-- Reply to one of the assistant's answers with the reply ping on, without a command, to ask a new question with the whole conversation as context. Replies can be chained.
-- Replies with the ping turned off are ignored, so a stray reply doesn't trigger an answer.
+- Reply to one of the assistant's answers without a command to ask a new question with the whole conversation as context. Replies can be chained.
 - An answer stops accepting replies once it's older than `interactionTimeout`.
 
 #### Limits

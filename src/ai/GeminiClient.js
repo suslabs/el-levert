@@ -3,6 +3,7 @@ import { getLogger } from "../LevertClient.js";
 import Util from "../util/Util.js";
 import ObjectUtil from "../util/ObjectUtil.js";
 import SSEUtil from "../util/misc/SSEUtil.js";
+import StreamUtil from "../util/misc/StreamUtil.js";
 import { httpStatusCodes, isServerErrorStatus, isSuccessStatus } from "../util/misc/HttpStatusCodes.js";
 
 import AIError from "../errors/AIError.js";
@@ -228,7 +229,7 @@ class GeminiClient {
         );
 
         if (stream && !isSuccessStatus(res.status)) {
-            res.data = GeminiClient._parseError(await SSEUtil.readText(res.data));
+            res.data = GeminiClient._parseError((await StreamUtil.read(res.data)).toString());
         }
 
         return res;

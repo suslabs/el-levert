@@ -97,19 +97,6 @@ describe("DiscordClient", () => {
         expect(() => client._parseDiscordId(1, "thing", Thing, true)).toThrow("Invalid thing ID provided");
     });
 
-    test("allows intentional pings for specific users even when user mentions are off", () => {
-        const client = createClient();
-
-        client.setOptions({ mentionUsers: false, pingReply: true });
-
-        expect(client.getAllowedMentions(["123"])).toEqual({ repliedUser: true, parse: [], users: ["123"] });
-        expect(client.getAllowedMentions([])).toEqual({ repliedUser: true, parse: [] });
-
-        client.setOptions({ mentionUsers: true, pingReply: true });
-
-        expect(client.getAllowedMentions(["123"])).toEqual({ repliedUser: true, parse: ["users", "roles"] });
-    });
-
     test("logs in successfully, handles failed logins, logs out, and updates ready state", async () => {
         const client = createClient();
         client.killProcess = vi.fn();

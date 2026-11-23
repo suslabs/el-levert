@@ -462,7 +462,7 @@ describe("a command", () => {
         expect(click.reply.payloads[0].content).toContain("expired");
     });
 
-    test("pinging replies to answers continue the conversation until the answer expires", async () => {
+    test("replies to answers continue the conversation until the answer expires", async () => {
         const script = [
             answer(["First answer."]),
             extras([], []),
@@ -510,14 +510,7 @@ describe("a command", () => {
         const handler = runtime.client.commandHandler;
         runtime.client.client.user = botUser;
 
-        const replyTo = (messageId, ping = true) => ({
-            reference: { messageId },
-            mentions: {
-                ...createDiscordMessage("").mentions,
-                users: new Map(ping ? [[botUser.id, botUser]] : []),
-                repliedUser: botUser
-            }
-        });
+        const replyTo = messageId => ({ reference: { messageId } });
 
         await expect(handler.execute(createUserMsg("q-1", "%a hello"))).resolves.toBe(true);
 
@@ -547,9 +540,6 @@ describe("a command", () => {
         ]);
         expect(messages.get("q-3-answer").embeds[0].description).toBe("Third answer.");
         expect(script).toEqual([]);
-
-        const silent = createUserMsg("q-6", "no ping", replyTo("q-3-answer", false));
-        await expect(handler.execute(silent)).resolves.toBe(false);
 
         messages.get("q-3-answer").editedTimestamp = Date.now() - 2 * runtime.client.config.interactionTimeout;
 
@@ -945,20 +935,23 @@ describe("a command", () => {
         const script = [];
         const png = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
 
-        await setup(script, {
+        const bodies = await setup(script, {
             routes: { "GET /fresh.png": () => ({ headers: { "content-type": "image/png" }, body: png }) }
         });
 
         const expired = "https://cdn.discordapp.com/attachments/1/2/cat.png?ex=00&is=00&hm=00",
+            deleted = "https://cdn.discordapp.com/attachments/1/2/gone.png",
             refreshes = [];
 
         vi.spyOn(runtime.client.client.rest, "post").mockImplementation(async (route, options) => {
             refreshes.push([route, options.body]);
-            return { refreshed_urls: [{ original: expired, refreshed: `${server.url}/fresh.png` }] };
+
+            const urls = options.body.attachment_urls.filter(url => url === expired);
+            return { refreshed_urls: urls.map(url => ({ original: url, refreshed: `${server.url}/fresh.png` })) };
         });
 
         script.push(
-            calls([call("attach_image", { url: expired, name: "cat" })]),
+            calls([call("attach_image", { url: expired, name: "cat" }), call("attach_image", { url: deleted })]),
             answer(["Here's the cat."]),
             extras([], [])
         );
@@ -968,8 +961,14 @@ describe("a command", () => {
 
         const [file] = recorder.sent.at(-1).files;
 
-        expect(refreshes).toEqual([["/attachments/refresh-urls", { attachment_urls: [expired] }]]);
+        expect(refreshes).toEqual([
+            ["/attachments/refresh-urls", { attachment_urls: [expired] }],
+            ["/attachments/refresh-urls", { attachment_urls: [deleted] }]
+        ]);
         expect(Buffer.compare(file.attachment, png)).toBe(0);
+
+        const [, gone] = bodies[1].body.contents.at(-1).parts.map(part => part.functionResponse.response);
+        expect(gone).toEqual({ error: "This Discord attachment no longer exists or can't be accessed" });
     });
 
     test("admins have no time limit when unlimitedTimeForAdmins is on", async () => {

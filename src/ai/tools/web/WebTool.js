@@ -2,7 +2,6 @@ import AITool from "../AITool.js";
 
 import { getClient } from "../../../LevertClient.js";
 
-import Util from "../../../util/Util.js";
 import DiscordUtil from "../../../util/DiscordUtil.js";
 import HTTPUtil from "../../../util/vm/HTTPUtil.js";
 
@@ -18,8 +17,13 @@ class WebTool extends AITool {
             return url;
         }
 
-        const refreshed = await DiscordUtil.refreshAttachmentUrls(getClient().client.rest, [url]);
-        return Util.first(refreshed);
+        const [refreshed] = await DiscordUtil.refreshAttachmentUrls(getClient().client.rest, url);
+
+        if (refreshed === null) {
+            throw new AIError("This Discord attachment no longer exists or can't be accessed");
+        }
+
+        return refreshed;
     }
 
     formatHost(value) {

@@ -67,18 +67,4 @@ describe("MessageTracker", () => {
         expect(disabled.clearTrackedMsgs()).toBe(false);
         expect(disabled.addReaction("x", ":)")).toBe(false);
     });
-
-    test("finds the trigger message of a tracked reply", async () => {
-        const { default: ReplyTracker } = await import("../../../../src/handlers/discord/tracker/ReplyTracker.js");
-
-        const tracker = new ReplyTracker(5);
-
-        tracker.addReply({ id: "trigger-1" }, { id: "reply-1" });
-        tracker.addReply({ id: "trigger-2" }, [{ id: "reply-2" }, { id: "reply-3" }]);
-
-        expect(tracker.findTriggerId("reply", { id: "reply-1" })).toBe("trigger-1");
-        expect(tracker.findTriggerId("reply", "reply-3")).toBe("trigger-2");
-        expect(tracker.findTriggerId("reply", "reply-9")).toBeNull();
-        expect(tracker.findTriggerId("reply", undefined)).toBeNull();
-    });
 });

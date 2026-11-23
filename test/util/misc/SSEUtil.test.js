@@ -28,8 +28,4 @@ describe("SSEUtil", () => {
         const bytes = Buffer.from("data: 1️⃣\n\n");
         expect(await collect(Readable.from([bytes.subarray(0, 8), bytes.subarray(8)]))).toEqual(["1️⃣"]);
     });
-
-    test("reads a whole stream as text", async () => {
-        await expect(SSEUtil.readText(streamOf(["ab", "c"]))).resolves.toBe("abc");
-    });
 });
