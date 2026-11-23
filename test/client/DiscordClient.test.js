@@ -46,6 +46,17 @@ function createClient() {
 }
 
 describe("DiscordClient", () => {
+    test("allows explicitly selected users according to the configured mention policy", () => {
+        const client = createClient();
+        client.setOptions({ mentionUsers: false, pingReply: true });
+
+        expect(client.getAllowedMentions(["123"])).toEqual({ repliedUser: true, parse: [], users: ["123"] });
+        expect(client.getAllowedMentions([])).toEqual({ repliedUser: true, parse: [], users: [] });
+
+        client.setOptions({ mentionUsers: true, pingReply: false });
+        expect(client.getAllowedMentions(["123"])).toEqual({ repliedUser: false, parse: ["roles"], users: ["123"] });
+    });
+
     test("copies known options, updates mention config, and validates parsed ids", () => {
         const client = createClient();
 

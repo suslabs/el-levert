@@ -21,6 +21,8 @@ import TypeTester from "../../util/TypeTester.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
 import RegexUtil from "../../util/misc/RegexUtil.js";
+import { BinaryExtensions, TextExtensions } from "../../util/misc/FileExtensions.js";
+import StreamUtil from "../../util/misc/StreamUtil.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
 import DatabaseUtil from "../../util/database/DatabaseUtil.js";
@@ -1157,55 +1159,86 @@ class TagManager extends DBManager {
                 throw new TagError("Invalid body type:" + type, type);
         }
 
-        const attach = msg.file ?? msg.attachments?.at(0);
+        const attach = msg.file ?? Util.first(Array.from(msg.attachments?.values() ?? []));
 
-        let isFile = true,
-            isScript = false,
-            isBinary = false;
+        let fileUrl = msg.fileUrl,
+            attachInfo = msg.attachInfo;
 
-        let body;
+        if (attach == null && !Util.nonemptyString(fileUrl)) {
+            const value = t_args?.trim() ?? "";
+            attachInfo = DiscordUtil.parseAttachmentUrl(value);
 
-        if (attach == null && !Util.nonemptyString(msg.fileUrl)) {
-            isFile = false;
-        } else {
-            const contentType = (attach?.contentType ?? "").split(";")[0].trim().toLowerCase(),
-                url = msg.fileUrl ?? attach?.url;
+            if (attachInfo === null) {
+                return null;
+            }
 
-            const attachInfo = msg.attachInfo ?? DiscordUtil.parseAttachmentUrl(url ?? ""),
-                ext = (attachInfo?.ext ?? (attach?.name ? path.extname(attach.name) : "")).toLowerCase();
+            const ext = attachInfo.ext.toLowerCase();
 
-            isBinary = type === "tag" && binaryContentTypes.includes(contentType) && binaryExtensions.includes(ext);
-            isScript = Util.hasPrefix(scriptContentTypes, contentType);
+            if (!TextExtensions.has(ext) && ext !== BinaryExtensions.bin) {
+                return null;
+            }
 
-            const maxSize = this._getMaxTagSize(isBinary, isScript);
+            const urls = await DiscordUtil.refreshAttachmentUrls(getClient().client.rest, value);
+            fileUrl = Util.first(urls);
 
-            try {
-                const res = await DiscordUtil.fetchAttachment(msg, isBinary ? "arraybuffer" : "text", {
-                    allowedContentTypes: fileContentTypes,
-                    maxSize
-                });
-
-                body = isBinary ? ArrayUtil.toUint8Array(res.body) : res.body;
-            } catch (err) {
-                if (Util.hasPrefix(["Message doesn't have", "Invalid content type"], err.message)) {
-                    isFile = false;
-                } else if (err.message.startsWith("The attachment can take up at most")) {
-                    const typeLabel = isBinary ? "Binary tag" : isScript ? "Script" : Util.capitalize(name);
-                    throw new TagError(`${typeLabel}s can take up at most ${maxSize} kb`, err.ref);
-                } else {
-                    throw err;
-                }
+            if (fileUrl === null) {
+                throw new TagError("Discord did not refresh attachment URL", value);
             }
         }
 
-        if (!isFile) {
-            const trimmedArgs = (t_args = t_args?.trimEnd?.() ?? "");
+        try {
+            const res = await DiscordUtil.openAttachment(
+                { file: attach, fileUrl, attachInfo },
+                {
+                    allowedContentTypes: fileContentTypes
+                }
+            );
 
-            body = trimmedArgs + (Util.empty(trimmedArgs) ? "" : " ");
-            body += (msg.attachments ?? []).map(at => at.url).join(" ");
+            const contentType = res.contentType.split(";")[0].trim().toLowerCase(),
+                ext = (res.attachInfo?.ext ?? (attach?.name ? path.extname(attach.name) : "")).toLowerCase();
+
+            const isBinary = binaryContentTypes.includes(contentType) && binaryExtensions.includes(ext),
+                isScript = Util.hasPrefix(scriptContentTypes, contentType);
+
+            const maxSize = this._getMaxTagSize(isBinary, isScript),
+                maxBytes = maxSize === -1 ? Infinity : Math.round(maxSize) * Util.dataBytes.kilobyte;
+
+            const typeLabel = isBinary ? `Binary ${name}` : isScript ? "Script" : Util.capitalize(name);
+
+            if (attach?.size > maxBytes) {
+                res.stream.destroy();
+                throw new TagError(`${typeLabel}s can take up at most ${maxSize} kb`);
+            }
+
+            let data;
+
+            try {
+                data = await StreamUtil.read(res.stream, maxBytes);
+            } catch (err) {
+                if (err.name === "UtilError" && err.message === "Stream exceeds maximum size") {
+                    throw new TagError(`${typeLabel}s can take up at most ${maxSize} kb`);
+                }
+
+                throw err;
+            }
+
+            return {
+                body: isBinary ? ArrayUtil.toUint8Array(data) : data.toString(),
+                isScript,
+                isBinary,
+                isFile: true
+            };
+        } catch (err) {
+            if (!Util.hasPrefix(["Message doesn't have", "Invalid content type"], err.message)) {
+                throw err;
+            }
+
+            const trimmedArgs = (t_args = t_args?.trimEnd?.() ?? ""),
+                attachmentUrls = Array.from(msg.attachments?.values() ?? [], at => at.url).join(" ");
+
+            const body = trimmedArgs + (Util.empty(trimmedArgs) ? "" : " ") + attachmentUrls;
+            return { body, isScript: false, isBinary: false, isFile: false };
         }
-
-        return { body, isScript, isBinary, isFile };
     }
 
     emulateTag(options) {

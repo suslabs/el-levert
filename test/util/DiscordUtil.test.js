@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "vitest";
 import { ChannelType, EmbedBuilder, AttachmentBuilder } from "discord.js";
 
 import DiscordUtil from "../../src/util/DiscordUtil.js";
+import StreamUtil from "../../src/util/misc/StreamUtil.js";
 import createHttpStubServer from "../helpers/httpStubServer.js";
 
 import UtilError from "../../src/errors/UtilError.js";
@@ -83,6 +84,45 @@ describe("DiscordUtil", () => {
         expect(DiscordUtil.hasAttachmentUrls(null)).toBe(false);
 
         expect(DiscordUtil.parseAttachmentUrl("not a discord attachment")).toBeNull();
+    });
+
+    test("refreshes one or more attachment URLs in order and returns null for missing results", async () => {
+        const first = "https://cdn.discordapp.com/attachments/1/2/a.png?ex=00&is=00&hm=00",
+            second = "https://cdn.discordapp.com/attachments/1/2/b.png?ex=00&is=00&hm=00",
+            unmatched = "https://cdn.discordapp.com/attachments/1/2/c.png";
+
+        const calls = [];
+        const rest = {
+            post: async (route, options) => {
+                calls.push({ route, body: options.body });
+                return {
+                    refreshed_urls: [
+                        { original: second, refreshed: "fresh-b" },
+                        { original: first, refreshed: "fresh-a" }
+                    ]
+                };
+            }
+        };
+
+        await expect(DiscordUtil.refreshAttachmentUrls(rest, [first, second, first])).resolves.toEqual([
+            "fresh-a",
+            "fresh-b",
+            "fresh-a"
+        ]);
+        expect(calls).toEqual([
+            {
+                route: "/attachments/refresh-urls",
+                body: { attachment_urls: [first, second, first] }
+            }
+        ]);
+
+        await expect(DiscordUtil.refreshAttachmentUrls(rest, unmatched)).resolves.toEqual([null]);
+        await expect(DiscordUtil.refreshAttachmentUrls(rest, first)).resolves.toEqual(["fresh-a"]);
+
+        const failure = new Error("refresh failed");
+        await expect(
+            DiscordUtil.refreshAttachmentUrls({ post: async () => Promise.reject(failure) }, [first])
+        ).rejects.toBe(failure);
     });
 
     test("markdown trimming closes delimiters opened after the first character", () => {
@@ -211,25 +251,21 @@ describe("DiscordUtil", () => {
             attachInfo: { ext: ".txt" }
         };
 
-        const { body } = await DiscordUtil.fetchAttachment(message, "text", {
+        const { stream } = await DiscordUtil.openAttachment(message, {
             allowedContentTypes: [],
-            allowedContentType: [],
-            maxSize: 100
+            allowedContentType: []
         });
-        expect(typeof body).toBe("string");
+        expect((await StreamUtil.read(stream)).toString()).toBe("body");
 
-        const { body: unlimitedBody } = await DiscordUtil.fetchAttachment(message, "text", {
-            maxSize: -1
-        });
-        expect(typeof unlimitedBody).toBe("string");
+        const { stream: limitedStream } = await DiscordUtil.openAttachment(message);
+        await expect(StreamUtil.read(limitedStream, 2)).rejects.toThrow("Stream exceeds maximum size");
 
         await expect(
-            DiscordUtil.fetchAttachment(
+            DiscordUtil.openAttachment(
                 {
                     fileUrl: `${server.url}/file.bin`,
                     attachInfo: { ext: ".bin" }
                 },
-                "text",
                 { allowedContentTypes: [".txt"] }
             )
         ).rejects.toThrow("Invalid file extension");

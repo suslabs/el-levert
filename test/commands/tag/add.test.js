@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import createHttpStubServer from "../../helpers/httpStubServer.js";
 
 import {
     addAdmin,
@@ -83,6 +84,38 @@ describe("tag add command", () => {
 
         expect(res).toContain("Created tag **beta**");
         expect(res).not.toContain(command.attachmentWarning);
+    });
+
+    test("downloads refreshed Discord text and script URLs for add and edit", async () => {
+        const server = await createHttpStubServer({
+            "/file.txt": () => ({ headers: { "content-type": "text/plain" }, body: "file contents" }),
+            "/file.js": () => ({ headers: { "content-type": "application/javascript" }, body: "return 42;" })
+        });
+
+        try {
+            const textUrl = "https://cdn.discordapp.com/attachments/1/2/file.txt?ex=00&is=00&hm=00",
+                scriptUrl = "https://cdn.discordapp.com/attachments/1/2/file.js?ex=00&is=00&hm=00";
+
+            const post = vi.spyOn(runtime.client.client.rest, "post").mockImplementation(async (route, options) => ({
+                refreshed_urls: options.body.attachment_urls.map(url => ({
+                    original: url,
+                    refreshed: url === textUrl ? `${server.url}/file.txt` : `${server.url}/file.js`
+                }))
+            }));
+
+            const command = getCommand(runtime, "tag");
+
+            await expect(executeCommand(command, `add linked ${textUrl}`, { msg })).resolves.toContain("Created tag");
+            expect((await runtime.client.tagManager.fetch("linked")).body).toBe("file contents");
+
+            await expect(executeCommand(command, `edit linked ${scriptUrl}`, { msg })).resolves.toContain("Edited");
+            const tag = await runtime.client.tagManager.fetch("linked");
+            expect(tag.body).toBe("return 42;");
+            expect(tag.isScript).toBe(true);
+            expect(post).toHaveBeenCalledTimes(2);
+        } finally {
+            await server.close();
+        }
     });
 
     test("adds warning when attachment is not covered by downloading the body", async () => {

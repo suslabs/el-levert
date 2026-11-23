@@ -109,6 +109,7 @@ LEVERET_OWNER=your discord id
 Important groups of settings:
 
 - Discord text interface: `cmdPrefix`, `interactionTimeout` (active button session lifespan in seconds)
+- Mentions: `mentionUsers` controls automatic user and role mentions; a response can restrict user mentions to `pings: [userId]`. `pingReply` controls replies mentioning the original author.
 - CLI interface: `enableCliCommands`, `cliCmdPrefix`
 - Eval modes and execution: `enableEval`, `enableVM2`, `enableOtherLangs`
 - VM HTTP settings: `vmHttp` (`maxUploadSize`, `maxDownloadSize`, `maxRequests`, `rateLimitWindow`, `allowLocalhostRequests`, `allowFilesystemRequests`)
@@ -252,6 +253,8 @@ Shows how long the bot has been running and when it started.
 ### 5. tag / t
 
 Tags are saved snippets you can call by name. They are useful for canned replies, reusable snippets, aliases, and script-based responses.
+
+Tag add and edit accept standalone Discord attachment URLs for recognized text and script files, plus `.bin` files. Downloads accept plain text, JSON, JavaScript, and binary content types. Image and other media URLs remain links.
 
 Who uses this:
 

@@ -307,6 +307,10 @@ class DiscordClient {
         };
     }
 
+    getAllowedMentions(users) {
+        return { repliedUser: this.pingReply, parse: this.mentionUsers ? ["roles"] : [], users };
+    }
+
     async login(token, exitOnFailure = false) {
         this.logger?.info("Logging in...");
 

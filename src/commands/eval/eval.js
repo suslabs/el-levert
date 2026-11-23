@@ -17,8 +17,27 @@ async function evalBase(args, msg, options) {
     options = ObjectUtil.guaranteeObject(options);
 
     let body = "";
+    let downloaded = null;
 
-    if (Util.empty(msg.attachments)) {
+    try {
+        downloaded = await getClient().tagManager.downloadBody(args, msg, "eval");
+    } catch (err) {
+        if (err.name === "TagError") {
+            return {
+                body: null,
+                err: `${getEmoji("warn")} ${err.message}.`
+            };
+        } else {
+            return {
+                body: null,
+                err: DiscordUtil.formatErrorEmbed(`${getEmoji("error")} Downloading attachment failed:`, err, {
+                    charLimit: getConfig().errorCharLimit
+                })
+            };
+        }
+    }
+
+    if (downloaded === null) {
         const parsedBody = options.allowFilePath
             ? await EmulationCommandUtil.resolveGuessedPathBody(args, {
                   name: "script"
@@ -37,23 +56,7 @@ async function evalBase(args, msg, options) {
 
         ({ body } = ScriptCommandType.parse(parsedBody.body));
     } else {
-        try {
-            ({ body } = await getClient().tagManager.downloadBody(null, msg, "eval"));
-        } catch (err) {
-            if (err.name === "TagError") {
-                return {
-                    body: null,
-                    err: `${getEmoji("warn")} ${err.message}.`
-                };
-            } else {
-                return {
-                    body: null,
-                    err: DiscordUtil.formatErrorEmbed(`${getEmoji("error")} Downloading attachment failed:`, err, {
-                        charLimit: getConfig().errorCharLimit
-                    })
-                };
-            }
-        }
+        body = downloaded.body;
     }
 
     if (Util.empty(body)) {
@@ -150,7 +153,7 @@ class EvalCommand {
         args: "<script> [--debug]",
         description:
             "Execute Javascript code in an isolated sandbox environment or run code in other languages using subcommands.",
-        usage: "- <script>: Javascript code to execute, or provide a file attachment.\n- --debug, -d: Enable debug inspector output and memory diagnostics.",
+        usage: "- <script>: Javascript code, a Discord file URL, or a file attachment.\n- --debug, -d: Enable debug inspector output and memory diagnostics.",
         subcommands: ["c", "cpp", "py", "vm2", "langs"],
         arguments: [
             {

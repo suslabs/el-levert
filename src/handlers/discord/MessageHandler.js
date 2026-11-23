@@ -770,6 +770,12 @@ class MessageHandler extends Handler {
         const process = item => {
             const out = this._applyLimits(item, options);
             MessageHandler._stripPings(out);
+
+            if (typeof out.pings !== "undefined") {
+                out.allowedMentions = getClient().getAllowedMentions(out.pings);
+                delete out.pings;
+            }
+
             return out;
         };
 

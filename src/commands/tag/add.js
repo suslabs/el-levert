@@ -11,7 +11,7 @@ class TagAddCommand {
         args: "<name> [body]",
         description:
             "Creates a new tag under your ownership. Accepts plain text, markdown codeblocks for scripts, or Discord attachments (images, text files, or binary .bin files). The bot owner can also specify local file paths.",
-        usage: "- <name>: Unique tag identifier to register.\n- [body]: Content of the tag, or provide a file attachment.",
+        usage: "- <name>: Unique tag identifier to register.\n- [body]: Content of the tag, a Discord file URL, or a file attachment.",
         parser: {
             requireArgs: true
         },

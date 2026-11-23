@@ -171,42 +171,42 @@ Subcommands:
         }
 
         let parsed,
-            downloaded,
+            downloaded = null,
             isLocalFile = false;
 
-        if (hasAttachments) {
-            try {
-                downloaded = await getClient().tagManager.downloadBody(t_args, msg, "tag");
+        try {
+            downloaded = await getClient().tagManager.downloadBody(hasAttachments ? t_args : body, msg, "tag");
+        } catch (err) {
+            getLogger().error(err);
 
-                parsed = {
-                    ...downloaded,
-                    meta: Tag.getParsedMeta(downloaded, type)
+            if (err.name === "TagError") {
+                return {
+                    body: null,
+                    meta: null,
+                    attachment: false,
+                    fromReply: false,
+                    localFile: false,
+                    err: `${getEmoji("warn")} ${err.message}.`
                 };
-            } catch (err) {
-                getLogger().error(err);
-
-                if (err.name === "TagError") {
-                    return {
-                        body: null,
-                        meta: null,
-                        attachment: false,
-                        fromReply: false,
-                        localFile: false,
-                        err: `${getEmoji("warn")} ${err.message}.`
-                    };
-                } else {
-                    return {
-                        body: null,
-                        meta: null,
-                        attachment: false,
-                        fromReply: false,
-                        localFile: false,
-                        err: DiscordUtil.formatErrorEmbed(`${getEmoji("error")} Downloading attachment failed:`, err, {
-                            charLimit: getConfig().errorCharLimit
-                        })
-                    };
-                }
+            } else {
+                return {
+                    body: null,
+                    meta: null,
+                    attachment: false,
+                    fromReply: false,
+                    localFile: false,
+                    err: DiscordUtil.formatErrorEmbed(`${getEmoji("error")} Downloading attachment failed:`, err, {
+                        charLimit: getConfig().errorCharLimit
+                    })
+                };
             }
+        }
+
+        if (downloaded !== null) {
+            parsed = {
+                ...downloaded,
+                meta: Tag.getParsedMeta(downloaded, type)
+            };
         } else {
             const parsedBody = options.allowFilePath
                 ? await EmulationCommandUtil.resolveGuessedPathBody(body, {
@@ -240,7 +240,7 @@ Subcommands:
             }
         }
 
-        const attachment = hasAttachments ? !downloaded.isFile : DiscordUtil.hasAttachmentUrls(parsed.body);
+        const attachment = downloaded !== null ? !downloaded.isFile : DiscordUtil.hasAttachmentUrls(parsed.body);
 
         return {
             body: parsed.body,

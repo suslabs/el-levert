@@ -10,7 +10,7 @@ class TagEditCommand {
         args: "<name> [new_body]",
         description:
             "Replaces a tag's body with new text, codeblock, or file attachment. Only the owner or moderators can edit a tag. The bot owner can provide local file paths.",
-        usage: "- <name>: The name of the tag to edit.\n- [new_body]: The updated content, or supply a file attachment.",
+        usage: "- <name>: The name of the tag to edit.\n- [new_body]: The updated content, a Discord file URL, or a file attachment.",
         parser: {
             requireArgs: true
         },

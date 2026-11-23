@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import createHttpStubServer from "../../helpers/httpStubServer.js";
 import { cleanupRuntime, createRuntime } from "../../helpers/runtimeHarness.js";
 
@@ -293,6 +293,70 @@ describe("TagManager", () => {
 
         await expect(manager.downloadBody("", { attachments: [] }, "invalid")).rejects.toThrow("Invalid body type");
         expect(TagError).toBeDefined();
+    });
+
+    test("refreshes linked files and applies their actual content types and size limits", async () => {
+        const manager = await createManager();
+        manager.maxTagSize = { text: 2, script: 1, binary: 3 };
+
+        const server = await createHttpStubServer({
+            "/plain.txt": () => ({ headers: { "content-type": "text/plain" }, body: "plain text" }),
+            "/code.js": () => ({ headers: { "content-type": "application/javascript" }, body: "x".repeat(1500) }),
+            "/data.json": () => ({ headers: { "content-type": "application/json" }, body: '{"value":1}' }),
+            "/file.bin": () => ({
+                headers: { "content-type": "application/octet-stream" },
+                body: Buffer.from([0, 1, 2])
+            }),
+            "/wrong.txt": () => ({ headers: { "content-type": "image/png" }, body: "image" })
+        });
+        servers.push(server);
+
+        const post = vi.spyOn(runtime.client.client.rest, "post").mockImplementation(async (route, options) => ({
+            refreshed_urls: options.body.attachment_urls.map(url => ({
+                original: url,
+                refreshed: `${server.url}/${new URL(url).pathname.split("/").at(-1)}`
+            }))
+        }));
+
+        try {
+            const base = "https://cdn.discordapp.com/attachments/1/2/";
+
+            expect(await manager.downloadBody(`${base}image.png`, { attachments: new Map() }, "tag")).toBeNull();
+            expect(await manager.downloadBody(`words ${base}plain.txt`, { attachments: new Map() }, "tag")).toBeNull();
+
+            await expect(manager.downloadBody(`${base}plain.txt`, { attachments: new Map() }, "tag")).resolves.toEqual({
+                body: "plain text",
+                isFile: true,
+                isBinary: false,
+                isScript: false
+            });
+            await expect(manager.downloadBody(`${base}code.js`, { attachments: new Map() }, "tag")).rejects.toThrow(
+                "Scripts can take up at most 1 kb"
+            );
+
+            const json = await manager.downloadBody(`${base}data.json`, { attachments: new Map() }, "tag");
+            expect(json.body).toBe('{"value":1}');
+
+            const binary = await manager.downloadBody(`${base}file.bin`, { attachments: new Map() }, "tag");
+            expect(binary.isBinary).toBe(true);
+            expect(Array.from(binary.body)).toEqual([0, 1, 2]);
+
+            const binaryEval = await manager.downloadBody(`${base}file.bin`, { attachments: new Map() }, "eval");
+            expect(binaryEval.isBinary).toBe(true);
+            expect(Array.from(binaryEval.body)).toEqual([0, 1, 2]);
+
+            const wrong = await manager.downloadBody(`${base}wrong.txt`, { attachments: new Map() }, "tag");
+            expect(wrong.isFile).toBe(false);
+            expect(wrong.body.trim()).toBe(`${base}wrong.txt`);
+            expect(server.state.requests.every(request => request.method === "GET")).toBe(true);
+
+            post.mockResolvedValueOnce({ refreshed_urls: [] });
+            await expect(manager.downloadBody(`${base}plain.txt`, { attachments: new Map() }, "tag")).rejects.toThrow(
+                "Discord did not refresh attachment URL"
+            );
+        } finally {
+            post.mockRestore();
+        }
     });
 
     test("emulates tags with tag fields, defaults, and normal execution flow", async () => {

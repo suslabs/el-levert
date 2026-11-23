@@ -247,6 +247,20 @@ let DiscordUtil = {
         return DiscordUtil.attachUrlRegex.test(str);
     },
 
+    attachRefreshRoute: "/attachments/refresh-urls",
+
+    refreshAttachmentUrls: async (rest, urls) => {
+        urls = ArrayUtil.guaranteeArray(urls);
+
+        const data = await rest.post(DiscordUtil.attachRefreshRoute, {
+            body: { attachment_urls: urls }
+        });
+
+        const refreshed = new Map(data.refreshed_urls.map(entry => [entry.original, entry.refreshed]));
+
+        return urls.map(url => refreshed.get(url) ?? null);
+    },
+
     discordEpoch: 1420070400000,
 
     snowflakeFromDate: date => {
@@ -832,31 +846,22 @@ let DiscordUtil = {
         return embedData;
     },
 
-    _fetchAttachmentDefaults: {
-        allowedContentType: [],
-        allowedContentTypes: [],
-        maxSize: Infinity
-    },
-    fetchAttachment: async (msg, responseType = "text", options = {}) => {
-        options = ObjectUtil.setValuesWithDefaults({}, options, DiscordUtil._fetchAttachmentDefaults);
+    openAttachment: async (msg, options) => {
+        options = ObjectUtil.guaranteeObject(options);
 
-        const ctypes = [].concat(options.allowedContentType, options.allowedContentTypes);
+        const allowedContentType = options.allowedContentType ?? [],
+            allowedContentTypes = options.allowedContentTypes ?? [];
 
-        const maxSizeKb = options.maxSize === -1 ? Infinity : Math.round(options.maxSize),
-            maxSize = maxSizeKb * Util.dataBytes.kilobyte;
+        const ctypes = [].concat(allowedContentType, allowedContentTypes);
 
-        const maxSizeError = attachSize =>
-            new UtilError(`The attachment can take up at most ${maxSizeKb} kb`, { attachSize, maxSizeKb });
-
-        const attach = msg.file ?? msg.attachments?.at(0),
+        const attach = msg.file ?? Util.first(Array.from(msg.attachments?.values() ?? [])),
             url = msg.fileUrl ?? attach?.url;
 
         if (!Util.nonemptyString(url)) {
             throw new UtilError("Message doesn't have any attachments");
         }
 
-        const attachInfo = msg.attachInfo ?? DiscordUtil.parseAttachmentUrl(url),
-            contentType = attach?.contentType;
+        const attachInfo = msg.attachInfo ?? DiscordUtil.parseAttachmentUrl(url);
 
         const [ctypePrefs, extensions] = ArrayUtil.split(ctypes, type => type.startsWith("."));
 
@@ -868,31 +873,35 @@ let DiscordUtil = {
             TypeTester.normalizeEnum(attachInfo.ext, extensions, "file extension", UtilError);
         }
 
-        if (!Util.empty(ctypePrefs)) {
+        const checkContentType = contentType => {
+            if (Util.empty(ctypePrefs)) {
+                return;
+            }
+
             if (contentType == null) {
                 throw new UtilError("Attachment doesn't have a content type");
             } else if (!Util.hasPrefix(ctypePrefs, contentType)) {
                 throw new UtilError("Invalid content type: " + contentType, contentType);
             }
+        };
+
+        if (attach != null) {
+            checkContentType(attach.contentType);
         }
 
-        if (attach?.size > maxSize) {
-            throw maxSizeError();
+        const res = await axios.request({ url, responseType: "stream" });
+        const contentType = attach?.contentType ?? res.headers["content-type"];
+
+        if (attach == null) {
+            try {
+                checkContentType(contentType);
+            } catch (err) {
+                res.data.destroy();
+                throw err;
+            }
         }
 
-        let res = null;
-
-        try {
-            res = await axios.request({
-                url,
-                maxContentLength: maxSize,
-                responseType
-            });
-        } catch (err) {
-            throw err.message.startsWith("maxContentLength") ? maxSizeError() : err;
-        }
-
-        return { attach, body: res.data, contentType };
+        return { attach, attachInfo, contentType, stream: res.data };
     },
 
     rebindMessage: (msg, client) => {

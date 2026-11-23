@@ -45,6 +45,31 @@ afterEach(async () => {
 });
 
 describe("MessageHandler", () => {
+    test("applies explicit user pings without enabling other mentions", () => {
+        const handler = createHandler();
+
+        const out = handler._getOutput(
+            { content: "<@123> @everyone", pings: ["123"] },
+            { limitType: MessageLimitTypes.none }
+        );
+
+        expect(out.content).toBe("<@123> \\@everyone");
+        expect(out.allowedMentions).toEqual({ repliedUser: true, parse: [], users: ["123"] });
+        expect(out).not.toHaveProperty("pings");
+
+        const plain = handler._getOutput({ content: "<@123>" }, { limitType: MessageLimitTypes.none });
+        expect(plain).not.toHaveProperty("allowedMentions");
+
+        runtime.client.setOptions({ mentionUsers: true, pingReply: false });
+
+        const restricted = handler._getOutput(
+            { content: "<@123> <@456>", pings: ["123"] },
+            { limitType: MessageLimitTypes.none }
+        );
+
+        expect(restricted.allowedMentions).toEqual({ repliedUser: false, parse: ["roles"], users: ["123"] });
+    });
+
     test("escapes pings, formats embeds, and applies trim, file, and error limits", () => {
         const handler = createHandler();
 

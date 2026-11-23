@@ -2,6 +2,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import createHttpStubServer from "../../helpers/httpStubServer.js";
+import Util from "../../../src/util/Util.js";
 import {
     addAdmin,
     cleanupRuntime,
@@ -29,6 +31,27 @@ afterEach(async () => {
 }, 30000);
 
 describe("eval command", () => {
+    test("runs a script downloaded from a refreshed Discord attachment URL", async () => {
+        const server = await createHttpStubServer({
+            "/code.txt": () => ({ headers: { "content-type": "text/plain" }, body: "1 + 2" })
+        });
+
+        try {
+            const url = "https://cdn.discordapp.com/attachments/1/2/code.txt?ex=00&is=00&hm=00";
+            vi.spyOn(runtime.client.client.rest, "post").mockResolvedValue({
+                refreshed_urls: [{ original: url, refreshed: `${server.url}/code.txt` }]
+            });
+
+            const command = getCommand(runtime, "eval");
+            const result = await executeCommand(command, url, { msg: createCommandMessage(`%eval ${url}`) });
+
+            expect(result).toEqual(["3", { type: "options", useConfigLimits: true }]);
+        } finally {
+            vi.restoreAllMocks();
+            await server.close();
+        }
+    });
+
     test("loads only the local eval path and runs scripts through real isolated-vm", async () => {
         const command = getCommand(runtime, "eval");
 
@@ -99,9 +122,14 @@ describe("Merged Branch Coverage", () => {
                 3
             ]
         };
-        runtime.client.tagManager.downloadBody = async () => ({
-            body: "from attachment"
-        });
+        const downloadBody = runtime.client.tagManager.downloadBody.bind(runtime.client.tagManager);
+        runtime.client.tagManager.downloadBody = async (args, msg, type) => {
+            if (Util.empty(msg.attachments)) {
+                return await downloadBody(args, msg, type);
+            }
+
+            return { body: "from attachment" };
+        };
     });
 
     afterEach(async () => {
@@ -142,6 +170,8 @@ describe("Merged Branch Coverage", () => {
                 content: ":no_entry_sign: Downloading attachment failed:",
                 embeds: expect.any(Array)
             });
+
+            runtime.client.tagManager.downloadBody = async () => null;
 
             runtime.client.tagVM.runScript = async () => {
                 const err = new Error("Stopped");
