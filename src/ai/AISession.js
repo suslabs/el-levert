@@ -15,6 +15,9 @@ class AISession {
     static maxFiles = 10;
     static maxImages = 4;
 
+    static toolMode = "AUTO";
+    static answerMode = "NONE";
+
     static getText(parts) {
         return parts
             .filter(part => typeof part.text === "string" && !part.thought)
@@ -70,6 +73,7 @@ class AISession {
 
         for (let i = 0; i < this.manager.maxSteps; i++) {
             this._checkCancelled();
+
             if (this.timeLeft < AISession.minCallTime) {
                 throw new AIError("Ran out of time", { steps: this.steps.length });
             }
@@ -148,7 +152,7 @@ class AISession {
             systemInstruction,
             contents: this.contents,
             tools: [{ functionDeclarations: this.manager.tools.getDeclarations(this) }],
-            toolConfig: { functionCallingConfig: { mode: final ? "NONE" : "AUTO" } }
+            toolConfig: { functionCallingConfig: { mode: final ? AISession.answerMode : AISession.toolMode } }
         };
     }
 

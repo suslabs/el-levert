@@ -4,6 +4,7 @@ import ToolParams from "../ToolParams.js";
 import AIPhases from "../../../structures/ai/AIPhases.js";
 
 import Util from "../../../util/Util.js";
+import ArrayUtil from "../../../util/ArrayUtil.js";
 import HTTPUtil from "../../../util/vm/HTTPUtil.js";
 
 import AIError from "../../../errors/AIError.js";
@@ -58,7 +59,9 @@ class HttpRequestTool extends WebTool {
             method: method.toLowerCase(),
             headers: {
                 accept: "application/json, text/plain;q=0.9",
-                ...Object.fromEntries((args.headers ?? []).map(header => [header.name, header.value]))
+                ...Object.fromEntries(
+                    ArrayUtil.guaranteeArray(args.headers, null, true).map(header => [header.name, header.value])
+                )
             },
             responseType: "text",
             transformResponse: data => data,

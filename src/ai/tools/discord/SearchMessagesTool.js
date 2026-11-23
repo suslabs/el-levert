@@ -69,14 +69,17 @@ class SearchMessagesTool extends MessageHistoryTool {
             .filter(msg => matcher.test(this._getSearchText(msg)))
             .slice(0, limit);
 
-        return {
+        const out = {
             scanned: msgs.length,
             count: matches.length,
-            messages: matches.map(msg => this.formatMessage(msg)),
-            note: Util.empty(matches)
-                ? `No messages matching "${query}" in the last ${msgs.length} messages.`
-                : undefined
+            messages: matches.map(msg => this.formatMessage(msg))
         };
+
+        if (Util.empty(matches)) {
+            out.note = `No messages matching "${query}" in the last ${msgs.length} messages.`;
+        }
+
+        return out;
     }
 
     _createMatcher(query, isRegex) {

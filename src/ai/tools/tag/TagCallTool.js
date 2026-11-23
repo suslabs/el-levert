@@ -7,6 +7,7 @@ import { getClient } from "../../../LevertClient.js";
 
 import Util from "../../../util/Util.js";
 import TypeTester from "../../../util/TypeTester.js";
+import ArrayUtil from "../../../util/ArrayUtil.js";
 import DiscordUtil from "../../../util/DiscordUtil.js";
 
 class TagCallTool extends TagTool {
@@ -37,7 +38,11 @@ class TagCallTool extends TagTool {
 
     async execute(args, session) {
         const tag = await this.fetchTag(args.name),
-            out = await getClient().tagManager.execute(tag, (args.args ?? []).join(" "), session.request.scriptValues);
+            out = await getClient().tagManager.execute(
+                tag,
+                ArrayUtil.guaranteeArray(args.args, null, true).join(" "),
+                session.request.scriptValues
+            );
 
         const files = TypeTester.isObject(out) ? (out.files ?? []) : [];
 

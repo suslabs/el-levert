@@ -51,7 +51,7 @@ class GeminiClient {
     async stream(body, state, options) {
         for (;;) {
             const res = await this._send(body, state, options, true),
-                out = await GeminiClient._catchTimeout(
+                out = await GeminiClient._catchAbort(
                     this._readStream(res.data, state, options.onParts),
                     options.signal
                 );
@@ -71,7 +71,7 @@ class GeminiClient {
     static _thinkingErrorRegex = /thinking/i;
     static _timeoutErrors = new Set(["CanceledError", "AbortError"]);
 
-    static async _catchTimeout(promise, signal) {
+    static async _catchAbort(promise, signal) {
         try {
             return await promise;
         } catch (err) {
@@ -207,7 +207,7 @@ class GeminiClient {
     async _post(model, body, state, options, stream) {
         const timeout = Util.clamp(options.timeLeft, GeminiClient.minTimeout, this.requestTimeout);
 
-        const res = await GeminiClient._catchTimeout(
+        const res = await GeminiClient._catchAbort(
             this.http.request({
                 url: this._getUrl(model, stream),
                 method: "post",

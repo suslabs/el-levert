@@ -587,7 +587,7 @@ Examples:
 
 ### 10. AI assistant: `a` / `ai` / `ask`
 
-Asks the AI assistant (Google Gemini). Only available when `enableAI` is on.
+Asks the AI assistant (Google Gemini). Only available when `enableAI` is on and a Gemini key is set (see [Credentials](#credentials)).
 
 Syntax:
 
@@ -595,32 +595,76 @@ Syntax:
 %a <question>
 ```
 
-- The answer is a single embed headed by the assistant's name and icon (`ai.name`, `ai.icon`; with no icon the bot's avatar is used). While it works, the header shows the current phase (e.g. "Searching...") and the embed shows a status line for each tool it runs, then a preview of the answer as it is written and "Finishing response...". A red Cancel button under the progress lets the person who asked stop the answer.
-- The finished answer has a green border, the sources it used and three to five numbered follow-up questions, and a footer with the model and the tokens used (`Models: <models> | <tokens> tok, <reasoning> reasoning | <seconds>s`, with the reasoning part left out when the model didn't reason and the time the answer took at the end).
-- The follow-ups have matching 1, 2, 3 buttons under the answer. Anyone can click one; the assistant answers it as the person who clicked, with the earlier questions and answers as context. The buttons are disabled after `interactionTimeout`. With `ai.followUpsAnyone` off, only the person who asked can use them. With `ai.followUpsEditAnswer` on, a follow-up from the person who asked replaces the message that was clicked instead of being sent as a new one; follow-ups from anyone else always get a new message. Follow-ups sent as a new message ping the person who clicked. The clicked message's buttons are hidden while the assistant works.
-- Reply to a message with `%a` to ask about it, or attach an image.
-- Replying to one of the assistant's answers without a command asks the reply as a new `%a` question, with the whole conversation so far as context. Replies can be chained, and an answer stops accepting replies once it's older than `interactionTimeout`.
-- Code, scripts and data the assistant writes are attached as files. If an answer is too long for the embed, the full answer is attached as `answer.md`.
-- Each user can ask `ai.maxRequests` questions (follow-up clicks included) every `ai.rateLimitWindow` seconds. Admins aren't limited.
-- The prompts live in text files under `ai.promptsPath` (`system.txt` for the assistant, `finisher.txt` for the sources and follow-ups pass, `inspectImage.txt` for image descriptions) and can be edited without touching the code.
+#### Asking
 
-Tools the assistant can use:
+- Attach an image to the question, or reply to a message with `%a`, to ask about it.
+- Name a tag ("caption this: ...") and the assistant runs that tag for you.
+- Ask for expert or hard mode to get expert questbook and recipe data.
 
-- `search_tags`: searches tags by name and by the text in their bodies.
-- `search_quests`, `read_quest`: the Nomi-CEu questbook (normal and expert), loaded from the modpack's GitHub repository at startup.
-- `search_recipes`, `show_recipe`: NomiCodex recipe lookups. The assistant picks the main production recipe (for example the Large Chemical Reactor recipe for polyethylene, or the Mixer recipe for signalum dust, not crafting it from tiny piles) and shows its card as the answer's image. Naming a machine ("steel ingot ebf") filters by it.
-- `tag_get`, `tag_call`: read or run a tag as the asking user.
-- `search_web`, `fetch_web_page`, `http_request` (GET/HEAD API calls only): web access through the same private-network protection as script HTTP requests.
-- `execute_javascript`: runs in the eval sandbox with the same limits as `%eval` (needs `enableEval`).
-- `unit_convert`: energy and fluid rate conversions, per tick or per second.
-- `find_users`, `get_asking_user`, `get_bot_profile`: server members and profiles.
-- `fetch_recent_messages`, `search_messages`: chat history, limited to channels the asking user can see.
-- `inspect_image`: describes an attached or linked image.
-- `attach_file`: attaches a text file to the answer (1 MB each).
-- `show_image`: shows images from direct URLs in the answer embed (up to 4, as a grid).
-- `attach_image`: downloads an image and attaches it to the answer as a file. Text files and images share a limit of 10 attachments.
+#### While it works
 
-`tag_call` and `execute_javascript` are only offered for `%a` messages, not for follow-up buttons, because there is no user message for scripts to run as.
+- The reply is a single embed headed by the assistant's name and icon (`ai.name`, `ai.icon`; with no icon the bot's avatar is used). The header shows the current phase, like "Searching...".
+- Each tool call gets its own status line with an emoji for that tool (🔎 tags, 📜 questbook, 🧪 recipes, 🌐 web, 🧮 conversions, ...), followed by a live preview of the answer as it's written and "Finishing response..." at the end.
+- A red **Cancel** button lets the person who asked stop the answer at any point. The embed then turns red and shows "🚫 Thinking cancelled."
+
+#### The answer
+
+- A green embed with the answer, the sources it used, and three to five numbered follow-up questions.
+- The footer shows the models used, the tokens spent, the reasoning tokens (left out when the model didn't reason) and how long the answer took: `Models: <models> | <tokens> tok, <reasoning> reasoning | <seconds>s`.
+- Up to 4 images can appear in the embed (recipe cards, images the assistant shows). Code, data, images it downloads and files sent by tags it runs are attached to the message, up to 10 attachments. An answer too long for the embed is also attached in full as `answer.md`.
+- If a model fails or stops partway, the assistant switches to the next model in `ai.models`. If every model fails, the embed turns red with a short reason.
+
+#### Follow-ups
+
+- The numbered follow-ups have matching **1**, **2**, **3** ... buttons. The assistant answers a clicked follow-up with the conversation so far as context. The buttons stop working after `interactionTimeout`.
+- `ai.followUpsAnyone`: when on, anyone can click them; when off, only the person who asked.
+- `ai.followUpsEditAnswer`: when on, a follow-up clicked by the person who asked replaces the answer it was clicked on. Follow-ups clicked by anyone else always get a new message that pings them, and the original answer's buttons are hidden until it's done.
+
+#### Conversations
+
+- Reply to one of the assistant's answers with the reply ping on, without a command, to ask a new question with the whole conversation as context. Replies can be chained.
+- Replies with the ping turned off are ignored, so a stray reply doesn't trigger an answer.
+- An answer stops accepting replies once it's older than `interactionTimeout`.
+
+#### Limits
+
+- Each user can ask `ai.maxRequests` questions (follow-up clicks included) every `ai.rateLimitWindow` seconds.
+- Admins and the bot owner have no cooldown, and with `ai.unlimitedTimeForAdmins` on they have no time limit either.
+- Everyone else gets `ai.timeLimit` seconds per answer, with up to `ai.maxSteps` rounds of tool calls (`-1` for no step limit).
+
+#### Data sources
+
+Data sources are external datasets the assistant can search. `ai.sources` lists which ones are on by name. Their URLs and settings are defined in code, in `src/ai/sources/Sources.js`:
+
+- `nomiCodex`: the [NomiCodex](https://sayaisha.github.io/NomiCodex/) recipe viewer for NomiFactory CEu. The assistant picks the main production recipe (the Large Chemical Reactor recipe for polyethylene, the Mixer recipe for signalum dust, not crafting it from tiny piles) and shows its card. Naming a machine ("steel ingot ebf") filters by it.
+- `nomiQuestbook`: the NomiFactory CEu questbook (normal and expert), downloaded from the modpack's GitHub repository when the bot starts.
+
+#### Tools
+
+| Tool                                               | What it does                                                                                                          |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `search_tags`, `tag_get`, `tag_call`               | Search tags by name and body, read a tag, run a tag as the asking user. Files a tag sends are attached to the answer. |
+| `search_quests`, `read_quest`                      | Search the questbook and read quests with their tasks and prerequisites (`nomiQuestbook`).                            |
+| `search_recipes`, `show_recipe`                    | Look up recipes and show a recipe card (`nomiCodex`).                                                                 |
+| `search_web`, `fetch_web_page`, `http_request`     | Web search, read pages, call APIs (GET/HEAD only), with the same private-network protection as script HTTP requests.  |
+| `inspect_image`, `show_image`, `attach_image`      | Describe an image, show images in the embed, attach an image as a file.                                               |
+| `attach_file`                                      | Attach a text file (code, data) to the answer, up to 1 MB.                                                            |
+| `execute_javascript`                               | Run code in the eval sandbox with the same limits as `%eval` (needs `enableEval`).                                    |
+| `unit_convert`                                     | Energy and fluid rate conversions, per tick or per second.                                                            |
+| `find_users`, `get_asking_user`, `get_bot_profile` | Server members and profiles.                                                                                          |
+| `fetch_recent_messages`, `search_messages`         | Chat history, only from channels the asking user can see.                                                             |
+
+`tag_call` and `execute_javascript` only work for questions typed as messages, not for follow-up buttons, since there's no message for scripts to run as.
+
+#### Prompts
+
+The prompts are text files under `ai.promptsPath` and can be edited without touching the code: `system.txt` for the assistant, `finisher.txt` for the sources and follow-ups step, and `inspectImage.txt` for image descriptions. The live context (date, server, channel, asking user) is added by code.
+
+#### Models and keys
+
+- `ai.models` lists the Gemini models in order: the first is used, the rest are fallbacks when it's rate limited, unavailable or stops partway.
+- `ai.thinkingLevel` is used when writing the answer and `ai.toolThinkingLevel` while the assistant can still call tools (`null` for models without thinking levels).
+- `geminiKey` in `auth.json` can be a list of keys: when one runs out of quota, the next is used.
 
 ### 11. Maintenance commands
 
