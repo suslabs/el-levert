@@ -13,6 +13,7 @@ import AIError from "../../../errors/AIError.js";
 class FetchWebPageTool extends WebTool {
     static info = {
         name: "fetch_web_page",
+        emoji: "📄",
         phase: AIPhases.reading,
         description:
             "Get the readable text of a public web page (including Wikipedia and search results). Use nextOffset to read further.",

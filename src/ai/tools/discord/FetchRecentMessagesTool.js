@@ -8,6 +8,7 @@ import Util from "../../../util/Util.js";
 class FetchRecentMessagesTool extends MessageHistoryTool {
     static info = {
         name: "fetch_recent_messages",
+        emoji: "💬",
         phase: AIPhases.reading,
         description:
             "Read recent chat history (only channels the asking user can see), optionally filtered by author or time. Use this for author/time-only filtering.",

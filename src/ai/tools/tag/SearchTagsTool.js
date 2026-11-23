@@ -13,6 +13,7 @@ import AIError from "../../../errors/AIError.js";
 class SearchTagsTool extends TagTool {
     static info = {
         name: "search_tags",
+        emoji: "🔎",
         phase: AIPhases.searching,
         description:
             "Search the bot's tags by name and by the text in their bodies. Use first for game, modpack and mechanics questions.",

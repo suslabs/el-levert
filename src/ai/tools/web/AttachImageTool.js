@@ -11,6 +11,7 @@ import AIError from "../../../errors/AIError.js";
 class AttachImageTool extends WebTool {
     static info = {
         name: "attach_image",
+        emoji: "📎",
         phase: AIPhases.fetching,
         description:
             "Download an image from a direct URL and attach it to your answer as a file, for when the user wants the image itself or it must not depend on the link staying up.",

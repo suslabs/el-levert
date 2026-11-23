@@ -12,6 +12,7 @@ import AIError from "../../../errors/AIError.js";
 class FindUsersTool extends AITool {
     static info = {
         name: "find_users",
+        emoji: "👥",
         phase: AIPhases.searching,
         description:
             "Identify server members or bots by name, nickname, mention or ID. A unique exact match is final: stop retrieval and do not web search.",

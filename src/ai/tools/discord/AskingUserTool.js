@@ -5,6 +5,7 @@ import AIPhases from "../../../structures/ai/AIPhases.js";
 class AskingUserTool extends AITool {
     static info = {
         name: "get_asking_user",
+        emoji: "👤",
         phase: AIPhases.reading,
         description: "Return the profile of the user who asked (id, mention, names, roles, join date)."
     };

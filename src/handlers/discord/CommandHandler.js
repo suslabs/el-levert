@@ -128,15 +128,15 @@ class CommandHandler extends MessageHandler {
         };
     }
 
-    async _resolveReplyInvocation(msg, checkExpiry) {
+    async _resolveReplyInvocation(msg, live) {
         const trigger = await this._fetchReplyTrigger(msg);
 
         if (trigger === null) {
             return null;
-        } else if (checkExpiry) {
-            const replyMsg = await this._resolveReplyMsg(msg);
+        } else if (live) {
+            const active = await this._isActiveReply(msg);
 
-            if (this._isReplyExpired(replyMsg)) {
+            if (!active) {
                 return null;
             }
         }
@@ -211,13 +211,19 @@ class CommandHandler extends MessageHandler {
         });
     }
 
-    _isReplyExpired(replyMsg) {
+    async _isActiveReply(msg) {
+        if (msg.mentions.repliedUser?.id !== getClient().client.user.id) {
+            return false;
+        }
+
+        const replyMsg = await this._resolveReplyMsg(msg);
+
         if (replyMsg === null) {
-            return true;
+            return false;
         }
 
         const timestamp = replyMsg.editedTimestamp ?? replyMsg.createdTimestamp;
-        return Date.now() - timestamp > this.replyTimeout;
+        return Date.now() - timestamp <= this.replyTimeout;
     }
 
     async _resolveReplyMsg(msg) {

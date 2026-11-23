@@ -12,6 +12,7 @@ import DiscordUtil from "../../../util/DiscordUtil.js";
 class TagCallTool extends TagTool {
     static info = {
         name: "tag_call",
+        emoji: "🪄",
         phase: AIPhases.running,
         description:
             "Run a tag as the asking user. Files the tag sends (like edited images) are attached to your answer. Image tags (caption, etc.) take the image from the question's attachments or the message it replies to on their own: pass only the text arguments, and add an image URL as the first argument only when the image isn't attached to either. Only use names returned by search_tags or given by the user.",

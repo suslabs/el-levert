@@ -10,6 +10,7 @@ import AIError from "../../../errors/AIError.js";
 class SearchQuestsTool extends QuestTool {
     static info = {
         name: "search_quests",
+        emoji: "📜",
         phase: AIPhases.searching,
         description:
             "Search the modpack's questbook, its in-game progression guide (what to build next, how to reach a tier, what a quest asks for). Returns short matches; read_quest gives the full quests.",

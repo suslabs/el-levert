@@ -12,6 +12,7 @@ import AIError from "../../../errors/AIError.js";
 class TagGetTool extends TagTool {
     static info = {
         name: "tag_get",
+        emoji: "🏷️",
         phase: AIPhases.reading,
         description:
             "Fetch a tag's body by exact name. Only use names returned by search_tags or given by the user. Tags are community-maintained.",

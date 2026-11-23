@@ -10,6 +10,7 @@ import AIError from "../../../errors/AIError.js";
 class ShowImageTool extends WebTool {
     static info = {
         name: "show_image",
+        emoji: "🏞️",
         phase: AIPhases.looking,
         description:
             "Show an image inside your answer's embed from a direct image URL (a found page's image, an attachment, a diagram). Up to 4 images are shown as a grid.",

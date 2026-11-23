@@ -8,7 +8,7 @@ import Util from "../../../src/util/Util.js";
 
 import AIError from "../../../src/errors/AIError.js";
 
-const info = { name: "test_tool", phase: AIPhases.running, description: "Test tool." };
+const info = { name: "test_tool", emoji: "🧪", phase: AIPhases.running, description: "Test tool." };
 
 class EchoTool extends AITool {
     static info = info;
@@ -52,7 +52,12 @@ describe("AITool", () => {
             async execute() {}
         }
 
+        class NoEmoji extends EchoTool {
+            static info = { ...info, emoji: "" };
+        }
+
         expect(() => new NoInfo(manager)).toThrow("Tool must have info");
+        expect(() => new NoEmoji(manager)).toThrow("Tool must have an emoji");
         expect(() => new BadPhase(manager)).toThrow("Tool must have a valid phase");
         expect(() => new NoStatus(manager)).toThrow("Child class must have a getStatus function");
     });
@@ -87,6 +92,7 @@ describe("AITool", () => {
         const step = new EchoTool(manager).createStep({ text: `a\nb${"c".repeat(100)}` });
 
         expect(step.phase).toBe(AIPhases.running);
+        expect(step.emoji).toBe("🧪");
         expect(step.status).toBe(`Echoing ${Util.trimString(`a b${"c".repeat(100)}`, AITool.maxStatusArgLength)}`);
     });
 });

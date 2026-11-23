@@ -282,7 +282,7 @@ describe("a command", () => {
         expect(recorder.sent[1].content).toBe("");
         expect(embedOf(recorder.sent[1])).toEqual({
             author: { name: "Test Rabbit - Thinking...", icon_url: "https://example.test/icon.png" },
-            description: "▶️ *Thinking...*"
+            description: "💭 *Thinking...*"
         });
 
         expect(embedOf(recorder.sent.at(-1))).toEqual({
@@ -445,7 +445,7 @@ describe("a command", () => {
         expect(click.reply.payloads[0].content).toContain("expired");
     });
 
-    test("replies to answers continue the conversation with its history until the answer expires", async () => {
+    test("pinging replies to answers continue the conversation until the answer expires", async () => {
         const script = [
             answer(["First answer."]),
             extras([], []),
@@ -489,10 +489,16 @@ describe("a command", () => {
         };
 
         const handler = runtime.client.commandHandler;
+        runtime.client.client.user = botUser;
+
+        const replyTo = messageId => ({
+            reference: { messageId },
+            mentions: { ...createDiscordMessage("").mentions, repliedUser: botUser }
+        });
 
         await expect(handler.execute(createUserMsg("q-1", "%a hello"))).resolves.toBe(true);
 
-        const followUp = createUserMsg("q-2", "and then?", { reference: { messageId: "q-1-answer" } });
+        const followUp = createUserMsg("q-2", "and then?", replyTo("q-1-answer"));
         await expect(handler.execute(followUp)).resolves.toBe(true);
 
         const textsOf = body => body.contents.map(content => [content.role, content.parts[0].text]);
@@ -506,7 +512,7 @@ describe("a command", () => {
         expect(bodies[2].body.systemInstruction.parts[0].text).not.toContain("The question replies to a message");
         expect(messages.get("q-2-answer").embeds[0].description).toBe("Second answer.");
 
-        const chained = createUserMsg("q-3", "and after that?", { reference: { messageId: "q-2-answer" } });
+        const chained = createUserMsg("q-3", "and after that?", replyTo("q-2-answer"));
         await expect(handler.execute(chained)).resolves.toBe(true);
 
         expect(textsOf(bodies[4].body)).toEqual([
@@ -519,12 +525,15 @@ describe("a command", () => {
         expect(messages.get("q-3-answer").embeds[0].description).toBe("Third answer.");
         expect(script).toEqual([]);
 
+        const silent = createUserMsg("q-6", "no ping", { reference: { messageId: "q-3-answer" } });
+        await expect(handler.execute(silent)).resolves.toBe(false);
+
         messages.get("q-3-answer").editedTimestamp = Date.now() - 2 * runtime.client.config.interactionTimeout;
 
-        const expired = createUserMsg("q-4", "still there?", { reference: { messageId: "q-3-answer" } });
+        const expired = createUserMsg("q-4", "still there?", replyTo("q-3-answer"));
         await expect(handler.execute(expired)).resolves.toBe(false);
 
-        const untracked = createUserMsg("q-5", "what about this?", { reference: { messageId: "someone-else" } });
+        const untracked = createUserMsg("q-5", "what about this?", replyTo("someone-else"));
         await expect(handler.execute(untracked)).resolves.toBe(false);
     });
 

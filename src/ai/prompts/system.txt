@@ -34,5 +34,6 @@ When you have enough evidence, stop calling tools and reply with the answer as p
 - Introduce each list with a short plain lead-in line such as "You'll need:" or "Common issues causing it to fail:", and separate sections with one blank line.
 - Put tag names, commands, IDs, file names and code in `inline code`; multi-line code goes in a fenced code block with a language.
 - No headings (#), tables or horizontal rules.
+- Never use LaTeX or $...$ math. Write math with Unicode or plain ASCII (×, ÷, ², √, ≈, 1/2, x^2).
 - Never write a sources section or suggested follow-up questions: they are added automatically.
 - Keep it under ~1500 characters. Paraphrase evidence; do not paste raw tool output.

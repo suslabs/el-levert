@@ -3,6 +3,8 @@ import * as Tools from "./tools/tools.js";
 import AIPhases from "../structures/ai/AIPhases.js";
 
 class AIToolRegistry {
+    static unknownToolEmoji = "❔";
+
     constructor(manager) {
         this.tools = new Map(Object.values(Tools).map(_class => [_class.info.name, new _class(manager)]));
     }
@@ -28,7 +30,7 @@ class AIToolRegistry {
         const tool = this.get(name, session);
 
         if (tool === null) {
-            return { phase: AIPhases.thinking, status: `Calling ${name}` };
+            return { phase: AIPhases.thinking, emoji: AIToolRegistry.unknownToolEmoji, status: `Calling ${name}` };
         }
 
         return tool.createStep(args);

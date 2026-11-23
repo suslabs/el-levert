@@ -10,6 +10,7 @@ import AIError from "../../../errors/AIError.js";
 class SearchWebTool extends AITool {
     static info = {
         name: "search_web",
+        emoji: "🌐",
         phase: AIPhases.searching,
         description:
             "Web search for current, niche, disputed or external facts, and modpack questions the tags don't cover.",

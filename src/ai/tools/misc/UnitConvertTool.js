@@ -13,6 +13,7 @@ import AIError from "../../../errors/AIError.js";
 class UnitConvertTool extends AITool {
     static info = {
         name: "unit_convert",
+        emoji: "🧮",
         phase: AIPhases.calculating,
         description:
             "Convert between mB, bucket (B), mB/t, mB/s, B/t, B/s, EU/t, RF/t (FE/t), AE/t, their per-second forms and voltage tier amps (e.g. MV).",

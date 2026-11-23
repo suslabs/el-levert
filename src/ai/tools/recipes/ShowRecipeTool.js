@@ -10,6 +10,7 @@ import AIError from "../../../errors/AIError.js";
 class ShowRecipeTool extends RecipeTool {
     static info = {
         name: "show_recipe",
+        emoji: "🖼️",
         phase: AIPhases.rendering,
         description:
             "Render one recipe from search_recipes as an image card and show it with your answer. Call it once, for the recipe the user most likely means.",

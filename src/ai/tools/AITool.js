@@ -16,6 +16,8 @@ class AITool {
 
         if (!TypeTester.isObject(info)) {
             throw new AIError("Tool must have info");
+        } else if (!Util.nonemptyString(info.emoji)) {
+            throw new AIError("Tool must have an emoji", info.name);
         } else if (!AIPhases.has(info.phase)) {
             throw new AIError("Tool must have a valid phase", info.name);
         } else if (typeof this.execute !== "function") {
@@ -53,6 +55,7 @@ class AITool {
     createStep(args) {
         return {
             phase: this.phase,
+            emoji: this.constructor.info.emoji,
             status: this.getStatus(args)
         };
     }

@@ -9,7 +9,7 @@ import DiscordUtil from "../../util/DiscordUtil.js";
 import { httpStatusCodes, isServerErrorStatus } from "../../util/misc/HttpStatusCodes.js";
 
 class AIReplyView {
-    static statusEmoji = "▶️";
+    static thinkingEmoji = "💭";
     static finishingStatus = "Finishing response";
 
     static answerColor = 0x75fa4c;
@@ -140,8 +140,16 @@ class AIReplyView {
         return new ActionRowBuilder().addComponents(button);
     }
 
-    static _formatStatus(status) {
-        return `${AIReplyView.statusEmoji} *${escapeMarkdown(status)}...*`;
+    static _formatStatuses(phase, steps) {
+        if (Util.empty(steps)) {
+            return [AIReplyView._formatStatus(AIReplyView.thinkingEmoji, phase)];
+        }
+
+        return steps.map(step => AIReplyView._formatStatus(step.emoji, step.status));
+    }
+
+    static _formatStatus(emoji, status) {
+        return `${emoji} *${escapeMarkdown(status)}...*`;
     }
 
     static _formatPreview(text, finishing) {
@@ -237,9 +245,7 @@ class AIReplyView {
     }
 
     _renderStatus(phase, steps, text, finishing, cancelSession) {
-        const statuses = Util.empty(steps) ? [phase] : steps.map(step => step.status);
-
-        const statusText = statuses.slice(-AIReplyView.maxStatusLines).map(AIReplyView._formatStatus).join("\n"),
+        const statusText = AIReplyView._formatStatuses(phase, steps).slice(-AIReplyView.maxStatusLines).join("\n"),
             preview = AIReplyView._formatPreview(text, finishing);
 
         const embed = this._createEmbed(`${this.name} - ${phase}...`).setDescription(

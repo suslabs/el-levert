@@ -13,6 +13,7 @@ import AIError from "../../../errors/AIError.js";
 class ExecuteJavascriptTool extends AITool {
     static info = {
         name: "execute_javascript",
+        emoji: "💻",
         phase: AIPhases.running,
         description:
             "Run JavaScript in the bot's eval sandbox for nontrivial arithmetic, simulation or comparisons. Runs as a script, not a function body: make the result the FINAL evaluated expression (no return, no console.log).",

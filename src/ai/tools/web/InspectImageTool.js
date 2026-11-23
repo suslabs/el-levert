@@ -11,6 +11,7 @@ import AIError from "../../../errors/AIError.js";
 class InspectImageTool extends WebTool {
     static info = {
         name: "inspect_image",
+        emoji: "👀",
         phase: AIPhases.looking,
         description:
             "Load an image URL and get a factual description. Use ONLY when the answer depends on what an image shows.",

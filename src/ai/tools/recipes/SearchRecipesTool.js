@@ -15,6 +15,7 @@ import AIError from "../../../errors/AIError.js";
 class SearchRecipesTool extends RecipeTool {
     static info = {
         name: "search_recipes",
+        emoji: "🧪",
         phase: AIPhases.searching,
         description:
             'Look up an item\'s recipes (or, with uses, what it\'s used in) in the modpack\'s recipe viewer. Recipes come ranked with the main production recipe usually first. End the query with a machine to filter (e.g. "steel ingot ebf", "pe lcr", "signalum dust mixer").',

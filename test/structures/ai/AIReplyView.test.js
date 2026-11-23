@@ -39,20 +39,20 @@ describe("AIReplyView", () => {
         const embed = embedOf(
             view.renderProgress(
                 session([
-                    { phase: AIPhases.reading, status: 'Reading tag "steel"' },
-                    { phase: AIPhases.searching, status: 'Searching the web for "test_*"' }
+                    { phase: AIPhases.reading, emoji: "🏷️", status: 'Reading tag "steel"' },
+                    { phase: AIPhases.searching, emoji: "🌐", status: 'Searching the web for "test_*"' }
                 ]),
                 cancelSession
             )
         );
 
         expect(embed.author.name).toBe("Test Rabbit - Searching...");
-        expect(embed.description).toBe('▶️ *Reading tag "steel"...*\n▶️ *Searching the web for "test\\_\\*"...*');
+        expect(embed.description).toBe('🏷️ *Reading tag "steel"...*\n🌐 *Searching the web for "test\\_\\*"...*');
         expect(embed.color).toBeUndefined();
     });
 
     test("previews the streamed answer and the finishing step", () => {
-        const steps = [{ phase: AIPhases.searching, status: 'Searching the web for "test"' }],
+        const steps = [{ phase: AIPhases.searching, emoji: "🌐", status: 'Searching the web for "test"' }],
             embed = embedOf(
                 view.renderProgress(session(steps, `Here are the results: ${"x".repeat(300)}`, true), cancelSession)
             );
@@ -60,7 +60,7 @@ describe("AIReplyView", () => {
         const [status, preview] = embed.description.split("\n\n"),
             [text, finishing] = preview.split("\n");
 
-        expect(status).toBe('▶️ *Searching the web for "test"...*');
+        expect(status).toBe('🌐 *Searching the web for "test"...*');
         expect(text).toHaveLength(AIReplyView.maxPreviewLength);
         expect(text.endsWith("...")).toBe(true);
         expect(finishing).toBe("*Finishing response...*");
@@ -101,11 +101,15 @@ describe("AIReplyView", () => {
     });
 
     test("only shows the latest status lines", () => {
-        const steps = Array.from({ length: 8 }, (_, i) => ({ phase: AIPhases.running, status: `Step ${i}` })),
+        const steps = Array.from({ length: 8 }, (_, i) => ({
+                phase: AIPhases.running,
+                emoji: "💻",
+                status: `Step ${i}`
+            })),
             lines = embedOf(view.renderProgress(session(steps), cancelSession)).description.split("\n");
 
         expect(lines).toHaveLength(AIReplyView.maxStatusLines);
-        expect(lines.at(-1)).toBe("▶️ *Step 7...*");
+        expect(lines.at(-1)).toBe("💻 *Step 7...*");
     });
 
     test("keeps sources and attaches the full answer when trimming a long one", () => {

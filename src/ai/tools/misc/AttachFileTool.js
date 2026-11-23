@@ -10,6 +10,7 @@ import AIError from "../../../errors/AIError.js";
 class AttachFileTool extends AITool {
     static info = {
         name: "attach_file",
+        emoji: "📁",
         phase: AIPhases.writing,
         description:
             "Attach a text file (code, scripts, data, long lists or tables) to your reply instead of pasting it into the answer. Attaching a file with the same name replaces it.",

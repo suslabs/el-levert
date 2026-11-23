@@ -11,6 +11,7 @@ import AIError from "../../../errors/AIError.js";
 class ReadQuestTool extends QuestTool {
     static info = {
         name: "read_quest",
+        emoji: "📖",
         phase: AIPhases.reading,
         description: "Read quests from search_quests in full, with their tasks and prerequisites.",
         parameters: ToolParams.object(

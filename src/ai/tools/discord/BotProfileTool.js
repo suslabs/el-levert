@@ -7,6 +7,7 @@ import { getClient, getConfig } from "../../../LevertClient.js";
 class BotProfileTool extends AITool {
     static info = {
         name: "get_bot_profile",
+        emoji: "🐰",
         phase: AIPhases.reading,
         description: "Return this bot's own profile (name, mention, version, prefix, model)."
     };

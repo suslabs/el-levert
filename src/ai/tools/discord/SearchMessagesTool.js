@@ -13,6 +13,7 @@ import AIError from "../../../errors/AIError.js";
 class SearchMessagesTool extends MessageHistoryTool {
     static info = {
         name: "search_messages",
+        emoji: "🔍",
         phase: AIPhases.searching,
         description:
             "Search the recent history of one channel (only channels the asking user can see) for actual text. No match-all regex.",
