@@ -45,7 +45,7 @@ class AIReply {
     constructor(ctx) {
         this.ctx = ctx;
         this.request = ctx.isInteraction ? AIRequest.fromInteraction(ctx.interaction) : AIRequest.fromCommand(ctx);
-        this.replace = ctx.isInteraction && getConfig().ai.followUpsEditAnswer;
+        this.replace = ctx.isInteraction && ctx.isAuthor && getConfig().ai.followUpsEditAnswer;
 
         this.view = new AIReplyView();
         this.updater = new AIReplyUpdater(ctx, this.replace);
