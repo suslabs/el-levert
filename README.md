@@ -81,9 +81,8 @@ Supported environment variable names:
 
 - `LEVERET_TOKEN`
 - `LEVERET_OWNER`
-- `LEVERET_GEMINI_KEY` (optional, only needed when `enableAI` is on)
 
-If `config/auth.json` exists, the bot uses that file for `token`, `owner` and `geminiKey`. `geminiKey` can also be a list of keys: when one runs out of quota, the bot moves on to the next.
+If `config/auth.json` exists, the bot uses that file for `token` and `owner`.
 
 If there is no `config/auth.json`, the bot looks for `config/auth.env` and then for the matching environment variables.
 
@@ -92,8 +91,7 @@ If there is no `config/auth.json`, the bot looks for `config/auth.env` and then 
 ```json
 {
     "token": "bot token",
-    "owner": "your discord id",
-    "geminiKey": "optional Gemini API key, or a list of keys"
+    "owner": "your discord id"
 }
 ```
 
@@ -102,10 +100,7 @@ If there is no `config/auth.json`, the bot looks for `config/auth.env` and then 
 ```dotenv
 LEVERET_TOKEN=your bot token
 LEVERET_OWNER=your discord id
-LEVERET_GEMINI_KEY=optional Gemini API key
 ```
-
-The Gemini key lives in the credentials, not in a tag, so it can't be read with `%tag raw` or from scripts. Get a free key at https://aistudio.google.com/apikey.
 
 ## Main bot config
 
@@ -121,8 +116,7 @@ Important groups of settings:
 - Inspector and debugging: `vmInspector` (`enable`, `enableUser`, `connectTimeout`, `userConnectTimeout`, `userActionTimeout`, `port`)
 - Tags and quotas: `maxTagNameLength`, `tagNameRegex`, `maxTagSize` (per-tag limits in kb for `text`, `script`, and `binary`; `-1` for unlimited), `maxQuota` (total storage quota in kb; `-1` for unlimited), `maxTagCount` (`-1` for unlimited)
 - Reply and output limits: `outCharLimit`, `outLineLimit`, `embedCharLimit`, `embedLineLimit`
-- Major features: `enablePreviews`, `enableSed`, `enablePermissions`, `enableReminders`, `enableAI`
-- AI assistant: `ai` (`name` and `icon` for the embed header, `promptsPath` for the prompt text files, `endpoint`, `models` (the first one is used, the rest are fallbacks when it's rate limited or unavailable), `thinkingLevel` for writing answers and `toolThinkingLevel` for the steps where the assistant can still call tools (`null` for models without thinking levels; a `null` `toolThinkingLevel` uses `thinkingLevel`), `maxSteps` (`-1` for no limit; `timeLimit` still applies), `timeLimit` and `requestTimeout` in seconds, `unlimitedTimeForAdmins` (admins and the owner get no time limit), `maxDownloadSize` in MB, `maxToolOutput` in characters, `maxRequests` per user every `rateLimitWindow` seconds, `followUpsAnyone` and `followUpsEditAnswer` for the follow-up buttons, `allowLocalhostRequests`, `sources` (which built-in data sources the assistant can use, by name: `nomiCodex` for NomiCodex recipes, `nomiQuestbook` for the Nomi-CEu questbook, `wikipedia` for Wikipedia; their URLs and settings are defined in `src/ai/sources/Sources.js`))
+- Major features: `enablePreviews`, `enableSed`, `enablePermissions`, `enableReminders`
 - Logging and file paths: log files, log level, database path, command paths, Discord log settings
 
 ## Reactions config
@@ -165,7 +159,6 @@ If reactions are enabled, the file defines the bracket reactions and the word-tr
 - If `allowLocalhostRequests` is off (the default), script HTTP requests (`request` / `fetch`) cannot connect to localhost, loopback, or private network IP addresses.
 - If `allowFilesystemRequests` is off (the default), script HTTP requests cannot access local files through `file://` URLs.
 - If inspector support is off, debug flows described in this README are not available.
-- If `enableAI` is off, the `a` command is not available. If it's on, a Gemini key must be provided in the credentials or the bot refuses to start.
 - For tag size and count limits (`maxTagSize.text`, `maxTagSize.script`, `maxTagSize.binary`, `maxQuota`, and `maxTagCount`), setting any limit to `-1` means unlimited. The `%tag quota` command reports both your stored tag quota (in kb) and registered tag count against these limits (or as unlimited when configured as `-1`).
 
 # Features
@@ -180,7 +173,7 @@ If reactions are enabled, the file defines the bracket reactions and the word-tr
 - Message link previews, sed-style replacements, and reaction triggers
 - CLI commands for local testing and tag/script emulation
 - WebSocket command API for external tools and editor integration
-- AI assistant (Gemini) that searches tags, recipes, chat history, members and the web, with live streamed progress and follow-up buttons
+- AI assistant that answers questions using tags, the questbook, recipes, Wikipedia and the web
 
 ## Updating the bot
 
@@ -587,87 +580,32 @@ Examples:
 
 ### 10. AI assistant: `a` / `ai` / `ask`
 
-Asks the AI assistant (Google Gemini). Only available when `enableAI` is on and a Gemini key is set (see [Credentials](#credentials)).
+Asks the AI assistant a question. It can look things up in the server's tags, the NomiFactory CEu questbook and recipes, Wikipedia, the web, chat history and server members, and run tags or code to work things out.
 
-Syntax:
+Who uses this:
 
-```
-%a <question>
-```
+- everyone
 
-#### Asking
+Base usage:
 
-- Attach an image to the question, or reply to a message with `%a`, to ask about it.
-- Name a tag ("caption this: ...") and the assistant runs that tag for you.
-- Ask for expert or hard mode to get expert questbook and recipe data.
+`%a <question>`
+`%ai <question>`
+`%ask <question>`
 
-#### While it works
+Examples:
 
-- The reply is a single embed headed by the assistant's name and icon (`ai.name`, `ai.icon`; with no icon the bot's avatar is used). The header shows the current phase, like "Searching...".
-- Each tool call gets its own status line with an emoji for that tool (🔎 tags, 📜 questbook, 🧪 recipes, 📚 Wikipedia, 🌐 web, 🧮 conversions, ...), followed by a live preview of the answer as it's written and "Finishing response..." at the end.
-- A red **Cancel** button lets the person who asked stop the answer at any point. The embed then turns red and shows "🚫 Thinking cancelled."
+- `%a how do I make steel`
+- `%a what should I do after the EBF`
+- `%a caption this: when the code works` runs the `caption` tag for you
+- `%a recipe for polyethylene in expert mode`
 
-#### The answer
+Usage:
 
-- A green embed with the answer, the sources it used, and three to five numbered follow-up questions.
-- The footer shows the models used, the tokens spent, the reasoning tokens (left out when the model didn't reason) and how long the answer took: `Models: <models> | <tokens> tok, <reasoning> reasoning | <seconds>s`.
-- Up to 4 images can appear in the embed (recipe cards, images the assistant shows). Code, data, images it downloads and files sent by tags it runs are attached to the message, up to 10 attachments. An answer too long for the embed is also attached in full as `answer.md`.
-- If a model fails or stops partway, the assistant switches to the next model in `ai.models`. If every model fails, the embed turns red with a short reason.
-
-#### Follow-ups
-
-- The numbered follow-ups have matching **1**, **2**, **3** ... buttons. The assistant answers a clicked follow-up with the conversation so far as context. The buttons stop working after `interactionTimeout`.
-- `ai.followUpsAnyone`: when on, anyone can click them; when off, only the person who asked.
-- `ai.followUpsEditAnswer`: when on, a follow-up clicked by the person who asked replaces the answer it was clicked on. Follow-ups clicked by anyone else always get a new message that pings them, and the original answer's buttons are hidden until it's done.
-
-#### Conversations
-
-- Reply to one of the assistant's answers without a command to ask a new question with the whole conversation as context. Replies can be chained.
-- An answer stops accepting replies once it's older than `interactionTimeout`.
-
-#### Limits
-
-- Each user can ask `ai.maxRequests` questions (follow-up clicks included) every `ai.rateLimitWindow` seconds.
-- Admins and the bot owner have no cooldown, and with `ai.unlimitedTimeForAdmins` on they have no time limit either.
-- Everyone else gets `ai.timeLimit` seconds per answer, with up to `ai.maxSteps` rounds of tool calls (`-1` for no step limit).
-
-#### Data sources
-
-Data sources are the knowledge bases the assistant can search, separate from its general tools. `ai.sources` lists which ones are on by name, and a source's tools are only offered when it's on. Their URLs and settings are defined in code, in `src/ai/sources/Sources.js`, the same way script functions are:
-
-- `nomiCodex`: the [NomiCodex](https://sayaisha.github.io/NomiCodex/) recipe viewer for NomiFactory CEu. The assistant picks the main production recipe (the Large Chemical Reactor recipe for polyethylene, the Mixer recipe for signalum dust, not crafting it from tiny piles) and shows its card. Naming a machine ("steel ingot ebf") filters by it.
-- `nomiQuestbook`: the NomiFactory CEu questbook (normal and expert), downloaded from the modpack's GitHub repository when the bot starts.
-- `wikipedia`: Wikipedia, in any language, for encyclopedic facts.
-
-#### Tools
-
-| Tool                                               | What it does                                                                                                          |
-| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `search_tags`, `tag_get`, `tag_call`               | Search tags by name and body, read a tag, run a tag as the asking user. Files a tag sends are attached to the answer. |
-| `search_quests`, `read_quest`                      | Search the questbook and read quests with their tasks and prerequisites (`nomiQuestbook`).                            |
-| `search_recipes`, `show_recipe`                    | Look up recipes and show a recipe card (`nomiCodex`).                                                                 |
-| `search_web`, `fetch_web_page`, `http_request`     | Web search, read pages, call APIs (GET/HEAD only), with the same private-network protection as script HTTP requests.  |
-| `search_wikipedia`, `read_wikipedia`               | Search Wikipedia in any language and read articles as plain text (`wikipedia`).                                       |
-| `inspect_image`, `show_image`, `attach_image`      | Describe an image, show images in the embed, attach an image as a file.                                               |
-| `attach_file`                                      | Attach a text file (code, data) to the answer, up to 1 MB.                                                            |
-| `execute_javascript`                               | Run code in the eval sandbox with the same limits as `%eval` (needs `enableEval`).                                    |
-| `unit_convert`                                     | Energy and fluid rate conversions, per tick or per second.                                                            |
-| `find_users`, `get_asking_user`, `get_bot_profile` | Server members and profiles.                                                                                          |
-| `fetch_recent_messages`, `search_messages`         | Chat history, only from channels the asking user can see.                                                             |
-
-Expired Discord attachment links are refreshed through Discord's API before the web and image tools load them.
-
-`tag_call` and `execute_javascript` only work for questions typed as messages, not for follow-up buttons, since there's no message for scripts to run as.
-
-#### Prompts
-
-The prompts are text files under `ai.promptsPath` and can be edited without touching the code: `system.txt` for the assistant, `finisher.txt` for the sources and follow-ups step, and `inspectImage.txt` for image descriptions. The live context (date, server, channel, asking user) is added by code.
-
-#### Models and keys
-
-- `ai.models` lists the Gemini models in order: the first is used, the rest are fallbacks when it's rate limited, unavailable or stops partway.
-- `ai.thinkingLevel` is used when writing the answer and `ai.toolThinkingLevel` while the assistant can still call tools (`null` for models without thinking levels).
-- `geminiKey` in `auth.json` can be a list of keys: when one runs out of quota, the next is used.
+- Attach an image, or reply to a message with `%a`, to ask about it.
+- The reply shows what the assistant is doing as it works. Press **Cancel** to stop it.
+- Answers list the sources they used and a few follow-up questions. Click a number to ask that follow-up.
+- Reply to an answer without a command to keep the conversation going.
+- There's a cooldown on how often you can ask. Admins and the bot owner skip it.
 
 ### 11. Maintenance commands
 
