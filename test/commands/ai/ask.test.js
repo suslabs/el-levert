@@ -422,6 +422,7 @@ describe("a command", () => {
         expect(script).toEqual([]);
         expect(embedOf(click.reply.payloads.at(-1)).description).toBe("More.");
         expect(click.reply.payloads.map(payload => payload.content)).toEqual([`<@${clickerId}>`, `<@${clickerId}>`]);
+        expect(Util.first(click.reply.payloads).allowedMentions.users).toEqual([clickerId]);
 
         const [hidden, restored] = recorder.msg.payloads;
 

@@ -38,10 +38,10 @@ class AIReplyView {
         return Util.first(msg.embeds)?.description ?? msg.content;
     }
 
-    constructor(mention = null) {
+    constructor(pingUser = null) {
         const config = getConfig().ai;
 
-        this.mention = mention;
+        this.pingUser = pingUser;
 
         this.name = config.name;
         this.icon = config.icon ?? getClient().client.user.displayAvatarURL();
@@ -222,7 +222,14 @@ class AIReplyView {
     }
 
     _createPayload(embeds, components = []) {
-        return { content: this.mention ?? "", embeds, components, attachments: [] };
+        const payload = { content: "", embeds, components, attachments: [] };
+
+        if (this.pingUser !== null) {
+            payload.content = `<@${this.pingUser}>`;
+            payload.pings = [this.pingUser];
+        }
+
+        return payload;
     }
 
     _createEmbed(title) {

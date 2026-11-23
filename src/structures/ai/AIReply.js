@@ -47,7 +47,7 @@ class AIReply {
         this.request = ctx.isInteraction ? AIRequest.fromInteraction(ctx.interaction) : AIRequest.fromCommand(ctx);
         this.replace = ctx.isInteraction && ctx.isAuthor && getConfig().ai.followUpsEditAnswer;
 
-        this.view = new AIReplyView(ctx.isInteraction && !this.replace ? `<@${ctx.interaction.user.id}>` : null);
+        this.view = new AIReplyView(ctx.isInteraction && !this.replace ? ctx.interaction.user.id : null);
         this.updater = new AIReplyUpdater(ctx, this.replace);
 
         this.controller = new AbortController();
