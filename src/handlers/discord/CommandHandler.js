@@ -3,6 +3,7 @@ import { bold } from "discord.js";
 import MessageHandler from "./MessageHandler.js";
 
 import CommandContext from "../../structures/command/context/CommandContext.js";
+import CommandParser from "../../parsers/command/CommandParser.js";
 
 import { getClient, getConfig, getEmoji, getLogger } from "../../LevertClient.js";
 
@@ -47,40 +48,42 @@ class CommandHandler extends MessageHandler {
         });
 
         this.commandWaitTime = getConfig().commandWaitTime;
+        this.replyTimeout = getConfig().interactionTimeout;
     }
 
     async execute(msg, options) {
         options = ObjectUtil.guaranteeObject(options);
 
-        if (!getClient().commandManager.isCommand(msg.content, msg)) {
+        const invocation = await this._resolveInvocation(msg);
+
+        if (invocation === null) {
             return false;
         }
 
-        const executeMain = async () => {
-            const [cmd, , , parsed] = getClient().commandManager.getCommand(msg.content, msg);
+        return await this._executeInvocation(msg, invocation, options);
+    }
 
-            if (!cmd || parsed === null || (await this.checkRateLimit(msg))) {
+    async resubmit(msg) {
+        const invocation = await this._resolveInvocation(msg);
+
+        const deleted = await this.delete(msg);
+        return invocation === null ? deleted : await this._executeInvocation(msg, invocation, { isEdit: true });
+    }
+
+    async _executeInvocation(msg, invocation, options) {
+        options = ObjectUtil.guaranteeObject(options);
+
+        const executeMain = async () => {
+            const command = invocation.command;
+
+            if (await this.checkRateLimit(msg)) {
                 return false;
             }
 
             this._sendTyping(msg);
 
-            const replyMsg = await this._resolveReplyMsg(msg);
-
-            await this._executeAndReply(
-                cmd,
-                new CommandContext({
-                    command: cmd,
-                    commandName: parsed.name,
-                    raw: msg.content,
-                    argsText: parsed.argsText,
-                    parseResult: parsed,
-                    message: msg,
-                    replyMsg,
-                    handler: this,
-                    isEdit: options.isEdit
-                })
-            );
+            const context = await this._createContext(msg, invocation, options.isEdit);
+            await this._executeAndReply(command, context);
 
             return true;
         };
@@ -103,13 +106,112 @@ class CommandHandler extends MessageHandler {
         }
     }
 
-    async resubmit(msg) {
+    async _resolveInvocation(msg) {
         if (getClient().commandManager.isCommand(msg.content, msg)) {
-            await this.delete(msg);
-            return await this.execute(msg, { isEdit: true });
+            return this._resolveCommandInvocation(msg);
         } else {
-            return await this.delete(msg);
+            return await this._resolveReplyInvocation(msg);
         }
+    }
+
+    _resolveCommandInvocation(msg) {
+        const [command, , , parsed] = getClient().commandManager.getCommand(msg.content, msg);
+
+        if (command === null || parsed === null) {
+            return null;
+        }
+
+        return {
+            command,
+            parsed,
+            previousContext: null
+        };
+    }
+
+    async _resolveReplyInvocation(msg) {
+        const trigger = await this._fetchReplyTrigger(msg);
+
+        if (trigger === null) {
+            return null;
+        }
+
+        const replyMsg = await this._resolveReplyMsg(msg);
+
+        if (this._isReplyExpired(replyMsg)) {
+            return null;
+        }
+
+        const previousContext = await this._restoreContext(trigger);
+        return this._createReplyInvocation(msg, previousContext);
+    }
+
+    async _fetchReplyTrigger(msg) {
+        const triggerId = this.replyTracker.findTriggerId("reply", msg.reference?.messageId);
+        return triggerId === null ? null : await getClient().fetchMessage(msg.channelId, triggerId);
+    }
+
+    async _restoreContext(msg) {
+        let invocation;
+
+        if (getClient().commandManager.isCommand(msg.content, msg)) {
+            invocation = this._resolveCommandInvocation(msg);
+        } else {
+            invocation = await this._restoreReplyInvocation(msg);
+        }
+
+        return invocation === null ? null : await this._createContext(msg, invocation);
+    }
+
+    async _restoreReplyInvocation(msg) {
+        const trigger = await this._fetchReplyTrigger(msg);
+
+        if (trigger === null) {
+            return null;
+        }
+
+        const previousContext = await this._restoreContext(trigger);
+        return this._createReplyInvocation(msg, previousContext);
+    }
+
+    _createReplyInvocation(msg, previousContext) {
+        if (previousContext === null || !previousContext.command.continueOnReply) {
+            return null;
+        }
+
+        const command = previousContext.command,
+            parsed = CommandParser.parseInvocation(`${command.name} ${msg.content}`);
+
+        return {
+            command,
+            parsed,
+            previousContext
+        };
+    }
+
+    async _createContext(msg, invocation, isEdit = false) {
+        const { command, parsed, previousContext } = invocation;
+
+        return new CommandContext({
+            command,
+            commandName: parsed.name,
+            raw: parsed.raw,
+            argsText: parsed.argsText,
+            parseResult: parsed,
+            message: msg,
+            replyMsg: await this._resolveReplyMsg(msg),
+            previousContext,
+            handler: this,
+            isEdit
+        });
+    }
+
+    _isReplyExpired(replyMsg) {
+        if (replyMsg === null) {
+            return true;
+        }
+
+        const timestamp = replyMsg.editedTimestamp ?? replyMsg.createdTimestamp;
+        return Date.now() - timestamp > this.replyTimeout;
     }
 
     async _resolveReplyMsg(msg) {

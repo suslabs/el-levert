@@ -114,6 +114,32 @@ class Tracker {
         return data ?? this.constructor._emptyData;
     }
 
+    findTriggerId(listItemName, item) {
+        if (!this.enableTracking) {
+            return null;
+        }
+
+        const listName = this.constructor.listNames[listItemName];
+
+        if (typeof listName === "undefined") {
+            throw new HandlerError(`Invalid tracked list item: ${listItemName}`, listItemName);
+        }
+
+        const itemId = this.constructor._getId(item);
+
+        if (itemId == null) {
+            return null;
+        }
+
+        for (const [triggerId, data] of this.items) {
+            if (data[listName].some(trackedItem => this.constructor._getId(trackedItem) === itemId)) {
+                return triggerId;
+            }
+        }
+
+        return null;
+    }
+
     deleteData(triggerMsg) {
         const triggerId = this.constructor._getId(triggerMsg);
 

@@ -22,6 +22,7 @@ describe("BaseCommandContext vs CommandContext separation", () => {
         expect(cmdCtx.replyMsg).toBeNull();
         expect(cmdCtx.isEdit).toBe(false);
         expect(cmdCtx.processingReplySent).toBe(false);
+        expect(cmdCtx.previousContext).toBeNull();
     });
 
     test("CommandContext sets Discord-specific fields when provided", () => {
@@ -42,25 +43,33 @@ describe("BaseCommandContext vs CommandContext separation", () => {
         const mockMsg1 = { id: "msg-1" },
             mockMsg2 = { id: "msg-2" };
 
+        const previousContext = new CommandContext({
+            argsText: "earlier question"
+        });
+
         const cmdCtx = new CommandContext({
             replyMsg: mockMsg1,
             isEdit: true,
-            processingReplySent: true
+            processingReplySent: true,
+            previousContext
         });
 
         const cloned = cmdCtx.clone();
         expect(cloned.replyMsg).toBe(mockMsg1);
         expect(cloned.isEdit).toBe(true);
         expect(cloned.processingReplySent).toBe(true);
+        expect(cloned.previousContext).toBe(previousContext);
 
         const overridden = cmdCtx.clone({
             replyMsg: mockMsg2,
             isEdit: false,
-            processingReplySent: false
+            processingReplySent: false,
+            previousContext: null
         });
         expect(overridden.replyMsg).toBe(mockMsg2);
         expect(overridden.isEdit).toBe(false);
         expect(overridden.processingReplySent).toBe(false);
+        expect(overridden.previousContext).toBeNull();
     });
 
     test("BaseCommandContext clone works without child clone hook", () => {

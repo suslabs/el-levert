@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { createDiscordChannel, createDiscordMessage } from "../../helpers/discordStubs.js";
 import { cleanupRuntime, createRuntime } from "../../helpers/runtimeHarness.js";
+import CommandParser from "../../../src/parsers/command/CommandParser.js";
 
 let runtime;
 let CommandHandler;
@@ -23,7 +24,118 @@ afterEach(async () => {
     runtime = null;
 });
 
+function createReplyCommandHarness(runtime, command, channelName) {
+    const channel = createDiscordChannel({ id: channelName }),
+        messages = new Map();
+
+    runtime.client.commandManager = {
+        isCommand: content => content.startsWith("%"),
+        getCommand: content => {
+            const parsed = CommandParser.parseInvocation(content, "%");
+            return [command, parsed.name, parsed.argsText, parsed];
+        }
+    };
+    runtime.client.fetchMessage = vi.fn(async (requestedChannelId, messageId) => {
+        const msg = messages.get(messageId) ?? null;
+
+        if (msg !== null) {
+            expect(msg.channelId).toBe(requestedChannelId);
+        }
+
+        return msg;
+    });
+
+    const createMessage = (content, id, referencedMessage = null) => {
+        const msg = createDiscordMessage(content, {
+            id,
+            channel,
+            reference: referencedMessage === null ? null : { messageId: referencedMessage.id },
+            referencedMessage,
+            reply: async data => {
+                const answer = createDiscordMessage(typeof data === "string" ? data : data.content, {
+                    id: `answer-${id}`,
+                    channel,
+                    createdTimestamp: Date.now()
+                });
+
+                messages.set(answer.id, answer);
+                return answer;
+            }
+        });
+
+        messages.set(id, msg);
+        return msg;
+    };
+
+    return { messages, createMessage };
+}
+
 describe("CommandHandler", () => {
+    test("continues opted-in commands through reply chains with prior contexts", async () => {
+        const contexts = [];
+
+        const command = {
+            name: "conversation",
+            continueOnReply: true,
+            async execute(context) {
+                contexts.push(context);
+                return `answer: ${context.argsText}`;
+            }
+        };
+
+        const { messages, createMessage } = createReplyCommandHarness(runtime, command, "channel-conversation");
+
+        const question = createMessage("%conversation start", "question-1");
+        await expect(handler.execute(question)).resolves.toBe(true);
+
+        const firstAnswer = messages.get("answer-question-1"),
+            followUp = createMessage("and then?", "question-2", firstAnswer);
+        await expect(handler.execute(followUp)).resolves.toBe(true);
+
+        firstAnswer.createdTimestamp = Date.now() - handler.replyTimeout - 1;
+
+        const secondAnswer = messages.get("answer-question-2"),
+            nextFollowUp = createMessage("what next?", "question-3", secondAnswer);
+        await expect(handler.execute(nextFollowUp)).resolves.toBe(true);
+
+        expect(contexts.map(context => context.argsText)).toEqual(["start", "and then?", "what next?"]);
+        expect(contexts[0].previousContext).toBeNull();
+        expect(contexts[1].previousContext.argsText).toBe("start");
+        expect(contexts[2].previousContext.argsText).toBe("and then?");
+        expect(contexts[2].previousContext.previousContext.argsText).toBe("start");
+        expect(contexts[2].previousContext.replyMsg).toBe(firstAnswer);
+    });
+
+    test("requires command opt-in and rejects replies after their reply window", async () => {
+        expect(runtime.client.commandManager.searchCommands("ping").continueOnReply).toBe(false);
+
+        const command = {
+            name: "conversation",
+            continueOnReply: true,
+            execute: vi.fn(() => "answer")
+        };
+        const { messages, createMessage } = createReplyCommandHarness(runtime, command, "channel-expiry");
+
+        const question = createMessage("%conversation start", "question-opt-out");
+        await expect(handler.execute(question)).resolves.toBe(true);
+
+        const answer = messages.get("answer-question-opt-out"),
+            beforeReplyCount = command.execute.mock.calls.length;
+        command.continueOnReply = false;
+
+        const optOutReply = createMessage("continue?", "question-opt-out-reply", answer);
+        await expect(handler.execute(optOutReply)).resolves.toBe(false);
+        expect(command.execute).toHaveBeenCalledTimes(beforeReplyCount);
+
+        command.continueOnReply = true;
+        handler.replyTimeout = 10;
+        answer.createdTimestamp = Date.now() - handler.replyTimeout - 1;
+
+        const expiredReply = createMessage("too late", "question-expired-reply", answer);
+        await expect(handler.execute(expiredReply)).resolves.toBe(false);
+        expect(command.execute).toHaveBeenCalledTimes(beforeReplyCount);
+    });
+
     test("ignores non-commands and executes real commands through the reply path", async () => {
         const plainMsg = createDiscordMessage("hello there", {
             reply: vi.fn(async data => ({ content: data }))

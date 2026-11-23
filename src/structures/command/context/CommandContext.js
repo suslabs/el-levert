@@ -13,7 +13,8 @@ class CommandContext extends TextCommandContext {
         replyMsg: null,
         isEdit: false,
         processingReplySent: false,
-        interactionContext: null
+        interactionContext: null,
+        previousContext: null
     };
 
     static dataProps = [
@@ -26,7 +27,8 @@ class CommandContext extends TextCommandContext {
         "replyMsg",
         "isEdit",
         "processingReplySent",
-        "interactionContext"
+        "interactionContext",
+        "previousContext"
     ];
 
     constructor(data) {
