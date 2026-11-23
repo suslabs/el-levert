@@ -54,6 +54,7 @@
     "enablePreviews": true,
     "enableSed": true,
     "enableEval": true,
+    "enableAI": true,
     "enableOtherLangs": false,
     "enableVM2": false,
     "enablePermissions": true,
@@ -90,5 +91,32 @@
         "rateLimitWindow": 1,
         "allowLocalhostRequests": false,
         "allowFilesystemRequests": false
+    },
+    "ai": {
+        "name": "Large Language Rabbit",
+        "icon": null,
+        "promptsPath": "./src/ai/prompts",
+        "endpoint": "https://generativelanguage.googleapis.com/v1beta",
+        "models": [
+            "gemini-3.5-flash-lite",
+            "gemini-3.1-flash-lite",
+            "gemini-3.6-flash",
+            "gemini-flash-lite-latest",
+            "gemini-flash-latest"
+        ],
+        "thinkingLevel": "minimal",
+        "toolThinkingLevel": "medium",
+        "maxSteps": -1,
+        "timeLimit": 45,
+        "unlimitedTimeForAdmins": true,
+        "requestTimeout": 20,
+        "maxDownloadSize": 10,
+        "maxToolOutput": 12000,
+        "maxRequests": 3,
+        "rateLimitWindow": 60,
+        "followUpsAnyone": true,
+        "followUpsEditAnswer": true,
+        "allowLocalhostRequests": false,
+        "sources": ["nomiCodex", "nomiQuestbook", "wikipedia"]
     }
 }

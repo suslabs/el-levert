@@ -13,16 +13,22 @@ import ObjectUtil from "../../util/ObjectUtil.js";
 
 import { LoadStatus } from "../LoadStatus.js";
 
+function hasAuthValue(value) {
+    return Util.nonemptyString(value) || (Array.isArray(value) && !Util.empty(value));
+}
+
 function createAuthData(jsonData, envData) {
     jsonData = ObjectUtil.guaranteeObject(jsonData);
     envData = ObjectUtil.guaranteeObject(envData);
 
     const envKeys = DefaultAuthConfig.envKeys;
 
-    return {
-        token: Util.nonemptyString(jsonData.token) ? jsonData.token : envData[envKeys.token],
-        owner: Util.nonemptyString(jsonData.owner) ? jsonData.owner : envData[envKeys.owner]
-    };
+    return Object.fromEntries(
+        Object.entries(envKeys).map(([key, envKey]) => [
+            key,
+            hasAuthValue(jsonData[key]) ? jsonData[key] : envData[envKey]
+        ])
+    );
 }
 
 class AuthLoader extends Loader {

@@ -171,6 +171,9 @@
         "enableEval": {
             "type": "boolean"
         },
+        "enableAI": {
+            "type": "boolean"
+        },
         "enableOtherLangs": {
             "type": "boolean"
         },
@@ -285,6 +288,105 @@
                 "allowFilesystemRequests"
             ],
             "additionalProperties": false
+        },
+        "ai": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "promptsPath": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "icon": {
+                    "type": ["string", "null"]
+                },
+                "endpoint": {
+                    "type": "string"
+                },
+                "models": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "minItems": 1
+                },
+                "thinkingLevel": {
+                    "type": ["string", "null"]
+                },
+                "toolThinkingLevel": {
+                    "type": ["string", "null"]
+                },
+                "maxSteps": {
+                    "type": "integer",
+                    "anyOf": [{ "const": -1 }, { "minimum": 1 }]
+                },
+                "timeLimit": {
+                    "type": "number"
+                },
+                "unlimitedTimeForAdmins": {
+                    "type": "boolean"
+                },
+                "requestTimeout": {
+                    "type": "number"
+                },
+                "maxDownloadSize": {
+                    "type": "number"
+                },
+                "maxToolOutput": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "maxRequests": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "rateLimitWindow": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "followUpsAnyone": {
+                    "type": "boolean"
+                },
+                "followUpsEditAnswer": {
+                    "type": "boolean"
+                },
+                "allowLocalhostRequests": {
+                    "type": "boolean"
+                },
+                "sources": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "uniqueItems": true
+                }
+            },
+            "required": [
+                "name",
+                "icon",
+                "promptsPath",
+                "endpoint",
+                "models",
+                "thinkingLevel",
+                "toolThinkingLevel",
+                "maxSteps",
+                "timeLimit",
+                "unlimitedTimeForAdmins",
+                "requestTimeout",
+                "maxDownloadSize",
+                "maxToolOutput",
+                "maxRequests",
+                "rateLimitWindow",
+                "followUpsAnyone",
+                "followUpsEditAnswer",
+                "allowLocalhostRequests",
+                "sources"
+            ],
+            "additionalProperties": false
         }
     },
     "required": [
@@ -332,6 +434,7 @@
         "enablePreviews",
         "enableSed",
         "enableEval",
+        "enableAI",
         "enableOtherLangs",
         "enableVM2",
         "enablePermissions",
@@ -349,7 +452,8 @@
         "logWebhook",
         "emoji",
         "bridgeBotIds",
-        "vmHttp"
+        "vmHttp",
+        "ai"
     ],
     "anyOf": [
         {
