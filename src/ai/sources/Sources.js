@@ -23,7 +23,8 @@ const Sources = Object.freeze({
             urls: {
                 [PackModes.normal]: `${nomiCeuRepo}/DefaultQuests.json`,
                 [PackModes.expert]: `${nomiCeuRepo}/saved_quests/ExpertQuests.json`
-            }
+            },
+            mode: PackModes.normal
         }
     }
 });

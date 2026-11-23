@@ -1,3 +1,4 @@
+import PackSource from "./PackSource.js";
 import QuestbookParser from "./QuestbookParser.js";
 
 import { getLogger } from "../../LevertClient.js";
@@ -6,7 +7,7 @@ import BM25Index from "../../util/search/BM25Index.js";
 
 import AIError from "../../errors/AIError.js";
 
-class Questbook {
+class Questbook extends PackSource {
     static fieldWeights = {
         title: 3,
         keywords: 2,
@@ -14,7 +15,8 @@ class Questbook {
     };
 
     constructor(http, options, timeout) {
-        this.http = http;
+        super(http, options);
+
         this.timeout = timeout;
 
         this.urls = options.urls;

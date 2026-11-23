@@ -1,27 +1,21 @@
-import PackModes from "../../structures/ai/PackModes.js";
+import PackSource from "./PackSource.js";
 
 import Util from "../../util/Util.js";
 import { isSuccessStatus } from "../../util/misc/HttpStatusCodes.js";
 
 import AIError from "../../errors/AIError.js";
 
-class NomiCodexClient {
+class NomiCodexClient extends PackSource {
     static renderWait = 8;
 
     static notFoundError = "not found";
 
     constructor(http, options) {
-        this.http = http;
+        super(http, options);
 
         this.searchUrls = options.searchUrls;
         this.shotUrl = options.shotUrl;
         this.siteUrl = options.siteUrl;
-
-        this.mode = options.mode;
-    }
-
-    getMode(expert) {
-        return expert ? PackModes.expert : this.mode;
     }
 
     getItemUrl(itemId) {

@@ -30,15 +30,13 @@ class ReadQuestTool extends QuestTool {
     }
 
     execute(args) {
-        const ids = ArrayUtil.guaranteeArray(args.ids ?? [])
-            .slice(0, ReadQuestTool.maxQuests)
-            .map(String);
+        const ids = ArrayUtil.guaranteeArray(args.ids, null, true).slice(0, ReadQuestTool.maxQuests).map(String);
 
         if (Util.empty(ids)) {
             throw new AIError("ids are required");
         }
 
-        const mode = this.getMode(args.expert);
+        const mode = this.questbook.getMode(args.expert);
         return { quests: ids.map(id => this._formatQuest(id, mode)) };
     }
 

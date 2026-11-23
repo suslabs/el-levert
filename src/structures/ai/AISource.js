@@ -27,15 +27,21 @@ class AISource extends BaseStructure {
     }
 
     async load(http, timeout) {
+        const backend = this._createBackend(http, timeout);
+
+        if (typeof backend.load === "function") {
+            await backend.load();
+        }
+
+        return backend;
+    }
+
+    _createBackend(http, timeout) {
         switch (this.type) {
             case AISourceTypes.recipes:
                 return new NomiCodexClient(http, this.options);
-            case AISourceTypes.questbook: {
-                const questbook = new Questbook(http, this.options, timeout);
-                await questbook.load();
-
-                return questbook;
-            }
+            case AISourceTypes.questbook:
+                return new Questbook(http, this.options, timeout);
         }
     }
 }

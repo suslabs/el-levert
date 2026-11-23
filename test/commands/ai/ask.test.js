@@ -1064,7 +1064,7 @@ describe("a command", () => {
         const bodies = await setup(script, { routes: { "GET /quests.json": () => ({ json: questbook }) } });
 
         await loadSources({
-            quests: { type: "questbook", options: { urls: { normal: `${server.url}/quests.json` } } }
+            quests: { type: "questbook", options: { urls: { normal: `${server.url}/quests.json` }, mode: "normal" } }
         });
 
         const recorder = createRecorder();

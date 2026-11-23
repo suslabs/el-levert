@@ -40,7 +40,7 @@ class SearchQuestsTool extends QuestTool {
         }
 
         const limit = Util.clamp(args.limit ?? SearchQuestsTool.defaultLimit, 1, SearchQuestsTool.maxLimit),
-            quests = this.questbook.search(query, this.getMode(args.expert), limit);
+            quests = this.questbook.search(query, this.questbook.getMode(args.expert), limit);
 
         return {
             query,

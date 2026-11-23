@@ -123,7 +123,8 @@ class AIReply {
 
         await this.updater.start(this.view.renderThinking(cancelSession));
 
-        let result;
+        let result = null,
+            error = null;
 
         try {
             result = await aiManager.ask(question, this.request, {
@@ -133,18 +134,18 @@ class AIReply {
                 onProgress: session => this.updater.update(this.view.renderProgress(session, cancelSession))
             });
         } catch (err) {
-            if (this.cancelled) {
-                return null;
-            } else if (!AIReply.expectedErrors.has(err.name)) {
+            if (!this.cancelled && !AIReply.expectedErrors.has(err.name)) {
                 this.updater.cancel();
                 throw err;
             }
 
-            return await this.updater.finish(this.view.renderError(err));
+            error = err;
         }
 
         if (this.cancelled) {
             return null;
+        } else if (error !== null) {
+            return await this.updater.finish(this.view.renderError(error));
         }
 
         const turns = [...history, { role: "user", text: question }, { role: "model", text: result.answer }],
