@@ -656,6 +656,8 @@ Data sources are the knowledge bases the assistant can search, separate from its
 | `find_users`, `get_asking_user`, `get_bot_profile` | Server members and profiles.                                                                                          |
 | `fetch_recent_messages`, `search_messages`         | Chat history, only from channels the asking user can see.                                                             |
 
+Expired Discord attachment links are refreshed through Discord's API before the web and image tools load them.
+
 `tag_call` and `execute_javascript` only work for questions typed as messages, not for follow-up buttons, since there's no message for scripts to run as.
 
 #### Prompts

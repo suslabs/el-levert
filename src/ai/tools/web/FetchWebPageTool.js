@@ -30,7 +30,7 @@ class FetchWebPageTool extends WebTool {
     }
 
     async execute(args, session) {
-        const url = this.parseUrl(args.url),
+        const url = await this.resolveUrl(args.url),
             page = await this._fetchPage(url, session);
 
         return { source: url, title: page.title, ...TextPager.page(page.text, args) };

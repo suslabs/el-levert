@@ -29,7 +29,7 @@ class InspectImageTool extends WebTool {
     }
 
     async execute(args, session) {
-        const url = this.parseUrl(args.url);
+        const url = await this.resolveUrl(args.url);
 
         const res = await this.manager.http.request({
             url,

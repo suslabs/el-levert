@@ -83,11 +83,6 @@ class GeminiClient {
         }
     }
 
-    static _createSignal(timeout, signal) {
-        const timeoutSignal = AbortSignal.timeout(timeout);
-        return signal === null ? timeoutSignal : AbortSignal.any([timeoutSignal, signal]);
-    }
-
     static _addUsage(state, usage) {
         state.tokens += usage?.totalTokenCount ?? 0;
         state.reasoning += usage?.thoughtsTokenCount ?? 0;
@@ -204,9 +199,18 @@ class GeminiClient {
         return res;
     }
 
-    async _post(model, body, state, options, stream) {
-        const timeout = Util.clamp(options.timeLeft, GeminiClient.minTimeout, this.requestTimeout);
+    _createSignal(timeLeft, signal) {
+        if (!Number.isFinite(timeLeft)) {
+            return signal;
+        }
 
+        const timeout = Util.clamp(timeLeft, GeminiClient.minTimeout, this.requestTimeout),
+            timeoutSignal = AbortSignal.timeout(timeout);
+
+        return signal === null ? timeoutSignal : AbortSignal.any([timeoutSignal, signal]);
+    }
+
+    async _post(model, body, state, options, stream) {
         const res = await GeminiClient._catchAbort(
             this.http.request({
                 url: this._getUrl(model, stream),
@@ -217,8 +221,7 @@ class GeminiClient {
                 },
                 data: this._buildBody(body, state, options.thinkingLevel ?? this.thinkingLevel),
                 responseType: stream ? "stream" : "json",
-                timeout,
-                signal: GeminiClient._createSignal(timeout, options.signal),
+                signal: this._createSignal(options.timeLeft, options.signal),
                 validateStatus: () => true
             }),
             options.signal

@@ -45,7 +45,7 @@ class HttpRequestTool extends WebTool {
     }
 
     async execute(args, session) {
-        const url = this.parseUrl(args.url),
+        const url = await this.resolveUrl(args.url),
             method = String(args.method ?? "GET").toUpperCase();
 
         if (!HttpRequestTool.methods.includes(method)) {

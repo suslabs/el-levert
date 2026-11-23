@@ -813,6 +813,21 @@ describe("a command", () => {
         expect(embed.description).toContain("Gemini took too long to respond.");
     });
 
+    test("admins wait for slow Gemini responses", async () => {
+        const slow = () => new Promise(resolve => setTimeout(() => resolve(answer(["Worth the wait."])), 300));
+
+        await setup([extras([], [])], {
+            ai: { requestTimeout: 100 },
+            auth: { geminiKey: "test-key", owner: askerId },
+            routes: { [`POST ${streamPath("test-model")}`]: slow }
+        });
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("hi", recorder));
+
+        expect(embedOf(recorder.sent.at(-1)).description).toBe("Worth the wait.");
+    });
+
     test("admins skip the cooldown", async () => {
         const script = [answer(["ok"]), extras([], []), answer(["again"]), extras([], [])];
 
@@ -923,6 +938,37 @@ describe("a command", () => {
 
         expect(script).toEqual([]);
         expect(file.name).toBe("my_cat.png");
+        expect(Buffer.compare(file.attachment, png)).toBe(0);
+    });
+
+    test("refreshes expired Discord attachment links before downloading them", async () => {
+        const script = [];
+        const png = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+
+        await setup(script, {
+            routes: { "GET /fresh.png": () => ({ headers: { "content-type": "image/png" }, body: png }) }
+        });
+
+        const expired = "https://cdn.discordapp.com/attachments/1/2/cat.png?ex=00&is=00&hm=00",
+            refreshes = [];
+
+        vi.spyOn(runtime.client.client.rest, "post").mockImplementation(async (route, options) => {
+            refreshes.push([route, options.body]);
+            return { refreshed_urls: [{ original: expired, refreshed: `${server.url}/fresh.png` }] };
+        });
+
+        script.push(
+            calls([call("attach_image", { url: expired, name: "cat" })]),
+            answer(["Here's the cat."]),
+            extras([], [])
+        );
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("send the old cat picture", recorder));
+
+        const [file] = recorder.sent.at(-1).files;
+
+        expect(refreshes).toEqual([["/attachments/refresh-urls", { attachment_urls: [expired] }]]);
         expect(Buffer.compare(file.attachment, png)).toBe(0);
     });
 
