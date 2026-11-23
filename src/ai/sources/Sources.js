@@ -12,7 +12,6 @@ const Sources = Object.freeze({
                 "https://nomicodex-search.cloudrender70.workers.dev/search"
             ],
             shotUrl: "https://nomi-codex.vercel.app/api/shot",
-            siteUrl: "https://sayaisha.github.io/NomiCodex",
             mode: PackModes.normal
         }
     },

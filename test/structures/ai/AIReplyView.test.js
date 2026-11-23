@@ -86,7 +86,8 @@ describe("AIReplyView", () => {
                     images,
                     models: ["m"],
                     tokens: 1,
-                    reasoning: 0
+                    reasoning: 0,
+                    elapsed: 12345
                 },
                 null
             );
@@ -117,7 +118,8 @@ describe("AIReplyView", () => {
                     images: [],
                     models: ["test-model"],
                     tokens: 1234567,
-                    reasoning: 0
+                    reasoning: 0,
+                    elapsed: 12345
                 },
                 null
             ),
@@ -125,7 +127,7 @@ describe("AIReplyView", () => {
 
         expect(embed.description.length).toBeLessThanOrEqual(4096);
         expect(embed.description.endsWith("Sources:\n1. https://example.test/page")).toBe(true);
-        expect(embed.footer.text).toBe("Models: test-model | 1,234,567 tok");
+        expect(embed.footer.text).toBe("Models: test-model | 1,234,567 tok | 12.3s");
         expect(payload.components).toEqual([]);
         expect(payload.attachments).toEqual([]);
         expect(payload.files.map(file => file.name)).toEqual(["answer.md"]);
@@ -145,7 +147,8 @@ describe("AIReplyView", () => {
                 images: [],
                 models: ["test-model"],
                 tokens: 1,
-                reasoning: 0
+                reasoning: 0,
+                elapsed: 12345
             },
             session
         );

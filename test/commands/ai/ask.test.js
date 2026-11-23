@@ -270,6 +270,10 @@ describe("a command", () => {
             finishInput = JSON.parse(finishBody.contents[0].parts[0].text);
 
         expect(finishBody.generationConfig.responseMimeType).toBe("application/json");
+        expect(finishBody.generationConfig.responseSchema.properties.followUps).toMatchObject({
+            minItems: 3,
+            maxItems: 5
+        });
         expect(finishInput.question).toBe("how do I make steel");
         expect(finishInput.answer).toBe("Use the **EBF** to make steel. 144 mB/t is 2.88 B/s.");
         expect(finishInput.candidates).toContain("tag:steel");
@@ -286,7 +290,7 @@ describe("a command", () => {
             color: 0x75fa4c,
             description:
                 "Use the **EBF** to make steel. 144 mB/t is 2.88 B/s.\n\nSources:\n1. tag:steel\n\nFollow-ups:\n1. What coils does the EBF need?",
-            footer: { text: "Models: test-model | 1,500 tok, 30 reasoning" }
+            footer: { text: expect.stringMatching(/^Models: test-model \| 1,500 tok, 30 reasoning \| \d+(\.\d)?s$/) }
         });
 
         const [button] = buttonsOf(recorder.sent.at(-1));
@@ -615,7 +619,7 @@ describe("a command", () => {
         ]);
 
         expect(bodies[1].body.generationConfig).toBeUndefined();
-        expect(embedOf(recorder.sent.at(-1)).footer.text).toBe("Models: fallback-model | 15 tok");
+        expect(embedOf(recorder.sent.at(-1)).footer.text).toMatch(/^Models: fallback-model \| 15 tok \| [\d.]+s$/);
     });
 
     test("switches to the next model when one gets overloaded mid-answer", async () => {
@@ -641,7 +645,7 @@ describe("a command", () => {
         const embed = embedOf(recorder.sent.at(-1));
 
         expect(embed.description).toBe("1 B is 1000 mB.");
-        expect(embed.footer.text).toBe("Models: test-model, fallback-model | 35 tok");
+        expect(embed.footer.text).toMatch(/^Models: test-model, fallback-model \| 35 tok \| [\d.]+s$/);
     });
 
     test("restarts an answer on the next model when the stream stops partway", async () => {
@@ -997,7 +1001,6 @@ describe("a command", () => {
                 options: {
                     searchUrls: [`${server.url}/down`, `${server.url}/api/search`],
                     shotUrl: `${server.url}/api/shot`,
-                    siteUrl: "https://codex.test",
                     mode: "normal"
                 }
             }
@@ -1012,7 +1015,7 @@ describe("a command", () => {
 
         const found = bodies[1].body.contents.at(-1).parts[0].functionResponse.response;
 
-        expect(found.source).toBe(`https://codex.test/?item=${encodeURIComponent(itemId)}`);
+        expect(found).not.toHaveProperty("source");
         expect(found.recipes.map(entry => [entry.machine, entry.idx, entry.seconds, entry.fromSameMaterial])).toEqual([
             ["Mixer", 0, 15, false],
             ["Crafting", 21, 15, true],

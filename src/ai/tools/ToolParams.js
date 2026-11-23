@@ -3,7 +3,7 @@ const ToolParams = Object.freeze({
     integer: description => ({ type: "integer", description }),
     number: description => ({ type: "number", description }),
     boolean: description => ({ type: "boolean", description }),
-    stringArray: description => ({ type: "array", items: { type: "string" }, description }),
+    stringArray: (description, extra) => ({ type: "array", items: { type: "string" }, description, ...extra }),
 
     object: (properties, required) => {
         const schema = { type: "object", properties };

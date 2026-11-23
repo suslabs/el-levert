@@ -32,7 +32,8 @@ class AISession {
         this.onProgress = options.onProgress ?? null;
         this.signal = options.signal ?? null;
 
-        this.deadline = Date.now() + (options.timeLimit ?? manager.timeLimit);
+        this.startTime = Date.now();
+        this.deadline = this.startTime + (options.timeLimit ?? manager.timeLimit);
         this.state = manager.gemini.createState();
 
         this.ledger = new AISourceLedger();
@@ -213,7 +214,8 @@ class AISession {
             images: this.images,
             models: this.state.models,
             tokens: this.state.tokens,
-            reasoning: this.state.reasoning
+            reasoning: this.state.reasoning,
+            elapsed: Date.now() - this.startTime
         };
     }
 

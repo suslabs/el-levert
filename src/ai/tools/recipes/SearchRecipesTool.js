@@ -60,7 +60,6 @@ class SearchRecipesTool extends RecipeTool {
         const item = data.item;
 
         const out = {
-            source: recipes.getItemUrl(item.id),
             item: { id: item.id, name: HtmlUtil.stripTags(item.name) },
             machine: data.machineFilter,
             alternatives: data.alternatives.map(alt => HtmlUtil.stripTags(alt.name))

@@ -6,7 +6,8 @@ import ArrayUtil from "../util/ArrayUtil.js";
 import AIError from "../errors/AIError.js";
 
 class AIResponseFinisher {
-    static maxFollowUps = 3;
+    static minFollowUps = 3;
+    static maxFollowUps = 5;
     static maxFollowUpLength = 80;
 
     static maxSources = 3;
@@ -14,7 +15,10 @@ class AIResponseFinisher {
 
     static schema = ToolParams.object(
         {
-            followUps: ToolParams.stringArray("Next questions."),
+            followUps: ToolParams.stringArray("Next questions.", {
+                minItems: AIResponseFinisher.minFollowUps,
+                maxItems: AIResponseFinisher.maxFollowUps
+            }),
             sources: ToolParams.stringArray("Exact candidate sources.")
         },
         ["followUps", "sources"]

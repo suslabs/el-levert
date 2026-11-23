@@ -200,7 +200,8 @@ class AIReplyView {
             usage.push(`${Util.formatNumber(result.reasoning)} reasoning`);
         }
 
-        return `Models: ${result.models.join(", ")} | ${usage.join(", ")}`;
+        const seconds = Util.round(result.elapsed * Util.durationSeconds.milli, 1);
+        return `Models: ${result.models.join(", ")} | ${usage.join(", ")} | ${seconds}s`;
     }
 
     static _formatError(err) {

@@ -15,11 +15,6 @@ class NomiCodexClient extends PackSource {
 
         this.searchUrls = options.searchUrls;
         this.shotUrl = options.shotUrl;
-        this.siteUrl = options.siteUrl;
-    }
-
-    getItemUrl(itemId) {
-        return `${this.siteUrl}/?item=${encodeURIComponent(itemId)}`;
     }
 
     async search(query, options) {
