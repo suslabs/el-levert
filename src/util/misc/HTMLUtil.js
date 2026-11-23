@@ -1,6 +1,6 @@
 import Util from "../Util.js";
 
-const HtmlUtil = Object.freeze({
+const HTMLUtil = Object.freeze({
     entities: Object.freeze({
         amp: "&",
         lt: "<",
@@ -15,9 +15,9 @@ const HtmlUtil = Object.freeze({
 
     _entityRegex: /&(#x[0-9a-f]+|#\d+|[a-z0-9]+);/gi,
     decodeEntities: str => {
-        return String(str).replace(HtmlUtil._entityRegex, (match, code) => {
+        return String(str).replace(HTMLUtil._entityRegex, (match, code) => {
             if (!code.startsWith("#")) {
-                return HtmlUtil.entities[code.toLowerCase()] ?? match;
+                return HTMLUtil.entities[code.toLowerCase()] ?? match;
             }
 
             const isHex = code[1].toLowerCase() === "x",
@@ -29,7 +29,7 @@ const HtmlUtil = Object.freeze({
 
     _tagRegex: /<[^>]+>/g,
     stripTags: html => {
-        return HtmlUtil.decodeEntities(String(html).replace(HtmlUtil._tagRegex, "")).trim();
+        return HTMLUtil.decodeEntities(String(html).replace(HTMLUtil._tagRegex, "")).trim();
     },
 
     _titleRegex: /<title[^>]*>([\s\S]*?)<\/title>/i,
@@ -45,29 +45,29 @@ const HtmlUtil = Object.freeze({
     toText: html => {
         html = String(html);
 
-        const titleMatch = html.match(HtmlUtil._titleRegex),
-            title = titleMatch === null ? "" : HtmlUtil.stripTags(titleMatch[1]);
+        const titleMatch = html.match(HTMLUtil._titleRegex),
+            title = titleMatch === null ? "" : HTMLUtil.stripTags(titleMatch[1]);
 
-        let body = html.replace(HtmlUtil._hiddenRegex, " ").replace(HtmlUtil._commentRegex, " ");
+        let body = html.replace(HTMLUtil._hiddenRegex, " ").replace(HTMLUtil._commentRegex, " ");
 
-        const main = body.match(HtmlUtil._mainRegex);
+        const main = body.match(HTMLUtil._mainRegex);
 
-        if (main !== null && Util.first(main).length > HtmlUtil.minMainLength) {
+        if (main !== null && Util.first(main).length > HTMLUtil.minMainLength) {
             body = Util.first(main);
         }
 
-        const text = HtmlUtil.decodeEntities(
+        const text = HTMLUtil.decodeEntities(
             body
-                .replace(HtmlUtil._blockEndRegex, "\n")
-                .replace(HtmlUtil._listItemRegex, "• ")
-                .replace(HtmlUtil._tagRegex, " ")
+                .replace(HTMLUtil._blockEndRegex, "\n")
+                .replace(HTMLUtil._listItemRegex, "• ")
+                .replace(HTMLUtil._tagRegex, " ")
         )
-            .replace(HtmlUtil._spaceRegex, " ")
-            .replace(HtmlUtil._newlineRegex, "\n")
+            .replace(HTMLUtil._spaceRegex, " ")
+            .replace(HTMLUtil._newlineRegex, "\n")
             .trim();
 
         return { title, text };
     }
 });
 
-export default HtmlUtil;
+export default HTMLUtil;

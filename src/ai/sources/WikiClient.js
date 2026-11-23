@@ -1,5 +1,6 @@
 import Util from "../../util/Util.js";
-import HtmlUtil from "../../util/misc/HtmlUtil.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
+import HTMLUtil from "../../util/misc/HTMLUtil.js";
 
 import AIError from "../../errors/AIError.js";
 
@@ -7,7 +8,11 @@ class WikiClient {
     static apiPath = "w/api.php";
     static articlePath = "wiki";
 
+    static defaultLimit = 5;
+
     constructor(http, options) {
+        options = ObjectUtil.guaranteeObject(options);
+
         this.http = http;
 
         this.name = options.name;
@@ -27,33 +32,38 @@ class WikiClient {
     }
 
     async search(query, options) {
-        const data = await this._query(
-            options.language,
-            {
-                list: "search",
-                srsearch: query,
-                srlimit: options.limit
-            },
-            options.timeout
-        );
+        options = ObjectUtil.guaranteeObject(options);
+
+        const language = options.language ?? this.language,
+            limit = options.limit ?? WikiClient.defaultLimit;
+
+        const timeout = options.timeout ?? 0;
+
+        const data = await this._query(language, { list: "search", srsearch: query, srlimit: limit }, timeout);
 
         return (data.search ?? []).map(result => ({
             title: result.title,
-            url: this._getArticleUrl(result.title, options.language),
-            snippet: HtmlUtil.stripTags(result.snippet)
+            url: this._getArticleUrl(result.title, language),
+            snippet: HTMLUtil.stripTags(result.snippet)
         }));
     }
 
     async read(title, options) {
+        options = ObjectUtil.guaranteeObject(options);
+
+        const language = options.language ?? this.language;
+
+        const timeout = options.timeout ?? 0;
+
         const data = await this._query(
-            options.language,
+            language,
             {
                 prop: "extracts",
                 explaintext: 1,
                 redirects: 1,
                 titles: title
             },
-            options.timeout
+            timeout
         );
 
         const page = Util.first(Object.values(data.pages ?? {}));
@@ -64,7 +74,7 @@ class WikiClient {
 
         return {
             title: page.title,
-            url: this._getArticleUrl(page.title, options.language),
+            url: this._getArticleUrl(page.title, language),
             text: page.extract ?? ""
         };
     }

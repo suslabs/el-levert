@@ -1,5 +1,4 @@
 import RecipeTool from "./RecipeTool.js";
-import ToolParams from "../../ToolParams.js";
 
 import NomiCodexClient from "../../../sources/NomiCodexClient.js";
 
@@ -8,7 +7,8 @@ import { OverclockingValues } from "../../../../structures/OverclockingValues.js
 import AIPhases from "../../../../structures/ai/AIPhases.js";
 
 import Util from "../../../../util/Util.js";
-import HtmlUtil from "../../../../util/misc/HtmlUtil.js";
+import HTMLUtil from "../../../../util/misc/HTMLUtil.js";
+import ToolParams from "../../../../util/ai/ToolParams.js";
 
 class SearchRecipesTool extends RecipeTool {
     static info = {
@@ -55,9 +55,9 @@ class SearchRecipesTool extends RecipeTool {
         const item = data.item;
 
         const out = {
-            item: { id: item.id, name: HtmlUtil.stripTags(item.name) },
+            item: { id: item.id, name: HTMLUtil.stripTags(item.name) },
             machine: data.machineFilter,
-            alternatives: data.alternatives.map(alt => HtmlUtil.stripTags(alt.name))
+            alternatives: data.alternatives.map(alt => HTMLUtil.stripTags(alt.name))
         };
 
         if (args.uses) {
@@ -77,7 +77,7 @@ class SearchRecipesTool extends RecipeTool {
     }
 
     static _getMaterial(name) {
-        return HtmlUtil.stripTags(name)
+        return HTMLUtil.stripTags(name)
             .toLowerCase()
             .replace(SearchRecipesTool._formWordsRegex, "")
             .replace(SearchRecipesTool._spaceRegex, " ")
@@ -89,7 +89,7 @@ class SearchRecipesTool extends RecipeTool {
     }
 
     _formatRecipe(recipe, material) {
-        const inputs = HtmlUtil.stripTags(recipe.ins);
+        const inputs = HTMLUtil.stripTags(recipe.ins);
 
         return {
             idx: recipe.idx ?? null,
@@ -100,18 +100,18 @@ class SearchRecipesTool extends RecipeTool {
             heat: recipe.heat,
             cleanroom: recipe.clean ?? false,
             inputs,
-            outputs: HtmlUtil.stripTags(recipe.outs),
+            outputs: HTMLUtil.stripTags(recipe.outs),
             fromSameMaterial: !Util.empty(material) && inputs.toLowerCase().includes(material)
         };
     }
 
     _formatUse(use) {
         return {
-            makes: HtmlUtil.stripTags(use.n),
+            makes: HTMLUtil.stripTags(use.n),
             machine: use.t,
             euPerTick: use.e,
             seconds: SearchRecipesTool._toSeconds(use.d),
-            inputs: HtmlUtil.stripTags(use.i)
+            inputs: HTMLUtil.stripTags(use.i)
         };
     }
 }

@@ -55,8 +55,9 @@ class AIPrompt {
         ]);
 
         const parts = [replyMsg.content, ...embedText].filter(Util.nonemptyString),
-            text = Util.trimString(parts.join("\n"), AIPrompt.maxReplyLength),
-            lines = [`- The question replies to a message by <@${replyMsg.author.id}>: """${text}"""`];
+            text = Util.trimString(parts.join("\n"), AIPrompt.maxReplyLength);
+
+        const lines = [`- The question replies to a message by <@${replyMsg.author.id}>: """${text}"""`];
 
         const attachments = AIPrompt._formatAttachments(replyMsg);
 

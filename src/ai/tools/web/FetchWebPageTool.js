@@ -1,12 +1,12 @@
 import WebTool from "./WebTool.js";
-import ToolParams from "../ToolParams.js";
-import TextPager from "../TextPager.js";
 
 import AIPhases from "../../../structures/ai/AIPhases.js";
 
-import HtmlUtil from "../../../util/misc/HtmlUtil.js";
+import HTMLUtil from "../../../util/misc/HTMLUtil.js";
 import HTTPUtil from "../../../util/vm/HTTPUtil.js";
 import { isSuccessStatus } from "../../../util/misc/HttpStatusCodes.js";
+import ToolParams from "../../../util/ai/ToolParams.js";
+import AIUtil from "../../../util/ai/AIUtil.js";
 
 import AIError from "../../../errors/AIError.js";
 
@@ -19,7 +19,7 @@ class FetchWebPageTool extends WebTool {
         parameters: ToolParams.object(
             {
                 url: ToolParams.string("Absolute http(s) URL."),
-                ...TextPager.params
+                ...ToolParams.page()
             },
             ["url"]
         )
@@ -33,7 +33,7 @@ class FetchWebPageTool extends WebTool {
         const url = await this.resolveUrl(args.url),
             page = await this._fetchPage(url, session);
 
-        return { source: url, title: page.title, ...TextPager.page(page.text, args) };
+        return { source: url, title: page.title, ...AIUtil.pageText(page.text, args) };
     }
 
     async _fetchPage(url, session) {
@@ -54,7 +54,7 @@ class FetchWebPageTool extends WebTool {
         if (contentType.startsWith("image/")) {
             throw new AIError("This URL is an image; use inspect_image");
         } else if (contentType.includes("html")) {
-            return HtmlUtil.toText(res.data);
+            return HTMLUtil.toText(res.data);
         } else {
             return { title: "", text: String(res.data) };
         }

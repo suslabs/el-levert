@@ -41,6 +41,8 @@ class GeminiClient {
     }
 
     async generate(body, state, options) {
+        options = ObjectUtil.guaranteeObject(options);
+
         const res = await this._send(body, state, options, false);
 
         GeminiClient._addUsage(state, res.data.usageMetadata);
@@ -50,12 +52,16 @@ class GeminiClient {
     }
 
     async stream(body, state, options) {
+        options = ObjectUtil.guaranteeObject(options);
+
+        const onParts = options.onParts,
+            onRestart = options.onRestart;
+
+        const signal = options.signal ?? null;
+
         for (;;) {
             const res = await this._send(body, state, options, true),
-                out = await GeminiClient._catchAbort(
-                    this._readStream(res.data, state, options.onParts),
-                    options.signal
-                );
+                out = await GeminiClient._catchAbort(this._readStream(res.data, state, onParts), signal);
 
             if (out !== null) {
                 GeminiClient._useModel(state, this.getModel(state));
@@ -65,7 +71,7 @@ class GeminiClient {
             getLogger().warn(`AI model ${this.getModel(state)} stopped mid-answer, switching to the next one.`);
 
             state.modelIdx++;
-            await options.onRestart();
+            await onRestart();
         }
     }
 
@@ -113,6 +119,104 @@ class GeminiClient {
         } catch {
             return { error: { message: text } };
         }
+    }
+
+    _createSignal(timeLeft, signal) {
+        if (!Number.isFinite(timeLeft)) {
+            return signal;
+        }
+
+        const timeout = Util.clamp(timeLeft, GeminiClient.minTimeout, this.requestTimeout),
+            timeoutSignal = AbortSignal.timeout(timeout);
+
+        return signal === null ? timeoutSignal : AbortSignal.any([timeoutSignal, signal]);
+    }
+
+    _getUrl(model, stream) {
+        const base = `${this.endpoint}/models/${encodeURIComponent(model)}`;
+        return stream ? `${base}:streamGenerateContent?alt=sse` : `${base}:generateContent`;
+    }
+
+    _buildBody(body, state, thinkingLevel) {
+        if (!state.thinking || thinkingLevel === null) {
+            return body;
+        }
+
+        return {
+            ...body,
+            generationConfig: {
+                ...body.generationConfig,
+                thinkingConfig: { thinkingLevel }
+            }
+        };
+    }
+
+    async _post(model, body, state, options, stream) {
+        const thinkingLevel = options.thinkingLevel ?? this.thinkingLevel;
+
+        const timeLeft = options.timeLeft ?? Infinity,
+            signal = options.signal ?? null;
+
+        const res = await GeminiClient._catchAbort(
+            this.http.request({
+                url: this._getUrl(model, stream),
+                method: "post",
+                headers: {
+                    "content-type": "application/json",
+                    "x-goog-api-key": this.apiKeys[this.keyIdx]
+                },
+                data: this._buildBody(body, state, thinkingLevel),
+                responseType: stream ? "stream" : "json",
+                signal: this._createSignal(timeLeft, signal),
+                validateStatus: () => true
+            }),
+            signal
+        );
+
+        if (stream && !isSuccessStatus(res.status)) {
+            res.data = GeminiClient._parseError((await StreamUtil.read(res.data)).toString());
+        }
+
+        return res;
+    }
+
+    _isThinkingError(res) {
+        return GeminiClient._thinkingErrorRegex.test(GeminiClient._errorMessage(res));
+    }
+
+    async _request(model, body, state, options, stream) {
+        const res = await this._post(model, body, state, options, stream);
+
+        if (res.status === httpStatusCodes.BAD_REQUEST && state.thinking && this._isThinkingError(res)) {
+            state.thinking = false;
+            return await this._post(model, body, state, options, stream);
+        }
+
+        return res;
+    }
+
+    async _requestWithKeys(model, body, state, options, stream) {
+        let res;
+
+        for (let i = 0; i < this.apiKeys.length; i++) {
+            res = await this._request(model, body, state, options, stream);
+
+            if (res.status !== httpStatusCodes.TOO_MANY_REQUESTS) {
+                break;
+            }
+
+            this.keyIdx = (this.keyIdx + 1) % this.apiKeys.length;
+        }
+
+        return res;
+    }
+
+    _createError(model, res) {
+        return new AIError(`${model}: HTTP ${res.status} ${GeminiClient._errorMessage(res)}`.trim(), {
+            model,
+            status: res.status,
+            reason: res.data?.error?.status ?? null
+        });
     }
 
     async _send(body, state, options, stream) {
@@ -171,99 +275,6 @@ class GeminiClient {
         }
 
         return { parts, finishReason };
-    }
-
-    async _requestWithKeys(model, body, state, options, stream) {
-        let res;
-
-        for (let i = 0; i < this.apiKeys.length; i++) {
-            res = await this._request(model, body, state, options, stream);
-
-            if (res.status !== httpStatusCodes.TOO_MANY_REQUESTS) {
-                break;
-            }
-
-            this.keyIdx = (this.keyIdx + 1) % this.apiKeys.length;
-        }
-
-        return res;
-    }
-
-    async _request(model, body, state, options, stream) {
-        const res = await this._post(model, body, state, options, stream);
-
-        if (res.status === httpStatusCodes.BAD_REQUEST && state.thinking && this._isThinkingError(res)) {
-            state.thinking = false;
-            return await this._post(model, body, state, options, stream);
-        }
-
-        return res;
-    }
-
-    _createSignal(timeLeft, signal) {
-        if (!Number.isFinite(timeLeft)) {
-            return signal;
-        }
-
-        const timeout = Util.clamp(timeLeft, GeminiClient.minTimeout, this.requestTimeout),
-            timeoutSignal = AbortSignal.timeout(timeout);
-
-        return signal === null ? timeoutSignal : AbortSignal.any([timeoutSignal, signal]);
-    }
-
-    async _post(model, body, state, options, stream) {
-        const res = await GeminiClient._catchAbort(
-            this.http.request({
-                url: this._getUrl(model, stream),
-                method: "post",
-                headers: {
-                    "content-type": "application/json",
-                    "x-goog-api-key": this.apiKeys[this.keyIdx]
-                },
-                data: this._buildBody(body, state, options.thinkingLevel ?? this.thinkingLevel),
-                responseType: stream ? "stream" : "json",
-                signal: this._createSignal(options.timeLeft, options.signal),
-                validateStatus: () => true
-            }),
-            options.signal
-        );
-
-        if (stream && !isSuccessStatus(res.status)) {
-            res.data = GeminiClient._parseError((await StreamUtil.read(res.data)).toString());
-        }
-
-        return res;
-    }
-
-    _getUrl(model, stream) {
-        const base = `${this.endpoint}/models/${encodeURIComponent(model)}`;
-        return stream ? `${base}:streamGenerateContent?alt=sse` : `${base}:generateContent`;
-    }
-
-    _buildBody(body, state, thinkingLevel) {
-        if (!state.thinking || thinkingLevel === null) {
-            return body;
-        }
-
-        return {
-            ...body,
-            generationConfig: {
-                ...body.generationConfig,
-                thinkingConfig: { thinkingLevel }
-            }
-        };
-    }
-
-    _isThinkingError(res) {
-        return GeminiClient._thinkingErrorRegex.test(GeminiClient._errorMessage(res));
-    }
-
-    _createError(model, res) {
-        return new AIError(`${model}: HTTP ${res.status} ${GeminiClient._errorMessage(res)}`.trim(), {
-            model,
-            status: res.status,
-            reason: res.data?.error?.status ?? null
-        });
     }
 }
 

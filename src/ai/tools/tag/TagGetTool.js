@@ -1,11 +1,11 @@
 import TagTool from "./TagTool.js";
-import ToolParams from "../ToolParams.js";
 
 import AIPhases from "../../../structures/ai/AIPhases.js";
 
 import { getClient } from "../../../LevertClient.js";
 
 import Util from "../../../util/Util.js";
+import ToolParams from "../../../util/ai/ToolParams.js";
 
 import AIError from "../../../errors/AIError.js";
 

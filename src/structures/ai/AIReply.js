@@ -118,6 +118,30 @@ class AIReply {
         return true;
     }
 
+    async _isAdmin(userId) {
+        const permManager = getClient().permManager;
+
+        let perm = permManager.getLevels().default;
+
+        if (permManager.enabled) {
+            perm = await permManager.maxLevel(userId);
+        }
+
+        return permManager.allowed(perm, "admin");
+    }
+
+    _createSession(spec, interactionMode) {
+        const session = new ComponentSession(this.ctx, { interactionMode, spec });
+
+        getClient().interactionHandler.registerSession(session);
+        return session;
+    }
+
+    _createFollowUpSession(followUps, history) {
+        const mode = getConfig().ai.followUpsAnyone ? InteractionModes.anyone : InteractionModes.authorOnly;
+        return this._createSession({ followUps, history }, mode);
+    }
+
     async _run(question, history, timeLimit, cancelSession) {
         const aiManager = getClient().aiManager;
 
@@ -166,30 +190,6 @@ class AIReply {
             await hidden;
             await session.message.edit(this.view.renderFollowUps(session));
         }
-    }
-
-    async _isAdmin(userId) {
-        const permManager = getClient().permManager;
-
-        let perm = permManager.getLevels().default;
-
-        if (permManager.enabled) {
-            perm = await permManager.maxLevel(userId);
-        }
-
-        return permManager.allowed(perm, "admin");
-    }
-
-    _createFollowUpSession(followUps, history) {
-        const mode = getConfig().ai.followUpsAnyone ? InteractionModes.anyone : InteractionModes.authorOnly;
-        return this._createSession({ followUps, history }, mode);
-    }
-
-    _createSession(spec, interactionMode) {
-        const session = new ComponentSession(this.ctx, { interactionMode, spec });
-
-        getClient().interactionHandler.registerSession(session);
-        return session;
     }
 }
 

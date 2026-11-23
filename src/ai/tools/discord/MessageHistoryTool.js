@@ -3,6 +3,7 @@ import AITool from "../AITool.js";
 import { getClient } from "../../../LevertClient.js";
 
 import Util from "../../../util/Util.js";
+import ObjectUtil from "../../../util/ObjectUtil.js";
 import DiscordUtil from "../../../util/DiscordUtil.js";
 
 import AIError from "../../../errors/AIError.js";
@@ -12,17 +13,22 @@ class MessageHistoryTool extends AITool {
     static maxContentLength = 500;
 
     async fetchHistory(session, options) {
+        options = ObjectUtil.guaranteeObject(options);
+
+        const pages = options.pages ?? 1,
+            pageSize = options.pageSize ?? MessageHistoryTool.pageSize;
+
         const request = session.request,
             channelId = this._resolveChannelId(String(options.channelId ?? "")) ?? request.channel.id;
 
         const msgs = [];
         let before = options.before;
 
-        for (let i = 0; i < options.pages; i++) {
+        for (let i = 0; i < pages; i++) {
             const batch = await getClient().fetchMessages(
                 channelId,
                 { checkAccess: true, user_id: request.author.id },
-                { limit: options.pageSize, before }
+                { limit: pageSize, before }
             );
 
             if (batch === null) {
@@ -32,7 +38,7 @@ class MessageHistoryTool extends AITool {
             const sorted = Array.from(batch.values()).sort((a, b) => b.createdTimestamp - a.createdTimestamp);
             msgs.push(...sorted.filter(msg => msg.id !== request.msg?.id));
 
-            if (sorted.length < options.pageSize) {
+            if (sorted.length < pageSize) {
                 break;
             }
 

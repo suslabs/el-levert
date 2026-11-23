@@ -1,8 +1,9 @@
 import WikiTool from "./WikiTool.js";
-import ToolParams from "../../ToolParams.js";
-import TextPager from "../../TextPager.js";
 
 import AIPhases from "../../../../structures/ai/AIPhases.js";
+
+import ToolParams from "../../../../util/ai/ToolParams.js";
+import AIUtil from "../../../../util/ai/AIUtil.js";
 
 class ReadWikiTool extends WikiTool {
     static info = {
@@ -14,7 +15,7 @@ class ReadWikiTool extends WikiTool {
             {
                 title: ToolParams.string("Article title."),
                 language: ToolParams.string('Wikipedia language code, e.g. "en", "de" (default "en").'),
-                ...TextPager.params
+                ...ToolParams.page()
             },
             ["title"]
         )
@@ -29,7 +30,7 @@ class ReadWikiTool extends WikiTool {
             language = this.wiki.getLanguage(args.language);
 
         const article = await this.wiki.read(title, { language, timeout: session.toolTimeout() });
-        return { source: article.url, title: article.title, ...TextPager.page(article.text, args) };
+        return { source: article.url, title: article.title, ...AIUtil.pageText(article.text, args) };
     }
 }
 

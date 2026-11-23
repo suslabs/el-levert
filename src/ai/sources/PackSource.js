@@ -1,9 +1,13 @@
 import PackModes from "../../structures/ai/PackModes.js";
 
+import ObjectUtil from "../../util/ObjectUtil.js";
+
 class PackSource {
     constructor(http, options) {
+        options = ObjectUtil.guaranteeObject(options);
+
         this.http = http;
-        this.mode = options.mode;
+        this.mode = options.mode ?? PackModes.normal;
     }
 
     getMode(expert) {

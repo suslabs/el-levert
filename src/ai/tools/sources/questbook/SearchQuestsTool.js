@@ -1,9 +1,9 @@
 import QuestTool from "./QuestTool.js";
-import ToolParams from "../../ToolParams.js";
 
 import AIPhases from "../../../../structures/ai/AIPhases.js";
 
 import Util from "../../../../util/Util.js";
+import ToolParams from "../../../../util/ai/ToolParams.js";
 
 class SearchQuestsTool extends QuestTool {
     static info = {

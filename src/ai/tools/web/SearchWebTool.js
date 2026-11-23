@@ -1,7 +1,8 @@
 import AITool from "../AITool.js";
-import ToolParams from "../ToolParams.js";
 
 import AIPhases from "../../../structures/ai/AIPhases.js";
+
+import ToolParams from "../../../util/ai/ToolParams.js";
 
 class SearchWebTool extends AITool {
     static info = {

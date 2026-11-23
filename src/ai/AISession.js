@@ -6,6 +6,7 @@ import { getLogger } from "../LevertClient.js";
 
 import Util from "../util/Util.js";
 import ObjectUtil from "../util/ObjectUtil.js";
+import AIUtil from "../util/ai/AIUtil.js";
 
 import AIError from "../errors/AIError.js";
 
@@ -17,13 +18,6 @@ class AISession {
 
     static toolMode = "AUTO";
     static answerMode = "NONE";
-
-    static getText(parts) {
-        return parts
-            .filter(part => typeof part.text === "string" && !part.thought)
-            .map(part => part.text)
-            .join("");
-    }
 
     constructor(manager, request, options) {
         options = ObjectUtil.guaranteeObject(options);
@@ -104,7 +98,7 @@ class AISession {
 
         const parts = Util.first(data.candidates ?? [])?.content?.parts ?? [];
 
-        return AISession.getText(parts).trim();
+        return AIUtil.getText(parts).trim();
     }
 
     toolTimeout() {
@@ -161,7 +155,7 @@ class AISession {
             timeLeft: this.timeLeft,
             signal: this.signal,
             thinkingLevel: final ? this.manager.thinkingLevel : this.manager.toolThinkingLevel,
-            onParts: parts => this._appendText(AISession.getText(parts)),
+            onParts: parts => this._appendText(AIUtil.getText(parts)),
             onRestart: () => this._resetText()
         });
     }

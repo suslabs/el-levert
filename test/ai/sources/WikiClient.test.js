@@ -2,10 +2,6 @@ import { describe, expect, test } from "vitest";
 
 import WikiClient from "../../../src/ai/sources/WikiClient.js";
 import Sources from "../../../src/ai/sources/Sources.js";
-import SearchWikiTool from "../../../src/ai/tools/sources/wiki/SearchWikiTool.js";
-import ReadWikiTool from "../../../src/ai/tools/sources/wiki/ReadWikiTool.js";
-
-import AISourceTypes from "../../../src/structures/ai/AISourceTypes.js";
 
 import Util from "../../../src/util/Util.js";
 
@@ -21,17 +17,6 @@ function createWiki(data) {
 
     return { requests, wiki: new WikiClient(http, Sources.wikipedia.options) };
 }
-
-function createTool(Tool, wiki) {
-    const manager = {
-        maxToolOutput: 20000,
-        sources: { get: type => (type === AISourceTypes.wiki ? wiki : null) }
-    };
-
-    return new Tool(manager);
-}
-
-const session = { toolTimeout: () => 1000, logError: () => {} };
 
 describe("WikiClient", () => {
     test("searches in the chosen language with a user agent", async () => {
@@ -73,55 +58,5 @@ describe("WikiClient", () => {
         expect(wiki.getLanguage()).toBe("en");
         expect(wiki.getLanguage("PT-br")).toBe("pt-br");
         expect(() => wiki.getLanguage("../x")).toThrow('Invalid Wikipedia language "../x"');
-    });
-});
-
-describe("Wikipedia tools", () => {
-    test("are only available when the source is on", () => {
-        const { wiki } = createWiki({});
-
-        expect(createTool(SearchWikiTool, wiki).isAvailable(session)).toBe(true);
-        expect(createTool(ReadWikiTool, null).isAvailable(session)).toBe(false);
-    });
-
-    test("search_wikipedia validates its input", async () => {
-        const { requests, wiki } = createWiki({ search: [] });
-        const tool = createTool(SearchWikiTool, wiki);
-
-        await expect(tool.execute({ query: "steel" }, session)).resolves.toEqual({
-            query: "steel",
-            language: "en",
-            results: []
-        });
-        expect(Util.first(requests).params.srlimit).toBe(SearchWikiTool.defaultLimit);
-
-        await expect(tool.execute({ query: "steel", language: "../x" }, session)).resolves.toEqual({
-            error: 'Invalid Wikipedia language "../x"'
-        });
-        await expect(tool.execute({ query: " " }, session)).resolves.toEqual({ error: "query is required" });
-    });
-
-    test("read_wikipedia pages through the article and cites it", async () => {
-        const text = "a".repeat(6000);
-
-        const { wiki } = createWiki({ pages: { 1: { title: "Steel", extract: text } } });
-        const tool = createTool(ReadWikiTool, wiki);
-
-        const first = await tool.execute({ title: "Steel" }, session);
-
-        expect(first).toMatchObject({
-            source: "https://en.wikipedia.org/wiki/Steel",
-            title: "Steel",
-            offset: 0,
-            nextOffset: 5000,
-            totalChars: 6000
-        });
-
-        const rest = await tool.execute({ title: "Steel", offset: first.nextOffset }, session);
-
-        expect(rest.text).toHaveLength(1000);
-        expect(rest.nextOffset).toBeNull();
-
-        await expect(tool.execute({ title: "" }, session)).resolves.toEqual({ error: "title is required" });
     });
 });

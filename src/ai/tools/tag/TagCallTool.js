@@ -1,5 +1,4 @@
 import TagTool from "./TagTool.js";
-import ToolParams from "../ToolParams.js";
 
 import AIPhases from "../../../structures/ai/AIPhases.js";
 
@@ -9,6 +8,7 @@ import Util from "../../../util/Util.js";
 import TypeTester from "../../../util/TypeTester.js";
 import ArrayUtil from "../../../util/ArrayUtil.js";
 import DiscordUtil from "../../../util/DiscordUtil.js";
+import ToolParams from "../../../util/ai/ToolParams.js";
 
 class TagCallTool extends TagTool {
     static info = {

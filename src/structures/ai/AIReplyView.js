@@ -6,6 +6,7 @@ import { getClient, getConfig, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
+import AIUtil from "../../util/ai/AIUtil.js";
 import { httpStatusCodes, isServerErrorStatus } from "../../util/misc/HttpStatusCodes.js";
 
 class AIReplyView {
@@ -57,9 +58,9 @@ class AIReplyView {
 
     renderResult(result, session) {
         const answer = result.answer.trim(),
-            extras = AIReplyView._joinSections(
-                AIReplyView._formatList("Sources:", result.sources),
-                AIReplyView._formatList(
+            extras = AIUtil.joinSections(
+                AIUtil.formatList("Sources:", result.sources),
+                AIUtil.formatList(
                     "Follow-ups:",
                     result.followUps.map(followUp => escapeMarkdown(followUp))
                 )
@@ -69,9 +70,7 @@ class AIReplyView {
 
         const embed = this._createEmbed(this.name)
             .setColor(AIReplyView.answerColor)
-            .setDescription(
-                AIReplyView._joinSections(Util.trimString(answer, answerLimit, null, { tight: true }), extras)
-            )
+            .setDescription(AIUtil.joinSections(Util.trimString(answer, answerLimit, null, { tight: true }), extras))
             .setFooter({ text: AIReplyView._formatFooter(result) });
 
         const components = session === null ? [] : [AIReplyView._createFollowUpRow(session)];
@@ -127,10 +126,6 @@ class AIReplyView {
         return [AIReplyView.customIdPrefix, action, ...parts].join(":");
     }
 
-    static _joinSections(...sections) {
-        return sections.filter(Util.nonemptyString).join("\n\n");
-    }
-
     static _createCancelRow(session) {
         const button = new ButtonBuilder()
             .setCustomId(AIReplyView._createCustomId(AIReplyView.cancelAction, session.id))
@@ -166,14 +161,6 @@ class AIReplyView {
         }
 
         return lines.join("\n");
-    }
-
-    static _formatList(header, items) {
-        if (Util.empty(items)) {
-            return "";
-        }
-
-        return [header, ...items.map((item, i) => `${i + 1}. ${item}`)].join("\n");
     }
 
     static _createFollowUpRow(session) {
@@ -249,7 +236,7 @@ class AIReplyView {
             preview = AIReplyView._formatPreview(text, finishing);
 
         const embed = this._createEmbed(`${this.name} - ${phase}...`).setDescription(
-            AIReplyView._joinSections(statusText, preview)
+            AIUtil.joinSections(statusText, preview)
         );
 
         return this._createPayload([embed], [AIReplyView._createCancelRow(cancelSession)]);

@@ -1,5 +1,4 @@
 import TagTool from "./TagTool.js";
-import ToolParams from "../ToolParams.js";
 
 import AIPhases from "../../../structures/ai/AIPhases.js";
 
@@ -7,6 +6,7 @@ import { getClient } from "../../../LevertClient.js";
 
 import Util from "../../../util/Util.js";
 import ArrayUtil from "../../../util/ArrayUtil.js";
+import ToolParams from "../../../util/ai/ToolParams.js";
 
 class SearchTagsTool extends TagTool {
     static info = {

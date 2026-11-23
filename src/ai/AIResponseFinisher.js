@@ -1,7 +1,6 @@
-import ToolParams from "./tools/ToolParams.js";
-
 import Util from "../util/Util.js";
-import ArrayUtil from "../util/ArrayUtil.js";
+import ToolParams from "../util/ai/ToolParams.js";
+import AIUtil from "../util/ai/AIUtil.js";
 
 import AIError from "../errors/AIError.js";
 
@@ -43,23 +42,16 @@ class AIResponseFinisher {
         const out = AIResponseFinisher._parse(text);
 
         return {
-            followUps: AIResponseFinisher._cleanList(out.followUps)
+            followUps: AIUtil.cleanList(out.followUps)
                 .slice(0, AIResponseFinisher.maxFollowUps)
                 .map(followUp =>
-                    AIResponseFinisher._formatFollowUp(Util.trimString(followUp, AIResponseFinisher.maxFollowUpLength))
+                    AIUtil.formatQuestion(Util.trimString(followUp, AIResponseFinisher.maxFollowUpLength))
                 ),
 
-            sources: AIResponseFinisher._cleanList(out.sources)
+            sources: AIUtil.cleanList(out.sources)
                 .filter(source => session.ledger.has(source))
                 .slice(0, AIResponseFinisher.maxSources)
         };
-    }
-
-    static _endPunctuationRegex = /[.?!]$/;
-
-    static _formatFollowUp(followUp) {
-        const question = Util.capitalize(followUp);
-        return AIResponseFinisher._endPunctuationRegex.test(question) ? question : `${question}?`;
     }
 
     static _parse(text) {
@@ -68,11 +60,6 @@ class AIResponseFinisher {
         } catch (err) {
             throw new AIError("The model returned invalid follow-ups", { text, err });
         }
-    }
-
-    static _cleanList(list) {
-        const items = ArrayUtil.guaranteeArray(list, null, true).map(item => String(item).trim());
-        return ArrayUtil.unique(items.filter(Util.nonemptyString));
     }
 }
 

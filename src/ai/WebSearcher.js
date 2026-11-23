@@ -1,5 +1,5 @@
 import Util from "../util/Util.js";
-import HtmlUtil from "../util/misc/HtmlUtil.js";
+import HTMLUtil from "../util/misc/HTMLUtil.js";
 import { isSuccessStatus } from "../util/misc/HttpStatusCodes.js";
 
 import AIError from "../errors/AIError.js";
@@ -56,7 +56,7 @@ class WebSearcher {
             return null;
         }
 
-        const href = HtmlUtil.decodeEntities(link[1]);
+        const href = HTMLUtil.decodeEntities(link[1]);
 
         if (href.includes(WebSearcher._adPath)) {
             return null;
@@ -65,10 +65,10 @@ class WebSearcher {
         const snippet = block.match(WebSearcher._resultSnippetRegex);
 
         return {
-            title: HtmlUtil.stripTags(link[2]),
+            title: HTMLUtil.stripTags(link[2]),
             url: this._resolveRedirect(href),
             snippet:
-                snippet === null ? "" : Util.trimString(HtmlUtil.stripTags(snippet[1]), WebSearcher.maxSnippetLength)
+                snippet === null ? "" : Util.trimString(HTMLUtil.stripTags(snippet[1]), WebSearcher.maxSnippetLength)
         };
     }
 

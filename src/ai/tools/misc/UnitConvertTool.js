@@ -1,5 +1,4 @@
 import AITool from "../AITool.js";
-import ToolParams from "../ToolParams.js";
 
 import { OverclockingValues } from "../../../structures/OverclockingValues.js";
 
@@ -7,6 +6,7 @@ import AIPhases from "../../../structures/ai/AIPhases.js";
 
 import Util from "../../../util/Util.js";
 import ConversionUtil from "../../../util/commands/ConversionUtil.js";
+import ToolParams from "../../../util/ai/ToolParams.js";
 
 import AIError from "../../../errors/AIError.js";
 

@@ -1,7 +1,8 @@
 import WikiTool from "./WikiTool.js";
-import ToolParams from "../../ToolParams.js";
 
 import AIPhases from "../../../../structures/ai/AIPhases.js";
+
+import ToolParams from "../../../../util/ai/ToolParams.js";
 
 class SearchWikiTool extends WikiTool {
     static info = {

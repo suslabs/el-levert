@@ -1,6 +1,7 @@
 import PackSource from "./PackSource.js";
 
 import Util from "../../util/Util.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
 import { isSuccessStatus } from "../../util/misc/HttpStatusCodes.js";
 
 import AIError from "../../errors/AIError.js";
@@ -11,6 +12,7 @@ class NomiCodexClient extends PackSource {
     static notFoundError = "not found";
 
     constructor(http, options) {
+        options = ObjectUtil.guaranteeObject(options);
         super(http, options);
 
         this.searchUrls = options.searchUrls;
@@ -18,14 +20,21 @@ class NomiCodexClient extends PackSource {
     }
 
     async search(query, options) {
-        const params = { q: query, mode: options.mode };
+        options = ObjectUtil.guaranteeObject(options);
 
-        if (options.uses) {
+        const mode = options.mode ?? this.mode,
+            uses = options.uses ?? false;
+
+        const timeout = options.timeout ?? 0;
+
+        const params = { q: query, mode };
+
+        if (uses) {
             params.uses = 1;
         }
 
         for (const url of this.searchUrls) {
-            const data = await this._fetchSearch(url, params, options.timeout);
+            const data = await this._fetchSearch(url, params, timeout);
 
             if (data !== null) {
                 return data;
@@ -36,18 +45,24 @@ class NomiCodexClient extends PackSource {
     }
 
     async renderCard(itemId, idx, options) {
+        options = ObjectUtil.guaranteeObject(options);
+
+        const mode = options.mode ?? this.mode;
+
+        const timeout = options.timeout ?? 0;
+
         const res = await this.http.request({
             url: this.shotUrl,
             params: {
                 item: itemId,
-                mode: options.mode,
+                mode,
                 r: idx + 1,
                 sel: "card",
                 format: "json",
                 wait: NomiCodexClient.renderWait
             },
             responseType: "json",
-            timeout: options.timeout
+            timeout
         });
 
         if (!Util.nonemptyString(res.data.abs)) {
