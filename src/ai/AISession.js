@@ -1,6 +1,7 @@
 import AISourceLedger from "../structures/ai/AISourceLedger.js";
 
 import AIPhases from "../structures/ai/AIPhases.js";
+import AIEfforts from "../structures/ai/AIEfforts.js";
 
 import { getLogger } from "../LevertClient.js";
 
@@ -32,6 +33,7 @@ class AISession {
         this.startTime = Date.now();
         this.deadline = this.startTime + (options.timeLimit ?? manager.timeLimit);
         this.state = manager.gemini.createState();
+        this.effort = AIEfforts.research;
 
         this.ledger = new AISourceLedger();
         this.contents = [];
@@ -55,29 +57,37 @@ class AISession {
         return Util.last(this.steps)?.phase ?? AIPhases.thinking;
     }
 
-    async run(question) {
-        const systemInstruction = {
-            parts: [{ text: this.manager.prompt.build(this.request, this.manager.tools.getNames(this)) }]
-        };
+    get maxSteps() {
+        return this.effort === AIEfforts.quick ? this.manager.quickMaxSteps : this.manager.maxSteps;
+    }
 
+    async run(question) {
         this.contents = [
             ...this.history.map(turn => ({ role: turn.role, parts: [{ text: turn.text }] })),
             { role: "user", parts: [{ text: question }] }
         ];
 
-        for (let i = 0; i < this.manager.maxSteps; i++) {
+        this.effort = await this._triage();
+        this._checkCancelled();
+
+        const prompt = this.manager.prompt.build(this.request, this.manager.tools.getNames(this), this.effort),
+            systemInstruction = { parts: [{ text: prompt }] };
+
+        for (let i = 0; i < this.maxSteps; i++) {
             this._checkCancelled();
 
             if (this.timeLeft < AISession.minCallTime) {
                 throw new AIError("Ran out of time", { steps: this.steps.length });
             }
 
-            const final = i === this.manager.maxSteps - 1 || this.timeLeft < this.manager.requestTimeout,
-                res = await this._stream(this._buildRequest(systemInstruction, final), final);
+            const stepStart = Date.now();
 
-            const calls = res.parts
-                .filter(part => typeof part.functionCall !== "undefined")
-                .map(part => ({ ...part.functionCall, args: ObjectUtil.guaranteeObject(part.functionCall.args) }));
+            const final = i === this.maxSteps - 1 || this.timeLeft < this.manager.requestTimeout;
+
+            const res = await this._stream(this._buildRequest(systemInstruction, final), final),
+                calls = AISession._getCalls(res.parts);
+
+            this._logStep(i, stepStart, calls);
 
             if (Util.empty(calls)) {
                 return await this._finish(question, res.finishReason);
@@ -131,6 +141,12 @@ class AISession {
         getLogger().error(`AI tool "${toolName}" failed:`, err);
     }
 
+    static _getCalls(parts) {
+        return parts
+            .filter(part => typeof part.functionCall !== "undefined")
+            .map(part => ({ ...part.functionCall, args: ObjectUtil.guaranteeObject(part.functionCall.args) }));
+    }
+
     static _createResponse(call, res) {
         return {
             functionResponse: {
@@ -139,6 +155,24 @@ class AISession {
                 response: res
             }
         };
+    }
+
+    async _triage() {
+        const startTime = Date.now();
+
+        try {
+            const effort = await this.manager.triage.classify(this, this.contents);
+            getLogger().debug(`AI question sorted as ${effort} in ${AIUtil.formatElapsed(startTime)}.`);
+
+            return effort;
+        } catch (err) {
+            if (err.name !== "AIError" || this.signal?.aborted) {
+                throw err;
+            }
+
+            getLogger().warn(`Couldn't sort an AI question by effort: ${err.message}`);
+            return AIEfforts.research;
+        }
     }
 
     _buildRequest(systemInstruction, final) {
@@ -174,6 +208,11 @@ class AISession {
         await this._reportProgress();
     }
 
+    _logStep(i, startTime, calls) {
+        const action = Util.empty(calls) ? "wrote the answer" : `called ${calls.map(call => call.name).join(", ")}`;
+        getLogger().debug(`AI step ${i + 1} on ${this.model} took ${AIUtil.formatElapsed(startTime)} and ${action}.`);
+    }
+
     async _runCalls(calls) {
         const steps = calls.map(call => this.manager.tools.createStep(call.name, call.args, this));
 
@@ -202,8 +241,16 @@ class AISession {
         this.finishing = true;
         await this._reportProgress();
 
+        const extrasStart = Date.now();
+
         const extras = await this._getExtras(question, answer);
+
+        getLogger().debug(`AI sources and follow-ups took ${AIUtil.formatElapsed(extrasStart)}.`);
         this._checkCancelled();
+
+        getLogger().debug(
+            `AI answer took ${AIUtil.formatElapsed(this.startTime)} over ${this.steps.length} tool call(s).`
+        );
 
         return {
             answer,

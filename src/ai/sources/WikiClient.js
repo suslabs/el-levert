@@ -1,6 +1,7 @@
 import Util from "../../util/Util.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 import HTMLUtil from "../../util/misc/HTMLUtil.js";
+import HTTPUtil from "../../util/vm/HTTPUtil.js";
 
 import AIError from "../../errors/AIError.js";
 
@@ -81,13 +82,12 @@ class WikiClient {
 
     static _languageRegex = /^[a-z]{2,3}(-[a-z]+)?$/;
 
-    _getUrl(language, path) {
-        return `https://${language}.${this.host}/${path}`;
+    _getUrl(language, ...path) {
+        return HTTPUtil.joinUrl(`https://${language}.${this.host}`, ...path);
     }
 
     _getArticleUrl(title, language) {
-        const path = encodeURIComponent(title.replaceAll(" ", "_"));
-        return this._getUrl(language, `${WikiClient.articlePath}/${path}`);
+        return this._getUrl(language, WikiClient.articlePath, encodeURIComponent(title.replaceAll(" ", "_")));
     }
 
     async _query(language, params, timeout) {

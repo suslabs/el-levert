@@ -4,6 +4,7 @@ import AISession from "../../ai/AISession.js";
 import AIToolRegistry from "../../ai/AIToolRegistry.js";
 import AIPrompt from "../../ai/AIPrompt.js";
 import AIResponseFinisher from "../../ai/AIResponseFinisher.js";
+import AITriage from "../../ai/AITriage.js";
 import WebSearcher from "../../ai/WebSearcher.js";
 import AISourceRegistry from "../../ai/sources/AISourceRegistry.js";
 import Sources from "../../ai/sources/Sources.js";
@@ -23,7 +24,7 @@ class AIManager extends Manager {
     static $name = "aiManager";
     static loadPriority = 4;
 
-    static promptNames = ["system", "finisher", "inspectImage"];
+    static promptNames = ["system", "triage", "finisher", "inspectImage"];
 
     constructor(enabled, apiKeys) {
         super(enabled);
@@ -41,6 +42,7 @@ class AIManager extends Manager {
         const config = getConfig().ai;
 
         this.maxSteps = config.maxSteps === -1 ? Infinity : config.maxSteps;
+        this.quickMaxSteps = config.quickMaxSteps;
         this.timeLimit = config.timeLimit;
         this.unlimitedTimeForAdmins = config.unlimitedTimeForAdmins;
 
@@ -63,6 +65,7 @@ class AIManager extends Manager {
         this.gemini = new GeminiClient(this.http, this.apiKeys, config);
         this.tools = new AIToolRegistry(this);
         this.prompt = new AIPrompt(this.prompts.system);
+        this.triage = new AITriage(this.prompts.triage);
         this.finisher = new AIResponseFinisher(this.prompts.finisher);
         this.webSearcher = new WebSearcher(this.http);
 
