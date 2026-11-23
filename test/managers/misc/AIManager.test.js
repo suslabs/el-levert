@@ -39,6 +39,15 @@ describe("AIManager", () => {
         }
     });
 
+    test("refuses to load unknown sources", async () => {
+        await expect(
+            createCommandRuntime({
+                config: { enableAI: true, ai: { sources: ["nope"] } },
+                auth: { geminiKey: "test-key" }
+            })
+        ).rejects.toThrow("Unknown AI sources: nope");
+    });
+
     test("loads its config and tools", async () => {
         runtime = await createCommandRuntime({
             config: { enableAI: true },
@@ -53,6 +62,8 @@ describe("AIManager", () => {
         expect(manager.prompts.inspectImage).toContain("Describe this image");
         expect(Array.from(manager.tools.tools.keys())).toEqual([
             "search_tags",
+            "search_quests",
+            "read_quest",
             "search_recipes",
             "show_recipe",
             "tag_get",

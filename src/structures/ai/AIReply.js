@@ -53,6 +53,10 @@ class AIReply {
         this.controller = new AbortController();
     }
 
+    get cancelled() {
+        return this.controller.signal.aborted;
+    }
+
     async answer(question, history) {
         const aiManager = getClient().aiManager;
 
@@ -79,8 +83,9 @@ class AIReply {
         }
     }
 
-    cancel() {
+    async cancel() {
         this.controller.abort();
+        await this.updater.close();
     }
 
     static async _handleFollowUp(ctx) {
@@ -105,8 +110,10 @@ class AIReply {
     }
 
     static async _handleCancel(ctx) {
-        await ctx.deferUpdate();
-        ctx.interactionContext.session.spec.reply.cancel();
+        const reply = ctx.interactionContext.session.spec.reply;
+
+        await reply.cancel();
+        await ctx.update(reply.view.renderCancelled());
 
         return true;
     }
@@ -126,12 +133,18 @@ class AIReply {
                 onProgress: session => this.updater.update(this.view.renderProgress(session, cancelSession))
             });
         } catch (err) {
-            if (!AIReply.expectedErrors.has(err.name)) {
+            if (this.cancelled) {
+                return null;
+            } else if (!AIReply.expectedErrors.has(err.name)) {
                 this.updater.cancel();
                 throw err;
             }
 
             return await this.updater.finish(this.view.renderError(err));
+        }
+
+        if (this.cancelled) {
+            return null;
         }
 
         const turns = [...history, { role: "user", text: question }, { role: "model", text: result.answer }],

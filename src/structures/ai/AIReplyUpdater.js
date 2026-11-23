@@ -12,6 +12,8 @@ class AIReplyUpdater {
 
         this.pending = null;
         this.timer = null;
+
+        this.closed = false;
     }
 
     async start(payload) {
@@ -22,6 +24,10 @@ class AIReplyUpdater {
     }
 
     update(payload) {
+        if (this.closed) {
+            return;
+        }
+
         this.pending = payload;
 
         if (this.timer !== null) {
@@ -39,6 +45,13 @@ class AIReplyUpdater {
 
         this.timer = null;
         this.pending = null;
+    }
+
+    async close() {
+        this.closed = true;
+        this.cancel();
+
+        await this.queue;
     }
 
     async finish(payload) {

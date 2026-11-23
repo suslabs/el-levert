@@ -5,7 +5,8 @@ import AIToolRegistry from "../../ai/AIToolRegistry.js";
 import AIPrompt from "../../ai/AIPrompt.js";
 import AIResponseFinisher from "../../ai/AIResponseFinisher.js";
 import WebSearcher from "../../ai/WebSearcher.js";
-import NomiCodexClient from "../../ai/recipes/NomiCodexClient.js";
+import AISourceRegistry from "../../ai/sources/AISourceRegistry.js";
+import Sources from "../../ai/sources/Sources.js";
 import PromptLoader from "../../loaders/ai/PromptLoader.js";
 
 import { getConfig, getLogger } from "../../LevertClient.js";
@@ -64,7 +65,9 @@ class AIManager extends Manager {
         this.prompt = new AIPrompt(this.prompts.system);
         this.finisher = new AIResponseFinisher(this.prompts.finisher);
         this.webSearcher = new WebSearcher(this.http);
-        this.recipes = config.recipes.enabled ? new NomiCodexClient(this.http, config.recipes) : null;
+
+        this.sources = new AISourceRegistry(this.http, config.requestTimeout);
+        await this.sources.load(AISourceRegistry.select(Sources, config.sources));
     }
 
     unload() {

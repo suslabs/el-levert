@@ -34,7 +34,7 @@ class ShowRecipeTool extends RecipeTool {
             throw new AIError("itemId and a recipe idx from search_recipes are required");
         }
 
-        const recipes = this.manager.recipes;
+        const recipes = this.recipes;
 
         const card = await recipes.renderCard(itemId, args.idx, {
             mode: recipes.getMode(args.expert),

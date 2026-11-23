@@ -1,4 +1,6 @@
 export { default as SearchTagsTool } from "./tag/SearchTagsTool.js";
+export { default as SearchQuestsTool } from "./questbook/SearchQuestsTool.js";
+export { default as ReadQuestTool } from "./questbook/ReadQuestTool.js";
 export { default as SearchRecipesTool } from "./recipes/SearchRecipesTool.js";
 export { default as ShowRecipeTool } from "./recipes/ShowRecipeTool.js";
 export { default as TagGetTool } from "./tag/TagGetTool.js";

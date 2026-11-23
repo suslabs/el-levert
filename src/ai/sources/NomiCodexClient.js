@@ -1,3 +1,5 @@
+import PackModes from "../../structures/ai/PackModes.js";
+
 import Util from "../../util/Util.js";
 import { isSuccessStatus } from "../../util/misc/HttpStatusCodes.js";
 
@@ -6,7 +8,6 @@ import AIError from "../../errors/AIError.js";
 class NomiCodexClient {
     static renderWait = 8;
 
-    static expertMode = "expert";
     static notFoundError = "not found";
 
     constructor(http, options) {
@@ -20,7 +21,7 @@ class NomiCodexClient {
     }
 
     getMode(expert) {
-        return expert ? NomiCodexClient.expertMode : this.mode;
+        return expert ? PackModes.expert : this.mode;
     }
 
     getItemUrl(itemId) {

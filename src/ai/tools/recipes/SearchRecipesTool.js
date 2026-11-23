@@ -1,7 +1,7 @@
 import RecipeTool from "./RecipeTool.js";
 import ToolParams from "../ToolParams.js";
 
-import NomiCodexClient from "../../recipes/NomiCodexClient.js";
+import NomiCodexClient from "../../sources/NomiCodexClient.js";
 
 import { OverclockingValues } from "../../../structures/OverclockingValues.js";
 
@@ -45,7 +45,7 @@ class SearchRecipesTool extends RecipeTool {
             throw new AIError("query is required");
         }
 
-        const recipes = this.manager.recipes;
+        const recipes = this.recipes;
 
         const data = await recipes.search(query, {
             mode: recipes.getMode(args.expert),

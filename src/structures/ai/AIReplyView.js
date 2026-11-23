@@ -94,6 +94,14 @@ class AIReplyView {
         return `${getEmoji("clock")} You are asking too fast. Please slow down! (${bold(waitStr)})`;
     }
 
+    renderCancelled() {
+        const embed = this._createEmbed(this.name)
+            .setColor(AIReplyView.errorColor)
+            .setDescription(`${getEmoji("error")} Thinking cancelled.`);
+
+        return AIReplyView._createPayload([embed]);
+    }
+
     renderError(err) {
         const embed = this._createEmbed(this.name)
             .setColor(AIReplyView.errorColor)

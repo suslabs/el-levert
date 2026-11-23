@@ -85,7 +85,6 @@ async function setup(script, options = {}) {
                 endpoint: `${server.url}/v1beta`,
                 models: options.models ?? ["test-model"],
                 sources: options.sources?.(server.url) ?? [],
-                ...(typeof options.recipes === "function" ? { recipes: options.recipes(server.url) } : {}),
                 ...options.ai
             }
         },
@@ -97,6 +96,15 @@ async function setup(script, options = {}) {
     });
 
     return bodies;
+}
+
+async function loadSources(definitions) {
+    const { default: AISourceRegistry } = await import("../../../src/ai/sources/AISourceRegistry.js");
+
+    const manager = runtime.client.aiManager;
+
+    manager.sources = new AISourceRegistry(manager.http, manager.requestTimeout);
+    await manager.sources.load(definitions);
 }
 
 function createSentMessage(id) {
@@ -164,6 +172,12 @@ function createClick(customId, user, message) {
         deferUpdate: async () => {
             interaction.deferred = true;
             interaction.updated = true;
+        },
+        update: async data => {
+            interaction.replied = true;
+            message.payloads.push(data);
+
+            return message;
         },
         reply: async data => {
             interaction.replied = true;
@@ -789,10 +803,14 @@ describe("a command", () => {
         await running;
         release();
 
-        const final = recorder.sent.at(-1);
+        const cancelled = recorder.msg.payloads.at(-1);
 
-        expect(embedOf(final).description).toContain("Answer cancelled.");
-        expect(final.components).toEqual([]);
+        expect(embedOf(cancelled)).toMatchObject({
+            color: 0xed4245,
+            description: ":no_entry_sign: Thinking cancelled."
+        });
+        expect(cancelled.components).toEqual([]);
+        expect(recorder.sent).toHaveLength(2);
         expect(runtime.client.interactionHandler.getSession(cancel.custom_id.split(":").at(-1))).toBeNull();
     });
 
@@ -960,13 +978,6 @@ describe("a command", () => {
             shots = [];
 
         const bodies = await setup(script, {
-            recipes: url => ({
-                enabled: true,
-                searchUrls: [`${url}/down`, `${url}/api/search`],
-                shotUrl: `${url}/api/shot`,
-                siteUrl: "https://codex.test",
-                mode: "normal"
-            }),
             routes: {
                 "GET /down": () => ({ statusCode: 503, json: {} }),
                 "GET /api/search": ({ url }) => {
@@ -976,6 +987,18 @@ describe("a command", () => {
                 "GET /api/shot": ({ url }) => {
                     shots.push(Object.fromEntries(url.searchParams));
                     return { json: { ok: true, abs: "https://codex.test/card.png" } };
+                }
+            }
+        });
+
+        await loadSources({
+            codex: {
+                type: "recipes",
+                options: {
+                    searchUrls: [`${server.url}/down`, `${server.url}/api/search`],
+                    shotUrl: `${server.url}/api/shot`,
+                    siteUrl: "https://codex.test",
+                    mode: "normal"
                 }
             }
         });
@@ -1000,6 +1023,85 @@ describe("a command", () => {
 
         expect(embed.description).toBe("Signalum Dust is made in a **Mixer**.");
         expect(embed.image.url).toBe("https://codex.test/card.png");
+    });
+
+    test("searches the questbook and reads quests with their tasks and prerequisites", async () => {
+        const questbook = {
+            "questDatabase:9": {
+                "0:10": {
+                    "questID:3": 1,
+                    "preRequisites:11": [0],
+                    "properties:10": {
+                        "betterquesting:10": { "name:8": "§6Steel Age", "desc:8": "Make §asteel§r in the EBF." }
+                    },
+                    "tasks:9": {
+                        "0:10": {
+                            "taskID:8": "bq_standard:retrieval",
+                            "requiredItems:9": { "0:10": { "Count:3": 16, "id:8": "gregtech:steel_ingot" } }
+                        }
+                    }
+                },
+                "1:10": {
+                    "questID:3": 0,
+                    "properties:10": { "betterquesting:10": { "name:8": "Iron Age", "desc:8": "Get iron." } }
+                }
+            },
+            "questLines:9": {
+                "0:10": {
+                    "properties:10": { "betterquesting:10": { "name:8": "The Beginning" } },
+                    "quests:9": { "0:10": { "id:3": 1 }, "1:10": { "id:3": 0 } }
+                }
+            }
+        };
+
+        const script = [
+            calls([call("search_quests", { query: "steel" })]),
+            calls([call("read_quest", { ids: ["1", "9"] })]),
+            answer(["Do **Steel Age** next."]),
+            extras([], ['Quest "Steel Age"'])
+        ];
+
+        const bodies = await setup(script, { routes: { "GET /quests.json": () => ({ json: questbook }) } });
+
+        await loadSources({
+            quests: { type: "questbook", options: { urls: { normal: `${server.url}/quests.json` } } }
+        });
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("what's next after iron?", recorder));
+
+        const responseOf = idx => Util.first(bodies[idx].body.contents.at(-1).parts).functionResponse.response;
+
+        expect(script).toEqual([]);
+        expect(responseOf(1).quests.map(quest => [quest.id, quest.title, quest.chapter])).toEqual([
+            ["1", "Steel Age", "The Beginning"]
+        ]);
+
+        expect(responseOf(2).quests).toEqual([
+            {
+                source: 'Quest "Steel Age"',
+                id: "1",
+                title: "Steel Age",
+                chapter: "The Beginning",
+                text: "Make steel in the EBF.",
+                tasks: ["retrieval: 16x gregtech:steel_ingot"],
+                prereqs: [{ id: "0", title: "Iron Age" }]
+            },
+            { id: "9", error: "No quest with this ID." }
+        ]);
+
+        expect(embedOf(recorder.sent.at(-1)).description).toContain('Sources:\n1. Quest "Steel Age"');
+    });
+
+    test("doesn't offer questbook or recipe tools when no source is enabled", async () => {
+        const bodies = await setup([answer(["Hi."]), extras([], [])]);
+
+        await getCommand(runtime, "a").handler(createAskContext("hi", createRecorder()));
+
+        const names = bodies[0].body.tools[0].functionDeclarations.map(decl => decl.name);
+
+        expect(names).not.toContain("search_quests");
+        expect(names).not.toContain("search_recipes");
     });
 
     test("shows an image the model picks in the answer embed", async () => {
