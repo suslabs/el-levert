@@ -1,13 +1,14 @@
-import RecipeTool from "./RecipeTool.js";
+import SourceTool from "../SourceTool.js";
 
 import AIPhases from "../../../../structures/ai/AIPhases.js";
+import AISourceTypes from "../../../../structures/ai/AISourceTypes.js";
 
 import Util from "../../../../util/Util.js";
 import ToolParams from "../../../../util/ai/ToolParams.js";
 
 import AIError from "../../../../errors/AIError.js";
 
-class ShowRecipeTool extends RecipeTool {
+class ShowRecipeTool extends SourceTool {
     static info = {
         name: "show_recipe",
         emoji: "🖼️",
@@ -16,13 +17,17 @@ class ShowRecipeTool extends RecipeTool {
             "Render one recipe from search_recipes as an image card and show it with your answer. Call it once, for the recipe the user most likely means.",
         parameters: ToolParams.object(
             {
-                itemId: ToolParams.string("Item ID from search_recipes."),
-                idx: ToolParams.integer("Recipe idx from search_recipes."),
+                itemId: ToolParams.string(
+                    "The recipe's itemId from search_recipes (hot ingot EBF steps use the hot ingot's)."
+                ),
+                idx: ToolParams.integer("The recipe's idx from search_recipes."),
                 expert: ToolParams.boolean("Use expert (hard) mode recipes.")
             },
             ["itemId", "idx"]
         )
     };
+
+    static sourceType = AISourceTypes.recipes;
 
     getStatus() {
         return "Rendering the recipe card";
@@ -35,10 +40,8 @@ class ShowRecipeTool extends RecipeTool {
             throw new AIError("itemId and a recipe idx from search_recipes are required");
         }
 
-        const recipes = this.recipes;
-
-        const card = await recipes.renderCard(itemId, args.idx, {
-            mode: recipes.getMode(args.expert),
+        const card = await this.source.renderCard(itemId, args.idx, {
+            mode: this.source.getMode(session.resolveExpert(args.expert)),
             timeout: session.toolTimeout()
         });
 

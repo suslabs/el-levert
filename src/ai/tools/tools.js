@@ -7,10 +7,13 @@ export { default as SearchRecipesTool } from "./sources/recipes/SearchRecipesToo
 export { default as ShowRecipeTool } from "./sources/recipes/ShowRecipeTool.js";
 export { default as SearchWikiTool } from "./sources/wiki/SearchWikiTool.js";
 export { default as ReadWikiTool } from "./sources/wiki/ReadWikiTool.js";
+export { default as SearchGameDocsTool } from "./sources/docs/SearchGameDocsTool.js";
+export { default as SearchScriptDocsTool } from "./sources/docs/SearchScriptDocsTool.js";
 export { default as SearchWebTool } from "./web/SearchWebTool.js";
 export { default as FetchWebPageTool } from "./web/FetchWebPageTool.js";
 export { default as ExecuteJavascriptTool } from "./misc/ExecuteJavascriptTool.js";
 export { default as UnitConvertTool } from "./misc/UnitConvertTool.js";
+export { default as OverclockTool } from "./misc/OverclockTool.js";
 export { default as AttachFileTool } from "./misc/AttachFileTool.js";
 export { default as FindUsersTool } from "./discord/FindUsersTool.js";
 export { default as BotProfileTool } from "./discord/BotProfileTool.js";

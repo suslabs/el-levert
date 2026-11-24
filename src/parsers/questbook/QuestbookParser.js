@@ -1,3 +1,6 @@
+import MarkdownStyler from "../markdown/MarkdownStyler.js";
+import MarkdownStyles from "../markdown/MarkdownStyles.js";
+
 import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
 
@@ -11,6 +14,61 @@ const QuestbookParser = Object.freeze({
         return String(str ?? "").replace(QuestbookParser._formattingRegex, "");
     },
 
+    _resetCode: "r",
+    _whiteCode: "f",
+
+    _codeStyles: Object.freeze({
+        l: MarkdownStyles.bold,
+        m: MarkdownStyles.strike,
+        n: MarkdownStyles.underline,
+        o: MarkdownStyles.italic
+    }),
+
+    _bulletRegex: /^((?:\s|§.)*)\* /gm,
+    _emptyFormatRegex: /(§[^r])+\s*§r/g,
+    _colorRegex: /§[0-9a-eg]/g,
+    _openSpaceRegex: /(§[^r])(\s+)/g,
+    _closeSpaceRegex: /(\s+)(§r)/g,
+    _tokenRegex: /(\s*)(§.)(\s*)/g,
+    _codeRegex: /^§(.)$/,
+
+    _formatToken: (token, styler) => {
+        const match = token.match(QuestbookParser._codeRegex);
+
+        if (match === null) {
+            return token;
+        }
+
+        const code = match[1],
+            style = QuestbookParser._codeStyles[code];
+
+        if (code === QuestbookParser._resetCode) {
+            return styler.reset();
+        } else if (code === QuestbookParser._whiteCode) {
+            return styler.end(MarkdownStyles.bold);
+        } else if (typeof style === "undefined") {
+            return "";
+        } else {
+            return styler.start(style);
+        }
+    },
+
+    formatMarkdown: str => {
+        const text = String(str ?? "")
+            .replace(QuestbookParser._bulletRegex, "$1- ")
+            .replace(QuestbookParser._emptyFormatRegex, "")
+            .replace(QuestbookParser._colorRegex, "§l")
+            .replace(QuestbookParser._openSpaceRegex, "$2$1")
+            .replace(QuestbookParser._closeSpaceRegex, "$2$1");
+
+        const styler = new MarkdownStyler();
+
+        return `${text.trim()}§r`
+            .split(QuestbookParser._tokenRegex)
+            .map(token => QuestbookParser._formatToken(token, styler))
+            .join("");
+    },
+
     parse: raw => {
         const data = QuestbookParser._normalize(raw);
 
@@ -20,6 +78,7 @@ const QuestbookParser = Object.freeze({
 
         return {
             packName: data.questSettings?.betterquesting?.pack_name ?? null,
+            packVersion: data.questSettings?.betterquesting?.pack_version ?? null,
             quests: data.questDatabase.map(QuestbookParser._parseQuest),
             lines: (data.questLines ?? []).map(QuestbookParser._parseLine)
         };
@@ -119,7 +178,8 @@ const QuestbookParser = Object.freeze({
         return {
             id: String(quest.questID),
             name: QuestbookParser.stripFormatting(props.name),
-            desc: QuestbookParser.stripFormatting(props.desc),
+            desc: String(props.desc ?? ""),
+            logic: props.questlogic ?? null,
             icon: TypeTester.isObject(props.icon) ? QuestbookParser._parseItem(props.icon) : null,
             main: props.ismain === 1,
             visibility: props.visibility ?? null,

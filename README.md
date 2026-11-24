@@ -577,6 +577,7 @@ Examples:
 - `convert <value> <from_unit> <to_unit...>`: Converts compatible energy (`rf`, `eu`, `ae`, voltage-tier amps) and fluid (`mb`, `b`) rates and displays the conversion chain.
 - `cleanroomcalc` / `crc <width>x<height>x<length>`: Calculates required filter casings, plascrete, and construction blocks for a GregTech cleanroom of given dimensions (e.g. `5x5x5`, `9x7x9`).
 - `stoik <reactants> -> <products>`: Balances chemical equations and verifies reaction stoichiometry.
+- `questbook` / `qb <questbook> <quest name or id> [--expert]`: Shows a quest from a modpack questbook (e.g. `%qb nfu steel age`), with its requirements and the questbook version. When several quests match, lists them with a button for each, ten per page; clicking one opens it in place and **Back** returns to the list. Quests too long for an embed are sent as a file. Add `--expert` for the expert mode questbook. Running it without arguments lists the available questbooks.
 
 ### 10. AI assistant: `a` / `ai` / `ask`
 

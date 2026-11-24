@@ -1,11 +1,12 @@
-import WikiTool from "./WikiTool.js";
+import SourceTool from "../SourceTool.js";
 
 import AIPhases from "../../../../structures/ai/AIPhases.js";
+import AISourceTypes from "../../../../structures/ai/AISourceTypes.js";
 
 import ToolParams from "../../../../util/ai/ToolParams.js";
 import AIUtil from "../../../../util/ai/AIUtil.js";
 
-class ReadWikiTool extends WikiTool {
+class ReadWikiTool extends SourceTool {
     static info = {
         name: "read_wikipedia",
         emoji: "📑",
@@ -21,15 +22,17 @@ class ReadWikiTool extends WikiTool {
         )
     };
 
+    static sourceType = AISourceTypes.wiki;
+
     getStatus(args) {
-        return `Reading "${this.formatArg(args.title)}" on ${this.wiki.name}`;
+        return `Reading "${this.formatArg(args.title)}" on ${this.source.name}`;
     }
 
     async execute(args, session) {
         const title = this.requireString(args, "title"),
-            language = this.wiki.getLanguage(args.language);
+            language = this.source.getLanguage(args.language);
 
-        const article = await this.wiki.read(title, { language, timeout: session.toolTimeout() });
+        const article = await this.source.read(title, { language, timeout: session.toolTimeout() });
         return { source: article.url, title: article.title, ...AIUtil.pageText(article.text, args) };
     }
 }

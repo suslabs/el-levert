@@ -176,6 +176,33 @@ describe("TagVM", () => {
         await expect(vm.runScript("util.executeTag('missing')", { msg })).rejects.toThrow("Tag missing doesn't exist");
     });
 
+    test("keeps concurrent scripts isolated while nested tags still see their parent", async () => {
+        const msg = createDiscordMessage("hello");
+
+        const first = vm.runScript("new Promise(resolve => setTimeout(() => resolve('first'), 5))", { msg }),
+            second = vm.runScript("new Promise(resolve => setTimeout(() => resolve('second'), 40))", { msg });
+
+        await expect(Promise.all([first, second])).resolves.toEqual(["first", "second"]);
+
+        await addTag(runtime, "inner", "'inner'", "user-1", { type: "ivm" });
+
+        const parents = [],
+            getEvalContext = vm._getEvalContext.bind(vm);
+
+        vi.spyOn(vm, "_getEvalContext").mockImplementation(async (...args) => {
+            parents.push(args[2]);
+            return await getEvalContext(...args);
+        });
+
+        await expect(vm.runScript("(async () => await util.executeTagSafe('inner'))()", { msg })).resolves.toBe(
+            "inner"
+        );
+
+        expect(parents).toHaveLength(2);
+        expect(parents[0]).toBeNull();
+        expect(parents[1]).not.toBeNull();
+    });
+
     test("bridges util message and user helpers through the vm", async () => {
         const msg = createDiscordMessage("hello");
 

@@ -303,8 +303,20 @@
                 "icon": {
                     "type": ["string", "null"]
                 },
-                "endpoint": {
-                    "type": "string"
+                "endpoints": {
+                    "type": "object",
+                    "properties": {
+                        "gemini": {
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "openrouter": {
+                            "type": "string",
+                            "minLength": 1
+                        }
+                    },
+                    "required": ["gemini", "openrouter"],
+                    "additionalProperties": false
                 },
                 "models": {
                     "type": "array",
@@ -336,6 +348,14 @@
                 "requestTimeout": {
                     "type": "number"
                 },
+                "modelCooldown": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "maxModelCooldown": {
+                    "type": "number",
+                    "minimum": 0
+                },
                 "maxDownloadSize": {
                     "type": "number"
                 },
@@ -359,21 +379,13 @@
                 },
                 "allowLocalhostRequests": {
                     "type": "boolean"
-                },
-                "sources": {
-                    "type": "array",
-                    "items": {
-                        "type": "string",
-                        "minLength": 1
-                    },
-                    "uniqueItems": true
                 }
             },
             "required": [
                 "name",
                 "icon",
                 "promptsPath",
-                "endpoint",
+                "endpoints",
                 "models",
                 "thinkingLevel",
                 "toolThinkingLevel",
@@ -382,14 +394,15 @@
                 "timeLimit",
                 "unlimitedTimeForAdmins",
                 "requestTimeout",
+                "modelCooldown",
+                "maxModelCooldown",
                 "maxDownloadSize",
                 "maxToolOutput",
                 "maxRequests",
                 "rateLimitWindow",
                 "followUpsAnyone",
                 "followUpsEditAnswer",
-                "allowLocalhostRequests",
-                "sources"
+                "allowLocalhostRequests"
             ],
             "additionalProperties": false
         }

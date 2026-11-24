@@ -10,7 +10,7 @@ class SearchWebTool extends AITool {
         emoji: "🌐",
         phase: AIPhases.searching,
         description:
-            "Web search for current, niche, disputed or external facts, and modpack questions the tags don't cover.",
+            "Web search for general, current or external facts. For modpack questions, use it only after the questbook, recipes and tags found nothing.",
         parameters: ToolParams.object(
             {
                 query: ToolParams.string("Short search query."),
@@ -19,6 +19,8 @@ class SearchWebTool extends AITool {
             ["query"]
         )
     };
+
+    static maxCalls = 4;
 
     static defaultLimit = 5;
     static maxLimit = 8;

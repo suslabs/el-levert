@@ -4,6 +4,7 @@
     "encoding": "utf-8",
     "config": "config.json",
     "reactions": "reactions.json",
+    "questbooks": "questbooks.json",
     "auth": "auth.json",
     "authEnv": "auth.env"
 }

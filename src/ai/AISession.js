@@ -1,4 +1,6 @@
+import AIAnswerParser from "./AIAnswerParser.js";
 import AISourceLedger from "../structures/ai/AISourceLedger.js";
+import AICallLedger from "../structures/ai/AICallLedger.js";
 
 import AIPhases from "../structures/ai/AIPhases.js";
 import AIEfforts from "../structures/ai/AIEfforts.js";
@@ -18,7 +20,10 @@ class AISession {
     static maxImages = 4;
 
     static toolMode = "AUTO";
-    static answerMode = "NONE";
+
+    static maxHistoryTurns = 8;
+    static maxTurnLength = 2000;
+    static triageTurns = 3;
 
     constructor(manager, request, options) {
         options = ObjectUtil.guaranteeObject(options);
@@ -32,10 +37,12 @@ class AISession {
 
         this.startTime = Date.now();
         this.deadline = this.startTime + (options.timeLimit ?? manager.timeLimit);
-        this.state = manager.gemini.createState();
+        this.state = manager.router.createState();
         this.effort = AIEfforts.research;
+        this.expert = this.history.some(turn => turn.expert === true);
 
         this.ledger = new AISourceLedger();
+        this.calls = new AICallLedger(this.manager.tools);
         this.contents = [];
         this.files = new Map();
         this.images = [];
@@ -46,7 +53,7 @@ class AISession {
     }
 
     get model() {
-        return this.manager.gemini.getModel(this.state);
+        return this.manager.router.getModel(this.state);
     }
 
     get timeLeft() {
@@ -63,15 +70,18 @@ class AISession {
 
     async run(question) {
         this.contents = [
-            ...this.history.map(turn => ({ role: turn.role, parts: [{ text: turn.text }] })),
+            ...this.history.slice(-AISession.maxHistoryTurns).map(turn => ({
+                role: turn.role,
+                parts: [{ text: Util.trimString(turn.text, AISession.maxTurnLength) }]
+            })),
             { role: "user", parts: [{ text: question }] }
         ];
 
         this.effort = await this._triage();
         this._checkCancelled();
 
-        const prompt = this.manager.prompt.build(this.request, this.manager.tools.getNames(this), this.effort),
-            systemInstruction = { parts: [{ text: prompt }] };
+        const prompt = this.manager.prompt.build(this.request, this.manager.tools.getNames(this), this.effort);
+        this.systemInstruction = { parts: [{ text: prompt }] };
 
         for (let i = 0; i < this.maxSteps; i++) {
             this._checkCancelled();
@@ -84,13 +94,13 @@ class AISession {
 
             const final = i === this.maxSteps - 1 || this.timeLeft < this.manager.requestTimeout;
 
-            const res = await this._stream(this._buildRequest(systemInstruction, final), final),
-                calls = AISession._getCalls(res.parts);
+            const res = await this._stream(this._buildRequest(final), final),
+                calls = final ? [] : AIUtil.getCalls(res.parts);
 
             this._logStep(i, stepStart, calls);
 
             if (Util.empty(calls)) {
-                return await this._finish(question, res.finishReason);
+                return await this._finish(res.finishReason);
             }
 
             this.contents.push({ role: "model", parts: res.parts });
@@ -101,14 +111,12 @@ class AISession {
     }
 
     async generateText(body) {
-        const data = await this.manager.gemini.generate(body, this.state, {
+        const out = await this.manager.router.generate(body, this.state, {
             timeLeft: this.timeLeft,
             signal: this.signal
         });
 
-        const parts = Util.first(data.candidates ?? [])?.content?.parts ?? [];
-
-        return AIUtil.getText(parts).trim();
+        return AIUtil.getText(out.parts).trim();
     }
 
     toolTimeout() {
@@ -117,6 +125,16 @@ class AISession {
             AISession.minCallTime,
             this.manager.requestTimeout
         );
+    }
+
+    resolveExpert(expert) {
+        if (expert === true) {
+            this.expert = true;
+        } else if (expert === false) {
+            return false;
+        }
+
+        return this.expert;
     }
 
     attachFile(name, content) {
@@ -141,27 +159,11 @@ class AISession {
         getLogger().error(`AI tool "${toolName}" failed:`, err);
     }
 
-    static _getCalls(parts) {
-        return parts
-            .filter(part => typeof part.functionCall !== "undefined")
-            .map(part => ({ ...part.functionCall, args: ObjectUtil.guaranteeObject(part.functionCall.args) }));
-    }
-
-    static _createResponse(call, res) {
-        return {
-            functionResponse: {
-                ...(typeof call.id === "undefined" ? {} : { id: call.id }),
-                name: call.name,
-                response: res
-            }
-        };
-    }
-
     async _triage() {
         const startTime = Date.now();
 
         try {
-            const effort = await this.manager.triage.classify(this, this.contents);
+            const effort = await this.manager.triage.classify(this, this.contents.slice(-AISession.triageTurns));
             getLogger().debug(`AI question sorted as ${effort} in ${AIUtil.formatElapsed(startTime)}.`);
 
             return effort;
@@ -175,17 +177,33 @@ class AISession {
         }
     }
 
-    _buildRequest(systemInstruction, final) {
+    _getContents(final) {
+        const note = this.manager.prompt.buildNote(final, this.expert);
+
+        if (Util.empty(note)) {
+            return this.contents;
+        }
+
+        const last = Util.last(this.contents);
+        return [...this.contents.slice(0, -1), { ...last, parts: [...last.parts, { text: note }] }];
+    }
+
+    _buildRequest(final) {
+        const body = { systemInstruction: this.systemInstruction, contents: this._getContents(final) };
+
+        if (final) {
+            return body;
+        }
+
         return {
-            systemInstruction,
-            contents: this.contents,
+            ...body,
             tools: [{ functionDeclarations: this.manager.tools.getDeclarations(this) }],
-            toolConfig: { functionCallingConfig: { mode: final ? AISession.answerMode : AISession.toolMode } }
+            toolConfig: { functionCallingConfig: { mode: AISession.toolMode } }
         };
     }
 
     async _stream(body, final) {
-        return await this.manager.gemini.stream(body, this.state, {
+        return await this.manager.router.stream(body, this.state, {
             timeLeft: this.timeLeft,
             signal: this.signal,
             thinkingLevel: final ? this.manager.thinkingLevel : this.manager.toolThinkingLevel,
@@ -224,14 +242,14 @@ class AISession {
     }
 
     async _runCall(call) {
-        const res = await this.manager.tools.execute(call.name, call.args, this);
+        const res = await this.calls.run(call, () => this.manager.tools.execute(call.name, call.args, this));
         this.ledger.record(res);
 
-        return AISession._createResponse(call, res);
+        return AIUtil.createResponse(call, res);
     }
 
-    async _finish(question, finishReason) {
-        const answer = this.text.trim();
+    async _finish(finishReason) {
+        const { answer, followUps, sources } = AIAnswerParser.parse(this.text, this.ledger);
 
         if (Util.empty(answer)) {
             const reason = finishReason ?? "empty response";
@@ -241,11 +259,6 @@ class AISession {
         this.finishing = true;
         await this._reportProgress();
 
-        const extrasStart = Date.now();
-
-        const extras = await this._getExtras(question, answer);
-
-        getLogger().debug(`AI sources and follow-ups took ${AIUtil.formatElapsed(extrasStart)}.`);
         this._checkCancelled();
 
         getLogger().debug(
@@ -254,27 +267,16 @@ class AISession {
 
         return {
             answer,
-            ...extras,
+            followUps,
+            sources,
             files: Array.from(this.files, ([name, content]) => ({ name, content })),
             images: this.images,
+            expert: this.expert,
             models: this.state.models,
             tokens: this.state.tokens,
             reasoning: this.state.reasoning,
             elapsed: Date.now() - this.startTime
         };
-    }
-
-    async _getExtras(question, answer) {
-        try {
-            return await this.manager.finisher.finish(this, question, answer);
-        } catch (err) {
-            if (err.name !== "AIError") {
-                throw err;
-            }
-
-            getLogger().warn(`Couldn't add sources and follow-ups to an AI answer: ${err.message}`);
-            return { followUps: [], sources: [] };
-        }
     }
 
     _checkCancelled() {

@@ -6,6 +6,7 @@ import Util from "../../../util/Util.js";
 import ArrayUtil from "../../../util/ArrayUtil.js";
 import HTTPUtil from "../../../util/vm/HTTPUtil.js";
 import ToolParams from "../../../util/ai/ToolParams.js";
+import AIUtil from "../../../util/ai/AIUtil.js";
 
 import AIError from "../../../errors/AIError.js";
 
@@ -50,7 +51,9 @@ class HttpRequestTool extends WebTool {
 
         if (!HttpRequestTool.methods.includes(method)) {
             throw new AIError(`${method} requests aren't allowed; only ${HttpRequestTool.methods.join(" and ")}`);
-        } else if (HTTPUtil.getHost(url) === HTTPUtil.getHost(this.manager.gemini.endpoint)) {
+        } else if (
+            this.manager.router.endpoints.some(endpoint => HTTPUtil.getHost(endpoint) === HTTPUtil.getHost(url))
+        ) {
             throw new AIError("That endpoint is reserved");
         }
 
@@ -88,11 +91,7 @@ class HttpRequestTool extends WebTool {
             return Util.trimString(text, HttpRequestTool.maxBodyLength);
         }
 
-        try {
-            return JSON.parse(text);
-        } catch {
-            return text;
-        }
+        return AIUtil.parseJson(text, text);
     }
 }
 

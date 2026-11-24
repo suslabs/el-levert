@@ -1,0 +1,32 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "questbooks",
+    "title": "Questbooks",
+    "type": "object",
+    "additionalProperties": {
+        "type": "object",
+        "properties": {
+            "title": {
+                "type": "string",
+                "minLength": 1
+            },
+            "urls": {
+                "type": "object",
+                "properties": {
+                    "normal": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "expert": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "required": ["normal"],
+                "additionalProperties": false
+            }
+        },
+        "required": ["title", "urls"],
+        "additionalProperties": false
+    }
+}

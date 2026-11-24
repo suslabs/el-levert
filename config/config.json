@@ -96,28 +96,43 @@
         "name": "Large Language Rabbit",
         "icon": null,
         "promptsPath": "./src/ai/prompts",
-        "endpoint": "https://generativelanguage.googleapis.com/v1beta",
+        "endpoints": {
+            "gemini": "https://generativelanguage.googleapis.com/v1beta",
+            "openrouter": "https://openrouter.ai/api/v1"
+        },
         "models": [
             "gemini-3.5-flash-lite",
             "gemini-3.1-flash-lite",
             "gemini-3.6-flash",
             "gemini-flash-lite-latest",
-            "gemini-flash-latest"
+            "gemini-flash-latest",
+            "openrouter:nvidia/nemotron-3-ultra-550b-a55b:free",
+            "openrouter:inclusionai/ling-3.2-flash:free",
+            "openrouter:baidu/ernie-5.5-flash-preview:free",
+            "openrouter:dots-studio/dots-3-note-preview:free",
+            "openrouter:google/gemma-4-31b-it:free",
+            "openrouter:google/gemma-4-26b-a4b-it:free",
+            "openrouter:recursive/flint-v1.0:free",
+            "openrouter:nvidia/nemotron-3.5-lightning:free",
+            "openrouter:nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+            "openrouter:particle-ai/particle-1:free",
+            "openrouter:nvidia/nemotron-3.5-super-vl:free"
         ],
-        "thinkingLevel": "minimal",
+        "thinkingLevel": "low",
         "toolThinkingLevel": "low",
         "maxSteps": -1,
         "quickMaxSteps": 2,
         "timeLimit": 45,
         "unlimitedTimeForAdmins": true,
         "requestTimeout": 20,
+        "modelCooldown": 60,
+        "maxModelCooldown": 600,
         "maxDownloadSize": 10,
-        "maxToolOutput": 12000,
+        "maxToolOutput": 6000,
         "maxRequests": 3,
         "rateLimitWindow": 60,
         "followUpsAnyone": true,
         "followUpsEditAnswer": true,
-        "allowLocalhostRequests": false,
-        "sources": ["nomiCodex", "nomiQuestbook", "wikipedia"]
+        "allowLocalhostRequests": false
     }
 }

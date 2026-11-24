@@ -1,10 +1,11 @@
-import WikiTool from "./WikiTool.js";
+import SourceTool from "../SourceTool.js";
 
 import AIPhases from "../../../../structures/ai/AIPhases.js";
+import AISourceTypes from "../../../../structures/ai/AISourceTypes.js";
 
 import ToolParams from "../../../../util/ai/ToolParams.js";
 
-class SearchWikiTool extends WikiTool {
+class SearchWikiTool extends SourceTool {
     static info = {
         name: "search_wikipedia",
         emoji: "📚",
@@ -21,20 +22,24 @@ class SearchWikiTool extends WikiTool {
         )
     };
 
+    static sourceType = AISourceTypes.wiki;
+
+    static maxCalls = 3;
+
     static defaultLimit = 5;
     static maxLimit = 8;
 
     getStatus(args) {
-        return `Searching ${this.wiki.name} for "${this.formatArg(args.query)}"`;
+        return `Searching ${this.source.name} for "${this.formatArg(args.query)}"`;
     }
 
     async execute(args, session) {
         const query = this.requireString(args, "query");
 
-        const language = this.wiki.getLanguage(args.language),
+        const language = this.source.getLanguage(args.language),
             limit = this.getLimit(args);
 
-        const results = await this.wiki.search(query, { language, limit, timeout: session.toolTimeout() });
+        const results = await this.source.search(query, { language, limit, timeout: session.toolTimeout() });
         return { query, language, results };
     }
 }

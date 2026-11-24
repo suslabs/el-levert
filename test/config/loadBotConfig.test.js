@@ -39,6 +39,17 @@ describe("loadBotConfig", () => {
                 }
             }
         }));
+        vi.doMock("../../src/loaders/config/QuestbooksLoader.js", () => ({
+            default: class QuestbooksLoader {
+                constructor() {
+                    this.name = "questbooks";
+                }
+
+                async load() {
+                    return [{}, 1];
+                }
+            }
+        }));
         vi.doMock("../../src/loaders/config/AuthLoader.js", () => ({
             default: class AuthLoader {
                 async load() {
@@ -64,7 +75,8 @@ describe("loadBotConfig", () => {
                 },
                 configs: {
                     config: expect.any(Object),
-                    reactions: expect.any(Object)
+                    reactions: expect.any(Object),
+                    questbooks: {}
                 }
             })
         );

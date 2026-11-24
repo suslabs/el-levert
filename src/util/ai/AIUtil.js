@@ -10,6 +10,30 @@ const AIUtil = Object.freeze({
             .join("");
     },
 
+    getCalls: parts => {
+        return parts
+            .filter(part => typeof part.functionCall !== "undefined")
+            .map(part => ({ ...part.functionCall, args: ObjectUtil.guaranteeObject(part.functionCall.args) }));
+    },
+
+    createResponse: (call, res) => {
+        const functionResponse = { name: call.name, response: res };
+
+        if (typeof call.id !== "undefined") {
+            functionResponse.id = call.id;
+        }
+
+        return { functionResponse };
+    },
+
+    parseJson: (text, fallback) => {
+        try {
+            return JSON.parse(text);
+        } catch {
+            return fallback;
+        }
+    },
+
     pageChars: Object.freeze({
         default: 5000,
         min: 500,
@@ -34,6 +58,10 @@ const AIUtil = Object.freeze({
             nextOffset: end < text.length ? end : null,
             totalChars: text.length
         };
+    },
+
+    formatDuration: ms => {
+        return Util.duration(ms, { format: true, short: true, largestOnly: true });
     },
 
     formatElapsed: startTime => {

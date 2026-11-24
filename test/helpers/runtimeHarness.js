@@ -81,14 +81,17 @@ function buildDefaultConfig(tempDir, overrides = {}) {
             name: "Test Rabbit",
             icon: "https://example.test/icon.png",
             promptsPath: path.join(repoRoot, "src/ai/prompts"),
-            endpoint: "http://127.0.0.1:1/v1beta",
+            endpoints: { gemini: "http://127.0.0.1:1/v1beta", openrouter: "http://127.0.0.1:1/api/v1" },
             models: ["test-model"],
             thinkingLevel: "minimal",
             toolThinkingLevel: "low",
             maxSteps: 6,
+            quickMaxSteps: 2,
             timeLimit: 10 / Util.durationSeconds.milli,
             unlimitedTimeForAdmins: true,
             requestTimeout: 2 / Util.durationSeconds.milli,
+            modelCooldown: 0,
+            maxModelCooldown: 0,
             maxDownloadSize: 10 * Util.dataBytes.megabyte,
             maxToolOutput: 12000,
             maxRequests: 100,
@@ -96,7 +99,6 @@ function buildDefaultConfig(tempDir, overrides = {}) {
             followUpsAnyone: true,
             followUpsEditAnswer: false,
             allowLocalhostRequests: true,
-            sources: [],
             ...ai
         },
         vmHttp: {
@@ -248,9 +250,13 @@ async function loadRuntimeManagers(client, Managers, config, auth) {
                     }
                 ]
             },
+            questbookManager: {
+                enabled: !Util.empty(Object.keys(client.questbooks)),
+                args: [true, client.questbooks]
+            },
             aiManager: {
                 enabled: config.enableAI,
-                args: [true, auth.geminiKey]
+                args: [true, { gemini: auth.geminiKey, openrouter: auth.openrouterKey }, {}]
             }
         },
         {
@@ -315,11 +321,13 @@ async function createRuntime(options = {}) {
 
     const config = buildDefaultConfig(tempDir, options.config),
         reactions = buildDefaultReactions(options.reactions),
+        questbooks = options.questbooks ?? {},
         auth = buildDefaultAuth(options.auth);
 
     const client = new LevertClient(auth, {
         config,
-        reactions
+        reactions,
+        questbooks
     });
 
     silenceLogger(client.logger);
@@ -402,6 +410,7 @@ async function writeConfigFiles(runtime, configs = {}) {
     const files = {
         "config.json": configs.config ?? runtime.client.config,
         "reactions.json": configs.reactions ?? runtime.client.reactions,
+        "questbooks.json": configs.questbooks ?? runtime.client.questbooks,
         "auth.json": configs.auth ?? {
             owner: runtime.client.owner,
             token: "test-token"

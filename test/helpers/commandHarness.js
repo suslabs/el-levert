@@ -11,6 +11,7 @@ function createCommandRuntime(options = {}) {
         loadHandlers: options.loadHandlers ?? false,
         config: options.config,
         reactions: options.reactions,
+        questbooks: options.questbooks,
         auth: options.auth,
         discordOverrides: options.discordOverrides,
         clientOverrides: options.clientOverrides

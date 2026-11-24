@@ -206,7 +206,7 @@ async function updateAuthorPage(ctx, session, targetPage, totalPages, spec) {
         pageRendered = formatRendered(pageRes.rendered);
 
     const row = PaginationUtil.createPaginationRow(session.id, targetPage, totalPages, false);
-    await ctx.update({ ...pageRendered, components: [row] });
+    await ctx.update({ ...pageRendered, components: [...(pageRendered.components ?? []), row] });
 
     return true;
 }
@@ -386,7 +386,7 @@ const PaginationUtil = Object.freeze({
         const reply = await ctx.reply(
             {
                 ...payload,
-                components: [row]
+                components: [...(payload.components ?? []), row]
             },
             ctx.ephemeral ? { ephemeral: true } : {}
         );

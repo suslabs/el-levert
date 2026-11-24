@@ -21,7 +21,11 @@ class AIReply {
         while (previous !== null) {
             turns.unshift(
                 { role: "user", text: previous.argsText },
-                { role: "model", text: AIReplyView.getAnswerText(answerMsg) }
+                {
+                    role: "model",
+                    text: AIReplyView.getAnswerText(answerMsg),
+                    expert: AIReplyView.isExpertAnswer(answerMsg)
+                }
             );
 
             answerMsg = previous.replyMsg;
@@ -172,7 +176,11 @@ class AIReply {
             return await this.updater.finish(this.view.renderError(error));
         }
 
-        const turns = [...history, { role: "user", text: question }, { role: "model", text: result.answer }],
+        const turns = [
+                ...history,
+                { role: "user", text: question },
+                { role: "model", text: result.answer, expert: result.expert }
+            ],
             session = Util.empty(result.followUps) ? null : this._createFollowUpSession(result.followUps, turns);
 
         const msg = await this.updater.finish(this.view.renderResult(result, session));

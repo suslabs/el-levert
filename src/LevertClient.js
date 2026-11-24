@@ -29,7 +29,7 @@ import Benchmark from "./util/misc/Benchmark.js";
 import ClientError from "./errors/ClientError.js";
 
 let token = null,
-    geminiKey = null,
+    aiKeys = null,
     client = null;
 
 class LevertClient extends DiscordClient {
@@ -95,10 +95,12 @@ class LevertClient extends DiscordClient {
         }
 
         const config = configs.config ?? {},
-            reactions = configs.reactions ?? {};
+            reactions = configs.reactions ?? {},
+            questbooks = configs.questbooks ?? {};
 
         this.config = config;
         this.reactions = reactions;
+        this.questbooks = questbooks;
 
         this.setOptions({
             wrapEvents: this.config.wrapEvents,
@@ -114,7 +116,10 @@ class LevertClient extends DiscordClient {
         }
 
         token = auth.token;
-        geminiKey = auth.geminiKey ?? null;
+        aiKeys = {
+            gemini: auth.geminiKey ?? null,
+            openrouter: auth.openrouterKey ?? null
+        };
         this.owner = auth.owner;
     }
 
@@ -601,9 +606,13 @@ class LevertClient extends DiscordClient {
                     }
                 ]
             },
+            questbookManager: {
+                enabled: !Util.empty(Object.keys(this.questbooks)),
+                args: [true, this.questbooks]
+            },
             aiManager: {
                 enabled: this.config.enableAI,
-                args: [true, geminiKey]
+                args: [true, aiKeys]
             }
         });
     }

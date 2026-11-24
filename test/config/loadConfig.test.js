@@ -29,6 +29,7 @@ async function seedConfigRoot(overrides = {}) {
 
     await fs.writeFile(path.join(tempRoot, "config/config.json"), JSON.stringify(config, null, 4));
     await fs.writeFile(path.join(tempRoot, "config/reactions.json"), JSON.stringify(reactions, null, 4));
+    await fs.cp(path.join(repoRoot, "config/questbooks.json"), path.join(tempRoot, "config/questbooks.json"));
 }
 
 beforeEach(async () => {
@@ -56,6 +57,7 @@ describe("loadConfig", () => {
         const out = await loadConfig(console);
         expect(out).toHaveProperty("config");
         expect(out).toHaveProperty("reactions");
+        expect(Object.keys(out.questbooks)).toEqual(["nfu"]);
         expect(out).not.toHaveProperty("auth");
     });
 

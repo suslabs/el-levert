@@ -1,5 +1,7 @@
 import { ActionRowBuilder, bold, ButtonBuilder, ButtonStyle, EmbedBuilder, escapeMarkdown } from "discord.js";
 
+import AIAnswerParser from "../../ai/AIAnswerParser.js";
+
 import AIPhases from "./AIPhases.js";
 
 import { getClient, getConfig, getEmoji } from "../../LevertClient.js";
@@ -20,6 +22,7 @@ class AIReplyView {
     static maxPreviewLength = 200;
 
     static answerFilename = "answer.md";
+    static expertLabel = "Expert mode";
 
     static customIdPrefix = "ai";
     static followUpAction = "followup";
@@ -33,6 +36,10 @@ class AIReplyView {
     static getFollowUp(customId, followUps) {
         const [, , idxText] = customId.split(":");
         return followUps[Util.parseInt(idxText)] ?? null;
+    }
+
+    static isExpertAnswer(msg) {
+        return Util.first(msg.embeds)?.footer?.text?.includes(AIReplyView.expertLabel) ?? false;
     }
 
     static getAnswerText(msg) {
@@ -148,7 +155,7 @@ class AIReplyView {
     }
 
     static _formatPreview(text, finishing) {
-        const preview = text.trim();
+        const preview = AIAnswerParser.getPreview(text).trim();
 
         const lines = [];
 
@@ -193,8 +200,14 @@ class AIReplyView {
             usage.push(`${Util.formatNumber(result.reasoning)} reasoning`);
         }
 
-        const seconds = Util.round(result.elapsed * Util.durationSeconds.milli, 1);
-        return `Models: ${result.models.join(", ")} | ${usage.join(", ")} | ${seconds}s`;
+        const seconds = Util.round(result.elapsed * Util.durationSeconds.milli, 1),
+            parts = [`Models: ${result.models.join(", ")}`, usage.join(", "), `${seconds}s`];
+
+        if (result.expert) {
+            parts.push(AIReplyView.expertLabel);
+        }
+
+        return parts.join(" | ");
     }
 
     static _formatError(err) {
@@ -202,15 +215,29 @@ class AIReplyView {
         return [`${getEmoji("error")} ${Util.capitalize(err.message)}.`, hint].filter(Util.nonemptyString).join("\n");
     }
 
+    static _formatRetry(retryIn) {
+        if (retryIn <= 0) {
+            return "Try again in a minute.";
+        }
+
+        return `Try again in ${bold(AIUtil.formatDuration(retryIn))}.`;
+    }
+
+    static _getUnavailableReason(status) {
+        if (status === httpStatusCodes.TOO_MANY_REQUESTS) {
+            return "The AI usage limits are used up for now.";
+        } else if (isServerErrorStatus(status)) {
+            return "The AI models are overloaded right now.";
+        } else {
+            return "Every model is busy right now.";
+        }
+    }
+
     static _getErrorHint(ref) {
-        if (ref.reason === "ACCESS_TOKEN_TYPE_UNSUPPORTED") {
-            return "Google rejected the new-format (AQ.) key. Use a standard key (starts with AIza) from Google Cloud Console.";
-        } else if (ref.status === httpStatusCodes.TOO_MANY_REQUESTS) {
-            return "The Gemini quota is used up for now. Try again in a minute.";
-        } else if (ref.status === httpStatusCodes.UNAUTHORIZED || ref.status === httpStatusCodes.FORBIDDEN) {
-            return "The bot's Gemini API key was rejected.";
-        } else if (isServerErrorStatus(ref.status)) {
-            return "Gemini is overloaded right now. Try again in a minute.";
+        if (ref.status === httpStatusCodes.UNAUTHORIZED || ref.status === httpStatusCodes.FORBIDDEN) {
+            return "The bot's AI API key was rejected.";
+        } else if (typeof ref.retryIn === "number") {
+            return `${AIReplyView._getUnavailableReason(ref.status)} ${AIReplyView._formatRetry(ref.retryIn)}`;
         } else {
             return "";
         }
