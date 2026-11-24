@@ -14,7 +14,7 @@ class SearchTagsTool extends TagTool {
         emoji: "🔎",
         phase: AIPhases.searching,
         description:
-            "Search the bot's tags by name and by the text in their bodies. Use first for game, modpack and mechanics questions.",
+            "Search the bot's tags by name and by the text in their bodies. For modpack questions, use it after the questbook and recipes; for other questions, after the web.",
         parameters: ToolParams.object(
             {
                 query: ToolParams.string("Search text."),

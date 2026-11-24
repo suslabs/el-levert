@@ -12,7 +12,7 @@ import AIError from "../../errors/AIError.js";
 class AITool {
     static info = null;
 
-    static expectedErrors = new Set(["AIError", "UtilError", "TagError", "VMError", "AxiosError"]);
+    static expectedErrors = new Set(["AIError", "UtilError", "TagError", "VMError", "QuestbookError", "AxiosError"]);
     static maxStatusArgLength = 60;
 
     constructor(manager) {

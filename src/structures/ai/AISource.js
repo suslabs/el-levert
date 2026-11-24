@@ -1,7 +1,7 @@
 import BaseStructure from "../BaseStructure.js";
 import NomiCodexClient from "../../ai/sources/NomiCodexClient.js";
-import Questbook from "../../ai/sources/Questbook.js";
 import WikiClient from "../../ai/sources/WikiClient.js";
+import DocsLibrary from "../../ai/sources/DocsLibrary.js";
 
 import AISourceTypes from "./AISourceTypes.js";
 
@@ -28,23 +28,23 @@ class AISource extends BaseStructure {
     }
 
     async load(http, timeout) {
-        const backend = this._createBackend(http, timeout);
+        const backend = this._createBackend(http);
 
         if (typeof backend.load === "function") {
-            await backend.load();
+            await backend.load(timeout);
         }
 
         return backend;
     }
 
-    _createBackend(http, timeout) {
+    _createBackend(http) {
         switch (this.type) {
             case AISourceTypes.recipes:
                 return new NomiCodexClient(http, this.options);
-            case AISourceTypes.questbook:
-                return new Questbook(http, this.options, timeout);
             case AISourceTypes.wiki:
                 return new WikiClient(http, this.options);
+            case AISourceTypes.docs:
+                return new DocsLibrary(http, this.options);
         }
     }
 }

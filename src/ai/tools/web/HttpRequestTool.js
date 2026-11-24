@@ -50,7 +50,9 @@ class HttpRequestTool extends WebTool {
 
         if (!HttpRequestTool.methods.includes(method)) {
             throw new AIError(`${method} requests aren't allowed; only ${HttpRequestTool.methods.join(" and ")}`);
-        } else if (HTTPUtil.getHost(url) === HTTPUtil.getHost(this.manager.gemini.endpoint)) {
+        } else if (
+            this.manager.router.endpoints.some(endpoint => HTTPUtil.getHost(endpoint) === HTTPUtil.getHost(url))
+        ) {
             throw new AIError("That endpoint is reserved");
         }
 

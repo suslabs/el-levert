@@ -1,9 +1,10 @@
 import Manager from "../Manager.js";
-import GeminiClient from "../../ai/GeminiClient.js";
+import ModelRouter from "../../ai/ModelRouter.js";
+import GeminiProvider from "../../ai/providers/GeminiProvider.js";
+import OpenRouterProvider from "../../ai/providers/OpenRouterProvider.js";
 import AISession from "../../ai/AISession.js";
 import AIToolRegistry from "../../ai/AIToolRegistry.js";
 import AIPrompt from "../../ai/AIPrompt.js";
-import AIResponseFinisher from "../../ai/AIResponseFinisher.js";
 import AITriage from "../../ai/AITriage.js";
 import WebSearcher from "../../ai/WebSearcher.js";
 import AISourceRegistry from "../../ai/sources/AISourceRegistry.js";
@@ -14,6 +15,7 @@ import { getConfig, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
 import RateLimiter from "../../util/misc/RateLimiter.js";
 import HTTPUtil from "../../util/vm/HTTPUtil.js";
 
@@ -24,21 +26,23 @@ class AIManager extends Manager {
     static $name = "aiManager";
     static loadPriority = 4;
 
-    static promptNames = ["system", "triage", "finisher", "inspectImage"];
+    static promptNames = ["system", "triage", "inspectImage"];
 
-    constructor(enabled, apiKeys) {
+    static providerClasses = [GeminiProvider, OpenRouterProvider];
+    static defaultProvider = GeminiProvider.providerName;
+
+    constructor(enabled, keys) {
         super(enabled);
 
-        this.apiKeys = ArrayUtil.guaranteeArray(apiKeys, null, true).filter(Util.nonemptyString);
+        this.keys = Object.fromEntries(
+            Object.entries(ObjectUtil.guaranteeObject(keys)).map(([name, value]) => [
+                name,
+                ArrayUtil.guaranteeArray(value, null, true).filter(Util.nonemptyString)
+            ])
+        );
     }
 
     async load() {
-        if (Util.empty(this.apiKeys)) {
-            throw new ManagerError(
-                'AI is enabled but no Gemini API key was provided. Set "geminiKey" in auth.json or LEVERET_GEMINI_KEY in auth.env'
-            );
-        }
-
         const config = getConfig().ai;
 
         this.maxSteps = config.maxSteps === -1 ? Infinity : config.maxSteps;
@@ -62,11 +66,10 @@ class AIManager extends Manager {
             AIError
         );
 
-        this.gemini = new GeminiClient(this.http, this.apiKeys, config);
+        this.router = this._createRouter(config);
         this.tools = new AIToolRegistry(this);
         this.prompt = new AIPrompt(this.prompts.system);
         this.triage = new AITriage(this.prompts.triage);
-        this.finisher = new AIResponseFinisher(this.prompts.finisher);
         this.webSearcher = new WebSearcher(this.http);
 
         this.sources = new AISourceRegistry(this.http, config.requestTimeout);
@@ -80,6 +83,45 @@ class AIManager extends Manager {
     async ask(question, request, options) {
         const session = new AISession(this, request, options);
         return await session.run(question);
+    }
+
+    _createProviders(config) {
+        const providers = new Map();
+
+        for (const providerClass of AIManager.providerClasses) {
+            const name = providerClass.providerName,
+                keys = this.keys[name] ?? [];
+
+            if (!Util.empty(keys)) {
+                providers.set(name, new providerClass(this.http, keys, { endpoint: config.endpoints[name] }));
+            }
+        }
+
+        if (Util.empty(providers)) {
+            throw new ManagerError(
+                'AI is enabled but no API key was provided. Set "geminiKey" or "openrouterKey" in auth.json (or LEVERET_GEMINI_KEY / LEVERET_OPENROUTER_KEY in auth.env)'
+            );
+        }
+
+        return providers;
+    }
+
+    _createRouter(config) {
+        const providers = this._createProviders(config),
+            names = AIManager.providerClasses.map(providerClass => providerClass.providerName);
+
+        const models = config.models.map(id => ModelRouter.parseModel(id, names, AIManager.defaultProvider)),
+            [usable, skipped] = ArrayUtil.split(models, spec => !providers.has(spec.provider));
+
+        if (!Util.empty(skipped)) {
+            getLogger().warn(`Skipping AI models without an API key: ${skipped.map(spec => spec.id).join(", ")}`);
+        }
+
+        if (Util.empty(usable)) {
+            throw new ManagerError("None of the configured AI models have an API key");
+        }
+
+        return new ModelRouter(this.http, providers, usable, config);
     }
 
     async _loadPrompts(promptsPath) {

@@ -15,6 +15,7 @@ class SearchQuestsTool extends QuestTool {
         parameters: ToolParams.object(
             {
                 query: ToolParams.string("Search keywords."),
+                book: ToolParams.string("Questbook name from the runtime context (default: the first one)."),
                 limit: ToolParams.integer("Results, 1-10 (default 5)."),
                 expert: ToolParams.boolean("Use the expert (hard) mode questbook.")
             },
@@ -31,14 +32,17 @@ class SearchQuestsTool extends QuestTool {
         return `Searching the questbook for "${this.formatArg(args.query)}"`;
     }
 
-    execute(args) {
+    execute(args, session) {
         const query = this.requireString(args, "query");
 
-        const limit = this.getLimit(args),
-            quests = this.questbook.search(query, this.questbook.getMode(args.expert), limit);
+        const questbook = this.getQuestbook(args.book),
+            limit = this.getLimit(args);
+
+        const quests = questbook.search(query, questbook.getMode(session.resolveExpert(args.expert)), limit);
 
         return {
             query,
+            questbook: questbook.title,
             quests: quests.map(quest => ({
                 source: this.formatSource(quest),
                 id: quest.id,

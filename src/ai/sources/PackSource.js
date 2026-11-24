@@ -1,4 +1,4 @@
-import PackModes from "../../structures/ai/PackModes.js";
+import PackModes from "../../structures/PackModes.js";
 
 import ObjectUtil from "../../util/ObjectUtil.js";
 

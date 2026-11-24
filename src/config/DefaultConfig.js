@@ -133,6 +133,16 @@ const DefaultConfig = Object.freeze({
             round: true,
             mult: 1 / Util.durationSeconds.milli
         },
+        modelCooldown: {
+            min: 0,
+            round: true,
+            mult: 1 / Util.durationSeconds.milli
+        },
+        maxModelCooldown: {
+            min: 0,
+            round: true,
+            mult: 1 / Util.durationSeconds.milli
+        },
         maxDownloadSize: {
             min: 0,
             round: true,

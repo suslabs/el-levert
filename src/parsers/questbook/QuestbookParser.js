@@ -11,6 +11,66 @@ const QuestbookParser = Object.freeze({
         return String(str ?? "").replace(QuestbookParser._formattingRegex, "");
     },
 
+    _markdownFormats: Object.freeze({
+        k: "",
+        l: "**",
+        m: "~~",
+        n: "__",
+        o: "*"
+    }),
+
+    _bulletRegex: /^((?:\s|§.)*)\* /gm,
+    _emptyFormatRegex: /(§[^r])+\s*§r/g,
+    _colorRegex: /§[0-9a-eg]/g,
+    _openSpaceRegex: /(§[^r])(\s+)/g,
+    _closeSpaceRegex: /(\s+)(§r)/g,
+    _tokenRegex: /(\s*)(§.)(\s*)/g,
+    _codeRegex: /^§(.)$/,
+
+    _formatToken: (token, formats) => {
+        const match = token.match(QuestbookParser._codeRegex);
+
+        if (match === null) {
+            return token;
+        }
+
+        const code = match[1];
+
+        if (code === "r") {
+            const reset = Array.from(formats).reverse().join("");
+            formats.clear();
+
+            return reset;
+        } else if (code === "f") {
+            return formats.delete("**") ? "**" : "";
+        }
+
+        const format = QuestbookParser._markdownFormats[code];
+
+        if (!Util.nonemptyString(format) || formats.has(format)) {
+            return "";
+        }
+
+        formats.add(format);
+        return format;
+    },
+
+    formatMarkdown: str => {
+        const text = String(str ?? "")
+            .replace(QuestbookParser._bulletRegex, "$1- ")
+            .replace(QuestbookParser._emptyFormatRegex, "")
+            .replace(QuestbookParser._colorRegex, "§l")
+            .replace(QuestbookParser._openSpaceRegex, "$2$1")
+            .replace(QuestbookParser._closeSpaceRegex, "$2$1");
+
+        const formats = new Set();
+
+        return `${text.trim()}§r`
+            .split(QuestbookParser._tokenRegex)
+            .map(token => QuestbookParser._formatToken(token, formats))
+            .join("");
+    },
+
     parse: raw => {
         const data = QuestbookParser._normalize(raw);
 
@@ -20,6 +80,7 @@ const QuestbookParser = Object.freeze({
 
         return {
             packName: data.questSettings?.betterquesting?.pack_name ?? null,
+            packVersion: data.questSettings?.betterquesting?.pack_version ?? null,
             quests: data.questDatabase.map(QuestbookParser._parseQuest),
             lines: (data.questLines ?? []).map(QuestbookParser._parseLine)
         };
@@ -119,7 +180,8 @@ const QuestbookParser = Object.freeze({
         return {
             id: String(quest.questID),
             name: QuestbookParser.stripFormatting(props.name),
-            desc: QuestbookParser.stripFormatting(props.desc),
+            desc: String(props.desc ?? ""),
+            logic: props.questlogic ?? null,
             icon: TypeTester.isObject(props.icon) ? QuestbookParser._parseItem(props.icon) : null,
             main: props.ismain === 1,
             visibility: props.visibility ?? null,

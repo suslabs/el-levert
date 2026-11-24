@@ -17,6 +17,7 @@ class ReadQuestTool extends QuestTool {
         parameters: ToolParams.object(
             {
                 ids: ToolParams.stringArray("Quest IDs from search_quests."),
+                book: ToolParams.string("Questbook name from the runtime context (default: the first one)."),
                 expert: ToolParams.boolean("Use the expert (hard) mode questbook.")
             },
             ["ids"]
@@ -30,19 +31,21 @@ class ReadQuestTool extends QuestTool {
         return "Reading quests";
     }
 
-    execute(args) {
+    execute(args, session) {
         const ids = ArrayUtil.guaranteeArray(args.ids, null, true).slice(0, ReadQuestTool.maxQuests).map(String);
 
         if (Util.empty(ids)) {
             throw new AIError("ids are required");
         }
 
-        const mode = this.questbook.getMode(args.expert);
-        return { quests: ids.map(id => this._formatQuest(id, mode)) };
+        const questbook = this.getQuestbook(args.book),
+            mode = questbook.getMode(session.resolveExpert(args.expert));
+
+        return { quests: ids.map(id => this._formatQuest(questbook, id, mode)) };
     }
 
-    _formatQuest(id, mode) {
-        const quest = this.questbook.get(id, mode);
+    _formatQuest(questbook, id, mode) {
+        const quest = questbook.get(id, mode);
 
         if (quest === null) {
             return { id, error: "No quest with this ID." };
@@ -57,7 +60,7 @@ class ReadQuestTool extends QuestTool {
             tasks: quest.tasks,
             prereqs: quest.prereqs.map(prereq => ({
                 id: prereq,
-                title: this.questbook.get(prereq, mode)?.title ?? null
+                title: questbook.get(prereq, mode)?.title ?? null
             }))
         };
     }

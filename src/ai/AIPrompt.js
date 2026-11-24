@@ -1,9 +1,12 @@
-import { getConfig } from "../LevertClient.js";
+import { getClient, getConfig } from "../LevertClient.js";
 
 import Util from "../util/Util.js";
 
 class AIPrompt {
     static maxReplyLength = 1200;
+
+    static finalNote = "Tools are no longer available. Answer now with what you already have.";
+    static expertNote = "The pack mode is expert (hard mode). Use expert recipes and quests from now on.";
 
     constructor(instructions) {
         this.instructions = instructions;
@@ -12,6 +15,20 @@ class AIPrompt {
     build(request, toolNames, effort) {
         const lines = AIPrompt._runtimeLines(request, toolNames, effort);
         return `${this.instructions}\n\n## RUNTIME CONTEXT\n${lines.join("\n")}`;
+    }
+
+    buildNote(final, expert) {
+        const notes = [];
+
+        if (expert) {
+            notes.push(AIPrompt.expertNote);
+        }
+
+        if (final) {
+            notes.push(AIPrompt.finalNote);
+        }
+
+        return notes.join("\n");
     }
 
     static _runtimeLines(request, toolNames, effort) {
@@ -27,6 +44,12 @@ class AIPrompt {
             `- Effort: ${effort}`
         ];
 
+        const questbooks = AIPrompt._formatQuestbooks();
+
+        if (!Util.empty(questbooks)) {
+            lines.push(`- Questbooks: ${questbooks}`);
+        }
+
         const attachments = AIPrompt._formatAttachments(request.msg);
 
         if (!Util.empty(attachments)) {
@@ -38,6 +61,16 @@ class AIPrompt {
         }
 
         return lines;
+    }
+
+    static _formatQuestbooks() {
+        const manager = getClient().questbookManager;
+
+        if (typeof manager === "undefined") {
+            return "";
+        }
+
+        return manager.names.map(name => `${name} (${manager.get(name).title})`).join(", ");
     }
 
     static _formatAttachments(msg) {

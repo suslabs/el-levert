@@ -1,14 +1,17 @@
 import AITool from "../../AITool.js";
 
-import AISourceTypes from "../../../../structures/ai/AISourceTypes.js";
+import { getClient } from "../../../../LevertClient.js";
+
+import Util from "../../../../util/Util.js";
 
 class QuestTool extends AITool {
-    get questbook() {
-        return this.manager.sources.get(AISourceTypes.questbook);
+    isAvailable() {
+        return (getClient().questbookManager?.getDefault() ?? null) !== null;
     }
 
-    isAvailable() {
-        return this.questbook !== null;
+    getQuestbook(name) {
+        const manager = getClient().questbookManager;
+        return Util.nonemptyString(name) ? manager.get(name) : manager.getDefault();
     }
 
     formatSource(quest) {

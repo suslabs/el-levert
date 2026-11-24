@@ -7,6 +7,7 @@ export { default as SearchRecipesTool } from "./sources/recipes/SearchRecipesToo
 export { default as ShowRecipeTool } from "./sources/recipes/ShowRecipeTool.js";
 export { default as SearchWikiTool } from "./sources/wiki/SearchWikiTool.js";
 export { default as ReadWikiTool } from "./sources/wiki/ReadWikiTool.js";
+export { default as SearchScriptDocsTool } from "./sources/docs/SearchScriptDocsTool.js";
 export { default as SearchWebTool } from "./web/SearchWebTool.js";
 export { default as FetchWebPageTool } from "./web/FetchWebPageTool.js";
 export { default as ExecuteJavascriptTool } from "./misc/ExecuteJavascriptTool.js";

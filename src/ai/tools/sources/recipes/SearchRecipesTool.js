@@ -21,7 +21,9 @@ class SearchRecipesTool extends RecipeTool {
             {
                 query: ToolParams.string("Item name, abbreviation or ID, optionally followed by a machine."),
                 uses: ToolParams.boolean("List recipes that use the item instead of ones that make it."),
-                expert: ToolParams.boolean("Use expert (hard) mode recipes.")
+                expert: ToolParams.boolean(
+                    "Use expert (hard) mode recipes. Items only in expert mode switch to it on their own."
+                )
             },
             ["query"]
         )
@@ -40,13 +42,18 @@ class SearchRecipesTool extends RecipeTool {
     async execute(args, session) {
         const query = this.requireString(args, "query");
 
-        const recipes = this.recipes;
+        const expert = session.resolveExpert(args.expert);
 
-        const data = await recipes.search(query, {
-            mode: recipes.getMode(args.expert),
-            uses: args.uses ?? false,
-            timeout: session.toolTimeout()
-        });
+        let data = await this._search(query, args, session, expert);
+
+        if (data.error === NomiCodexClient.notFoundError && !expert) {
+            const expertData = await this._search(query, args, session, true);
+
+            if (expertData.error !== NomiCodexClient.notFoundError) {
+                session.resolveExpert(true);
+                data = expertData;
+            }
+        }
 
         if (data.error === NomiCodexClient.notFoundError) {
             return { query, found: false, suggestions: (data.alternatives ?? []).map(alt => alt.name) };
@@ -55,6 +62,7 @@ class SearchRecipesTool extends RecipeTool {
         const item = data.item;
 
         const out = {
+            mode: this.recipes.getMode(session.expert),
             item: { id: item.id, name: HTMLUtil.stripTags(item.name) },
             machine: data.machineFilter,
             alternatives: data.alternatives.map(alt => HTMLUtil.stripTags(alt.name))
@@ -86,6 +94,14 @@ class SearchRecipesTool extends RecipeTool {
 
     static _toSeconds(ticks) {
         return ticks / OverclockingValues.ticksPerSecond;
+    }
+
+    async _search(query, args, session, expert) {
+        return await this.recipes.search(query, {
+            mode: this.recipes.getMode(expert),
+            uses: args.uses ?? false,
+            timeout: session.toolTimeout()
+        });
     }
 
     _formatRecipe(recipe, material) {

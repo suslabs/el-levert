@@ -174,7 +174,7 @@ const FakeUtil = Object.freeze({
         }).copyInto();
     },
 
-    executeTagSafeRef: async (msg, name, args) => {
+    executeTagSafeRef: async (context, msg, name, args) => {
         const tag = await getClient().tagManager.fetch(name);
 
         if (tag === null) {
@@ -182,9 +182,7 @@ const FakeUtil = Object.freeze({
             throw new Error(`Tag ${name} doesn't exist`);
         }
 
-        return await getClient().tagManager.execute(tag, args, {
-            msg
-        });
+        return await getClient().tagManager.execute(tag, args, { msg }, { parentContext: context });
     },
 
     /* eslint-disable */

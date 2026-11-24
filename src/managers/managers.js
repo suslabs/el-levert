@@ -6,4 +6,5 @@ export { default as PermissionManager } from "./database/PermissionManager.js";
 export { default as ReminderManager } from "./database/ReminderManager.js";
 export { default as GatewayManager } from "./misc/GatewayManager.js";
 export { default as InputManager } from "./misc/InputManager.js";
+export { default as QuestbookManager } from "./misc/QuestbookManager.js";
 export { default as AIManager } from "./misc/AIManager.js";

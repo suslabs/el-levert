@@ -66,18 +66,18 @@ class TagVM extends VM {
         this.inspectorMode = this._getInspectorMode();
 
         this.vmHttp = getConfig().vmHttp;
-
-        this._contextStack = [];
     }
 
     async runScript(code, values, options) {
         values = ObjectUtil.guaranteeObject(values);
         options = ObjectUtil.guaranteeObject(options);
 
+        const parentContext = options.parentContext ?? null;
+
         code = transpileScript(code, options);
         logUsage(code);
 
-        const inspectorInfo = this._getInspectorInfo(values, options);
+        const inspectorInfo = this._getInspectorInfo(values, options, parentContext);
 
         if (inspectorInfo.enable) {
             options.commandContext?.disableTimeout();
@@ -86,7 +86,7 @@ class TagVM extends VM {
         if (
             inspectorInfo.mode === InspectorModes.console &&
             this._inspectorServer?.inspectorConnected &&
-            Util.empty(this._contextStack)
+            parentContext === null
         ) {
             getLogger().info("Can't run script: inspector is already connected.");
             throw new VMError("Inspector is already connected.");
@@ -100,7 +100,7 @@ class TagVM extends VM {
             pushed = false;
 
         try {
-            context = await this._getEvalContext(values, inspectorInfo);
+            context = await this._getEvalContext(values, inspectorInfo, parentContext);
 
             this._pushContext(context);
             pushed = true;
@@ -171,11 +171,7 @@ class TagVM extends VM {
         this._inspectorServer = server;
     }
 
-    _getActiveContext() {
-        return this._contextStack.at(-1) ?? null;
-    }
-
-    async _getEvalContext(values, inspectorInfo) {
+    async _getEvalContext(values, inspectorInfo, parentContext = null) {
         inspectorInfo = ObjectUtil.guaranteeObject(inspectorInfo, {
             connectTimeout: 0,
             enable: false,
@@ -186,7 +182,7 @@ class TagVM extends VM {
             {
                 memLimit: this.memLimit,
                 timeLimit: this.timeLimit,
-                parent: this._getActiveContext()
+                parent: parentContext
             },
             {
                 connectTimeout: inspectorInfo.connectTimeout,
@@ -201,17 +197,10 @@ class TagVM extends VM {
     }
 
     _pushContext(context) {
-        this._contextStack.push(context);
         context.inspectorSession?.pushContext(context);
     }
 
     _popContext(context) {
-        const idx = this._contextStack.lastIndexOf(context);
-
-        if (idx !== -1) {
-            this._contextStack.splice(idx, 1);
-        }
-
         context.inspectorSession?.popContext(context);
     }
 
@@ -223,16 +212,15 @@ class TagVM extends VM {
         return this.enableUserInspector ? InspectorModes.user : InspectorModes.console;
     }
 
-    _getInspectorInfo(values, options) {
+    _getInspectorInfo(values, options, parentContext) {
         values = ObjectUtil.guaranteeObject(values);
         options = ObjectUtil.guaranteeObject(options);
 
-        const parent = this._getActiveContext(),
-            parentSession = parent?.inspectorSession ?? null;
+        const parentSession = parentContext?.inspectorSession ?? null;
 
         if (parentSession !== null) {
             return {
-                connectTimeout: parent.inspector.connectTimeout,
+                connectTimeout: parentContext.inspector.connectTimeout,
                 createdSession: false,
                 enable: true,
                 mode: parentSession.mode,

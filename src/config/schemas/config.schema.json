@@ -171,6 +171,35 @@
         "enableEval": {
             "type": "boolean"
         },
+        "questbooks": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "urls": {
+                        "type": "object",
+                        "properties": {
+                            "normal": {
+                                "type": "string",
+                                "minLength": 1
+                            },
+                            "expert": {
+                                "type": "string",
+                                "minLength": 1
+                            }
+                        },
+                        "required": ["normal"],
+                        "additionalProperties": false
+                    }
+                },
+                "required": ["title", "urls"],
+                "additionalProperties": false
+            }
+        },
         "enableAI": {
             "type": "boolean"
         },
@@ -303,8 +332,20 @@
                 "icon": {
                     "type": ["string", "null"]
                 },
-                "endpoint": {
-                    "type": "string"
+                "endpoints": {
+                    "type": "object",
+                    "properties": {
+                        "gemini": {
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "openrouter": {
+                            "type": "string",
+                            "minLength": 1
+                        }
+                    },
+                    "required": ["gemini", "openrouter"],
+                    "additionalProperties": false
                 },
                 "models": {
                     "type": "array",
@@ -335,6 +376,14 @@
                 },
                 "requestTimeout": {
                     "type": "number"
+                },
+                "modelCooldown": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "maxModelCooldown": {
+                    "type": "number",
+                    "minimum": 0
                 },
                 "maxDownloadSize": {
                     "type": "number"
@@ -373,7 +422,7 @@
                 "name",
                 "icon",
                 "promptsPath",
-                "endpoint",
+                "endpoints",
                 "models",
                 "thinkingLevel",
                 "toolThinkingLevel",
@@ -382,6 +431,8 @@
                 "timeLimit",
                 "unlimitedTimeForAdmins",
                 "requestTimeout",
+                "modelCooldown",
+                "maxModelCooldown",
                 "maxDownloadSize",
                 "maxToolOutput",
                 "maxRequests",
@@ -439,6 +490,7 @@
         "enablePreviews",
         "enableSed",
         "enableEval",
+        "questbooks",
         "enableAI",
         "enableOtherLangs",
         "enableVM2",

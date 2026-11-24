@@ -1,9 +1,7 @@
+import { fileURLToPath } from "node:url";
+
 import AISourceTypes from "../../structures/ai/AISourceTypes.js";
-import PackModes from "../../structures/ai/PackModes.js";
-
-import HTTPUtil from "../../util/vm/HTTPUtil.js";
-
-const nomiCeuOverrides = "https://raw.githubusercontent.com/Nomi-CEu/Nomi-CEu/main/overrides/config-overrides";
+import PackModes from "../../structures/PackModes.js";
 
 const Sources = Object.freeze({
     nomiCodex: {
@@ -18,17 +16,6 @@ const Sources = Object.freeze({
         }
     },
 
-    nomiQuestbook: {
-        type: AISourceTypes.questbook,
-        options: {
-            urls: {
-                [PackModes.normal]: HTTPUtil.joinUrl(nomiCeuOverrides, "normal/betterquesting/DefaultQuests.json"),
-                [PackModes.expert]: HTTPUtil.joinUrl(nomiCeuOverrides, "expert/betterquesting/DefaultQuests.json")
-            },
-            mode: PackModes.normal
-        }
-    },
-
     wikipedia: {
         type: AISourceTypes.wiki,
         options: {
@@ -36,6 +23,18 @@ const Sources = Object.freeze({
             host: "wikipedia.org",
             language: "en",
             userAgent: "ElLevert/1.0 (Discord bot)"
+        }
+    },
+
+    scriptDocs: {
+        type: AISourceTypes.docs,
+        options: {
+            name: "script and CanvasKit docs",
+            files: [fileURLToPath(new URL("../docs/scripts.md", import.meta.url))],
+            urls: {
+                "CanvasKit loader reference":
+                    "https://raw.githubusercontent.com/Alex31TheDev/cycdraw/main/canvaskit/canvaskitloader.d.ts"
+            }
         }
     }
 });

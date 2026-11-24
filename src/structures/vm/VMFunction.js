@@ -71,7 +71,7 @@ class VMFunction extends BaseStructure {
 
         if (this.singleContext) {
             this.ref = this._getRefFunc(propertyMap);
-            this.otherRefs = this._getOtherRefs(propertyMap);
+            this.otherRefs = this._getOtherRefs(propertyMap, this.context);
             this._resolved = true;
 
             this.takesContext = this._takesContext();
@@ -94,7 +94,7 @@ class VMFunction extends BaseStructure {
             vmContext = evalContext.context;
 
         let ref = this._stringFunc ? null : this._getRefFunc(propertyMap),
-            otherRefs = this._getOtherRefs(propertyMap);
+            otherRefs = this._getOtherRefs(propertyMap, evalContext);
 
         if (this._takesContext(ref)) {
             ref = FunctionUtil.bindArgs(ref, evalContext);
@@ -126,6 +126,10 @@ class VMFunction extends BaseStructure {
         }
 
         return ref.bind(parent);
+    }
+
+    static _takesContextArg(func) {
+        return typeof func === "function" && Util.first(FunctionUtil.functionArgumentNames(func)) === "context";
     }
 
     static _resolveBinds(func, binds, propertyMap) {
@@ -163,14 +167,7 @@ class VMFunction extends BaseStructure {
             return this.takesContext;
         }
 
-        func ??= this.ref;
-
-        if (typeof func !== "function") {
-            return false;
-        }
-
-        const argNames = FunctionUtil.functionArgumentNames(func);
-        return Util.first(argNames) === "context";
+        return VMFunction._takesContextArg(func ?? this.ref);
     }
 
     _getRegisterCode() {
@@ -197,13 +194,18 @@ class VMFunction extends BaseStructure {
         return this._registerCode;
     }
 
-    _getOtherRefs(propertyMap) {
+    _getOtherRefs(propertyMap, evalContext) {
         if (!this._stringFunc || this._resolved) {
             return [];
         }
 
         return this.otherRefs.map(ref => {
             let func = VMFunction._resolveReference(ref.ref, propertyMap);
+
+            if (VMFunction._takesContextArg(func)) {
+                func = FunctionUtil.bindArgs(func, evalContext);
+            }
+
             func = VMFunction._resolveBinds(func, ref.binds ?? [], propertyMap);
 
             return func;

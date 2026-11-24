@@ -7,7 +7,9 @@ import UtilError from "../../errors/UtilError.js";
 class BM25Index {
     static defaultValues = {
         k1: 1.2,
-        b: 0.75
+        b: 0.75,
+        prefixWeight: 0,
+        minPrefixLength: 3
     };
 
     static stopWords = new Set(
@@ -68,8 +70,10 @@ class BM25Index {
 
         const avgLength = this.entries.reduce((sum, entry) => sum + entry.length, 0) / this.size;
 
+        const expansions = terms.map(term => this._expandTerm(term));
+
         return this.entries
-            .map(entry => ({ doc: entry.doc, score: this._score(entry, terms, avgLength) }))
+            .map(entry => ({ doc: entry.doc, score: this._score(entry, expansions, avgLength) }))
             .filter(res => res.score > 0)
             .sort((a, b) => b.score - a.score)
             .slice(0, limit);
@@ -82,13 +86,35 @@ class BM25Index {
         return Math.log(1 + (this.size - docFreq + 0.5) / (docFreq + 0.5));
     }
 
-    _score(entry, terms, avgLength) {
+    _expandTerm(term) {
+        const matches = [[term, 1]];
+
+        if (this.prefixWeight <= 0 || term.length < this.minPrefixLength) {
+            return matches;
+        }
+
+        for (const token of this.docFreqs.keys()) {
+            if (token !== term && token.startsWith(term)) {
+                matches.push([token, this.prefixWeight]);
+            }
+        }
+
+        return matches;
+    }
+
+    _scoreToken(entry, token, norm) {
+        const freq = entry.termFreqs.get(token) ?? 0;
+        return freq > 0 ? this._idf(token) * ((freq * (this.k1 + 1)) / (freq + this.k1 * norm)) : 0;
+    }
+
+    _score(entry, expansions, avgLength) {
         const norm = 1 - this.b + (this.b * entry.length) / avgLength;
 
-        return terms.reduce((score, term) => {
-            const freq = entry.termFreqs.get(term) ?? 0;
-            return freq > 0 ? score + this._idf(term) * ((freq * (this.k1 + 1)) / (freq + this.k1 * norm)) : score;
-        }, 0);
+        return expansions.reduce(
+            (score, matches) =>
+                score + Math.max(...matches.map(([token, weight]) => weight * this._scoreToken(entry, token, norm))),
+            0
+        );
     }
 }
 

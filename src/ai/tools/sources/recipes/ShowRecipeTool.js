@@ -38,7 +38,7 @@ class ShowRecipeTool extends RecipeTool {
         const recipes = this.recipes;
 
         const card = await recipes.renderCard(itemId, args.idx, {
-            mode: recipes.getMode(args.expert),
+            mode: recipes.getMode(session.resolveExpert(args.expert)),
             timeout: session.toolTimeout()
         });
 
