@@ -1,7 +1,6 @@
 import Manager from "../Manager.js";
 import ModelRouter from "../../ai/ModelRouter.js";
-import GeminiProvider from "../../ai/providers/GeminiProvider.js";
-import OpenRouterProvider from "../../ai/providers/OpenRouterProvider.js";
+import Providers from "../../ai/providers/index.js";
 import AISession from "../../ai/AISession.js";
 import AIToolRegistry from "../../ai/AIToolRegistry.js";
 import AIPrompt from "../../ai/AIPrompt.js";
@@ -28,11 +27,12 @@ class AIManager extends Manager {
 
     static promptNames = ["system", "triage", "inspectImage"];
 
-    static providerClasses = [GeminiProvider, OpenRouterProvider];
-    static defaultProvider = GeminiProvider.providerName;
+    static defaultProvider = "gemini";
 
-    constructor(enabled, keys) {
+    constructor(enabled, keys, sources = Sources) {
         super(enabled);
+
+        this.sourceDefinitions = sources;
 
         this.keys = Object.fromEntries(
             Object.entries(ObjectUtil.guaranteeObject(keys)).map(([name, value]) => [
@@ -73,7 +73,7 @@ class AIManager extends Manager {
         this.webSearcher = new WebSearcher(this.http);
 
         this.sources = new AISourceRegistry(this.http, config.requestTimeout);
-        await this.sources.load(AISourceRegistry.select(Sources, config.sources));
+        await this.sources.load(this.sourceDefinitions);
     }
 
     unload() {
@@ -88,9 +88,8 @@ class AIManager extends Manager {
     _createProviders(config) {
         const providers = new Map();
 
-        for (const providerClass of AIManager.providerClasses) {
-            const name = providerClass.providerName,
-                keys = this.keys[name] ?? [];
+        for (const [name, providerClass] of Object.entries(Providers)) {
+            const keys = this.keys[name] ?? [];
 
             if (!Util.empty(keys)) {
                 providers.set(name, new providerClass(this.http, keys, { endpoint: config.endpoints[name] }));
@@ -107,10 +106,11 @@ class AIManager extends Manager {
     }
 
     _createRouter(config) {
-        const providers = this._createProviders(config),
-            names = AIManager.providerClasses.map(providerClass => providerClass.providerName);
+        const providers = this._createProviders(config);
 
-        const models = config.models.map(id => ModelRouter.parseModel(id, names, AIManager.defaultProvider)),
+        const models = config.models.map(id =>
+                ModelRouter.parseModel(id, Object.keys(Providers), AIManager.defaultProvider)
+            ),
             [usable, skipped] = ArrayUtil.split(models, spec => !providers.has(spec.provider));
 
         if (!Util.empty(skipped)) {

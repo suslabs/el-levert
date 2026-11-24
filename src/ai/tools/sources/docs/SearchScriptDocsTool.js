@@ -1,8 +1,8 @@
 import DocsTool from "./DocsTool.js";
 
 import AIPhases from "../../../../structures/ai/AIPhases.js";
+import AISourceTypes from "../../../../structures/ai/AISourceTypes.js";
 
-import Util from "../../../../util/Util.js";
 import ToolParams from "../../../../util/ai/ToolParams.js";
 
 class SearchScriptDocsTool extends DocsTool {
@@ -21,27 +21,7 @@ class SearchScriptDocsTool extends DocsTool {
         )
     };
 
-    static defaultLimit = 4;
-    static maxLimit = 6;
-
-    static sectionLength = 3000;
-
-    getStatus(args) {
-        return `Searching the ${this.docs.name} for "${this.formatArg(args.query)}"`;
-    }
-
-    execute(args) {
-        const query = this.requireString(args, "query"),
-            sections = this.docs.search(query, this.getLimit(args));
-
-        return {
-            query,
-            sections: sections.map(section => ({
-                title: section.title,
-                text: Util.trimString(section.text, SearchScriptDocsTool.sectionLength)
-            }))
-        };
-    }
+    static sourceType = AISourceTypes.scriptDocs;
 }
 
 export default SearchScriptDocsTool;

@@ -23,6 +23,8 @@ class SearchQuestsTool extends QuestTool {
         )
     };
 
+    static maxCalls = 4;
+
     static defaultLimit = 5;
     static maxLimit = 10;
 

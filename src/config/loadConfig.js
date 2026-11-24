@@ -1,5 +1,6 @@
 import ConfigLoader from "../loaders/config/ConfigLoader.js";
 import ReactionsLoader from "../loaders/config/ReactionsLoader.js";
+import QuestbooksLoader from "../loaders/config/QuestbooksLoader.js";
 import AuthLoader from "../loaders/config/AuthLoader.js";
 
 import { LoadStatus } from "../loaders/LoadStatus.js";
@@ -13,6 +14,7 @@ function initConfigLoaders(logger) {
 
     loaders.push(new ConfigLoader(logger, loaderConfig));
     loaders.push(new ReactionsLoader(logger, loaderConfig));
+    loaders.push(new QuestbooksLoader(logger, loaderConfig));
 
     return loaders;
 }

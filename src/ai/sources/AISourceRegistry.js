@@ -1,20 +1,8 @@
 import AISource from "../../structures/ai/AISource.js";
 
-import Util from "../../util/Util.js";
-
-import AIError from "../../errors/AIError.js";
+import { getLogger } from "../../LevertClient.js";
 
 class AISourceRegistry {
-    static select(definitions, names) {
-        const unknown = names.filter(name => typeof definitions[name] === "undefined");
-
-        if (!Util.empty(unknown)) {
-            throw new AIError(`Unknown AI sources: ${unknown.join(", ")}`, unknown);
-        }
-
-        return Object.fromEntries(names.map(name => [name, definitions[name]]));
-    }
-
     constructor(http, timeout) {
         this.http = http;
         this.timeout = timeout;
@@ -23,14 +11,27 @@ class AISourceRegistry {
     }
 
     async load(definitions) {
-        for (const [name, definition] of Object.entries(definitions)) {
-            const source = new AISource({ name, ...definition });
-            this.sources.set(source.type, await source.load(this.http, this.timeout));
+        const sources = Object.entries(definitions)
+            .map(([name, definition]) => new AISource({ name, ...definition }))
+            .sort((a, b) => b.priority - a.priority);
+
+        for (const source of sources) {
+            if (!this.sources.has(source.type)) {
+                await this._loadSource(source);
+            }
         }
     }
 
     get(type) {
         return this.sources.get(type) ?? null;
+    }
+
+    async _loadSource(source) {
+        try {
+            this.sources.set(source.type, await source.load(this.http, this.timeout));
+        } catch (err) {
+            getLogger().error(`Couldn't load the ${source.name} AI source:`, err);
+        }
     }
 }
 

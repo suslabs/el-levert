@@ -7,7 +7,7 @@ import HTTPUtil from "../../util/vm/HTTPUtil.js";
 import AIUtil from "../../util/ai/AIUtil.js";
 
 class OpenRouterProvider extends AIProvider {
-    static providerName = "openrouter";
+    static $name = "openrouter";
 
     static chatPath = "chat/completions";
     static doneEvent = "[DONE]";
@@ -38,7 +38,7 @@ class OpenRouterProvider extends AIProvider {
     }
 
     parseResponse(data) {
-        const message = Util.first(data.choices ?? [])?.message ?? {};
+        const message = Util.first(data.choices).message;
 
         return {
             parts: OpenRouterProvider._toParts(message.content, message.tool_calls ?? []),
@@ -61,7 +61,7 @@ class OpenRouterProvider extends AIProvider {
             }
 
             const data = JSON.parse(event),
-                choice = Util.first(data.choices ?? []);
+                choice = Util.first(data.choices);
 
             usage = data.usage ?? usage;
             interrupted ||= typeof data.error !== "undefined";
@@ -72,9 +72,9 @@ class OpenRouterProvider extends AIProvider {
 
             finishReason = choice.finish_reason ?? finishReason;
 
-            OpenRouterProvider._addCallDeltas(calls, choice.delta?.tool_calls ?? []);
+            OpenRouterProvider._addCallDeltas(calls, choice.delta.tool_calls ?? []);
 
-            if (Util.nonemptyString(choice.delta?.content)) {
+            if (Util.nonemptyString(choice.delta.content)) {
                 const textParts = [{ text: choice.delta.content }];
 
                 parts.push(...textParts);
@@ -92,8 +92,8 @@ class OpenRouterProvider extends AIProvider {
     }
 
     getUnblockDelay(res) {
-        const retryAfter = Number(res.headers?.["retry-after"]),
-            resetAt = Number(res.headers?.["x-ratelimit-reset"]);
+        const retryAfter = Number(res.headers["retry-after"]),
+            resetAt = Number(res.headers["x-ratelimit-reset"]);
 
         if (Number.isFinite(retryAfter) && retryAfter > 0) {
             return retryAfter / Util.durationSeconds.milli;
@@ -118,16 +118,16 @@ class OpenRouterProvider extends AIProvider {
     }
 
     static _toAssistantMessage(content, turnIdx) {
-        const calls = content.parts.filter(part => typeof part.functionCall !== "undefined"),
+        const calls = AIUtil.getCalls(content.parts),
             text = AIUtil.getText(content.parts);
 
         const message = { role: "assistant", content: Util.empty(text) ? null : text };
 
         if (!Util.empty(calls)) {
-            message.tool_calls = calls.map((part, i) => ({
-                id: part.functionCall.id ?? OpenRouterProvider._getCallId(turnIdx, i),
+            message.tool_calls = calls.map((call, i) => ({
+                id: call.id ?? OpenRouterProvider._getCallId(turnIdx, i),
                 type: "function",
-                function: { name: part.functionCall.name, arguments: JSON.stringify(part.functionCall.args ?? {}) }
+                function: { name: call.name, arguments: JSON.stringify(call.args) }
             }));
         }
 
@@ -172,7 +172,7 @@ class OpenRouterProvider extends AIProvider {
         body.contents.forEach((content, i) => messages.push(...OpenRouterProvider._toMessages(content, i)));
 
         const chat = { messages },
-            declarations = Util.first(body.tools ?? [])?.functionDeclarations ?? [];
+            declarations = Util.first(body.tools)?.functionDeclarations ?? [];
 
         if (!Util.empty(declarations)) {
             chat.tools = declarations.map(decl => ({ type: "function", function: decl }));
@@ -198,16 +198,8 @@ class OpenRouterProvider extends AIProvider {
         }
     }
 
-    static _parseArgs(text) {
-        try {
-            return Util.empty(text) ? {} : JSON.parse(text);
-        } catch {
-            return {};
-        }
-    }
-
     static _toCallPart(call) {
-        const functionCall = { name: call.name, args: OpenRouterProvider._parseArgs(call.args) };
+        const functionCall = { name: call.name, args: Util.empty(call.args) ? {} : AIUtil.parseJson(call.args, {}) };
 
         if (call.id !== null) {
             functionCall.id = call.id;
@@ -235,10 +227,12 @@ class OpenRouterProvider extends AIProvider {
     }
 
     static _parseUsage(usage) {
+        usage = ObjectUtil.guaranteeObject(usage);
+
         return {
-            tokens: usage?.total_tokens ?? 0,
-            cached: usage?.prompt_tokens_details?.cached_tokens ?? 0,
-            reasoning: usage?.completion_tokens_details?.reasoning_tokens ?? 0
+            tokens: usage.total_tokens ?? 0,
+            cached: usage.prompt_tokens_details?.cached_tokens ?? 0,
+            reasoning: usage.completion_tokens_details?.reasoning_tokens ?? 0
         };
     }
 }

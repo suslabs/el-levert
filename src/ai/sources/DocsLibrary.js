@@ -1,5 +1,7 @@
 import fs from "node:fs/promises";
 
+import MarkdownParser from "../../parsers/markdown/MarkdownParser.js";
+
 import Util from "../../util/Util.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 import BM25Index from "../../util/search/BM25Index.js";
@@ -30,7 +32,7 @@ class DocsLibrary {
 
     async load(timeout) {
         for (const file of this.files) {
-            this._addSections(DocsLibrary._splitMarkdown(await fs.readFile(file, "utf8")));
+            this._addSections(MarkdownParser.splitSections(await fs.readFile(file, "utf8")));
         }
 
         for (const [title, url] of Object.entries(this.urls)) {
@@ -43,20 +45,9 @@ class DocsLibrary {
         return this.index.search(query, limit).map(res => res.doc);
     }
 
-    static _headingRegex = /^## /m;
     static _blockRegex = /\n\s*\n/;
     static _declarationRegex = /^(?:\/\*\*|export |declare )/;
     static _commentLineRegex = /^\s*(?:\/\*\*|\*|\/\/)/;
-
-    static _splitMarkdown(text) {
-        return text
-            .split(DocsLibrary._headingRegex)
-            .filter(Util.nonemptyString)
-            .map(part => {
-                const [title, ...lines] = part.split("\n");
-                return { title: title.trim(), text: lines.join("\n").trim() };
-            });
-    }
 
     static _getTitle(title, block) {
         const declaration = block.split("\n").find(line => !DocsLibrary._commentLineRegex.test(line)) ?? "";

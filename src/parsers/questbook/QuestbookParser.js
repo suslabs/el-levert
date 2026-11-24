@@ -1,3 +1,6 @@
+import MarkdownStyler from "../markdown/MarkdownStyler.js";
+import MarkdownStyles from "../markdown/MarkdownStyles.js";
+
 import Util from "../../util/Util.js";
 import TypeTester from "../../util/TypeTester.js";
 
@@ -11,12 +14,14 @@ const QuestbookParser = Object.freeze({
         return String(str ?? "").replace(QuestbookParser._formattingRegex, "");
     },
 
-    _markdownFormats: Object.freeze({
-        k: "",
-        l: "**",
-        m: "~~",
-        n: "__",
-        o: "*"
+    _resetCode: "r",
+    _whiteCode: "f",
+
+    _codeStyles: Object.freeze({
+        l: MarkdownStyles.bold,
+        m: MarkdownStyles.strike,
+        n: MarkdownStyles.underline,
+        o: MarkdownStyles.italic
     }),
 
     _bulletRegex: /^((?:\s|§.)*)\* /gm,
@@ -27,32 +32,25 @@ const QuestbookParser = Object.freeze({
     _tokenRegex: /(\s*)(§.)(\s*)/g,
     _codeRegex: /^§(.)$/,
 
-    _formatToken: (token, formats) => {
+    _formatToken: (token, styler) => {
         const match = token.match(QuestbookParser._codeRegex);
 
         if (match === null) {
             return token;
         }
 
-        const code = match[1];
+        const code = match[1],
+            style = QuestbookParser._codeStyles[code];
 
-        if (code === "r") {
-            const reset = Array.from(formats).reverse().join("");
-            formats.clear();
-
-            return reset;
-        } else if (code === "f") {
-            return formats.delete("**") ? "**" : "";
-        }
-
-        const format = QuestbookParser._markdownFormats[code];
-
-        if (!Util.nonemptyString(format) || formats.has(format)) {
+        if (code === QuestbookParser._resetCode) {
+            return styler.reset();
+        } else if (code === QuestbookParser._whiteCode) {
+            return styler.end(MarkdownStyles.bold);
+        } else if (typeof style === "undefined") {
             return "";
+        } else {
+            return styler.start(style);
         }
-
-        formats.add(format);
-        return format;
     },
 
     formatMarkdown: str => {
@@ -63,11 +61,11 @@ const QuestbookParser = Object.freeze({
             .replace(QuestbookParser._openSpaceRegex, "$2$1")
             .replace(QuestbookParser._closeSpaceRegex, "$2$1");
 
-        const formats = new Set();
+        const styler = new MarkdownStyler();
 
         return `${text.trim()}§r`
             .split(QuestbookParser._tokenRegex)
-            .map(token => QuestbookParser._formatToken(token, formats))
+            .map(token => QuestbookParser._formatToken(token, styler))
             .join("");
     },
 

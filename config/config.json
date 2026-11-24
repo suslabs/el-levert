@@ -54,15 +54,6 @@
     "enablePreviews": true,
     "enableSed": true,
     "enableEval": true,
-    "questbooks": {
-        "nfu": {
-            "title": "Nomifactory CEu",
-            "urls": {
-                "normal": "https://raw.githubusercontent.com/Nomi-CEu/Nomi-CEu/main/overrides/config-overrides/normal/betterquesting/DefaultQuests.json",
-                "expert": "https://raw.githubusercontent.com/Nomi-CEu/Nomi-CEu/main/overrides/config-overrides/expert/betterquesting/DefaultQuests.json"
-            }
-        }
-    },
     "enableAI": true,
     "enableOtherLangs": false,
     "enableVM2": false,
@@ -142,7 +133,6 @@
         "rateLimitWindow": 60,
         "followUpsAnyone": true,
         "followUpsEditAnswer": true,
-        "allowLocalhostRequests": false,
-        "sources": ["nomiCodex", "wikipedia", "scriptDocs"]
+        "allowLocalhostRequests": false
     }
 }

@@ -37,6 +37,10 @@ class Overclocking {
         auto: false
     });
 
+    static ceNote =
+        "Applicable for GTCE,\ntiers adjusted for actual machine tier,\nUse a 4A CEF and a MAX energy hatch for MAX";
+    static nfuNote = "Applicable for NFu,\ntiers adjusted for actual machine tier";
+
     static get tierCount() {
         return tiers.length;
     }
@@ -161,6 +165,18 @@ class Overclocking {
             default:
                 return false;
         }
+    }
+
+    get notes() {
+        const notes = [this.isCe ? Overclocking.ceNote : Overclocking.nfuNote];
+
+        if (this.hasParallel) {
+            notes.push(
+                `For parallelization, it is assumed that you are running ${this.amperage}A of the specified tier.\nManually specify the amperage if it differs.`
+            );
+        }
+
+        return notes.join("\n\n");
     }
 
     toObject() {

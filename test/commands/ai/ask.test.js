@@ -117,7 +117,6 @@ async function setup(script, options = {}) {
             ai: {
                 endpoints: { gemini: `${server.url}/v1beta`, openrouter: `${server.url}/api/v1` },
                 models: options.models ?? ["test-model"],
-                sources: options.sources?.(server.url) ?? [],
                 ...options.ai
             }
         },
@@ -925,6 +924,48 @@ describe("a command", () => {
         expect(embedOf(recorder.sent.at(-1)).description).toBe("Done.");
     });
 
+    test("skips a rejected key until restart and answers with the next one", async () => {
+        const rejected = {
+            statusCode: 401,
+            json: { error: { message: "The bound service account is deleted or disabled.", status: "UNAUTHENTICATED" } }
+        };
+
+        const script = [rejected, answer(["ok"]), answer(["again"])];
+
+        const bodies = await setup(script, { auth: { geminiKey: ["key-1", "key-2"] } });
+
+        const recorder = createRecorder();
+
+        await getCommand(runtime, "a").handler(createAskContext("hi", recorder));
+        await getCommand(runtime, "a").handler(createAskContext("hi again", createRecorder()));
+
+        expect(script).toEqual([]);
+        expect(bodies.map(entry => entry.key)).toEqual(["key-1", "key-2", "key-2"]);
+        expect(embedOf(recorder.sent.at(-1)).description).toBe("ok");
+    });
+
+    test("runs the overclock calculator as a tool", async () => {
+        const script = [
+            calls([
+                call("overclock", { eu: 1920, duration: "60s", mode: "ebf", recipeHeat: 3600, coilHeat: 5200 }),
+                call("overclock", { eu: -5, duration: "1s" })
+            ]),
+            answer(["Done."])
+        ];
+
+        const bodies = await setup(script);
+        await getCommand(runtime, "a").handler(createAskContext("oc 1920 eu 60s in the ebf", createRecorder()));
+
+        const [ebf, invalid] = bodies[1].body.contents.at(-1).parts.map(part => part.functionResponse.response);
+
+        expect(script).toEqual([]);
+        expect(ebf).toMatchObject({ input: "1,920 EU/t for 60s", mode: "ebf" });
+        expect(ebf.table).toContain("EU/t");
+        expect(ebf.table).toContain("EV");
+        expect(ebf.notes).toContain("Applicable for NFu");
+        expect(invalid.error).toContain("EU cost must be positive");
+    });
+
     test("tries keys in order and skips a key until Google says its quota is back", async () => {
         const limited = {
             statusCode: 429,
@@ -1273,8 +1314,8 @@ describe("a command", () => {
     test("reports quota, key and empty answer errors in the embed", async () => {
         const script = [
             { statusCode: 429, json: { error: { message: "Resource exhausted" } } },
-            { statusCode: 401, json: { error: { message: "Bad key", status: "ACCESS_TOKEN_TYPE_UNSUPPORTED" } } },
-            sse({ ...chunk([], { finishReason: "SAFETY" }), ...usage(5) })
+            sse({ ...chunk([], { finishReason: "SAFETY" }), ...usage(5) }),
+            { statusCode: 401, json: { error: { message: "Bad key", status: "UNAUTHENTICATED" } } }
         ];
 
         await setup(script);
@@ -1290,8 +1331,223 @@ describe("a command", () => {
 
         expect(results.map(embed => embed.color)).toEqual([0xed4245, 0xed4245, 0xed4245]);
         expect(results[0].description).toContain("usage limits are used up");
-        expect(results[1].description).toContain("AIza");
-        expect(results[2].description).toContain("The model returned no answer (SAFETY)");
+        expect(results[1].description).toContain("The model returned no answer (SAFETY)");
+        expect(results[2].description).toContain("The bot's AI API key was rejected.");
+    });
+
+    test("searches normal mode when asked even after the conversation switched to expert", async () => {
+        const searches = [];
+
+        const script = [
+            calls([
+                call("search_recipes", { query: "liquid ender air", expert: false }),
+                call("search_recipes", { query: "liquid ender air", expert: true })
+            ]),
+            answer(["Same recipe in both modes."])
+        ];
+
+        await setup(script, {
+            routes: {
+                "GET /api/search": ({ url }) => {
+                    searches.push(url.searchParams.get("mode"));
+                    return { json: { error: "not found", alternatives: [] } };
+                }
+            }
+        });
+
+        await loadSources({
+            codex: {
+                type: "recipes",
+                options: { searchUrls: [`${server.url}/api/search`], shotUrl: "x", mode: "normal" }
+            }
+        });
+
+        const history = [
+            { role: "user", text: "make the stabilized miner" },
+            { role: "model", text: "It's expert only.", expert: true }
+        ];
+
+        const ctx = createAskContext("does it differ in normal mode?", createRecorder()),
+            request = {
+                author: ctx.author,
+                member: null,
+                channel: ctx.channel,
+                guild: null,
+                msg: null,
+                replyMsg: null
+            };
+
+        await runtime.client.aiManager.ask(
+            "does it differ in normal mode?",
+            { ...request, scriptValues: {} },
+            { history }
+        );
+
+        expect(script).toEqual([]);
+        expect(searches).toEqual(["normal", "expert"]);
+    });
+
+    test("answers repeated calls from memory and caps how often a search tool runs", async () => {
+        const searches = [];
+
+        const search = query => call("search_recipes", { query });
+
+        const script = [
+            calls([search("a"), search("a")]),
+            calls([search("b"), search("c"), search("d"), search("e")]),
+            answer(["Done."])
+        ];
+
+        const bodies = await setup(script, {
+            routes: {
+                "GET /api/search": ({ url }) => {
+                    searches.push(url.searchParams.get("q"));
+                    return { json: { error: "not found", alternatives: [] } };
+                }
+            }
+        });
+
+        await loadSources({
+            codex: {
+                type: "recipes",
+                options: { searchUrls: [`${server.url}/api/search`], shotUrl: "x", mode: "normal" }
+            }
+        });
+
+        await getCommand(runtime, "a").handler(createAskContext("loop please", createRecorder()));
+
+        const responses = idx => bodies[idx].body.contents.at(-1).parts.map(part => part.functionResponse.response);
+
+        expect(script).toEqual([]);
+        expect(responses(1)[1]).toMatchObject({ repeated: true });
+        expect(responses(2).at(-1).error).toContain("as many times as allowed");
+        expect(new Set(searches.filter(query => query !== null))).toEqual(new Set(["a", "b", "c", "d"]));
+    });
+
+    test("follows hot ingots to their blast furnace recipe and maps EBF to the pack's machine name", async () => {
+        const recipe = (type, ins, outs, heat = 0) => ({
+            type,
+            idx: 0,
+            eu: 7680,
+            dur: 938,
+            tier: "IV",
+            heat,
+            ins,
+            outs
+        });
+
+        const items = {
+            "Signalum Ingot": {
+                item: { id: "i:signalum_ingot", name: "Signalum Ingot" },
+                recipes: [
+                    recipe("Crafting", "Block of Signalum (1)", "Signalum Ingot (9)"),
+                    recipe("Vacuum Freezer", "Hot Signalum Ingot (1)", "Signalum Ingot (1)")
+                ]
+            },
+            "Hot Signalum Ingot": {
+                item: { id: "i:hot_signalum_ingot", name: "Hot Signalum Ingot" },
+                recipes: [recipe("Blast Furnace", "Signalum Dust (1), Helium (100L)", "Hot Signalum Ingot (1)", 4000)]
+            }
+        };
+
+        const script = [
+            calls([call("search_recipes", { query: "Signalum Ingot", machine: "EBF" })]),
+            answer(["Blast it."])
+        ];
+
+        const queries = [];
+
+        const bodies = await setup(script, {
+            routes: {
+                "GET /api/search": ({ url }) => {
+                    const query = url.searchParams.get("q");
+                    queries.push(query);
+
+                    return { json: { machineFilter: null, uses: [], alternatives: [], ...items[query] } };
+                }
+            }
+        });
+
+        await loadSources({
+            codex: {
+                type: "recipes",
+                options: { searchUrls: [`${server.url}/api/search`], shotUrl: "x", mode: "normal" }
+            }
+        });
+
+        await getCommand(runtime, "a").handler(createAskContext("signalum ebf recipe", createRecorder()));
+
+        const found = bodies[1].body.contents.at(-1).parts[0].functionResponse.response;
+
+        expect(script).toEqual([]);
+        expect(queries).toEqual(["Signalum Ingot", "Hot Signalum Ingot"]);
+
+        expect(found.totalRecipes).toBe(0);
+        expect(found.note).toContain("Vacuum Freezer");
+        expect(found.hotIngot).toMatchObject({ item: { name: "Hot Signalum Ingot" }, totalRecipes: 1 });
+        expect(found.hotIngot.recipes[0]).toMatchObject({ machine: "Blast Furnace", heat: 4000, euPerTick: 7680 });
+    });
+
+    test("searches the item alone and filters its recipes by machine type", async () => {
+        const recipe = (type, outs) => ({ type, idx: 0, eu: 30, dur: 20, tier: "LV", heat: 0, ins: "Air", outs });
+
+        const data = {
+            item: { id: "f:liquid_ender_air", name: "Liquid Ender Air" },
+            machineFilter: null,
+            recipes: [recipe("Vacuum Freezer", "Liquid Ender Air (1000L)")],
+            uses: [
+                {
+                    n: "Enderpearl Dust",
+                    t: "Distillation Tower",
+                    e: 7680,
+                    d: 2000,
+                    x: "IV",
+                    h: 0,
+                    a: 1,
+                    i: "Liquid Ender Air"
+                }
+            ],
+            alternatives: []
+        };
+
+        const script = [
+            calls([
+                call("search_recipes", { query: "Liquid Ender Air", machine: "distillation", uses: true }),
+                call("search_recipes", { query: "Liquid Ender Air", machine: "EBF" })
+            ]),
+            answer(["It's distilled in the **Distillation Tower**."])
+        ];
+
+        const queries = [];
+
+        const bodies = await setup(script, {
+            routes: {
+                "GET /api/search": ({ url }) => {
+                    queries.push(url.searchParams.get("q"));
+                    return { json: data };
+                }
+            }
+        });
+
+        await loadSources({
+            codex: {
+                type: "recipes",
+                options: { searchUrls: [`${server.url}/api/search`], shotUrl: "x", mode: "normal" }
+            }
+        });
+
+        await getCommand(runtime, "a").handler(createAskContext("liquid ender air distillation?", createRecorder()));
+
+        const [uses, ebf] = bodies[1].body.contents.at(-1).parts.map(part => part.functionResponse.response);
+
+        expect(script).toEqual([]);
+        expect(queries).toEqual(["Liquid Ender Air", "Liquid Ender Air"]);
+
+        expect(uses).toMatchObject({ machine: "distillation", machines: { "Distillation Tower": 1 }, totalUses: 1 });
+        expect(uses.note).toBeUndefined();
+
+        expect(ebf).toMatchObject({ machines: { "Vacuum Freezer": 1 }, recipes: [], totalRecipes: 0 });
+        expect(ebf.note).toContain("Pick one from machines");
     });
 
     test("switches to expert mode for items only in it and keeps using it", async () => {

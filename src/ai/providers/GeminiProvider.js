@@ -8,7 +8,7 @@ import GeminiQuotaUtil from "../../util/ai/GeminiQuotaUtil.js";
 import { httpStatusCodes } from "../../util/misc/HttpStatusCodes.js";
 
 class GeminiProvider extends AIProvider {
-    static providerName = "gemini";
+    static $name = "gemini";
 
     static generateMethod = "generateContent";
     static streamMethod = "streamGenerateContent?alt=sse";
@@ -30,7 +30,7 @@ class GeminiProvider extends AIProvider {
 
     parseResponse(data) {
         return {
-            parts: Util.first(data.candidates ?? [])?.content?.parts ?? [],
+            parts: Util.first(data.candidates)?.content?.parts ?? [],
             usage: GeminiProvider._parseUsage(data.usageMetadata)
         };
     }
@@ -45,7 +45,7 @@ class GeminiProvider extends AIProvider {
 
         for await (const event of SSEUtil.readEvents(stream)) {
             const data = JSON.parse(event),
-                candidate = Util.first(data.candidates ?? []);
+                candidate = Util.first(data.candidates);
 
             usage = data.usageMetadata ?? usage;
             blockReason = data.promptFeedback?.blockReason ?? blockReason;
@@ -69,12 +69,8 @@ class GeminiProvider extends AIProvider {
         };
     }
 
-    getErrorReason(res) {
-        return res.data?.error?.status ?? null;
-    }
-
     getUnblockDelay(res) {
-        return GeminiQuotaUtil.getUnblockDelay(res.data?.error);
+        return GeminiQuotaUtil.getUnblockDelay(res.data.error);
     }
 
     isThinkingError(res) {
@@ -101,10 +97,12 @@ class GeminiProvider extends AIProvider {
     }
 
     static _parseUsage(usage) {
+        usage = ObjectUtil.guaranteeObject(usage);
+
         return {
-            tokens: usage?.totalTokenCount ?? 0,
-            cached: usage?.cachedContentTokenCount ?? 0,
-            reasoning: usage?.thoughtsTokenCount ?? 0
+            tokens: usage.totalTokenCount ?? 0,
+            cached: usage.cachedContentTokenCount ?? 0,
+            reasoning: usage.thoughtsTokenCount ?? 0
         };
     }
 

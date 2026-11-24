@@ -110,15 +110,7 @@ function renderOutput(oc) {
 
     const header = `${getEmoji("info")} Input: **${Util.formatNumber(oc.eu, 3)} EU/t** for **${Overclocking.formatDuration(oc.duration)}**`;
 
-    let footer = oc.isCe
-        ? "Applicable for GTCE,\ntiers adjusted for actual machine tier,\nUse a 4A CEF and a MAX energy hatch for MAX"
-        : "Applicable for NFu,\ntiers adjusted for actual machine tier";
-
-    if (oc.hasParallel) {
-        footer += `\n\nFor parallelization, it is assumed that you are running ${oc.amperage}A of the specified tier.\nManually specify the amperage if it differs.`;
-    }
-
-    const embed = new EmbedBuilder().setFooter({ text: footer }).setDescription(codeblock(table));
+    const embed = new EmbedBuilder().setFooter({ text: oc.notes }).setDescription(codeblock(table));
 
     return {
         content: header,

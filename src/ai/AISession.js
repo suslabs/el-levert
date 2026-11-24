@@ -1,5 +1,6 @@
 import AIAnswerParser from "./AIAnswerParser.js";
 import AISourceLedger from "../structures/ai/AISourceLedger.js";
+import AICallLedger from "../structures/ai/AICallLedger.js";
 
 import AIPhases from "../structures/ai/AIPhases.js";
 import AIEfforts from "../structures/ai/AIEfforts.js";
@@ -41,6 +42,7 @@ class AISession {
         this.expert = this.history.some(turn => turn.expert === true);
 
         this.ledger = new AISourceLedger();
+        this.calls = new AICallLedger(this.manager.tools);
         this.contents = [];
         this.files = new Map();
         this.images = [];
@@ -93,7 +95,7 @@ class AISession {
             const final = i === this.maxSteps - 1 || this.timeLeft < this.manager.requestTimeout;
 
             const res = await this._stream(this._buildRequest(final), final),
-                calls = final ? [] : AISession._getCalls(res.parts);
+                calls = final ? [] : AIUtil.getCalls(res.parts);
 
             this._logStep(i, stepStart, calls);
 
@@ -128,6 +130,8 @@ class AISession {
     resolveExpert(expert) {
         if (expert === true) {
             this.expert = true;
+        } else if (expert === false) {
+            return false;
         }
 
         return this.expert;
@@ -153,22 +157,6 @@ class AISession {
 
     logError(toolName, err) {
         getLogger().error(`AI tool "${toolName}" failed:`, err);
-    }
-
-    static _getCalls(parts) {
-        return parts
-            .filter(part => typeof part.functionCall !== "undefined")
-            .map(part => ({ ...part.functionCall, args: ObjectUtil.guaranteeObject(part.functionCall.args) }));
-    }
-
-    static _createResponse(call, res) {
-        return {
-            functionResponse: {
-                ...(typeof call.id === "undefined" ? {} : { id: call.id }),
-                name: call.name,
-                response: res
-            }
-        };
     }
 
     async _triage() {
@@ -254,10 +242,10 @@ class AISession {
     }
 
     async _runCall(call) {
-        const res = await this.manager.tools.execute(call.name, call.args, this);
+        const res = await this.calls.run(call, () => this.manager.tools.execute(call.name, call.args, this));
         this.ledger.record(res);
 
-        return AISession._createResponse(call, res);
+        return AIUtil.createResponse(call, res);
     }
 
     async _finish(finishReason) {

@@ -5,6 +5,7 @@ import { getLogger } from "../LevertClient.js";
 import Util from "../util/Util.js";
 import ObjectUtil from "../util/ObjectUtil.js";
 import StreamUtil from "../util/misc/StreamUtil.js";
+import AIUtil from "../util/ai/AIUtil.js";
 import { httpStatusCodes, isServerErrorStatus, isSuccessStatus } from "../util/misc/HttpStatusCodes.js";
 
 import AIError from "../errors/AIError.js";
@@ -36,6 +37,7 @@ class ModelRouter {
         this.requestTimeout = options.requestTimeout;
 
         this.quotas = new ModelQuotas(options.modelCooldown ?? 0, options.maxModelCooldown ?? 0);
+        this.rejectedKeys = new Set();
     }
 
     get endpoints() {
@@ -128,10 +130,15 @@ class ModelRouter {
         }
     }
 
+    static _isKeyRejected(status) {
+        return status === httpStatusCodes.UNAUTHORIZED || status === httpStatusCodes.FORBIDDEN;
+    }
+
     static _canFallback(status) {
         return (
             status === httpStatusCodes.TOO_MANY_REQUESTS ||
             status === httpStatusCodes.NOT_FOUND ||
+            ModelRouter._isKeyRejected(status) ||
             isServerErrorStatus(status)
         );
     }
@@ -140,20 +147,12 @@ class ModelRouter {
         return signal === null ? timeoutSignal : AbortSignal.any([timeoutSignal, signal]);
     }
 
+    static _getProviderKeyId(provider, keyIdx) {
+        return `${provider}#${keyIdx}`;
+    }
+
     static _getKeyId(model, keyIdx) {
         return `${model}#${keyIdx}`;
-    }
-
-    static _formatDuration(ms) {
-        return Util.duration(ms, { format: true, short: true, largestOnly: true });
-    }
-
-    static _parseError(text) {
-        try {
-            return JSON.parse(text);
-        } catch {
-            return { error: { message: text } };
-        }
     }
 
     _getSpec(state) {
@@ -206,7 +205,8 @@ class ModelRouter {
         );
 
         if (stream && !isSuccessStatus(res.status)) {
-            res.data = ModelRouter._parseError((await StreamUtil.read(res.data)).toString());
+            const text = (await StreamUtil.read(res.data)).toString();
+            res.data = AIUtil.parseJson(text, { error: { message: text } });
         }
 
         return res;
@@ -249,13 +249,29 @@ class ModelRouter {
 
         const delay = this.quotas.limit(keyId, this._getProviderFor(spec).getUnblockDelay(res));
         getLogger().warn(
-            `AI model ${spec.id} hit its usage limit on key ${keyIdx + 1}, blocked for ${ModelRouter._formatDuration(delay)}.`
+            `AI model ${spec.id} hit its usage limit on key ${keyIdx + 1}, blocked for ${AIUtil.formatDuration(delay)}.`
+        );
+    }
+
+    _rejectKey(state, spec, keyIdx, res) {
+        const provider = this._getProviderFor(spec);
+
+        state.lastStatus = res.status;
+        this.rejectedKeys.add(ModelRouter._getProviderKeyId(spec.provider, keyIdx));
+
+        getLogger().error(
+            `AI key ${keyIdx + 1} for ${spec.provider} was rejected (HTTP ${res.status} ${provider.getErrorMessage(res)}). Skipping it until the bot restarts.`
         );
     }
 
     _canUseKey(state, spec, keyIdx) {
         const keyId = ModelRouter._getKeyId(spec.id, keyIdx);
-        return !state.failed.has(keyId) && !this.quotas.isLimited(keyId);
+
+        return (
+            !this.rejectedKeys.has(ModelRouter._getProviderKeyId(spec.provider, keyIdx)) &&
+            !state.failed.has(keyId) &&
+            !this.quotas.isLimited(keyId)
+        );
     }
 
     async _requestWithKeys(spec, body, state, options, stream) {
@@ -272,6 +288,11 @@ class ModelRouter {
 
             if (res === null) {
                 this._fail(state, spec, i, "took too long to respond");
+                continue;
+            } else if (ModelRouter._isKeyRejected(res.status)) {
+                this._rejectKey(state, spec, i, res);
+
+                failed = res;
                 continue;
             } else if (ModelRouter._canFallback(res.status)) {
                 this._fail(state, spec, i, `is unavailable (HTTP ${res.status})`, res);
@@ -296,8 +317,7 @@ class ModelRouter {
 
         return new AIError(`${spec.id}: HTTP ${res.status} ${provider.getErrorMessage(res)}`.trim(), {
             model: spec.id,
-            status: res.status,
-            reason: provider.getErrorReason(res)
+            status: res.status
         });
     }
 

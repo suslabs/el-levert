@@ -95,10 +95,12 @@ class LevertClient extends DiscordClient {
         }
 
         const config = configs.config ?? {},
-            reactions = configs.reactions ?? {};
+            reactions = configs.reactions ?? {},
+            questbooks = configs.questbooks ?? {};
 
         this.config = config;
         this.reactions = reactions;
+        this.questbooks = questbooks;
 
         this.setOptions({
             wrapEvents: this.config.wrapEvents,
@@ -605,8 +607,8 @@ class LevertClient extends DiscordClient {
                 ]
             },
             questbookManager: {
-                enabled: !Util.empty(Object.keys(this.config.questbooks)),
-                args: [true, this.config.questbooks]
+                enabled: !Util.empty(Object.keys(this.questbooks)),
+                args: [true, this.questbooks]
             },
             aiManager: {
                 enabled: this.config.enableAI,

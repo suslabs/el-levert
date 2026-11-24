@@ -6,6 +6,7 @@ import PackModes from "../../structures/PackModes.js";
 const Sources = Object.freeze({
     nomiCodex: {
         type: AISourceTypes.recipes,
+        priority: 3,
         options: {
             searchUrls: [
                 "https://nomi-codex.vercel.app/api/search",
@@ -18,6 +19,7 @@ const Sources = Object.freeze({
 
     wikipedia: {
         type: AISourceTypes.wiki,
+        priority: 1,
         options: {
             name: "Wikipedia",
             host: "wikipedia.org",
@@ -26,8 +28,18 @@ const Sources = Object.freeze({
         }
     },
 
+    gregtech: {
+        type: AISourceTypes.gameDocs,
+        priority: 2,
+        options: {
+            name: "GregTech CEu reference",
+            files: [fileURLToPath(new URL("../docs/gregtech.md", import.meta.url))]
+        }
+    },
+
     scriptDocs: {
-        type: AISourceTypes.docs,
+        type: AISourceTypes.scriptDocs,
+        priority: 1,
         options: {
             name: "script and CanvasKit docs",
             files: [fileURLToPath(new URL("../docs/scripts.md", import.meta.url))],

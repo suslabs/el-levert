@@ -1,25 +1,32 @@
-import RecipeTool from "./RecipeTool.js";
+import SourceTool from "../SourceTool.js";
 
 import NomiCodexClient from "../../../sources/NomiCodexClient.js";
 
 import { OverclockingValues } from "../../../../structures/OverclockingValues.js";
 
 import AIPhases from "../../../../structures/ai/AIPhases.js";
+import AISourceTypes from "../../../../structures/ai/AISourceTypes.js";
 
 import Util from "../../../../util/Util.js";
+import ArrayUtil from "../../../../util/ArrayUtil.js";
 import HTMLUtil from "../../../../util/misc/HTMLUtil.js";
 import ToolParams from "../../../../util/ai/ToolParams.js";
 
-class SearchRecipesTool extends RecipeTool {
+class SearchRecipesTool extends SourceTool {
     static info = {
         name: "search_recipes",
         emoji: "🧪",
         phase: AIPhases.searching,
         description:
-            'Look up an item\'s recipes (or, with uses, what it\'s used in) in the modpack\'s recipe viewer. Recipes come ranked with the main production recipe usually first. End the query with a machine to filter (e.g. "steel ingot ebf", "pe lcr", "signalum dust mixer").',
+            "Look up an item's recipes (or, with uses, what it's used in) in the modpack's recipe viewer. Search for the item alone and put a machine type in machine. Results list the machine types the item has recipes in, with the main production recipe usually first.",
         parameters: ToolParams.object(
             {
-                query: ToolParams.string("Item name, abbreviation or ID, optionally followed by a machine."),
+                query: ToolParams.string(
+                    'The item or material name only, e.g. "Liquid Ender Air". Never add machines or extra words.'
+                ),
+                machine: ToolParams.string(
+                    'Only show recipes made in this machine type, e.g. "Distillation Tower", "EBF", "LCR".'
+                ),
                 uses: ToolParams.boolean("List recipes that use the item instead of ones that make it."),
                 expert: ToolParams.boolean(
                     "Use expert (hard) mode recipes. Items only in expert mode switch to it on their own."
@@ -29,7 +36,26 @@ class SearchRecipesTool extends RecipeTool {
         )
     };
 
+    static sourceType = AISourceTypes.recipes;
+
+    static maxCalls = 4;
+
     static maxResults = 15;
+
+    static machineMissNote = "No recipes in that machine. Pick one from machines instead of searching again.";
+    static hotIngotNote =
+        "This ingot comes out of the Blast Furnace hot. hotIngot lists how the hot ingot is made; it is then cooled into the ingot in a Vacuum Freezer.";
+
+    static machineAliases = Object.freeze({
+        ebf: "blast furnace",
+        pbf: "primitive blast furnace",
+        abs: "alloy blast smelter",
+        lcr: "chemical reactor",
+        vf: "vacuum freezer",
+        dt: "distillation tower"
+    });
+
+    static _hotIngotRegex = /\bHot [^,(]+ Ingot\b/;
 
     static _spaceRegex = /\s+/g;
     static _formWordsRegex =
@@ -44,10 +70,13 @@ class SearchRecipesTool extends RecipeTool {
 
         const expert = session.resolveExpert(args.expert);
 
-        let data = await this._search(query, args, session, expert);
+        const uses = args.uses ?? false,
+            machine = Util.nonemptyString(args.machine) ? args.machine.trim() : null;
 
-        if (data.error === NomiCodexClient.notFoundError && !expert) {
-            const expertData = await this._search(query, args, session, true);
+        let data = await this._search(query, uses, session, expert);
+
+        if (data.error === NomiCodexClient.notFoundError && typeof args.expert === "undefined" && !expert) {
+            const expertData = await this._search(query, uses, session, true);
 
             if (expertData.error !== NomiCodexClient.notFoundError) {
                 session.resolveExpert(true);
@@ -62,26 +91,84 @@ class SearchRecipesTool extends RecipeTool {
         const item = data.item;
 
         const out = {
-            mode: this.recipes.getMode(session.expert),
+            mode: this.source.getMode(session.expert),
             item: { id: item.id, name: HTMLUtil.stripTags(item.name) },
-            machine: data.machineFilter,
+            machine,
             alternatives: data.alternatives.map(alt => HTMLUtil.stripTags(alt.name))
         };
 
-        if (args.uses) {
-            out.uses = data.uses.slice(0, SearchRecipesTool.maxResults).map(use => this._formatUse(use));
-            out.totalUses = data.uses.length;
+        const entries = uses ? data.uses : data.recipes,
+            getType = uses ? use => use.t : recipe => recipe.type;
+
+        const matches = SearchRecipesTool._filterByMachine(entries, getType, machine),
+            shown = matches.slice(0, SearchRecipesTool.maxResults);
+
+        out.machines = SearchRecipesTool._countMachines(entries, getType);
+
+        if (uses) {
+            out.uses = shown.map(use => this._formatUse(use));
+            out.totalUses = matches.length;
         } else {
             const material = SearchRecipesTool._getMaterial(item.name);
 
-            out.recipes = data.recipes
-                .slice(0, SearchRecipesTool.maxResults)
-                .map(recipe => this._formatRecipe(recipe, material));
+            out.recipes = shown.map(recipe => this._formatRecipe(recipe, material));
+            out.totalRecipes = matches.length;
+        }
 
-            out.totalRecipes = data.recipes.length;
+        const hotIngot = uses ? null : await this._findHotIngot(data.recipes, machine, session);
+
+        if (hotIngot !== null) {
+            out.hotIngot = hotIngot;
+            out.note = SearchRecipesTool.hotIngotNote;
+        } else if (machine !== null && Util.empty(matches)) {
+            out.note = SearchRecipesTool.machineMissNote;
         }
 
         return out;
+    }
+
+    static _wordRegex = /[^a-z0-9]+/;
+
+    static _getInitials(name) {
+        return name
+            .toLowerCase()
+            .split(SearchRecipesTool._wordRegex)
+            .filter(Util.nonemptyString)
+            .map(word => Util.first(word))
+            .join("");
+    }
+
+    static _matchesMachine(type, machine) {
+        const lowerType = HTMLUtil.stripTags(type).toLowerCase();
+
+        machine = machine.toLowerCase();
+        machine = SearchRecipesTool.machineAliases[machine] ?? machine;
+
+        return lowerType.includes(machine) || SearchRecipesTool._getInitials(lowerType) === machine;
+    }
+
+    static _filterByMachine(entries, getType, machine) {
+        if (machine === null) {
+            return entries;
+        }
+
+        return entries.filter(entry => SearchRecipesTool._matchesMachine(getType(entry), machine));
+    }
+
+    static _countMachines(entries, getType) {
+        return Object.fromEntries(ArrayUtil.frequency(entries, entry => HTMLUtil.stripTags(getType(entry))));
+    }
+
+    static _getHotIngotName(recipes) {
+        for (const recipe of recipes) {
+            const match = HTMLUtil.stripTags(recipe.ins).match(SearchRecipesTool._hotIngotRegex);
+
+            if (match !== null) {
+                return Util.first(match);
+            }
+        }
+
+        return null;
     }
 
     static _getMaterial(name) {
@@ -96,12 +183,34 @@ class SearchRecipesTool extends RecipeTool {
         return ticks / OverclockingValues.ticksPerSecond;
     }
 
-    async _search(query, args, session, expert) {
-        return await this.recipes.search(query, {
-            mode: this.recipes.getMode(expert),
-            uses: args.uses ?? false,
+    async _search(query, uses, session, expert) {
+        return await this.source.search(query, {
+            mode: this.source.getMode(expert),
+            uses,
             timeout: session.toolTimeout()
         });
+    }
+
+    async _findHotIngot(recipes, machine, session) {
+        const name = SearchRecipesTool._getHotIngotName(recipes);
+
+        if (name === null) {
+            return null;
+        }
+
+        const data = await this._search(name, false, session, session.expert);
+
+        if (data.error === NomiCodexClient.notFoundError) {
+            return null;
+        }
+
+        const matches = SearchRecipesTool._filterByMachine(data.recipes, recipe => recipe.type, machine);
+
+        return {
+            item: { id: data.item.id, name: HTMLUtil.stripTags(data.item.name) },
+            recipes: matches.slice(0, SearchRecipesTool.maxResults).map(recipe => this._formatRecipe(recipe, "")),
+            totalRecipes: matches.length
+        };
     }
 
     _formatRecipe(recipe, material) {

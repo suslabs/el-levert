@@ -6,6 +6,7 @@ import Util from "../../../util/Util.js";
 import ArrayUtil from "../../../util/ArrayUtil.js";
 import HTTPUtil from "../../../util/vm/HTTPUtil.js";
 import ToolParams from "../../../util/ai/ToolParams.js";
+import AIUtil from "../../../util/ai/AIUtil.js";
 
 import AIError from "../../../errors/AIError.js";
 
@@ -90,11 +91,7 @@ class HttpRequestTool extends WebTool {
             return Util.trimString(text, HttpRequestTool.maxBodyLength);
         }
 
-        try {
-            return JSON.parse(text);
-        } catch {
-            return text;
-        }
+        return AIUtil.parseJson(text, text);
     }
 }
 

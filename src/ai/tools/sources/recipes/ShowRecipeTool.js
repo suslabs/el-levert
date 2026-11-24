@@ -1,13 +1,14 @@
-import RecipeTool from "./RecipeTool.js";
+import SourceTool from "../SourceTool.js";
 
 import AIPhases from "../../../../structures/ai/AIPhases.js";
+import AISourceTypes from "../../../../structures/ai/AISourceTypes.js";
 
 import Util from "../../../../util/Util.js";
 import ToolParams from "../../../../util/ai/ToolParams.js";
 
 import AIError from "../../../../errors/AIError.js";
 
-class ShowRecipeTool extends RecipeTool {
+class ShowRecipeTool extends SourceTool {
     static info = {
         name: "show_recipe",
         emoji: "🖼️",
@@ -24,6 +25,8 @@ class ShowRecipeTool extends RecipeTool {
         )
     };
 
+    static sourceType = AISourceTypes.recipes;
+
     getStatus() {
         return "Rendering the recipe card";
     }
@@ -35,10 +38,8 @@ class ShowRecipeTool extends RecipeTool {
             throw new AIError("itemId and a recipe idx from search_recipes are required");
         }
 
-        const recipes = this.recipes;
-
-        const card = await recipes.renderCard(itemId, args.idx, {
-            mode: recipes.getMode(session.resolveExpert(args.expert)),
+        const card = await this.source.renderCard(itemId, args.idx, {
+            mode: this.source.getMode(session.resolveExpert(args.expert)),
             timeout: session.toolTimeout()
         });
 

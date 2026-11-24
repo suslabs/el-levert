@@ -30,6 +30,8 @@ class SearchMessagesTool extends MessageHistoryTool {
         )
     };
 
+    static maxCalls = 3;
+
     static defaultLimit = 10;
     static maxLimit = 25;
 

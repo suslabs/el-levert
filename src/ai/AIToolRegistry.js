@@ -26,6 +26,10 @@ class AIToolRegistry {
         return tool?.isAvailable(session) ? tool : null;
     }
 
+    getMaxCalls(name) {
+        return this.tools.get(name)?.constructor.maxCalls ?? Infinity;
+    }
+
     createStep(name, args, session) {
         const tool = this.get(name, session);
 

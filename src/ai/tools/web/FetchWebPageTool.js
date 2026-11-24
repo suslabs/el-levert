@@ -25,6 +25,8 @@ class FetchWebPageTool extends WebTool {
         )
     };
 
+    static maxCalls = 5;
+
     getStatus(args) {
         return `Reading ${this.formatHost(args.url)}`;
     }

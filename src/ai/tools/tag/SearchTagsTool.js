@@ -24,6 +24,8 @@ class SearchTagsTool extends TagTool {
         )
     };
 
+    static maxCalls = 4;
+
     static defaultLimit = 5;
     static maxLimit = 8;
 

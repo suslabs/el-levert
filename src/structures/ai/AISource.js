@@ -14,6 +14,7 @@ class AISource extends BaseStructure {
     static defaultValues = {
         name: "",
         type: null,
+        priority: 0,
         options: {}
     };
 
@@ -43,7 +44,8 @@ class AISource extends BaseStructure {
                 return new NomiCodexClient(http, this.options);
             case AISourceTypes.wiki:
                 return new WikiClient(http, this.options);
-            case AISourceTypes.docs:
+            case AISourceTypes.scriptDocs:
+            case AISourceTypes.gameDocs:
                 return new DocsLibrary(http, this.options);
         }
     }

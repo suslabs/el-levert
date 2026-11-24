@@ -12,8 +12,17 @@ import AIError from "../../errors/AIError.js";
 class AITool {
     static info = null;
 
-    static expectedErrors = new Set(["AIError", "UtilError", "TagError", "VMError", "QuestbookError", "AxiosError"]);
+    static expectedErrors = new Set([
+        "AIError",
+        "UtilError",
+        "TagError",
+        "VMError",
+        "QuestbookError",
+        "OCError",
+        "AxiosError"
+    ]);
     static maxStatusArgLength = 60;
+    static maxCalls = Infinity;
 
     constructor(manager) {
         const info = this.constructor.info;
@@ -21,13 +30,13 @@ class AITool {
         if (!TypeTester.isObject(info)) {
             throw new AIError("Tool must have info");
         } else if (!Util.nonemptyString(info.emoji)) {
-            throw new AIError("Tool must have an emoji", info.name);
+            throw new AIError("Tool must have an emoji");
         } else if (!AIPhases.has(info.phase)) {
-            throw new AIError("Tool must have a valid phase", info.name);
+            throw new AIError("Tool must have a valid phase");
         } else if (typeof this.execute !== "function") {
-            throw new AIError("Child class must have an execute function", info.name);
+            throw new AIError("Child class must have an execute function");
         } else if (typeof this.getStatus !== "function") {
-            throw new AIError("Child class must have a getStatus function", info.name);
+            throw new AIError("Child class must have a getStatus function");
         }
 
         this.manager = manager;

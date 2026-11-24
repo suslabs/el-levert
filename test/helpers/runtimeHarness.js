@@ -76,7 +76,6 @@ function buildDefaultConfig(tempDir, overrides = {}) {
             port: inspectorPort,
             ...vmInspector
         },
-        questbooks: {},
         enableAI: false,
         ai: {
             name: "Test Rabbit",
@@ -100,7 +99,6 @@ function buildDefaultConfig(tempDir, overrides = {}) {
             followUpsAnyone: true,
             followUpsEditAnswer: false,
             allowLocalhostRequests: true,
-            sources: [],
             ...ai
         },
         vmHttp: {
@@ -253,12 +251,12 @@ async function loadRuntimeManagers(client, Managers, config, auth) {
                 ]
             },
             questbookManager: {
-                enabled: !Util.empty(Object.keys(config.questbooks)),
-                args: [true, config.questbooks]
+                enabled: !Util.empty(Object.keys(client.questbooks)),
+                args: [true, client.questbooks]
             },
             aiManager: {
                 enabled: config.enableAI,
-                args: [true, { gemini: auth.geminiKey, openrouter: auth.openrouterKey }]
+                args: [true, { gemini: auth.geminiKey, openrouter: auth.openrouterKey }, {}]
             }
         },
         {
@@ -323,11 +321,13 @@ async function createRuntime(options = {}) {
 
     const config = buildDefaultConfig(tempDir, options.config),
         reactions = buildDefaultReactions(options.reactions),
+        questbooks = options.questbooks ?? {},
         auth = buildDefaultAuth(options.auth);
 
     const client = new LevertClient(auth, {
         config,
-        reactions
+        reactions,
+        questbooks
     });
 
     silenceLogger(client.logger);
@@ -410,6 +410,7 @@ async function writeConfigFiles(runtime, configs = {}) {
     const files = {
         "config.json": configs.config ?? runtime.client.config,
         "reactions.json": configs.reactions ?? runtime.client.reactions,
+        "questbooks.json": configs.questbooks ?? runtime.client.questbooks,
         "auth.json": configs.auth ?? {
             owner: runtime.client.owner,
             token: "test-token"

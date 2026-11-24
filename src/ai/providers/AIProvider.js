@@ -4,20 +4,21 @@ import ObjectUtil from "../../util/ObjectUtil.js";
 import AIError from "../../errors/AIError.js";
 
 class AIProvider {
-    static providerName = null;
-
     constructor(http, keys, options) {
-        if (!Util.nonemptyString(this.constructor.providerName)) {
+        const compName = this.constructor.$name;
+
+        if (!Util.nonemptyString(compName)) {
             throw new AIError("AI provider must have a name");
         } else if (typeof this.buildRequest !== "function") {
-            throw new AIError("Child class must have a buildRequest function", this.constructor.providerName);
+            throw new AIError("Child class must have a buildRequest function");
         } else if (typeof this.parseResponse !== "function") {
-            throw new AIError("Child class must have a parseResponse function", this.constructor.providerName);
+            throw new AIError("Child class must have a parseResponse function");
         } else if (typeof this.readStream !== "function") {
-            throw new AIError("Child class must have a readStream function", this.constructor.providerName);
+            throw new AIError("Child class must have a readStream function");
         }
 
         options = ObjectUtil.guaranteeObject(options);
+        this.options = options;
 
         this.http = http;
         this.keys = keys;
@@ -26,15 +27,11 @@ class AIProvider {
     }
 
     get name() {
-        return this.constructor.providerName;
+        return this.constructor.$name;
     }
 
     getErrorMessage(res) {
-        return String(res.data?.error?.message ?? res.statusText ?? "");
-    }
-
-    getErrorReason() {
-        return null;
+        return String(res.data.error?.message ?? res.statusText);
     }
 
     getUnblockDelay() {

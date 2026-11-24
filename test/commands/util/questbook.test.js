@@ -56,7 +56,7 @@ async function setup() {
     runtime = await createCommandRuntime({
         loadVMs: false,
         loadHandlers: true,
-        config: { questbooks: { NFU: { title: "Test Pack", urls: { normal: `${server.url}/normal.json` } } } }
+        questbooks: { NFU: { title: "Test Pack", urls: { normal: `${server.url}/normal.json` } } }
     });
 
     return getCommand(runtime, "questbook");
@@ -176,7 +176,7 @@ describe("questbook command", () => {
         runtime = await createCommandRuntime({
             loadVMs: false,
             loadHandlers: true,
-            config: { questbooks: { big: { title: "Big Pack", urls: { normal: `${server.url}/big.json` } } } }
+            questbooks: { big: { title: "Big Pack", urls: { normal: `${server.url}/big.json` } } }
         });
 
         const replies = [];

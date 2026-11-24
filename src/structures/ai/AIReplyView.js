@@ -220,7 +220,7 @@ class AIReplyView {
             return "Try again in a minute.";
         }
 
-        return `Try again in ${bold(Util.duration(retryIn, { format: true, short: true, largestOnly: true }))}.`;
+        return `Try again in ${bold(AIUtil.formatDuration(retryIn))}.`;
     }
 
     static _getUnavailableReason(status) {
@@ -234,9 +234,7 @@ class AIReplyView {
     }
 
     static _getErrorHint(ref) {
-        if (ref.reason === "ACCESS_TOKEN_TYPE_UNSUPPORTED") {
-            return "Google rejected the new-format (AQ.) key. Use a standard key (starts with AIza) from Google Cloud Console.";
-        } else if (ref.status === httpStatusCodes.UNAUTHORIZED || ref.status === httpStatusCodes.FORBIDDEN) {
+        if (ref.status === httpStatusCodes.UNAUTHORIZED || ref.status === httpStatusCodes.FORBIDDEN) {
             return "The bot's AI API key was rejected.";
         } else if (typeof ref.retryIn === "number") {
             return `${AIReplyView._getUnavailableReason(ref.status)} ${AIReplyView._formatRetry(ref.retryIn)}`;

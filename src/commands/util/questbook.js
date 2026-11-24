@@ -1,4 +1,4 @@
-import { getClient, getConfig, getEmoji } from "../../LevertClient.js";
+import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import PaginationUtil from "../../util/commands/PaginationUtil.js";
@@ -37,7 +37,7 @@ class QuestbookCommand {
     };
 
     load() {
-        if (Util.empty(Object.keys(getConfig().questbooks))) {
+        if (Util.empty(Object.keys(getClient().questbooks))) {
             return false;
         }
     }

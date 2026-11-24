@@ -171,35 +171,6 @@
         "enableEval": {
             "type": "boolean"
         },
-        "questbooks": {
-            "type": "object",
-            "additionalProperties": {
-                "type": "object",
-                "properties": {
-                    "title": {
-                        "type": "string",
-                        "minLength": 1
-                    },
-                    "urls": {
-                        "type": "object",
-                        "properties": {
-                            "normal": {
-                                "type": "string",
-                                "minLength": 1
-                            },
-                            "expert": {
-                                "type": "string",
-                                "minLength": 1
-                            }
-                        },
-                        "required": ["normal"],
-                        "additionalProperties": false
-                    }
-                },
-                "required": ["title", "urls"],
-                "additionalProperties": false
-            }
-        },
         "enableAI": {
             "type": "boolean"
         },
@@ -408,14 +379,6 @@
                 },
                 "allowLocalhostRequests": {
                     "type": "boolean"
-                },
-                "sources": {
-                    "type": "array",
-                    "items": {
-                        "type": "string",
-                        "minLength": 1
-                    },
-                    "uniqueItems": true
                 }
             },
             "required": [
@@ -439,8 +402,7 @@
                 "rateLimitWindow",
                 "followUpsAnyone",
                 "followUpsEditAnswer",
-                "allowLocalhostRequests",
-                "sources"
+                "allowLocalhostRequests"
             ],
             "additionalProperties": false
         }
@@ -490,7 +452,6 @@
         "enablePreviews",
         "enableSed",
         "enableEval",
-        "questbooks",
         "enableAI",
         "enableOtherLangs",
         "enableVM2",
