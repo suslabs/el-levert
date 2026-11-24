@@ -1424,46 +1424,59 @@ describe("a command", () => {
         expect(new Set(searches.filter(query => query !== null))).toEqual(new Set(["a", "b", "c", "d"]));
     });
 
-    test("follows hot ingots to their blast furnace recipe and maps EBF to the pack's machine name", async () => {
-        const recipe = (type, ins, outs, heat = 0) => ({
+    test("passes ranked hot ingot steps through with the card item they belong to", async () => {
+        const hotId = "i:hot_signalum_ingot";
+
+        const recipe = (type, role, idx, ins, outs, extra = {}) => ({
             type,
-            idx: 0,
+            role,
+            idx,
             eu: 7680,
             dur: 938,
             tier: "IV",
-            heat,
+            heat: 0,
             ins,
-            outs
+            outs,
+            variants: [],
+            ...extra
         });
 
-        const items = {
-            "Signalum Ingot": {
-                item: { id: "i:signalum_ingot", name: "Signalum Ingot" },
-                recipes: [
-                    recipe("Crafting", "Block of Signalum (1)", "Signalum Ingot (9)"),
-                    recipe("Vacuum Freezer", "Hot Signalum Ingot (1)", "Signalum Ingot (1)")
-                ]
-            },
-            "Hot Signalum Ingot": {
-                item: { id: "i:hot_signalum_ingot", name: "Hot Signalum Ingot" },
-                recipes: [recipe("Blast Furnace", "Signalum Dust (1), Helium (100L)", "Hot Signalum Ingot (1)", 4000)]
-            }
+        const searchData = {
+            item: { id: "i:signalum_ingot", name: "Signalum Ingot" },
+            machineFilter: null,
+            uses: [],
+            alternatives: [],
+            recipes: [
+                recipe("Blast Furnace", "hot", 0, "Signalum Dust (1), Helium (100L)", "Hot Signalum Ingot (1)", {
+                    heat: 4000,
+                    itemId: hotId,
+                    itemName: "Hot Signalum Ingot"
+                }),
+                recipe("Vacuum Freezer", "cool", 3, "Hot Signalum Ingot (1)", "Signalum Ingot (1)"),
+                recipe("Crafting", "reshape", 1, "Block of Signalum (1)", "Signalum Ingot (9)", {
+                    variants: [{ type: "Crafting", ins: "Signalum Nugget (9)" }]
+                })
+            ]
         };
 
         const script = [
             calls([call("search_recipes", { query: "Signalum Ingot", machine: "EBF" })]),
-            answer(["Blast it."])
+            calls([call("show_recipe", { itemId: hotId, idx: 0 })]),
+            answer(["Blast it, then cool it."])
         ];
 
-        const queries = [];
+        const queries = [],
+            shots = [];
 
         const bodies = await setup(script, {
             routes: {
                 "GET /api/search": ({ url }) => {
-                    const query = url.searchParams.get("q");
-                    queries.push(query);
-
-                    return { json: { machineFilter: null, uses: [], alternatives: [], ...items[query] } };
+                    queries.push(url.searchParams.get("q"));
+                    return { json: searchData };
+                },
+                "GET /api/shot": ({ url }) => {
+                    shots.push(url.searchParams.get("item"));
+                    return { json: { ok: true, abs: "https://codex.test/card.png" } };
                 }
             }
         });
@@ -1471,7 +1484,7 @@ describe("a command", () => {
         await loadSources({
             codex: {
                 type: "recipes",
-                options: { searchUrls: [`${server.url}/api/search`], shotUrl: "x", mode: "normal" }
+                options: { searchUrls: [`${server.url}/api/search`], shotUrl: `${server.url}/api/shot`, mode: "normal" }
             }
         });
 
@@ -1480,12 +1493,26 @@ describe("a command", () => {
         const found = bodies[1].body.contents.at(-1).parts[0].functionResponse.response;
 
         expect(script).toEqual([]);
-        expect(queries).toEqual(["Signalum Ingot", "Hot Signalum Ingot"]);
+        expect(queries).toEqual(["Signalum Ingot"]);
+        expect(shots).toEqual([hotId]);
 
-        expect(found.totalRecipes).toBe(0);
-        expect(found.note).toContain("Vacuum Freezer");
-        expect(found.hotIngot).toMatchObject({ item: { name: "Hot Signalum Ingot" }, totalRecipes: 1 });
-        expect(found.hotIngot.recipes[0]).toMatchObject({ machine: "Blast Furnace", heat: 4000, euPerTick: 7680 });
+        expect(found.machines).toEqual({ "Blast Furnace": 1, "Vacuum Freezer": 1, Crafting: 1 });
+        expect(found.recipes).toEqual([
+            {
+                itemId: hotId,
+                idx: 0,
+                role: "hot",
+                machine: "Blast Furnace",
+                euPerTick: 7680,
+                seconds: 46.9,
+                tier: "IV",
+                heat: 4000,
+                cleanroom: false,
+                inputs: "Signalum Dust (1), Helium (100L)",
+                outputs: "Hot Signalum Ingot (1)"
+            }
+        ]);
+        expect(found).not.toHaveProperty("note");
     });
 
     test("searches the item alone and filters its recipes by machine type", async () => {
@@ -1624,18 +1651,20 @@ describe("a command", () => {
         expect(session.spec.history.at(-1)).toMatchObject({ role: "model", expert: true });
     });
 
-    test("finds the main recipe, flags reshaping recipes and shows the recipe card", async () => {
+    test("passes recipe roles and merged variants through and shows the recipe card", async () => {
         const itemId = "i:nomilabs:meta_dust:10";
 
-        const recipe = (type, idx, ins) => ({
+        const recipe = (type, idx, ins, role, variants = []) => ({
             type,
             idx,
+            role,
             eu: 1920,
             dur: 300,
             tier: "EV",
             heat: 0,
             ins,
-            outs: "Signalum Dust (4)"
+            outs: "Signalum Dust (4)",
+            variants
         });
 
         const searchData = {
@@ -1643,9 +1672,11 @@ describe("a command", () => {
             machineFilter: null,
             hotChain: false,
             recipes: [
-                recipe("Mixer", 0, "Annealed Copper Dust (4), Ardite Dust (2), Red Alloy Dust (2)"),
-                recipe("Crafting", 21, "Tiny Pile of Signalum Dust (9)"),
-                recipe("Sag Mill", 23, "Signalum Ingot (1)")
+                recipe("Mixer", 0, "Annealed Copper Dust (4), Ardite Dust (2), Red Alloy Dust (2)", "make"),
+                recipe("Crafting", 21, "Tiny Pile of Signalum Dust (9)", "reshape", [
+                    { type: "Packager", ins: "Small Pile of Signalum Dust (4)" }
+                ]),
+                recipe("Pulverization", 23, "Signalum Ingot (1)", "reshape")
             ],
             uses: [],
             alternatives: [{ name: "Signalum Ingot" }]
@@ -1696,10 +1727,19 @@ describe("a command", () => {
         const found = bodies[1].body.contents.at(-1).parts[0].functionResponse.response;
 
         expect(found).not.toHaveProperty("source");
-        expect(found.recipes.map(entry => [entry.machine, entry.idx, entry.seconds, entry.fromSameMaterial])).toEqual([
-            ["Mixer", 0, 15, false],
-            ["Crafting", 21, 15, true],
-            ["Sag Mill", 23, 15, true]
+        expect(
+            found.recipes.map(entry => [
+                entry.itemId,
+                entry.machine,
+                entry.idx,
+                entry.role,
+                entry.seconds,
+                entry.alsoIn
+            ])
+        ).toEqual([
+            [itemId, "Mixer", 0, "make", 15, undefined],
+            [itemId, "Crafting", 21, "reshape", 15, ["Packager"]],
+            [itemId, "Pulverization", 23, "reshape", 15, undefined]
         ]);
 
         const embed = embedOf(recorder.sent.at(-1));

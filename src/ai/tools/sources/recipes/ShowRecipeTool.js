@@ -17,8 +17,10 @@ class ShowRecipeTool extends SourceTool {
             "Render one recipe from search_recipes as an image card and show it with your answer. Call it once, for the recipe the user most likely means.",
         parameters: ToolParams.object(
             {
-                itemId: ToolParams.string("Item ID from search_recipes."),
-                idx: ToolParams.integer("Recipe idx from search_recipes."),
+                itemId: ToolParams.string(
+                    "The recipe's itemId from search_recipes (hot ingot EBF steps use the hot ingot's)."
+                ),
+                idx: ToolParams.integer("The recipe's idx from search_recipes."),
                 expert: ToolParams.boolean("Use expert (hard) mode recipes.")
             },
             ["itemId", "idx"]
