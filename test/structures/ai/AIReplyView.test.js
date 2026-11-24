@@ -179,4 +179,15 @@ describe("AIReplyView", () => {
             description: expect.stringContaining("Ran out of time.")
         });
     });
+
+    test("reads expert mode back from an answer's footer", async () => {
+        const { default: AIReplyView } = await import("../../../src/structures/ai/AIReplyView.js");
+
+        const message = text => ({ embeds: [{ description: "Answer.", footer: { text } }] });
+
+        expect(AIReplyView.isExpertAnswer(message("Models: m | 10 tok | 1s | Expert mode"))).toBe(true);
+        expect(AIReplyView.isExpertAnswer(message("Models: m | 10 tok | 1s"))).toBe(false);
+        expect(AIReplyView.isExpertAnswer({ embeds: [{ description: "No footer." }] })).toBe(false);
+        expect(AIReplyView.isExpertAnswer({ embeds: [] })).toBe(false);
+    });
 });

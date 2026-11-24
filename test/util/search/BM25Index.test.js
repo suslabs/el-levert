@@ -38,4 +38,18 @@ describe("BM25Index", () => {
         expect(index.search("the")).toEqual([]);
         expect(new BM25Index({ text: 1 }).search("steel")).toEqual([]);
     });
+
+    test("matches word starts at a lower weight when prefix matching is on", () => {
+        const index = new BM25Index({ title: 1 }, { prefixWeight: 0.5 });
+
+        index.add({ title: "Electric Blast Furnace" });
+        index.add({ title: "Elec" });
+        index.add({ title: "Steam Boiler" });
+
+        const results = index.search("elec").map(res => res.doc.title);
+        expect(results).toEqual(["Elec", "Electric Blast Furnace"]);
+
+        expect(new BM25Index({ title: 1 }).search("elec")).toEqual([]);
+        expect(index.search("el").map(res => res.doc.title)).toEqual([]);
+    });
 });

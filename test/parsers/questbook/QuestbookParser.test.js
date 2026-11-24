@@ -98,11 +98,13 @@ describe("QuestbookParser", () => {
             [acid, miner, cake] = book.quests;
 
         expect(book.packName).toBe("Nomifactory");
+        expect(book.packVersion).toBeNull();
 
         expect(miner).toEqual({
             id: "65",
             name: "Tier Three Micro Miner",
-            desc: "The Third Micro Miner. You'll need that Boron in the MV Field Generators.",
+            desc: "The Third Micro Miner. §2You'll need that Boron in the MV Field Generators.§r",
+            logic: null,
             icon: { id: "nomilabs:tierthreeship", damage: 0, count: 1, oreDict: null },
             main: true,
             visibility: "ALWAYS",
@@ -145,6 +147,7 @@ describe("QuestbookParser", () => {
         ]);
         expect(cake.tasks).toEqual([{ type: "bq_standard:checkbox", items: [], fluids: [] }]);
         expect(cake.desc).toBe("");
+        expect(acid.desc).toBe("§9Sulfuric Acid§r is mainly produced in a 3-step process");
     });
 
     test("parses quest lines in their stored order", () => {
@@ -161,6 +164,17 @@ describe("QuestbookParser", () => {
 
         expect(() => QuestbookParser.parse({ "questLines:9": {} })).toThrow(ParserError);
         expect(() => QuestbookParser.parse(null)).toThrow("Invalid questbook: no quest database found");
+    });
+
+    test("turns Minecraft formatting codes into Discord markdown", () => {
+        expect(QuestbookParser.formatMarkdown("§6Gold§r and §lbold§r, §oitalic §nunder§r")).toBe(
+            "**Gold** and **bold**, *italic __under__*"
+        );
+        expect(QuestbookParser.formatMarkdown("§l§6Both§r end")).toBe("**Both** end");
+        expect(QuestbookParser.formatMarkdown("§fwhite§r text")).toBe("white text");
+        expect(QuestbookParser.formatMarkdown("Ores:\n§6* Tin\n* Copper§r")).toBe("Ores:\n**- Tin\n- Copper**");
+        expect(QuestbookParser.formatMarkdown("§6 §r plain")).toBe("plain");
+        expect(QuestbookParser.formatMarkdown(null)).toBe("");
     });
 
     test("strips Minecraft formatting codes", () => {

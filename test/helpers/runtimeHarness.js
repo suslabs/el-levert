@@ -76,19 +76,23 @@ function buildDefaultConfig(tempDir, overrides = {}) {
             port: inspectorPort,
             ...vmInspector
         },
+        questbooks: {},
         enableAI: false,
         ai: {
             name: "Test Rabbit",
             icon: "https://example.test/icon.png",
             promptsPath: path.join(repoRoot, "src/ai/prompts"),
-            endpoint: "http://127.0.0.1:1/v1beta",
+            endpoints: { gemini: "http://127.0.0.1:1/v1beta", openrouter: "http://127.0.0.1:1/api/v1" },
             models: ["test-model"],
             thinkingLevel: "minimal",
             toolThinkingLevel: "low",
             maxSteps: 6,
+            quickMaxSteps: 2,
             timeLimit: 10 / Util.durationSeconds.milli,
             unlimitedTimeForAdmins: true,
             requestTimeout: 2 / Util.durationSeconds.milli,
+            modelCooldown: 0,
+            maxModelCooldown: 0,
             maxDownloadSize: 10 * Util.dataBytes.megabyte,
             maxToolOutput: 12000,
             maxRequests: 100,
@@ -248,9 +252,13 @@ async function loadRuntimeManagers(client, Managers, config, auth) {
                     }
                 ]
             },
+            questbookManager: {
+                enabled: !Util.empty(Object.keys(config.questbooks)),
+                args: [true, config.questbooks]
+            },
             aiManager: {
                 enabled: config.enableAI,
-                args: [true, auth.geminiKey]
+                args: [true, { gemini: auth.geminiKey, openrouter: auth.openrouterKey }]
             }
         },
         {

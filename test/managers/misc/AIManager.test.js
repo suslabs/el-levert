@@ -19,8 +19,8 @@ describe("AIManager", () => {
         expect(runtime.client.aiManager).toBeUndefined();
     });
 
-    test("refuses to load without a gemini key", async () => {
-        await expect(createCommandRuntime({ config: { enableAI: true } })).rejects.toThrow("no Gemini API key");
+    test("refuses to load without any AI key", async () => {
+        await expect(createCommandRuntime({ config: { enableAI: true } })).rejects.toThrow("no API key was provided");
     });
 
     test("refuses to load when a prompt file is missing", async () => {
@@ -33,7 +33,7 @@ describe("AIManager", () => {
                     config: { enableAI: true, ai: { promptsPath } },
                     auth: { geminiKey: "test-key" }
                 })
-            ).rejects.toThrow("Missing AI prompt files: finisher, inspectImage");
+            ).rejects.toThrow("Missing AI prompt files: triage, inspectImage");
         } finally {
             await fs.rm(promptsPath, { recursive: true, force: true });
         }
@@ -57,7 +57,7 @@ describe("AIManager", () => {
         const manager = runtime.client.aiManager;
 
         expect(manager.maxSteps).toBe(6);
-        expect(manager.finisher.instructions).toContain("followUps");
+        expect(manager.prompt.instructions).toContain("[[EXTRAS]]");
         expect(manager.prompt.instructions).toContain("## ANSWER FORMAT");
         expect(manager.prompts.inspectImage).toContain("Describe this image");
         expect(Array.from(manager.tools.tools.keys())).toEqual([
@@ -70,6 +70,7 @@ describe("AIManager", () => {
             "show_recipe",
             "search_wikipedia",
             "read_wikipedia",
+            "search_script_docs",
             "search_web",
             "fetch_web_page",
             "execute_javascript",

@@ -11,6 +11,7 @@ describe("managers index", () => {
             "gatewayManager",
             "inputManager",
             "permManager",
+            "questbookManager",
             "reminderManager",
             "tagManager",
             "websocketCommandManager"

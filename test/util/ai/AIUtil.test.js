@@ -18,6 +18,11 @@ describe("AIUtil", () => {
         expect(AIUtil.pageText(text, { maxChars: 99999 }).text).toHaveLength(6000);
     });
 
+    test("formats elapsed time in milliseconds", () => {
+        expect(AIUtil.formatElapsed(Date.now() - 1500)).toMatch(/^1,5\d\d ms$/);
+        expect(AIUtil.formatElapsed(Date.now())).toMatch(/^\d ms$/);
+    });
+
     test("cleans lists and formats questions", () => {
         expect(AIUtil.cleanList([" a ", "", "a", 3, null])).toEqual(["a", "3", "null"]);
         expect(AIUtil.cleanList(null)).toEqual([]);

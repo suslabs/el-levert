@@ -48,20 +48,53 @@ const answer = (pieces, tokens = 100, reasoning = 0) =>
         ...usage(tokens, reasoning)
     });
 
-const extras = (followUps, sources, tokens = 50) => ({
-    json: {
-        candidates: [{ content: { role: "model", parts: [{ text: JSON.stringify({ followUps, sources }) }] } }],
-        ...usage(tokens)
+const extras = (followUps, sources) => ({ extras: { followUps, sources } });
+
+const trailer = ({ followUps, sources }) =>
+    [
+        "\n[[EXTRAS]]",
+        "Follow-ups:",
+        ...followUps.map(item => `- ${item}`),
+        "Sources:",
+        ...sources.map(item => `- ${item}`)
+    ].join("\n");
+
+const withExtras = (res, next) => {
+    if (typeof next?.extras === "undefined" || typeof res?.body !== "string") {
+        return res;
     }
+
+    return { ...res, body: res.body + `data: ${JSON.stringify(chunk([{ text: trailer(next.extras) }]))}\r\n\r\n` };
+};
+
+const triage = effort => ({
+    json: { candidates: [{ content: { role: "model", parts: [{ text: JSON.stringify({ effort }) }] } }], ...usage(10) }
 });
 
+const isTriage = body => typeof body.generationConfig?.responseSchema?.properties?.effort !== "undefined";
+
 async function setup(script, options = {}) {
-    const bodies = [];
+    const bodies = [],
+        triages = [];
 
     const route = path => ({
         [`POST ${path}`]: ({ body, req }) => {
-            bodies.push({ path, key: req.headers["x-goog-api-key"], body: JSON.parse(body) });
-            return script.shift();
+            const data = JSON.parse(body);
+
+            if (isTriage(data)) {
+                triages.push(data);
+                return options.triage?.(data) ?? triage("research");
+            }
+
+            bodies.push({ path, key: req.headers["x-goog-api-key"], body: data });
+
+            const res = withExtras(script.shift(), Util.first(script));
+
+            if (typeof Util.first(script)?.extras !== "undefined") {
+                script.shift();
+            }
+
+            return res;
         }
     });
 
@@ -82,7 +115,7 @@ async function setup(script, options = {}) {
             enableAI: true,
             enableEval: options.loadVMs ?? false,
             ai: {
-                endpoint: `${server.url}/v1beta`,
+                endpoints: { gemini: `${server.url}/v1beta`, openrouter: `${server.url}/api/v1` },
                 models: options.models ?? ["test-model"],
                 sources: options.sources?.(server.url) ?? [],
                 ...options.ai
@@ -95,6 +128,7 @@ async function setup(script, options = {}) {
         }
     });
 
+    bodies.triages = triages;
     return bodies;
 }
 
@@ -105,6 +139,13 @@ async function loadSources(definitions) {
 
     manager.sources = new AISourceRegistry(manager.http, manager.requestTimeout);
     await manager.sources.load(definitions);
+}
+
+async function loadQuestbooks(configs) {
+    const { default: QuestbookManager } = await import("../../../src/managers/misc/QuestbookManager.js");
+
+    runtime.client.questbookManager = new QuestbookManager(true, configs);
+    await runtime.client.questbookManager.load();
 }
 
 function createSentMessage(id) {
@@ -262,16 +303,12 @@ describe("a command", () => {
         await getCommand(runtime, "a").handler(createAskContext("how do I make steel", recorder));
 
         expect(script).toEqual([]);
-        expect(bodies.map(entry => entry.path)).toEqual([
-            streamPath("test-model"),
-            streamPath("test-model"),
-            generatePath("test-model")
-        ]);
+        expect(bodies.map(entry => entry.path)).toEqual([streamPath("test-model"), streamPath("test-model")]);
 
         expect(bodies[0].key).toBe("test-key");
         expect(bodies[0].body.toolConfig.functionCallingConfig.mode).toBe("AUTO");
         expect(bodies[0].body.generationConfig.thinkingConfig.thinkingLevel).toBe("low");
-        expect(bodies[2].body.generationConfig.thinkingConfig.thinkingLevel).toBe("minimal");
+        expect(bodies[1].body.systemInstruction).toEqual(bodies[0].body.systemInstruction);
         expect(bodies[0].body.systemInstruction.parts[0].text).toContain(`<@${askerId}>`);
         expect(bodies[0].body.systemInstruction.parts[0].text).toContain("## ANSWER FORMAT");
         expect(bodies[0].body.tools[0].functionDeclarations.map(decl => decl.name)).not.toContain("search_recipes");
@@ -281,18 +318,6 @@ describe("a command", () => {
         expect(search.id).toBe("c1");
         expect(Util.first(search.response.tags)).toMatchObject({ source: "tag:steel", name: "steel" });
         expect(convert.response).toMatchObject({ result: 2.88, output: "2.88 B/s" });
-
-        const finishBody = bodies[2].body,
-            finishInput = JSON.parse(finishBody.contents[0].parts[0].text);
-
-        expect(finishBody.generationConfig.responseMimeType).toBe("application/json");
-        expect(finishBody.generationConfig.responseSchema.properties.followUps).toMatchObject({
-            minItems: 3,
-            maxItems: 5
-        });
-        expect(finishInput.question).toBe("how do I make steel");
-        expect(finishInput.answer).toBe("Use the **EBF** to make steel. 144 mB/t is 2.88 B/s.");
-        expect(finishInput.candidates).toContain("tag:steel");
 
         expect(recorder.replies).toBe(1);
         expect(recorder.sent).not.toContain(":hourglass_flowing_sand: Processing command...");
@@ -307,7 +332,7 @@ describe("a command", () => {
             color: 0x75fa4c,
             description:
                 "Use the **EBF** to make steel. 144 mB/t is 2.88 B/s.\n\nSources:\n1. tag:steel\n\nFollow-ups:\n1. What coils does the EBF need?",
-            footer: { text: expect.stringMatching(/^Models: test-model \| 1,500 tok, 30 reasoning \| \d+(\.\d)?s$/) }
+            footer: { text: expect.stringMatching(/^Models: test-model \| 1,410 tok, 30 reasoning \| \d+(\.\d)?s$/) }
         });
 
         const [button] = buttonsOf(recorder.sent.at(-1));
@@ -354,7 +379,7 @@ describe("a command", () => {
         const click = createClick(buttons[0].custom_id, clicker, recorder.msg);
         await expect(runtime.client.interactionHandler.execute(click.interaction)).resolves.toBe(true);
 
-        const body = bodies[2].body,
+        const body = bodies[1].body,
             toolNames = body.tools[0].functionDeclarations.map(decl => decl.name);
 
         expect(body.contents.map(content => content.role)).toEqual(["user", "model", "user"]);
@@ -391,7 +416,7 @@ describe("a command", () => {
         const other = createClick(button.custom_id, createDiscordUser({ id: clickerId }), recorder.msg);
         await runtime.client.interactionHandler.execute(other.interaction);
 
-        expect(bodies).toHaveLength(2);
+        expect(bodies).toHaveLength(1);
         expect(other.reply.payloads[0].content).toContain("Only the command caller");
 
         const asker = createClick(button.custom_id, createDiscordUser({ id: askerId }), recorder.msg);
@@ -519,19 +544,19 @@ describe("a command", () => {
 
         const textsOf = body => body.contents.map(content => [content.role, content.parts[0].text]);
 
-        expect(textsOf(bodies[2].body)).toEqual([
+        expect(textsOf(bodies[1].body)).toEqual([
             ["user", "hello"],
             ["model", "First answer."],
             ["user", "and then?"]
         ]);
 
-        expect(bodies[2].body.systemInstruction.parts[0].text).not.toContain("The question replies to a message");
+        expect(bodies[1].body.systemInstruction.parts[0].text).not.toContain("The question replies to a message");
         expect(messages.get("q-2-answer").embeds[0].description).toBe("Second answer.");
 
         const chained = createUserMsg("q-3", "and after that?", replyTo("q-2-answer"));
         await expect(handler.execute(chained)).resolves.toBe(true);
 
-        expect(textsOf(bodies[4].body)).toEqual([
+        expect(textsOf(bodies[2].body)).toEqual([
             ["user", "hello"],
             ["model", "First answer."],
             ["user", "and then?"],
@@ -634,12 +659,13 @@ describe("a command", () => {
         await getCommand(runtime, "a").handler(createAskContext("convert", recorder));
 
         const modeOf = entry => [
-            entry.body.toolConfig.functionCallingConfig.mode,
+            entry.body.toolConfig?.functionCallingConfig.mode ?? null,
             entry.body.generationConfig.thinkingConfig.thinkingLevel
         ];
 
         expect(modeOf(bodies[0])).toEqual(["AUTO", "low"]);
-        expect(modeOf(bodies[1])).toEqual(["NONE", "minimal"]);
+        expect(modeOf(bodies[1])).toEqual([null, "minimal"]);
+        expect(bodies[1].body.tools).toBeUndefined();
         expect(embedOf(recorder.sent.at(-1)).description).toBe("1000 mB.");
     });
 
@@ -659,12 +685,14 @@ describe("a command", () => {
         expect(bodies.map(entry => entry.path)).toEqual([
             streamPath("test-model"),
             streamPath("test-model"),
-            streamPath("fallback-model"),
-            generatePath("fallback-model")
+            streamPath("fallback-model")
         ]);
 
         expect(bodies[1].body.generationConfig).toBeUndefined();
-        expect(embedOf(recorder.sent.at(-1)).footer.text).toMatch(/^Models: fallback-model \| 15 tok \| [\d.]+s$/);
+        expect(bodies[2].body.generationConfig.thinkingConfig).toEqual({ thinkingLevel: "low" });
+        expect(embedOf(recorder.sent.at(-1)).footer.text).toMatch(
+            /^Models: test-model, fallback-model \| 20 tok \| [\d.]+s$/
+        );
     });
 
     test("switches to the next model when one gets overloaded mid-answer", async () => {
@@ -683,14 +711,13 @@ describe("a command", () => {
         expect(bodies.map(entry => entry.path)).toEqual([
             streamPath("test-model"),
             streamPath("test-model"),
-            streamPath("fallback-model"),
-            generatePath("fallback-model")
+            streamPath("fallback-model")
         ]);
 
         const embed = embedOf(recorder.sent.at(-1));
 
         expect(embed.description).toBe("1 B is 1000 mB.");
-        expect(embed.footer.text).toMatch(/^Models: test-model, fallback-model \| 35 tok \| [\d.]+s$/);
+        expect(embed.footer.text).toMatch(/^Models: test-model, fallback-model \| 40 tok \| [\d.]+s$/);
     });
 
     test("restarts an answer on the next model when the stream stops partway", async () => {
@@ -710,8 +737,7 @@ describe("a command", () => {
         expect(bodies.map(entry => entry.path)).toEqual([
             streamPath("test-model"),
             streamPath("fallback-model"),
-            streamPath("third-model"),
-            generatePath("third-model")
+            streamPath("third-model")
         ]);
 
         const progress = recorder.sent.slice(0, -1).map(payload => embedOf(payload).description);
@@ -720,7 +746,73 @@ describe("a command", () => {
         const embed = embedOf(recorder.sent.at(-1));
 
         expect(embed.description).toBe("A complete answer.");
-        expect(embed.footer.text).toMatch(/^Models: third-model \| /);
+        expect(embed.footer.text).toMatch(/^Models: test-model, third-model \| /);
+    });
+
+    test("blocks a usage-limited model until its reset but retries an overloaded one next time", async () => {
+        let limitedHits = 0,
+            overloadedHits = 0;
+
+        const limited = () => {
+            limitedHits++;
+
+            return {
+                statusCode: 429,
+                json: {
+                    error: {
+                        message: "Quota exceeded.",
+                        details: [{ "@type": "type.googleapis.com/google.rpc.RetryInfo", retryDelay: "60s" }]
+                    }
+                }
+            };
+        };
+
+        const overloaded = () => {
+            overloadedHits++;
+            return { statusCode: 503, json: { error: { message: "High demand." } } };
+        };
+
+        await setup([answer(["First."]), answer(["Second."])], {
+            models: ["test-model", "busy-model", "fallback-model"],
+            ai: { models: ["test-model", "busy-model", "fallback-model"] },
+            routes: {
+                [`POST ${streamPath("test-model")}`]: limited,
+                [`POST ${streamPath("busy-model")}`]: overloaded
+            }
+        });
+
+        await getCommand(runtime, "a").handler(createAskContext("first", createRecorder()));
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("second", recorder));
+
+        expect(limitedHits).toBe(1);
+        expect(overloadedHits).toBe(2);
+        expect(embedOf(recorder.sent.at(-1)).description).toBe("Second.");
+    });
+
+    test("says when to try again once every model is usage-limited", async () => {
+        const limited = {
+            statusCode: 429,
+            json: {
+                error: {
+                    message: "Quota exceeded.",
+                    details: [{ "@type": "type.googleapis.com/google.rpc.RetryInfo", retryDelay: "45s" }]
+                }
+            }
+        };
+
+        await setup([limited]);
+
+        await getCommand(runtime, "a").handler(createAskContext("first", createRecorder()));
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("second", recorder));
+
+        const description = embedOf(recorder.sent.at(-1)).description;
+
+        expect(description).toContain("All models are unavailable right now.");
+        expect(description).toMatch(/The AI usage limits are used up for now\. Try again in \*\*4\ds\*\*\./);
     });
 
     test("shows a short error without the raw response when every model is overloaded", async () => {
@@ -736,18 +828,115 @@ describe("a command", () => {
         const description = embedOf(recorder.sent.at(-1)).description;
 
         expect(description).toContain("All models are unavailable right now.");
-        expect(description).toContain("Gemini is overloaded right now");
+        expect(description).toContain("The AI models are overloaded right now");
         expect(description).not.toContain("high demand");
     });
 
-    test("tries the next API key when one runs out of quota and keeps using it", async () => {
-        const script = [
-            { statusCode: 429, json: { error: { message: "Resource exhausted." } } },
-            answer(["ok"]),
-            extras([], []),
-            answer(["again"]),
-            extras([], [])
+    test("falls back to an OpenRouter model that can call tools", async () => {
+        const chat = (...events) => ({
+            headers: { "content-type": "text/event-stream" },
+            body: [...events.map(event => `data: ${JSON.stringify(event)}\n\n`), "data: [DONE]\n\n"].join("")
+        });
+
+        const replies = [
+            chat(
+                {
+                    choices: [
+                        {
+                            delta: {
+                                tool_calls: [
+                                    {
+                                        index: 0,
+                                        id: "or1",
+                                        function: {
+                                            name: "unit_convert",
+                                            arguments: '{"value":1,"from":"B","to":"mB"}'
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                { choices: [{ delta: {}, finish_reason: "tool_calls" }], usage: { total_tokens: 30 } }
+            ),
+            chat(
+                { choices: [{ delta: { content: "1 B is **1000 mB**." } }] },
+                { choices: [{ delta: { content: "\n[[EXTRAS]]\nFollow-ups:\n- what about 2 B\nSources:" } }] },
+                { choices: [{ delta: {}, finish_reason: "stop" }], usage: { total_tokens: 40 } }
+            )
         ];
+
+        const requests = [];
+
+        await setup([{ statusCode: 503, json: { error: { message: "High demand." } } }], {
+            ai: { models: ["test-model", "openrouter:vendor/model:free"] },
+            auth: { geminiKey: "test-key", openrouterKey: "sk-or-test" },
+            routes: {
+                "POST /api/v1/chat/completions": ({ body, req }) => {
+                    requests.push({ auth: req.headers.authorization, body: JSON.parse(body) });
+                    return replies.shift();
+                }
+            }
+        });
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("1 bucket in mB?", recorder));
+
+        expect(replies).toEqual([]);
+        expect(requests.map(request => [request.auth, request.body.model])).toEqual([
+            ["Bearer sk-or-test", "vendor/model:free"],
+            ["Bearer sk-or-test", "vendor/model:free"]
+        ]);
+
+        const toolMessage = requests[1].body.messages.find(message => message.role === "tool");
+        expect(toolMessage.tool_call_id).toBe("or1");
+        expect(JSON.parse(toolMessage.content)).toMatchObject({ result: 1000 });
+
+        const final = recorder.sent.at(-1);
+
+        expect(embedOf(final).description).toContain("1 B is **1000 mB**.");
+        expect(embedOf(final).footer.text).toMatch(/^Models: test-model, openrouter:vendor\/model:free \| 80 tok \| /);
+        expect(buttonsOf(final).map(button => button.label)).toEqual(["1"]);
+    });
+
+    test("tries the same model on the next key before moving to the next model", async () => {
+        const overloaded = { statusCode: 503, json: { error: { message: "High demand." } } },
+            cut = sse(chunk([{ text: "Half" }]), { error: { code: 503, message: "Overloaded." } });
+
+        const script = [overloaded, cut, overloaded, answer(["Done."])];
+
+        const bodies = await setup(script, {
+            models: ["test-model", "fallback-model"],
+            ai: { models: ["test-model", "fallback-model"] },
+            auth: { geminiKey: ["key-a", "key-b"] }
+        });
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("hi", recorder));
+
+        expect(script).toEqual([]);
+        expect(bodies.map(entry => [entry.path, entry.key])).toEqual([
+            [streamPath("test-model"), "key-a"],
+            [streamPath("test-model"), "key-b"],
+            [streamPath("fallback-model"), "key-a"],
+            [streamPath("fallback-model"), "key-b"]
+        ]);
+        expect(embedOf(recorder.sent.at(-1)).description).toBe("Done.");
+    });
+
+    test("tries keys in order and skips a key until Google says its quota is back", async () => {
+        const limited = {
+            statusCode: 429,
+            json: {
+                error: {
+                    message: "Resource exhausted.",
+                    details: [{ "@type": "type.googleapis.com/google.rpc.RetryInfo", retryDelay: "60s" }]
+                }
+            }
+        };
+
+        const script = [limited, answer(["ok"]), extras([], []), answer(["again"]), extras([], [])];
 
         const bodies = await setup(script, { auth: { geminiKey: ["key-1", "key-2"] } });
 
@@ -755,7 +944,7 @@ describe("a command", () => {
         await getCommand(runtime, "a").handler(createAskContext("hi again", createRecorder()));
 
         expect(script).toEqual([]);
-        expect(bodies.map(entry => entry.key)).toEqual(["key-1", "key-2", "key-2", "key-2", "key-2"]);
+        expect(bodies.map(entry => entry.key)).toEqual(["key-1", "key-2", "key-2"]);
     });
 
     test("limits how often each user can ask", async () => {
@@ -768,14 +957,13 @@ describe("a command", () => {
         const recorder = createRecorder();
         await getCommand(runtime, "a").handler(createAskContext("hi again", recorder));
 
-        expect(bodies).toHaveLength(2);
+        expect(bodies).toHaveLength(1);
         expect(recorder.sent).toHaveLength(1);
         expect(recorder.sent[0]).toMatch(/You are asking too fast\. Please slow down! \(\*\*\d+s\*\*\)/);
     });
 
-    test("still posts the answer when sources and follow-ups can't be added", async () => {
-        const broken = { json: { candidates: [{ content: { parts: [{ text: "not json" }] } }] } };
-        await setup([answer(["The answer."]), broken]);
+    test("posts the answer without buttons when it has no follow-ups block", async () => {
+        await setup([answer(["The answer."])]);
 
         const recorder = createRecorder();
         await getCommand(runtime, "a").handler(createAskContext("hi", recorder));
@@ -786,7 +974,25 @@ describe("a command", () => {
         expect(final.components).toEqual([]);
     });
 
-    test("reports a slow Gemini response as an error instead of crashing", async () => {
+    test("skips a model that takes too long and answers with the next one", async () => {
+        const slow = () => new Promise(resolve => setTimeout(() => resolve(answer(["late"])), 1500));
+
+        await setup([answer(["From the fallback."]), extras([], [])], {
+            ai: { requestTimeout: 100, models: ["test-model", "fallback-model"] },
+            models: ["test-model", "fallback-model"],
+            routes: { [`POST ${streamPath("test-model")}`]: slow }
+        });
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("hi", recorder));
+
+        const embed = embedOf(recorder.sent.at(-1));
+
+        expect(embed.description).toBe("From the fallback.");
+        expect(embed.footer.text).toMatch(/^Models: test-model, fallback-model \| /);
+    });
+
+    test("reports every model being too slow as an error instead of crashing", async () => {
         const slow = () => new Promise(resolve => setTimeout(() => resolve(answer(["late"])), 1500));
 
         await setup([], {
@@ -800,22 +1006,66 @@ describe("a command", () => {
         const embed = embedOf(recorder.sent.at(-1));
 
         expect(embed.color).toBe(0xed4245);
-        expect(embed.description).toContain("Gemini took too long to respond.");
+        expect(embed.description).toContain("All models are unavailable right now.");
     });
 
-    test("admins wait for slow Gemini responses", async () => {
-        const slow = () => new Promise(resolve => setTimeout(() => resolve(answer(["Worth the wait."])), 300));
+    test("answers quick questions briefly with a smaller step budget", async () => {
+        const script = [
+            calls([call("find_users", { query: "sloppa" })]),
+            answer(["**Sloppa** is a member here."]),
+            extras(["Who else is in the server?"], [])
+        ];
 
-        await setup([extras([], [])], {
-            ai: { requestTimeout: 100 },
-            auth: { geminiKey: "test-key", owner: askerId },
-            routes: { [`POST ${streamPath("test-model")}`]: slow }
-        });
+        const bodies = await setup(script, { triage: () => triage("quick") });
 
         const recorder = createRecorder();
-        await getCommand(runtime, "a").handler(createAskContext("hi", recorder));
+        await getCommand(runtime, "a").handler(createAskContext("who is sloppa", recorder));
 
-        expect(embedOf(recorder.sent.at(-1)).description).toBe("Worth the wait.");
+        expect(script).toEqual([]);
+        expect(bodies.triages).toHaveLength(1);
+        expect(bodies.triages[0].contents.at(-1).parts[0].text).toBe("who is sloppa");
+
+        const [lookup, final] = bodies.map(entry => entry.body);
+
+        expect(lookup.systemInstruction.parts[0].text).toContain("- Effort: quick");
+        expect(lookup.toolConfig.functionCallingConfig.mode).toBe("AUTO");
+        expect(final.tools).toBeUndefined();
+
+        expect(embedOf(recorder.sent.at(-1)).description).toContain("**Sloppa** is a member here.");
+    });
+
+    test("ignores tool calls the model makes on its last step", async () => {
+        const script = [
+            calls([call("find_users", { query: "pexa" })]),
+            sse(chunk([{ text: "No member called **pexa** here." }, call("search_wikipedia", { query: "pexa" })]), {
+                ...chunk([], { finishReason: "STOP" }),
+                ...usage(10)
+            }),
+            extras([], [])
+        ];
+
+        const bodies = await setup(script, { triage: () => triage("quick") });
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("who is pexa", recorder));
+
+        expect(script).toEqual([]);
+        expect(bodies[1].body.tools).toBeUndefined();
+        expect(bodies[1].body.contents.at(-1).parts.at(-1).text).toContain("Tools are no longer available.");
+        expect(embedOf(recorder.sent.at(-1)).description).toContain("No member called **pexa** here.");
+    });
+
+    test("treats a question as research when triage fails", async () => {
+        const script = [answer(["Thorough answer."]), extras([], [])];
+
+        const bodies = await setup(script, { triage: () => ({ json: { candidates: [] } }) });
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("how do I make steel", recorder));
+
+        expect(bodies[0].body.systemInstruction.parts[0].text).toContain("- Effort: research");
+        expect(bodies[0].body.toolConfig.functionCallingConfig.mode).toBe("AUTO");
+        expect(embedOf(recorder.sent.at(-1)).description).toBe("Thorough answer.");
     });
 
     test("admins skip the cooldown", async () => {
@@ -1039,9 +1289,83 @@ describe("a command", () => {
         }
 
         expect(results.map(embed => embed.color)).toEqual([0xed4245, 0xed4245, 0xed4245]);
-        expect(results[0].description).toContain("quota is used up");
+        expect(results[0].description).toContain("usage limits are used up");
         expect(results[1].description).toContain("AIza");
         expect(results[2].description).toContain("The model returned no answer (SAFETY)");
+    });
+
+    test("switches to expert mode for items only in it and keeps using it", async () => {
+        const itemId = "i:nomilabs:stabilized_miner";
+
+        const expertData = {
+            item: { id: itemId, name: "Stabilized Micro Miner" },
+            machineFilter: null,
+            recipes: [
+                {
+                    type: "Assembler",
+                    idx: 0,
+                    eu: 480,
+                    dur: 200,
+                    tier: "HV",
+                    heat: 0,
+                    ins: "Hull (1)",
+                    outs: "Miner (1)"
+                }
+            ],
+            uses: [],
+            alternatives: []
+        };
+
+        const script = [
+            calls([call("search_recipes", { query: "stabilized micro miner" })]),
+            calls([call("show_recipe", { itemId, idx: 0 })]),
+            answer(["Stabilized Micro Miners are expert-only."]),
+            extras(["What does it mine?"], [])
+        ];
+
+        const searches = [],
+            shots = [];
+
+        const bodies = await setup(script, {
+            routes: {
+                "GET /api/search": ({ url }) => {
+                    const params = Object.fromEntries(url.searchParams);
+                    searches.push(params.mode);
+
+                    return { json: params.mode === "expert" ? expertData : { error: "not found", alternatives: [] } };
+                },
+                "GET /api/shot": ({ url }) => {
+                    shots.push(url.searchParams.get("mode"));
+                    return { json: { ok: true, abs: "https://codex.test/card.png" } };
+                }
+            }
+        });
+
+        await loadSources({
+            codex: {
+                type: "recipes",
+                options: { searchUrls: [`${server.url}/api/search`], shotUrl: `${server.url}/api/shot`, mode: "normal" }
+            }
+        });
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("how do I make stabilized micro miners", recorder));
+
+        expect(script).toEqual([]);
+        expect(searches).toEqual(["normal", "expert"]);
+        expect(shots).toEqual(["expert"]);
+
+        const found = bodies[1].body.contents.at(-1).parts[0].functionResponse.response;
+        expect(found.mode).toBe("expert");
+        expect(bodies[1].body.contents.at(-1).parts.at(-1).text).toContain("The pack mode is expert");
+
+        const final = recorder.sent.at(-1);
+        expect(embedOf(final).footer.text).toMatch(/\| Expert mode$/);
+
+        const [button] = buttonsOf(final),
+            session = runtime.client.interactionHandler.getSession(button.custom_id.split(":").at(-1));
+
+        expect(session.spec.history.at(-1)).toMatchObject({ role: "model", expert: true });
     });
 
     test("finds the main recipe, flags reshaping recipes and shows the recipe card", async () => {
@@ -1166,9 +1490,7 @@ describe("a command", () => {
 
         const bodies = await setup(script, { routes: { "GET /quests.json": () => ({ json: questbook }) } });
 
-        await loadSources({
-            quests: { type: "questbook", options: { urls: { normal: `${server.url}/quests.json` }, mode: "normal" } }
-        });
+        await loadQuestbooks({ nfu: { title: "Test Pack", urls: { normal: `${server.url}/quests.json` } } });
 
         const recorder = createRecorder();
         await getCommand(runtime, "a").handler(createAskContext("what's next after iron?", recorder));
@@ -1176,6 +1498,8 @@ describe("a command", () => {
         const responseOf = idx => Util.first(bodies[idx].body.contents.at(-1).parts).functionResponse.response;
 
         expect(script).toEqual([]);
+        expect(responseOf(1).questbook).toBe("Test Pack");
+        expect(bodies[0].body.systemInstruction.parts[0].text).toContain("- Questbooks: nfu (Test Pack)");
         expect(responseOf(1).quests.map(quest => [quest.id, quest.title, quest.chapter])).toEqual([
             ["1", "Steel Age", "The Beginning"]
         ]);
