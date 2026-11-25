@@ -1,13 +1,17 @@
 import AIRequest from "./AIRequest.js";
 import AIReplyUpdater from "./AIReplyUpdater.js";
 import AIReplyView from "./AIReplyView.js";
+import AIPromptGuard from "../../ai/AIPromptGuard.js";
 import ComponentSession from "../interaction/ComponentSession.js";
 
 import InteractionModes from "../interaction/InteractionModes.js";
 
-import { getClient, getConfig } from "../../LevertClient.js";
+import { getClient, getConfig, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import LoggerUtil from "../../util/LoggerUtil.js";
+
+import AIError from "../../errors/AIError.js";
 
 class AIReply {
     static expectedErrors = new Set(["AIError", "AxiosError"]);
@@ -141,9 +145,19 @@ class AIReply {
         return session;
     }
 
-    _createFollowUpSession(followUps, history) {
+    _createFollowUpSession(result, question, history) {
+        if (Util.empty(result.followUps)) {
+            return null;
+        }
+
+        const turns = [
+            ...history,
+            { role: "user", text: question },
+            { role: "model", text: result.answer, expert: result.expert }
+        ];
+
         const mode = getConfig().ai.followUpsAnyone ? InteractionModes.anyone : InteractionModes.authorOnly;
-        return this._createSession({ followUps, history }, mode);
+        return this._createSession({ followUps: result.followUps, history: turns }, mode);
     }
 
     async _run(question, history, timeLimit, cancelSession) {
@@ -151,8 +165,7 @@ class AIReply {
 
         await this.updater.start(this.view.renderThinking(cancelSession));
 
-        let result = null,
-            error = null;
+        let result;
 
         try {
             result = await aiManager.ask(question, this.request, {
@@ -162,27 +175,25 @@ class AIReply {
                 onProgress: session => this.updater.update(this.view.renderProgress(session, cancelSession))
             });
         } catch (err) {
-            if (!this.cancelled && !AIReply.expectedErrors.has(err.name)) {
-                this.updater.cancel();
-                throw err;
+            if (this.cancelled) {
+                return null;
             }
 
-            error = err;
+            if (!AIReply.expectedErrors.has(err.name)) {
+                getLogger().error(`AI answer failed (${LoggerUtil.formatErrorSummary(err, aiManager.redactLogText)}).`);
+                err = new AIError("The AI could not finish this answer");
+            } else if (aiManager.promptGuard.contains(err.message)) {
+                err = new AIError(AIPromptGuard.refusal);
+            }
+
+            return await this.updater.finish(this.view.renderError(err));
         }
 
         if (this.cancelled) {
             return null;
-        } else if (error !== null) {
-            return await this.updater.finish(this.view.renderError(error));
         }
 
-        const turns = [
-                ...history,
-                { role: "user", text: question },
-                { role: "model", text: result.answer, expert: result.expert }
-            ],
-            session = Util.empty(result.followUps) ? null : this._createFollowUpSession(result.followUps, turns);
-
+        const session = this._createFollowUpSession(result, question, history);
         const msg = await this.updater.finish(this.view.renderResult(result, session));
         session?.setMessage(msg);
 

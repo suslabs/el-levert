@@ -28,6 +28,17 @@
                 }
             ]
         },
+        "keenableKey": {
+            "type": "string",
+            "title": "Keenable web search API key"
+        },
+        "tavilyKey": {
+            "title": "Tavily web search backup key or list of keys",
+            "oneOf": [
+                { "type": "string" },
+                { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 }
+            ]
+        },
         "openrouterKey": {
             "title": "OpenRouter API key, or a list of keys used in turn when one runs out",
             "oneOf": [

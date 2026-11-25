@@ -10,6 +10,8 @@ class AskingUserTool extends AITool {
         description: "Return the profile of the user who asked (id, mention, names, roles, join date)."
     };
 
+    static quick = true;
+
     getStatus() {
         return "Checking your profile";
     }

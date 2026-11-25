@@ -7,6 +7,7 @@
     "websocketCommandsPath": "./src/commands/websocket",
     "dbPath": "./db",
     "logLevel": "debug",
+    "debugLogRetentionDays": 14,
     "cmdPrefix": "%",
     "enableCliCommands": true,
     "cliCmdPrefix": ".",
@@ -96,6 +97,7 @@
         "name": "Large Language Rabbit",
         "icon": null,
         "promptsPath": "./src/ai/prompts",
+        "packName": "Nomifactory CEu",
         "endpoints": {
             "gemini": "https://generativelanguage.googleapis.com/v1beta",
             "openrouter": "https://openrouter.ai/api/v1"
@@ -118,10 +120,10 @@
             "openrouter:particle-ai/particle-1:free",
             "openrouter:nvidia/nemotron-3.5-super-vl:free"
         ],
-        "thinkingLevel": "low",
-        "toolThinkingLevel": "low",
+        "thinkingLevel": "medium",
+        "toolThinkingLevel": "medium",
         "maxSteps": -1,
-        "quickMaxSteps": 2,
+        "quickMaxSteps": 3,
         "timeLimit": 45,
         "unlimitedTimeForAdmins": true,
         "requestTimeout": 20,

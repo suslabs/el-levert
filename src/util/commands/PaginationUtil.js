@@ -31,6 +31,14 @@ function makePaginationArg(name, options) {
     });
 }
 
+function readPaginationArg(ctx, name) {
+    if (typeof ctx.arg !== "function" || (typeof ctx.parseArgs === "function" && !ctx.parseArgs().results.has(name))) {
+        return undefined;
+    }
+
+    return ctx.arg(name);
+}
+
 async function fetchPageData(spec, page, limit, ctx) {
     if (spec.initialData != null && (page === 1 || page === spec.initialData.page)) {
         const initial = spec.initialData,
@@ -250,18 +258,17 @@ const PaginationUtil = Object.freeze({
         const defaultLimit = options.defaultLimit ?? 10,
             maxLimit = options.maxLimit ?? 50;
 
-        const hasArg = typeof ctx.arg === "function",
-            rawAll = hasArg ? (ctx.arg(allName) ?? ctx.arg("all")) : null,
+        const rawAll = readPaginationArg(ctx, allName) ?? readPaginationArg(ctx, "all"),
             commandName = ctx.commandName ?? "";
 
         const all =
             Boolean(rawAll) || options.all === true || commandName.endsWith("all") || commandName.endsWith("_all");
 
         const rawLimit =
-                options.limit ?? (hasArg ? (ctx.arg(limitName) ?? ctx.arg("limit") ?? defaultLimit) : defaultLimit),
+                options.limit ?? readPaginationArg(ctx, limitName) ?? readPaginationArg(ctx, "limit") ?? defaultLimit,
             limit = Util.clamp(rawLimit, 1, maxLimit);
 
-        const rawPage = options.page ?? (hasArg ? (ctx.arg(pageName) ?? ctx.arg("page") ?? 1) : 1),
+        const rawPage = options.page ?? readPaginationArg(ctx, pageName) ?? readPaginationArg(ctx, "page") ?? 1,
             page = Math.max(1, rawPage),
             offset = options.offset ?? (page - 1) * limit;
 

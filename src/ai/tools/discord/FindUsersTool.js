@@ -25,6 +25,8 @@ class FindUsersTool extends AITool {
         )
     };
 
+    static quick = true;
+
     static defaultLimit = 5;
     static maxLimit = 10;
 

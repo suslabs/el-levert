@@ -64,27 +64,30 @@ class AIReplyView {
     }
 
     renderResult(result, session) {
-        const answer = result.answer.trim(),
-            extras = AIUtil.joinSections(
-                AIUtil.formatList("Sources:", result.sources),
-                AIUtil.formatList(
-                    "Follow-ups:",
-                    result.followUps.map(followUp => escapeMarkdown(followUp))
-                )
-            );
-
-        const answerLimit = AIReplyView._getAnswerLimit(extras);
-
+        const answer = result.answer.trim();
         const embed = this._createEmbed(this.name)
             .setColor(AIReplyView.answerColor)
-            .setDescription(AIUtil.joinSections(Util.trimString(answer, answerLimit, null, { tight: true }), extras))
-            .setFooter({ text: AIReplyView._formatFooter(result) });
+            .setFooter({
+                text: AIReplyView._fitText(AIReplyView._formatFooter(result), DiscordUtil.embedLimits.footer)
+            });
+
+        const limit = AIReplyView._getDescriptionLimit(embed);
+        const tailLimit = Math.max(0, limit - Math.min(answer.length, AIReplyView.maxPreviewLength) - 2);
+        const { extras, omittedSources } = AIReplyView._formatExtras(result, tailLimit);
+        const preview = AIReplyView._fitText(answer, limit, extras);
+
+        embed.setDescription(AIUtil.joinSections(preview, extras));
+
+        const needsAttachment = preview !== answer || omittedSources;
+        const fullAnswer = omittedSources
+            ? AIUtil.joinSections(answer, AIUtil.formatList("Sources:", result.sources))
+            : answer;
 
         const components = session === null ? [] : [AIReplyView._createFollowUpRow(session)];
 
         return {
             ...this._createPayload(AIReplyView._addImages(embed, result.images), components),
-            files: AIReplyView._createFiles(result.files, answer, answerLimit)
+            files: AIReplyView._createFiles(result.files, needsAttachment ? fullAnswer : null)
         };
     }
 
@@ -111,9 +114,9 @@ class AIReplyView {
     }
 
     renderError(err) {
-        const embed = this._createEmbed(this.name)
-            .setColor(AIReplyView.errorColor)
-            .setDescription(AIReplyView._formatError(err));
+        const embed = this._createEmbed(this.name).setColor(AIReplyView.errorColor);
+        const limit = AIReplyView._getDescriptionLimit(embed);
+        embed.setDescription(AIReplyView._fitText(AIReplyView._formatError(err), limit));
 
         return this._createPayload([embed]);
     }
@@ -181,16 +184,73 @@ class AIReplyView {
         return new ActionRowBuilder().addComponents(buttons);
     }
 
-    static _getAnswerLimit(extras) {
-        return Util.empty(extras) ? DiscordUtil.embedCharLimit : DiscordUtil.embedCharLimit - extras.length - 2;
+    static _getDescriptionLimit(embed) {
+        const { author, footer } = DiscordUtil.getEmbedData(embed);
+        const authorLength = DiscordUtil.escapeMassMentions(author.name).length,
+            footerLength = DiscordUtil.escapeMassMentions(footer?.text ?? "").length;
+
+        return Math.min(DiscordUtil.embedLimits.description, DiscordUtil.embedCharLimit - authorLength - footerLength);
     }
 
-    static _createFiles(files, answer, answerLimit) {
-        if (answer.length > answerLimit) {
-            files = [...files, { name: AIReplyView.answerFilename, content: answer }];
+    // The message handler escapes mass mentions after rendering, so measure that form as well.
+    static _fitText(text, limit, tail = "") {
+        let fitted = text;
+
+        for (;;) {
+            const length = DiscordUtil.escapeMassMentions(AIUtil.joinSections(fitted, tail)).length;
+            const excess = length - limit;
+
+            if (excess <= 0 || Util.empty(fitted)) {
+                return fitted;
+            }
+
+            const available = fitted.length - excess;
+            fitted = available < 3 ? "" : Util.trimString(text, available, null, { tight: true });
+        }
+    }
+
+    static _formatExtras(result, limit) {
+        const questions = AIUtil.formatList(
+            "Follow-ups:",
+            result.followUps.map(followUp => escapeMarkdown(followUp, { bold: false }))
+        );
+        const followUps = AIReplyView._fitText(questions, limit);
+        const sources = [];
+
+        for (const source of result.sources) {
+            const candidate = AIUtil.joinSections(AIUtil.formatList("Sources:", [...sources, source]), followUps);
+
+            if (DiscordUtil.escapeMassMentions(candidate).length <= limit) {
+                sources.push(source);
+            }
         }
 
-        return files.flatMap(file => DiscordUtil.getFileAttach(file.content, file.name).files);
+        return {
+            extras: AIUtil.joinSections(AIUtil.formatList("Sources:", sources), followUps),
+            omittedSources: sources.length < result.sources.length
+        };
+    }
+
+    static _createFiles(files, fullAnswer) {
+        const attachments = files.flatMap(file => DiscordUtil.getFileAttach(file.content, file.name).files);
+
+        if (fullAnswer !== null && attachments.length < DiscordUtil.msgFileLimit) {
+            const limit = getConfig().maxFileSize;
+            const used = attachments.reduce((bytes, file) => bytes + Util.getByteLength(file.attachment), 0);
+
+            if (limit <= 0 || used + Util.getByteLength(fullAnswer) <= limit) {
+                const names = new Set(attachments.map(file => file.name));
+                let name = AIReplyView.answerFilename;
+
+                for (let i = 2; names.has(name); i++) {
+                    name = AIReplyView.answerFilename.replace(".md", `-${i}.md`);
+                }
+
+                attachments.push(...DiscordUtil.getFileAttach(fullAnswer, name).files);
+            }
+        }
+
+        return attachments;
     }
 
     static _formatFooter(result) {
@@ -201,7 +261,11 @@ class AIReplyView {
         }
 
         const seconds = Util.round(result.elapsed * Util.durationSeconds.milli, 1),
-            parts = [`Models: ${result.models.join(", ")}`, usage.join(", "), `${seconds}s`];
+            parts = [usage.join(", "), `${seconds}s`];
+
+        if (!Util.empty(result.models)) {
+            parts.unshift(`Models: ${result.models.join(", ")}`);
+        }
 
         if (result.expert) {
             parts.push(AIReplyView.expertLabel);
@@ -226,6 +290,8 @@ class AIReplyView {
     static _getUnavailableReason(status) {
         if (status === httpStatusCodes.TOO_MANY_REQUESTS) {
             return "The AI usage limits are used up for now.";
+        } else if (status === httpStatusCodes.PAYMENT_REQUIRED) {
+            return "The AI provider reports a billing or credit limit.";
         } else if (isServerErrorStatus(status)) {
             return "The AI models are overloaded right now.";
         } else {
@@ -255,16 +321,17 @@ class AIReplyView {
     }
 
     _createEmbed(title) {
-        return new EmbedBuilder().setAuthor({ name: title, iconURL: this.icon });
+        const name = AIReplyView._fitText(title, DiscordUtil.embedLimits.author);
+        return new EmbedBuilder().setAuthor({ name, iconURL: this.icon });
     }
 
     _renderStatus(phase, steps, text, finishing, cancelSession) {
         const statusText = AIReplyView._formatStatuses(phase, steps).slice(-AIReplyView.maxStatusLines).join("\n"),
             preview = AIReplyView._formatPreview(text, finishing);
 
-        const embed = this._createEmbed(`${this.name} - ${phase}...`).setDescription(
-            AIUtil.joinSections(statusText, preview)
-        );
+        const embed = this._createEmbed(`${this.name} - ${phase}...`);
+        const limit = AIReplyView._getDescriptionLimit(embed);
+        embed.setDescription(AIReplyView._fitText(AIUtil.joinSections(statusText, preview), limit));
 
         return this._createPayload([embed], [AIReplyView._createCancelRow(cancelSession)]);
     }

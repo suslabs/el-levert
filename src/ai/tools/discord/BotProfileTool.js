@@ -12,6 +12,8 @@ class BotProfileTool extends AITool {
         description: "Return this bot's own profile (name, mention, version, prefix, model)."
     };
 
+    static quick = true;
+
     getStatus() {
         return "Checking my profile";
     }

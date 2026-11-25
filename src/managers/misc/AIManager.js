@@ -4,8 +4,10 @@ import Providers from "../../ai/providers/index.js";
 import AISession from "../../ai/AISession.js";
 import AIToolRegistry from "../../ai/AIToolRegistry.js";
 import AIPrompt from "../../ai/AIPrompt.js";
+import AIPromptGuard from "../../ai/AIPromptGuard.js";
 import AITriage from "../../ai/AITriage.js";
-import WebSearcher from "../../ai/WebSearcher.js";
+import WebSearcher from "../../ai/search/WebSearcher.js";
+import PageReader from "../../ai/search/PageReader.js";
 import AISourceRegistry from "../../ai/sources/AISourceRegistry.js";
 import Sources from "../../ai/sources/Sources.js";
 import PromptLoader from "../../loaders/ai/PromptLoader.js";
@@ -14,9 +16,11 @@ import { getConfig, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
+import LoggerUtil from "../../util/LoggerUtil.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 import RateLimiter from "../../util/misc/RateLimiter.js";
 import HTTPUtil from "../../util/vm/HTTPUtil.js";
+import ModuleUtil from "../../util/misc/ModuleUtil.js";
 
 import AIError from "../../errors/AIError.js";
 import ManagerError from "../../errors/ManagerError.js";
@@ -29,17 +33,25 @@ class AIManager extends Manager {
 
     static defaultProvider = "gemini";
 
+    static getKeys(auth) {
+        const suffix = "Key";
+
+        return Object.fromEntries(
+            Object.entries(auth)
+                .filter(([name]) => name.endsWith(suffix))
+                .map(([name, value]) => [
+                    name.slice(0, -suffix.length),
+                    ArrayUtil.unique(ArrayUtil.guaranteeArray(value, null, true).filter(Util.nonemptyString))
+                ])
+        );
+    }
+
     constructor(enabled, keys, sources = Sources) {
         super(enabled);
 
         this.sourceDefinitions = sources;
 
-        this.keys = Object.fromEntries(
-            Object.entries(ObjectUtil.guaranteeObject(keys)).map(([name, value]) => [
-                name,
-                ArrayUtil.guaranteeArray(value, null, true).filter(Util.nonemptyString)
-            ])
-        );
+        this.keys = ObjectUtil.guaranteeObject(keys);
     }
 
     async load() {
@@ -57,7 +69,7 @@ class AIManager extends Manager {
 
         this.rateLimiter = new RateLimiter(config.maxRequests, config.rateLimitWindow);
 
-        this.prompts = await this._loadPrompts(config.promptsPath);
+        this.prompts = await this._loadPrompts(config.promptsPath, config.packName);
         this.http = HTTPUtil.createAxiosClient(
             {
                 allowLocalhostRequests: config.allowLocalhostRequests,
@@ -66,23 +78,50 @@ class AIManager extends Manager {
             AIError
         );
 
+        this.promptGuard = new AIPromptGuard(Object.values(this.prompts));
+        const secrets = Object.values(this.keys).flat();
+        this.redactLogText = text =>
+            this.promptGuard.contains(text) ? "[redacted private prompt]" : LoggerUtil.redactText(text, secrets);
+
         this.router = this._createRouter(config);
         this.tools = new AIToolRegistry(this);
-        this.prompt = new AIPrompt(this.prompts.system);
+        this.prompt = new AIPrompt(`${AIPromptGuard.instruction}\n\n${this.prompts.system}`);
         this.triage = new AITriage(this.prompts.triage);
-        this.webSearcher = new WebSearcher(this.http);
+        this.browser = await AIManager._loadBrowser(config.allowLocalhostRequests);
+        this.pageReader = new PageReader(this.http, this.browser);
+        this.webSearcher = new WebSearcher(this.http, this.browser, this.pageReader, this.keys);
 
         this.sources = new AISourceRegistry(this.http, config.requestTimeout);
         await this.sources.load(this.sourceDefinitions);
     }
 
-    unload() {
+    async unload() {
         this.rateLimiter.destroy();
+        await this.browser?.close();
     }
 
     async ask(question, request, options) {
         const session = new AISession(this, request, options);
         return await session.run(question);
+    }
+
+    formatLog(value) {
+        if (this.promptGuard.contains(value)) {
+            value = "[redacted private prompt]";
+        }
+
+        return LoggerUtil.formatLog(value, undefined, undefined, this.redactLogText);
+    }
+
+    // Puppeteer is an optional dependency: without it, search and page reading use plain requests
+    static async _loadBrowser(allowLocalhostRequests) {
+        const StealthBrowser = await ModuleUtil.loadOptionalModule(
+            ["puppeteer", "puppeteer-extra", "puppeteer-extra-plugin-stealth"],
+            import.meta.url,
+            "../../ai/browser/StealthBrowser.js"
+        );
+
+        return StealthBrowser === null ? null : new StealthBrowser(allowLocalhostRequests);
     }
 
     _createProviders(config) {
@@ -121,11 +160,11 @@ class AIManager extends Manager {
             throw new ManagerError("None of the configured AI models have an API key");
         }
 
-        return new ModelRouter(this.http, providers, usable, config);
+        return new ModelRouter(this.http, providers, usable, { ...config, redactLogText: this.redactLogText });
     }
 
-    async _loadPrompts(promptsPath) {
-        const [prompts] = await new PromptLoader(promptsPath, getLogger()).load();
+    async _loadPrompts(promptsPath, packName) {
+        const [prompts] = await new PromptLoader(promptsPath, getLogger(), { variables: { packName } }).load();
 
         const missing = AIManager.promptNames.filter(name => !Util.nonemptyString(prompts[name]));
 

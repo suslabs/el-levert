@@ -20,6 +20,7 @@ import UtilError from "../errors/UtilError.js";
 
 let DiscordUtil = {
     msgCharLimit: 2000,
+    msgFileLimit: 10,
     embedCharLimit: 4096,
 
     threadChannelTypes: new Set([ChannelType.PublicThread, ChannelType.PrivateThread]),
@@ -111,6 +112,21 @@ let DiscordUtil = {
     findCodeblocks: str => {
         const matches = str.matchAll(DiscordUtil.codeblockRegex);
         return Array.from(matches).map(match => [match.index, match.index + match[0].length]);
+    },
+
+    _massMentionRegex: /@(everyone|here)/g,
+
+    escapeMassMentions: str => {
+        if (typeof str !== "string") {
+            return str;
+        }
+
+        const codeblocks = DiscordUtil.findCodeblocks(str);
+
+        return str.replaceAll(DiscordUtil._massMentionRegex, (mention, _, offset) => {
+            const inCodeblock = codeblocks.some(([start, end]) => offset >= start && offset < end);
+            return inCodeblock ? mention : "\\" + mention;
+        });
     },
 
     maskCodeblocks: (str, mask = " ") => {
@@ -917,6 +933,10 @@ let DiscordUtil = {
     logAttachByteLimit: 256,
 
     formatMessageLog: (data, splitLength = 80, maxLength = 2500, options) => {
+        options = ObjectUtil.guaranteeObject(options);
+
+        const redactText = options.redactText ?? LoggerUtil.redactText;
+
         if (data == null) {
             return LoggerUtil.formatLog(null, splitLength, maxLength);
         }
@@ -924,7 +944,7 @@ let DiscordUtil = {
         const payload = Array.isArray(data) && Util.single(data) ? Util.first(data) : data,
             normalized = DiscordUtil._formatMessagePayload(payload, options);
 
-        return LoggerUtil.formatLog(normalized, splitLength, maxLength);
+        return LoggerUtil.formatLog(normalized, splitLength, maxLength, redactText);
     },
 
     _isBinaryAttachment: (data, name = "") => {

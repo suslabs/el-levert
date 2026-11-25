@@ -42,7 +42,7 @@ class ExecuteJavascriptTool extends AITool {
             throw new AIError("code is required");
         }
 
-        const out = await getClient().tagVM.runScript(code, session.request.scriptValues);
+        const out = await getClient().tagVM.runScript(code, session.request.scriptValues, { logContent: false });
 
         const text = TypeTester.isObject(out) ? JSON.stringify(out) : String(out ?? "");
         return { output: Util.trimString(text, ExecuteJavascriptTool.maxOutputLength) };

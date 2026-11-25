@@ -1,5 +1,6 @@
 import Util from "../Util.js";
 import ObjectUtil from "../ObjectUtil.js";
+import TypeTester from "../TypeTester.js";
 import ArrayUtil from "../ArrayUtil.js";
 
 const AIUtil = Object.freeze({
@@ -26,6 +27,21 @@ const AIUtil = Object.freeze({
         return { functionResponse };
     },
 
+    _resultLists: ["results", "sections", "recipes", "uses", "quests", "messages", "tags", "matches"],
+
+    // whether a tool result actually found something: errors, "found: false" and searches
+    // whose result lists are all empty don't count
+    hasFindings: res => {
+        if (!TypeTester.isObject(res) || typeof res.error !== "undefined" || res.found === false) {
+            return false;
+        } else if (res.repeated === true) {
+            return AIUtil.hasFindings(res.result);
+        }
+
+        const lists = AIUtil._resultLists.filter(key => Array.isArray(res[key]));
+        return Util.empty(lists) || lists.some(key => !Util.empty(res[key]));
+    },
+
     parseJson: (text, fallback) => {
         try {
             return JSON.parse(text);
@@ -33,6 +49,8 @@ const AIUtil = Object.freeze({
             return fallback;
         }
     },
+
+    normalizeQuery: query => query.trim().replace(/\s+/g, " ").toLowerCase(),
 
     pageChars: Object.freeze({
         default: 5000,

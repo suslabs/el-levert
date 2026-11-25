@@ -17,7 +17,9 @@ import Benchmark from "../../util/misc/Benchmark.js";
 import CommandError from "../../errors/CommandError.js";
 
 function logCommandUsage(msg, name, args) {
-    const cmdArgs = !Util.empty(args) ? ` with args:${LoggerUtil.formatLog(args)}` : ".";
+    const cmdArgs = Util.empty(args)
+        ? "."
+        : ` with args:${getClient().aiManager?.formatLog(args) ?? LoggerUtil.formatLog(args)}`;
 
     getLogger().info(
         `User ${DiscordUtil.formatUser(msg.author)} used command "${name}" in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)})${cmdArgs}`
@@ -29,13 +31,16 @@ function logExecutionTime(elapsed) {
 }
 
 function logCommandOutput(cmd, out) {
-    if (getLogger().isDebugEnabled()) {
-        if (Array.isArray(out) && Util.single(out)) {
-            out = Util.first(out);
-        }
+    const logger = getLogger();
 
-        getLogger().debug(`Command "${cmd.name}" returned:${DiscordUtil.formatMessageLog(out)}`);
+    if (!logger.isDebugEnabled()) {
+        return;
     }
+
+    const redactText = getClient().aiManager?.redactLogText;
+    const output = DiscordUtil.formatMessageLog(out, undefined, undefined, { redactText });
+
+    logger.debug(`Command "${cmd.name}" returned:${output}`);
 }
 
 class CommandHandler extends MessageHandler {

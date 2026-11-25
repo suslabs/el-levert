@@ -1,10 +1,11 @@
 import AIPhases from "../../structures/ai/AIPhases.js";
+import AIEfforts from "../../structures/ai/AIEfforts.js";
 
 import { getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-import TypeTester from "../../util/TypeTester.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
+import TypeTester from "../../util/TypeTester.js";
 import AIUtil from "../../util/ai/AIUtil.js";
 
 import AIError from "../../errors/AIError.js";
@@ -23,6 +24,9 @@ class AITool {
     ]);
     static maxStatusArgLength = 60;
     static maxCalls = Infinity;
+
+    // offered for quick questions too (general facts, members); everything else only for research
+    static quick = false;
 
     constructor(manager) {
         const info = this.constructor.info;
@@ -88,7 +92,9 @@ class AITool {
     }
 
     _isAvailable(session) {
-        if (typeof this._childIsAvailable !== "function") {
+        if (session.effort === AIEfforts.quick && !this.constructor.quick) {
+            return false;
+        } else if (typeof this._childIsAvailable !== "function") {
             return true;
         }
 
@@ -96,7 +102,11 @@ class AITool {
     }
 
     async _execute(args, session) {
-        getLogger().debug(`AI tool "${this.name}" called with args:${LoggerUtil.formatLog(args)}`);
+        const logger = getLogger();
+
+        if (logger.isDebugEnabled()) {
+            logger.debug(`AI tool "${this.name}" called with args:${this.manager.formatLog(args)}`);
+        }
 
         const startTime = Date.now();
         let out;
@@ -105,18 +115,21 @@ class AITool {
             out = await this._childExecute(args, session);
         } catch (err) {
             if (!AITool.expectedErrors.has(err.name)) {
-                session.logError(this.name, err);
+                logger.error(
+                    `AI tool "${this.name}" failed (${LoggerUtil.formatErrorSummary(err, this.manager.redactLogText)}).`
+                );
             }
 
             out = { error: err.message };
         }
 
-        getLogger().debug(`AI tool "${this.name}" took ${AIUtil.formatElapsed(startTime)}.`);
+        logger.debug(`AI tool "${this.name}" took ${AIUtil.formatElapsed(startTime)}.`);
 
-        const limited = this._limitOutput(out);
-        getLogger().debug(`AI tool "${this.name}" returned:${LoggerUtil.formatLog(limited)}`);
+        if (logger.isDebugEnabled()) {
+            logger.debug(`AI tool "${this.name}" returned:${this.manager.formatLog(out)}`);
+        }
 
-        return limited;
+        return this._limitOutput(out);
     }
 
     _limitOutput(out) {
@@ -129,6 +142,7 @@ class AITool {
 
         return {
             truncated: true,
+            found: AIUtil.hasFindings(out),
             partial: text.slice(0, maxOutput)
         };
     }

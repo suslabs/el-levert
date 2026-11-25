@@ -28,6 +28,10 @@
         "logLevel": {
             "type": "string"
         },
+        "debugLogRetentionDays": {
+            "type": "integer",
+            "minimum": 0
+        },
         "cmdPrefix": {
             "type": "string"
         },
@@ -295,6 +299,11 @@
                 "name": {
                     "type": "string",
                     "minLength": 1
+                },
+                "packName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^[^\\r\\n]*\\S[^\\r\\n]*$"
                 },
                 "promptsPath": {
                     "type": "string",

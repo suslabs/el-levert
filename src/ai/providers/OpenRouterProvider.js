@@ -5,6 +5,7 @@ import ObjectUtil from "../../util/ObjectUtil.js";
 import SSEUtil from "../../util/misc/SSEUtil.js";
 import HTTPUtil from "../../util/vm/HTTPUtil.js";
 import AIUtil from "../../util/ai/AIUtil.js";
+import { httpStatusCodes } from "../../util/misc/HttpStatusCodes.js";
 
 class OpenRouterProvider extends AIProvider {
     static $name = "openrouter";
@@ -53,7 +54,7 @@ class OpenRouterProvider extends AIProvider {
         let usage = null;
 
         let finishReason = null,
-            interrupted = false;
+            error = null;
 
         for await (const event of SSEUtil.readEvents(stream)) {
             if (event === OpenRouterProvider.doneEvent) {
@@ -64,7 +65,7 @@ class OpenRouterProvider extends AIProvider {
                 choice = Util.first(data.choices);
 
             usage = data.usage ?? usage;
-            interrupted ||= typeof data.error !== "undefined";
+            error = data.error ?? error;
 
             if (typeof choice === "undefined") {
                 continue;
@@ -86,22 +87,21 @@ class OpenRouterProvider extends AIProvider {
 
         return {
             parts,
-            finishReason: interrupted ? null : OpenRouterProvider._getFinishReason(finishReason),
+            finishReason: error === null ? OpenRouterProvider._getFinishReason(finishReason) : null,
+            error,
             usage: OpenRouterProvider._parseUsage(usage)
         };
     }
 
     getUnblockDelay(res) {
-        const retryAfter = Number(res.headers["retry-after"]),
-            resetAt = Number(res.headers["x-ratelimit-reset"]);
+        const delay = super.getUnblockDelay(res);
 
-        if (Number.isFinite(retryAfter) && retryAfter > 0) {
-            return retryAfter / Util.durationSeconds.milli;
-        } else if (Number.isFinite(resetAt) && resetAt > Date.now()) {
-            return resetAt - Date.now();
-        } else {
-            return null;
+        if (delay !== null || res.status !== httpStatusCodes.TOO_MANY_REQUESTS) {
+            return delay;
         }
+
+        const resetIn = Number(res.headers?.["x-ratelimit-reset"]) - Date.now();
+        return Number.isFinite(resetIn) && resetIn > 0 ? resetIn : null;
     }
 
     static _getCallId(turnIdx, i) {
@@ -176,7 +176,11 @@ class OpenRouterProvider extends AIProvider {
 
         if (!Util.empty(declarations)) {
             chat.tools = declarations.map(decl => ({ type: "function", function: decl }));
-            chat.tool_choice = "auto";
+            const calling = body.toolConfig?.functionCallingConfig;
+            const forcedTool = calling?.mode === "ANY" ? Util.first(calling.allowedFunctionNames) : null;
+
+            chat.tool_choice =
+                typeof forcedTool === "string" ? { type: "function", function: { name: forcedTool } } : "auto";
         }
 
         const schema = body.generationConfig?.responseSchema;

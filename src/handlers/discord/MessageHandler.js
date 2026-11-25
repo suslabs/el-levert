@@ -332,7 +332,6 @@ class MessageHandler extends Handler {
         return limits;
     }
 
-    static _mentionRegex = /@(everyone|here)/g;
     static _emptyMessage = "Cannot send an empty message";
 
     static _embedOversizedRules = [
@@ -380,26 +379,8 @@ class MessageHandler extends Handler {
         }
     ];
 
-    static _escapeMentions(str) {
-        if (typeof str !== "string") {
-            return str;
-        }
-
-        const codeblockRanges = DiscordUtil.findCodeblocks(str);
-
-        return str.replaceAll(MessageHandler._mentionRegex, (match, p1, offset) => {
-            for (const [start, end] of codeblockRanges) {
-                if (offset >= start && offset < end) {
-                    return match;
-                }
-            }
-
-            return `\\@${p1}`;
-        });
-    }
-
     static _stripPings(out) {
-        out.content = MessageHandler._escapeMentions(out.content);
+        out.content = DiscordUtil.escapeMassMentions(out.content);
 
         if (!Array.isArray(out.embeds)) {
             return;
@@ -410,28 +391,28 @@ class MessageHandler extends Handler {
                 ...DiscordUtil.getEmbedData(rawEmbed)
             };
 
-            embed.title = MessageHandler._escapeMentions(embed.title);
-            embed.description = MessageHandler._escapeMentions(embed.description);
+            embed.title = DiscordUtil.escapeMassMentions(embed.title);
+            embed.description = DiscordUtil.escapeMassMentions(embed.description);
 
             if (embed.footer != null) {
                 embed.footer = {
                     ...embed.footer,
-                    text: MessageHandler._escapeMentions(embed.footer.text)
+                    text: DiscordUtil.escapeMassMentions(embed.footer.text)
                 };
             }
 
             if (embed.author != null) {
                 embed.author = {
                     ...embed.author,
-                    name: MessageHandler._escapeMentions(embed.author.name)
+                    name: DiscordUtil.escapeMassMentions(embed.author.name)
                 };
             }
 
             if (Array.isArray(embed.fields)) {
                 embed.fields = embed.fields.map(field => ({
                     ...field,
-                    name: MessageHandler._escapeMentions(field.name),
-                    value: MessageHandler._escapeMentions(field.value)
+                    name: DiscordUtil.escapeMassMentions(field.name),
+                    value: DiscordUtil.escapeMassMentions(field.value)
                 }));
             }
 

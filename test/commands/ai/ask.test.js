@@ -1,3 +1,5 @@
+import { once } from "node:events";
+
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import createHttpStubServer from "../../helpers/httpStubServer.js";
@@ -67,8 +69,11 @@ const withExtras = (res, next) => {
     return { ...res, body: res.body + `data: ${JSON.stringify(chunk([{ text: trailer(next.extras) }]))}\r\n\r\n` };
 };
 
-const triage = effort => ({
-    json: { candidates: [{ content: { role: "model", parts: [{ text: JSON.stringify({ effort }) }] } }], ...usage(10) }
+const triage = (effort, lookup = "", fields = {}) => ({
+    json: {
+        candidates: [{ content: { role: "model", parts: [{ text: JSON.stringify({ effort, lookup, ...fields }) }] } }],
+        ...usage(10)
+    }
 });
 
 const isTriage = body => typeof body.generationConfig?.responseSchema?.properties?.effort !== "undefined";
@@ -748,7 +753,7 @@ describe("a command", () => {
         expect(embed.footer.text).toMatch(/^Models: test-model, third-model \| /);
     });
 
-    test("blocks a usage-limited model until its reset but retries an overloaded one next time", async () => {
+    test("skips usage-limited and overloaded models on the next question", async () => {
         let limitedHits = 0,
             overloadedHits = 0;
 
@@ -768,12 +773,15 @@ describe("a command", () => {
 
         const overloaded = () => {
             overloadedHits++;
-            return { statusCode: 503, json: { error: { message: "High demand." } } };
+            return sse(chunk([{ text: "An interrupted answer" }]), { error: { code: 503, message: "High demand." } });
         };
 
         await setup([answer(["First."]), answer(["Second."])], {
             models: ["test-model", "busy-model", "fallback-model"],
-            ai: { models: ["test-model", "busy-model", "fallback-model"] },
+            ai: {
+                modelCooldown: Util.durationSeconds.minute / Util.durationSeconds.milli,
+                maxModelCooldown: (10 * Util.durationSeconds.minute) / Util.durationSeconds.milli
+            },
             routes: {
                 [`POST ${streamPath("test-model")}`]: limited,
                 [`POST ${streamPath("busy-model")}`]: overloaded
@@ -786,8 +794,24 @@ describe("a command", () => {
         await getCommand(runtime, "a").handler(createAskContext("second", recorder));
 
         expect(limitedHits).toBe(1);
-        expect(overloadedHits).toBe(2);
+        expect(overloadedHits).toBe(1);
         expect(embedOf(recorder.sent.at(-1)).description).toBe("Second.");
+    });
+
+    test("skips an overloaded key and a rejected key and keeps the overload retry time", async () => {
+        const script = [
+            { statusCode: 503, headers: { "retry-after": "45" }, json: { error: { message: "High demand." } } },
+            { statusCode: 401, json: { error: { message: "Invalid key." } } }
+        ];
+        const bodies = await setup(script, { auth: { geminiKey: ["key-1", "key-2"] } });
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("first", createRecorder()));
+        await getCommand(runtime, "a").handler(createAskContext("second", recorder));
+
+        expect(bodies.map(entry => entry.key)).toEqual(["key-1", "key-2"]);
+        expect(bodies.triages).toHaveLength(1);
+        expect(embedOf(recorder.sent.at(-1)).description).toMatch(/overloaded right now\. Try again in \*\*4\ds\*\*/);
     });
 
     test("says when to try again once every model is usage-limited", async () => {
@@ -829,6 +853,17 @@ describe("a command", () => {
         expect(description).toContain("All models are unavailable right now.");
         expect(description).toContain("The AI models are overloaded right now");
         expect(description).not.toContain("high demand");
+    });
+
+    test("redacts credentials echoed in a provider error", async () => {
+        await setup([{ statusCode: 400, json: { error: { message: "Invalid request using test-key" } } }]);
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("hi", recorder));
+
+        const description = embedOf(recorder.sent.at(-1)).description;
+        expect(description).toContain("Invalid request using [redacted]");
+        expect(description).not.toContain("test-key");
     });
 
     test("falls back to an OpenRouter model that can call tools", async () => {
@@ -979,7 +1014,7 @@ describe("a command", () => {
 
         const script = [limited, answer(["ok"]), extras([], []), answer(["again"]), extras([], [])];
 
-        const bodies = await setup(script, { auth: { geminiKey: ["key-1", "key-2"] } });
+        const bodies = await setup(script, { auth: { geminiKey: ["key-1", "key-1", "key-2"] } });
 
         await getCommand(runtime, "a").handler(createAskContext("hi", createRecorder()));
         await getCommand(runtime, "a").handler(createAskContext("hi again", createRecorder()));
@@ -1050,6 +1085,71 @@ describe("a command", () => {
         expect(embed.description).toContain("All models are unavailable right now.");
     });
 
+    test("abandons a stalled response body and falls back without keeping its partial text", async () => {
+        const partial = sse(chunk([{ text: "Stalled partial answer." }]));
+
+        const bodies = await setup([answer(["From the fallback."])], {
+            ai: { requestTimeout: 1 / Util.durationSeconds.milli },
+            models: ["test-model", "fallback-model"],
+            routes: {
+                [`POST ${streamPath("test-model")}`]: async ({ res }) => {
+                    res.writeHead(200, partial.headers);
+                    res.write(partial.body);
+                    await once(res, "close");
+                }
+            }
+        });
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("hi", recorder));
+
+        expect(bodies.map(entry => entry.path)).toEqual([streamPath("fallback-model")]);
+        expect(embedOf(recorder.sent.at(-1)).description).toBe("From the fallback.");
+    });
+
+    test("falls back when Gemini reports depleted credits", async () => {
+        const bodies = await setup(
+            [
+                { statusCode: 402, json: { error: { message: "Insufficient credits." } } },
+                answer(["From the fallback."])
+            ],
+            { models: ["test-model", "fallback-model"] }
+        );
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("hi", recorder));
+
+        expect(bodies.map(entry => entry.path)).toEqual([streamPath("test-model"), streamPath("fallback-model")]);
+        expect(embedOf(recorder.sent.at(-1)).description).toBe("From the fallback.");
+    });
+
+    test("keeps an active stream going across the idle timeout interval", async () => {
+        const partial = sse(chunk([{ text: "One " }]));
+
+        await setup([], {
+            ai: { requestTimeout: 0.5 / Util.durationSeconds.milli },
+            routes: {
+                [`POST ${streamPath("test-model")}`]: async ({ res }) => {
+                    res.writeHead(200, partial.headers);
+                    res.write(partial.body);
+
+                    for (const piece of ["two ", "three."]) {
+                        await Util.delay(0.25 / Util.durationSeconds.milli);
+                        res.write(sse(chunk([{ text: piece }])).body);
+                    }
+
+                    await Util.delay(0.25 / Util.durationSeconds.milli);
+                    return sse(chunk([], { finishReason: "STOP" })).body;
+                }
+            }
+        });
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("hi", recorder));
+
+        expect(embedOf(recorder.sent.at(-1)).description).toBe("One two three.");
+    });
+
     test("answers quick questions briefly with a smaller step budget", async () => {
         const script = [
             calls([call("find_users", { query: "sloppa" })]),
@@ -1094,6 +1194,111 @@ describe("a command", () => {
         expect(bodies[1].body.tools).toBeUndefined();
         expect(bodies[1].body.contents.at(-1).parts.at(-1).text).toContain("Tools are no longer available.");
         expect(embedOf(recorder.sent.at(-1)).description).toContain("No member called **pexa** here.");
+    });
+
+    test("looks up who/what questions on Wikipedia and the web before the model answers", async () => {
+        const lookups = { wiki: [], read: [], web: [] };
+
+        const script = [
+            calls([call("search_wikipedia", { query: " Tung Tung TUNG  shaur" })]),
+            answer(["**Tung Tung Tung Sahur** is an AI-generated meme character."])
+        ];
+
+        const bodies = await setup(script, { triage: () => triage("research", "tung tung tung shaur") });
+
+        const manager = runtime.client.aiManager;
+
+        manager.sources.sources.set("wiki", {
+            name: "Wikipedia",
+            search: async query => {
+                lookups.wiki.push(query);
+                return [{ title: "Tung Tung Tung Sahur", url: "https://en.wikipedia.org/wiki/Tung", snippet: "" }];
+            },
+            read: async title => {
+                lookups.read.push(title);
+                return { title, url: "https://en.wikipedia.org/wiki/Tung", text: "An Italian brainrot meme." };
+            },
+            getLanguage: language => language ?? "en"
+        });
+
+        manager.webSearcher = {
+            search: async query => {
+                lookups.web.push(query);
+                return { query, results: [{ title: "Tung Tung Tung Sahur meme", url: "https://example.test/tung" }] };
+            }
+        };
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("who is tung tung tung shaur", recorder));
+
+        expect(script).toEqual([]);
+        expect(lookups).toEqual({
+            wiki: ["tung tung tung shaur"],
+            read: ["Tung Tung Tung Sahur"],
+            web: ["tung tung tung shaur"]
+        });
+
+        const question = Util.first(bodies).body.contents.at(-1);
+
+        expect(question.parts[0].text).toBe("who is tung tung tung shaur");
+        expect(question.parts[1].text).toContain("Automatic lookup");
+        expect(question.parts[1].text).toContain("An Italian brainrot meme.");
+        expect(question.parts[1].text).toContain("https://example.test/tung");
+
+        const repeated = bodies[1].body.contents.at(-1).parts[0].functionResponse.response;
+        expect(repeated).toMatchObject({ repeated: true });
+
+        expect(embedOf(recorder.sent.at(-1)).description).toContain("Tung Tung Tung Sahur");
+    }, 30000);
+
+    test("tells the model not to guess once every search came back empty or failed", async () => {
+        const script = [
+            calls([call("search_web", { query: "who created nomifactory" })]),
+            answer(["I couldn't find who created Nomifactory."])
+        ];
+
+        const bodies = await setup(script);
+
+        runtime.client.aiManager.webSearcher = {
+            search: async query => ({ query, results: [] })
+        };
+
+        await getCommand(runtime, "a").handler(createAskContext("who created nomifactory", createRecorder()));
+
+        const notes = request =>
+            request.body.contents
+                .at(-1)
+                .parts.map(part => part.text ?? "")
+                .join("\n");
+
+        expect(script).toEqual([]);
+        expect(notes(Util.first(bodies))).not.toContain("Don't answer from memory");
+        expect(notes(bodies[1])).toContain("Don't answer from memory");
+    });
+
+    test("doesn't look anything up when triage finds no outside subject", async () => {
+        const searches = [];
+
+        const script = [answer(["Steel is made in the **EBF**."])];
+        const bodies = await setup(script, { triage: () => triage("research", "") });
+
+        runtime.client.aiManager.webSearcher = {
+            search: async query => {
+                searches.push(query);
+                return { query, results: [] };
+            }
+        };
+
+        await getCommand(runtime, "a").handler(
+            createAskContext("what is steel used for in nomifactory", createRecorder())
+        );
+
+        expect(script).toEqual([]);
+        expect(searches).toEqual([]);
+
+        const parts = Util.first(bodies).body.contents.at(-1).parts;
+        expect(Util.first(parts).text).toBe("what is steel used for in nomifactory");
+        expect(parts.some(part => part.text?.includes("Automatic lookup"))).toBe(false);
     });
 
     test("treats a question as research when triage fails", async () => {
@@ -1416,7 +1621,11 @@ describe("a command", () => {
 
         await getCommand(runtime, "a").handler(createAskContext("loop please", createRecorder()));
 
-        const responses = idx => bodies[idx].body.contents.at(-1).parts.map(part => part.functionResponse.response);
+        const responses = idx =>
+            bodies[idx].body.contents
+                .at(-1)
+                .parts.filter(part => typeof part.functionResponse !== "undefined")
+                .map(part => part.functionResponse.response);
 
         expect(script).toEqual([]);
         expect(responses(1)[1]).toMatchObject({ repeated: true });
@@ -1515,6 +1724,168 @@ describe("a command", () => {
         expect(found).not.toHaveProperty("note");
     });
 
+    test("asks for exact names when pack data only returns fuzzy matches for recipe targets", async () => {
+        const queries = [];
+        const bodies = await setup([], {
+            triage: () =>
+                triage("research", "", {
+                    recipeQueries: [
+                        { query: "pex", uses: false },
+                        { query: "lex", uses: true }
+                    ]
+                }),
+            routes: {
+                "GET /api/search": ({ url }) => {
+                    const query = url.searchParams.get("q");
+                    queries.push([query, url.searchParams.get("uses")]);
+                    const name = query === "pex" ? "Polyethylene" : "Lexan";
+                    return { json: { item: { id: `test:${name}`, name }, alternatives: [] } };
+                }
+            }
+        });
+        await loadSources({
+            codex: { type: "recipes", options: { searchUrls: [`${server.url}/api/search`], mode: "normal" } }
+        });
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("how do i craft pex and crack lex", recorder));
+
+        expect(queries).toEqual(
+            expect.arrayContaining([
+                ["pex", null],
+                ["lex", "1"]
+            ])
+        );
+        expect(bodies).toHaveLength(0);
+        expect(embedOf(recorder.sent.at(-1)).description).toContain("exact item names or IDs shown in JEI");
+    });
+
+    test.each([
+        ["draconium", "What is the best way to make draconium? Do extensive research.", false],
+        ["molten draconium", "What is the best way to make molten draconium?", true]
+    ])("checks the requested form for %s before answering", async (query, question, isFluid) => {
+        const queries = [];
+        const bodies = await setup(isFluid ? [answer(["NomiCodex lists extracting Draconium Rods into fluid."])] : [], {
+            triage: () => triage("research", "", { recipeQueries: [{ query, uses: false }] }),
+            routes: {
+                "GET /api/search": ({ url }) => {
+                    const q = url.searchParams.get("q");
+                    queries.push(q);
+
+                    if (q === "molten draconium") {
+                        return { json: { item: { id: "f:gregtech:uranium", name: "Molten Uranium" } } };
+                    }
+
+                    return {
+                        json: {
+                            item: { id: "f:nomilabs:draconium", name: "Draconium" },
+                            alternatives: [
+                                { name: "Draconium Dust" },
+                                { name: "Draconium Ingot" },
+                                { name: "Draconium Plate" }
+                            ],
+                            recipes: [
+                                {
+                                    idx: 1,
+                                    type: "Extractor",
+                                    role: "recycle",
+                                    eu: 480,
+                                    dur: 206,
+                                    ins: "Draconium Rod (1)",
+                                    outs: "Draconium (72L)"
+                                }
+                            ]
+                        }
+                    };
+                }
+            }
+        });
+        await loadSources({ codex: { type: "recipes", options: { searchUrls: [`${server.url}/api/search`] } } });
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext(question, recorder));
+
+        const description = embedOf(recorder.sent.at(-1)).description;
+
+        if (isFluid) {
+            expect(queries).toEqual(["molten draconium", "draconium"]);
+            const lookup = Util.first(bodies)
+                .body.contents.at(-1)
+                .parts.find(part => part.text.startsWith("Pack recipe lookups"));
+            expect(JSON.parse(lookup.text.split("\n")[1])).toMatchObject({
+                missing: [],
+                results: [
+                    { item: { id: "f:nomilabs:draconium" }, recipes: [{ role: "recycle", machine: "Extractor" }] }
+                ]
+            });
+            expect(description).toContain("extracting Draconium Rods into fluid");
+        } else {
+            expect(queries).toEqual(["draconium"]);
+            expect(bodies).toHaveLength(0);
+            expect(description).toContain("Which form do you want to look up?");
+            expect(description).toContain("**Draconium Dust**, **Draconium Ingot**, **Draconium (fluid)**");
+        }
+    });
+
+    test("verifies recipe targets while honoring a no-web restriction", async () => {
+        const bodies = await setup(
+            [answer(["The pack lists a steel recipe. What exact name does JEI show for pex?"])],
+            {
+                triage: () =>
+                    triage("research", "", {
+                        excludedTools: ["search_web"],
+                        recipeQueries: [
+                            { query: "steel", uses: false, expert: true },
+                            { query: "pex", uses: false }
+                        ]
+                    }),
+                routes: {
+                    "GET /api/search": ({ url }) => {
+                        if (url.searchParams.get("q") === "pex") {
+                            return { json: { error: "not found" } };
+                        }
+
+                        return {
+                            json: {
+                                item: { id: "test:steel", name: "Steel Ingot" },
+                                alternatives: [],
+                                recipes: [
+                                    {
+                                        type: "Blast Furnace",
+                                        idx: 0,
+                                        eu: 30,
+                                        dur: 20,
+                                        ins: "Steel Dust",
+                                        outs: "Steel Ingot"
+                                    }
+                                ]
+                            }
+                        };
+                    }
+                }
+            }
+        );
+        await loadSources({
+            codex: { type: "recipes", options: { searchUrls: [`${server.url}/api/search`], mode: "normal" } }
+        });
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(
+            createAskContext("how do i craft steel and pex in expert? no web search", recorder)
+        );
+
+        const lookup = bodies[0].body.contents.at(-1).parts.find(part => part.text.startsWith("Pack recipe lookups"));
+        expect(bodies[0].body.tools[0].functionDeclarations.some(tool => tool.name === "search_web")).toBe(false);
+        expect(JSON.parse(lookup.text.split("\n")[1])).toMatchObject({
+            missing: ["pex"],
+            results: [
+                { mode: "expert", item: { name: "Steel Ingot" }, recipes: [{ inputs: "Steel Dust" }] },
+                { found: false }
+            ]
+        });
+        expect(embedOf(recorder.sent.at(-1)).description).toContain("What exact name does JEI show for pex?");
+    });
+
     test("searches the item alone and filters its recipes by machine type", async () => {
         const recipe = (type, outs) => ({ type, idx: 0, eu: 30, dur: 20, tier: "LV", heat: 0, ins: "Air", outs });
 
@@ -1548,6 +1919,12 @@ describe("a command", () => {
         const queries = [];
 
         const bodies = await setup(script, {
+            triage: () =>
+                triage("research", "", {
+                    toolScope: "only",
+                    requiredTools: ["search_recipes"],
+                    allowedTools: ["search_recipes", "show_recipe"]
+                }),
             routes: {
                 "GET /api/search": ({ url }) => {
                     queries.push(url.searchParams.get("q"));
@@ -1563,9 +1940,30 @@ describe("a command", () => {
             }
         });
 
-        await getCommand(runtime, "a").handler(createAskContext("liquid ender air distillation?", createRecorder()));
+        await getCommand(runtime, "a").handler(
+            createAskContext(
+                "Use only %rp to check Liquid Ender Air in the Distillation Tower and the EBF.",
+                createRecorder()
+            )
+        );
 
-        const [uses, ebf] = bodies[1].body.contents.at(-1).parts.map(part => part.functionResponse.response);
+        const classifier = Util.first(bodies.triages).systemInstruction.parts,
+            instructions = Util.first(bodies).body.systemInstruction.parts;
+
+        expect(Util.first(classifier).text).toContain(
+            "rp, %rp, recipe browser, recipe data: search_recipes and show_recipe"
+        );
+        expect(Util.first(instructions).text).toContain("`rp` is the built-in Discord recipe command");
+        expect(
+            Util.first(bodies)
+                .body.tools[0].functionDeclarations.map(tool => tool.name)
+                .sort()
+        ).toEqual(["search_recipes", "show_recipe"]);
+
+        const [uses, ebf] = bodies[1].body.contents
+            .at(-1)
+            .parts.filter(part => typeof part.functionResponse !== "undefined")
+            .map(part => part.functionResponse.response);
 
         expect(script).toEqual([]);
         expect(queries).toEqual(["Liquid Ender Air", "Liquid Ender Air"]);

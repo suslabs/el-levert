@@ -22,6 +22,8 @@ class SearchWikiTool extends SourceTool {
         )
     };
 
+    static quick = true;
+
     static sourceType = AISourceTypes.wiki;
 
     static maxCalls = 3;

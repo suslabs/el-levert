@@ -135,9 +135,11 @@ dist
 
 # Bot
 /config/auth.json
+/config/auth.env
 /db/
 
 # Other
+.DS_Store
 .VSCodeCounter
 .deploy/
 /scratch

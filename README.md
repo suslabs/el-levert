@@ -81,10 +81,12 @@ Supported environment variable names:
 
 - `LEVERET_TOKEN`
 - `LEVERET_OWNER`
+- `LEVERET_GEMINI_KEY` for Gemini models
+- `LEVERET_OPENROUTER_KEY` for OpenRouter models
+- `LEVERET_KEENABLE_KEY` for primary AI web search
+- `LEVERET_TAVILY_KEY` for backup AI web search
 
-If `config/auth.json` exists, the bot uses that file for `token` and `owner`.
-
-If there is no `config/auth.json`, the bot looks for `config/auth.env` and then for the matching environment variables.
+For each field, the bot uses a value from `config/auth.json` if present. Otherwise, it checks the matching environment variable and then `config/auth.env`.
 
 `config/auth.json` example:
 
@@ -103,6 +105,8 @@ LEVERET_OWNER=your discord id
 ```
 
 ## Main bot config
+
+`debugLogRetentionDays` keeps dated debug files for the configured `logFile` for 14 UTC days by default. The bot prunes expired debug files at startup and on daily rotation. Use `0` to disable pruning.
 
 `config/config.json` controls the main bot behavior, including command prefixes, limits, enabled features, logging, and paths.
 
@@ -578,10 +582,11 @@ Examples:
 - `cleanroomcalc` / `crc <width>x<height>x<length>`: Calculates required filter casings, plascrete, and construction blocks for a GregTech cleanroom of given dimensions (e.g. `5x5x5`, `9x7x9`).
 - `stoik <reactants> -> <products>`: Balances chemical equations and verifies reaction stoichiometry.
 - `questbook` / `qb <questbook> <quest name or id> [--expert]`: Shows a quest from a modpack questbook (e.g. `%qb nfu steel age`), with its requirements and the questbook version. When several quests match, lists them with a button for each, ten per page; clicking one opens it in place and **Back** returns to the list. Quests too long for an embed are sent as a file. Add `--expert` for the expert mode questbook. Running it without arguments lists the available questbooks.
+- `rp <item> [machine] [number] [--uses] [--expert] [--light] [--list] [--page <num>]`: Looks up Nomifactory CEu recipes in NomiCodex. Click a result or enter its number to open the recipe card. Use `--uses` to find recipes that consume the item. For example, `%rp steel ingot ebf` lists Blast Furnace recipes for Steel Ingots, and `%rp steel ingot --uses 1` opens the first use.
 
 ### 10. AI assistant: `a` / `ai` / `ask`
 
-Asks the AI assistant a question. It can look things up in the server's tags, the NomiFactory CEu questbook and recipes, Wikipedia, the web, chat history and server members, and run tags or code to work things out.
+Asks the AI assistant a question. It can look things up in the server's tags, the configured modpack’s questbook and recipes, Wikipedia, the web, chat history and server members, and run tags or code to work things out.
 
 Who uses this:
 
@@ -608,6 +613,8 @@ Usage:
 - Answers list the sources they used and a few follow-up questions. Click a number to ask that follow-up.
 - Reply to an answer without a command to keep the conversation going.
 - There's a cooldown on how often you can ask. Admins and the bot owner skip it.
+
+Set `ai.packName` in `config/config.json` to name the modpack in the AI prompts. Prompt files can use `{{packName}}`. Recipe, questbook and documentation sources each supply their own data.
 
 ### 11. Maintenance commands
 

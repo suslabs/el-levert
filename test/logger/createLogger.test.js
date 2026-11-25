@@ -112,6 +112,50 @@ describe("createLogger", () => {
 
         vi.useRealTimers();
     });
+
+    test("prunes expired debug logs for the configured file at startup and rotation", async () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2026-06-27T10:00:00.000Z"));
+
+        const expired = "2026-06-25-rotation-debug.log",
+            retained = "2026-06-26-rotation-debug.log",
+            otherApp = "2026-06-25-other-debug.log",
+            otherLevel = "2026-06-25-rotation-info.log";
+
+        await Promise.all(
+            [expired, retained, otherApp, otherLevel].map(file => fs.writeFile(path.join(tempDir, file), ""))
+        );
+
+        const linked = "2026-06-24-rotation-debug.log";
+        await fs.symlink(otherApp, path.join(tempDir, linked));
+
+        const logger = createLogger({
+            filename: path.join(tempDir, "rotation.log"),
+            fileFormat: "json",
+            level: "debug",
+            debugLogRetentionDays: 2
+        });
+        loggers.push(logger);
+
+        const transport = logger.transports[0];
+        await new Promise(resolve => transport.once("open", resolve));
+
+        const files = await fs.readdir(tempDir);
+        expect(files).not.toContain(expired);
+        expect(files).toEqual(expect.arrayContaining([retained, linked, otherApp, otherLevel]));
+
+        vi.setSystemTime(new Date("2026-06-28T10:00:00.000Z"));
+        const rotated = new Promise(resolve => transport.once("open", resolve));
+        logger.debug("Rotate now");
+        vi.runOnlyPendingTimers();
+        await rotated;
+
+        const rotatedFiles = await fs.readdir(tempDir);
+        expect(rotatedFiles).not.toContain(retained);
+        expect(rotatedFiles).toEqual(
+            expect.arrayContaining(["2026-06-27-rotation-debug.log", linked, otherApp, otherLevel])
+        );
+    });
 });
 
 describe("Merged Branch Coverage", () => {

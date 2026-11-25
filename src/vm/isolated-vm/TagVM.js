@@ -73,9 +73,13 @@ class TagVM extends VM {
         options = ObjectUtil.guaranteeObject(options);
 
         const parentContext = options.parentContext ?? null;
+        const logContent = options.logContent ?? parentContext?.logContent ?? true;
 
         code = transpileScript(code, options);
-        logUsage(code);
+
+        if (logContent) {
+            logUsage(code);
+        }
 
         const inspectorInfo = this._getInspectorInfo(values, options, parentContext);
 
@@ -100,7 +104,7 @@ class TagVM extends VM {
             pushed = false;
 
         try {
-            context = await this._getEvalContext(values, inspectorInfo, parentContext);
+            context = await this._getEvalContext(values, inspectorInfo, parentContext, logContent);
 
             this._pushContext(context);
             pushed = true;
@@ -125,9 +129,12 @@ class TagVM extends VM {
         logFinished(inspectorInfo.enable);
 
         let dataType;
-        [out, dataType] = outErr ? this._handleScriptError(outErr) : this._handleScriptOuput(out);
+        [out, dataType] = outErr ? this._handleScriptError(outErr, logContent) : this._handleScriptOuput(out);
 
-        logOutput(out, dataType);
+        if (logContent) {
+            logOutput(out, dataType);
+        }
+
         return out;
     }
 
@@ -171,7 +178,7 @@ class TagVM extends VM {
         this._inspectorServer = server;
     }
 
-    async _getEvalContext(values, inspectorInfo, parentContext = null) {
+    async _getEvalContext(values, inspectorInfo, parentContext, logContent) {
         inspectorInfo = ObjectUtil.guaranteeObject(inspectorInfo, {
             connectTimeout: 0,
             enable: false,
@@ -182,7 +189,8 @@ class TagVM extends VM {
             {
                 memLimit: this.memLimit,
                 timeLimit: this.timeLimit,
-                parent: parentContext
+                parent: parentContext,
+                logContent
             },
             {
                 connectTimeout: inspectorInfo.connectTimeout,
@@ -293,10 +301,12 @@ class TagVM extends VM {
         return out;
     }
 
-    _handleScriptError(err) {
+    _handleScriptError(err, logContent) {
         switch (err.name) {
             case "VMError":
-                getLogger().debug(`IVM error: ${err.message}`);
+                if (logContent) {
+                    getLogger().debug(`IVM error: ${err.message}`);
+                }
                 throw err;
 
             case VMErrors.custom[0]:

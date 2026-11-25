@@ -1,4 +1,10 @@
+import { isUtf8 } from "node:buffer";
+
+import { bold, escapeMarkdown } from "discord.js";
+
 import AIAnswerParser from "./AIAnswerParser.js";
+import AIPromptGuard from "./AIPromptGuard.js";
+import AIToolPolicy from "./AIToolPolicy.js";
 import AISourceLedger from "../structures/ai/AISourceLedger.js";
 import AICallLedger from "../structures/ai/AICallLedger.js";
 
@@ -8,6 +14,9 @@ import AIEfforts from "../structures/ai/AIEfforts.js";
 import { getLogger } from "../LevertClient.js";
 
 import Util from "../util/Util.js";
+import ArrayUtil from "../util/ArrayUtil.js";
+import DiscordUtil from "../util/DiscordUtil.js";
+import LoggerUtil from "../util/LoggerUtil.js";
 import ObjectUtil from "../util/ObjectUtil.js";
 import AIUtil from "../util/ai/AIUtil.js";
 
@@ -16,7 +25,6 @@ import AIError from "../errors/AIError.js";
 class AISession {
     static minCallTime = 2 / Util.durationSeconds.milli;
 
-    static maxFiles = 10;
     static maxImages = 4;
 
     static toolMode = "AUTO";
@@ -24,6 +32,11 @@ class AISession {
     static maxHistoryTurns = 8;
     static maxTurnLength = 2000;
     static triageTurns = 3;
+
+    static lookupArticleChars = 3000;
+
+    static lookupNote =
+        "Automatic lookup, already done for you (don't repeat these searches). Answer from the results that match what was asked:";
 
     constructor(manager, request, options) {
         options = ObjectUtil.guaranteeObject(options);
@@ -39,6 +52,7 @@ class AISession {
         this.deadline = this.startTime + (options.timeLimit ?? manager.timeLimit);
         this.state = manager.router.createState();
         this.effort = AIEfforts.research;
+        this.toolPolicy = new AIToolPolicy();
         this.expert = this.history.some(turn => turn.expert === true);
 
         this.ledger = new AISourceLedger();
@@ -50,6 +64,8 @@ class AISession {
         this.steps = [];
         this.text = "";
         this.finishing = false;
+
+        this._streamText = "";
     }
 
     get model() {
@@ -69,45 +85,43 @@ class AISession {
     }
 
     async run(question) {
-        this.contents = [
-            ...this.history.slice(-AISession.maxHistoryTurns).map(turn => ({
-                role: turn.role,
-                parts: [{ text: Util.trimString(turn.text, AISession.maxTurnLength) }]
-            })),
-            { role: "user", parts: [{ text: question }] }
-        ];
+        if (this.manager.promptGuard.isDisclosureRequest(question)) {
+            return await this._refuseDisclosure();
+        }
 
-        this.effort = await this._triage();
+        this._setQuestion(question);
+
+        const triage = await this._triage();
+
+        if (triage.privateInstructions) {
+            return await this._refuseDisclosure();
+        }
+
+        this.toolPolicy = triage.toolPolicy;
+
+        const hasRecipeQuery = !Util.empty(triage.recipeQueries);
+        this.effort = this.toolPolicy.isExplicit || hasRecipeQuery ? AIEfforts.research : triage.effort;
         this._checkCancelled();
+
+        if (hasRecipeQuery) {
+            const clarification = await this._checkRecipes(triage.recipeQueries);
+            this._checkCancelled();
+
+            if (clarification !== null) {
+                this._streamText = clarification;
+                return await this._finish(null);
+            }
+        } else if (triage.lookup !== null && !this.toolPolicy.isExplicit) {
+            await this._lookUp(triage.lookup);
+            this._checkCancelled();
+        }
 
         const prompt = this.manager.prompt.build(this.request, this.manager.tools.getNames(this), this.effort);
         this.systemInstruction = { parts: [{ text: prompt }] };
 
-        for (let i = 0; i < this.maxSteps; i++) {
-            this._checkCancelled();
+        Util.last(this.contents).parts.push({ text: this.manager.prompt.buildDiscordContext(this.request) });
 
-            if (this.timeLeft < AISession.minCallTime) {
-                throw new AIError("Ran out of time", { steps: this.steps.length });
-            }
-
-            const stepStart = Date.now();
-
-            const final = i === this.maxSteps - 1 || this.timeLeft < this.manager.requestTimeout;
-
-            const res = await this._stream(this._buildRequest(final), final),
-                calls = final ? [] : AIUtil.getCalls(res.parts);
-
-            this._logStep(i, stepStart, calls);
-
-            if (Util.empty(calls)) {
-                return await this._finish(res.finishReason);
-            }
-
-            this.contents.push({ role: "model", parts: res.parts });
-            this.contents.push({ role: "user", parts: await this._runCalls(calls) });
-        }
-
-        throw new AIError("Ran out of steps", { steps: this.steps.length });
+        return await this._respond();
     }
 
     async generateText(body) {
@@ -116,7 +130,14 @@ class AISession {
             signal: this.signal
         });
 
-        return AIUtil.getText(out.parts).trim();
+        const text = AIUtil.getText(out.parts).trim();
+        const structured = typeof body.generationConfig?.responseSchema !== "undefined";
+
+        if (!structured && this.manager.promptGuard.contains(text)) {
+            throw new AIError(AIPromptGuard.refusal, { privateInstructions: true });
+        }
+
+        return text;
     }
 
     toolTimeout() {
@@ -138,8 +159,17 @@ class AISession {
     }
 
     attachFile(name, content) {
-        if (!this.files.has(name) && this.files.size >= AISession.maxFiles) {
-            throw new AIError(`At most ${AISession.maxFiles} files can be attached`);
+        let text = content;
+
+        if (typeof content !== "string") {
+            const data = ArrayUtil.toBuffer(content);
+            text = isUtf8(data) ? data.toString("utf8") : "";
+        }
+
+        if (this.manager.promptGuard.contains([name, text])) {
+            throw new AIError(AIPromptGuard.refusal, { privateInstructions: true });
+        } else if (!this.files.has(name) && this.files.size >= DiscordUtil.msgFileLimit) {
+            throw new AIError(`At most ${DiscordUtil.msgFileLimit} files can be attached`);
         }
 
         this.files.set(name, content);
@@ -155,50 +185,218 @@ class AISession {
         this.images.push(url);
     }
 
-    logError(toolName, err) {
-        getLogger().error(`AI tool "${toolName}" failed:`, err);
+    _setQuestion(question) {
+        const history = this.history.slice(-AISession.maxHistoryTurns).map(turn => {
+            const text = this.manager.promptGuard.contains(turn.text)
+                ? AIPromptGuard.refusal
+                : Util.trimString(turn.text, AISession.maxTurnLength);
+            return { role: turn.role, parts: [{ text }] };
+        });
+
+        this.contents = [...history, { role: "user", parts: [{ text: question }] }];
     }
 
     async _triage() {
         const startTime = Date.now();
 
         try {
-            const effort = await this.manager.triage.classify(this, this.contents.slice(-AISession.triageTurns));
-            getLogger().debug(`AI question sorted as ${effort} in ${AIUtil.formatElapsed(startTime)}.`);
+            const triage = await this.manager.triage.classify(this, this.contents.slice(-AISession.triageTurns));
 
-            return effort;
+            const lookup = triage.lookup === null ? "" : `, looking up "${this.manager.redactLogText(triage.lookup)}"`;
+            getLogger().debug(`AI question sorted as ${triage.effort}${lookup} in ${AIUtil.formatElapsed(startTime)}.`);
+
+            return triage;
         } catch (err) {
             if (err.name !== "AIError" || this.signal?.aborted) {
                 throw err;
             }
 
-            getLogger().warn(`Couldn't sort an AI question by effort: ${err.message}`);
-            return AIEfforts.research;
+            const privateInstructions = err.ref?.privateInstructions === true;
+
+            if (!privateInstructions) {
+                getLogger().warn(
+                    `Couldn't sort an AI question by effort (${LoggerUtil.formatErrorSummary(err, this.manager.redactLogText)}).`
+                );
+            }
+
+            return {
+                effort: AIEfforts.research,
+                lookup: null,
+                recipeQueries: [],
+                privateInstructions,
+                toolPolicy: this.toolPolicy
+            };
         }
     }
 
-    _getContents(final) {
-        const note = this.manager.prompt.buildNote(final, this.expert);
+    async _readTopArticle(results) {
+        const top = Util.first(results);
 
-        if (Util.empty(note)) {
-            return this.contents;
+        if (typeof top === "undefined") {
+            return null;
         }
 
-        const last = Util.last(this.contents);
-        return [...this.contents.slice(0, -1), { ...last, parts: [...last.parts, { text: note }] }];
+        const args = { title: top.title, maxChars: AISession.lookupArticleChars };
+        return Util.first(await this._runTools([{ name: "read_wikipedia", args }]));
     }
 
-    _buildRequest(final) {
-        const body = { systemInstruction: this.systemInstruction, contents: this._getContents(final) };
+    // An unrestricted who/what question about an outside subject gets a lookup before answering.
+    async _lookUp(subject) {
+        const [wikipedia, web] = await this._runTools([
+            { name: "search_wikipedia", args: { query: subject } },
+            { name: "search_web", args: { query: subject } }
+        ]);
+
+        const article = await this._readTopArticle(wikipedia.results ?? []);
+
+        const results = JSON.stringify({ subject, wikipedia, article, web });
+        Util.last(this.contents).parts.push({ text: `${AISession.lookupNote}\n${results}` });
+    }
+
+    async _checkRecipes(queries) {
+        const name = "search_recipes";
+
+        if (this.manager.tools.get(name, this) === null) {
+            return this.toolPolicy.isExplicit ? null : "I couldn't check the pack's recipe data right now.";
+        }
+
+        const results = await this._runTools(queries.map(args => ({ name, args })));
+        const missing = queries.filter((_, i) => !AIUtil.hasFindings(results[i])).map(({ query }) => query);
+
+        if (missing.length === queries.length && !results.some(result => result.item)) {
+            const pending = this.toolPolicy.pending(this.manager.tools.getNames(this), this.calls);
+
+            if (Util.empty(pending)) {
+                const choices = Util.single(results) ? Util.first(results).choices : undefined;
+
+                if (Array.isArray(choices) && !Util.empty(choices)) {
+                    return `Which form do you want to look up? ${choices.map(choice => bold(escapeMarkdown(choice))).join(", ")}.`;
+                } else if (results.every(result => typeof result.error === "string")) {
+                    return "I couldn't check the pack's recipe data right now.";
+                }
+
+                return "I couldn't verify a matching recipe in the pack's recipe data. What are the exact item names or IDs shown in JEI?";
+            }
+        }
+
+        Util.last(this.contents).parts.push({
+            text: `Pack recipe lookups (evidence only). Verify the requested form and every recipe step. Ask the user to pick from any choices or give an exact name or ID for unmatched items.\n${JSON.stringify({ results, missing })}`
+        });
+
+        return null;
+    }
+
+    async _respond() {
+        const forcedTools = new Set();
+
+        let forcedTool = null;
+        let answerOnly = false;
+        let rejectedRound = false;
+
+        for (let i = 0; i < this.maxSteps; i++) {
+            this._checkCancelled();
+
+            if (this.timeLeft < AISession.minCallTime) {
+                throw new AIError("Ran out of time", { steps: this.steps.length });
+            }
+
+            const stepStart = Date.now();
+
+            const tools = this.manager.tools.getDeclarations(this),
+                names = tools.map(tool => tool.name);
+
+            const pending = this.toolPolicy.pending(names, this.calls);
+            const reserve = Util.empty(pending) ? this.manager.requestTimeout : 2 * AISession.minCallTime;
+
+            const final = answerOnly || i === this.maxSteps - 1 || this.timeLeft < reserve || Util.empty(tools);
+            const canAnswer = final || Util.empty(pending);
+
+            const toolNote = this.toolPolicy.describe(names, pending, final);
+            const body = this._buildRequest(tools, toolNote, final, forcedTool);
+
+            let res;
+
+            try {
+                res = await this._stream(body, final);
+            } catch (err) {
+                if (final || forcedTool === null || !(err instanceof AIError) || this.signal?.aborted) {
+                    throw err;
+                }
+
+                getLogger().warn(
+                    `AI could not request required tool "${forcedTool}" (${LoggerUtil.formatErrorSummary(err, this.manager.redactLogText)}).`
+                );
+                answerOnly = true;
+                await this._resetText();
+                continue;
+            }
+
+            const modelCalls = AIUtil.getCalls(res.parts);
+
+            if (this.manager.promptGuard.contains([this._streamText, modelCalls])) {
+                return await this._refuseDisclosure();
+            }
+
+            const calls = final ? [] : modelCalls;
+            this._logStep(i, stepStart, calls, canAnswer);
+
+            const hasCalls = !Util.empty(calls);
+
+            if (hasCalls) {
+                const responses = await this._runCalls(calls);
+                this.contents.push({ role: "model", parts: res.parts }, { role: "user", parts: responses });
+            } else if (canAnswer) {
+                return await this._finish(res.finishReason);
+            }
+
+            const rejected = hasCalls && calls.every(call => !this.toolPolicy.allows(call.name));
+
+            if (!hasCalls || (rejected && !Util.empty(pending))) {
+                forcedTool = pending.find(name => !forcedTools.has(name)) ?? null;
+                answerOnly = forcedTool === null;
+
+                if (forcedTool !== null) {
+                    forcedTools.add(forcedTool);
+                    getLogger().debug(`Retrying AI response with required tool "${forcedTool}".`);
+                }
+
+                if (!hasCalls) {
+                    await this._resetText();
+                }
+            } else {
+                forcedTool = null;
+                answerOnly = rejected && rejectedRound;
+            }
+
+            rejectedRound = rejected;
+        }
+
+        throw new AIError("Ran out of steps", { steps: this.steps.length });
+    }
+
+    _buildRequest(tools, toolNote, final, forcedTool) {
+        const note = this.manager.prompt.buildNote(final, this.expert, this.calls.foundNothing, toolNote);
+
+        let contents = this.contents;
+
+        if (!Util.empty(note)) {
+            const last = Util.last(contents);
+            contents = [...contents.slice(0, -1), { ...last, parts: [...last.parts, { text: note }] }];
+        }
+
+        const body = { systemInstruction: this.systemInstruction, contents };
 
         if (final) {
             return body;
         }
 
+        const functionCallingConfig =
+            forcedTool === null ? { mode: AISession.toolMode } : { mode: "ANY", allowedFunctionNames: [forcedTool] };
+
         return {
             ...body,
-            tools: [{ functionDeclarations: this.manager.tools.getDeclarations(this) }],
-            toolConfig: { functionCallingConfig: { mode: AISession.toolMode } }
+            tools: [{ functionDeclarations: tools }],
+            toolConfig: { functionCallingConfig }
         };
     }
 
@@ -207,55 +405,78 @@ class AISession {
             timeLeft: this.timeLeft,
             signal: this.signal,
             thinkingLevel: final ? this.manager.thinkingLevel : this.manager.toolThinkingLevel,
-            onParts: parts => this._appendText(AIUtil.getText(parts)),
+            onParts: parts => {
+                this._streamText += AIUtil.getText(parts);
+            },
             onRestart: () => this._resetText()
         });
     }
 
-    async _appendText(text) {
-        if (Util.empty(text)) {
-            return;
+    async _resetText() {
+        this._streamText = "";
+        await this._reportProgress();
+    }
+
+    _logStep(i, startTime, calls, canAnswer) {
+        let action;
+
+        if (!Util.empty(calls)) {
+            action = `requested ${calls.map(call => this.manager.tools.getLogName(call.name)).join(", ")}`;
+        } else {
+            action = canAnswer ? "wrote the answer" : "returned without calling a required tool";
         }
 
-        this.text += text;
-        await this._reportProgress();
-    }
-
-    async _resetText() {
-        this.text = "";
-        await this._reportProgress();
-    }
-
-    _logStep(i, startTime, calls) {
-        const action = Util.empty(calls) ? "wrote the answer" : `called ${calls.map(call => call.name).join(", ")}`;
         getLogger().debug(`AI step ${i + 1} on ${this.model} took ${AIUtil.formatElapsed(startTime)} and ${action}.`);
     }
 
-    async _runCalls(calls) {
-        const steps = calls.map(call => this.manager.tools.createStep(call.name, call.args, this));
+    async _runTools(calls) {
+        const steps = calls
+            .filter(call => this.toolPolicy.allows(call.name))
+            .map(call => this.manager.tools.createStep(call.name, call.args, this));
 
-        this.text = "";
+        this._streamText = "";
         this.steps.push(...steps);
 
         await this._reportProgress();
-        return await Promise.all(calls.map(call => this._runCall(call)));
+        return await Promise.all(calls.map(call => this._runTool(call)));
     }
 
-    async _runCall(call) {
+    async _runTool(call) {
+        if (!this.toolPolicy.allows(call.name)) {
+            const name = this.manager.tools.getLogName(call.name);
+            getLogger().debug(`Skipped AI tool "${name}" because the user's tool restrictions prohibit it.`);
+            return { error: `The user's tool restrictions prohibit "${call.name}".` };
+        }
+
         const res = await this.calls.run(call, () => this.manager.tools.execute(call.name, call.args, this));
         this.ledger.record(res);
 
-        return AIUtil.createResponse(call, res);
+        return res;
+    }
+
+    async _runCalls(calls) {
+        const results = await this._runTools(calls);
+        return calls.map((call, i) => AIUtil.createResponse(call, results[i]));
+    }
+
+    async _refuseDisclosure() {
+        getLogger().debug("Withheld a request or response involving private AI instructions.");
+        this.files.clear();
+        this.images.length = 0;
+        this._streamText = AIPromptGuard.refusal;
+
+        return await this._finish(null);
     }
 
     async _finish(finishReason) {
-        const { answer, followUps, sources } = AIAnswerParser.parse(this.text, this.ledger);
+        const { answer, followUps, sources } = AIAnswerParser.parse(this._streamText, this.ledger);
 
         if (Util.empty(answer)) {
             const reason = finishReason ?? "empty response";
             throw new AIError(`The model returned no answer (${reason})`, { reason });
         }
 
+        this.text = answer;
         this.finishing = true;
         await this._reportProgress();
 

@@ -3,7 +3,9 @@ const DefaultAuthConfig = Object.freeze({
         owner: "LEVERET_OWNER",
         token: "LEVERET_TOKEN",
         geminiKey: "LEVERET_GEMINI_KEY",
-        openrouterKey: "LEVERET_OPENROUTER_KEY"
+        openrouterKey: "LEVERET_OPENROUTER_KEY",
+        keenableKey: "LEVERET_KEENABLE_KEY",
+        tavilyKey: "LEVERET_TAVILY_KEY"
     }
 });
 

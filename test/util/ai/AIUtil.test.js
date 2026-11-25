@@ -38,6 +38,22 @@ describe("AIUtil", () => {
         expect(AIUtil.joinSections("a", "", "b")).toBe("a\n\nb");
     });
 
+    test("tells tool results that found something from empty or failed ones", () => {
+        expect(AIUtil.hasFindings({ query: "x", results: [{ title: "X" }] })).toBe(true);
+        expect(AIUtil.hasFindings({ title: "Steel", text: "Steel is an alloy." })).toBe(true);
+        expect(AIUtil.hasFindings({ table: "..." })).toBe(true);
+
+        expect(AIUtil.hasFindings({ query: "x", results: [] })).toBe(false);
+        expect(AIUtil.hasFindings({ query: "x", found: false, suggestions: ["y"] })).toBe(false);
+        expect(AIUtil.hasFindings({ error: "Web search is blocked right now" })).toBe(false);
+        expect(AIUtil.hasFindings({ recipes: [], uses: [] })).toBe(false);
+        expect(AIUtil.hasFindings({ query: "x", tags: [] })).toBe(false);
+        expect(AIUtil.hasFindings({ matches: [], note: "No members matched." })).toBe(false);
+
+        expect(AIUtil.hasFindings({ repeated: true, result: { results: [] } })).toBe(false);
+        expect(AIUtil.hasFindings({ repeated: true, result: { results: [1] } })).toBe(true);
+    });
+
     test("ToolParams describes paging with the AIUtil bounds", () => {
         expect(ToolParams.page()).toEqual({
             offset: { type: "integer", description: "Character offset to continue from." },

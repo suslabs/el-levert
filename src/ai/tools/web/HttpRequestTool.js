@@ -17,8 +17,7 @@ class HttpRequestTool extends WebTool {
         name: "http_request",
         emoji: "📡",
         phase: AIPhases.fetching,
-        description:
-            "GET/HEAD an API endpoint or user-owned endpoint (JSON/text). NEVER use for public web pages (use fetch_web_page).",
+        description: "GET/HEAD an API or user-owned endpoint (JSON/text). Not for web pages: use fetch_web_page.",
         parameters: ToolParams.object(
             {
                 method: ToolParams.string("HTTP method.", { enum: HttpRequestTool.methods }),

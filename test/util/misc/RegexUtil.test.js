@@ -36,5 +36,6 @@ describe("RegexUtil", () => {
         expect(RegexUtil.templateReplace("Hi {{ name }} and \\{{ skip }}", { name: "Alex" })).toBe(
             "Hi Alex and \\{{ skip }}"
         );
+        expect(RegexUtil.templateReplace("{{constructor}} {{missing}}", {})).toBe("{{constructor}} {{missing}}");
     });
 });

@@ -9,6 +9,7 @@ import AISourceTypes from "../../../../structures/ai/AISourceTypes.js";
 
 import Util from "../../../../util/Util.js";
 import ArrayUtil from "../../../../util/ArrayUtil.js";
+import AIUtil from "../../../../util/ai/AIUtil.js";
 import HTMLUtil from "../../../../util/misc/HTMLUtil.js";
 import ToolParams from "../../../../util/ai/ToolParams.js";
 
@@ -60,36 +61,51 @@ class SearchRecipesTool extends SourceTool {
     async execute(args, session) {
         const query = this.requireString(args, "query");
 
-        const expert = session.resolveExpert(args.expert);
+        let expert = session.resolveExpert(args.expert);
 
         const uses = args.uses ?? false,
             machine = Util.nonemptyString(args.machine) ? args.machine.trim() : null;
 
-        let data = await this._search(query, uses, session, expert);
+        let { data, item, fluid } = await this._resolveItem(query, uses, session, expert);
 
-        if (data.error === NomiCodexClient.notFoundError && typeof args.expert === "undefined" && !expert) {
-            const expertData = await this._search(query, uses, session, true);
+        if (item === null && typeof args.expert === "undefined" && !expert) {
+            const match = await this._resolveItem(query, uses, session, true);
 
-            if (expertData.error !== NomiCodexClient.notFoundError) {
+            if (match.item !== null) {
+                ({ data, item, fluid } = match);
+                expert = true;
                 session.resolveExpert(true);
-                data = expertData;
             }
         }
 
-        if (data.error === NomiCodexClient.notFoundError) {
-            return { query, found: false, suggestions: (data.alternatives ?? []).map(alt => alt.name) };
+        const alternatives = (data.alternatives ?? []).map(alt => HTMLUtil.stripTags(alt.name));
+
+        if (item === null) {
+            const suggestions = [data.item?.name, ...alternatives];
+            return { query, found: false, suggestions: suggestions.filter(Util.nonemptyString) };
         }
 
-        const item = data.item;
+        if (!fluid && machine === null) {
+            const choices = SearchRecipesTool._getMaterialForms(query, item, alternatives);
+
+            if (!Util.empty(choices)) {
+                return {
+                    query,
+                    found: false,
+                    choices,
+                    note: "The material has several forms. Ask which form the user wants."
+                };
+            }
+        }
 
         const out = {
-            mode: this.source.getMode(session.expert),
-            item: { id: item.id, name: HTMLUtil.stripTags(item.name) },
+            mode: this.source.getMode(expert),
+            item,
             machine,
-            alternatives: data.alternatives.map(alt => HTMLUtil.stripTags(alt.name))
+            alternatives
         };
 
-        const entries = uses ? data.uses : data.recipes,
+        const entries = (uses ? data.uses : data.recipes) ?? [],
             getType = uses ? use => use.t : recipe => recipe.type;
 
         const matches = SearchRecipesTool._filterByMachine(entries, getType, machine),
@@ -113,6 +129,37 @@ class SearchRecipesTool extends SourceTool {
     }
 
     static _wordRegex = /[^a-z0-9]+/;
+    static _fluidQualifier = /^(?:fluid|molten)\s+|\s+(?:fluid|\(fluid\))$/gi;
+    static _materialForms = new Set(["dust", "ingot", "gem"]);
+
+    static _getItem(data, query) {
+        if (data.error === NomiCodexClient.notFoundError || data.item == null) {
+            return null;
+        }
+
+        const { id, name } = data.item;
+        const item = { id, name: HTMLUtil.stripTags(name) };
+
+        query = AIUtil.normalizeQuery(query);
+        const matches = ` ${AIUtil.normalizeQuery(item.name)} `.includes(` ${query} `) || id?.toLowerCase() === query;
+        return matches ? item : null;
+    }
+
+    static _getMaterialForms(query, item, alternatives) {
+        query = AIUtil.normalizeQuery(query);
+
+        if (!item.id?.startsWith("f:") || AIUtil.normalizeQuery(item.name) !== query) {
+            return [];
+        }
+
+        const prefix = `${query} `;
+        const forms = alternatives.filter(name => {
+            const normalized = AIUtil.normalizeQuery(name);
+            return normalized.startsWith(prefix) && this._materialForms.has(normalized.slice(prefix.length));
+        });
+
+        return Util.empty(forms) ? [] : ArrayUtil.unique([...forms, `${item.name} (fluid)`]);
+    }
 
     static _getInitials(name) {
         return name
@@ -190,6 +237,25 @@ class SearchRecipesTool extends SourceTool {
             uses,
             timeout: session.toolTimeout()
         });
+    }
+
+    async _resolveItem(query, uses, session, expert) {
+        const data = await this._search(query, uses, session, expert),
+            item = SearchRecipesTool._getItem(data, query);
+
+        const fluidQuery = query.replace(SearchRecipesTool._fluidQualifier, "").trim();
+        const fluid = fluidQuery !== query;
+
+        if (item === null && fluid && Util.nonemptyString(fluidQuery)) {
+            const fluidData = await this._search(fluidQuery, uses, session, expert),
+                fluidItem = SearchRecipesTool._getItem(fluidData, fluidQuery);
+
+            if (fluidItem?.id?.startsWith("f:")) {
+                return { data: fluidData, item: fluidItem, fluid };
+            }
+        }
+
+        return { data, item, fluid };
     }
 }
 
