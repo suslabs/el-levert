@@ -3,6 +3,8 @@ import { Buffer } from "node:buffer";
 
 import { cleanupRuntime, createRuntime } from "../../helpers/runtimeHarness.js";
 
+import DateUtil from "../../../src/util/misc/DateUtil.js";
+
 let runtime;
 let Tag;
 let TagTypes;
@@ -210,8 +212,8 @@ describe("Tag", () => {
             lastEditedTimestamp: 2
         });
         expect(plain.getTimeInfo(false)).toEqual({
-            registered: new Date(1).toUTCString(),
-            lastEdited: new Date(2).toUTCString()
+            registered: DateUtil.formatDate(1),
+            lastEdited: DateUtil.formatDate(2)
         });
         expect(plain.getTimeInfo(false, true)).toEqual({
             registered: "<t:0>",

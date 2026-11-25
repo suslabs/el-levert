@@ -2,7 +2,7 @@ import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
-import DateUtil from "../../util/commands/DateUtil.js";
+import DateUtil from "../../util/misc/DateUtil.js";
 
 const messageRegex = /(.+?)\s*(?:(?:(['"`])((?:[^\2\\]|\\.)*?)\2)|$)/;
 

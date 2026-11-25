@@ -7,7 +7,7 @@
     "websocketCommandsPath": "./src/commands/websocket",
     "dbPath": "./db",
     "logLevel": "debug",
-    "debugLogRetentionDays": 14,
+    "debugLogRetentionDays": -1,
     "cmdPrefix": "%",
     "enableCliCommands": true,
     "cliCmdPrefix": ".",

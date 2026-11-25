@@ -5,6 +5,7 @@ import { getClient, getConfig, getEmoji } from "../../LevertClient.js";
 import TagRevisionManager from "../../managers/database/revision/TagRevisionManager.js";
 
 import Util from "../../util/Util.js";
+import DateUtil from "../../util/misc/DateUtil.js";
 import RevisionAuditUtil from "../../util/commands/RevisionAuditUtil.js";
 import PaginationUtil from "../../util/commands/PaginationUtil.js";
 
@@ -122,7 +123,7 @@ Calling without a tag name shows the full audit log across all tags. Providing a
             tagName = firstArg.toLowerCase();
         }
 
-        const dates = RevisionAuditUtil.parseDateRange(ctx.arg("from"), ctx.arg("to"));
+        const dates = DateUtil.parseRange(ctx.arg("from"), ctx.arg("to"));
 
         if (dates.error) {
             return `${getEmoji("warn")} ${dates.error}`;

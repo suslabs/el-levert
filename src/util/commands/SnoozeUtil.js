@@ -14,7 +14,7 @@ import InteractionModes from "../../structures/interaction/InteractionModes.js";
 import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../Util.js";
-import DateUtil from "./DateUtil.js";
+import DateUtil from "../misc/DateUtil.js";
 
 let SnoozeUtil = {
     createSnoozeRow: sessionId => {
@@ -59,21 +59,11 @@ let SnoozeUtil = {
     },
 
     handleInteraction: async ctx => {
-        const session = ctx.snoozeSession ?? ctx.interactionContext?.session;
+        const session = ctx.snoozeSession ?? ctx.interactionContext?.session,
+            reminder = session?.spec?.reminder,
+            interaction = ctx.interaction;
 
-        if (session == null) {
-            return false;
-        }
-
-        const reminder = session.spec?.reminder;
-
-        if (reminder == null) {
-            return false;
-        }
-
-        const interaction = ctx.interaction;
-
-        if (interaction == null) {
+        if (session == null || reminder == null || interaction == null) {
             return false;
         }
 

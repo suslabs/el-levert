@@ -5,6 +5,22 @@ import Util from "../Util.js";
 import UtilError from "../../errors/UtilError.js";
 
 let DateUtil = {
+    today: () => new Date().toISOString().slice(0, 10),
+
+    formatDate: date => {
+        return new Date(date).toLocaleString("en-GB", {
+            weekday: "short",
+            year: "numeric",
+            month: "numeric",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            timeZoneName: "short",
+            timeZone: "UTC"
+        });
+    },
+
     parse: value => {
         value = value?.trim?.();
 

@@ -30,7 +30,7 @@
         },
         "debugLogRetentionDays": {
             "type": "integer",
-            "minimum": 0
+            "anyOf": [{ "const": -1 }, { "minimum": 1 }]
         },
         "cmdPrefix": {
             "type": "string"
@@ -102,26 +102,32 @@
             "type": "object",
             "properties": {
                 "text": {
-                    "type": "number"
+                    "type": "number",
+                    "anyOf": [{ "const": -1 }, { "minimum": 1 }]
                 },
                 "script": {
-                    "type": "number"
+                    "type": "number",
+                    "anyOf": [{ "const": -1 }, { "minimum": 1 }]
                 },
                 "binary": {
-                    "type": "number"
+                    "type": "number",
+                    "anyOf": [{ "const": -1 }, { "minimum": 1 }]
                 }
             },
             "required": ["text", "script", "binary"],
             "additionalProperties": false
         },
         "maxQuota": {
-            "type": "number"
+            "type": "number",
+            "anyOf": [{ "const": -1 }, { "minimum": 1 }]
         },
         "maxTagCount": {
-            "type": "number"
+            "type": "integer",
+            "anyOf": [{ "const": -1 }, { "minimum": 1 }]
         },
         "memLimit": {
-            "type": "number"
+            "type": "number",
+            "anyOf": [{ "const": -1 }, { "minimum": 1 }]
         },
         "timeLimit": {
             "type": "number"

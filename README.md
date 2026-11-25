@@ -106,9 +106,7 @@ LEVERET_OWNER=your discord id
 
 ## Main bot config
 
-`debugLogRetentionDays` keeps dated debug files for the configured `logFile` for 14 UTC days by default. The bot prunes expired debug files at startup and on daily rotation. Use `0` to disable pruning.
-
-`config/config.json` controls the main bot behavior, including command prefixes, limits, enabled features, logging, and paths.
+`config/config.json` controls the main bot behavior, including command prefixes, limits, enabled features, logging, and paths. Where supported (such as `debugLogRetentionDays`, `maxTagSize`, `maxQuota`, `maxTagCount`, `memLimit`, and `ai.maxSteps`), limits and retention values can be set to `-1` to disable them.
 
 Important groups of settings:
 
@@ -118,10 +116,10 @@ Important groups of settings:
 - Eval modes and execution: `enableEval`, `enableVM2`, `enableOtherLangs`
 - VM HTTP settings: `vmHttp` (`maxUploadSize`, `maxDownloadSize`, `maxRequests`, `rateLimitWindow`, `allowLocalhostRequests`, `allowFilesystemRequests`)
 - Inspector and debugging: `vmInspector` (`enable`, `enableUser`, `connectTimeout`, `userConnectTimeout`, `userActionTimeout`, `port`)
-- Tags and quotas: `maxTagNameLength`, `tagNameRegex`, `maxTagSize` (per-tag limits in kb for `text`, `script`, and `binary`; `-1` for unlimited), `maxQuota` (total storage quota in kb; `-1` for unlimited), `maxTagCount` (`-1` for unlimited)
+- Tags and quotas: `maxTagNameLength`, `tagNameRegex`, `maxTagSize` (per-tag limits in kb for `text`, `script`, and `binary`), `maxQuota` (total storage quota in kb), `maxTagCount`
 - Reply and output limits: `outCharLimit`, `outLineLimit`, `embedCharLimit`, `embedLineLimit`
 - Major features: `enablePreviews`, `enableSed`, `enablePermissions`, `enableReminders`
-- Logging and file paths: log files, log level, database path, command paths, Discord log settings
+- Logging and file paths: log files, log level, debug log retention (`debugLogRetentionDays`, pruned at startup and on daily rotation), database path, command paths, Discord log settings
 
 ## Reactions config
 

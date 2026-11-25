@@ -1,4 +1,4 @@
-import { escapeMarkdown, bold, codeBlock, time } from "discord.js";
+import { escapeMarkdown, bold, codeBlock } from "discord.js";
 
 import BaseStructure from "../BaseStructure.js";
 
@@ -559,15 +559,8 @@ class Tag extends BaseStructure {
                 } else {
                     const invalidValue = this.constructor.invalidValues[prop];
 
-                    let timeStr;
-
-                    if (value === invalidValue) {
-                        timeStr = "not set";
-                    } else if (discord) {
-                        timeStr = time(new Date(value));
-                    } else {
-                        timeStr = new Date(value).toUTCString();
-                    }
+                    const timeStr =
+                        value === invalidValue ? "not set" : DiscordUtil.formatTimestamp(value, { discord });
 
                     return [prop, timeStr];
                 }

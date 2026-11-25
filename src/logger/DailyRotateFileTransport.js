@@ -5,8 +5,11 @@ import winston from "winston";
 
 import Util from "../util/Util.js";
 import ObjectUtil from "../util/ObjectUtil.js";
+import DateUtil from "../util/misc/DateUtil.js";
 
 import LoggerError from "../errors/LoggerError.js";
+
+const dayLength = Util.durationSeconds.day / Util.durationSeconds.milli;
 
 class DailyRotateFileTransport extends winston.transports.File {
     constructor(options) {
@@ -18,7 +21,8 @@ class DailyRotateFileTransport extends winston.transports.File {
             throw new LoggerError("A log file path must be provided");
         }
 
-        const date = DailyRotateFileTransport._today();
+        const date = DateUtil.today();
+
         const { dir, name, ext } = path.parse(logFile);
         const suffix = DailyRotateFileTransport._getSuffix(name, ext, options.level);
 
@@ -27,13 +31,13 @@ class DailyRotateFileTransport extends winston.transports.File {
         this._date = date;
         this._suffix = suffix;
         this._debugSuffix = DailyRotateFileTransport._getSuffix(name, ext, "debug");
-        this._debugLogRetentionDays = options.debugLogRetentionDays ?? 0;
+        this._retentionDays = options.debugLogRetentionDays ?? -1;
 
         this._pruneDebugLogs();
     }
 
     log(info, callback) {
-        const date = DailyRotateFileTransport._today();
+        const date = DateUtil.today();
 
         if (date !== this._date) {
             this._date = date;
@@ -49,22 +53,17 @@ class DailyRotateFileTransport extends winston.transports.File {
     }
 
     static _logDate = /^\d{4}-\d{2}-\d{2}$/;
-    static _dayLength = Util.durationSeconds.day / Util.durationSeconds.milli;
-
-    static _today() {
-        return new Date().toISOString().slice(0, 10);
-    }
 
     static _getSuffix(name, ext, level) {
         return level == null ? `-${name}${ext}` : `-${name}-${level}${ext}`;
     }
 
     _pruneDebugLogs() {
-        if (this._debugLogRetentionDays <= 0) {
+        if (this._retentionDays <= 0) {
             return;
         }
 
-        const cutoff = Date.parse(this._date) - (this._debugLogRetentionDays - 1) * DailyRotateFileTransport._dayLength;
+        const cutoff = Date.parse(this._date) - (this._retentionDays - 1) * dayLength;
 
         try {
             for (const entry of fs.readdirSync(this.dirname, { withFileTypes: true })) {

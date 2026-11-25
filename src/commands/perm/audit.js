@@ -6,6 +6,7 @@ import PermissionRevisionManager from "../../managers/database/revision/Permissi
 import { getClient, getConfig, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import DateUtil from "../../util/misc/DateUtil.js";
 import RevisionAuditUtil from "../../util/commands/RevisionAuditUtil.js";
 import PaginationUtil from "../../util/commands/PaginationUtil.js";
 
@@ -139,7 +140,7 @@ class PermAuditCommand {
             }
         }
 
-        const dates = RevisionAuditUtil.parseDateRange(ctx.arg("from"), ctx.arg("to"));
+        const dates = DateUtil.parseRange(ctx.arg("from"), ctx.arg("to"));
 
         if (dates.error) {
             return `${getEmoji("warn")} ${dates.error}`;

@@ -1,9 +1,12 @@
+import Ajv from "ajv";
 import { describe, expect, test, vi } from "vitest";
 
 import "../../../setupGlobals.js";
 
 import Util from "../../../src/util/Util.js";
 import ConfigLoader from "../../../src/loaders/config/ConfigLoader.js";
+import config from "../../../config/config.json" assert { type: "json" };
+import configSchema from "../../../src/config/schemas/config.schema.json" assert { type: "json" };
 
 describe("ConfigLoader", () => {
     test("clamps message limits and normalizes millisecond durations", () => {
@@ -141,5 +144,39 @@ describe("ConfigLoader", () => {
         expect(config.bridgeBotExps.get("good").source).toContain("content1");
         expect(config.bridgeBotExps.get("good").source).toContain("content2");
         expect(logger.warn).toHaveBeenCalledWith('No/invalid regex for bot "bad".');
+    });
+
+    test("validates -1 or >= 1 constraints in config schema", () => {
+        const ajv = new Ajv(),
+            validate = ajv.compile(configSchema);
+
+        expect(validate(structuredClone(config))).toBe(true);
+
+        const cases = [
+            data => (data.debugLogRetentionDays = 0),
+            data => (data.maxTagSize.text = 0),
+            data => (data.maxTagSize.script = -2),
+            data => (data.maxTagSize.binary = 0),
+            data => (data.maxQuota = 0),
+            data => (data.maxTagCount = 0),
+            data => (data.memLimit = 0),
+            data => (data.ai.maxSteps = 0)
+        ];
+
+        for (const mutate of cases) {
+            const invalid = structuredClone(config);
+            mutate(invalid);
+            expect(validate(invalid)).toBe(false);
+        }
+
+        const unlimited = structuredClone(config);
+        unlimited.debugLogRetentionDays = -1;
+        unlimited.maxTagSize = { text: -1, script: -1, binary: -1 };
+        unlimited.maxQuota = -1;
+        unlimited.maxTagCount = -1;
+        unlimited.memLimit = -1;
+        unlimited.ai.maxSteps = -1;
+
+        expect(validate(unlimited)).toBe(true);
     });
 });

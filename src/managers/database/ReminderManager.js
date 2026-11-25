@@ -13,7 +13,7 @@ import DatabaseUtil from "../../util/database/DatabaseUtil.js";
 import Benchmark from "../../util/misc/Benchmark.js";
 import IntervalLoop from "../../util/misc/IntervalLoop.js";
 import SnoozeUtil from "../../util/commands/SnoozeUtil.js";
-import DateUtil from "../../util/commands/DateUtil.js";
+import DateUtil from "../../util/misc/DateUtil.js";
 
 import ReminderError from "../../errors/ReminderError.js";
 

@@ -1,7 +1,7 @@
 import Reminder from "../../src/structures/Reminder.js";
 
 import Util from "../../src/util/Util.js";
-import DateUtil from "../../src/util/commands/DateUtil.js";
+import DateUtil from "../../src/util/misc/DateUtil.js";
 
 describe("Reminder", () => {
     test("finds due and next occurrences without changing the schedule", () => {

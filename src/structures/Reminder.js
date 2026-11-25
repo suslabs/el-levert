@@ -1,9 +1,10 @@
-import { escapeMarkdown, time, TimestampStyles, bold } from "discord.js";
+import { escapeMarkdown, TimestampStyles, bold } from "discord.js";
 
 import BaseStructure from "./BaseStructure.js";
 
 import Util from "../util/Util.js";
-import DateUtil from "../util/commands/DateUtil.js";
+import DiscordUtil from "../util/DiscordUtil.js";
+import DateUtil from "../util/misc/DateUtil.js";
 
 class Reminder extends BaseStructure {
     static defaultValues = {
@@ -56,7 +57,10 @@ class Reminder extends BaseStructure {
     }
 
     getTimestamp(discord = true, style = TimestampStyles.ShortDateTime) {
-        return this._formatTimestamp(this.getOccurrence(this.getOccurrenceIndex(Date.now(), true)), discord, style);
+        return DiscordUtil.formatTimestamp(this.getOccurrence(this.getOccurrenceIndex(Date.now(), true)), {
+            discord,
+            style
+        });
     }
 
     format(includeMsg = true, discord = true) {
@@ -66,7 +70,7 @@ class Reminder extends BaseStructure {
             format += ` (every ${DateUtil.formatInterval(this.interval)}`;
 
             if (this.end !== null) {
-                format += ` until ${this._formatTimestamp(this.end, discord, TimestampStyles.ShortDateTime)}`;
+                format += ` until ${DiscordUtil.formatTimestamp(this.end, { discord, style: TimestampStyles.ShortDateTime })}`;
             }
 
             format += ")";
@@ -78,26 +82,6 @@ class Reminder extends BaseStructure {
         }
 
         return format;
-    }
-
-    _formatTimestamp(date, discord, style) {
-        const timestamp = new Date(date);
-
-        if (discord) {
-            return time(timestamp, style);
-        }
-
-        return timestamp.toLocaleString("en-GB", {
-            weekday: "short",
-            year: "numeric",
-            month: "numeric",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-            timeZoneName: "short",
-            timeZone: "UTC"
-        });
     }
 }
 

@@ -156,6 +156,38 @@ describe("createLogger", () => {
             expect.arrayContaining(["2026-06-27-rotation-debug.log", linked, otherApp, otherLevel])
         );
     });
+
+    test("keeps logs forever when debugLogRetentionDays is -1 while still rotating", async () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2026-06-27T10:00:00.000Z"));
+
+        const oldLog = "2020-01-01-rotation-debug.log";
+        await fs.writeFile(path.join(tempDir, oldLog), "");
+
+        const logger = createLogger({
+            filename: path.join(tempDir, "rotation.log"),
+            fileFormat: "json",
+            level: "debug",
+            debugLogRetentionDays: -1
+        });
+        loggers.push(logger);
+
+        const transport = logger.transports[0];
+        await new Promise(resolve => transport.once("open", resolve));
+
+        expect(await fs.readdir(tempDir)).toContain(oldLog);
+
+        vi.setSystemTime(new Date("2026-06-28T10:00:00.000Z"));
+        const rotated = new Promise(resolve => transport.once("open", resolve));
+        logger.debug("Rotate without pruning");
+        vi.runOnlyPendingTimers();
+        await rotated;
+
+        expect(transport.filename).toContain("2026-06-28-rotation-debug.log");
+        expect(await fs.readdir(tempDir)).toEqual(
+            expect.arrayContaining([oldLog, "2026-06-27-rotation-debug.log", "2026-06-28-rotation-debug.log"])
+        );
+    });
 });
 
 describe("Merged Branch Coverage", () => {

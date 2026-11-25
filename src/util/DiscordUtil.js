@@ -3,13 +3,23 @@ import path from "node:path";
 
 import axios from "axios";
 
-import { EmbedBuilder, ChannelType, AttachmentBuilder, inlineCode, codeBlock, bold, escapeMarkdown } from "discord.js";
+import {
+    EmbedBuilder,
+    ChannelType,
+    AttachmentBuilder,
+    inlineCode,
+    codeBlock,
+    bold,
+    escapeMarkdown,
+    time
+} from "discord.js";
 
 import Util from "./Util.js";
 import LoggerUtil from "./LoggerUtil.js";
 import TypeTester from "./TypeTester.js";
 import ObjectUtil from "./ObjectUtil.js";
 import ArrayUtil from "./ArrayUtil.js";
+import DateUtil from "./misc/DateUtil.js";
 import HTTPUtil from "./vm/HTTPUtil.js";
 
 import EmbedCountAreas from "./EmbedCountAreas.js";
@@ -292,6 +302,15 @@ let DiscordUtil = {
             timestamp = Number(snowflakeBits >> 22n);
 
         return new Date(timestamp + DiscordUtil.discordEpoch);
+    },
+
+    formatTimestamp: (date, options) => {
+        options = ObjectUtil.guaranteeObject(options);
+
+        const discord = options.discord ?? true,
+            style = options.style;
+
+        return discord ? time(new Date(date), style) : DateUtil.formatDate(date);
     },
 
     isThreadChannel: channel => {

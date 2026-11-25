@@ -1,4 +1,4 @@
-import { EmbedBuilder, escapeMarkdown, time } from "discord.js";
+import { EmbedBuilder, escapeMarkdown } from "discord.js";
 
 import Tag from "../../structures/tag/Tag.js";
 
@@ -7,17 +7,9 @@ import { getClient } from "../../LevertClient.js";
 import Util from "../Util.js";
 import DiscordUtil from "../DiscordUtil.js";
 import ObjectUtil from "../ObjectUtil.js";
-import DateUtil from "./DateUtil.js";
+import DateUtil from "../misc/DateUtil.js";
 
 const RevisionAuditUtil = Object.freeze({
-    formatDate: (date, discord = false) => {
-        if (discord) {
-            return time(new Date(date));
-        }
-
-        return new Date(date).toUTCString();
-    },
-
     formatUser: async (user, discord = false, options = {}) => {
         return await getClient().formatUser(user, discord, options);
     },
@@ -66,7 +58,7 @@ const RevisionAuditUtil = Object.freeze({
                 `Actor: ${formattedActor}`,
                 version !== null ? `Version: \`${version}\`` : null,
                 useSubjectIndex && revision.id !== revNum ? `Global ID: \`#${revision.id}\`` : null,
-                `Created: ${RevisionAuditUtil.formatDate(revision.created, true)}`,
+                `Created: ${DiscordUtil.formatTimestamp(revision.created, { discord: true })}`,
                 `Changed: ${revision.changed.join(", ")}`
             ]
                 .filter(Boolean)
@@ -91,7 +83,7 @@ const RevisionAuditUtil = Object.freeze({
                         `Actor: ${rawActor}`,
                         version !== null ? `Version: ${version}` : null,
                         useSubjectIndex && revision.id !== revNum ? `Global ID: #${revision.id}` : null,
-                        `Created: ${RevisionAuditUtil.formatDate(revision.created)}`,
+                        `Created: ${DiscordUtil.formatTimestamp(revision.created, { discord: false })}`,
                         `Changed: ${revision.changed.join(", ")}`,
                         "",
                         diffText
@@ -123,7 +115,7 @@ const RevisionAuditUtil = Object.freeze({
                 const revNum = useSubjectIndex ? (revision.subjectIndex ?? revision.id) : revision.id;
 
                 const actor = await RevisionAuditUtil.formatUser(revision.actor, isDiscord),
-                    date = RevisionAuditUtil.formatDate(revision.created, isDiscord);
+                    date = DiscordUtil.formatTimestamp(revision.created, { discord: isDiscord });
 
                 const op = isDiscord ? `**${revision.operation}**` : revision.operation;
 
@@ -143,10 +135,6 @@ const RevisionAuditUtil = Object.freeze({
         return new EmbedBuilder()
             .setDescription(description)
             .setFooter({ text: `Page ${page} | ${revisions.length} revision${Util.single(revisions) ? "" : "s"}` });
-    },
-
-    parseDateRange: (fromText, toText) => {
-        return DateUtil.parseRange(fromText, toText);
     },
 
     parseRevisionId: value => {
@@ -232,7 +220,7 @@ const RevisionAuditUtil = Object.freeze({
     _parseClearScope: (ctx, subjectText) => {
         const scopeArgs = String(ctx.arg("scopeArgs") ?? "").trim(),
             tokens = Util.empty(scopeArgs) ? [] : scopeArgs.split(/\s+/),
-            dates = RevisionAuditUtil.parseDateRange(ctx.arg("from"), ctx.arg("to"));
+            dates = DateUtil.parseRange(ctx.arg("from"), ctx.arg("to"));
 
         let subject = null,
             fromId = null,
