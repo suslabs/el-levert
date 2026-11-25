@@ -16,11 +16,16 @@ import Benchmark from "../../util/misc/Benchmark.js";
 
 import CommandError from "../../errors/CommandError.js";
 
-function logCommandUsage(msg, name, args) {
+function logCommandUsage(msg, cmd, args) {
+    if (cmd.logContent === false) {
+        getLogger().info(`Command "${cmd.name}" invoked.`);
+        return;
+    }
+
     const cmdArgs = !Util.empty(args) ? ` with args:${LoggerUtil.formatLog(args)}` : ".";
 
     getLogger().info(
-        `User ${DiscordUtil.formatUser(msg.author)} used command "${name}" in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)})${cmdArgs}`
+        `User ${DiscordUtil.formatUser(msg.author)} used command "${cmd.name}" in channel ${msg.channel.id} (${DiscordUtil.formatChannelName(msg.channel)})${cmdArgs}`
     );
 }
 
@@ -29,7 +34,7 @@ function logExecutionTime(elapsed) {
 }
 
 function logCommandOutput(cmd, out) {
-    if (getLogger().isDebugEnabled()) {
+    if (cmd.logContent !== false && getLogger().isDebugEnabled()) {
         if (Array.isArray(out) && Util.single(out)) {
             out = Util.first(out);
         }
@@ -243,7 +248,7 @@ class CommandHandler extends MessageHandler {
     }
 
     async _executeCommand(cmd, context) {
-        logCommandUsage(context.msg, cmd.name, context.argsText);
+        logCommandUsage(context.msg, cmd, context.argsText);
 
         let outRes = null,
             outErr = null;

@@ -4,8 +4,8 @@ import AIEfforts from "../../structures/ai/AIEfforts.js";
 import { getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-import TypeTester from "../../util/TypeTester.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
+import TypeTester from "../../util/TypeTester.js";
 import AIUtil from "../../util/ai/AIUtil.js";
 
 import AIError from "../../errors/AIError.js";
@@ -102,8 +102,6 @@ class AITool {
     }
 
     async _execute(args, session) {
-        getLogger().debug(`AI tool "${this.name}" called with args:${LoggerUtil.formatLog(args)}`);
-
         const startTime = Date.now();
         let out;
 
@@ -111,7 +109,7 @@ class AITool {
             out = await this._childExecute(args, session);
         } catch (err) {
             if (!AITool.expectedErrors.has(err.name)) {
-                session.logError(this.name, err);
+                getLogger().error(`AI tool "${this.name}" failed (${LoggerUtil.formatErrorSummary(err)}).`);
             }
 
             out = { error: err.message };
@@ -119,10 +117,7 @@ class AITool {
 
         getLogger().debug(`AI tool "${this.name}" took ${AIUtil.formatElapsed(startTime)}.`);
 
-        const limited = this._limitOutput(out);
-        getLogger().debug(`AI tool "${this.name}" returned:${LoggerUtil.formatLog(limited)}`);
-
-        return limited;
+        return this._limitOutput(out);
     }
 
     _limitOutput(out) {

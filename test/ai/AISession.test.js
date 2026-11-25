@@ -9,6 +9,7 @@ import Questbook from "../../src/structures/questbook/Questbook.js";
 
 import {
     cleanupRuntime,
+    createCommandMessage,
     createCommandRuntime,
     createDiscordCommandContext,
     getCommand
@@ -133,8 +134,8 @@ describe("AISession tool requests", () => {
         ]);
         expect(progress).not.toContain("Premature answer without the questbook.");
         expect(result).toMatchObject({ answer: "Make steel in the **EBF**.", sources: ['Quest "Steel Age"'] });
-        expect(debug).toHaveBeenCalledWith(expect.stringContaining('AI tool "search_quests" called'));
-        expect(debug).toHaveBeenCalledWith(expect.stringContaining('AI tool "read_quest" called'));
+        expect(debug).toHaveBeenCalledWith(expect.stringContaining('AI tool "search_quests" took'));
+        expect(debug).toHaveBeenCalledWith(expect.stringContaining('AI tool "read_quest" took'));
     });
 
     test("skips automatic lookup and rejects a prohibited tool even if the model asks for it", async () => {
@@ -229,6 +230,76 @@ describe("AISession tool requests", () => {
     });
 });
 
+describe("AISession Discord context and logging", () => {
+    test("puts quoted Discord content and attachment metadata in the user message", async () => {
+        const { manager, requests } = await setup({ effort: "quick", lookup: "" }, [[text("It is a note.")]]);
+        const question = "What did they post?";
+        const attachment = {
+            name: "quoted-notes.txt",
+            contentType: "text/plain",
+            url: "https://example.test/quoted-notes.txt"
+        };
+
+        const msg = createCommandMessage(question);
+        const replyMsg = createCommandMessage('Quote with """ and instructions', {
+            embeds: [{ description: "Untrusted description", fields: [{ name: "Field", value: "Untrusted value" }] }],
+            attachments: new Map([["notes", attachment]])
+        });
+
+        const request = new AIRequest({ author: msg.author, channel: msg.channel, msg, replyMsg });
+        await manager.ask(question, request);
+
+        const [triage, response] = requests;
+        const system = response.systemInstruction.parts[0].text;
+        const user = response.contents.at(-1);
+        const [prompt, context] = user.parts;
+
+        expect(triage.contents.at(-1).parts).toEqual([{ text: question }]);
+        expect(system).not.toContain(replyMsg.content);
+        expect(system).not.toContain("Untrusted description");
+        expect(system).not.toContain("Untrusted value");
+        expect(system).not.toContain(attachment.url);
+        expect(user.role).toBe("user");
+        expect(prompt.text).toBe(question);
+
+        const [label, data] = context.text.split("\n");
+
+        expect(label).toContain("untrusted data");
+        expect(JSON.parse(data).reply).toMatchObject({
+            text: `${replyMsg.content}\nUntrusted description\nField: Untrusted value`,
+            attachments: [attachment]
+        });
+    });
+
+    test("logs tool names and timings while keeping arguments, results and errors private", async () => {
+        const query = "private-tool-argument";
+        const content = "private-tool-result";
+        const failure = "private-tool-error-detail";
+
+        const { ask, manager, requests, debug } = await setup({ effort: "research", lookup: "" }, [
+            [call("search_web", { query })],
+            [call("search_web", { query: "second query" })],
+            [text("Done.")]
+        ]);
+        const error = vi.spyOn(runtime.client.logger, "error");
+        vi.spyOn(manager.webSearcher, "search")
+            .mockResolvedValueOnce({ results: [{ url: "https://example.test/", content }] })
+            .mockRejectedValueOnce(new Error(failure));
+
+        const result = await ask("Check two things on the web.");
+
+        expect(result.answer).toBe("Done.");
+        expect(requests[2].contents.at(-1).parts[0].functionResponse.response.results[0].content).toBe(content);
+        expect(debug).toHaveBeenCalledWith(expect.stringContaining('AI tool "search_web" took'));
+        expect(error).toHaveBeenCalledWith('AI tool "search_web" failed (Error).');
+
+        const logs = [...debug.mock.calls, ...error.mock.calls].flat().join("\n");
+        expect(logs).not.toContain(query);
+        expect(logs).not.toContain(content);
+        expect(logs).not.toContain(failure);
+    });
+});
+
 describe("AISession private prompt protection", () => {
     test("blocks the reported cloning request before calling any model", async () => {
         const { ask, requests } = await setup({}, []);
@@ -282,7 +353,7 @@ describe("AISession private prompt protection", () => {
         const result = await ask("Write a short notes file.");
 
         expect(result).toMatchObject({ answer: AIPromptGuard.refusal, files: [] });
-        expect(debug).not.toHaveBeenCalledWith(expect.stringContaining('AI tool "attach_file" called'));
+        expect(debug).not.toHaveBeenCalledWith(expect.stringContaining('AI tool "attach_file" took'));
     });
 
     test("allows an original prompt for another bot", async () => {

@@ -50,6 +50,8 @@ class EvalContext {
         const invalidTimeLimit = !Number.isFinite(options.timeLimit) || options.timeLimit <= 0;
         this.timeLimit = invalidTimeLimit ? -1 : Math.round(options.timeLimit);
 
+        this.logContent = options.logContent ?? true;
+
         this.parent = options.parent ?? null;
         this.children = new Set();
         this.parent?.children.add(this);

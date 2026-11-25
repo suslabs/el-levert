@@ -104,6 +104,8 @@ LEVERET_OWNER=your discord id
 
 ## Main bot config
 
+`debugLogRetentionDays` keeps dated debug files for the configured `logFile` for 14 UTC days by default. The bot prunes expired debug files at startup and on daily rotation. Use `0` to disable pruning.
+
 `config/config.json` controls the main bot behavior, including command prefixes, limits, enabled features, logging, and paths.
 
 Important groups of settings:
@@ -581,7 +583,7 @@ Examples:
 
 ### 10. AI assistant: `a` / `ai` / `ask`
 
-Asks the AI assistant a question. It can look things up in the server's tags, the NomiFactory CEu questbook and recipes, Wikipedia, the web, chat history and server members, and run tags or code to work things out.
+Asks the AI assistant a question. It can look things up in the server's tags, the configured modpack’s questbook and recipes, Wikipedia, the web, chat history and server members, and run tags or code to work things out.
 
 Who uses this:
 
@@ -608,6 +610,8 @@ Usage:
 - Answers list the sources they used and a few follow-up questions. Click a number to ask that follow-up.
 - Reply to an answer without a command to keep the conversation going.
 - There's a cooldown on how often you can ask. Admins and the bot owner skip it.
+
+Set `ai.packName` in `config/config.json` to name the modpack in the AI prompts. Prompt files can use `{{packName}}`. Recipe, questbook and documentation sources each supply their own data.
 
 ### 11. Maintenance commands
 

@@ -2,6 +2,8 @@ import AISource from "../../structures/ai/AISource.js";
 
 import { getLogger } from "../../LevertClient.js";
 
+import LoggerUtil from "../../util/LoggerUtil.js";
+
 class AISourceRegistry {
     constructor(http, timeout) {
         this.http = http;
@@ -30,7 +32,7 @@ class AISourceRegistry {
         try {
             this.sources.set(source.type, await source.load(this.http, this.timeout));
         } catch (err) {
-            getLogger().error(`Couldn't load the ${source.name} AI source:`, err);
+            getLogger().error(`Couldn't load the ${source.name} AI source (${LoggerUtil.formatErrorSummary(err)}).`);
         }
     }
 }

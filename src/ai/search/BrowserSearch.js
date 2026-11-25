@@ -11,10 +11,6 @@ class BrowserSearch extends SearchBackend {
     static url = "https://duckduckgo.com/";
     static resultSelector = "article[data-testid='result']";
 
-    get enabled() {
-        return this.browser !== null;
-    }
-
     async search(query, limit, timeout) {
         const url = `${BrowserSearch.url}?${new URLSearchParams({ q: query, ia: "web" })}`;
 

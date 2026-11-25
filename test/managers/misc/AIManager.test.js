@@ -39,6 +39,22 @@ describe("AIManager", () => {
         }
     });
 
+    test("renders the configured pack name in the answer and triage prompts", async () => {
+        const packName = "Example Craft: Expert";
+
+        runtime = await createCommandRuntime({
+            config: { enableAI: true, ai: { packName } },
+            auth: { geminiKey: "test-key" }
+        });
+
+        const { prompt, triage } = runtime.client.aiManager;
+
+        expect(prompt.instructions).toContain(packName);
+        expect(triage.instructions).toContain(packName);
+        expect(prompt.instructions).not.toContain("{{packName}}");
+        expect(triage.instructions).not.toContain("{{packName}}");
+    });
+
     test("offers quick questions only the tools that answer general facts and members", async () => {
         runtime = await createCommandRuntime({ config: { enableAI: true }, auth: { geminiKey: "test-key" } });
 

@@ -1198,7 +1198,10 @@ describe("a command", () => {
 
         expect(script).toEqual([]);
         expect(searches).toEqual([]);
-        expect(Util.first(bodies).body.contents.at(-1).parts).toHaveLength(1);
+
+        const parts = Util.first(bodies).body.contents.at(-1).parts;
+        expect(Util.first(parts).text).toBe("what is steel used for in nomifactory");
+        expect(parts.some(part => part.text?.includes("Automatic lookup"))).toBe(false);
     });
 
     test("treats a question as research when triage fails", async () => {

@@ -1,3 +1,5 @@
+import ObjectUtil from "../util/ObjectUtil.js";
+
 import CallstackUtil from "../util/misc/CallstackUtil.js";
 
 const includeCalls = false,
@@ -35,7 +37,9 @@ const fileFormat = [
     "json"
 ];
 
-function getDefaultLoggerConfig(name, filename, consoleOutput, level, options = {}) {
+function getDefaultLoggerConfig(name, filename, consoleOutput, level, options) {
+    options = ObjectUtil.guaranteeObject(options);
+
     const showDate = options.showDate ?? true,
         dateFormat = showDate ? "YYYY-MM-DD HH:mm:ss" : "HH:mm:ss";
 

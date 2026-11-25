@@ -183,7 +183,7 @@ const RegexUtil = Object.freeze({
     templateReplace: (template, strings) => {
         return template.replace(RegexUtil._templateReplaceRegex, (match, key) => {
             key = key.trim();
-            return strings[key] ?? match;
+            return Object.hasOwn(strings, key) ? (strings[key] ?? match) : match;
         });
     }
 });

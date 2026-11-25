@@ -26,7 +26,7 @@ class AIToolPolicy {
         return this._required.filter(name => available.includes(name) && !calls.hasCalled(name));
     }
 
-    describe(available, calls, final) {
+    describe(available, pending, final) {
         if (!this.isExplicit) {
             return "";
         }
@@ -55,8 +55,6 @@ class AIToolPolicy {
                 `These requested tools are unavailable for this question: ${unavailable.join(", ")}. Tell the user.`
             );
         }
-
-        const pending = this.pending(available, calls);
 
         if (!Util.empty(pending)) {
             if (final) {

@@ -197,8 +197,9 @@ describe("AIReplyView", () => {
         expect(embed.description.endsWith("...")).toBe(true);
     });
 
-    test("renders follow-ups as buttons bound to their session", () => {
-        const followUps = ["One?", "Two_?"],
+    test("preserves bold in follow-ups and binds their buttons to the session", () => {
+        const question = "Show me the **Distillation Tower** recipes for **Crude Oil**?";
+        const followUps = [question, "Two_?"],
             session = new ComponentSession({ author: { id: "1" } }, { spec: { followUps, history: [] } });
 
         const payload = view.renderResult(
@@ -218,7 +219,7 @@ describe("AIReplyView", () => {
 
         const buttons = payload.components[0].toJSON().components;
 
-        expect(embedOf(payload).description).toBe("Answer.\n\nFollow-ups:\n1. One?\n2. Two\\_?");
+        expect(embedOf(payload).description).toBe(`Answer.\n\nFollow-ups:\n1. ${question}\n2. Two\\_?`);
         expect(buttons.map(button => [button.label, button.custom_id])).toEqual([
             ["1", `ai:followup:0:${session.id}`],
             ["2", `ai:followup:1:${session.id}`]

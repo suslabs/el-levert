@@ -1,8 +1,10 @@
-import Backends from "./index.js";
+import BrowserSearch from "./BrowserSearch.js";
+import DuckDuckGoSearch from "./DuckDuckGoSearch.js";
 
 import { getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import LoggerUtil from "../../util/LoggerUtil.js";
 
 // searches with the first backend that works (the stealth browser, then plain DuckDuckGo),
 // then reads the top results so the model gets their text, not just snippets
@@ -14,10 +16,11 @@ class WebSearcher {
 
     constructor(http, browser, pageReader) {
         this.pageReader = pageReader;
+        this.backends = [new DuckDuckGoSearch(http)];
 
-        this.backends = Object.values(Backends)
-            .map(Backend => new Backend(http, browser))
-            .filter(backend => backend.enabled);
+        if (browser !== null) {
+            this.backends.unshift(new BrowserSearch(http, browser));
+        }
     }
 
     async search(query, limit, timeout) {
@@ -55,7 +58,7 @@ class WebSearcher {
                     throw err;
                 }
 
-                getLogger().warn(`Web search on ${backend.name} failed: ${err.message}`);
+                getLogger().warn(`Web search on ${backend.name} failed (${LoggerUtil.formatErrorSummary(err)}).`);
                 lastError = err;
             }
         }

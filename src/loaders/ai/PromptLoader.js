@@ -5,8 +5,6 @@ import PromptFileLoader from "./PromptFileLoader.js";
 
 import ObjectUtil from "../../util/ObjectUtil.js";
 
-import { LoadStatus } from "../LoadStatus.js";
-
 class PromptLoader extends DirectoryLoader {
     constructor(dirPath, logger, options) {
         options = ObjectUtil.guaranteeObject(options);
@@ -19,18 +17,11 @@ class PromptLoader extends DirectoryLoader {
             fileLoaderClass: PromptFileLoader
         });
 
-        this.prompts = {};
+        this.variables = ObjectUtil.guaranteeObject(options.variables);
     }
 
-    async load() {
-        const status = await super.load();
-
-        if (status === LoadStatus.failed) {
-            return status;
-        }
-
-        this.prompts = Object.fromEntries(Array.from(this.data, ([file, text]) => [path.parse(file).name, text]));
-        return status;
+    get prompts() {
+        return Object.fromEntries(Array.from(this.data ?? [], ([file, text]) => [path.parse(file).name, text]));
     }
 }
 

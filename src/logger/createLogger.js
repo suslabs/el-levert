@@ -9,15 +9,16 @@ import Util from "../util/Util.js";
 
 import LoggerError from "../errors/LoggerError.js";
 
-function getFileTransport(config, logFile, level) {
-    if (config == null) {
+function getFileTransport(config, level) {
+    if (config.fileFormat == null) {
         throw new LoggerError("A file format must be provided if outputting to a file");
     }
 
     return new DailyRotateFileTransport({
-        logFile,
+        logFile: config.filename,
         level,
-        format: getFormat(config)
+        debugLogRetentionDays: config.debugLogRetentionDays,
+        format: getFormat(config.fileFormat)
     });
 }
 
@@ -29,22 +30,6 @@ function getConsoleTransport(config) {
     return new winston.transports.Console({
         format: getFormat(config)
     });
-}
-
-function getTransports(config) {
-    const transports = [];
-
-    if (config.fileOutput) {
-        const fileTransport = getFileTransport(config.fileFormat, config.filename, config.level);
-        transports.push(fileTransport);
-    }
-
-    if (config.consoleOutput) {
-        const consoleTransport = getConsoleTransport(config.consoleFormat);
-        transports.push(consoleTransport);
-    }
-
-    return transports;
 }
 
 function getDefaultMeta(config) {
@@ -61,25 +46,27 @@ function getDefaultMeta(config) {
 }
 
 function createLogger(config) {
-    config.fileOutput = config.filename != null;
+    const level = config.level ?? process.env.LOG_LEVEL ?? "debug";
+    const transports = [];
 
-    if (!config.fileOutput && !config.consoleOutput) {
+    if (config.filename != null) {
+        transports.push(getFileTransport(config, level));
+    }
+
+    if (config.consoleOutput) {
+        transports.push(getConsoleTransport(config.consoleFormat));
+    }
+
+    if (Util.empty(transports)) {
         throw new LoggerError("Must provide an output method");
     }
 
-    config.level ??= process.env.LOG_LEVEL ?? "debug";
-
-    const transports = getTransports(config),
-        meta = getDefaultMeta(config);
-
-    const logger = winston.createLogger({
-        level: config.level,
+    return winston.createLogger({
+        level,
         transports,
         format: getGlobalFormat(),
-        defaultMeta: meta
+        defaultMeta: getDefaultMeta(config)
     });
-
-    return logger;
 }
 
 export default createLogger;

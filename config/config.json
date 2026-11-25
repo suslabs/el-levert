@@ -7,6 +7,7 @@
     "websocketCommandsPath": "./src/commands/websocket",
     "dbPath": "./db",
     "logLevel": "debug",
+    "debugLogRetentionDays": 14,
     "cmdPrefix": "%",
     "enableCliCommands": true,
     "cliCmdPrefix": ".",
@@ -96,6 +97,7 @@
         "name": "Large Language Rabbit",
         "icon": null,
         "promptsPath": "./src/ai/prompts",
+        "packName": "Nomifactory CEu",
         "endpoints": {
             "gemini": "https://generativelanguage.googleapis.com/v1beta",
             "openrouter": "https://openrouter.ai/api/v1"

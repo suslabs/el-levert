@@ -22,10 +22,6 @@ class SearchBackend {
         return this.constructor.$name;
     }
 
-    get enabled() {
-        return true;
-    }
-
     formatResult(title, url, snippet) {
         return { title, url, snippet: Util.trimString(snippet, SearchBackend.maxSnippetLength) };
     }

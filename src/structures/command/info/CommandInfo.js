@@ -5,10 +5,11 @@ class CommandInfo extends TextCommandInfo {
         ...TextCommandInfo.defaultValues,
         allowed: 0,
         ownerOnly: false,
-        continueOnReply: false
+        continueOnReply: false,
+        logContent: true
     };
 
-    static dataProps = [...TextCommandInfo.dataProps, "allowed", "ownerOnly", "continueOnReply"];
+    static dataProps = [...TextCommandInfo.dataProps, "allowed", "ownerOnly", "continueOnReply", "logContent"];
 }
 
 export default CommandInfo;

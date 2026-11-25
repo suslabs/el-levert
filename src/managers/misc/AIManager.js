@@ -60,7 +60,7 @@ class AIManager extends Manager {
 
         this.rateLimiter = new RateLimiter(config.maxRequests, config.rateLimitWindow);
 
-        this.prompts = await this._loadPrompts(config.promptsPath);
+        this.prompts = await this._loadPrompts(config.promptsPath, config.packName);
         this.http = HTTPUtil.createAxiosClient(
             {
                 allowLocalhostRequests: config.allowLocalhostRequests,
@@ -142,8 +142,8 @@ class AIManager extends Manager {
         return new ModelRouter(this.http, providers, usable, config);
     }
 
-    async _loadPrompts(promptsPath) {
-        const [prompts] = await new PromptLoader(promptsPath, getLogger()).load();
+    async _loadPrompts(promptsPath, packName) {
+        const [prompts] = await new PromptLoader(promptsPath, getLogger(), { variables: { packName } }).load();
 
         const missing = AIManager.promptNames.filter(name => !Util.nonemptyString(prompts[name]));
 

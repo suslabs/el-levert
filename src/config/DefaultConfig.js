@@ -2,6 +2,8 @@ import Util from "../util/Util.js";
 import DiscordUtil from "../util/DiscordUtil.js";
 
 const DefaultConfig = Object.freeze({
+    debugLogRetentionDays: 14,
+
     outCharLimit: {
         min: 0,
         max: DiscordUtil.msgCharLimit
@@ -123,6 +125,7 @@ const DefaultConfig = Object.freeze({
     },
 
     ai: {
+        packName: "unspecified",
         timeLimit: {
             min: 0,
             round: true,

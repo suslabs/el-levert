@@ -466,9 +466,11 @@ class LevertClient extends DiscordClient {
     _setupLogger() {
         this._deleteLogger();
 
-        const configOpts = [LevertClient.loggerName, this.config.logFile, true, this.config.logLevel],
-            config = getDefaultLoggerConfig(...configOpts);
+        const logFile = this.config.logFile,
+            logLevel = this.config.logLevel;
 
+        const config = getDefaultLoggerConfig(LevertClient.loggerName, logFile, true, logLevel);
+        config.debugLogRetentionDays = this.config.debugLogRetentionDays;
         this.logger = createLogger(config);
         this._wrapEvent = wrapEvent.bind(undefined, this.logger);
     }

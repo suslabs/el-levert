@@ -14,6 +14,7 @@ import { getLogger } from "../LevertClient.js";
 import Util from "../util/Util.js";
 import ArrayUtil from "../util/ArrayUtil.js";
 import DiscordUtil from "../util/DiscordUtil.js";
+import LoggerUtil from "../util/LoggerUtil.js";
 import ObjectUtil from "../util/ObjectUtil.js";
 import AIUtil from "../util/ai/AIUtil.js";
 
@@ -106,6 +107,8 @@ class AISession {
         const prompt = this.manager.prompt.build(this.request, this.manager.tools.getNames(this), this.effort);
         this.systemInstruction = { parts: [{ text: prompt }] };
 
+        Util.last(this.contents).parts.push({ text: this.manager.prompt.buildDiscordContext(this.request) });
+
         return await this._respond();
     }
 
@@ -170,10 +173,6 @@ class AISession {
         this.images.push(url);
     }
 
-    logError(toolName, err) {
-        getLogger().error(`AI tool "${toolName}" failed:`, err);
-    }
-
     _setQuestion(question) {
         const history = this.history.slice(-AISession.maxHistoryTurns).map(turn => {
             const text = this.manager.promptGuard.contains(turn.text)
@@ -191,9 +190,7 @@ class AISession {
         try {
             const triage = await this.manager.triage.classify(this, this.contents.slice(-AISession.triageTurns));
 
-            getLogger().debug(
-                `AI question sorted as ${triage.effort}${triage.lookup === null ? "" : `, looking up "${triage.lookup}"`} in ${AIUtil.formatElapsed(startTime)}.`
-            );
+            getLogger().debug(`AI question sorted as ${triage.effort} in ${AIUtil.formatElapsed(startTime)}.`);
 
             return triage;
         } catch (err) {
@@ -204,7 +201,7 @@ class AISession {
             const privateInstructions = err.ref?.privateInstructions === true;
 
             if (!privateInstructions) {
-                getLogger().warn(`Couldn't sort an AI question by effort: ${err.message}`);
+                getLogger().warn(`Couldn't sort an AI question by effort (${LoggerUtil.formatErrorSummary(err)}).`);
             }
 
             return { effort: AIEfforts.research, lookup: null, privateInstructions, toolPolicy: this.toolPolicy };
@@ -260,16 +257,21 @@ class AISession {
             const final = answerOnly || i === this.maxSteps - 1 || this.timeLeft < reserve || Util.empty(tools);
             const canAnswer = final || Util.empty(pending);
 
+            const toolNote = this.toolPolicy.describe(names, pending, final);
+            const body = this._buildRequest(tools, toolNote, final, forcedTool);
+
             let res;
 
             try {
-                res = await this._stream(this._buildRequest(tools, names, final, forcedTool), final);
+                res = await this._stream(body, final);
             } catch (err) {
                 if (final || forcedTool === null || !(err instanceof AIError) || this.signal?.aborted) {
                     throw err;
                 }
 
-                getLogger().warn(`AI could not request required tool "${forcedTool}": ${err.message}`);
+                getLogger().warn(
+                    `AI could not request required tool "${forcedTool}" (${LoggerUtil.formatErrorSummary(err)}).`
+                );
                 answerOnly = true;
                 await this._resetText();
                 continue;
@@ -284,20 +286,18 @@ class AISession {
             const calls = final ? [] : modelCalls;
             this._logStep(i, stepStart, calls, canAnswer);
 
-            const noCalls = Util.empty(calls);
+            const hasCalls = !Util.empty(calls);
 
-            if (noCalls && canAnswer) {
+            if (hasCalls) {
+                const responses = await this._runCalls(calls);
+                this.contents.push({ role: "model", parts: res.parts }, { role: "user", parts: responses });
+            } else if (canAnswer) {
                 return await this._finish(res.finishReason);
             }
 
-            if (!noCalls) {
-                this.contents.push({ role: "model", parts: res.parts });
-                this.contents.push({ role: "user", parts: await this._runCalls(calls) });
-            }
+            const rejected = hasCalls && calls.every(call => !this.toolPolicy.allows(call.name));
 
-            const rejected = !noCalls && calls.every(call => !this.toolPolicy.allows(call.name));
-
-            if (noCalls || (rejected && !Util.empty(pending))) {
+            if (!hasCalls || (rejected && !Util.empty(pending))) {
                 forcedTool = pending.find(name => !forcedTools.has(name)) ?? null;
                 answerOnly = forcedTool === null;
 
@@ -306,7 +306,7 @@ class AISession {
                     getLogger().debug(`Retrying AI response with required tool "${forcedTool}".`);
                 }
 
-                if (noCalls) {
+                if (!hasCalls) {
                     await this._resetText();
                 }
             } else {
@@ -320,20 +320,17 @@ class AISession {
         throw new AIError("Ran out of steps", { steps: this.steps.length });
     }
 
-    _getContents(names, final) {
-        const toolNote = this.toolPolicy.describe(names, this.calls, final);
+    _buildRequest(tools, toolNote, final, forcedTool) {
         const note = this.manager.prompt.buildNote(final, this.expert, this.calls.foundNothing, toolNote);
 
-        if (Util.empty(note)) {
-            return this.contents;
+        let contents = this.contents;
+
+        if (!Util.empty(note)) {
+            const last = Util.last(contents);
+            contents = [...contents.slice(0, -1), { ...last, parts: [...last.parts, { text: note }] }];
         }
 
-        const last = Util.last(this.contents);
-        return [...this.contents.slice(0, -1), { ...last, parts: [...last.parts, { text: note }] }];
-    }
-
-    _buildRequest(tools, names, final, forcedTool) {
-        const body = { systemInstruction: this.systemInstruction, contents: this._getContents(names, final) };
+        const body = { systemInstruction: this.systemInstruction, contents };
 
         if (final) {
             return body;
@@ -370,7 +367,7 @@ class AISession {
         let action;
 
         if (!Util.empty(calls)) {
-            action = `requested ${calls.map(call => call.name).join(", ")}`;
+            action = `requested ${calls.map(call => this.manager.tools.getLogName(call.name)).join(", ")}`;
         } else {
             action = canAnswer ? "wrote the answer" : "returned without calling a required tool";
         }
@@ -392,7 +389,8 @@ class AISession {
 
     async _runTool(call) {
         if (!this.toolPolicy.allows(call.name)) {
-            getLogger().debug(`Skipped AI tool "${call.name}" because the user's tool restrictions prohibit it.`);
+            const name = this.manager.tools.getLogName(call.name);
+            getLogger().debug(`Skipped AI tool "${name}" because the user's tool restrictions prohibit it.`);
             return { error: `The user's tool restrictions prohibit "${call.name}".` };
         }
 

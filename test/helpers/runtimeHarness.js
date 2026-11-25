@@ -79,6 +79,7 @@ function buildDefaultConfig(tempDir, overrides = {}) {
         enableAI: false,
         ai: {
             name: "Test Rabbit",
+            packName: "Test Pack",
             icon: "https://example.test/icon.png",
             promptsPath: path.join(repoRoot, "src/ai/prompts"),
             endpoints: { gemini: "http://127.0.0.1:1/v1beta", openrouter: "http://127.0.0.1:1/api/v1" },

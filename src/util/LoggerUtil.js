@@ -69,6 +69,13 @@ const LoggerUtil = Object.freeze({
         return binary ?? value;
     },
 
+    formatErrorSummary(err) {
+        const type = err instanceof Error ? err.constructor.name : "Error";
+        const status = err?.response?.status ?? err?.status ?? err?.ref?.status ?? err?.ref;
+
+        return Number.isInteger(status) && status >= 100 && status <= 599 ? `${type}, HTTP ${status}` : type;
+    },
+
     formatLog(str, splitLength = 80, maxLength = 1000) {
         if (str == null) {
             return " none";

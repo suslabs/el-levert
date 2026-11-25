@@ -212,7 +212,7 @@ class AIReplyView {
     static _formatExtras(result, limit) {
         const questions = AIUtil.formatList(
             "Follow-ups:",
-            result.followUps.map(followUp => escapeMarkdown(followUp))
+            result.followUps.map(followUp => escapeMarkdown(followUp, { bold: false }))
         );
         const followUps = AIReplyView._fitText(questions, limit);
         const sources = [];

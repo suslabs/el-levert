@@ -254,13 +254,11 @@ class ModelRouter {
     }
 
     _rejectKey(state, spec, keyIdx, res) {
-        const provider = this._getProviderFor(spec);
-
         state.lastStatus = res.status;
         this.rejectedKeys.add(ModelRouter._getProviderKeyId(spec.provider, keyIdx));
 
         getLogger().error(
-            `AI key ${keyIdx + 1} for ${spec.provider} was rejected (HTTP ${res.status} ${provider.getErrorMessage(res)}). Skipping it until the bot restarts.`
+            `AI key ${keyIdx + 1} for ${spec.provider} was rejected (HTTP ${res.status}). Skipping it until the bot restarts.`
         );
     }
 

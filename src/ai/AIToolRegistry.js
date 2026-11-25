@@ -30,6 +30,10 @@ class AIToolRegistry {
         return typeof tool !== "undefined" && AIToolRegistry._isAvailable(tool, session) ? tool : null;
     }
 
+    getLogName(name) {
+        return this.tools.get(name)?.name ?? "unknown";
+    }
+
     getMaxCalls(name) {
         return this.tools.get(name)?.constructor.maxCalls ?? Infinity;
     }

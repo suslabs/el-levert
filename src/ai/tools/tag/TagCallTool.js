@@ -41,7 +41,8 @@ class TagCallTool extends TagTool {
             out = await getClient().tagManager.execute(
                 tag,
                 ArrayUtil.guaranteeArray(args.args, null, true).join(" "),
-                session.request.scriptValues
+                session.request.scriptValues,
+                { logContent: false }
             );
 
         const files = TypeTester.isObject(out) ? (out.files ?? []) : [];
