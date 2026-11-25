@@ -1,6 +1,8 @@
 import { RESTJSONErrorCodes } from "discord.js";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import DiscordUtil from "../../../src/util/DiscordUtil.js";
+
 import { cleanupRuntime, createRuntime } from "../../helpers/runtimeHarness.js";
 
 let runtime;
@@ -73,8 +75,8 @@ describe("MessageHandler", () => {
     test("escapes pings, formats embeds, and applies trim, file, and error limits", () => {
         const handler = createHandler();
 
-        expect(MessageHandler._escapeMentions("@everyone `@here`")).toBe("\\@everyone `@here`");
-        expect(MessageHandler._escapeMentions(null)).toBeNull();
+        expect(DiscordUtil.escapeMassMentions("@everyone `@here`")).toBe("\\@everyone `@here`");
+        expect(DiscordUtil.escapeMassMentions(null)).toBeNull();
         expect(getEmoji("missing")).toBe("");
         expect(
             MessageHandler._formatOutput({

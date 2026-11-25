@@ -176,7 +176,11 @@ class OpenRouterProvider extends AIProvider {
 
         if (!Util.empty(declarations)) {
             chat.tools = declarations.map(decl => ({ type: "function", function: decl }));
-            chat.tool_choice = "auto";
+            const calling = body.toolConfig?.functionCallingConfig;
+            const forcedTool = calling?.mode === "ANY" ? Util.first(calling.allowedFunctionNames) : null;
+
+            chat.tool_choice =
+                typeof forcedTool === "string" ? { type: "function", function: { name: forcedTool } } : "auto";
         }
 
         const schema = body.generationConfig?.responseSchema;

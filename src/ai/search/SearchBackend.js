@@ -5,7 +5,7 @@ import AIError from "../../errors/AIError.js";
 class SearchBackend {
     static maxSnippetLength = 300;
 
-    constructor(http, keys) {
+    constructor(http, browser) {
         const compName = this.constructor.$name;
 
         if (!Util.nonemptyString(compName)) {
@@ -15,20 +15,19 @@ class SearchBackend {
         }
 
         this.http = http;
-        this.keys = keys;
+        this.browser = browser;
     }
 
     get name() {
         return this.constructor.$name;
     }
 
-    // backends that need a key are skipped when none is configured
     get enabled() {
-        return !this.constructor.needsKey || !Util.empty(this.keys);
+        return true;
     }
 
     formatResult(title, url, snippet) {
-        return { title, url, snippet: Util.trimString(snippet, this.constructor.maxSnippetLength) };
+        return { title, url, snippet: Util.trimString(snippet, SearchBackend.maxSnippetLength) };
     }
 }
 

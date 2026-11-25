@@ -1,6 +1,7 @@
 import AIRequest from "./AIRequest.js";
 import AIReplyUpdater from "./AIReplyUpdater.js";
 import AIReplyView from "./AIReplyView.js";
+import AIPromptGuard from "../../ai/AIPromptGuard.js";
 import ComponentSession from "../interaction/ComponentSession.js";
 
 import InteractionModes from "../interaction/InteractionModes.js";
@@ -8,6 +9,8 @@ import InteractionModes from "../interaction/InteractionModes.js";
 import { getClient, getConfig } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+
+import AIError from "../../errors/AIError.js";
 
 class AIReply {
     static expectedErrors = new Set(["AIError", "AxiosError"]);
@@ -167,7 +170,7 @@ class AIReply {
                 throw err;
             }
 
-            error = err;
+            error = aiManager.promptGuard.contains(err.message) ? new AIError(AIPromptGuard.refusal) : err;
         }
 
         if (this.cancelled) {

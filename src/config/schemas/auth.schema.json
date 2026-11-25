@@ -43,22 +43,6 @@
                     "minItems": 1
                 }
             ]
-        },
-        "tavilyKey": {
-            "title": "Tavily web search API key, or a list of keys used in turn when one runs out",
-            "oneOf": [
-                {
-                    "type": "string"
-                },
-                {
-                    "type": "array",
-                    "items": {
-                        "type": "string",
-                        "minLength": 1
-                    },
-                    "minItems": 1
-                }
-            ]
         }
     }
 }

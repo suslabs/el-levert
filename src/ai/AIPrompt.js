@@ -19,8 +19,12 @@ class AIPrompt {
         return `${this.instructions}\n\n## RUNTIME CONTEXT\n${lines.join("\n")}`;
     }
 
-    buildNote(final, expert, foundNothing) {
+    buildNote(final, expert, foundNothing, toolNote) {
         const notes = [];
+
+        if (!Util.empty(toolNote)) {
+            notes.push(toolNote);
+        }
 
         if (expert) {
             notes.push(AIPrompt.expertNote);

@@ -118,8 +118,8 @@
             "openrouter:particle-ai/particle-1:free",
             "openrouter:nvidia/nemotron-3.5-super-vl:free"
         ],
-        "thinkingLevel": "low",
-        "toolThinkingLevel": "low",
+        "thinkingLevel": "medium",
+        "toolThinkingLevel": "medium",
         "maxSteps": -1,
         "quickMaxSteps": 3,
         "timeLimit": 45,

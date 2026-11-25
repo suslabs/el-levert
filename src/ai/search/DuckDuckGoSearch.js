@@ -5,10 +5,10 @@ import { httpStatusCodes, isSuccessStatus } from "../../util/misc/HttpStatusCode
 
 import AIError from "../../errors/AIError.js";
 
-// scrapes DuckDuckGo's HTML results page; no key, but it can be blocked by a bot check
+// requests DuckDuckGo's HTML results page directly: works without a browser, but it is
+// often shown a bot check
 class DuckDuckGoSearch extends SearchBackend {
     static $name = "duckduckgo";
-    static needsKey = false;
 
     static url = "https://html.duckduckgo.com/html/";
     static userAgent =

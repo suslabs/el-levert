@@ -1,92 +1,76 @@
-import { afterEach, describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
-import { cleanupRuntime, createRuntime } from "../../helpers/runtimeHarness.js";
+import WebSearcher from "../../../src/ai/search/WebSearcher.js";
 
-let runtime;
+import AIError from "../../../src/errors/AIError.js";
 
-afterEach(async () => {
-    await cleanupRuntime(runtime);
-    runtime = null;
-});
+vi.mock("../../../src/LevertClient.js", () => ({ getLogger: () => ({ warn: vi.fn() }) }));
 
-const ddgResult = (url, title, snippet) =>
-    `<div class="result results_links"><a class="result__a" href="//duckduckgo.com/l/?uddg=${encodeURIComponent(url)}">${title}</a><a class="result__snippet">${snippet}</a></div>`;
-
-// answers each request with the next reply and records what was asked
 function createHttp(replies) {
-    const requests = [];
-
-    return {
-        requests,
-        request: async config => {
-            requests.push(config);
-            return replies.shift();
-        }
-    };
-}
-
-async function createSearcher(http, keys) {
-    runtime = await createRuntime({});
-
-    const { default: WebSearcher } = await import("../../../src/ai/search/WebSearcher.js");
-    return new WebSearcher(http, keys);
+    return { request: () => Promise.resolve(replies.shift()) };
 }
 
 describe("WebSearcher", () => {
-    test("searches Tavily when it has a key and formats its results", async () => {
-        const http = createHttp([
-            {
-                status: 200,
-                data: { results: [{ title: "Nomifactory", url: "https://github.com/x", content: "By Exaxxion" }] }
-            }
-        ]);
-
-        const searcher = await createSearcher(http, { tavily: ["key-1"] });
-
-        await expect(searcher.search("nomifactory", 5, 1000)).resolves.toEqual({
-            query: "nomifactory",
-            results: [{ title: "Nomifactory", url: "https://github.com/x", snippet: "By Exaxxion" }]
-        });
-
-        expect(http.requests[0]).toMatchObject({
-            url: "https://api.tavily.com/search",
-            method: "post",
-            headers: { authorization: "Bearer key-1" },
-            data: { query: "nomifactory", max_results: 5 }
-        });
+    test("reads the top three search results and preserves the remaining snippets", async () => {
+        const html = [1, 2, 3, 4]
+            .map(
+                i =>
+                    `<div class="result results_links"><a class="result__a" href="https://example.com/${i}">Page ${i}</a><a class="result__snippet">Snippet</a></div>`
+            )
+            .join("");
+        const reader = { read: url => Promise.resolve({ text: `Content ${url}` }) };
+        const searcher = new WebSearcher(createHttp([{ status: 200, data: html }]), null, reader);
+        const result = await searcher.search("test", 4, 1000);
+        expect(result.results).toHaveLength(4);
+        expect(result.results[0].content).toBe("Content https://example.com/1");
+        expect(result.results[2].content).toBe("Content https://example.com/3");
+        expect(result.results[3].content).toBeUndefined();
     });
 
-    test("moves to the next Tavily key, then to DuckDuckGo when Tavily fails", async () => {
-        const http = createHttp([
-            { status: 401, data: {} },
-            { status: 432, data: {} },
-            { status: 200, data: ddgResult("https://example.test/a", "<b>A</b> page", "About &amp; more") }
-        ]);
+    test("takes search results from Chromium before trying the HTTP backend", async () => {
+        const page = {
+            goto: vi.fn(),
+            waitForSelector: vi.fn(),
+            $$eval: (selector, read) =>
+                read([
+                    {
+                        querySelector: selector =>
+                            selector.startsWith("a")
+                                ? { innerText: "Example", href: "https://example.com/" }
+                                : { innerText: "A result" }
+                    }
+                ])
+        };
+        const browser = { withPage: callback => callback(page) };
+        const reader = { read: vi.fn().mockResolvedValue({ text: "Example page text" }) };
+        const http = { request: vi.fn() };
+        const searcher = new WebSearcher(http, browser, reader);
 
-        const searcher = await createSearcher(http, { tavily: ["bad-key", "used-up-key"] });
-
-        await expect(searcher.search("a", 5, 1000)).resolves.toEqual({
-            query: "a",
-            results: [{ title: "A page", url: "https://example.test/a", snippet: "About & more" }]
+        await expect(searcher.search("test query", 5, 1000)).resolves.toMatchObject({
+            results: [
+                { title: "Example", url: "https://example.com/", snippet: "A result", content: "Example page text" }
+            ]
         });
-
-        expect(http.requests.map(request => request.headers.authorization ?? request.url)).toEqual([
-            "Bearer bad-key",
-            "Bearer used-up-key",
-            "https://html.duckduckgo.com/html/"
-        ]);
+        expect(page.goto).toHaveBeenCalledWith(expect.stringContaining("q=test+query"), expect.anything());
+        expect(http.request).not.toHaveBeenCalled();
     });
 
-    test("uses only DuckDuckGo without a Tavily key and reports its bot check as an error", async () => {
-        const http = createHttp([
-            { status: 202, data: '<div class="anomaly-modal__mask"></div>' },
-            { status: 200, data: '<div class="anomaly-modal__modal"></div>' }
-        ]);
+    test("falls back to DuckDuckGo when the browser fails", async () => {
+        const browser = {
+            withPage: vi.fn().mockRejectedValue(new AIError("Browser failed"))
+        };
+        const html =
+            '<div class="result results_links"><a class="result__a" href="https://example.com">Example</a><a class="result__snippet">Snippet</a></div>';
+        const reader = {
+            read: vi.fn().mockRejectedValue(new AIError("Page failed"))
+        };
+        const searcher = new WebSearcher(createHttp([{ status: 200, data: html }]), browser, reader);
+        const result = await searcher.search("test", 5, 1000);
+        expect(result.results[0]).toMatchObject({ title: "Example", readError: "Page failed" });
+    });
 
-        const searcher = await createSearcher(http, {});
-
-        expect(searcher.backends.map(backend => backend.name)).toEqual(["duckduckgo"]);
-        await expect(searcher.search("a", 5, 1000)).rejects.toThrow("Web search is blocked right now");
-        await expect(searcher.search("a", 5, 1000)).rejects.toThrow("Web search is blocked right now");
+    test("reports a DuckDuckGo bot check", async () => {
+        const searcher = new WebSearcher(createHttp([{ status: 202, data: "" }]), null, null);
+        await expect(searcher.search("test", 5, 1000)).rejects.toThrow("bot check");
     });
 });

@@ -1,6 +1,8 @@
 import { ButtonStyle } from "discord.js";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
+import DiscordUtil from "../../../src/util/DiscordUtil.js";
+
 import { cleanupRuntime, createCommandRuntime } from "../../helpers/commandHarness.js";
 
 let runtime, view;
@@ -129,13 +131,70 @@ describe("AIReplyView", () => {
             ),
             embed = embedOf(payload);
 
-        expect(embed.description.length).toBeLessThanOrEqual(4096);
+        expect(DiscordUtil.embedComponentsOverSizeLimit(embed, { total: DiscordUtil.embedCharLimit })).toBe(false);
         expect(embed.description.endsWith("Sources:\n1. https://example.test/page")).toBe(true);
         expect(embed.footer.text).toBe("Models: test-model | 1,234,567 tok | 12.3s");
         expect(payload.components).toEqual([]);
         expect(payload.attachments).toEqual([]);
         expect(payload.files.map(file => file.name)).toEqual(["answer.md"]);
         expect(payload.files[0].attachment.toString()).toBe("a".repeat(5000));
+    });
+
+    test("budgets for escaped mentions and saves an oversized source in the answer attachment", () => {
+        const answer = "@everyone ".repeat(500).trim();
+        const oversizedSource = `https://example.test/${"x".repeat(4500)}`;
+        const payload = view.renderResult(
+            {
+                answer,
+                sources: [oversizedSource, "Quest A"],
+                followUps: ["What next?"],
+                files: [],
+                images: [],
+                models: ["test-model"],
+                tokens: 1,
+                reasoning: 0,
+                elapsed: 12345
+            },
+            null
+        );
+        const embed = embedOf(payload);
+        embed.description = DiscordUtil.escapeMassMentions(embed.description);
+
+        expect(DiscordUtil.embedComponentsOverSizeLimit(embed, { total: DiscordUtil.embedCharLimit })).toBe(false);
+        expect(embed.description).toContain("Sources:\n1. Quest A");
+        expect(embed.description).toContain("Follow-ups:\n1. What next?");
+        expect(payload.files[0].attachment.toString()).toBe(`${answer}\n\nSources:\n1. ${oversizedSource}\n2. Quest A`);
+    });
+
+    test("gives the overflow attachment its own name when a tool already attached answer.md", () => {
+        const answer = "a".repeat(5000);
+        const payload = view.renderResult(
+            {
+                answer,
+                sources: [],
+                followUps: [],
+                files: [{ name: "answer.md", content: "File from a tool." }],
+                images: [],
+                models: ["test-model"],
+                tokens: 1,
+                reasoning: 0,
+                elapsed: 12345
+            },
+            null
+        );
+
+        expect(payload.files.map(file => [file.name, file.attachment.toString()])).toEqual([
+            ["answer.md", "File from a tool."],
+            ["answer-2.md", answer]
+        ]);
+    });
+
+    test("fits oversized errors inside the entire embed budget", () => {
+        const embed = embedOf(view.renderError(new AIError("verbose error ".repeat(400))));
+
+        expect(DiscordUtil.embedComponentsOverSizeLimit(embed, { total: DiscordUtil.embedCharLimit })).toBe(false);
+        expect(embed.description).toContain("Verbose error");
+        expect(embed.description.endsWith("...")).toBe(true);
     });
 
     test("renders follow-ups as buttons bound to their session", () => {

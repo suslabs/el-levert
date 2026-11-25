@@ -74,6 +74,18 @@ describe("OpenRouterProvider", () => {
         ]);
     });
 
+    test("requires the named tool when the session requests a specific call", () => {
+        const body = {
+            contents: [],
+            tools: [{ functionDeclarations: [{ name: "search_quests", description: "Search quests." }] }],
+            toolConfig: { functionCallingConfig: { mode: "ANY", allowedFunctionNames: ["search_quests"] } }
+        };
+
+        const request = provider.buildRequest("model", "key", body, { stream: true });
+
+        expect(request.data.tool_choice).toEqual({ type: "function", function: { name: "search_quests" } });
+    });
+
     test("reads streamed text and tool calls into the bot's parts", async () => {
         const streamed = [];
 
@@ -101,7 +113,7 @@ describe("OpenRouterProvider", () => {
                 { choices: [], usage: { total_tokens: 42, prompt_tokens_details: { cached_tokens: 10 } } },
                 "[DONE]"
             ]),
-            async parts => streamed.push(...parts)
+            parts => streamed.push(...parts)
         );
 
         expect(streamed).toEqual([{ text: "Hel" }, { text: "lo" }]);

@@ -9,8 +9,12 @@ class AIToolRegistry {
         this.tools = new Map(Object.values(Tools).map(_class => [_class.info.name, new _class(manager)]));
     }
 
+    getRegisteredNames() {
+        return Array.from(this.tools.keys());
+    }
+
     getAvailable(session) {
-        return Array.from(this.tools.values()).filter(tool => tool.isAvailable(session));
+        return Array.from(this.tools.values()).filter(tool => AIToolRegistry._isAvailable(tool, session));
     }
 
     getDeclarations(session) {
@@ -23,7 +27,7 @@ class AIToolRegistry {
 
     get(name, session) {
         const tool = this.tools.get(name);
-        return tool?.isAvailable(session) ? tool : null;
+        return typeof tool !== "undefined" && AIToolRegistry._isAvailable(tool, session) ? tool : null;
     }
 
     getMaxCalls(name) {
@@ -48,6 +52,10 @@ class AIToolRegistry {
         }
 
         return await tool.execute(args, session);
+    }
+
+    static _isAvailable(tool, session) {
+        return (session.toolPolicy?.allows(tool.name) ?? true) && tool.isAvailable(session);
     }
 }
 

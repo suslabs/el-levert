@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { cleanupRuntime, createCommandRuntime } from "../../helpers/commandHarness.js";
 
@@ -57,6 +57,25 @@ describe("AIManager", () => {
 
         expect(tools.get("search_tags", session)).toBeNull();
         expect(tools.get("search_tags", { ...session, effort: "research" })).not.toBeNull();
+    });
+
+    test("fetches page text through the AI web tool", async () => {
+        runtime = await createCommandRuntime({ config: { enableAI: true }, auth: { geminiKey: "test-key" } });
+
+        const manager = runtime.client.aiManager;
+        const url = "https://example.com/notes";
+        const request = vi.spyOn(manager.http, "request").mockResolvedValue({
+            status: 200,
+            headers: { "content-type": "text/plain" },
+            data: "First line. Second line."
+        });
+
+        const session = { effort: "quick", expert: false, request: {}, toolTimeout: () => manager.requestTimeout };
+        const tool = manager.tools.get("fetch_web_page", session);
+        const result = await tool.execute({ url }, session);
+
+        expect(result).toMatchObject({ source: url, text: "First line. Second line." });
+        expect(request).toHaveBeenCalledWith(expect.objectContaining({ url, responseType: "text" }));
     });
 
     test("loads the highest priority source of each type and falls back when one fails", async () => {

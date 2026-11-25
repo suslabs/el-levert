@@ -12,7 +12,7 @@ class AskCommand {
         continueOnReply: true,
         args: "<question>",
         description:
-            "Ask the AI assistant. It can search tags, recipes, chat history, server members and the web, run calculations and look at images. Reply to a message or attach an image to ask about it.",
+            "Ask the AI assistant. It can search the questbook, recipes, tags, chat history, server members and the web, run calculations and look at images. You can ask it to use or avoid a specific source. Reply to a message or attach an image to ask about it.",
         usage: "- <question>: What you want to know. Follow-up suggestions appear as buttons under the answer.",
         arguments: [
             {

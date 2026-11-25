@@ -9,7 +9,8 @@ class SearchWebTool extends AITool {
         name: "search_web",
         emoji: "🌐",
         phase: AIPhases.searching,
-        description: "Web search for general, current or external facts. Results are titles, links and snippets.",
+        description:
+            "Web search for general, current or external facts. Results include titles, links, snippets and page text when available.",
         parameters: ToolParams.object(
             {
                 query: ToolParams.string("Short search query."),

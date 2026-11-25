@@ -256,7 +256,7 @@ async function loadRuntimeManagers(client, Managers, config, auth) {
             },
             aiManager: {
                 enabled: config.enableAI,
-                args: [true, { gemini: auth.geminiKey, openrouter: auth.openrouterKey, tavily: auth.tavilyKey }, {}]
+                args: [true, { gemini: auth.geminiKey, openrouter: auth.openrouterKey }, {}]
             }
         },
         {

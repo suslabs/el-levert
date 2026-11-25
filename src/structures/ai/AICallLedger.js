@@ -6,21 +6,6 @@ class AICallLedger {
     static budgetNote =
         "You've used this tool as many times as allowed for one answer. Answer with what you have, or say what you couldn't find.";
 
-    static _spaceRegex = /\s+/g;
-
-    // calls count as the same when their arguments only differ in case, spacing or key order
-    static _normalize(value) {
-        return typeof value === "string" ? value.trim().replace(AICallLedger._spaceRegex, " ").toLowerCase() : value;
-    }
-
-    static _getKey(call) {
-        const args = Object.keys(call.args)
-            .sort()
-            .map(key => [key, AICallLedger._normalize(call.args[key])]);
-
-        return `${call.name}:${JSON.stringify(args)}`;
-    }
-
     constructor(tools) {
         this.tools = tools;
 
@@ -33,6 +18,10 @@ class AICallLedger {
     // tools ran, but every one came back empty or failed
     get foundNothing() {
         return !Util.empty(this.results) && !this.found;
+    }
+
+    hasCalled(name) {
+        return this.counts.has(name);
     }
 
     async run(call, execute) {
@@ -57,6 +46,23 @@ class AICallLedger {
         this.found ||= AIUtil.hasFindings(res);
 
         return res;
+    }
+
+    static _spaceRegex = /\s+/g;
+
+    // Search queries are case-insensitive. Code, paths, and other arguments keep their exact values.
+    static _normalize(key, value) {
+        return key === "query" && typeof value === "string"
+            ? value.trim().replace(AICallLedger._spaceRegex, " ").toLowerCase()
+            : value;
+    }
+
+    static _getKey(call) {
+        const args = Object.keys(call.args)
+            .sort()
+            .map(key => [key, AICallLedger._normalize(key, call.args[key])]);
+
+        return `${call.name}:${JSON.stringify(args)}`;
     }
 }
 

@@ -38,12 +38,14 @@ const ModuleUtil = Object.freeze({
         return obj;
     },
 
-    loadOptionalModule: async (dependencyName, importURL, modulePath) => {
-        try {
-            await import(dependencyName);
-        } catch (err) {
-            console.warn(`Optional dependency "${dependencyName}" is not installed. Skipping "${modulePath}".`);
-            return null;
+    loadOptionalModule: async (dependencies, importURL, modulePath) => {
+        for (const dependency of Array.isArray(dependencies) ? dependencies : [dependencies]) {
+            try {
+                await import(dependency);
+            } catch (err) {
+                console.warn(`Optional dependency "${dependency}" could not be loaded. Skipping "${modulePath}".`);
+                return null;
+            }
         }
 
         const resolvedModulePath = new URL(modulePath, importURL).href;

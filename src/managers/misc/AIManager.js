@@ -4,8 +4,10 @@ import Providers from "../../ai/providers/index.js";
 import AISession from "../../ai/AISession.js";
 import AIToolRegistry from "../../ai/AIToolRegistry.js";
 import AIPrompt from "../../ai/AIPrompt.js";
+import AIPromptGuard from "../../ai/AIPromptGuard.js";
 import AITriage from "../../ai/AITriage.js";
 import WebSearcher from "../../ai/search/WebSearcher.js";
+import PageReader from "../../ai/search/PageReader.js";
 import AISourceRegistry from "../../ai/sources/AISourceRegistry.js";
 import Sources from "../../ai/sources/Sources.js";
 import PromptLoader from "../../loaders/ai/PromptLoader.js";
@@ -17,6 +19,7 @@ import ArrayUtil from "../../util/ArrayUtil.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 import RateLimiter from "../../util/misc/RateLimiter.js";
 import HTTPUtil from "../../util/vm/HTTPUtil.js";
+import ModuleUtil from "../../util/misc/ModuleUtil.js";
 
 import AIError from "../../errors/AIError.js";
 import ManagerError from "../../errors/ManagerError.js";
@@ -68,21 +71,36 @@ class AIManager extends Manager {
 
         this.router = this._createRouter(config);
         this.tools = new AIToolRegistry(this);
-        this.prompt = new AIPrompt(this.prompts.system);
+        this.promptGuard = new AIPromptGuard(Object.values(this.prompts));
+        this.prompt = new AIPrompt(`${AIPromptGuard.instruction}\n\n${this.prompts.system}`);
         this.triage = new AITriage(this.prompts.triage);
-        this.webSearcher = new WebSearcher(this.http, { tavily: this.keys.tavily });
+        this.browser = await AIManager._loadBrowser(config.allowLocalhostRequests);
+        this.pageReader = new PageReader(this.http, this.browser);
+        this.webSearcher = new WebSearcher(this.http, this.browser, this.pageReader);
 
         this.sources = new AISourceRegistry(this.http, config.requestTimeout);
         await this.sources.load(this.sourceDefinitions);
     }
 
-    unload() {
+    async unload() {
         this.rateLimiter.destroy();
+        await this.browser?.close();
     }
 
     async ask(question, request, options) {
         const session = new AISession(this, request, options);
         return await session.run(question);
+    }
+
+    // Puppeteer is an optional dependency: without it, search and page reading use plain requests
+    static async _loadBrowser(allowLocalhostRequests) {
+        const StealthBrowser = await ModuleUtil.loadOptionalModule(
+            ["puppeteer", "puppeteer-extra", "puppeteer-extra-plugin-stealth"],
+            import.meta.url,
+            "../../ai/browser/StealthBrowser.js"
+        );
+
+        return StealthBrowser === null ? null : new StealthBrowser(allowLocalhostRequests);
     }
 
     _createProviders(config) {
