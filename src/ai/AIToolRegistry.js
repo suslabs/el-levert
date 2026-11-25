@@ -5,8 +5,8 @@ import AIPhases from "../structures/ai/AIPhases.js";
 class AIToolRegistry {
     static unknownToolEmoji = "❔";
 
-    constructor(manager) {
-        this.tools = new Map(Object.values(Tools).map(_class => [_class.info.name, new _class(manager)]));
+    constructor() {
+        this.tools = new Map(Object.values(Tools).map(_class => [_class.info.name, new _class()]));
     }
 
     getRegisteredNames() {
@@ -59,7 +59,7 @@ class AIToolRegistry {
     }
 
     static _isAvailable(tool, session) {
-        return (session.toolPolicy?.allows(tool.name) ?? true) && tool.isAvailable(session);
+        return session.toolPolicy.allows(tool.name) && tool.isAvailable(session);
     }
 }
 

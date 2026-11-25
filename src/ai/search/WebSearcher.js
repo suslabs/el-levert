@@ -55,7 +55,6 @@ class WebSearcher {
                 break;
             }
 
-            // Leave time for the next backend if this one gets blocked.
             const timeout = Math.max(1, Math.ceil(remaining / (this.backends.length - i)));
 
             try {

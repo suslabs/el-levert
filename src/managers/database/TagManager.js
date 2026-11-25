@@ -506,6 +506,7 @@ class TagManager extends DBManager {
         }
 
         let validateAliasName = false;
+
         let create, name, owner;
 
         if (tag === null) {
@@ -1159,7 +1160,7 @@ class TagManager extends DBManager {
                 throw new TagError("Invalid body type:" + type, type);
         }
 
-        const attach = msg.file ?? Util.first(Array.from(msg.attachments?.values() ?? []));
+        const attach = DiscordUtil.getFirstAttachment(msg);
 
         let fileUrl = msg.fileUrl,
             attachInfo = msg.attachInfo;
@@ -1234,7 +1235,7 @@ class TagManager extends DBManager {
             }
 
             const trimmedArgs = (t_args = t_args?.trimEnd?.() ?? ""),
-                attachmentUrls = Array.from(msg.attachments?.values() ?? [], at => at.url).join(" ");
+                attachmentUrls = DiscordUtil.getAttachmentUrls(msg).join(" ");
 
             const body = trimmedArgs + (Util.empty(trimmedArgs) ? "" : " ") + attachmentUrls;
             return { body, isScript: false, isBinary: false, isFile: false };

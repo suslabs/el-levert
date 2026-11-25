@@ -929,6 +929,10 @@ let Util = {
         return Util.formatUnitDurations(durations, Util.durationNames, options);
     },
 
+    shortDuration: delta => {
+        return Util.duration(delta, { format: true, short: true, largestOnly: true });
+    },
+
     _byteNames: Object.freeze({
         byte: {
             fullName: "byte",

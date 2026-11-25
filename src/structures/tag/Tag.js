@@ -384,9 +384,12 @@ class Tag extends BaseStructure {
     }
 
     shallowProps(options) {
-        const shallow = ArrayUtil.guaranteeArray(options.shallow, null, true);
+        options = ObjectUtil.guaranteeObject(options);
 
-        if (options.keepBody ?? true) {
+        const shallow = ArrayUtil.guaranteeArray(options.shallow, null, true),
+            keepBody = options.keepBody ?? true;
+
+        if (keepBody) {
             shallow.push("body", "bin");
         }
 
@@ -622,9 +625,16 @@ class Tag extends BaseStructure {
     static _timeProps = ["registered", "lastEdited"];
 
     static _normalizeMetaValue(value, options) {
-        const { name, valid, unknown, ...enumOptions } = options;
+        options = ObjectUtil.guaranteeObject(options);
 
-        enumOptions.unknown = unknown ?? true;
+        const name = options.name,
+            valid = options.valid;
+
+        const enumOptions = {
+            ...options,
+            unknown: options.unknown ?? true
+        };
+
         return TypeTester.normalizeEnum(value, valid, name, TagError, enumOptions);
     }
 

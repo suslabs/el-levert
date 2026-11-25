@@ -33,6 +33,7 @@ function createClient() {
         },
         users: {
             fetch: vi.fn(),
+            cache: new Collection(),
             resolve: vi.fn().mockReturnValue(null)
         },
         user: {

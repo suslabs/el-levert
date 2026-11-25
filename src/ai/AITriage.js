@@ -3,6 +3,8 @@ import AIToolPolicy from "./AIToolPolicy.js";
 import AIEfforts from "../structures/ai/AIEfforts.js";
 import AIToolScopes from "../structures/ai/AIToolScopes.js";
 
+import { getClient } from "../LevertClient.js";
+
 import Util from "../util/Util.js";
 import ArrayUtil from "../util/ArrayUtil.js";
 import AIUtil from "../util/ai/AIUtil.js";
@@ -63,7 +65,9 @@ class AITriage {
     }
 
     async classify(session, contents) {
-        const names = session.manager.tools.getRegisteredNames();
+        const aiManager = getClient().aiManager,
+            names = aiManager.tools.getRegisteredNames();
+
         const instructions = `${this.instructions}\n\nRegistered tool names: ${names.join(", ")}.`;
 
         const text = await session.generateText({
@@ -75,7 +79,7 @@ class AITriage {
             }
         });
 
-        return AITriage._parse(text, names, session.manager.promptGuard);
+        return AITriage._parse(text, names, aiManager.promptGuard);
     }
 
     static _toolNames(value, registered) {
@@ -104,8 +108,9 @@ class AITriage {
             });
         }
 
-        const lookup = String(data.lookup ?? "").trim();
-        const scope = AIToolScopes.has(data.toolScope) ? data.toolScope : AIToolScopes.auto;
+        const lookup = String(data.lookup ?? "").trim(),
+            scope = AIToolScopes.has(data.toolScope) ? data.toolScope : AIToolScopes.auto;
+
         const required = AITriage._toolNames(data.requiredTools, names),
             excluded = AITriage._toolNames(data.excludedTools, names),
             allowed = AITriage._toolNames(data.allowedTools, names);
@@ -133,9 +138,9 @@ class AITriage {
                 continue;
             }
 
-            const query = entry.query.trim();
-            const machine = Util.nonemptyString(entry.machine) ? entry.machine.trim() : undefined;
-            const uses = entry.uses === true,
+            const query = entry.query.trim(),
+                machine = Util.nonemptyString(entry.machine) ? entry.machine.trim() : undefined,
+                uses = entry.uses === true,
                 expert = typeof entry.expert === "boolean" ? entry.expert : undefined;
 
             const key = `${expert}:${uses}:${machine?.toLowerCase()}:${AIUtil.normalizeQuery(query)}`;

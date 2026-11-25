@@ -173,15 +173,16 @@ class ModelRouter {
 
         let timer = startTimer();
 
-        const onParts = options.onParts;
-        const refreshOnParts = parts => {
-            clearTimeout(timer);
-            timer = startTimer();
-            return onParts(parts);
-        };
+        const onParts = options.onParts,
+            refreshOnParts = parts => {
+                clearTimeout(timer);
+                timer = startTimer();
+                return onParts(parts);
+            };
 
-        const signal = options.signal ?? null;
-        const thinkingLevel = state.noThinking.has(spec.id) ? null : (options.thinkingLevel ?? this.thinkingLevel);
+        const signal = options.signal ?? null,
+            thinkingLevel = state.noThinking.has(spec.id) ? null : (options.thinkingLevel ?? this.thinkingLevel);
+
         const requestOptions = {
             stream,
             thinkingLevel,
@@ -227,12 +228,13 @@ class ModelRouter {
             return;
         }
 
-        const retryDelay = this._getProviderFor(spec).getUnblockDelay(res);
-        const delay = this.quotas.limit(keyId, retryDelay, status, stream);
+        const retryDelay = this._getProviderFor(spec).getUnblockDelay(res),
+            delay = this.quotas.limit(keyId, retryDelay, status, stream);
+
         const detail = status === httpStatusCodes.TOO_MANY_REQUESTS ? "hit its usage limit" : reason;
 
         getLogger().warn(
-            `AI model ${spec.id} ${detail} on key ${keyIdx + 1}${note}. Cooling down for ${AIUtil.formatDuration(delay)}.`
+            `AI model ${spec.id} ${detail} on key ${keyIdx + 1}${note}. Cooling down for ${Util.shortDuration(delay)}.`
         );
     }
 
@@ -315,8 +317,8 @@ class ModelRouter {
     }
 
     _getRetryInfo(state) {
-        let soonest = null;
-        let rejectedStatus = null;
+        let soonest = null,
+            rejectedStatus = null;
 
         for (const spec of this.models) {
             const { keys } = this._getProviderFor(spec);

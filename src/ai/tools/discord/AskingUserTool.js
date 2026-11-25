@@ -2,6 +2,8 @@ import AITool from "../AITool.js";
 
 import AIPhases from "../../../structures/ai/AIPhases.js";
 
+import DiscordUtil from "../../../util/DiscordUtil.js";
+
 class AskingUserTool extends AITool {
     static info = {
         name: "get_asking_user",
@@ -21,11 +23,7 @@ class AskingUserTool extends AITool {
             member = session.request.member;
 
         return {
-            id: user.id,
-            mention: `<@${user.id}>`,
-            username: user.username,
-            displayName: member?.displayName ?? user.globalName ?? user.username,
-            bot: user.bot,
+            ...DiscordUtil.getUserSummary(user, member),
             createdAt: user.createdAt.toISOString(),
             joinedServerAt: member?.joinedAt?.toISOString() ?? null,
             roles: member === null ? [] : this._getRoles(member, session.request.guildId)

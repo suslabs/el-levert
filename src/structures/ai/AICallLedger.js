@@ -15,7 +15,6 @@ class AICallLedger {
         this.found = false;
     }
 
-    // tools ran, but every one came back empty or failed
     get foundNothing() {
         return !Util.empty(this.results) && !this.found;
     }
@@ -48,7 +47,6 @@ class AICallLedger {
         return res;
     }
 
-    // Search queries are case-insensitive. Code, paths, and other arguments keep their exact values.
     static _normalize(key, value) {
         return key === "query" && typeof value === "string" ? AIUtil.normalizeQuery(value) : value;
     }

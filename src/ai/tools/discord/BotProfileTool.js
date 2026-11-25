@@ -1,3 +1,5 @@
+import { userMention } from "discord.js";
+
 import AITool from "../AITool.js";
 
 import AIPhases from "../../../structures/ai/AIPhases.js";
@@ -24,7 +26,7 @@ class BotProfileTool extends AITool {
 
         return {
             id: user.id,
-            mention: `<@${user.id}>`,
+            mention: userMention(user.id),
             username: user.username,
             version: client.version,
             commandPrefix: getConfig().cmdPrefix,

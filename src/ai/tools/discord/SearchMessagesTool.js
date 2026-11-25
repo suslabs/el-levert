@@ -5,6 +5,7 @@ import MessageHistoryTool from "./MessageHistoryTool.js";
 import AIPhases from "../../../structures/ai/AIPhases.js";
 
 import Util from "../../../util/Util.js";
+import DiscordUtil from "../../../util/DiscordUtil.js";
 import RegexUtil from "../../../util/misc/RegexUtil.js";
 import ToolParams from "../../../util/ai/ToolParams.js";
 
@@ -101,7 +102,10 @@ class SearchMessagesTool extends MessageHistoryTool {
     }
 
     _getSearchText(msg) {
-        const embedText = msg.embeds.map(embed => `${embed.title ?? ""} ${embed.description ?? ""}`);
+        const embedText = msg.embeds
+            .map(embed => DiscordUtil.stringifyEmbed(embed, { urls: false }))
+            .filter(Util.nonemptyString);
+
         return [msg.content, ...embedText].join(" ");
     }
 }

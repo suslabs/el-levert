@@ -50,12 +50,12 @@ const GeminiQuotaUtil = Object.freeze({
     },
 
     getTimeToDailyReset: (date = new Date()) => {
-        const local = GeminiQuotaUtil._getPacificWallTime(date);
-        const midnight = new Date(local).setUTCHours(24, 0, 0, 0);
+        const local = GeminiQuotaUtil._getPacificWallTime(date),
+            midnight = new Date(local).setUTCHours(24, 0, 0, 0);
 
         // The Pacific offset at the next midnight can differ from the current offset.
-        const estimate = midnight + date.getTime() - date.getUTCMilliseconds() - local;
-        const correction = midnight - GeminiQuotaUtil._getPacificWallTime(new Date(estimate));
+        const estimate = midnight + date.getTime() - date.getUTCMilliseconds() - local,
+            correction = midnight - GeminiQuotaUtil._getPacificWallTime(new Date(estimate));
 
         return estimate + correction - date.getTime();
     },

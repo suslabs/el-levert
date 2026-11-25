@@ -3,10 +3,7 @@ import WebTool from "./WebTool.js";
 import AIPhases from "../../../structures/ai/AIPhases.js";
 
 import Util from "../../../util/Util.js";
-import HTTPUtil from "../../../util/vm/HTTPUtil.js";
 import ToolParams from "../../../util/ai/ToolParams.js";
-
-import AIError from "../../../errors/AIError.js";
 
 class AttachImageTool extends WebTool {
     static info = {
@@ -39,24 +36,13 @@ class AttachImageTool extends WebTool {
     }
 
     async execute(args, session) {
-        const url = await this.resolveUrl(args.url);
-
-        const res = await this.manager.http.request({
-            url,
-            responseType: "arraybuffer",
-            maxContentLength: AttachImageTool.maxSize,
-            timeout: session.toolTimeout()
+        const { mimeType, data } = await this.fetchImage(args.url, session, {
+            maxContentLength: AttachImageTool.maxSize
         });
-
-        const mimeType = Util.first(HTTPUtil.getContentType(res.headers).split(";"));
-
-        if (!mimeType.startsWith("image/")) {
-            throw new AIError("URL is not an image");
-        }
 
         const name = `${AttachImageTool._getBaseName(args.name)}.${AttachImageTool._getExtension(mimeType)}`;
 
-        session.attachFile(name, Buffer.from(res.data));
+        session.attachFile(name, data);
         return { attached: name };
     }
 

@@ -11,7 +11,8 @@ import {
     codeBlock,
     bold,
     escapeMarkdown,
-    time
+    time,
+    userMention
 } from "discord.js";
 
 import Util from "./Util.js";
@@ -882,6 +883,28 @@ let DiscordUtil = {
         return embedData;
     },
 
+    getUserSummary: (user, member = null) => {
+        return {
+            id: user.id,
+            mention: userMention(user.id),
+            username: user.username,
+            displayName: member?.displayName ?? user.globalName ?? user.username,
+            bot: user.bot
+        };
+    },
+
+    getAttachments: msg => {
+        return Array.from(msg?.attachments?.values() ?? []);
+    },
+
+    getAttachmentUrls: msg => {
+        return DiscordUtil.getAttachments(msg).map(attach => attach.url);
+    },
+
+    getFirstAttachment: msg => {
+        return msg.file ?? Util.first(DiscordUtil.getAttachments(msg)) ?? null;
+    },
+
     openAttachment: async (msg, options) => {
         options = ObjectUtil.guaranteeObject(options);
 
@@ -890,7 +913,7 @@ let DiscordUtil = {
 
         const ctypes = [].concat(allowedContentType, allowedContentTypes);
 
-        const attach = msg.file ?? Util.first(Array.from(msg.attachments?.values() ?? [])),
+        const attach = DiscordUtil.getFirstAttachment(msg),
             url = msg.fileUrl ?? attach?.url;
 
         if (!Util.nonemptyString(url)) {

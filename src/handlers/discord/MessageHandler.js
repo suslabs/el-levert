@@ -24,8 +24,6 @@ function hasReplies(replies) {
 }
 
 class MessageHandler extends Handler {
-    static _rateLimiter = null;
-
     static get rateLimiter() {
         if (this._rateLimiter === null) {
             const config = getConfig();
@@ -89,11 +87,7 @@ class MessageHandler extends Handler {
         }
 
         const waitMs = this.rateLimiter.getTimeToReset(msg.author.id),
-            waitStr = Util.duration(waitMs, {
-                format: true,
-                short: true,
-                largestOnly: true
-            });
+            waitStr = Util.shortDuration(waitMs);
 
         const waitBold = bold(waitStr),
             warning = `${getEmoji("clock")} You are sending commands too fast. Please slow down! (${waitBold})`;
@@ -529,6 +523,8 @@ class MessageHandler extends Handler {
         return total;
     }
 
+    static _rateLimiter = null;
+
     static _attachAbortCleanup(promise, signal) {
         promise
             .then(res => {
@@ -544,13 +540,18 @@ class MessageHandler extends Handler {
     }
 
     static async _dispatchWithSignal(res, options) {
+        options = ObjectUtil.guaranteeObject(options);
+
+        const deleteOnAbort = options.deleteOnAbort ?? false,
+            signal = options.signal ?? null;
+
         const promise = Promise.resolve(res);
 
-        if (options.deleteOnAbort && options.signal != null) {
-            MessageHandler._attachAbortCleanup(promise, options.signal);
+        if (deleteOnAbort && signal !== null) {
+            MessageHandler._attachAbortCleanup(promise, signal);
         }
 
-        return await Util.raceSignal(promise, options.signal);
+        return await Util.raceSignal(promise, signal);
     }
 
     _sendTyping(msg) {

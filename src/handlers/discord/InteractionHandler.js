@@ -1,5 +1,6 @@
 import MessageHandler from "./MessageHandler.js";
 import InteractionTracker from "./tracker/InteractionTracker.js";
+import ComponentSession from "../../structures/interaction/ComponentSession.js";
 
 import InteractionContext from "../../structures/command/context/InteractionContext.js";
 
@@ -46,7 +47,7 @@ class InteractionHandler extends MessageHandler {
             return false;
         }
 
-        const sessionId = this._parseSessionId(interaction.customId);
+        const sessionId = ComponentSession.parseCustomId(interaction.customId)?.sessionId;
 
         if (!Util.nonemptyString(sessionId)) {
             return false;
@@ -103,15 +104,6 @@ class InteractionHandler extends MessageHandler {
     unload() {
         super.unload();
         return this.tracker.destroy();
-    }
-
-    _parseSessionId(customId) {
-        if (!Util.nonemptyString(customId)) {
-            return null;
-        }
-
-        const parts = customId.split(":");
-        return Util.last(parts);
     }
 }
 

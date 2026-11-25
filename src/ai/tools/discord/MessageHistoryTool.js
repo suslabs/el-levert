@@ -1,3 +1,5 @@
+import { userMention } from "discord.js";
+
 import AITool from "../AITool.js";
 
 import { getClient } from "../../../LevertClient.js";
@@ -54,13 +56,13 @@ class MessageHistoryTool extends AITool {
             source: msg.url,
             author: {
                 id: msg.author.id,
-                mention: `<@${msg.author.id}>`,
+                mention: userMention(msg.author.id),
                 name: msg.member?.displayName ?? msg.author.username,
                 bot: msg.author.bot
             },
             createdAt: msg.createdAt.toISOString(),
             content: Util.trimString(msg.content, MessageHistoryTool.maxContentLength),
-            attachments: Array.from(msg.attachments.values()).map(attach => attach.url)
+            attachments: DiscordUtil.getAttachmentUrls(msg)
         };
     }
 

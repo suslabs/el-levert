@@ -2,6 +2,8 @@ import AITool from "../AITool.js";
 
 import AIPhases from "../../../structures/ai/AIPhases.js";
 
+import { getClient } from "../../../LevertClient.js";
+
 import ToolParams from "../../../util/ai/ToolParams.js";
 
 class SearchWebTool extends AITool {
@@ -35,7 +37,7 @@ class SearchWebTool extends AITool {
         const query = this.requireString(args, "query"),
             limit = this.getLimit(args);
 
-        return await this.manager.webSearcher.search(query, limit, session.toolTimeout());
+        return await getClient().aiManager.webSearcher.search(query, limit, session.toolTimeout());
     }
 }
 

@@ -35,8 +35,9 @@ class AIProvider {
     }
 
     getUnblockDelay(res) {
-        const retryAfter = res.headers?.["retry-after"];
-        const seconds = Number(retryAfter);
+        const retryAfter = res.headers?.["retry-after"],
+            seconds = Number(retryAfter);
+
         const delay = Number.isFinite(seconds)
             ? seconds / Util.durationSeconds.milli
             : Date.parse(retryAfter) - Date.now();

@@ -195,7 +195,6 @@ class SearchRecipesTool extends SourceTool {
         return ticks / OverclockingValues.ticksPerSecond;
     }
 
-    // itemId is the item the recipe card belongs to: hot ingot EBF steps live on the hot ingot
     static _formatRecipe(recipe, itemId) {
         const out = {
             itemId: recipe.itemId ?? itemId,
@@ -243,8 +242,8 @@ class SearchRecipesTool extends SourceTool {
         const data = await this._search(query, uses, session, expert),
             item = SearchRecipesTool._getItem(data, query);
 
-        const fluidQuery = query.replace(SearchRecipesTool._fluidQualifier, "").trim();
-        const fluid = fluidQuery !== query;
+        const fluidQuery = query.replace(SearchRecipesTool._fluidQualifier, "").trim(),
+            fluid = fluidQuery !== query;
 
         if (item === null && fluid && Util.nonemptyString(fluidQuery)) {
             const fluidData = await this._search(fluidQuery, uses, session, expert),

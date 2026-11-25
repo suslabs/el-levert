@@ -29,21 +29,29 @@ class SearchBackend {
         return { title, url, snippet: Util.trimString(snippet, this.constructor.maxSnippetLength) };
     }
 
-    async searchJson(url, headers, data, timeout) {
+    async request(config) {
         const res = await this.http.request({
+            validateStatus: () => true,
+            ...config
+        });
+
+        if (!isSuccessStatus(res.status)) {
+            throw new AIError(`HTTP ${res.status}`, res.status);
+        }
+
+        return res;
+    }
+
+    async searchJson(url, headers, data, timeout) {
+        const res = await this.request({
             url,
             method: "post",
             headers,
             data,
             responseType: "json",
             maxRedirects: 0,
-            timeout,
-            validateStatus: () => true
+            timeout
         });
-
-        if (!isSuccessStatus(res.status)) {
-            throw new AIError(`HTTP ${res.status}`, res.status);
-        }
 
         return ArrayUtil.guaranteeArray(res.data?.results)
             .filter(result => typeof result?.url === "string" && HTTPUtil.getHost(result.url) !== null)

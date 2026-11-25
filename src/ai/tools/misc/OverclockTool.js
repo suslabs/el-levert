@@ -8,7 +8,6 @@ import Overclocking from "../../../util/commands/overclocking/Overclocking.js";
 import OverclockingModes from "../../../util/commands/overclocking/OverclockingModes.js";
 
 class OverclockTool extends AITool {
-    // the modes that apply to Nomifactory CEu; ce and macerator emulate the older GTCE
     static modes = [OverclockingModes.standard, OverclockingModes.ebf, OverclockingModes.lcr];
 
     static info = {

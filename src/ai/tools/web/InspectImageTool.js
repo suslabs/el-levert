@@ -2,11 +2,10 @@ import WebTool from "./WebTool.js";
 
 import AIPhases from "../../../structures/ai/AIPhases.js";
 
-import Util from "../../../util/Util.js";
-import HTTPUtil from "../../../util/vm/HTTPUtil.js";
-import ToolParams from "../../../util/ai/ToolParams.js";
+import { getClient } from "../../../LevertClient.js";
 
-import AIError from "../../../errors/AIError.js";
+import Util from "../../../util/Util.js";
+import ToolParams from "../../../util/ai/ToolParams.js";
 
 class InspectImageTool extends WebTool {
     static info = {
@@ -31,21 +30,7 @@ class InspectImageTool extends WebTool {
     }
 
     async execute(args, session) {
-        const url = await this.resolveUrl(args.url);
-
-        const res = await this.manager.http.request({
-            url,
-            responseType: "arraybuffer",
-            timeout: session.toolTimeout()
-        });
-
-        const mimeType = Util.first(HTTPUtil.getContentType(res.headers).split(";"));
-
-        if (!mimeType.startsWith("image/")) {
-            throw new AIError(`URL is not an image (${Util.empty(mimeType) ? "unknown type" : mimeType})`);
-        }
-
-        const data = Buffer.from(res.data);
+        const { url, mimeType, data } = await this.fetchImage(args.url, session);
 
         const question = Util.nonemptyString(args.question) ? ` Focus on: ${args.question}` : "",
             description = await session.generateText({
@@ -54,7 +39,7 @@ class InspectImageTool extends WebTool {
                         role: "user",
                         parts: [
                             { inlineData: { mimeType, data: data.toString("base64") } },
-                            { text: this.manager.prompts.inspectImage + question }
+                            { text: getClient().aiManager.prompts.inspectImage + question }
                         ]
                     }
                 ]

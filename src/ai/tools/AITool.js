@@ -1,7 +1,7 @@
 import AIPhases from "../../structures/ai/AIPhases.js";
 import AIEfforts from "../../structures/ai/AIEfforts.js";
 
-import { getLogger } from "../../LevertClient.js";
+import { getClient, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
@@ -25,10 +25,9 @@ class AITool {
     static maxStatusArgLength = 60;
     static maxCalls = Infinity;
 
-    // offered for quick questions too (general facts, members); everything else only for research
     static quick = false;
 
-    constructor(manager) {
+    constructor() {
         const info = this.constructor.info;
 
         if (!TypeTester.isObject(info)) {
@@ -42,8 +41,6 @@ class AITool {
         } else if (typeof this.getStatus !== "function") {
             throw new AIError("Child class must have a getStatus function");
         }
-
-        this.manager = manager;
 
         this._childIsAvailable = this.isAvailable;
         this.isAvailable = this._isAvailable.bind(this);
@@ -102,10 +99,11 @@ class AITool {
     }
 
     async _execute(args, session) {
-        const logger = getLogger();
+        const logger = getLogger(),
+            aiManager = getClient().aiManager;
 
         if (logger.isDebugEnabled()) {
-            logger.debug(`AI tool "${this.name}" called with args:${this.manager.formatLog(args)}`);
+            logger.debug(`AI tool "${this.name}" called with args:${aiManager.formatLog(args)}`);
         }
 
         const startTime = Date.now();
@@ -116,7 +114,7 @@ class AITool {
         } catch (err) {
             if (!AITool.expectedErrors.has(err.name)) {
                 logger.error(
-                    `AI tool "${this.name}" failed (${LoggerUtil.formatErrorSummary(err, this.manager.redactLogText)}).`
+                    `AI tool "${this.name}" failed (${LoggerUtil.formatErrorSummary(err, aiManager.redactLogText)}).`
                 );
             }
 
@@ -126,7 +124,7 @@ class AITool {
         logger.debug(`AI tool "${this.name}" took ${AIUtil.formatElapsed(startTime)}.`);
 
         if (logger.isDebugEnabled()) {
-            logger.debug(`AI tool "${this.name}" returned:${this.manager.formatLog(out)}`);
+            logger.debug(`AI tool "${this.name}" returned:${aiManager.formatLog(out)}`);
         }
 
         return this._limitOutput(out);
@@ -134,7 +132,7 @@ class AITool {
 
     _limitOutput(out) {
         const text = JSON.stringify(out ?? null),
-            maxOutput = this.manager.maxToolOutput;
+            maxOutput = getClient().aiManager.maxToolOutput;
 
         if (text.length <= maxOutput) {
             return out;

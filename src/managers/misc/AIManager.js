@@ -84,7 +84,7 @@ class AIManager extends Manager {
             this.promptGuard.contains(text) ? "[redacted private prompt]" : LoggerUtil.redactText(text, secrets);
 
         this.router = this._createRouter(config);
-        this.tools = new AIToolRegistry(this);
+        this.tools = new AIToolRegistry();
         this.prompt = new AIPrompt(`${AIPromptGuard.instruction}\n\n${this.prompts.system}`);
         this.triage = new AITriage(this.prompts.triage);
         this.browser = await AIManager._loadBrowser(config.allowLocalhostRequests);
@@ -101,7 +101,7 @@ class AIManager extends Manager {
     }
 
     async ask(question, request, options) {
-        const session = new AISession(this, request, options);
+        const session = new AISession(request, options);
         return await session.run(question);
     }
 
@@ -113,7 +113,6 @@ class AIManager extends Manager {
         return LoggerUtil.formatLog(value, undefined, undefined, this.redactLogText);
     }
 
-    // Puppeteer is an optional dependency: without it, search and page reading use plain requests
     static async _loadBrowser(allowLocalhostRequests) {
         const StealthBrowser = await ModuleUtil.loadOptionalModule(
             ["puppeteer", "puppeteer-extra", "puppeteer-extra-plugin-stealth"],

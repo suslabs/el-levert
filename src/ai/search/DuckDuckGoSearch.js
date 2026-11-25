@@ -1,12 +1,10 @@
 import SearchBackend from "./SearchBackend.js";
 
 import HTMLUtil from "../../util/misc/HTMLUtil.js";
-import { httpStatusCodes, isSuccessStatus } from "../../util/misc/HttpStatusCodes.js";
+import { httpStatusCodes } from "../../util/misc/HttpStatusCodes.js";
 
 import AIError from "../../errors/AIError.js";
 
-// requests DuckDuckGo's HTML results page directly: works without a browser, but it is
-// often shown a bot check
 class DuckDuckGoSearch extends SearchBackend {
     static $name = "duckduckgo";
 
@@ -14,26 +12,22 @@ class DuckDuckGoSearch extends SearchBackend {
     static userAgent =
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 
-    // DuckDuckGo answers bots with HTTP 202 and a challenge page instead of results
     static blockedStatus = httpStatusCodes.ACCEPTED;
     static blockedMarker = "anomaly-modal";
 
     async search(query, limit, timeout) {
-        const res = await this.http.request({
+        const res = await this.request({
             url: DuckDuckGoSearch.url,
             params: { q: query },
             headers: { "user-agent": DuckDuckGoSearch.userAgent, accept: "text/html" },
             responseType: "text",
-            timeout,
-            validateStatus: () => true
+            timeout
         });
 
         const page = String(res.data);
 
         if (res.status === DuckDuckGoSearch.blockedStatus || page.includes(DuckDuckGoSearch.blockedMarker)) {
             throw new AIError("Web search is blocked right now (the search engine is showing a bot check)", res.status);
-        } else if (!isSuccessStatus(res.status)) {
-            throw new AIError(`HTTP ${res.status}`, res.status);
         }
 
         return page

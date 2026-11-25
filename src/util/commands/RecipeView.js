@@ -181,9 +181,9 @@ class RecipeView {
             .filter(Boolean)
             .join(" • ");
 
-        const inputs = recipe.ins ? `from ${bold(this._text(recipe.ins, limit))}` : "";
-        const outputs = recipe.outs ? `→ ${bold(this._text(recipe.outs, limit))}` : "";
-        const io = [inputs, outputs].filter(Boolean).join(" ");
+        const inputs = recipe.ins ? `from ${bold(this._text(recipe.ins, limit))}` : "",
+            outputs = recipe.outs ? `→ ${bold(this._text(recipe.outs, limit))}` : "",
+            io = [inputs, outputs].filter(Boolean).join(" ");
 
         return Util.empty(io) ? summary : `${summary}\n  ${io}`;
     }
@@ -250,10 +250,11 @@ class RecipeView {
         const name = bold(this._text(item.name, 200)),
             separator = this.uses ? " " : " — ";
 
-        const machine = this.data.machineFilter ? ` (${this._text(this.data.machineFilter, 60)})` : "";
-        const position = italic(`${this.label.toLowerCase()} ${number} of ${count}${machine} • ${this.mode} mode`);
-        const description = `${name}${separator}${this._describeEntry(entry)}\n${position}`;
-        const payload = this._withDescription(content, description, this.footer, limits);
+        const machine = this.data.machineFilter ? ` (${this._text(this.data.machineFilter, 60)})` : "",
+            position = italic(`${this.label.toLowerCase()} ${number} of ${count}${machine} • ${this.mode} mode`);
+
+        const description = `${name}${separator}${this._describeEntry(entry)}\n${position}`,
+            payload = this._withDescription(content, description, this.footer, limits);
 
         try {
             const url = await this.source.renderCard(
@@ -267,7 +268,9 @@ class RecipeView {
                     timeout: RecipeView.cardTimeout
                 }
             );
-            Util.first(payload.embeds).setImage(url);
+
+            const embed = Util.first(payload.embeds);
+            embed.setImage(url);
         } catch (err) {
             if (!(err instanceof AIError || err instanceof AxiosError)) {
                 throw err;

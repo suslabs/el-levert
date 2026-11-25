@@ -146,8 +146,7 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
                 return;
             }
 
-            let param;
-            let callback;
+            let param, callback;
 
             try {
                 ({ param, callback } = this._extractEachArgs(args));

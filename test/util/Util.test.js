@@ -249,6 +249,7 @@ describe("Util", () => {
         expect(options).toEqual({ format: true, short: true, spaceOnShort: true });
         expect(Util.duration(65000, { format: true, short: true })).toBe("1m, 5s");
         expect(Util.duration(65000, { format: true, short: true, largestOnly: true })).toBe("1m");
+        expect(Util.shortDuration(65000)).toBe("1m");
         expect(Util.duration(125000, { format: true, largestOnly: true, digits: 2 })).toBe("2.08 minutes");
         expect(Util.duration(0, { format: true })).toBe("0 seconds");
         expect(Util.duration(0, { format: true, short: true })).toBe("0s");

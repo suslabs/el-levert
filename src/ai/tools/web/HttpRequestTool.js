@@ -2,6 +2,8 @@ import WebTool from "./WebTool.js";
 
 import AIPhases from "../../../structures/ai/AIPhases.js";
 
+import { getClient } from "../../../LevertClient.js";
+
 import Util from "../../../util/Util.js";
 import ArrayUtil from "../../../util/ArrayUtil.js";
 import HTTPUtil from "../../../util/vm/HTTPUtil.js";
@@ -48,15 +50,15 @@ class HttpRequestTool extends WebTool {
         const url = await this.resolveUrl(args.url),
             method = String(args.method ?? "GET").toUpperCase();
 
+        const aiManager = getClient().aiManager;
+
         if (!HttpRequestTool.methods.includes(method)) {
             throw new AIError(`${method} requests aren't allowed; only ${HttpRequestTool.methods.join(" and ")}`);
-        } else if (
-            this.manager.router.endpoints.some(endpoint => HTTPUtil.getHost(endpoint) === HTTPUtil.getHost(url))
-        ) {
+        } else if (aiManager.router.endpoints.some(endpoint => HTTPUtil.getHost(endpoint) === HTTPUtil.getHost(url))) {
             throw new AIError("That endpoint is reserved");
         }
 
-        const res = await this.manager.http.request({
+        const res = await aiManager.http.request({
             url,
             method: method.toLowerCase(),
             headers: {

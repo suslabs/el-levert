@@ -17,21 +17,23 @@ import Util from "../Util.js";
 import DateUtil from "../misc/DateUtil.js";
 
 let SnoozeUtil = {
+    customIdPrefix: "snooze",
+
     createSnoozeRow: sessionId => {
         const snooze5m = new ButtonBuilder()
-                .setCustomId(`snooze:5m:${sessionId}`)
+                .setCustomId(ComponentSession.createCustomId(SnoozeUtil.customIdPrefix, "5m", sessionId))
                 .setLabel("5m")
                 .setStyle(ButtonStyle.Secondary),
             snooze15m = new ButtonBuilder()
-                .setCustomId(`snooze:15m:${sessionId}`)
+                .setCustomId(ComponentSession.createCustomId(SnoozeUtil.customIdPrefix, "15m", sessionId))
                 .setLabel("15m")
                 .setStyle(ButtonStyle.Secondary),
             snooze1h = new ButtonBuilder()
-                .setCustomId(`snooze:1h:${sessionId}`)
+                .setCustomId(ComponentSession.createCustomId(SnoozeUtil.customIdPrefix, "1h", sessionId))
                 .setLabel("1h")
                 .setStyle(ButtonStyle.Secondary),
             snoozeCustom = new ButtonBuilder()
-                .setCustomId(`snooze:custom:${sessionId}`)
+                .setCustomId(ComponentSession.createCustomId(SnoozeUtil.customIdPrefix, "custom", sessionId))
                 .setLabel("Custom")
                 .setStyle(ButtonStyle.Secondary);
 
@@ -67,14 +69,15 @@ let SnoozeUtil = {
             return false;
         }
 
-        const parts = interaction.customId.split(":"),
-            action = parts[1];
+        const action = ComponentSession.parseCustomId(interaction.customId)?.action;
 
         let duration = null;
 
         switch (action) {
             case "custom":
-                const modal = new ModalBuilder().setCustomId(`snooze:modal:${session.id}`).setTitle("Snooze Reminder");
+                const modal = new ModalBuilder()
+                    .setCustomId(ComponentSession.createCustomId(SnoozeUtil.customIdPrefix, "modal", session.id))
+                    .setTitle("Snooze Reminder");
 
                 const durationInput = new TextInputBuilder()
                     .setCustomId("duration")

@@ -29,8 +29,6 @@ const AIUtil = Object.freeze({
 
     _resultLists: ["results", "sections", "recipes", "uses", "quests", "messages", "tags", "matches"],
 
-    // whether a tool result actually found something: errors, "found: false" and searches
-    // whose result lists are all empty don't count
     hasFindings: res => {
         if (!TypeTester.isObject(res) || typeof res.error !== "undefined" || res.found === false) {
             return false;
@@ -76,10 +74,6 @@ const AIUtil = Object.freeze({
             nextOffset: end < text.length ? end : null,
             totalChars: text.length
         };
-    },
-
-    formatDuration: ms => {
-        return Util.duration(ms, { format: true, short: true, largestOnly: true });
     },
 
     formatElapsed: startTime => {

@@ -8,6 +8,28 @@ import Util from "../../util/Util.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 
 class ComponentSession {
+    static customIdSeparator = ":";
+
+    static createCustomId(prefix, action, ...parts) {
+        return [prefix, action, ...parts].join(ComponentSession.customIdSeparator);
+    }
+
+    static parseCustomId(customId) {
+        if (!Util.nonemptyString(customId)) {
+            return null;
+        }
+
+        const parts = customId.split(ComponentSession.customIdSeparator),
+            [prefix, action] = parts;
+
+        return {
+            prefix,
+            action: action ?? null,
+            args: parts.slice(2, -1),
+            sessionId: Util.last(parts)
+        };
+    }
+
     constructor(ctx, options = {}) {
         options = ObjectUtil.guaranteeObject(options);
 

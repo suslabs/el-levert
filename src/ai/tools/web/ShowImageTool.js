@@ -2,10 +2,7 @@ import WebTool from "./WebTool.js";
 
 import AIPhases from "../../../structures/ai/AIPhases.js";
 
-import HTTPUtil from "../../../util/vm/HTTPUtil.js";
 import ToolParams from "../../../util/ai/ToolParams.js";
-
-import AIError from "../../../errors/AIError.js";
 
 class ShowImageTool extends WebTool {
     static info = {
@@ -22,17 +19,7 @@ class ShowImageTool extends WebTool {
     }
 
     async execute(args, session) {
-        const url = await this.resolveUrl(args.url);
-
-        const res = await this.manager.http.request({
-            url,
-            method: "head",
-            timeout: session.toolTimeout()
-        });
-
-        if (!HTTPUtil.getContentType(res.headers).startsWith("image/")) {
-            throw new AIError("URL is not an image");
-        }
+        const { url } = await this.fetchImage(args.url, session, { headOnly: true });
 
         session.showImage(url);
         return { shown: true };

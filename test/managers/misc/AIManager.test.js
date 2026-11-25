@@ -59,7 +59,7 @@ describe("AIManager", () => {
         runtime = await createCommandRuntime({ config: { enableAI: true }, auth: { geminiKey: "test-key" } });
 
         const tools = runtime.client.aiManager.tools,
-            session = { effort: "quick", expert: false, request: {} };
+            session = { effort: "quick", expert: false, request: {}, toolPolicy: { allows: () => true } };
 
         expect(tools.getNames(session)).toEqual([
             "search_web",
@@ -86,7 +86,13 @@ describe("AIManager", () => {
             data: "First line. Second line."
         });
 
-        const session = { effort: "quick", expert: false, request: {}, toolTimeout: () => manager.requestTimeout };
+        const session = {
+            effort: "quick",
+            expert: false,
+            request: {},
+            toolPolicy: { allows: () => true },
+            toolTimeout: () => manager.requestTimeout
+        };
         const tool = manager.tools.get("fetch_web_page", session);
         const result = await tool.execute({ url }, session);
 

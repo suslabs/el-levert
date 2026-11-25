@@ -898,7 +898,15 @@ class DiscordClient {
             currentGuild = await this.fetchGuild(sv_id);
         }
 
-        const currentGuildId = currentGuild?.id ?? (typeof sv_id === "string" ? sv_id : null);
+        let currentGuildId;
+
+        if (currentGuild != null) {
+            currentGuildId = currentGuild.id;
+        } else if (typeof sv_id === "string") {
+            currentGuildId = sv_id;
+        } else {
+            currentGuildId = null;
+        }
 
         const allGuilds = Array.from(this.client.guilds.cache.values());
 
@@ -923,7 +931,7 @@ class DiscordClient {
                 return [];
             }
 
-            const cachedUser = this.client.users.cache?.get(user_id);
+            const cachedUser = this.client.users.cache.get(user_id);
 
             if (cachedUser != null) {
                 return ((cachedUser.user = cachedUser), [cachedUser]);

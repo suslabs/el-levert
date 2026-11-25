@@ -12,8 +12,6 @@ class WikiClient {
 
     static defaultLimit = 5;
 
-    // title matches tolerate typos ("tung tung tung shaur" finds "Tung Tung Tung Sahur"),
-    // full-text search covers descriptive queries
     static searchLists = "prefixsearch|search";
     static titleMatchProfile = "fuzzy";
 

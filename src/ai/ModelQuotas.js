@@ -33,9 +33,9 @@ class ModelQuotas {
     }
 
     limit(id, retryDelay = null, status = null, stream = null) {
-        const now = Date.now();
-        const current = this.limits.get(id);
-        const remaining = (current?.until ?? now) - now;
+        const now = Date.now(),
+            current = this.limits.get(id),
+            remaining = (current?.until ?? now) - now;
 
         if (remaining > 0 && (retryDelay === null || retryDelay <= remaining)) {
             return remaining;

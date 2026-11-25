@@ -15,4 +15,3 @@ SELECT
     GROUP_CONCAT(NULLIF(args, ''), $separator) OVER () AS collectedArgs
 FROM AliasChain
 ORDER BY depth ASC;
-

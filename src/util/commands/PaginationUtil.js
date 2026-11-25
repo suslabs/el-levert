@@ -39,15 +39,27 @@ function readPaginationArg(ctx, name) {
     return ctx.arg(name);
 }
 
+function extractPageResult(result) {
+    let items;
+
+    if (result.items != null) {
+        items = result.items;
+    } else if (Array.isArray(result)) {
+        items = result;
+    } else {
+        items = [];
+    }
+
+    const totalCount = result.totalCount ?? result.total ?? result.count ?? items.length;
+    return { items, totalCount };
+}
+
 async function fetchPageData(spec, page, limit, ctx) {
     if (spec.initialData != null && (page === 1 || page === spec.initialData.page)) {
-        const initial = spec.initialData,
-            items = initial.items ?? (Array.isArray(initial) ? initial : []),
-            totalCount = initial.totalCount ?? initial.total ?? initial.count ?? items.length;
-
+        const initial = spec.initialData;
         delete spec.initialData;
 
-        return { items, totalCount };
+        return extractPageResult(initial);
     }
 
     if (Array.isArray(spec.items)) {
@@ -67,10 +79,7 @@ async function fetchPageData(spec, page, limit, ctx) {
             return { items: [], totalCount: 0 };
         }
 
-        const items = fetchRes.items ?? (Array.isArray(fetchRes) ? fetchRes : []),
-            totalCount = fetchRes.totalCount ?? fetchRes.total ?? fetchRes.count ?? items.length;
-
-        return { items, totalCount };
+        return extractPageResult(fetchRes);
     }
 
     return { items: [], totalCount: 0 };
@@ -140,7 +149,9 @@ function formatRendered(rendered) {
 }
 
 async function showJumpModal(interaction, sessionId, totalPages) {
-    const modal = new ModalBuilder().setCustomId(`page:modal:${sessionId}`).setTitle("Jump to Page");
+    const modal = new ModalBuilder()
+        .setCustomId(ComponentSession.createCustomId(PaginationUtil.customIdPrefix, "modal", sessionId))
+        .setTitle("Jump to Page");
 
     const pageInput = new TextInputBuilder()
         .setCustomId("page_number")
@@ -275,37 +286,39 @@ const PaginationUtil = Object.freeze({
         return { page, limit, offset, all };
     },
 
+    customIdPrefix: "page",
+
     createPaginationRow: (sessionId, page, totalPages, disabled = false) => {
         const atStart = page <= 1 || totalPages <= 1 || disabled,
             atEnd = page >= totalPages || totalPages <= 1 || disabled,
             jumpDisabled = totalPages <= 1 || disabled;
 
         const firstButton = new ButtonBuilder()
-            .setCustomId(`page:first:${sessionId}`)
+            .setCustomId(ComponentSession.createCustomId(PaginationUtil.customIdPrefix, "first", sessionId))
             .setEmoji("⏮️")
             .setStyle(ButtonStyle.Secondary)
             .setDisabled(atStart);
 
         const prevButton = new ButtonBuilder()
-            .setCustomId(`page:prev:${sessionId}`)
+            .setCustomId(ComponentSession.createCustomId(PaginationUtil.customIdPrefix, "prev", sessionId))
             .setEmoji("◀️")
             .setStyle(ButtonStyle.Secondary)
             .setDisabled(atStart);
 
         const jumpButton = new ButtonBuilder()
-            .setCustomId(`page:jump:${sessionId}`)
+            .setCustomId(ComponentSession.createCustomId(PaginationUtil.customIdPrefix, "jump", sessionId))
             .setLabel(`${page} / ${totalPages}`)
             .setStyle(ButtonStyle.Secondary)
             .setDisabled(jumpDisabled);
 
         const nextButton = new ButtonBuilder()
-            .setCustomId(`page:next:${sessionId}`)
+            .setCustomId(ComponentSession.createCustomId(PaginationUtil.customIdPrefix, "next", sessionId))
             .setEmoji("▶️")
             .setStyle(ButtonStyle.Secondary)
             .setDisabled(atEnd);
 
         const lastButton = new ButtonBuilder()
-            .setCustomId(`page:last:${sessionId}`)
+            .setCustomId(ComponentSession.createCustomId(PaginationUtil.customIdPrefix, "last", sessionId))
             .setEmoji("⏭️")
             .setStyle(ButtonStyle.Secondary)
             .setDisabled(atEnd);
@@ -403,23 +416,16 @@ const PaginationUtil = Object.freeze({
     },
 
     handleInteraction: async ctx => {
-        const session = ctx.paginationSession ?? ctx.interactionContext?.session;
-
-        if (session == null) {
-            return false;
-        }
-
-        const spec = ctx.paginationSpec ?? session.spec,
+        const session = ctx.paginationSession ?? ctx.interactionContext?.session,
+            spec = ctx.paginationSpec ?? session?.spec,
             interaction = ctx.interactionContext?.interaction ?? ctx.interaction;
 
-        if (spec == null || interaction == null) {
+        if (session == null || spec == null || interaction == null) {
             return false;
         }
 
-        const isAuthor = ctx.isAuthor || session.interactionMode === InteractionModes.anyone;
-
-        const customParts = interaction.customId.split(":"),
-            action = customParts[1];
+        const isAuthor = ctx.isAuthor || session.interactionMode === InteractionModes.anyone,
+            action = ComponentSession.parseCustomId(interaction.customId)?.action;
 
         const totalPages = session.totalPages,
             currentPage = session.page;

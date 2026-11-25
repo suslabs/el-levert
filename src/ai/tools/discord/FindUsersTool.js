@@ -5,6 +5,7 @@ import AIPhases from "../../../structures/ai/AIPhases.js";
 import { getClient } from "../../../LevertClient.js";
 
 import Util from "../../../util/Util.js";
+import DiscordUtil from "../../../util/DiscordUtil.js";
 import ToolParams from "../../../util/ai/ToolParams.js";
 
 import AIError from "../../../errors/AIError.js";
@@ -66,11 +67,7 @@ class FindUsersTool extends AITool {
             names = [user.id, user.username, user.globalName, member.nickname, member.displayName];
 
         return {
-            id: user.id,
-            mention: `<@${user.id}>`,
-            username: user.username,
-            displayName: member.displayName ?? user.globalName ?? user.username,
-            bot: user.bot,
+            ...DiscordUtil.getUserSummary(user, member),
             exactMatch: names.some(name => typeof name === "string" && name.toLowerCase() === lower)
         };
     }

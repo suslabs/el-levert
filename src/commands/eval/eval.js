@@ -16,8 +16,8 @@ function formatPathError(err) {
 async function evalBase(args, msg, options) {
     options = ObjectUtil.guaranteeObject(options);
 
-    let body = "";
-    let downloaded = null;
+    let body = "",
+        downloaded = null;
 
     try {
         downloaded = await getClient().tagManager.downloadBody(args, msg, "eval");

@@ -18,10 +18,6 @@ const PickerUtil = Object.freeze({
     defaultPageSize: 10,
     defaultBackLabel: "Back",
 
-    _createCustomId: (action, sessionId) => {
-        return [PickerUtil.customIdPrefix, action, sessionId].join(":");
-    },
-
     _createRows: buttons => {
         return ArrayUtil.split(buttons, (_, i) => Math.floor(i / PickerUtil.rowSize))
             .filter(row => !Util.empty(row))
@@ -33,7 +29,9 @@ const PickerUtil = Object.freeze({
 
         const buttons = items.map(item =>
             new ButtonBuilder()
-                .setCustomId(PickerUtil._createCustomId(spec.items.indexOf(item), session.id))
+                .setCustomId(
+                    ComponentSession.createCustomId(PickerUtil.customIdPrefix, spec.items.indexOf(item), session.id)
+                )
                 .setLabel(String(spec.getLabel(item)))
                 .setStyle(ButtonStyle.Secondary)
         );
@@ -43,7 +41,7 @@ const PickerUtil = Object.freeze({
 
     _createBackRow: session => {
         const button = new ButtonBuilder()
-            .setCustomId(PickerUtil._createCustomId(PickerUtil.backAction, session.id))
+            .setCustomId(ComponentSession.createCustomId(PickerUtil.customIdPrefix, PickerUtil.backAction, session.id))
             .setLabel(session.spec.backLabel ?? PickerUtil.defaultBackLabel)
             .setStyle(ButtonStyle.Primary);
 
@@ -122,19 +120,19 @@ const PickerUtil = Object.freeze({
     },
 
     handleInteraction: async ctx => {
-        const [prefix, action] = ctx.interaction.customId.split(":");
+        const parsed = ComponentSession.parseCustomId(ctx.interaction.customId);
 
-        if (prefix !== PickerUtil.customIdPrefix) {
+        if (parsed?.prefix !== PickerUtil.customIdPrefix) {
             return await PaginationUtil.handleInteraction(ctx);
         }
 
         const session = ctx.interactionContext.session;
 
-        if (action === PickerUtil.backAction) {
+        if (parsed.action === PickerUtil.backAction) {
             return await PickerUtil._showList(ctx, session);
         }
 
-        return await PickerUtil._showItem(ctx, session, Util.parseInt(action));
+        return await PickerUtil._showItem(ctx, session, Util.parseInt(parsed.action));
     }
 });
 

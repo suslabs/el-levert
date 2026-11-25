@@ -10,7 +10,7 @@ class RateLimiter {
 
     static defaultValues = {
         maxRequests: Infinity,
-        window: 1000,
+        window: 1 / Util.durationSeconds.milli,
         sweepInterval: 0
     };
 

@@ -1,6 +1,15 @@
-import { ActionRowBuilder, bold, ButtonBuilder, ButtonStyle, EmbedBuilder, escapeMarkdown } from "discord.js";
+import {
+    ActionRowBuilder,
+    bold,
+    ButtonBuilder,
+    ButtonStyle,
+    EmbedBuilder,
+    escapeMarkdown,
+    userMention
+} from "discord.js";
 
 import AIAnswerParser from "../../ai/AIAnswerParser.js";
+import ComponentSession from "../interaction/ComponentSession.js";
 
 import AIPhases from "./AIPhases.js";
 
@@ -29,12 +38,12 @@ class AIReplyView {
     static cancelAction = "cancel";
 
     static getAction(customId) {
-        const [prefix, action] = customId.split(":");
-        return prefix === AIReplyView.customIdPrefix ? action : null;
+        const parsed = ComponentSession.parseCustomId(customId);
+        return parsed?.prefix === AIReplyView.customIdPrefix ? parsed.action : null;
     }
 
     static getFollowUp(customId, followUps) {
-        const [, , idxText] = customId.split(":");
+        const idxText = Util.first(ComponentSession.parseCustomId(customId)?.args);
         return followUps[Util.parseInt(idxText)] ?? null;
     }
 
@@ -71,10 +80,11 @@ class AIReplyView {
                 text: AIReplyView._fitText(AIReplyView._formatFooter(result), DiscordUtil.embedLimits.footer)
             });
 
-        const limit = AIReplyView._getDescriptionLimit(embed);
-        const tailLimit = Math.max(0, limit - Math.min(answer.length, AIReplyView.maxPreviewLength) - 2);
-        const { extras, omittedSources } = AIReplyView._formatExtras(result, tailLimit);
-        const preview = AIReplyView._fitText(answer, limit, extras);
+        const limit = AIReplyView._getDescriptionLimit(embed),
+            tailLimit = Math.max(0, limit - Math.min(answer.length, AIReplyView.maxPreviewLength) - 2);
+
+        const { extras, omittedSources } = AIReplyView._formatExtras(result, tailLimit),
+            preview = AIReplyView._fitText(answer, limit, extras);
 
         embed.setDescription(AIUtil.joinSections(preview, extras));
 
@@ -96,13 +106,7 @@ class AIReplyView {
     }
 
     renderCooldown(waitTime) {
-        const waitStr = Util.duration(waitTime, {
-            format: true,
-            short: true,
-            largestOnly: true
-        });
-
-        return `${getEmoji("clock")} You are asking too fast. Please slow down! (${bold(waitStr)})`;
+        return `${getEmoji("clock")} You are asking too fast. Please slow down! (${bold(Util.shortDuration(waitTime))})`;
     }
 
     renderCancelled() {
@@ -114,8 +118,9 @@ class AIReplyView {
     }
 
     renderError(err) {
-        const embed = this._createEmbed(this.name).setColor(AIReplyView.errorColor);
-        const limit = AIReplyView._getDescriptionLimit(embed);
+        const embed = this._createEmbed(this.name).setColor(AIReplyView.errorColor),
+            limit = AIReplyView._getDescriptionLimit(embed);
+
         embed.setDescription(AIReplyView._fitText(AIReplyView._formatError(err), limit));
 
         return this._createPayload([embed]);
@@ -132,13 +137,11 @@ class AIReplyView {
         return [embed, ...rest.map(url => new EmbedBuilder().setURL(first).setImage(url))];
     }
 
-    static _createCustomId(action, ...parts) {
-        return [AIReplyView.customIdPrefix, action, ...parts].join(":");
-    }
-
     static _createCancelRow(session) {
         const button = new ButtonBuilder()
-            .setCustomId(AIReplyView._createCustomId(AIReplyView.cancelAction, session.id))
+            .setCustomId(
+                ComponentSession.createCustomId(AIReplyView.customIdPrefix, AIReplyView.cancelAction, session.id)
+            )
             .setLabel("Cancel")
             .setStyle(ButtonStyle.Danger);
 
@@ -176,7 +179,14 @@ class AIReplyView {
     static _createFollowUpRow(session) {
         const buttons = session.spec.followUps.map((_, i) =>
             new ButtonBuilder()
-                .setCustomId(AIReplyView._createCustomId(AIReplyView.followUpAction, i, session.id))
+                .setCustomId(
+                    ComponentSession.createCustomId(
+                        AIReplyView.customIdPrefix,
+                        AIReplyView.followUpAction,
+                        i,
+                        session.id
+                    )
+                )
                 .setLabel(String(i + 1))
                 .setStyle(ButtonStyle.Secondary)
         );
@@ -197,8 +207,8 @@ class AIReplyView {
         let fitted = text;
 
         for (;;) {
-            const length = DiscordUtil.escapeMassMentions(AIUtil.joinSections(fitted, tail)).length;
-            const excess = length - limit;
+            const length = DiscordUtil.escapeMassMentions(AIUtil.joinSections(fitted, tail)).length,
+                excess = length - limit;
 
             if (excess <= 0 || Util.empty(fitted)) {
                 return fitted;
@@ -284,7 +294,7 @@ class AIReplyView {
             return "Try again in a minute.";
         }
 
-        return `Try again in ${bold(AIUtil.formatDuration(retryIn))}.`;
+        return `Try again in ${bold(Util.shortDuration(retryIn))}.`;
     }
 
     static _getUnavailableReason(status) {
@@ -313,7 +323,7 @@ class AIReplyView {
         const payload = { content: "", embeds, components, attachments: [] };
 
         if (this.pingUser !== null) {
-            payload.content = `<@${this.pingUser}>`;
+            payload.content = userMention(this.pingUser);
             payload.pings = [this.pingUser];
         }
 
@@ -329,8 +339,9 @@ class AIReplyView {
         const statusText = AIReplyView._formatStatuses(phase, steps).slice(-AIReplyView.maxStatusLines).join("\n"),
             preview = AIReplyView._formatPreview(text, finishing);
 
-        const embed = this._createEmbed(`${this.name} - ${phase}...`);
-        const limit = AIReplyView._getDescriptionLimit(embed);
+        const embed = this._createEmbed(`${this.name} - ${phase}...`),
+            limit = AIReplyView._getDescriptionLimit(embed);
+
         embed.setDescription(AIReplyView._fitText(AIUtil.joinSections(statusText, preview), limit));
 
         return this._createPayload([embed], [AIReplyView._createCancelRow(cancelSession)]);

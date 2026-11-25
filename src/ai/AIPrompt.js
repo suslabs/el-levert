@@ -1,6 +1,9 @@
+import { channelMention, userMention } from "discord.js";
+
 import { getClient, getConfig } from "../LevertClient.js";
 
 import Util from "../util/Util.js";
+import DiscordUtil from "../util/DiscordUtil.js";
 
 class AIPrompt {
     static maxReplyLength = 1200;
@@ -62,8 +65,8 @@ class AIPrompt {
             `- Current date/time (UTC): ${new Date().toISOString()}`,
             `- Available tools: ${toolNames.join(", ")}`,
             request.guild === null ? "- Location: direct messages" : "- Location: a Discord server",
-            `- Channel: <#${request.channel.id}>`,
-            `- Asking user mention: <@${author.id}>`,
+            `- Channel: ${channelMention(request.channel.id)}`,
+            `- Asking user mention: ${userMention(author.id)}`,
             `- Command prefix: ${getConfig().cmdPrefix}`,
             `- Effort: ${effort}`
         ];
@@ -90,7 +93,7 @@ class AIPrompt {
     static _attachments(msg) {
         return msg === null
             ? []
-            : Array.from(msg.attachments.values(), attach => ({
+            : DiscordUtil.getAttachments(msg).map(attach => ({
                   name: attach.name,
                   contentType: attach.contentType,
                   url: attach.url
