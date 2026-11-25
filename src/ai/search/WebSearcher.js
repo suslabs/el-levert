@@ -1,26 +1,33 @@
 import BrowserSearch from "./BrowserSearch.js";
 import DuckDuckGoSearch from "./DuckDuckGoSearch.js";
+import KeenableSearch from "./KeenableSearch.js";
+import TavilySearch from "./TavilySearch.js";
 
 import { getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
 
-// searches with the first backend that works (the stealth browser, then plain DuckDuckGo),
-// then reads the top results so the model gets their text, not just snippets
 class WebSearcher {
     static fallbackErrors = new Set(["AIError", "AxiosError", "CanceledError", "TimeoutError"]);
 
     static readCount = 3;
     static readLength = 1500;
 
-    constructor(http, browser, pageReader) {
+    constructor(http, browser, pageReader, keys) {
+        keys = ObjectUtil.guaranteeObject(keys);
+
         this.pageReader = pageReader;
-        this.backends = [new DuckDuckGoSearch(http)];
+        this.backends = [KeenableSearch, TavilySearch].flatMap(Backend =>
+            (keys[Backend.$name] ?? []).map(key => new Backend(http, key))
+        );
 
         if (browser !== null) {
-            this.backends.unshift(new BrowserSearch(http, browser));
+            this.backends.push(new BrowserSearch(http, browser));
         }
+
+        this.backends.push(new DuckDuckGoSearch(http));
     }
 
     async search(query, limit, timeout) {

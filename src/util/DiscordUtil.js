@@ -933,6 +933,10 @@ let DiscordUtil = {
     logAttachByteLimit: 256,
 
     formatMessageLog: (data, splitLength = 80, maxLength = 2500, options) => {
+        options = ObjectUtil.guaranteeObject(options);
+
+        const redactText = options.redactText ?? LoggerUtil.redactText;
+
         if (data == null) {
             return LoggerUtil.formatLog(null, splitLength, maxLength);
         }
@@ -940,7 +944,7 @@ let DiscordUtil = {
         const payload = Array.isArray(data) && Util.single(data) ? Util.first(data) : data,
             normalized = DiscordUtil._formatMessagePayload(payload, options);
 
-        return LoggerUtil.formatLog(normalized, splitLength, maxLength);
+        return LoggerUtil.formatLog(normalized, splitLength, maxLength, redactText);
     },
 
     _isBinaryAttachment: (data, name = "") => {

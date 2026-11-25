@@ -271,32 +271,35 @@ describe("AISession Discord context and logging", () => {
         });
     });
 
-    test("logs tool names and timings while keeping arguments, results and errors private", async () => {
-        const query = "private-tool-argument";
-        const content = "private-tool-result";
-        const failure = "private-tool-error-detail";
+    test("logs tool arguments, results and errors with credentials redacted", async () => {
+        const query = "ordinary search";
+        const content = "visible search result";
+        const failure = "upstream lookup failed";
+        const secret = "test-key";
 
         const { ask, manager, requests, debug } = await setup({ effort: "research", lookup: "" }, [
-            [call("search_web", { query })],
+            [call("search_web", { query: `${query} ${secret}` })],
             [call("search_web", { query: "second query" })],
             [text("Done.")]
         ]);
         const error = vi.spyOn(runtime.client.logger, "error");
         vi.spyOn(manager.webSearcher, "search")
             .mockResolvedValueOnce({ results: [{ url: "https://example.test/", content }] })
-            .mockRejectedValueOnce(new Error(failure));
+            .mockRejectedValueOnce(new Error(`${failure} (Bearer header-secret)`));
 
         const result = await ask("Check two things on the web.");
 
         expect(result.answer).toBe("Done.");
         expect(requests[2].contents.at(-1).parts[0].functionResponse.response.results[0].content).toBe(content);
         expect(debug).toHaveBeenCalledWith(expect.stringContaining('AI tool "search_web" took'));
-        expect(error).toHaveBeenCalledWith('AI tool "search_web" failed (Error).');
+        expect(error).toHaveBeenCalledWith(expect.stringContaining(failure));
 
         const logs = [...debug.mock.calls, ...error.mock.calls].flat().join("\n");
-        expect(logs).not.toContain(query);
-        expect(logs).not.toContain(content);
-        expect(logs).not.toContain(failure);
+        expect(logs).toContain(query);
+        expect(logs).toContain(content);
+        expect(logs).not.toContain(secret);
+        expect(logs).not.toContain("header-secret");
+        expect(manager.formatLog({ text: manager.prompt.instructions })).toContain("[redacted private prompt]");
     });
 });
 

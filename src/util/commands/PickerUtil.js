@@ -7,6 +7,7 @@ import { getClient } from "../../LevertClient.js";
 import Util from "../Util.js";
 import ArrayUtil from "../ArrayUtil.js";
 import ObjectUtil from "../ObjectUtil.js";
+import TypeTester from "../TypeTester.js";
 import PaginationUtil from "./PaginationUtil.js";
 
 const PickerUtil = Object.freeze({
@@ -86,7 +87,14 @@ const PickerUtil = Object.freeze({
     },
 
     _showItem: async (ctx, session, idx) => {
-        const payload = ObjectUtil.guaranteeObject(session.spec.renderItem(session.spec.items[idx]));
+        let rendered = session.spec.renderItem(session.spec.items[idx]);
+
+        if (TypeTester.isPromise(rendered)) {
+            const defer = ctx.isAuthor ? ctx.deferUpdate() : ctx.deferReply({ ephemeral: true });
+            [rendered] = await Promise.all([rendered, defer]);
+        }
+
+        const payload = ObjectUtil.guaranteeObject(rendered);
 
         if (!ctx.isAuthor) {
             await ctx.reply(payload, { ephemeral: true });

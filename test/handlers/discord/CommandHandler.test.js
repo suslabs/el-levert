@@ -342,6 +342,11 @@ describe("CommandHandler", () => {
         handler.commandWaitTime = 1;
         handler.globalTimeLimit = 5;
 
+        let onStarted;
+        const started = new Promise(resolve => {
+            onStarted = resolve;
+        });
+
         const deleteSpy = vi.fn(async () => undefined);
         const editSpy = vi.fn(async data => ({
             id: "reply-1",
@@ -359,6 +364,7 @@ describe("CommandHandler", () => {
         });
 
         runtime.client.tagVM.runScript = async (_, values, options) => {
+            onStarted();
             await new Promise(resolve => setTimeout(resolve, 2));
             options.commandContext.disableTimeout();
             await new Promise(resolve => setTimeout(resolve, 20));
@@ -366,7 +372,16 @@ describe("CommandHandler", () => {
             return "debugged";
         };
 
-        expect(await handler.execute(msg)).toBe(true);
+        vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+
+        try {
+            const execution = handler.execute(msg);
+            await Promise.race([started, execution]);
+            await vi.runAllTimersAsync();
+            expect(await execution).toBe(true);
+        } finally {
+            vi.useRealTimers();
+        }
         expect(msg.reply).toHaveBeenCalledWith({
             content: ":hourglass_flowing_sand: Processing command..."
         });

@@ -50,6 +50,8 @@ const AIUtil = Object.freeze({
         }
     },
 
+    normalizeQuery: query => query.trim().replace(/\s+/g, " ").toLowerCase(),
+
     pageChars: Object.freeze({
         default: 5000,
         min: 500,

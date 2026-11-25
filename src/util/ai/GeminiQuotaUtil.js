@@ -1,55 +1,73 @@
 import Util from "../Util.js";
+import ArrayUtil from "../ArrayUtil.js";
 
 const GeminiQuotaUtil = Object.freeze({
     retryInfoType: "type.googleapis.com/google.rpc.RetryInfo",
     quotaFailureType: "type.googleapis.com/google.rpc.QuotaFailure",
 
-    resetTimeZone: "America/Los_Angeles",
+    _dailyQuotaRegex: /per[_ -]?day/i,
+    _secondsRegex: /^(\d+(?:\.\d+)?)s$/,
+    _retryMessageRegex: /\bplease retry in (\d+(?:\.\d+)?)s\b/i,
 
-    _dailyQuotaRegex: /PerDay/i,
-    _secondsRegex: /^([\d.]+)s$/,
+    _pacificTime: new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/Los_Angeles",
+        hourCycle: "h23",
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+        hour: "numeric",
+        minute: "numeric",
+        second: "numeric"
+    }),
 
     _findDetail: (error, type) => {
-        return (error?.details ?? []).find(detail => detail["@type"] === type) ?? null;
+        const details = ArrayUtil.guaranteeArray(error?.details, null, true);
+        return details.find(detail => detail?.["@type"] === type) ?? null;
     },
 
     isDailyLimit: error => {
         const failure = GeminiQuotaUtil._findDetail(error, GeminiQuotaUtil.quotaFailureType);
-        return (failure?.violations ?? []).some(violation =>
-            GeminiQuotaUtil._dailyQuotaRegex.test(violation.quotaId ?? "")
+        return ArrayUtil.guaranteeArray(failure?.violations, null, true).some(violation =>
+            GeminiQuotaUtil._dailyQuotaRegex.test(violation?.quotaId ?? "")
         );
     },
 
     getRetryDelay: error => {
-        const match = GeminiQuotaUtil._findDetail(error, GeminiQuotaUtil.retryInfoType)?.retryDelay?.match(
-            GeminiQuotaUtil._secondsRegex
-        );
+        const retry = GeminiQuotaUtil._findDetail(error, GeminiQuotaUtil.retryInfoType)?.retryDelay;
+        const match =
+            GeminiQuotaUtil._secondsRegex.exec(retry) ?? GeminiQuotaUtil._retryMessageRegex.exec(error?.message);
 
-        return match == null ? null : Math.ceil(Number(match[1]) / Util.durationSeconds.milli);
+        const delay = match === null ? 0 : Number(match[1]) / Util.durationSeconds.milli;
+        return Number.isFinite(delay) && delay > 0 ? Math.ceil(delay) : null;
+    },
+
+    _getPacificWallTime: date => {
+        const parts = GeminiQuotaUtil._pacificTime.formatToParts(date);
+        const { year, month, day, hour, minute, second } = Object.fromEntries(
+            parts.map(part => [part.type, Number(part.value)])
+        );
+        return Date.UTC(year, month - 1, day, hour, minute, second);
     },
 
     getTimeToDailyReset: (date = new Date()) => {
-        const formatter = new Intl.DateTimeFormat("en-US", {
-            timeZone: GeminiQuotaUtil.resetTimeZone,
-            hourCycle: "h23",
-            hour: "numeric",
-            minute: "numeric",
-            second: "numeric"
-        });
+        const local = GeminiQuotaUtil._getPacificWallTime(date);
+        const midnight = new Date(local).setUTCHours(24, 0, 0, 0);
 
-        const parts = Object.fromEntries(formatter.formatToParts(date).map(part => [part.type, Number(part.value)])),
-            elapsed =
-                parts.hour * Util.durationSeconds.hour + parts.minute * Util.durationSeconds.minute + parts.second;
+        // The Pacific offset at the next midnight can differ from the current offset.
+        const estimate = midnight + date.getTime() - date.getUTCMilliseconds() - local;
+        const correction = midnight - GeminiQuotaUtil._getPacificWallTime(new Date(estimate));
 
-        return (Util.durationSeconds.day - elapsed) / Util.durationSeconds.milli;
+        return estimate + correction - date.getTime();
     },
 
     getUnblockDelay: error => {
+        const retryDelay = GeminiQuotaUtil.getRetryDelay(error);
+
         if (GeminiQuotaUtil.isDailyLimit(error)) {
-            return GeminiQuotaUtil.getTimeToDailyReset();
+            return Math.max(GeminiQuotaUtil.getTimeToDailyReset(), retryDelay ?? 0);
         }
 
-        return GeminiQuotaUtil.getRetryDelay(error);
+        return retryDelay;
     }
 });
 

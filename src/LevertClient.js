@@ -116,10 +116,7 @@ class LevertClient extends DiscordClient {
         }
 
         token = auth.token;
-        aiKeys = {
-            gemini: auth.geminiKey ?? null,
-            openrouter: auth.openrouterKey ?? null
-        };
+        aiKeys = Managers.aiManager.getKeys(auth);
         this.owner = auth.owner;
     }
 

@@ -31,11 +31,17 @@ class AIProvider {
     }
 
     getErrorMessage(res) {
-        return String(res.data.error?.message ?? res.statusText);
+        return String(res.data?.error?.message ?? res.statusText ?? "");
     }
 
-    getUnblockDelay() {
-        return null;
+    getUnblockDelay(res) {
+        const retryAfter = res.headers?.["retry-after"];
+        const seconds = Number(retryAfter);
+        const delay = Number.isFinite(seconds)
+            ? seconds / Util.durationSeconds.milli
+            : Date.parse(retryAfter) - Date.now();
+
+        return delay > 0 ? delay : null;
     }
 
     isThinkingError() {

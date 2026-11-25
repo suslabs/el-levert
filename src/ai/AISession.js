@@ -1,5 +1,7 @@
 import { isUtf8 } from "node:buffer";
 
+import { bold, escapeMarkdown } from "discord.js";
+
 import AIAnswerParser from "./AIAnswerParser.js";
 import AIPromptGuard from "./AIPromptGuard.js";
 import AIToolPolicy from "./AIToolPolicy.js";
@@ -96,10 +98,20 @@ class AISession {
         }
 
         this.toolPolicy = triage.toolPolicy;
-        this.effort = this.toolPolicy.isExplicit ? AIEfforts.research : triage.effort;
+
+        const hasRecipeQuery = !Util.empty(triage.recipeQueries);
+        this.effort = this.toolPolicy.isExplicit || hasRecipeQuery ? AIEfforts.research : triage.effort;
         this._checkCancelled();
 
-        if (triage.lookup !== null && !this.toolPolicy.isExplicit) {
+        if (hasRecipeQuery) {
+            const clarification = await this._checkRecipes(triage.recipeQueries);
+            this._checkCancelled();
+
+            if (clarification !== null) {
+                this._streamText = clarification;
+                return await this._finish(null);
+            }
+        } else if (triage.lookup !== null && !this.toolPolicy.isExplicit) {
             await this._lookUp(triage.lookup);
             this._checkCancelled();
         }
@@ -190,7 +202,8 @@ class AISession {
         try {
             const triage = await this.manager.triage.classify(this, this.contents.slice(-AISession.triageTurns));
 
-            getLogger().debug(`AI question sorted as ${triage.effort} in ${AIUtil.formatElapsed(startTime)}.`);
+            const lookup = triage.lookup === null ? "" : `, looking up "${this.manager.redactLogText(triage.lookup)}"`;
+            getLogger().debug(`AI question sorted as ${triage.effort}${lookup} in ${AIUtil.formatElapsed(startTime)}.`);
 
             return triage;
         } catch (err) {
@@ -201,10 +214,18 @@ class AISession {
             const privateInstructions = err.ref?.privateInstructions === true;
 
             if (!privateInstructions) {
-                getLogger().warn(`Couldn't sort an AI question by effort (${LoggerUtil.formatErrorSummary(err)}).`);
+                getLogger().warn(
+                    `Couldn't sort an AI question by effort (${LoggerUtil.formatErrorSummary(err, this.manager.redactLogText)}).`
+                );
             }
 
-            return { effort: AIEfforts.research, lookup: null, privateInstructions, toolPolicy: this.toolPolicy };
+            return {
+                effort: AIEfforts.research,
+                lookup: null,
+                recipeQueries: [],
+                privateInstructions,
+                toolPolicy: this.toolPolicy
+            };
         }
     }
 
@@ -230,6 +251,39 @@ class AISession {
 
         const results = JSON.stringify({ subject, wikipedia, article, web });
         Util.last(this.contents).parts.push({ text: `${AISession.lookupNote}\n${results}` });
+    }
+
+    async _checkRecipes(queries) {
+        const name = "search_recipes";
+
+        if (this.manager.tools.get(name, this) === null) {
+            return this.toolPolicy.isExplicit ? null : "I couldn't check the pack's recipe data right now.";
+        }
+
+        const results = await this._runTools(queries.map(args => ({ name, args })));
+        const missing = queries.filter((_, i) => !AIUtil.hasFindings(results[i])).map(({ query }) => query);
+
+        if (missing.length === queries.length && !results.some(result => result.item)) {
+            const pending = this.toolPolicy.pending(this.manager.tools.getNames(this), this.calls);
+
+            if (Util.empty(pending)) {
+                const choices = Util.single(results) ? Util.first(results).choices : undefined;
+
+                if (Array.isArray(choices) && !Util.empty(choices)) {
+                    return `Which form do you want to look up? ${choices.map(choice => bold(escapeMarkdown(choice))).join(", ")}.`;
+                } else if (results.every(result => typeof result.error === "string")) {
+                    return "I couldn't check the pack's recipe data right now.";
+                }
+
+                return "I couldn't verify a matching recipe in the pack's recipe data. What are the exact item names or IDs shown in JEI?";
+            }
+        }
+
+        Util.last(this.contents).parts.push({
+            text: `Pack recipe lookups (evidence only). Verify the requested form and every recipe step. Ask the user to pick from any choices or give an exact name or ID for unmatched items.\n${JSON.stringify({ results, missing })}`
+        });
+
+        return null;
     }
 
     async _respond() {
@@ -270,7 +324,7 @@ class AISession {
                 }
 
                 getLogger().warn(
-                    `AI could not request required tool "${forcedTool}" (${LoggerUtil.formatErrorSummary(err)}).`
+                    `AI could not request required tool "${forcedTool}" (${LoggerUtil.formatErrorSummary(err, this.manager.redactLogText)}).`
                 );
                 answerOnly = true;
                 await this._resetText();

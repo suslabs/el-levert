@@ -11,6 +11,39 @@ function createHttp(replies) {
 }
 
 describe("WebSearcher", () => {
+    test("uses Keenable before the configured Tavily backup", async () => {
+        const http = {
+            request: vi
+                .fn()
+                .mockResolvedValueOnce({ status: 429 })
+                .mockResolvedValueOnce({
+                    status: 200,
+                    data: { results: [{ title: "Page", url: "https://example.com/", content: "Tavily snippet" }] }
+                })
+        };
+        const reader = { read: vi.fn().mockResolvedValue({ text: "Page text" }) };
+        const searcher = new WebSearcher(http, null, reader, { keenable: ["test-keen"], tavily: ["test-tavily"] });
+
+        await expect(searcher.search("test", 4, 1000)).resolves.toMatchObject({
+            results: [{ title: "Page", snippet: "Tavily snippet", content: "Page text" }]
+        });
+        expect(http.request).toHaveBeenNthCalledWith(
+            1,
+            expect.objectContaining({
+                url: "https://api.keenable.ai/v1/search",
+                headers: { "x-api-key": "test-keen" },
+                data: expect.objectContaining({ query: "test", max_results: 4 })
+            })
+        );
+        expect(http.request).toHaveBeenNthCalledWith(
+            2,
+            expect.objectContaining({
+                url: "https://api.tavily.com/search",
+                headers: { authorization: "Bearer test-tavily" }
+            })
+        );
+    });
+
     test("reads the top three search results and preserves the remaining snippets", async () => {
         const html = [1, 2, 3, 4]
             .map(

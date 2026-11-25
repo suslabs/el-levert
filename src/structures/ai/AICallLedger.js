@@ -48,13 +48,9 @@ class AICallLedger {
         return res;
     }
 
-    static _spaceRegex = /\s+/g;
-
     // Search queries are case-insensitive. Code, paths, and other arguments keep their exact values.
     static _normalize(key, value) {
-        return key === "query" && typeof value === "string"
-            ? value.trim().replace(AICallLedger._spaceRegex, " ").toLowerCase()
-            : value;
+        return key === "query" && typeof value === "string" ? AIUtil.normalizeQuery(value) : value;
     }
 
     static _getKey(call) {

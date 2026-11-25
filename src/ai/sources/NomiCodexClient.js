@@ -1,8 +1,9 @@
 import PackSource from "./PackSource.js";
 
-import Util from "../../util/Util.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
+import HTMLUtil from "../../util/misc/HTMLUtil.js";
 import { isSuccessStatus } from "../../util/misc/HttpStatusCodes.js";
+import HTTPUtil from "../../util/vm/HTTPUtil.js";
 
 import AIError from "../../errors/AIError.js";
 
@@ -47,25 +48,40 @@ class NomiCodexClient extends PackSource {
     async renderCard(itemId, idx, options) {
         options = ObjectUtil.guaranteeObject(options);
 
-        const mode = options.mode ?? this.mode;
+        const mode = options.mode ?? this.mode,
+            machine = options.machine ?? null,
+            theme = options.theme ?? null,
+            use = options.use ?? null;
 
         const timeout = options.timeout ?? 0;
 
+        const params = {
+            item: itemId,
+            mode,
+            r: idx + 1,
+            sel: "card",
+            format: "json",
+            wait: NomiCodexClient.renderWait
+        };
+
+        if (use !== null) {
+            Object.assign(params, { view: "uses", type: use.t, out: HTMLUtil.stripTags(use.n), eu: use.e, dur: use.d });
+        } else if (machine !== null) {
+            params.type = machine;
+        }
+
+        if (theme !== null) {
+            params.theme = theme;
+        }
+
         const res = await this.http.request({
             url: this.shotUrl,
-            params: {
-                item: itemId,
-                mode,
-                r: idx + 1,
-                sel: "card",
-                format: "json",
-                wait: NomiCodexClient.renderWait
-            },
+            params,
             responseType: "json",
             timeout
         });
 
-        if (!Util.nonemptyString(res.data.abs)) {
+        if (HTTPUtil.getHost(res.data?.abs) === null) {
             throw new AIError("Couldn't render the recipe card");
         }
 

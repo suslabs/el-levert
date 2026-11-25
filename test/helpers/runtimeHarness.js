@@ -228,7 +228,7 @@ async function importFresh(modulePath) {
 async function loadRuntimeManagers(client, Managers, config, auth) {
     await client.loadComponents(
         "managers",
-        Managers.default ?? Managers,
+        Managers,
         {
             tagManager: [],
             permManager: [config.enablePermissions],
@@ -257,7 +257,7 @@ async function loadRuntimeManagers(client, Managers, config, auth) {
             },
             aiManager: {
                 enabled: config.enableAI,
-                args: [true, { gemini: auth.geminiKey, openrouter: auth.openrouterKey }, {}]
+                args: [true, Managers.aiManager.getKeys(auth), {}]
             }
         },
         {
@@ -315,7 +315,7 @@ async function createRuntime(options = {}) {
     await importFresh("../../setupGlobals.js");
 
     const { LevertClient } = await importFresh("../../src/LevertClient.js"),
-        Managers = await importFresh("../../src/managers/index.js"),
+        { default: Managers } = await importFresh("../../src/managers/index.js"),
         Handlers = await importFresh("../../src/handlers/index.js"),
         VMs = await importFresh("../../src/vm/index.js"),
         ModuleUtil = (await importFresh("../../src/util/misc/ModuleUtil.js")).default;

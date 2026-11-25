@@ -180,7 +180,7 @@ class AIReply {
             }
 
             if (!AIReply.expectedErrors.has(err.name)) {
-                getLogger().error(`AI answer failed (${LoggerUtil.formatErrorSummary(err)}).`);
+                getLogger().error(`AI answer failed (${LoggerUtil.formatErrorSummary(err, aiManager.redactLogText)}).`);
                 err = new AIError("The AI could not finish this answer");
             } else if (aiManager.promptGuard.contains(err.message)) {
                 err = new AIError(AIPromptGuard.refusal);

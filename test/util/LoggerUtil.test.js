@@ -15,6 +15,19 @@ describe("LoggerUtil", () => {
         expect(LoggerUtil.formatLog(circular)).toContain("error:");
     });
 
+    test("formats diagnostics and masks headers and credentials", () => {
+        const logged = LoggerUtil.formatLog({
+            query: "read this page",
+            url: "https://example.test/?api_key=query-secret",
+            headers: [{ name: "Authorization", value: "header-secret" }],
+            body: '{"password":"body-secret"}'
+        });
+
+        expect(logged).toContain("read this page");
+        expect(logged).toContain('"headers":"[redacted]"');
+        expect(logged).not.toMatch(/(?:query|header|body)-secret/);
+    });
+
     test("formats binary and typed arrays with zero copies and byte limits", () => {
         expect(LoggerUtil.formatBinary(null)).toBeNull();
         expect(LoggerUtil.formatBinary("string")).toBeNull();

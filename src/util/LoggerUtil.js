@@ -61,22 +61,47 @@ const LoggerUtil = Object.freeze({
         };
     },
 
-    _jsonReplacer(key, value) {
-        const raw = this[key];
+    _jsonReplacer(key, value, redactText) {
+        if (LoggerUtil._sensitiveField.test(key)) {
+            return LoggerUtil._redacted;
+        }
 
+        const raw = this[key];
         const binary = LoggerUtil.formatBinary(raw) ?? LoggerUtil.formatBinary(value);
 
-        return binary ?? value;
+        return binary ?? (typeof value === "string" ? redactText(value) : value);
     },
 
-    formatErrorSummary(err) {
+    _redacted: "[redacted]",
+    _sensitiveField:
+        /^(?:headers|authorization|cookie|set-cookie|credentials|password|(?:api|access|refresh|client|private)[_-]?(?:key|token|secret)|secret|token)$/i,
+    _credential:
+        /\b(?:github_pat_[\w]+|gh[pousr]_[\w]{20,}|AIza[\w-]{30,}|sk-(?:or-v1-)?[\w-]{20,}|keen_[\w]+_[\da-f]{20,}|tvly-[\w-]{16,}|[\w-]{20,}\.[\w-]{6}\.[\w-]{20,})\b/gi,
+    _bearer: /(\b(?:Bearer|Basic) +)[^\s"',;\\]+/gi,
+    _credentialAssignment:
+        /(\b(?:x[-_]api[-_]key|api[-_]?key|access[-_]?token|refresh[-_]?token|token|password|secret)["']?\s*[:=]\s*)(?:"[^"\r\n]*"|'[^'\r\n]*'|[^\s&#,;"'}]+)/gi,
+
+    redactText(text, secrets = []) {
+        for (const secret of secrets) {
+            text = text.replaceAll(secret, LoggerUtil._redacted);
+        }
+
+        return text
+            .replace(LoggerUtil._credential, LoggerUtil._redacted)
+            .replace(LoggerUtil._bearer, `$1${LoggerUtil._redacted}`)
+            .replace(LoggerUtil._credentialAssignment, `$1${LoggerUtil._redacted}`);
+    },
+
+    formatErrorSummary(err, redactText = LoggerUtil.redactText) {
         const type = err instanceof Error ? err.constructor.name : "Error";
         const status = err?.response?.status ?? err?.status ?? err?.ref?.status ?? err?.ref;
 
-        return Number.isInteger(status) && status >= 100 && status <= 599 ? `${type}, HTTP ${status}` : type;
+        const summary = Number.isInteger(status) && status >= 100 && status <= 599 ? `${type}, HTTP ${status}` : type;
+        const message = Util.nonemptyString(err?.message) ? redactText(err.message) : "";
+        return Util.empty(message) ? summary : `${summary}: ${message}`;
     },
 
-    formatLog(str, splitLength = 80, maxLength = 1000) {
+    formatLog(str, splitLength = 80, maxLength = 1000, redactText = LoggerUtil.redactText) {
         if (str == null) {
             return " none";
         }
@@ -89,16 +114,19 @@ const LoggerUtil = Object.freeze({
                 break;
             case "object":
                 try {
-                    str = JSON.stringify(str, LoggerUtil._jsonReplacer);
+                    str = JSON.stringify(str, function (key, value) {
+                        return LoggerUtil._jsonReplacer.call(this, key, value, redactText);
+                    });
                     break;
                 } catch (err) {
-                    return ` error: ${err.message}`;
+                    return ` error: ${redactText(err.message)}`;
                 }
             case "string":
                 if (Util.empty(str)) {
                     return " none";
                 }
 
+                str = redactText(str);
                 break;
         }
 

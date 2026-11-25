@@ -41,7 +41,7 @@ class GeminiProvider extends AIProvider {
 
         let finishReason = null,
             blockReason = null,
-            interrupted = false;
+            error = null;
 
         for await (const event of SSEUtil.readEvents(stream)) {
             const data = JSON.parse(event),
@@ -49,7 +49,7 @@ class GeminiProvider extends AIProvider {
 
             usage = data.usageMetadata ?? usage;
             blockReason = data.promptFeedback?.blockReason ?? blockReason;
-            interrupted ||= typeof data.error !== "undefined";
+            error = data.error ?? error;
 
             if (typeof candidate === "undefined") {
                 continue;
@@ -64,13 +64,20 @@ class GeminiProvider extends AIProvider {
 
         return {
             parts,
-            finishReason: GeminiProvider._getFinishReason(finishReason, blockReason, interrupted),
+            finishReason: GeminiProvider._getFinishReason(finishReason, blockReason, error !== null),
+            error,
             usage: GeminiProvider._parseUsage(usage)
         };
     }
 
     getUnblockDelay(res) {
-        return GeminiQuotaUtil.getUnblockDelay(res.data.error);
+        const error = res.data?.error;
+        const delay =
+            res.status === httpStatusCodes.TOO_MANY_REQUESTS
+                ? GeminiQuotaUtil.getUnblockDelay(error)
+                : GeminiQuotaUtil.getRetryDelay(error);
+
+        return delay ?? super.getUnblockDelay(res);
     }
 
     isThinkingError(res) {

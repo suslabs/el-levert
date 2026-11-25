@@ -102,6 +102,12 @@ class AITool {
     }
 
     async _execute(args, session) {
+        const logger = getLogger();
+
+        if (logger.isDebugEnabled()) {
+            logger.debug(`AI tool "${this.name}" called with args:${this.manager.formatLog(args)}`);
+        }
+
         const startTime = Date.now();
         let out;
 
@@ -109,13 +115,19 @@ class AITool {
             out = await this._childExecute(args, session);
         } catch (err) {
             if (!AITool.expectedErrors.has(err.name)) {
-                getLogger().error(`AI tool "${this.name}" failed (${LoggerUtil.formatErrorSummary(err)}).`);
+                logger.error(
+                    `AI tool "${this.name}" failed (${LoggerUtil.formatErrorSummary(err, this.manager.redactLogText)}).`
+                );
             }
 
             out = { error: err.message };
         }
 
-        getLogger().debug(`AI tool "${this.name}" took ${AIUtil.formatElapsed(startTime)}.`);
+        logger.debug(`AI tool "${this.name}" took ${AIUtil.formatElapsed(startTime)}.`);
+
+        if (logger.isDebugEnabled()) {
+            logger.debug(`AI tool "${this.name}" returned:${this.manager.formatLog(out)}`);
+        }
 
         return this._limitOutput(out);
     }
@@ -130,6 +142,7 @@ class AITool {
 
         return {
             truncated: true,
+            found: AIUtil.hasFindings(out),
             partial: text.slice(0, maxOutput)
         };
     }

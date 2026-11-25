@@ -290,6 +290,8 @@ class AIReplyView {
     static _getUnavailableReason(status) {
         if (status === httpStatusCodes.TOO_MANY_REQUESTS) {
             return "The AI usage limits are used up for now.";
+        } else if (status === httpStatusCodes.PAYMENT_REQUIRED) {
+            return "The AI provider reports a billing or credit limit.";
         } else if (isServerErrorStatus(status)) {
             return "The AI models are overloaded right now.";
         } else {

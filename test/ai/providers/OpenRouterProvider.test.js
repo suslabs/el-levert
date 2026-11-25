@@ -4,6 +4,7 @@ import { Readable } from "node:stream";
 import { describe, expect, test } from "vitest";
 
 import OpenRouterProvider from "../../../src/ai/providers/OpenRouterProvider.js";
+import Util from "../../../src/util/Util.js";
 
 const provider = new OpenRouterProvider(null, ["key"], { endpoint: "https://openrouter.test/api/v1" });
 
@@ -120,6 +121,7 @@ describe("OpenRouterProvider", () => {
         expect(out).toEqual({
             parts: [{ text: "Hel" }, { text: "lo" }, { functionCall: { id: "c1", name: "unit", args: { value: 1 } } }],
             finishReason: "STOP",
+            error: null,
             usage: { tokens: 42, cached: 10, reasoning: 0 }
         });
     });
@@ -130,8 +132,11 @@ describe("OpenRouterProvider", () => {
             async () => {}
         );
         expect(out.finishReason).toBeNull();
+        expect(out.error).toEqual({ message: "x" });
 
-        expect(provider.getUnblockDelay({ headers: { "retry-after": "30" } })).toBe(30000);
+        expect(provider.getUnblockDelay({ status: 503, headers: { "retry-after": "30" } })).toBe(
+            30 / Util.durationSeconds.milli
+        );
         expect(provider.getUnblockDelay({ headers: {} })).toBeNull();
     });
 });
