@@ -24,6 +24,8 @@ class InspectImageTool extends WebTool {
         )
     };
 
+    static quick = true;
+
     getStatus() {
         return "Looking at the image";
     }

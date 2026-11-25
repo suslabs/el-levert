@@ -5,7 +5,7 @@ import AISession from "../../ai/AISession.js";
 import AIToolRegistry from "../../ai/AIToolRegistry.js";
 import AIPrompt from "../../ai/AIPrompt.js";
 import AITriage from "../../ai/AITriage.js";
-import WebSearcher from "../../ai/WebSearcher.js";
+import WebSearcher from "../../ai/search/WebSearcher.js";
 import AISourceRegistry from "../../ai/sources/AISourceRegistry.js";
 import Sources from "../../ai/sources/Sources.js";
 import PromptLoader from "../../loaders/ai/PromptLoader.js";
@@ -70,7 +70,7 @@ class AIManager extends Manager {
         this.tools = new AIToolRegistry(this);
         this.prompt = new AIPrompt(this.prompts.system);
         this.triage = new AITriage(this.prompts.triage);
-        this.webSearcher = new WebSearcher(this.http);
+        this.webSearcher = new WebSearcher(this.http, { tavily: this.keys.tavily });
 
         this.sources = new AISourceRegistry(this.http, config.requestTimeout);
         await this.sources.load(this.sourceDefinitions);

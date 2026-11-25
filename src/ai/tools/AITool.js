@@ -1,4 +1,5 @@
 import AIPhases from "../../structures/ai/AIPhases.js";
+import AIEfforts from "../../structures/ai/AIEfforts.js";
 
 import { getLogger } from "../../LevertClient.js";
 
@@ -23,6 +24,9 @@ class AITool {
     ]);
     static maxStatusArgLength = 60;
     static maxCalls = Infinity;
+
+    // offered for quick questions too (general facts, members); everything else only for research
+    static quick = false;
 
     constructor(manager) {
         const info = this.constructor.info;
@@ -88,7 +92,9 @@ class AITool {
     }
 
     _isAvailable(session) {
-        if (typeof this._childIsAvailable !== "function") {
+        if (session.effort === AIEfforts.quick && !this.constructor.quick) {
+            return false;
+        } else if (typeof this._childIsAvailable !== "function") {
             return true;
         }
 

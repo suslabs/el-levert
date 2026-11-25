@@ -39,6 +39,26 @@ describe("AIManager", () => {
         }
     });
 
+    test("offers quick questions only the tools that answer general facts and members", async () => {
+        runtime = await createCommandRuntime({ config: { enableAI: true }, auth: { geminiKey: "test-key" } });
+
+        const tools = runtime.client.aiManager.tools,
+            session = { effort: "quick", expert: false, request: {} };
+
+        expect(tools.getNames(session)).toEqual([
+            "search_web",
+            "fetch_web_page",
+            "unit_convert",
+            "find_users",
+            "get_bot_profile",
+            "get_asking_user",
+            "inspect_image"
+        ]);
+
+        expect(tools.get("search_tags", session)).toBeNull();
+        expect(tools.get("search_tags", { ...session, effort: "research" })).not.toBeNull();
+    });
+
     test("loads the highest priority source of each type and falls back when one fails", async () => {
         runtime = await createCommandRuntime({ config: { enableAI: true }, auth: { geminiKey: "test-key" } });
 

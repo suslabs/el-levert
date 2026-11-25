@@ -9,8 +9,7 @@ class SearchWebTool extends AITool {
         name: "search_web",
         emoji: "🌐",
         phase: AIPhases.searching,
-        description:
-            "Web search for general, current or external facts. For modpack questions, use it only after the questbook, recipes and tags found nothing.",
+        description: "Web search for general, current or external facts. Results are titles, links and snippets.",
         parameters: ToolParams.object(
             {
                 query: ToolParams.string("Short search query."),
@@ -19,6 +18,8 @@ class SearchWebTool extends AITool {
             ["query"]
         )
     };
+
+    static quick = true;
 
     static maxCalls = 4;
 

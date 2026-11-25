@@ -22,6 +22,8 @@ class ReadWikiTool extends SourceTool {
         )
     };
 
+    static quick = true;
+
     static sourceType = AISourceTypes.wiki;
 
     getStatus(args) {

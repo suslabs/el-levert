@@ -25,6 +25,11 @@ class AISession {
     static maxTurnLength = 2000;
     static triageTurns = 3;
 
+    static lookupArticleChars = 3000;
+
+    static lookupNote =
+        "Automatic lookup, already done for you (don't repeat these searches). Answer from the results that match what was asked:";
+
     constructor(manager, request, options) {
         options = ObjectUtil.guaranteeObject(options);
 
@@ -77,8 +82,14 @@ class AISession {
             { role: "user", parts: [{ text: question }] }
         ];
 
-        this.effort = await this._triage();
+        const triage = await this._triage();
+        this.effort = triage.effort;
         this._checkCancelled();
+
+        if (triage.lookup !== null) {
+            await this._lookUp(triage.lookup);
+            this._checkCancelled();
+        }
 
         const prompt = this.manager.prompt.build(this.request, this.manager.tools.getNames(this), this.effort);
         this.systemInstruction = { parts: [{ text: prompt }] };
@@ -163,22 +174,50 @@ class AISession {
         const startTime = Date.now();
 
         try {
-            const effort = await this.manager.triage.classify(this, this.contents.slice(-AISession.triageTurns));
-            getLogger().debug(`AI question sorted as ${effort} in ${AIUtil.formatElapsed(startTime)}.`);
+            const triage = await this.manager.triage.classify(this, this.contents.slice(-AISession.triageTurns));
 
-            return effort;
+            getLogger().debug(
+                `AI question sorted as ${triage.effort}${triage.lookup === null ? "" : `, looking up "${triage.lookup}"`} in ${AIUtil.formatElapsed(startTime)}.`
+            );
+
+            return triage;
         } catch (err) {
             if (err.name !== "AIError" || this.signal?.aborted) {
                 throw err;
             }
 
             getLogger().warn(`Couldn't sort an AI question by effort: ${err.message}`);
-            return AIEfforts.research;
+            return { effort: AIEfforts.research, lookup: null };
         }
     }
 
+    async _readTopArticle(results) {
+        const top = Util.first(results);
+
+        if (typeof top === "undefined") {
+            return null;
+        }
+
+        const args = { title: top.title, maxChars: AISession.lookupArticleChars };
+        return Util.first(await this._runTools([{ name: "read_wikipedia", args }]));
+    }
+
+    // a who/what question about something outside the modpack always gets Wikipedia and
+    // the web searched, and the best Wikipedia article read, before the model answers
+    async _lookUp(subject) {
+        const [wikipedia, web] = await this._runTools([
+            { name: "search_wikipedia", args: { query: subject } },
+            { name: "search_web", args: { query: subject } }
+        ]);
+
+        const article = await this._readTopArticle(wikipedia.results ?? []);
+
+        const results = JSON.stringify({ subject, wikipedia, article, web });
+        Util.last(this.contents).parts.push({ text: `${AISession.lookupNote}\n${results}` });
+    }
+
     _getContents(final) {
-        const note = this.manager.prompt.buildNote(final, this.expert);
+        const note = this.manager.prompt.buildNote(final, this.expert, this.calls.foundNothing);
 
         if (Util.empty(note)) {
             return this.contents;
@@ -231,21 +270,26 @@ class AISession {
         getLogger().debug(`AI step ${i + 1} on ${this.model} took ${AIUtil.formatElapsed(startTime)} and ${action}.`);
     }
 
-    async _runCalls(calls) {
+    async _runTools(calls) {
         const steps = calls.map(call => this.manager.tools.createStep(call.name, call.args, this));
 
         this.text = "";
         this.steps.push(...steps);
 
         await this._reportProgress();
-        return await Promise.all(calls.map(call => this._runCall(call)));
+        return await Promise.all(calls.map(call => this._runTool(call)));
     }
 
-    async _runCall(call) {
+    async _runTool(call) {
         const res = await this.calls.run(call, () => this.manager.tools.execute(call.name, call.args, this));
         this.ledger.record(res);
 
-        return AIUtil.createResponse(call, res);
+        return res;
+    }
+
+    async _runCalls(calls) {
+        const results = await this._runTools(calls);
+        return calls.map((call, i) => AIUtil.createResponse(call, results[i]));
     }
 
     async _finish(finishReason) {

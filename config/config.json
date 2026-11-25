@@ -121,7 +121,7 @@
         "thinkingLevel": "low",
         "toolThinkingLevel": "low",
         "maxSteps": -1,
-        "quickMaxSteps": 2,
+        "quickMaxSteps": 3,
         "timeLimit": 45,
         "unlimitedTimeForAdmins": true,
         "requestTimeout": 20,

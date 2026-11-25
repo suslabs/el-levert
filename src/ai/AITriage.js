@@ -1,5 +1,6 @@
 import AIEfforts from "../structures/ai/AIEfforts.js";
 
+import Util from "../util/Util.js";
 import ToolParams from "../util/ai/ToolParams.js";
 
 import AIError from "../errors/AIError.js";
@@ -7,9 +8,12 @@ import AIError from "../errors/AIError.js";
 class AITriage {
     static schema = ToolParams.object(
         {
-            effort: ToolParams.string("How much work the question needs.", { enum: AIEfforts.values })
+            effort: ToolParams.string("How much work the question needs.", { enum: AIEfforts.values }),
+            lookup: ToolParams.string(
+                "For a who/what question about something outside the modpack, the name or term to look up. Empty otherwise."
+            )
         },
-        ["effort"]
+        ["effort", "lookup"]
     );
 
     constructor(instructions) {
@@ -30,19 +34,24 @@ class AITriage {
     }
 
     static _parse(text) {
-        let effort;
+        let data;
 
         try {
-            effort = JSON.parse(text).effort;
+            data = JSON.parse(text);
         } catch (err) {
             throw new AIError("The model returned an invalid triage", { text, err });
         }
 
-        if (!AIEfforts.has(effort)) {
-            throw new AIError(`Unknown effort "${effort}"`, { text });
+        if (!AIEfforts.has(data.effort)) {
+            throw new AIError(`Unknown effort "${data.effort}"`, { text });
         }
 
-        return effort;
+        const lookup = String(data.lookup ?? "").trim();
+
+        return {
+            effort: data.effort,
+            lookup: Util.empty(lookup) ? null : lookup
+        };
     }
 }
 

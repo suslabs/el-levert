@@ -27,6 +27,8 @@ class UnitConvertTool extends AITool {
         )
     };
 
+    static quick = true;
+
     static resultDigits = 6;
 
     static unitAliases = {

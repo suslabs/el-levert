@@ -25,6 +25,8 @@ class FetchWebPageTool extends WebTool {
         )
     };
 
+    static quick = true;
+
     static maxCalls = 5;
 
     getStatus(args) {

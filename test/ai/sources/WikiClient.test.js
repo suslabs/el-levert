@@ -28,12 +28,38 @@ describe("WikiClient", () => {
 
         expect(Util.first(requests)).toMatchObject({
             url: "https://de.wikipedia.org/w/api.php",
-            params: { action: "query", list: "search", srsearch: "steel", srlimit: 3 },
+            params: {
+                action: "query",
+                list: "prefixsearch|search",
+                pssearch: "steel",
+                psprofile: "fuzzy",
+                pslimit: 3,
+                srsearch: "steel",
+                srlimit: 3
+            },
             headers: { "user-agent": Sources.wikipedia.options.userAgent }
         });
 
         expect(results).toEqual([
             { title: "Steel Mill", url: "https://de.wikipedia.org/wiki/Steel_Mill", snippet: "A steel mill" }
+        ]);
+    });
+
+    test("puts typo-tolerant title matches before full-text results without duplicates", async () => {
+        const { wiki } = createWiki({
+            prefixsearch: [{ title: "Tung Tung Tung Sahur" }, { title: "Tung Tung Tung Sahur Runner" }],
+            search: [
+                { title: "Comparison of Standard Chinese transcription systems", snippet: "shau <b>shaur</b>" },
+                { title: "Tung Tung Tung Sahur", snippet: "duplicate" }
+            ]
+        });
+
+        const results = await wiki.search("tung tung tung shaur", { limit: 3 });
+
+        expect(results.map(result => [result.title, result.snippet])).toEqual([
+            ["Tung Tung Tung Sahur", ""],
+            ["Tung Tung Tung Sahur Runner", ""],
+            ["Comparison of Standard Chinese transcription systems", "shau shaur"]
         ]);
     });
 

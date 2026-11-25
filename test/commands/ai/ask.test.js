@@ -67,8 +67,11 @@ const withExtras = (res, next) => {
     return { ...res, body: res.body + `data: ${JSON.stringify(chunk([{ text: trailer(next.extras) }]))}\r\n\r\n` };
 };
 
-const triage = effort => ({
-    json: { candidates: [{ content: { role: "model", parts: [{ text: JSON.stringify({ effort }) }] } }], ...usage(10) }
+const triage = (effort, lookup = "") => ({
+    json: {
+        candidates: [{ content: { role: "model", parts: [{ text: JSON.stringify({ effort, lookup }) }] } }],
+        ...usage(10)
+    }
 });
 
 const isTriage = body => typeof body.generationConfig?.responseSchema?.properties?.effort !== "undefined";
@@ -1096,6 +1099,108 @@ describe("a command", () => {
         expect(embedOf(recorder.sent.at(-1)).description).toContain("No member called **pexa** here.");
     });
 
+    test("looks up who/what questions on Wikipedia and the web before the model answers", async () => {
+        const lookups = { wiki: [], read: [], web: [] };
+
+        const script = [
+            calls([call("search_wikipedia", { query: " Tung Tung TUNG  shaur" })]),
+            answer(["**Tung Tung Tung Sahur** is an AI-generated meme character."])
+        ];
+
+        const bodies = await setup(script, { triage: () => triage("research", "tung tung tung shaur") });
+
+        const manager = runtime.client.aiManager;
+
+        manager.sources.sources.set("wiki", {
+            name: "Wikipedia",
+            search: async query => {
+                lookups.wiki.push(query);
+                return [{ title: "Tung Tung Tung Sahur", url: "https://en.wikipedia.org/wiki/Tung", snippet: "" }];
+            },
+            read: async title => {
+                lookups.read.push(title);
+                return { title, url: "https://en.wikipedia.org/wiki/Tung", text: "An Italian brainrot meme." };
+            },
+            getLanguage: language => language ?? "en"
+        });
+
+        manager.webSearcher = {
+            search: async query => {
+                lookups.web.push(query);
+                return { query, results: [{ title: "Tung Tung Tung Sahur meme", url: "https://example.test/tung" }] };
+            }
+        };
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("who is tung tung tung shaur", recorder));
+
+        expect(script).toEqual([]);
+        expect(lookups).toEqual({
+            wiki: ["tung tung tung shaur"],
+            read: ["Tung Tung Tung Sahur"],
+            web: ["tung tung tung shaur"]
+        });
+
+        const question = Util.first(bodies).body.contents.at(-1);
+
+        expect(question.parts[0].text).toBe("who is tung tung tung shaur");
+        expect(question.parts[1].text).toContain("Automatic lookup");
+        expect(question.parts[1].text).toContain("An Italian brainrot meme.");
+        expect(question.parts[1].text).toContain("https://example.test/tung");
+
+        const repeated = bodies[1].body.contents.at(-1).parts[0].functionResponse.response;
+        expect(repeated).toMatchObject({ repeated: true });
+
+        expect(embedOf(recorder.sent.at(-1)).description).toContain("Tung Tung Tung Sahur");
+    }, 30000);
+
+    test("tells the model not to guess once every search came back empty or failed", async () => {
+        const script = [
+            calls([call("search_web", { query: "who created nomifactory" })]),
+            answer(["I couldn't find who created Nomifactory."])
+        ];
+
+        const bodies = await setup(script);
+
+        runtime.client.aiManager.webSearcher = {
+            search: async query => ({ query, results: [] })
+        };
+
+        await getCommand(runtime, "a").handler(createAskContext("who created nomifactory", createRecorder()));
+
+        const notes = request =>
+            request.body.contents
+                .at(-1)
+                .parts.map(part => part.text ?? "")
+                .join("\n");
+
+        expect(script).toEqual([]);
+        expect(notes(Util.first(bodies))).not.toContain("Don't answer from memory");
+        expect(notes(bodies[1])).toContain("Don't answer from memory");
+    });
+
+    test("doesn't look anything up when triage finds no outside subject", async () => {
+        const searches = [];
+
+        const script = [answer(["Steel is made in the **EBF**."])];
+        const bodies = await setup(script, { triage: () => triage("research", "") });
+
+        runtime.client.aiManager.webSearcher = {
+            search: async query => {
+                searches.push(query);
+                return { query, results: [] };
+            }
+        };
+
+        await getCommand(runtime, "a").handler(
+            createAskContext("what is steel used for in nomifactory", createRecorder())
+        );
+
+        expect(script).toEqual([]);
+        expect(searches).toEqual([]);
+        expect(Util.first(bodies).body.contents.at(-1).parts).toHaveLength(1);
+    });
+
     test("treats a question as research when triage fails", async () => {
         const script = [answer(["Thorough answer."]), extras([], [])];
 
@@ -1416,7 +1521,11 @@ describe("a command", () => {
 
         await getCommand(runtime, "a").handler(createAskContext("loop please", createRecorder()));
 
-        const responses = idx => bodies[idx].body.contents.at(-1).parts.map(part => part.functionResponse.response);
+        const responses = idx =>
+            bodies[idx].body.contents
+                .at(-1)
+                .parts.filter(part => typeof part.functionResponse !== "undefined")
+                .map(part => part.functionResponse.response);
 
         expect(script).toEqual([]);
         expect(responses(1)[1]).toMatchObject({ repeated: true });

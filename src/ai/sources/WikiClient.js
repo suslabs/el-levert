@@ -1,4 +1,5 @@
 import Util from "../../util/Util.js";
+import ArrayUtil from "../../util/ArrayUtil.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 import HTMLUtil from "../../util/misc/HTMLUtil.js";
 import HTTPUtil from "../../util/vm/HTTPUtil.js";
@@ -10,6 +11,11 @@ class WikiClient {
     static articlePath = "wiki";
 
     static defaultLimit = 5;
+
+    // title matches tolerate typos ("tung tung tung shaur" finds "Tung Tung Tung Sahur"),
+    // full-text search covers descriptive queries
+    static searchLists = "prefixsearch|search";
+    static titleMatchProfile = "fuzzy";
 
     constructor(http, options) {
         options = ObjectUtil.guaranteeObject(options);
@@ -40,13 +46,28 @@ class WikiClient {
 
         const timeout = options.timeout ?? 0;
 
-        const data = await this._query(language, { list: "search", srsearch: query, srlimit: limit }, timeout);
+        const data = await this._query(
+            language,
+            {
+                list: WikiClient.searchLists,
+                pssearch: query,
+                psprofile: WikiClient.titleMatchProfile,
+                pslimit: limit,
+                srsearch: query,
+                srlimit: limit
+            },
+            timeout
+        );
 
-        return (data.search ?? []).map(result => ({
-            title: result.title,
-            url: this._getArticleUrl(result.title, language),
-            snippet: HTMLUtil.stripTags(result.snippet)
-        }));
+        const results = [...(data.prefixsearch ?? []), ...(data.search ?? [])];
+
+        return ArrayUtil.unique(results, result => result.title)
+            .slice(0, limit)
+            .map(result => ({
+                title: result.title,
+                url: this._getArticleUrl(result.title, language),
+                snippet: HTMLUtil.stripTags(result.snippet ?? "")
+            }));
     }
 
     async read(title, options) {
