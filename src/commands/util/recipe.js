@@ -50,9 +50,9 @@ class RecipeCommand {
     static info = {
         name: "rp",
         category: "util",
-        args: "<item> [machine] [number] [--uses] [--expert] [--light] [--list] [--page <num>]",
+        args: "<item> [machine] [--uses] [--expert] [--light] [--list]",
         description: "Looks up Nomifactory CEu recipes and item uses in NomiCodex.",
-        usage: "- Add a machine name to filter results or a number to open a recipe.\n- --uses: Find recipes that consume the item.\n- --expert: Look up expert mode recipes.\n- --light: Use the light theme for cards.\n- --list: Always show the result list.\n- --page <num>: Open a page of results.",
+        usage: "- Add a machine name to filter results.\n- --uses: Find recipes that consume the item.\n- --expert: Look up expert mode recipes.\n- --light: Use the light theme for cards.\n- --list: Always show the result list.",
         arguments: [Util.first(PaginationUtil.getPaginationArguments()), { name: "parts", kind: "list" }]
     };
 
