@@ -2248,4 +2248,15 @@ describe("a command", () => {
         expect(script).toEqual([]);
         expect(embedOf(recorder.sent.at(-1)).image.url).toBe(`${server.url}/cat.png`);
     });
+
+    test("reports that AI is unavailable when AIManager failed to initialize", async () => {
+        runtime = await createCommandRuntime({ config: { enableAI: true } });
+
+        expect(runtime.client.aiManager.enabled).toBe(false);
+
+        const command = getCommand(runtime, "a"),
+            out = await command.handler(createAskContext("hello", createRecorder()));
+
+        expect(out).toContain("AI is currently unavailable");
+    });
 });

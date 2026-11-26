@@ -57,6 +57,11 @@ class AITool {
             throw new AIError("Child class must have a getStatus function");
         }
 
+        this.enabled = true;
+
+        this._childLoad = this.load;
+        this.load = this._load.bind(this);
+
         this._childIsAvailable = this.isAvailable;
         this.isAvailable = this._isAvailable.bind(this);
 
@@ -103,8 +108,16 @@ class AITool {
         };
     }
 
+    async _load(...args) {
+        if (typeof this._childLoad === "function" && (await this._childLoad(...args)) === false) {
+            this.enabled = false;
+        }
+
+        return this.enabled;
+    }
+
     _isAvailable(session) {
-        if (session.effort === AIEfforts.quick && !this.constructor.quick) {
+        if (!this.enabled || (session.effort === AIEfforts.quick && !this.constructor.quick)) {
             return false;
         } else if (typeof this._childIsAvailable !== "function") {
             return true;

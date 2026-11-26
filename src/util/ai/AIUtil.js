@@ -1,3 +1,5 @@
+import DefaultAuthConfig from "../../config/DefaultAuthConfig.js";
+
 import Util from "../Util.js";
 import ObjectUtil from "../ObjectUtil.js";
 import TypeTester from "../TypeTester.js";
@@ -97,6 +99,13 @@ const AIUtil = Object.freeze({
         }
 
         return [header, ...items.map((item, i) => `${i + 1}. ${item}`)].join("\n");
+    },
+
+    formatMissingKey: (component, keyName) => {
+        const envKey = DefaultAuthConfig.envKeys[keyName],
+            envHint = Util.nonemptyString(envKey) ? ` (or ${envKey} in auth.env)` : "";
+
+        return `Cannot initialize ${component} without an API key. Set "${keyName}" in auth.json${envHint}.`;
     },
 
     joinSections: (...sections) => {

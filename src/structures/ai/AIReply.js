@@ -6,7 +6,7 @@ import ComponentSession from "../interaction/ComponentSession.js";
 
 import InteractionModes from "../interaction/InteractionModes.js";
 
-import { getClient, getConfig, getLogger } from "../../LevertClient.js";
+import { getClient, getConfig, getEmoji, getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
@@ -59,6 +59,11 @@ class AIReply {
 
         switch (action) {
             case AIReplyView.followUpAction:
+                if (getClient().checkComponent("managers", "aiManager", { throwErrors: false, altName: "AI" })) {
+                    await ctx.reply(`${getEmoji("error")} AI is currently unavailable.`, { ephemeral: true });
+                    return true;
+                }
+
                 return await AIReply._handleFollowUp(ctx, findFollowUp(componentId.args, session.spec.followUps));
             case AIReplyView.cancelAction:
                 return await AIReply._handleCancel(ctx);

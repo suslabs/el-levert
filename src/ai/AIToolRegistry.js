@@ -13,6 +13,10 @@ class AIToolRegistry {
         this.tools = new Map(Object.values(Tools).map(_class => [_class.info.name, new _class()]));
     }
 
+    async load(aiManager) {
+        await Promise.all(Array.from(this.tools.values(), tool => tool.load(aiManager)));
+    }
+
     getRegisteredNames() {
         return Array.from(this.tools.keys());
     }

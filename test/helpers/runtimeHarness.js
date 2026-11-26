@@ -229,6 +229,9 @@ async function importFresh(modulePath) {
 }
 
 async function loadRuntimeManagers(client, Managers, config, auth) {
+    const ModuleUtil = (await importFresh("../../src/util/misc/ModuleUtil.js")).default;
+    await ModuleUtil.resolveBarrel(Managers);
+
     await client.loadComponents(
         "managers",
         Managers,

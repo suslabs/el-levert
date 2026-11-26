@@ -1,6 +1,6 @@
 import AIReply from "../../structures/ai/AIReply.js";
 
-import { getConfig, getEmoji } from "../../LevertClient.js";
+import { getClient, getConfig, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 
@@ -29,6 +29,10 @@ class AskCommand {
     }
 
     async handler(ctx) {
+        if (getClient().checkComponent("managers", "aiManager", { throwErrors: false, altName: "AI" })) {
+            return `${getEmoji("error")} AI is currently unavailable.`;
+        }
+
         const question = (ctx.arg("question") ?? "").trim();
 
         if (Util.empty(question)) {

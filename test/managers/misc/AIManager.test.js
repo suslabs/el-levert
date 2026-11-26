@@ -7,38 +7,107 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import AIEfforts from "../../../src/structures/ai/AIEfforts.js";
 
 import { cleanupRuntime, createCommandRuntime } from "../../helpers/commandHarness.js";
+import { createRuntime } from "../../helpers/runtimeHarness.js";
 
 let runtime;
 
 afterEach(async () => {
+    vi.doUnmock("../../../src/ai/browser/index.js");
     await cleanupRuntime(runtime);
     runtime = null;
 });
 
 describe("AIManager", () => {
-    test("isn't loaded when AI is disabled", async () => {
+    test("isn't loaded when AI is disabled", { timeout: 10000 }, async () => {
         runtime = await createCommandRuntime({});
         expect(runtime.client.aiManager).toBeUndefined();
     });
 
-    test("refuses to load without any AI key", async () => {
-        await expect(createCommandRuntime({ config: { enableAI: true } })).rejects.toThrow("no API key was provided");
+    test("logs an error and marks AI unavailable when no AI key is provided", async () => {
+        runtime = await createRuntime({ loadManagers: false, config: { enableAI: true } });
+
+        const errorSpy = vi.spyOn(runtime.client.logger, "error"),
+            { default: AIManager } = await import("../../../src/managers/misc/AIManager.js");
+
+        const manager = new AIManager(true, {});
+        await manager.load();
+
+        expect(manager.enabled).toBe(false);
+        expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("geminiKey"));
+        expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("no AI backend could be loaded"));
+
+        runtime.client.aiManager = manager;
+        runtime.client.managers = { aiManager: manager };
+        runtime.client.components.set("manager", { collectionName: "managers", loaded: true });
+        expect(runtime.client.checkComponent("managers", "aiManager", { throwErrors: false, altName: "AI" })).toBe(
+            "AI isn't enabled"
+        );
     });
 
-    test("refuses to load when a prompt file is missing", async () => {
+    test("logs an error and marks AI unavailable when a prompt file is missing", async () => {
         const promptsPath = await fs.mkdtemp(path.join(os.tmpdir(), "ai-prompts-"));
         await fs.writeFile(path.join(promptsPath, "system.txt"), "You are a test assistant.");
 
         try {
-            await expect(
-                createCommandRuntime({
-                    config: { enableAI: true, ai: { promptsPath } },
-                    auth: { geminiKey: "test-key" }
-                })
-            ).rejects.toThrow("Missing AI prompt files: triage, inspectImage");
+            runtime = await createRuntime({
+                loadManagers: false,
+                config: { enableAI: true, ai: { promptsPath } },
+                auth: { geminiKey: "test-key" }
+            });
+
+            const errorSpy = vi.spyOn(runtime.client.logger, "error"),
+                { default: AIManager } = await import("../../../src/managers/misc/AIManager.js");
+
+            const manager = new AIManager(true, { gemini: ["test-key"] });
+            await manager.load();
+
+            expect(manager.enabled).toBe(false);
+            expect(errorSpy).toHaveBeenCalledWith(
+                expect.stringContaining("prompt files are missing: triage, inspectImage")
+            );
         } finally {
             await fs.rm(promptsPath, { recursive: true, force: true });
         }
+    });
+
+    test("logs an error and disables browser search when optional browser dependencies are unavailable", async () => {
+        vi.doMock("../../../src/ai/browser/index.js", () => ({
+            loadStealthBrowser: async () => null
+        }));
+
+        runtime = await createCommandRuntime({
+            config: { enableAI: true },
+            auth: { geminiKey: "test-key", keenableKey: "keen-key" }
+        });
+
+        const manager = runtime.client.aiManager;
+
+        expect(manager.enabled).toBe(true);
+        expect(manager.browser).toBeNull();
+        expect(manager.webSearcher.backends.some(backend => backend.name === "browser")).toBe(false);
+
+        await manager.unload();
+        const errorSpy = vi.spyOn(runtime.client.logger, "error");
+        await manager.load();
+
+        expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('"browser" search backend'));
+    });
+
+    test("marks search_web tool unavailable when WebSearcher has no backends", async () => {
+        runtime = await createCommandRuntime({ config: { enableAI: true }, auth: { geminiKey: "test-key" } });
+
+        const manager = runtime.client.aiManager,
+            errorSpy = vi.spyOn(runtime.client.logger, "error");
+
+        manager.webSearcher.backends = [];
+        const tool = manager.tools.tools.get("search_web");
+
+        expect(await tool.load(manager)).toBe(false);
+        expect(tool.enabled).toBe(false);
+        expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('"search_web" tool'));
+
+        const { default: AISession } = await import("../../../src/ai/AISession.js");
+        expect(manager.tools.get("search_web", new AISession({}))).toBeNull();
     });
 
     test("renders the configured pack name in the answer and triage prompts", async () => {

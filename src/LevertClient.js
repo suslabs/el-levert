@@ -116,8 +116,9 @@ class LevertClient extends DiscordClient {
         }
 
         token = auth.token;
-        aiKeys = Managers.aiManager.getKeys(auth);
         this.owner = auth.owner;
+
+        aiKeys = Managers.aiManager?.getKeys(auth) ?? {};
     }
 
     loadComponents(groupName, barrel, ctorArgs, options) {
@@ -794,6 +795,7 @@ class LevertClient extends DiscordClient {
 
         this._setOtherConfigs();
 
+        await ModuleUtil.resolveBarrel(Managers);
         await this._loadManagers();
         this._loadHandlers();
 
