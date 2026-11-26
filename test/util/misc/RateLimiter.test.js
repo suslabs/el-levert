@@ -206,4 +206,22 @@ describe("RateLimiter", () => {
 
         vi.useRealTimers();
     });
+
+    test("does not enforce rate limits when maxRequests or window is -1", () => {
+        const unlimitedRequests = new RateLimiter(-1, 1000);
+        expect(unlimitedRequests.unlimited).toBe(true);
+        expect(unlimitedRequests.remaining).toBe(-1);
+        expect(unlimitedRequests.count).toBe(0);
+        expect(unlimitedRequests.canRequest()).toBe(true);
+        expect(unlimitedRequests.check()).toBe(true);
+        expect(unlimitedRequests.size).toBe(0);
+        expect(unlimitedRequests.getTimeToReset()).toBe(0);
+
+        const unlimitedWindow = new RateLimiter(1, -1, { sweepInterval: 10 });
+        expect(unlimitedWindow.unlimited).toBe(true);
+        expect(unlimitedWindow.enableSweep).toBe(false);
+        expect(unlimitedWindow._sweepLoop).toBeNull();
+        expect(unlimitedWindow.check("user1")).toBe(true);
+        expect(unlimitedWindow.check("user1")).toBe(true);
+    });
 });

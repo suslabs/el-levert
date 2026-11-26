@@ -1,108 +1,73 @@
 import Util from "../Util.js";
-import TypeTester from "../TypeTester.js";
-import ObjectUtil from "../ObjectUtil.js";
-import IntervalLoop from "./IntervalLoop.js";
+import BaseLimiter from "./BaseLimiter.js";
 
-import UtilError from "../../errors/UtilError.js";
-
-class RateLimiter {
-    static defaultKey = "default";
-
+class RateLimiter extends BaseLimiter {
     static defaultValues = {
         maxRequests: Infinity,
         window: 1 / Util.durationSeconds.milli,
         sweepInterval: 0
     };
 
-    static from(data, nullable = false, ...args) {
-        if (nullable && data === null) {
-            return null;
-        }
-
-        return data instanceof this ? data : new this(data, ...args);
-    }
-
     constructor(maxRequests, window, options) {
-        if (TypeTester.isObject(maxRequests)) {
-            options = maxRequests;
-            maxRequests = options.maxRequests;
-            window = options.window;
+        options = BaseLimiter.parseOptions([maxRequests, window], options, ["maxRequests", "window"]);
+
+        const maxReq = options.maxRequests ?? RateLimiter.defaultValues.maxRequests,
+            win = options.window ?? RateLimiter.defaultValues.window,
+            unlimited = maxReq === -1 || win <= 0;
+
+        if (unlimited) {
+            options.enableSweep = false;
         }
 
-        options = ObjectUtil.guaranteeObject(options);
+        super(options);
 
-        if (maxRequests != null) {
-            options.maxRequests = maxRequests;
-        }
-
-        if (window != null) {
-            options.window = window;
-        }
-
-        ObjectUtil.setValuesWithDefaults(this, options, this.constructor.defaultValues);
-
-        this.items = new Map();
-        this._sweepLoop = new IntervalLoop(this._sweepItems, this.sweepInterval);
-
-        if (this.sweepInterval > 0) {
-            this._sweepLoop.start();
-        }
-    }
-
-    get size() {
-        return this.items.size;
+        this.unlimited = unlimited;
     }
 
     get remaining() {
-        return this.getRemaining(RateLimiter.defaultKey);
+        return this.getRemaining(BaseLimiter.defaultKey);
     }
 
     get count() {
-        return this.getCount(RateLimiter.defaultKey);
-    }
-
-    has(key) {
-        const id = RateLimiter._getId(key);
-        return this.items.has(id);
-    }
-
-    hasItem(key) {
-        return this.has(key);
-    }
-
-    findItem(key) {
-        const id = RateLimiter._getId(key);
-        return this.items.get(id) ?? null;
-    }
-
-    getItem(key) {
-        return this.findItem(key);
+        return this.getCount(BaseLimiter.defaultKey);
     }
 
     getRemaining(key, now) {
+        if (this.unlimited) {
+            return -1;
+        }
+
         const [id, time] = this._resolveArgs(key, now);
 
-        this._pruneBucket(id, time);
+        this._pruneKey(id, time);
 
-        const bucket = this.items.get(id);
+        const bucket = this.items.get(id),
+            count = bucket?.length ?? 0;
 
-        const count = bucket?.length ?? 0;
         return Math.max(0, this.maxRequests - count);
     }
 
     getCount(key, now) {
+        if (this.unlimited) {
+            return 0;
+        }
+
         const [id, time] = this._resolveArgs(key, now);
 
-        this._pruneBucket(id, time);
+        this._pruneKey(id, time);
 
         const bucket = this.items.get(id);
         return bucket?.length ?? 0;
     }
 
     getTimeToReset(key, now) {
+        if (this.unlimited) {
+            return 0;
+        }
+
         const [id, time] = this._resolveArgs(key, now);
 
-        this._pruneBucket(id, time);
+        this._pruneKey(id, time);
 
         const bucket = this.items.get(id);
 
@@ -115,9 +80,13 @@ class RateLimiter {
     }
 
     canRequest(key, now) {
+        if (this.unlimited) {
+            return true;
+        }
+
         const [id, time] = this._resolveArgs(key, now);
 
-        this._pruneBucket(id, time);
+        this._pruneKey(id, time);
 
         const bucket = this.items.get(id),
             count = bucket?.length ?? 0;
@@ -126,9 +95,13 @@ class RateLimiter {
     }
 
     check(key, now) {
+        if (this.unlimited) {
+            return true;
+        }
+
         const [id, time] = this._resolveArgs(key, now);
 
-        this._pruneBucket(id, time);
+        this._pruneKey(id, time);
         let bucket = this.items.get(id);
 
         if (typeof bucket === "undefined") {
@@ -144,116 +117,11 @@ class RateLimiter {
         return true;
     }
 
-    execute(key, func) {
-        if (typeof key === "function") {
-            func = key;
-            key = RateLimiter.defaultKey;
-        }
-
-        if (typeof func !== "function") {
-            throw new UtilError("Function must be provided to execute");
-        } else if (!this.check(key)) {
-            return false;
-        }
-
-        return func();
+    _runGuarded(key, func, blockedValue) {
+        return this.check(key) ? func() : blockedValue;
     }
 
-    wrap(key, func) {
-        if (typeof key === "function") {
-            func = key;
-            key = RateLimiter.defaultKey;
-        }
-
-        if (typeof func !== "function") {
-            throw new UtilError("Function must be provided to wrap");
-        }
-
-        const _this = this;
-
-        return function (...args) {
-            if (!_this.check(key)) {
-                return null;
-            }
-
-            return func.apply(this, args);
-        };
-    }
-
-    prune(key, now) {
-        if (typeof key === "number" && typeof now === "undefined") {
-            now = key;
-            key = null;
-        }
-
-        const time = typeof now === "number" ? now : Date.now();
-
-        if (key != null) {
-            const id = RateLimiter._getId(key);
-            this._pruneBucket(id, time);
-            return;
-        }
-
-        for (const id of this.items.keys()) {
-            this._pruneBucket(id, time);
-        }
-    }
-
-    reset(key) {
-        if (key == null) {
-            return this.clear();
-        }
-
-        const id = RateLimiter._getId(key);
-        return this.items.delete(id);
-    }
-
-    removeItem(key) {
-        const id = RateLimiter._getId(key),
-            bucket = this.items.get(id) ?? null;
-
-        if (bucket === null) {
-            return null;
-        }
-
-        this.items.delete(id);
-        return bucket;
-    }
-
-    clear() {
-        this.items.clear();
-        return true;
-    }
-
-    clearItems() {
-        return this.clear();
-    }
-
-    destroy() {
-        this._sweepLoop.stop();
-        this.clear();
-    }
-
-    static _getId(target) {
-        if (TypeTester.isObject(target)) {
-            return target.id ?? target;
-        }
-
-        return target;
-    }
-
-    _resolveArgs(key, now) {
-        if (typeof key === "number" && typeof now === "undefined") {
-            return [RateLimiter.defaultKey, key];
-        }
-
-        const id = RateLimiter._getId(key) ?? RateLimiter.defaultKey,
-            time = typeof now === "number" ? now : Date.now();
-
-        return [id, time];
-    }
-
-    _pruneBucket(id, now) {
+    _pruneKey(id, now) {
         const bucket = this.items.get(id);
 
         if (typeof bucket === "undefined") {
@@ -269,14 +137,6 @@ class RateLimiter {
             this.items.set(id, filtered);
         }
     }
-
-    _sweepItems = () => {
-        const now = Date.now();
-
-        for (const id of this.items.keys()) {
-            this._pruneBucket(id, now);
-        }
-    };
 }
 
 export default RateLimiter;

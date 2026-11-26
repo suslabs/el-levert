@@ -2,44 +2,34 @@ import Util from "../../../util/Util.js";
 import TypeTester from "../../../util/TypeTester.js";
 import ArrayUtil from "../../../util/ArrayUtil.js";
 import ObjectUtil from "../../../util/ObjectUtil.js";
+import TimedStore from "../../../util/misc/TimedStore.js";
 
 import HandlerError from "../../../errors/HandlerError.js";
 
-class Tracker {
+class Tracker extends TimedStore {
     static itemName = "";
     static listNames = {};
 
     constructor(enabled = true, options) {
+        options = ObjectUtil.guaranteeObject(options);
+        super(options);
+
         if (!this.constructor._ready) {
+            this.destroy();
             throw new HandlerError("Tracker static initializer hasn't been run");
         }
 
         this.enabled = enabled;
         this.enableTracking = enabled;
-
-        options = ObjectUtil.guaranteeObject(options);
         this.options = options;
-
-        this.items = new Map();
     }
 
     findItem(id) {
-        id = this.constructor._getId(id);
-
-        if (!this.enableTracking || id == null) {
+        if (!this.enableTracking) {
             return null;
         }
 
-        const item = this.items.get(id);
-        return item ?? null;
-    }
-
-    getItem(id) {
-        return this.findItem(id);
-    }
-
-    hasItem(id) {
-        return this.findItem(id) !== null;
+        return super.findItem(id);
     }
 
     addItem(item) {
@@ -55,26 +45,12 @@ class Tracker {
         return true;
     }
 
-    removeItem(id) {
-        const item = this.findItem(id);
-
-        if (item === null) {
-            return null;
-        }
-
-        const targetId = this.constructor._getId(id);
-        this.items.delete(targetId);
-
-        return item;
-    }
-
-    clearItems() {
+    clear() {
         if (!this.enableTracking) {
             return false;
         }
 
-        this.items.clear();
-        return true;
+        return super.clear();
     }
 
     withItem(id, callback) {
@@ -151,23 +127,10 @@ class Tracker {
     }
 
     clearTrackedMsgs() {
-        if (!this.enableTracking) {
-            return false;
-        }
-
-        this.items.clear();
-        return true;
+        return this.clear();
     }
 
     static _ready = false;
-
-    static _getId(target) {
-        if (TypeTester.isObject(target)) {
-            return target.id ?? target;
-        } else {
-            return target;
-        }
-    }
 
     static _createItem(item) {
         if (TypeTester.isObject(item)) {

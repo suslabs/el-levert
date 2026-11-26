@@ -4,68 +4,15 @@ import { getLogger } from "../../../LevertClient.js";
 
 import Util from "../../../util/Util.js";
 import ArrayUtil from "../../../util/ArrayUtil.js";
-import IntervalLoop from "../../../util/misc/IntervalLoop.js";
+import ObjectUtil from "../../../util/ObjectUtil.js";
 
 class TimedTracker extends Tracker {
     constructor(sweepInterval = 0, options) {
-        super(true, options);
-
-        this.sweepInterval = sweepInterval;
-        this.enableChecks = sweepInterval > 0;
-        this.enableSweep = this.enableChecks;
-
-        this._sweepLoop = new IntervalLoop(this._sweepItems, this.sweepInterval, err =>
-            getLogger().error(`Error while sweeping ${this.constructor.itemName}s:`, err)
-        );
-
-        if (this.enableChecks) {
-            this._sweepLoop.start();
-        }
+        options = ObjectUtil.guaranteeObject(options);
+        super(true, { ...options, sweepInterval });
     }
 
-    destroy() {
-        const stopped = this._sweepLoop.stop();
-
-        this.clearItems();
-        return stopped;
-    }
-
-    static _sweepFunc(itemName) {
-        const cap = Util.capitalize(itemName);
-
-        const func = function sweepItems() {
-            return this._sweepItems();
-        };
-
-        return {
-            propName: `_sweep${cap}s`,
-            desc: { value: func }
-        };
-    }
-
-    static _registerItemFuncs() {
-        super._registerItemFuncs();
-
-        if (Util.nonemptyString(this.itemName)) {
-            this._registerFunc(this._sweepFunc, this.itemName);
-        }
-    }
-
-    _onExpire(item) {
-        if (typeof item.destroy !== "function") {
-            return;
-        }
-
-        const onError = err => getLogger().error(`Error while destroying expired ${this.constructor.itemName}:`, err);
-
-        try {
-            return Util.maybeAsyncThen(item.destroy(true), null, onError);
-        } catch (err) {
-            onError(err);
-        }
-    }
-
-    _sweepItems = () => {
+    sweepItems() {
         const now = Date.now(),
             expired = [];
 
@@ -85,7 +32,46 @@ class TimedTracker extends Tracker {
             this.removeItem(id);
             return this._onExpire(item);
         });
-    };
+    }
+
+    static _sweepFunc(itemName) {
+        const cap = Util.capitalize(itemName);
+
+        const func = function sweepItems() {
+            return this.sweepItems();
+        };
+
+        return {
+            propName: `_sweep${cap}s`,
+            desc: { value: func }
+        };
+    }
+
+    static _registerItemFuncs() {
+        super._registerItemFuncs();
+
+        if (Util.nonemptyString(this.itemName)) {
+            this._registerFunc(this._sweepFunc, this.itemName);
+        }
+    }
+
+    _onSweepError(err) {
+        getLogger().error(`Error while sweeping ${this.constructor.itemName}s:`, err);
+    }
+
+    _onExpire(item) {
+        if (typeof item.destroy !== "function") {
+            return;
+        }
+
+        const onError = err => getLogger().error(`Error while destroying expired ${this.constructor.itemName}:`, err);
+
+        try {
+            return Util.maybeAsyncThen(item.destroy(true), null, onError);
+        } catch (err) {
+            onError(err);
+        }
+    }
 }
 
 export default TimedTracker;
