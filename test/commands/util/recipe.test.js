@@ -148,7 +148,7 @@ afterEach(async () => {
 });
 
 describe("rp command", () => {
-    test("shows the tag-style help with built-in navigation", async () => {
+    test("shows search options in both help views", async () => {
         const out = await send("%rp");
         const embed = Util.first(out.embeds);
 
@@ -157,23 +157,22 @@ describe("rp command", () => {
             [
                 "**Search & view**",
                 "`%rp <item>` — list an item's recipes",
-                "`%rp <item> <n>` — show recipe #n as a card",
                 "`%rp <item> <machine>` — filter by machine (EBF, LCR, mixer, …)",
-                "`%rp <item> <machine> <n>` — one recipe from that machine",
                 "",
                 "**Uses**",
                 "`%rp <item> --uses` — recipes that consume the item",
-                "`%rp <item> --uses <n>` — show one use",
-                "",
-                "**Navigation**",
-                "Select a number to open a result. Use **Back** to return to the list.",
-                "`%rp <item> --page 2` — jump to a page",
                 "",
                 "**Options**",
                 "`--expert` hard mode • `--light` light card • `--list` always list"
             ].join("\n")
         );
-        expect(embed.footer.text).toBe("rp v26 • https://sayaisha.github.io/NomiCodex");
+        expect(embed.footer).toBeUndefined();
+
+        const commandHelp = await send("%rp -help");
+        const usage = Util.first(commandHelp.embeds).fields.find(field => field.name === "Usage").value;
+
+        expect(usage).toContain("<item> [machine] [--uses] [--expert] [--light] [--list]");
+        expect(usage).not.toMatch(/--page|number/);
         expect(getParams("/search")).toEqual([]);
     });
 
@@ -199,7 +198,8 @@ describe("rp command", () => {
         ]);
 
         const embed = Util.first(out.embeds);
-        expect(out.content).toBe("**Uses: Steel Ingot**");
+        expect(out.content ?? "").toBe("");
+        expect(embed.title).toBe("Uses: Steel Ingot");
         expect(embed.image.url).toBe(card);
         expect(embed.color).toBe(0xa78bfa);
         expect(embed.description).toBe(
@@ -212,7 +212,7 @@ describe("rp command", () => {
         const out = await send("%rp steel --uses --expert --light");
         const embed = Util.first(out.embeds);
 
-        expect(out.content).toBe("**Uses: Steel Ingot**");
+        expect(embed.title).toBe("Uses: Steel Ingot");
         expect(embed.description).toBe(
             "`1` makes **Steel Plate** — Forge Hammer • 16 EU/t • 2.8s from **Steel Ingot (3)**"
         );
@@ -224,31 +224,36 @@ describe("rp command", () => {
         const out = await send("%rp steel forge hammer --uses --expert --light");
         const embed = Util.first(out.embeds);
 
-        expect(out.content).toBe("**Uses: Steel Ingot**");
-        expect(embed.description).toContain(
-            "… showing 10 of 12\n\n_Use `%rp steel forge hammer --uses --page 2 --expert --light` for page 2._"
-        );
-        expect(embed.description).not.toContain("<number>");
+        expect(embed.title).toBe("Uses: Steel Ingot");
+        expect(embed.description).toMatch(/… showing 10 of 12$/);
+        expect(embed.description).not.toContain("%rp");
 
         const nav = out.components.at(-1).toJSON().components;
         const next = nav.find(button => button.custom_id.startsWith("page:next:"));
 
         const secondPage = await press(next.custom_id);
         expect(Util.first(secondPage.output.embeds).description).toMatch(/… showing 11–12 of 12$/);
+
+        const row = Util.first(secondPage.output.components).toJSON().components;
+        const shown = await press(Util.first(row).custom_id);
+
+        const shownEmbed = Util.first(shown.output.embeds);
+        expect(shownEmbed.image.url).toBe(card);
+        expect(shownEmbed.description).toContain("_use 11 of 12 • expert mode_");
     });
 
     test("paginates and opens cards with the existing picker", async () => {
         const out = await send("%rp steel --page 2");
 
         const embed = Util.first(out.embeds);
-        expect(out.content).toBe("**Steel Ingot**");
+        expect(out.content ?? "").toBe("");
+        expect(embed.title).toBe("Steel Ingot");
         expect(embed.color).toBe(0xa78bfa);
         expect(embed.description).toContain(
             "`11` Blast Furnace • 120 EU/t • 40s (MV) • 1000K • cleanroom • also Alloy Blast Smelter\n  from **Steel Dust (11)** → **Steel Ingot (1)**"
         );
         expect(embed.description).toMatch(/… page 2 of 2 \(12 recipes\)$/);
-        expect(embed.footer.text).toBe("NomiFactory CEu 1.7.7 • normal mode ⟨rp:steel|p2⟩");
-        expect(embed.title).toBeUndefined();
+        expect(embed.footer.text).toBe("NomiFactory CEu 1.7.7 • normal mode");
 
         const [row, nav] = out.components.map(component => component.toJSON().components);
         expect(row.map(button => button.label)).toEqual(["11", "12"]);
@@ -261,8 +266,12 @@ describe("rp command", () => {
         const shown = await press(Util.first(row).custom_id);
         expect(shown.deferred).toBe(true);
         expect(getParams("/shot").at(-1).r).toBe("26");
-        expect(Util.first(shown.output.embeds).description).toContain("Steel Dust (11)");
-        expect(Util.first(shown.output.embeds).footer.text).toBe("NomiFactory CEu 1.7.7 • normal mode ⟨rp:steel|r11⟩");
+
+        const shownEmbed = Util.first(shown.output.embeds);
+        expect(shown.output.content).toBe("");
+        expect(shownEmbed.title).toBe("Steel Ingot");
+        expect(shownEmbed.description).toContain("Steel Dust (11)");
+        expect(shownEmbed.footer.text).toBe(embed.footer.text);
 
         const back = Util.first(Util.first(shown.output.components).toJSON().components);
         const list = await press(back.custom_id);
@@ -278,20 +287,20 @@ describe("rp command", () => {
         const firstPage = await press(prev.custom_id);
         const firstEmbed = Util.first(firstPage.output.embeds);
 
-        expect(firstEmbed.footer.text).toBe("NomiFactory CEu 1.7.7 • normal mode ⟨rp:steel|p1⟩");
-        expect(firstEmbed.description).toContain("_Use `%rp steel --page 2` for page 2._");
-        expect(firstEmbed.description).not.toContain("<number>");
+        expect(firstEmbed.title).toBe("Steel Ingot");
+        expect(firstEmbed.footer.text).toBe("NomiFactory CEu 1.7.7 • normal mode");
+        expect(firstEmbed.description).toMatch(/… page 1 of 2 \(12 recipes\)$/);
+        expect(firstEmbed.description).not.toContain("%rp");
     });
 
-    test("shows the hot ingot notes on the recipe list", async () => {
+    test("shows the hot ingot step on the recipe list", async () => {
         const out = await send("%rp steel cooler --list --expert");
         const embed = Util.first(out.embeds);
 
-        expect(out.content).toBe("**Steel Ingot (Vacuum Freezer)**");
+        expect(embed.title).toBe("Steel Ingot (Vacuum Freezer)");
         expect(embed.description).toBe(
             "`1` Vacuum Freezer • 120 EU/t • 40s\n  from **Hot Steel Ingot**\n" +
-                "_:information_source: Showing the hot ingot — the Vacuum Freezer step._\n" +
-                "_Smelted hot in the EBF: `%rp steel ingot ebf --expert`_"
+                "_:information_source: Showing the hot ingot — the Vacuum Freezer step._"
         );
         expect(getParams("/shot")).toEqual([]);
     });
@@ -301,9 +310,9 @@ describe("rp command", () => {
 
         expect(getParams("/search").at(-1).q).toBe("steel ingot ebf");
         expect(getParams("/shot").at(-1)).toMatchObject({ item: "ingotHotSteel", r: "16" });
-        expect(out.content).toBe("**Hot Steel Ingot**");
-
         const embed = Util.first(out.embeds);
+        expect(out.content ?? "").toBe("");
+        expect(embed.title).toBe("Hot Steel Ingot");
         expect(embed.description).toContain("from **Steel Dust (1)** → **Steel Ingot (1)**");
         expect(embed.description).toContain(
             "_recipe 1 of 1 • normal mode_\n:link: <https://sayaisha.github.io/NomiCodex/?item=ingotSteel>"
@@ -322,8 +331,7 @@ describe("rp command", () => {
         expect(machineEmbed.description).toBe(
             ":information_source: **Steel Ingot** has no **distillation tower** recipes.\n" +
                 "It has recipes in: Blast Furnace.\n" +
-                "These have distillation tower recipes: **Nitrogen**.\n" +
-                "_Use `%rp steel ingot --expert` to list everything._"
+                "These have distillation tower recipes: **Nitrogen**."
         );
         expect(machineEmbed.footer).toBeUndefined();
 

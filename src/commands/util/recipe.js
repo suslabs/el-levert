@@ -50,9 +50,9 @@ class RecipeCommand {
     static info = {
         name: "rp",
         category: "util",
-        args: "<item> [machine] [number] [--uses] [--expert] [--light] [--list] [--page <num>]",
+        args: "<item> [machine] [--uses] [--expert] [--light] [--list]",
         description: "Looks up Nomifactory CEu recipes and item uses in NomiCodex.",
-        usage: "- Add a machine name to filter results or a number to open a recipe.\n- --uses: Find recipes that consume the item.\n- --expert: Look up expert mode recipes.\n- --light: Use the light theme for cards.\n- --list: Always show the result list.\n- --page <num>: Open a page of results.",
+        usage: "- Add a machine name to filter results.\n- --uses: Find recipes that consume the item.\n- --expert: Look up expert mode recipes.\n- --light: Use the light theme for cards.\n- --list: Always show the result list.",
         arguments: [Util.first(PaginationUtil.getPaginationArguments()), { name: "parts", kind: "list" }]
     };
 
@@ -61,12 +61,10 @@ class RecipeCommand {
     }
 
     async handler(ctx) {
-        const command = `${this.prefix}${this.name}`;
-
         const args = parseQuery(ctx.arg("parts"));
 
         if (Util.empty(args.query)) {
-            return RecipeView.help(command);
+            return RecipeView.help(`${this.prefix}${this.name}`);
         }
 
         const mode = this.source.getMode(args.expert);
@@ -77,7 +75,7 @@ class RecipeCommand {
                 uses: args.uses,
                 timeout: RecipeCommand.searchTimeout
             });
-            return await new RecipeView(this.source, data, command, { ...args, mode }).reply(ctx);
+            return await new RecipeView(this.source, data, { ...args, mode }).reply(ctx);
         } catch (err) {
             if (!(err instanceof AIError)) {
                 throw err;

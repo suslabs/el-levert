@@ -1,12 +1,10 @@
 import { AxiosError } from "axios";
-import { bold, EmbedBuilder, escapeInlineCode, escapeMarkdown, hideLinkEmbed, inlineCode, italic } from "discord.js";
+import { bold, EmbedBuilder, escapeMarkdown, hideLinkEmbed, inlineCode, italic } from "discord.js";
 
 import NomiCodexClient from "../../ai/sources/NomiCodexClient.js";
 import PickerUtil from "./PickerUtil.js";
 
 import { OverclockingValues } from "../../structures/OverclockingValues.js";
-
-import PackModes from "../../structures/PackModes.js";
 
 import { getEmoji } from "../../LevertClient.js";
 
@@ -22,11 +20,10 @@ class RecipeView {
     static cardTimeout = 11 / Util.durationSeconds.milli;
     static color = 0xa78bfa;
     static siteUrl = "https://sayaisha.github.io/NomiCodex";
-    static tagVersion = "rp v26";
     static packVersion = "NomiFactory CEu 1.7.7";
 
-    static notice(description, footer = null) {
-        return { embeds: [RecipeView._createEmbed(footer).setDescription(description)] };
+    static notice(description) {
+        return { embeds: [RecipeView._createEmbed().setDescription(description)] };
     }
 
     static help(command) {
@@ -34,26 +31,18 @@ class RecipeView {
             [
                 "**Search & view**",
                 `${inlineCode(`${command} <item>`)} — list an item's recipes`,
-                `${inlineCode(`${command} <item> <n>`)} — show recipe #n as a card`,
                 `${inlineCode(`${command} <item> <machine>`)} — filter by machine (EBF, LCR, mixer, …)`,
-                `${inlineCode(`${command} <item> <machine> <n>`)} — one recipe from that machine`,
                 "",
                 "**Uses**",
                 `${inlineCode(`${command} <item> --uses`)} — recipes that consume the item`,
-                `${inlineCode(`${command} <item> --uses <n>`)} — show one use`,
-                "",
-                "**Navigation**",
-                "Select a number to open a result. Use **Back** to return to the list.",
-                `${inlineCode(`${command} <item> --page 2`)} — jump to a page`,
                 "",
                 "**Options**",
                 "`--expert` hard mode • `--light` light card • `--list` always list"
-            ].join("\n"),
-            `${RecipeView.tagVersion} • ${RecipeView.siteUrl}`
+            ].join("\n")
         );
     }
 
-    constructor(source, data, command, options) {
+    constructor(source, data, options) {
         options = ObjectUtil.guaranteeObject(options);
 
         const query = options.query ?? "",
@@ -67,7 +56,6 @@ class RecipeView {
 
         this.source = source;
         this.data = data;
-        this.command = command;
         this.query = query;
         this.number = number;
         this.mode = data.mode ?? mode;
@@ -112,24 +100,16 @@ class RecipeView {
 
         const items = entries.map((entry, i) => ({ entry, number: i + 1 }));
 
-        const hotIngotHint = this.uses ? "" : this._hotIngotHint(entries);
-
         return await PickerUtil.pick(ctx, {
             items,
             getLabel: result => result.number,
-            renderList: (results, info) => this._renderList(item, results, info, hotIngotHint, limits),
+            renderList: (results, info) => this._renderList(item, results, info, limits),
             renderItem: result => this._renderItem(item, result, count, limits)
         });
     }
 
-    static _createEmbed(footer) {
-        const embed = new EmbedBuilder().setColor(RecipeView.color);
-
-        if (footer !== null) {
-            embed.setFooter({ text: footer });
-        }
-
-        return embed;
+    static _createEmbed() {
+        return new EmbedBuilder().setColor(RecipeView.color);
     }
 
     _text(html, limit) {
@@ -152,20 +132,6 @@ class RecipeView {
         return `\nDid you mean: ${names.join(", ")}`;
     }
 
-    _commandFor(query, ...args) {
-        const parts = [this.command, query, ...args];
-
-        if (this.mode === PackModes.expert) {
-            parts.push("--expert");
-        }
-
-        if (this.theme === "light") {
-            parts.push("--light");
-        }
-
-        return inlineCode(escapeInlineCode(parts.join(" ")));
-    }
-
     _renderEmpty(item) {
         const name = bold(this._text(item.name, 200));
         const machine = this.data.machineFilter;
@@ -180,10 +146,7 @@ class RecipeView {
             const types = this._text((item.types ?? []).join(", "), 600),
                 available = Util.empty(types) ? "" : `\nIt has recipes in: ${types}.`;
 
-            const command = this._commandFor(HTMLUtil.stripTags(item.name).toLowerCase());
-
-            description = `${name} has no ${bold(machineName)} recipes.${available}${this._alternatives(machineName)}\n`;
-            description += italic(`Use ${command} to list everything.`);
+            description = `${name} has no ${bold(machineName)} recipes.${available}${this._alternatives(machineName)}`;
         } else {
             description = `${name} has no listed recipes.`;
         }
@@ -254,30 +217,18 @@ class RecipeView {
         return !this.uses && machine ? ` (${this._text(machine, 60)})` : "";
     }
 
-    _header(name, showMachine = false) {
-        name = this._text(name, 200);
+    _title(name, showMachine = false) {
+        const prefix = this.uses ? "Uses: " : "",
+            suffix = showMachine ? this._machineSuffix() : "",
+            limit = DiscordUtil.embedLimits.title - prefix.length - suffix.length;
 
-        const machine = showMachine ? this._machineSuffix() : "";
-        return bold(this.uses ? `Uses: ${name}` : `${name}${machine}`);
+        name = Util.trimString(this._text(name), limit, null, { tight: true });
+        return `${prefix}${name}${suffix}`;
     }
 
-    _navFooter(kind, number) {
-        if (this.uses) {
-            return this.footer;
-        }
-
-        const start = `${this.footer} ⟨rp:`,
-            end = `|${kind}${number}⟩`,
-            limit = DiscordUtil.embedLimits.footer - start.length - end.length;
-
-        const query = this.query.replace(/[|⟨⟩\r\n]/g, " ").trim();
-
-        return `${start}${Util.trimString(query, limit, null, { tight: true })}${end}`;
-    }
-
-    _withDescription(content, description, footer, [total, totalLines]) {
-        const embed = RecipeView._createEmbed(footer);
-        const payload = { content, embeds: [embed] };
+    _result(title, description, [total, totalLines]) {
+        const embed = RecipeView._createEmbed().setTitle(title).setFooter({ text: this.footer }),
+            payload = { embeds: [embed] };
 
         if (DiscordUtil.embedComponentsOverSizeLimit({ ...embed.data, description }, { total, totalLines })) {
             Object.assign(payload, DiscordUtil.getFileAttach(description, "recipes.md"));
@@ -288,24 +239,7 @@ class RecipeView {
         return payload;
     }
 
-    _hotIngotHint(recipes) {
-        if (recipes.some(recipe => recipe.role === "hot")) {
-            return "";
-        }
-
-        for (const recipe of recipes) {
-            const match = /\bHot ([^,(]+ Ingot)\b/.exec(HTMLUtil.stripTags(recipe.ins ?? ""));
-
-            if (match !== null) {
-                const command = this._commandFor(match[1].toLowerCase(), "ebf");
-                return italic(`Smelted hot in the EBF: ${command}`);
-            }
-        }
-
-        return "";
-    }
-
-    _renderList(item, results, info, hotIngotHint, limits) {
+    _renderList(item, results, info, limits) {
         const { page, totalPages, totalCount } = info;
 
         const lines = results.map(({ entry, number }) => `${inlineCode(number)} ${this._describeEntry(entry, 100)}`);
@@ -324,25 +258,7 @@ class RecipeView {
             lines.push(italic(`${getEmoji("info")} Showing the hot ingot — the ${machine} step.`));
         }
 
-        if (!Util.empty(hotIngotHint)) {
-            lines.push(hotIngotHint);
-        }
-
-        if (page < totalPages) {
-            const next = page + 1;
-
-            const args = this.uses ? ["--uses"] : [],
-                command = this._commandFor(this.query, ...args, "--page", next);
-
-            lines.push("", italic(`Use ${command} for page ${next}.`));
-        }
-
-        return this._withDescription(
-            this._header(item.name, true),
-            lines.join("\n"),
-            this._navFooter("p", page),
-            limits
-        );
+        return this._result(this._title(item.name, true), lines.join("\n"), limits);
     }
 
     async _getCardUrl(entry, itemId, number) {
@@ -366,7 +282,7 @@ class RecipeView {
     async _renderItem(item, result, count, limits) {
         const { entry, number } = result;
 
-        const content = this._header(entry.itemName ?? item.name);
+        const title = this._title(entry.itemName ?? item.name);
 
         const name = bold(this._text(item.name, 200)),
             separator = this.uses ? " " : " — ",
@@ -383,7 +299,7 @@ class RecipeView {
             description += `\n:link: ${link}`;
         }
 
-        const payload = this._withDescription(content, description, this._navFooter("r", number), limits);
+        const payload = this._result(title, description, limits);
 
         if (url !== null) {
             Util.first(payload.embeds).setImage(url);
