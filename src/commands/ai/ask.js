@@ -6,8 +6,8 @@ import Util from "../../util/Util.js";
 
 class AskCommand {
     static info = {
-        name: "a",
-        aliases: ["ai", "ask"],
+        name: "ask",
+        aliases: ["a", "ai"],
         category: "ai",
         continueOnReply: true,
         args: "<question>",

@@ -279,9 +279,12 @@ describe("a command", () => {
     test("shows usage for an empty question", async () => {
         await setup([]);
 
-        const recorder = createRecorder(),
-            out = await getCommand(runtime, "a").handler(createAskContext("", recorder));
+        const command = getCommand(runtime, "ask"),
+            recorder = createRecorder(),
+            out = await command.handler(createAskContext("", recorder));
 
+        expect(command.name).toBe("ask");
+        expect(command.aliases).toContain("a");
         expect(out).toContain("question");
         expect(recorder.sent).toEqual([]);
     });
