@@ -2,7 +2,7 @@ import AITool from "../AITool.js";
 
 import AIPhases from "../../../structures/ai/AIPhases.js";
 
-import { getClient } from "../../../LevertClient.js";
+import { getClient, getLogger } from "../../../LevertClient.js";
 
 import ToolParams from "../../../util/ai/ToolParams.js";
 
@@ -28,6 +28,18 @@ class SearchWebTool extends AITool {
 
     static defaultLimit = 5;
     static maxLimit = 8;
+
+    load(aiManager) {
+        if (!aiManager.webSearcher.available) {
+            getLogger().error('Cannot initialize "search_web" tool without any available web search backend.');
+            return false;
+        }
+    }
+
+    isAvailable() {
+        const webSearcher = getClient().aiManager.webSearcher;
+        return webSearcher?.available ?? typeof webSearcher?.search === "function";
+    }
 
     getStatus(args) {
         return `Searching the web for "${this.formatArg(args.query)}"`;

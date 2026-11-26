@@ -4,7 +4,8 @@ import WebSearcher from "../../../src/ai/search/WebSearcher.js";
 
 import AIError from "../../../src/errors/AIError.js";
 
-vi.mock("../../../src/LevertClient.js", () => ({ getLogger: () => ({ warn: vi.fn() }) }));
+const mockLogger = { warn: vi.fn(), error: vi.fn() };
+vi.mock("../../../src/LevertClient.js", () => ({ getLogger: () => mockLogger }));
 
 function createHttp(replies) {
     return { request: () => Promise.resolve(replies.shift()) };
@@ -102,8 +103,54 @@ describe("WebSearcher", () => {
         expect(result.results[0]).toMatchObject({ title: "Example", readError: "Page failed" });
     });
 
-    test("reports a DuckDuckGo bot check", async () => {
+    test("reports a DuckDuckGo bot check and skips cooled-down backends until cooldown resets", async () => {
         const searcher = new WebSearcher(createHttp([{ status: 202, data: "" }]), null, null);
         await expect(searcher.search("test", 5, 1000)).rejects.toThrow("bot check");
+        await expect(searcher.search("test", 5, 1000)).rejects.toThrow("temporarily blocked or rate-limited");
+        searcher.destroy();
+    });
+
+    test("logs missing-key startup errors when keyed search backends are unconfigured and skips logging when keys exist", () => {
+        mockLogger.error.mockClear();
+
+        const withoutKeys = new WebSearcher(createHttp([]), null, null);
+        expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining("keenableKey"));
+        expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining("tavilyKey"));
+        withoutKeys.destroy();
+
+        mockLogger.error.mockClear();
+
+        const withKeys = new WebSearcher(createHttp([]), null, null, {
+            keenable: ["keen-key"],
+            tavily: ["tavily-key"]
+        });
+        expect(mockLogger.error).not.toHaveBeenCalled();
+        withKeys.destroy();
+    });
+
+    test("moves to the next backend on empty results, AbortError, and cooled-down failures", async () => {
+        const abortErr = new Error("aborted");
+        abortErr.name = "AbortError";
+
+        const http = {
+            request: vi
+                .fn()
+                .mockResolvedValueOnce({ status: 200, data: { results: [] } })
+                .mockRejectedValueOnce(abortErr)
+                .mockResolvedValueOnce({
+                    status: 200,
+                    data: '<div class="result results_links"><a class="result__a" href="/relative">Skip</a><a class="result__snippet">Bad</a></div><div class="result results_links"><a class="result__a" href="https://example.org/ok">Valid</a><a class="result__snippet">Snippet</a></div>'
+                })
+        };
+        const reader = { read: vi.fn().mockResolvedValue({ text: "Fallback text" }) };
+        const searcher = new WebSearcher(http, null, reader, {
+            keenable: ["keen-key"],
+            tavily: ["tavily-key"]
+        });
+
+        await expect(searcher.search("test", 5, 1000)).resolves.toMatchObject({
+            results: [{ title: "Valid", url: "https://example.org/ok", snippet: "Snippet", content: "Fallback text" }]
+        });
+        searcher.destroy();
     });
 });

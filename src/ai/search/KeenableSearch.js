@@ -2,6 +2,7 @@ import SearchBackend from "./SearchBackend.js";
 
 class KeenableSearch extends SearchBackend {
     static $name = "keenable";
+    static keyName = "keenableKey";
     static url = "https://api.keenable.ai/v1/search";
 
     constructor(http, key) {

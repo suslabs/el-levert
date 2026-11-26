@@ -321,7 +321,24 @@ const HTTPUtil = Object.freeze({
         return HTTPUtil.webProtocols.has(parsed.protocol) ? parsed.hostname.toLowerCase() : null;
     },
 
-    getContentType: headers => String(headers?.["content-type"] ?? "").toLowerCase()
+    getContentType: headers => String(headers?.["content-type"] ?? "").toLowerCase(),
+
+    parseRetryAfter: (value, now = Date.now()) => {
+        if (value == null) {
+            return null;
+        }
+
+        const str = String(value).trim();
+
+        if (Util.empty(str)) {
+            return null;
+        }
+
+        const seconds = Number(str),
+            delay = Number.isFinite(seconds) ? seconds / Util.durationSeconds.milli : Date.parse(str) - now;
+
+        return delay > 0 ? delay : null;
+    }
 });
 
 export default HTTPUtil;

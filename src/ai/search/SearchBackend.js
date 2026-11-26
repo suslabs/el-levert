@@ -7,6 +7,8 @@ import HTTPUtil from "../../util/vm/HTTPUtil.js";
 import AIError from "../../errors/AIError.js";
 
 class SearchBackend {
+    static keyName = null;
+
     static maxSnippetLength = 300;
 
     constructor(http, browser) {
@@ -39,7 +41,10 @@ class SearchBackend {
         });
 
         if (!isSuccessStatus(res.status)) {
-            throw new AIError(`HTTP ${res.status}`, res.status);
+            throw new AIError(`HTTP ${res.status}`, {
+                status: res.status,
+                retryDelay: HTTPUtil.parseRetryAfter(res.headers?.["retry-after"])
+            });
         }
 
         return res;

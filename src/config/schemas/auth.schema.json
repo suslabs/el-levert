@@ -29,8 +29,11 @@
             ]
         },
         "keenableKey": {
-            "type": "string",
-            "title": "Keenable web search API key"
+            "title": "Keenable web search API key or list of keys",
+            "oneOf": [
+                { "type": "string" },
+                { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 }
+            ]
         },
         "tavilyKey": {
             "title": "Tavily web search backup key or list of keys",

@@ -2,6 +2,7 @@ import SearchBackend from "./SearchBackend.js";
 
 import HTMLUtil from "../../util/misc/HTMLUtil.js";
 import { httpStatusCodes } from "../../util/misc/HttpStatusCodes.js";
+import HTTPUtil from "../../util/vm/HTTPUtil.js";
 
 import AIError from "../../errors/AIError.js";
 
@@ -27,7 +28,10 @@ class DuckDuckGoSearch extends SearchBackend {
         const page = String(res.data);
 
         if (res.status === DuckDuckGoSearch.blockedStatus || page.includes(DuckDuckGoSearch.blockedMarker)) {
-            throw new AIError("Web search is blocked right now (the search engine is showing a bot check)", res.status);
+            throw new AIError("Web search is blocked right now (the search engine is showing a bot check)", {
+                status: res.status,
+                retryDelay: HTTPUtil.parseRetryAfter(res.headers?.["retry-after"])
+            });
         }
 
         return page
@@ -64,11 +68,17 @@ class DuckDuckGoSearch extends SearchBackend {
             return null;
         }
 
+        const url = DuckDuckGoSearch._resolveRedirect(href);
+
+        if (HTTPUtil.getHost(url) === null) {
+            return null;
+        }
+
         const snippet = block.match(DuckDuckGoSearch._resultSnippetRegex);
 
         return this.formatResult(
             HTMLUtil.stripTags(link[2]),
-            DuckDuckGoSearch._resolveRedirect(href),
+            url,
             snippet === null ? "" : HTMLUtil.stripTags(snippet[1])
         );
     }

@@ -2,6 +2,7 @@ import SearchBackend from "./SearchBackend.js";
 
 class TavilySearch extends SearchBackend {
     static $name = "tavily";
+    static keyName = "tavilyKey";
     static url = "https://api.tavily.com/search";
     static maxSnippetLength = 1000;
 
