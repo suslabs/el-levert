@@ -1,11 +1,23 @@
 import AIProvider from "./AIProvider.js";
 
 import Util from "../../util/Util.js";
+import TypeTester from "../../util/TypeTester.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 import SSEUtil from "../../util/misc/SSEUtil.js";
 import HTTPUtil from "../../util/vm/HTTPUtil.js";
 import AIUtil from "../../util/ai/AIUtil.js";
 import { httpStatusCodes } from "../../util/misc/HttpStatusCodes.js";
+
+function getMetadataHeader(res, name) {
+    const headers = res?.data?.error?.metadata?.headers;
+
+    if (!TypeTester.isObject(headers)) {
+        return null;
+    }
+
+    const target = name.toLowerCase();
+    return Object.entries(headers).find(([key]) => key.toLowerCase() === target)?.[1] ?? null;
+}
 
 function getCallId(turnIdx, i) {
     return `call_${turnIdx}_${i}`;
@@ -140,6 +152,7 @@ class OpenRouterProvider extends AIProvider {
 
     static chatPath = "chat/completions";
     static doneEvent = "[DONE]";
+    static freeSuffix = ":free";
 
     static finishReasons = Object.freeze({
         stop: "STOP",
@@ -221,15 +234,81 @@ class OpenRouterProvider extends AIProvider {
         };
     }
 
-    getUnblockDelay(res) {
-        const delay = super.getUnblockDelay(res);
+    getQuotaKeys(model, keyIdx) {
+        const keys = super.getQuotaKeys(model, keyIdx);
 
-        if (delay !== null || res.status !== httpStatusCodes.TOO_MANY_REQUESTS) {
+        if (model.endsWith(OpenRouterProvider.freeSuffix)) {
+            keys.splice(1, 0, `${this.name}:free#${keyIdx}`);
+        }
+
+        return keys;
+    }
+
+    getQuotaKey(res, model, keyIdx) {
+        if (res?.status === httpStatusCodes.TOO_MANY_REQUESTS && OpenRouterProvider._isFreeAccountLimit(res)) {
+            return model.endsWith(OpenRouterProvider.freeSuffix)
+                ? `${this.name}:free#${keyIdx}`
+                : `${this.name}#${keyIdx}`;
+        }
+
+        return super.getQuotaKey(res, model, keyIdx);
+    }
+
+    getUnblockDelay(res) {
+        let delay = super.getUnblockDelay(res);
+
+        if (delay === null) {
+            const metaRetryAfter = getMetadataHeader(res, "retry-after");
+
+            if (metaRetryAfter != null) {
+                delay = super.getUnblockDelay({ headers: { "retry-after": metaRetryAfter } });
+            }
+        }
+
+        if (delay !== null || res?.status !== httpStatusCodes.TOO_MANY_REQUESTS) {
             return delay;
         }
 
-        const resetIn = Number(res.headers?.["x-ratelimit-reset"]) - Date.now();
-        return Number.isFinite(resetIn) && resetIn > 0 ? resetIn : null;
+        const reset = res?.headers?.["x-ratelimit-reset"] ?? getMetadataHeader(res, "x-ratelimit-reset");
+        return OpenRouterProvider._parseRateLimitReset(reset);
+    }
+
+    static _minEpochMs = 1e12;
+    static _freeTierSourceRegex = /free[_ -]?tier/i;
+    static _freeLimitMessageRegex = /free-models-per-(?:day|min)/i;
+
+    static _isFreeAccountLimit(res) {
+        const error = res?.data?.error,
+            limitSource = error?.metadata?.limit_source ?? "";
+
+        if (OpenRouterProvider._freeTierSourceRegex.test(limitSource)) {
+            return true;
+        }
+
+        return OpenRouterProvider._freeLimitMessageRegex.test(String(error?.message ?? ""));
+    }
+
+    static _parseRateLimitReset(reset) {
+        if (reset == null) {
+            return null;
+        }
+
+        const str = String(reset).trim();
+
+        if (Util.empty(str)) {
+            return null;
+        }
+
+        const ts = Number(str);
+
+        if (!Number.isFinite(ts)) {
+            return null;
+        }
+
+        const resetAt = ts < OpenRouterProvider._minEpochMs ? ts / Util.durationSeconds.milli : ts,
+            resetIn = resetAt - Date.now();
+
+        return resetIn > 0 ? resetIn : null;
     }
 
     static _getFinishReason(reason) {

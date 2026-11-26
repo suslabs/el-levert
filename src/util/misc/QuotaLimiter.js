@@ -28,6 +28,16 @@ class QuotaLimiter extends BaseLimiter {
         return item;
     }
 
+    getStrictestActive(keys, now) {
+        const time = typeof now === "number" ? now : Date.now(),
+            ids = Array.isArray(keys) ? keys : [keys];
+
+        return ids.reduce((strictest, key) => {
+            const active = this.getActive(key, time);
+            return active !== null && (strictest === null || active.until > strictest.until) ? active : strictest;
+        }, null);
+    }
+
     getTimeToReset(key, now) {
         const [id, time] = this._resolveArgs(key, now),
             item = this.items.get(id);
@@ -92,7 +102,6 @@ class QuotaLimiter extends BaseLimiter {
         }
 
         item.probing = true;
-
         let released = false;
 
         return (recovered = false, ...args) => {
@@ -105,6 +114,23 @@ class QuotaLimiter extends BaseLimiter {
 
             if (this.items.get(id) === item && this._canClear(item, recovered, ...args)) {
                 this.items.delete(id);
+            }
+        };
+    }
+
+    acquireAll(keys, now) {
+        const time = typeof now === "number" ? now : Date.now(),
+            ids = Array.isArray(keys) ? keys : [keys];
+
+        if (!ids.every(key => this.canRequest(key, time))) {
+            return null;
+        }
+
+        const releases = ids.map(key => this.acquire(key, time));
+
+        return (recovered = false, ...args) => {
+            for (const release of releases) {
+                release(recovered, ...args);
             }
         };
     }

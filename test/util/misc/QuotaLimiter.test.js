@@ -162,6 +162,22 @@ describe("QuotaLimiter", () => {
         vi.advanceTimersByTime(4 * second);
         expect(limiter.has("swept")).toBe(false);
 
+        limiter.limit("account", 2 * second);
+        limiter.limit("model", 5 * second);
+        expect(limiter.getStrictestActive(["account", "model"])).toMatchObject({ until: Date.now() + 5 * second });
+        expect(limiter.acquireAll(["account", "model"])).toBeNull();
+
+        vi.advanceTimersByTime(2 * second);
+        expect(limiter.acquireAll(["account", "model"])).toBeNull();
+        expect(limiter.findItem("account").probing).toBe(false);
+
+        vi.advanceTimersByTime(3 * second);
+        const releaseAll = limiter.acquireAll(["account", "model"]);
+        expect(typeof releaseAll).toBe("function");
+        releaseAll(true);
+        expect(limiter.has("account")).toBe(false);
+        expect(limiter.has("model")).toBe(false);
+
         limiter.destroy();
     });
 });

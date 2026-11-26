@@ -130,11 +130,27 @@ class GeminiProvider extends AIProvider {
         };
     }
 
+    getQuotaKey(res, model, keyIdx) {
+        if (res?.status === httpStatusCodes.TOO_MANY_REQUESTS) {
+            const failure = GeminiProvider._findDetail(res.data?.error, GeminiProvider.quotaFailureType),
+                violations = ArrayUtil.guaranteeArray(failure?.violations, null, true);
+
+            if (
+                !Util.empty(violations) &&
+                violations.every(violation => !GeminiProvider._modelQuotaRegex.test(violation?.quotaId ?? ""))
+            ) {
+                return `${this.name}#${keyIdx}`;
+            }
+        }
+
+        return super.getQuotaKey(res, model, keyIdx);
+    }
+
     getUnblockDelay(res) {
-        const error = res.data?.error,
+        const error = res?.data?.error,
             retryDelay = GeminiProvider.getRetryDelay(error);
 
-        if (res.status === httpStatusCodes.TOO_MANY_REQUESTS && GeminiProvider.isDailyLimit(error)) {
+        if (res?.status === httpStatusCodes.TOO_MANY_REQUESTS && GeminiProvider.isDailyLimit(error)) {
             return Math.max(GeminiProvider.getTimeToDailyReset(), retryDelay ?? 0);
         }
 
@@ -151,6 +167,7 @@ class GeminiProvider extends AIProvider {
     static _thinkingErrorRegex = /thinking/i;
 
     static _dailyQuotaRegex = /per[_ -]?day/i;
+    static _modelQuotaRegex = /per[_ -]?model/i;
     static _secondsRegex = /^(\d+(?:\.\d+)?)s$/;
     static _retryMessageRegex = /\bplease retry in (\d+(?:\.\d+)?)s\b/i;
 

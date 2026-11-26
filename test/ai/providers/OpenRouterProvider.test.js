@@ -138,5 +138,38 @@ describe("OpenRouterProvider", () => {
             30 / Util.durationSeconds.milli
         );
         expect(provider.getUnblockDelay({ headers: {} })).toBeNull();
+
+        const futureMs = Date.now() + 45 / Util.durationSeconds.milli;
+        expect(
+            provider.getUnblockDelay({
+                status: 429,
+                data: { error: { metadata: { headers: { "X-RateLimit-Reset": String(futureMs) } } } }
+            })
+        ).toBeGreaterThan(40 / Util.durationSeconds.milli);
+
+        const futureSec = Math.floor(Date.now() * Util.durationSeconds.milli) + 25;
+        expect(
+            provider.getUnblockDelay({
+                status: 429,
+                headers: { "x-ratelimit-reset": String(futureSec) }
+            })
+        ).toBeGreaterThan(20 / Util.durationSeconds.milli);
+
+        expect(provider.getQuotaKeys("google/gemma:free", 0)).toEqual([
+            "openrouter#0",
+            "openrouter:free#0",
+            "openrouter:google/gemma:free#0"
+        ]);
+        expect(provider.getQuotaKey({ status: 402 }, "google/gemma:free", 0)).toBe("openrouter#0");
+        expect(
+            provider.getQuotaKey(
+                { status: 429, data: { error: { metadata: { limit_source: "openrouter_free_tier_per_minute" } } } },
+                "google/gemma:free",
+                0
+            )
+        ).toBe("openrouter:free#0");
+        expect(
+            provider.getQuotaKey({ status: 429, data: { error: { message: "Provider overloaded" } } }, "google/gemma:free", 0)
+        ).toBe("openrouter:google/gemma:free#0");
     });
 });

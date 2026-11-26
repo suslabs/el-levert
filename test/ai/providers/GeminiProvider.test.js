@@ -74,5 +74,12 @@ describe("GeminiProvider", () => {
         expect(GeminiProvider.getTimeToDailyReset(new Date("2026-11-24T20:00:00Z"))).toBe(12 * hour);
         expect(GeminiProvider.getTimeToDailyReset(new Date("2026-03-08T08:00:00Z"))).toBe(23 * hour);
         expect(GeminiProvider.getTimeToDailyReset(new Date("2026-11-01T07:00:00Z"))).toBe(25 * hour);
+
+        expect(provider.getQuotaKey({ status: 429, data: { error: quotaError("GenerateRequestsPerDayPerProjectPerModel-FreeTier", "10s") } }, "gemini-2.5-flash", 0)).toBe(
+            "gemini:gemini-2.5-flash#0"
+        );
+        expect(provider.getQuotaKey({ status: 429, data: { error: quotaError("GenerateRequestsPerDayPerProject-FreeTier", "10s") } }, "gemini-2.5-flash", 0)).toBe(
+            "gemini#0"
+        );
     });
 });

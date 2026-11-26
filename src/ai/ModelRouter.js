@@ -241,8 +241,11 @@ class ModelRouter {
             return;
         }
 
-        const retryDelay = this._getProviderFor(spec).getUnblockDelay(res),
-            delay = this.quotas.limit(keyId, retryDelay, status, stream);
+        const provider = this._getProviderFor(spec),
+            quotaId = provider.getQuotaKey(res, spec.name, keyIdx);
+
+        const retryDelay = provider.getUnblockDelay(res),
+            delay = this.quotas.limit(quotaId, retryDelay, status, stream);
 
         const detail = status === httpStatusCodes.TOO_MANY_REQUESTS ? "hit its usage limit" : reason;
 
@@ -252,16 +255,17 @@ class ModelRouter {
     }
 
     async _requestWithKeys(spec, body, state, options, stream, deadline) {
-        const keys = this._getProviderFor(spec).keys;
+        const provider = this._getProviderFor(spec);
 
-        for (let i = 0; i < keys.length; i++) {
-            const keyId = getKeyId(spec, i);
+        for (let i = 0; i < provider.keys.length; i++) {
+            const keyId = getKeyId(spec, i),
+                scopes = provider.getQuotaKeys(spec.name, i);
 
             if (state.failed.has(keyId) || this.rejectedKeys.has(getProviderKeyId(spec.provider, i))) {
                 continue;
             }
 
-            const release = this.quotas.acquire(keyId);
+            const release = this.quotas.acquireAll(scopes);
 
             if (release === null) {
                 continue;
@@ -334,9 +338,9 @@ class ModelRouter {
             rejectedStatus = null;
 
         for (const spec of this.models) {
-            const { keys } = this._getProviderFor(spec);
+            const provider = this._getProviderFor(spec);
 
-            for (const [i] of keys.entries()) {
+            for (const [i] of provider.keys.entries()) {
                 const rejected = this.rejectedKeys.get(getProviderKeyId(spec.provider, i));
 
                 if (typeof rejected !== "undefined") {
@@ -344,7 +348,7 @@ class ModelRouter {
                     continue;
                 }
 
-                const limit = this.quotas.getActive(getKeyId(spec, i));
+                const limit = this.quotas.getStrictestActive(provider.getQuotaKeys(spec.name, i));
 
                 if (limit === null) {
                     const status = isKeyRejected(state.lastStatus) ? null : state.lastStatus;
@@ -355,9 +359,11 @@ class ModelRouter {
             }
         }
 
-        return soonest === null
-            ? { status: rejectedStatus, retryIn: 0 }
-            : { status: soonest.status, retryIn: Math.max(0, soonest.until - Date.now()) };
+        if (soonest === null) {
+            return { status: rejectedStatus, retryIn: 0 };
+        }
+
+        return { status: soonest.status, retryIn: Math.max(0, soonest.until - Date.now()) };
     }
 
     async _send(body, state, options, stream) {

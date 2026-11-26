@@ -1,5 +1,7 @@
 import Util from "../../util/Util.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
+import { httpStatusCodes } from "../../util/misc/HttpStatusCodes.js";
+import HTTPUtil from "../../util/vm/HTTPUtil.js";
 
 import AIError from "../../errors/AIError.js";
 
@@ -30,19 +32,24 @@ class AIProvider {
         return this.constructor.$name;
     }
 
+    getQuotaKeys(model, keyIdx) {
+        return [`${this.name}#${keyIdx}`, `${this.name}:${model}#${keyIdx}`];
+    }
+
+    getQuotaKey(res, model, keyIdx) {
+        if (res?.status === httpStatusCodes.PAYMENT_REQUIRED) {
+            return `${this.name}#${keyIdx}`;
+        }
+
+        return `${this.name}:${model}#${keyIdx}`;
+    }
+
     getErrorMessage(res) {
-        return String(res.data?.error?.message ?? res.statusText ?? "");
+        return String(res?.data?.error?.message ?? res?.statusText ?? "");
     }
 
     getUnblockDelay(res) {
-        const retryAfter = res.headers?.["retry-after"],
-            seconds = Number(retryAfter);
-
-        const delay = Number.isFinite(seconds)
-            ? seconds / Util.durationSeconds.milli
-            : Date.parse(retryAfter) - Date.now();
-
-        return delay > 0 ? delay : null;
+        return HTTPUtil.parseRetryAfter(res?.headers?.["retry-after"]);
     }
 
     isThinkingError() {
