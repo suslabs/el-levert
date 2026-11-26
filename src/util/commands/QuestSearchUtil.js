@@ -3,19 +3,19 @@ import { EmbedBuilder, bold, escapeMarkdown, inlineCode } from "discord.js";
 import { getConfig, getEmoji } from "../../LevertClient.js";
 
 import Util from "../Util.js";
-import PickerUtil from "./PickerUtil.js";
+import ListDetailView from "./ListDetailView.js";
+import PaginationUtil from "./PaginationUtil.js";
 import QuestbookUtil from "./QuestbookUtil.js";
 
-const QuestSearchUtil = Object.freeze({
-    maxResults: 50,
-    pageSize: 10,
-    commandName: "qb",
+function formatLine(quest) {
+    return `- **${quest.id}**: ${escapeMarkdown(quest.title)} (${quest.chapter})`;
+}
 
-    _formatLine: quest => {
-        return `- **${quest.id}**: ${escapeMarkdown(quest.title)} (${quest.chapter})`;
-    },
+class QuestSearchUtil {
+    static maxResults = 50;
+    static commandName = "qb";
 
-    reply: async (ctx, book, mode, query) => {
+    static async reply(ctx, book, mode, query) {
         const quests = book.searchTitles(query, mode, QuestSearchUtil.maxResults);
 
         if (Util.empty(quests)) {
@@ -24,31 +24,32 @@ const QuestSearchUtil = Object.freeze({
             return QuestbookUtil.formatQuest(book, mode, Util.first(quests));
         }
 
-        const usage = inlineCode(`${getConfig().cmdPrefix}${QuestSearchUtil.commandName} ${book.name} <id>`),
-            header = `${getEmoji("info")} Found **${Util.formatNumber(quests.length)}** quests. Click one or use ${usage}:`;
+        const usage = inlineCode(`${getConfig().cmdPrefix}${QuestSearchUtil.commandName} ${book.name} <id>`);
+
+        const header = `${getEmoji("info")} Found **${Util.formatNumber(quests.length)}** quests.`;
 
         const footer = QuestbookUtil.formatBook(book, mode);
 
-        return await PickerUtil.pick(ctx, {
+        return await PaginationUtil.paginate(ctx, {
             items: quests,
-            pageSize: QuestSearchUtil.pageSize,
+            maxLimit: ListDetailView.maxLimit,
 
-            getLabel: quest => quest.id,
-            renderItem: quest => QuestbookUtil.formatQuest(book, mode, quest),
-            renderList: items => ({
-                content: header,
+            controls: ListDetailView.createPicker(quest => QuestbookUtil.formatQuest(book, mode, quest), {
+                getLabel: quest => quest.id
+            }),
+
+            render: items => ({
+                content: `${header} Click one or use ${usage}:`,
                 embeds: [
-                    new EmbedBuilder()
-                        .setDescription(items.map(QuestSearchUtil._formatLine).join("\n"))
-                        .setFooter({ text: footer })
+                    new EmbedBuilder().setDescription(items.map(formatLine).join("\n")).setFooter({ text: footer })
                 ]
             }),
 
             dumpHeader: header,
-            formatDump: () => quests.map(QuestSearchUtil._formatLine).join("\n"),
+            formatDump: () => quests.map(formatLine).join("\n"),
             filename: "quests.txt"
         });
     }
-});
+}
 
 export default QuestSearchUtil;

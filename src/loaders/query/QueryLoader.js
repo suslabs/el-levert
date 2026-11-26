@@ -170,6 +170,7 @@ class QueryLoader extends DirectoryLoader {
 
     _getQueryStrings() {
         const queryStrings = {};
+
         const queryEntries = Array.from(this.data).filter(([filePath]) => !this._isCreateQuery(filePath)),
             categories = ArrayUtil.groupBy(queryEntries, ([filePath]) => this._getCategoryName(filePath));
 

@@ -67,6 +67,7 @@ async function press(customId, userId = "user-1") {
             interaction.ephemeral = options.ephemeral;
         },
         editReply: async data => (interaction.output = data),
+        reply: async data => (interaction.output = data),
         update: async data => (interaction.output = data)
     };
 
@@ -163,7 +164,10 @@ describe("rp command", () => {
                 "`%rp <item> --uses` — recipes that consume the item",
                 "",
                 "**Options**",
-                "`--expert` hard mode • `--light` light card • `--list` always list"
+                "`--expert` hard mode • `--light` light card • `--list` always list",
+                "",
+                "**Pagination**",
+                "`--page <num>`, `--limit <num>`, `--all`"
             ].join("\n")
         );
         expect(embed.footer).toBeUndefined();
@@ -171,8 +175,10 @@ describe("rp command", () => {
         const commandHelp = await send("%rp -help");
         const usage = Util.first(commandHelp.embeds).fields.find(field => field.name === "Usage").value;
 
-        expect(usage).toContain("<item> [machine] [--uses] [--expert] [--light] [--list]");
-        expect(usage).not.toMatch(/--page|number/);
+        expect(usage).toContain(
+            "<item> [machine] [--uses] [--expert] [--light] [--list] [--page <num>] [--limit <num>] [--all]"
+        );
+        expect(usage).not.toContain("[number]");
         expect(getParams("/search")).toEqual([]);
     });
 
@@ -284,6 +290,11 @@ describe("rp command", () => {
         ).toEqual(["11", "12"]);
 
         const prev = nav.find(button => button.custom_id.startsWith("page:prev:"));
+        const privatePage = await press(prev.custom_id, "other-user");
+
+        expect(privatePage.output.ephemeral).toBe(true);
+        expect(Util.first(privatePage.output.embeds).description).toMatch(/… page 1 of 2 \(12 recipes\)$/);
+
         const firstPage = await press(prev.custom_id);
         const firstEmbed = Util.first(firstPage.output.embeds);
 
@@ -291,6 +302,10 @@ describe("rp command", () => {
         expect(firstEmbed.footer.text).toBe("NomiFactory CEu 1.7.7 • normal mode");
         expect(firstEmbed.description).toMatch(/… page 1 of 2 \(12 recipes\)$/);
         expect(firstEmbed.description).not.toContain("%rp");
+
+        const stale = await press(Util.first(row).custom_id);
+        expect(stale.deferred).toBe(true);
+        expect(stale.output).toBeUndefined();
     });
 
     test("shows the hot ingot step on the recipe list", async () => {
@@ -311,7 +326,6 @@ describe("rp command", () => {
         expect(getParams("/search").at(-1).q).toBe("steel ingot ebf");
         expect(getParams("/shot").at(-1)).toMatchObject({ item: "ingotHotSteel", r: "16" });
         const embed = Util.first(out.embeds);
-        expect(out.content ?? "").toBe("");
         expect(embed.title).toBe("Hot Steel Ingot");
         expect(embed.description).toContain("from **Steel Dust (1)** → **Steel Ingot (1)**");
         expect(embed.description).toContain(
@@ -348,5 +362,17 @@ describe("rp command", () => {
 
         const list = await send("%rp miner 2 --list");
         expect(Util.first(Util.first(list.components).toJSON().components).label).toBe("1");
+
+        const limited = await send("%rp steel --limit 3 --page 2");
+        expect(Util.first(limited.embeds).description).toContain("page 2 of 4 (12 recipes)");
+        expect(
+            Util.first(limited.components)
+                .toJSON()
+                .components.map(button => button.label)
+        ).toEqual(["4", "5", "6"]);
+
+        const dumped = await send("%rp steel --all");
+        expect(dumped.content).toBe("**Steel Ingot**");
+        expect(Util.first(dumped.embeds).description).toContain("`12` Blast Furnace");
     });
 });

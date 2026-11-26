@@ -17,72 +17,69 @@ import CommandReaderKinds from "../../parsers/command/reader/CommandReaderKinds.
 import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../Util.js";
-import TypeTester from "../TypeTester.js";
-import ObjectUtil from "../ObjectUtil.js";
+import ArrayUtil from "../ArrayUtil.js";
 import DiscordUtil from "../DiscordUtil.js";
+import ObjectUtil from "../ObjectUtil.js";
+import TypeTester from "../TypeTester.js";
 import CaseUtil from "../misc/CaseUtil.js";
 
+import UtilError from "../../errors/UtilError.js";
+
 function makePaginationArg(name, options) {
+    options = ObjectUtil.guaranteeObject(options);
+
+    const kebab = CaseUtil.toKebabCase(name),
+        aliases = ArrayUtil.unique([...(options.aliases ?? []), ...(kebab === name ? [] : [kebab])]);
+
     return Object.freeze({
         name,
         kind: CommandReaderKinds.option,
-        aliases: [CaseUtil.toKebabCase(name)],
-        ...ObjectUtil.guaranteeObject(options)
+        ...options,
+        ...(Util.empty(aliases) ? {} : { aliases })
     });
 }
 
 function readPaginationArg(ctx, name) {
-    if (typeof ctx.arg !== "function" || (typeof ctx.parseArgs === "function" && !ctx.parseArgs().results.has(name))) {
-        return undefined;
+    if (typeof ctx.parseArgs === "function") {
+        const { results } = ctx.parseArgs();
+
+        if (results.has(name)) {
+            return results.get(name).value;
+        }
     }
 
-    return ctx.arg(name);
+    return typeof ctx.arg === "function" ? ctx.arg(name) : undefined;
 }
 
 function extractPageResult(result) {
-    let items;
-
-    if (result.items != null) {
-        items = result.items;
-    } else if (Array.isArray(result)) {
-        items = result;
-    } else {
-        items = [];
+    if (result == null) {
+        return { items: [], totalCount: 0 };
     }
 
-    const totalCount = result.totalCount ?? result.total ?? result.count ?? items.length;
+    const items = Array.isArray(result) ? result : (result.items ?? result.results ?? []),
+        totalCount = result.totalCount ?? result.total ?? result.count ?? items.length;
+
     return { items, totalCount };
 }
 
-async function fetchPageData(spec, page, limit, ctx) {
-    if (spec.initialData != null && (page === 1 || page === spec.initialData.page)) {
-        const initial = spec.initialData;
-        delete spec.initialData;
+async function fetchPageData(spec, request, ctx) {
+    const items = spec.items ?? null;
 
-        return extractPageResult(initial);
-    }
-
-    if (Array.isArray(spec.items)) {
-        const offset = (page - 1) * limit;
-
+    if (items !== null) {
+        const { offset, limit } = request;
         return {
-            items: spec.items.slice(offset, offset + limit),
-            totalCount: spec.items.length
+            items: items.slice(offset, offset + limit),
+            totalCount: items.length
         };
     }
 
-    if (typeof spec.fetch === "function") {
-        const offset = (page - 1) * limit,
-            fetchRes = await spec.fetch({ page, limit, offset }, ctx);
+    const fetch = spec.fetch;
 
-        if (fetchRes == null) {
-            return { items: [], totalCount: 0 };
-        }
-
-        return extractPageResult(fetchRes);
+    if (typeof fetch !== "function") {
+        return { items: [], totalCount: 0 };
     }
 
-    return { items: [], totalCount: 0 };
+    return extractPageResult(await fetch(request, ctx));
 }
 
 function resolveTargetPage(action, currentPage, totalPages) {
@@ -111,7 +108,7 @@ async function handleRenderOverflow(rendered, items, spec, ctx) {
         return rendered;
     }
 
-    const embedLimits = ctx.handler != null ? ctx.handler.getLimits().embed : [DiscordUtil.embedCharLimit],
+    const embedLimits = ctx.handler?.getLimits().embed ?? [DiscordUtil.embedCharLimit],
         isOversized = embeds.some(embed => DiscordUtil.embedOverSizeLimit(embed, ...embedLimits));
 
     if (!isOversized) {
@@ -129,15 +126,15 @@ async function handleRenderOverflow(rendered, items, spec, ctx) {
     };
 }
 
-async function renderPage(spec, page, ctx) {
-    const data = await fetchPageData(spec, page, ctx.pageSize, ctx),
-        items = data.items,
-        totalCount = data.totalCount;
+async function renderPage(ctx, spec, items, info) {
+    const render = spec.render;
 
-    let rendered = await spec.render(items, { page, totalPages: ctx.totalPages, totalCount }, ctx);
-    rendered = await handleRenderOverflow(rendered, items, spec, ctx);
+    if (typeof render !== "function") {
+        throw new UtilError("Pagination requires a page renderer.");
+    }
 
-    return { rendered, items, totalCount };
+    const rendered = await render(items, info, ctx);
+    return await handleRenderOverflow(rendered, items, spec, ctx);
 }
 
 function formatRendered(rendered) {
@@ -148,29 +145,12 @@ function formatRendered(rendered) {
     return ObjectUtil.guaranteeObject(rendered);
 }
 
-async function showJumpModal(interaction, sessionId, totalPages) {
-    const modal = new ModalBuilder()
-        .setCustomId(ComponentSession.createCustomId(PaginationUtil.customIdPrefix, "modal", sessionId))
-        .setTitle("Jump to Page");
-
-    const pageInput = new TextInputBuilder()
-        .setCustomId("page_number")
-        .setLabel(`Page Number (1-${totalPages})`)
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder(`Enter page number (1-${totalPages})`)
-        .setRequired(true)
-        .setMinLength(1)
-        .setMaxLength(String(totalPages).length);
-
-    const row = new ActionRowBuilder().addComponents(pageInput);
-    modal.addComponents(row);
-
-    await interaction.showModal(modal);
-    return true;
-}
-
 function resolveInteractionTargetPage(interaction, action, currentPage, totalPages) {
-    if (action === "modal" || interaction.isModalSubmit()) {
+    if (interaction.isModalSubmit()) {
+        if (action !== "modal") {
+            return null;
+        }
+
         const pageStr = interaction.fields.getTextInputValue("page_number").trim(),
             parsedPage = Util.parseInt(pageStr);
 
@@ -184,57 +164,14 @@ function resolveInteractionTargetPage(interaction, action, currentPage, totalPag
     return resolveTargetPage(action, currentPage, totalPages);
 }
 
-async function delegateEphemeralPagination(ctx, interaction, targetPage, spec) {
-    const newCtx = ctx.clone({
-        author: interaction.user,
-        user: interaction.user,
-        isAuthor: true,
-        ephemeral: true,
-        options: {
-            ...ctx.options,
-            page: targetPage
-        }
-    });
+class PaginationUtil {
+    static customIdPrefix = "page";
+    static defaultLimit = 10;
 
-    newCtx.page = targetPage;
-    newCtx.arg = name => {
-        if (name === (spec.pageName ?? "page") || name === "page" || name === "p") {
-            return targetPage;
-        }
-
-        if (typeof ctx.arg === "function") {
-            return ctx.arg(name);
-        }
-
-        return null;
-    };
-
-    await PaginationUtil.paginate(newCtx, spec);
-    return true;
-}
-
-async function updateAuthorPage(ctx, session, targetPage, totalPages, spec) {
-    session.page = targetPage;
-    ctx.page = targetPage;
-
-    if (session.context != null) {
-        session.context.page = targetPage;
-    }
-
-    const pageRes = await renderPage(spec, targetPage, ctx),
-        pageRendered = formatRendered(pageRes.rendered);
-
-    const row = PaginationUtil.createPaginationRow(session.id, targetPage, totalPages, false);
-    await ctx.update({ ...pageRendered, components: [...(pageRendered.components ?? []), row] });
-
-    return true;
-}
-
-const PaginationUtil = Object.freeze({
-    getPaginationArguments: (options = {}) => {
+    static getPaginationArguments(options = {}) {
         options = ObjectUtil.guaranteeObject(options);
 
-        const defaultLimit = options.defaultLimit ?? 10,
+        const defaultLimit = options.defaultLimit ?? PaginationUtil.defaultLimit,
             pageName = options.pageName ?? "page",
             limitName = options.limitName ?? "limit",
             allName = options.allName ?? "all";
@@ -257,16 +194,15 @@ const PaginationUtil = Object.freeze({
                 type: "boolean"
             })
         ];
-    },
+    }
 
-    getPaginationOptions: (ctx, options = {}) => {
+    static getPaginationOptions(ctx, options = {}) {
         options = ObjectUtil.guaranteeObject(options);
 
         const pageName = options.pageName ?? "page",
             limitName = options.limitName ?? "limit",
-            allName = options.allName ?? "all";
-
-        const defaultLimit = options.defaultLimit ?? 10,
+            allName = options.allName ?? "all",
+            defaultLimit = options.defaultLimit ?? PaginationUtil.defaultLimit,
             maxLimit = options.maxLimit ?? 50;
 
         const rawAll = readPaginationArg(ctx, allName) ?? readPaginationArg(ctx, "all"),
@@ -277,56 +213,32 @@ const PaginationUtil = Object.freeze({
 
         const rawLimit =
                 options.limit ?? readPaginationArg(ctx, limitName) ?? readPaginationArg(ctx, "limit") ?? defaultLimit,
-            limit = Util.clamp(rawLimit, 1, maxLimit);
+            limit = Util.clamp(Number.isFinite(rawLimit) ? rawLimit : defaultLimit, 1, maxLimit);
 
         const rawPage = options.page ?? readPaginationArg(ctx, pageName) ?? readPaginationArg(ctx, "page") ?? 1,
-            page = Math.max(1, rawPage),
+            page = Math.max(1, Number.isFinite(rawPage) ? Math.trunc(rawPage) : 1),
             offset = options.offset ?? (page - 1) * limit;
 
         return { page, limit, offset, all };
-    },
+    }
 
-    customIdPrefix: "page",
-
-    createPaginationRow: (sessionId, page, totalPages, disabled = false) => {
+    static createPaginationRow(sessionId, page, totalPages, disabled = false) {
         const atStart = page <= 1 || totalPages <= 1 || disabled,
             atEnd = page >= totalPages || totalPages <= 1 || disabled,
             jumpDisabled = totalPages <= 1 || disabled;
 
-        const firstButton = new ButtonBuilder()
-            .setCustomId(ComponentSession.createCustomId(PaginationUtil.customIdPrefix, "first", sessionId))
-            .setEmoji("⏮️")
-            .setStyle(ButtonStyle.Secondary)
-            .setDisabled(atStart);
-
-        const prevButton = new ButtonBuilder()
-            .setCustomId(ComponentSession.createCustomId(PaginationUtil.customIdPrefix, "prev", sessionId))
-            .setEmoji("◀️")
-            .setStyle(ButtonStyle.Secondary)
-            .setDisabled(atStart);
-
-        const jumpButton = new ButtonBuilder()
-            .setCustomId(ComponentSession.createCustomId(PaginationUtil.customIdPrefix, "jump", sessionId))
-            .setLabel(`${page} / ${totalPages}`)
-            .setStyle(ButtonStyle.Secondary)
-            .setDisabled(jumpDisabled);
-
-        const nextButton = new ButtonBuilder()
-            .setCustomId(ComponentSession.createCustomId(PaginationUtil.customIdPrefix, "next", sessionId))
-            .setEmoji("▶️")
-            .setStyle(ButtonStyle.Secondary)
-            .setDisabled(atEnd);
-
-        const lastButton = new ButtonBuilder()
-            .setCustomId(ComponentSession.createCustomId(PaginationUtil.customIdPrefix, "last", sessionId))
-            .setEmoji("⏭️")
-            .setStyle(ButtonStyle.Secondary)
-            .setDisabled(atEnd);
+        const firstButton = PaginationUtil._createButton(sessionId, "first", atStart).setEmoji("⏮️"),
+            prevButton = PaginationUtil._createButton(sessionId, "prev", atStart).setEmoji("◀️"),
+            jumpButton = PaginationUtil._createButton(sessionId, "jump", jumpDisabled).setLabel(
+                `${page} / ${totalPages}`
+            ),
+            nextButton = PaginationUtil._createButton(sessionId, "next", atEnd).setEmoji("▶️"),
+            lastButton = PaginationUtil._createButton(sessionId, "last", atEnd).setEmoji("⏭️");
 
         return new ActionRowBuilder().addComponents(firstButton, prevButton, jumpButton, nextButton, lastButton);
-    },
+    }
 
-    paginate: async (ctx, spec) => {
+    static async paginate(ctx, spec) {
         spec = ObjectUtil.guaranteeObject(spec);
         const paginationOpts = PaginationUtil.getPaginationOptions(ctx, spec);
 
@@ -334,15 +246,35 @@ const PaginationUtil = Object.freeze({
             return await PaginationUtil.dumpAll(ctx, spec);
         }
 
-        let page = paginationOpts.page,
-            limit = paginationOpts.limit;
+        let { page, limit, offset } = paginationOpts;
+
+        if (Array.isArray(spec.items) && !Util.empty(spec.items)) {
+            page = Util.clamp(page, 1, Math.max(1, Math.ceil(spec.items.length / limit)));
+            offset = (page - 1) * limit;
+        }
 
         ctx.pageSize = limit;
 
-        const data = await fetchPageData(spec, page, limit, ctx);
+        const initial = spec.initialData ?? null;
+        let data;
 
-        const items = data.items,
-            totalCount = data.totalCount;
+        if (initial?.page === page) {
+            data = extractPageResult(initial);
+        } else {
+            data = await fetchPageData(spec, { page, limit, offset }, ctx);
+        }
+
+        let { items, totalCount } = data,
+            totalPages = Math.max(1, Math.ceil(totalCount / limit));
+
+        if (totalCount > 0 && Util.empty(items) && page > totalPages) {
+            page = totalPages;
+            offset = (page - 1) * limit;
+            ({ items, totalCount } = await fetchPageData(spec, { page, limit, offset }, ctx));
+            totalPages = Math.max(1, Math.ceil(totalCount / limit));
+        }
+
+        page = Util.clamp(page, 1, totalPages);
 
         if (totalCount === 0 || Util.empty(items)) {
             const emptyMsg = spec.emptyMessage ?? `${getEmoji("info")} Found no results.`;
@@ -354,17 +286,13 @@ const PaginationUtil = Object.freeze({
             return emptyMsg;
         }
 
-        const totalPages = Math.max(1, Math.ceil(totalCount / limit));
-        page = Util.clamp(page, 1, totalPages);
-
         ctx.page = page;
         ctx.totalPages = totalPages;
         ctx.totalCount = totalCount;
 
-        let rendered = await spec.render(items, { page, totalPages, totalCount }, ctx);
-        rendered = await handleRenderOverflow(rendered, items, spec, ctx);
+        const rendered = await renderPage(ctx, spec, items, { page, totalPages, totalCount });
 
-        if (totalPages <= 1) {
+        if (totalPages <= 1 && typeof spec.controls !== "function") {
             if (ctx.isInteraction) {
                 return await ctx.reply(rendered, ctx.ephemeral ? { ephemeral: true } : {});
             }
@@ -372,71 +300,69 @@ const PaginationUtil = Object.freeze({
             return rendered;
         }
 
-        const session = new ComponentSession(ctx, {
-            interactionMode: ctx.ephemeral
-                ? InteractionModes.authorOnly
-                : (spec.interactionMode ?? InteractionModes.ephemeralOthers),
-            timeout: spec.timeout,
-            spec
-        });
+        const timeout = spec.timeout ?? null,
+            mode = spec.interactionMode ?? InteractionModes.ephemeralOthers,
+            interactionMode = ctx.ephemeral ? InteractionModes.authorOnly : mode;
+
+        const sessionSpec = { ...spec };
+        delete sessionSpec.initialData;
+
+        const session = new ComponentSession(ctx, { interactionMode, timeout, spec: sessionSpec });
 
         session.page = page;
         session.totalPages = totalPages;
         session.pageSize = limit;
         session.totalCount = totalCount;
-        session.spec = spec;
+        session.window = spec.window ?? null;
 
-        if (spec.window != null) {
-            session.window = spec.window;
-        }
+        const { payload, activate } = PaginationUtil._preparePage(rendered, items, session);
+        activate?.();
 
-        const client = getClient(),
-            handler = client != null ? client.interactionHandler : null;
-
-        if (handler != null) {
-            handler.registerSession(session);
-        }
+        const handler = getClient().interactionHandler;
+        handler.registerSession(session);
 
         ctx.paginationSession = session;
-        ctx.paginationSpec = spec;
+        ctx.paginationSpec = sessionSpec;
 
-        const row = PaginationUtil.createPaginationRow(session.id, page, totalPages, false),
-            payload = formatRendered(rendered);
+        if (totalPages <= 1 && !ctx.isInteraction) {
+            return payload;
+        }
 
-        const reply = await ctx.reply(
-            {
-                ...payload,
-                components: [...(payload.components ?? []), row]
-            },
-            ctx.ephemeral ? { ephemeral: true } : {}
-        );
+        try {
+            const reply = await ctx.reply(payload, ctx.ephemeral ? { ephemeral: true } : {});
+            session.setMessage(reply);
 
-        session.setMessage(reply);
-        return reply;
-    },
+            return reply;
+        } catch (err) {
+            handler.unregisterSession(session.id);
+            throw err;
+        }
+    }
 
-    handleInteraction: async ctx => {
-        const session = ctx.paginationSession ?? ctx.interactionContext?.session,
-            spec = ctx.paginationSpec ?? session?.spec,
-            interaction = ctx.interactionContext?.interaction ?? ctx.interaction;
+    static async refresh(ctx) {
+        const session = ctx.interactionContext.session;
+        return await PaginationUtil._updateAuthorPage(ctx, session, session.page);
+    }
 
-        if (session == null || spec == null || interaction == null) {
+    static async handleInteraction(ctx) {
+        const { componentId, interaction, session } = ctx.interactionContext;
+
+        if (componentId.prefix !== PaginationUtil.customIdPrefix) {
             return false;
         }
 
-        const isAuthor = ctx.isAuthor || session.interactionMode === InteractionModes.anyone,
-            action = ComponentSession.parseCustomId(interaction.customId)?.action;
+        const canUpdate = ctx.isAuthor || session.interactionMode === InteractionModes.anyone;
 
-        const totalPages = session.totalPages,
-            currentPage = session.page;
+        const { action } = componentId,
+            { page, totalPages } = session;
 
-        if (action === "jump") {
-            return await showJumpModal(interaction, session.id, totalPages);
+        if (action === "jump" && !interaction.isModalSubmit()) {
+            return await PaginationUtil._showJumpModal(interaction, session.id, totalPages);
         }
 
-        const targetPage = resolveInteractionTargetPage(interaction, action, currentPage, totalPages);
+        const targetPage = resolveInteractionTargetPage(interaction, action, page, totalPages);
 
-        if (targetPage === null || (targetPage === currentPage && isAuthor)) {
+        if (targetPage === null || (targetPage === page && canUpdate)) {
             if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
                 await interaction.deferUpdate();
             }
@@ -444,33 +370,17 @@ const PaginationUtil = Object.freeze({
             return true;
         }
 
-        if (!isAuthor) {
-            return await delegateEphemeralPagination(ctx, interaction, targetPage, spec);
+        if (!canUpdate) {
+            return await PaginationUtil._delegateEphemeralPagination(ctx, interaction, targetPage, session.spec);
         }
 
-        return await updateAuthorPage(ctx, session, targetPage, totalPages, spec);
-    },
+        return await PaginationUtil._updateAuthorPage(ctx, session, targetPage);
+    }
 
-    dumpAll: async (ctx, spec) => {
+    static async dumpAll(ctx, spec) {
         spec = ObjectUtil.guaranteeObject(spec);
 
-        let items = [];
-
-        if (Array.isArray(spec.items)) {
-            items = spec.items;
-        } else if (typeof spec.fetch === "function") {
-            const res = await spec.fetch(
-                {
-                    page: 1,
-                    limit: Infinity,
-                    offset: 0,
-                    all: true
-                },
-                ctx
-            );
-
-            items = res.items ?? [];
-        }
+        const { items } = await fetchPageData(spec, { page: 1, limit: Infinity, offset: 0, all: true }, ctx);
 
         if (Util.empty(items)) {
             return spec.emptyMessage ?? `${getEmoji("info")} Found no results.`;
@@ -488,7 +398,7 @@ const PaginationUtil = Object.freeze({
             return dump;
         }
 
-        const embedLimits = ctx.handler != null ? ctx.handler.getLimits().embed : [DiscordUtil.embedCharLimit],
+        const embedLimits = ctx.handler?.getLimits().embed ?? [DiscordUtil.embedCharLimit],
             isOversized = Util.overSizeLimits(dump, ...embedLimits);
 
         if (!isOversized) {
@@ -506,6 +416,110 @@ const PaginationUtil = Object.freeze({
             ...DiscordUtil.getFileAttach(dump, filename)
         };
     }
-});
+
+    static _createButton(sessionId, action, disabled) {
+        return new ButtonBuilder()
+            .setCustomId(ComponentSession.createCustomId(PaginationUtil.customIdPrefix, action, sessionId))
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(disabled);
+    }
+
+    static _preparePage(rendered, items, session, page = session.page) {
+        const controls = session.spec.controls,
+            extra = typeof controls === "function" ? controls(items, session) : null;
+
+        const payload = formatRendered(rendered),
+            components = [...(payload.components ?? []), ...(extra?.rows ?? [])];
+
+        if (session.totalPages > 1) {
+            components.push(PaginationUtil.createPaginationRow(session.id, page, session.totalPages));
+        }
+
+        return { payload: { ...payload, components }, activate: extra?.activate ?? null };
+    }
+
+    static async _showJumpModal(interaction, sessionId, totalPages) {
+        const modal = new ModalBuilder()
+            .setCustomId(ComponentSession.createCustomId(PaginationUtil.customIdPrefix, "modal", sessionId))
+            .setTitle("Jump to Page");
+
+        const pageInput = new TextInputBuilder()
+            .setCustomId("page_number")
+            .setLabel(`Page Number (1-${totalPages})`)
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder(`Enter page number (1-${totalPages})`)
+            .setRequired(true)
+            .setMinLength(1)
+            .setMaxLength(String(totalPages).length);
+
+        const row = new ActionRowBuilder().addComponents(pageInput);
+        modal.addComponents(row);
+
+        await interaction.showModal(modal);
+        return true;
+    }
+
+    static async _delegateEphemeralPagination(ctx, interaction, targetPage, spec) {
+        const newCtx = ctx.clone({
+            author: interaction.user,
+            user: interaction.user,
+            isAuthor: true,
+            ephemeral: true,
+            options: {
+                ...ctx.options,
+                page: targetPage
+            }
+        });
+
+        newCtx.page = targetPage;
+
+        if (typeof ctx.arg === "function") {
+            newCtx.arg = name => {
+                if (name === (spec.pageName ?? "page") || name === "page" || name === "p") {
+                    return targetPage;
+                }
+
+                return ctx.arg(name);
+            };
+        }
+
+        await PaginationUtil.paginate(newCtx, { ...spec, page: targetPage });
+        return true;
+    }
+
+    static async _updateAuthorPage(ctx, session, targetPage) {
+        const spec = session.spec;
+
+        const { pageSize, totalPages } = session;
+        ctx.paginationSession = session;
+        ctx.paginationSpec = spec;
+        ctx.pageSize = pageSize;
+
+        const offset = (targetPage - 1) * pageSize,
+            { items, totalCount } = await fetchPageData(spec, { page: targetPage, limit: pageSize, offset }, ctx);
+
+        ctx.page = targetPage;
+        ctx.totalPages = totalPages;
+        ctx.totalCount = totalCount;
+
+        const rendered = await renderPage(ctx, spec, items, {
+                page: targetPage,
+                totalPages,
+                totalCount
+            }),
+            { payload, activate } = PaginationUtil._preparePage(rendered, items, session, targetPage);
+
+        await ctx.update({ content: "", embeds: [], files: [], attachments: [], components: [], ...payload });
+
+        activate?.();
+        session.page = targetPage;
+
+        if (session.context != null) {
+            session.context.page = targetPage;
+        }
+
+        return true;
+    }
+}
 
 export default PaginationUtil;

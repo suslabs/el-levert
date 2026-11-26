@@ -1,10 +1,11 @@
 import { EmbedBuilder } from "discord.js";
 
-import { getClient, getEmoji } from "../../LevertClient.js";
-
 import TagManager from "../../managers/database/TagManager.js";
 
+import { getClient, getEmoji } from "../../LevertClient.js";
+
 import Util from "../../util/Util.js";
+import ArrayUtil from "../../util/ArrayUtil.js";
 import PaginationUtil from "../../util/commands/PaginationUtil.js";
 
 function formatTagList(tags, startIndex = 0) {
@@ -12,21 +13,21 @@ function formatTagList(tags, startIndex = 0) {
 }
 
 function formatFullTags(tags) {
-    let format = "";
+    const [newTags, oldTags] = ArrayUtil.split(tags, tag => tag.isOld);
 
-    if (!Util.empty(tags.newTags)) {
-        format += `EL LEVERT tags:\n${formatTagList(tags.newTags, 0)}`;
+    const sections = [];
+
+    if (!Util.empty(newTags)) {
+        sections.push(`EL LEVERT tags:
+${formatTagList(newTags)}`);
     }
 
-    if (!Util.empty(tags.oldTags)) {
-        if (!Util.empty(format)) {
-            format += "\n\n";
-        }
-
-        format += `OG Leveret tags:\n${formatTagList(tags.oldTags, 0)}`;
+    if (!Util.empty(oldTags)) {
+        sections.push(`OG Leveret tags:
+${formatTagList(oldTags)}`);
     }
 
-    return format;
+    return sections.join("\n\n");
 }
 
 class TagListCommand {
@@ -73,75 +74,55 @@ class TagListCommand {
             all: Boolean(paginationOpts.all)
         };
 
-        if (paginationOpts.all) {
-            const tags = await getClient().tagManager.list(listOptions, { all: true });
+        const userSubject = user === ctx.msg.author ? "You have" : `User \`${user.username}\` has`,
+            header = `${getEmoji("info")} ${userSubject} the following tags:`;
 
-            if (tags.totalCount < 1) {
-                if (user === ctx.msg.author) {
-                    return `${getEmoji("info")} You don't have any tags. If you want to see the list of all available tags, use \`${this.getSubcmd("dump").getArgsHelp("", false)}\`.`;
-                }
-
-                return `${getEmoji("info")} User \`${user.username}\` has **no** tags.`;
-            }
-
-            const allTags = [...tags.newTags, ...tags.oldTags];
-
-            const s = Util.single(allTags) ? "" : "s",
-                footer = `${tags.totalCount} total tag${s}`;
-
-            const userSubject = user === ctx.msg.author ? "You have" : `User \`${user.username}\` has`,
-                header = `${getEmoji("info")} ${userSubject} the following tags:`;
-
-            return await PaginationUtil.paginate(ctx, {
-                items: allTags,
-                defaultLimit: TagListCommand.defaultLimit,
-
-                render: (items, { page }) => {
-                    const startIndex = (page - 1) * ctx.pageSize,
-                        desc = formatTagList(items, startIndex);
-
-                    return {
-                        content: header,
-                        embeds: [new EmbedBuilder().setDescription(desc).setFooter({ text: footer })]
-                    };
-                },
-
-                dumpHeader: header,
-                formatDump: () => formatFullTags(tags),
-                filename: "tags.txt"
-            });
-        }
-
-        const initialRes = await getClient().tagManager.list(listOptions, paginationOpts),
-            totalCount = initialRes?.totalCount ?? initialRes?.count ?? 0;
-
-        if (totalCount < 1) {
+        const formatEmpty = () => {
             if (user === ctx.msg.author) {
                 return `${getEmoji("info")} You don't have any tags. If you want to see the list of all available tags, use \`${this.getSubcmd("dump").getArgsHelp("", false)}\`.`;
             }
 
             return `${getEmoji("info")} User \`${user.username}\` has **no** tags.`;
+        };
+
+        if (paginationOpts.all) {
+            const { items } = await getClient().tagManager.list(listOptions, { all: true });
+
+            if (Util.empty(items)) {
+                return formatEmpty();
+            }
+
+            return await PaginationUtil.dumpAll(ctx, {
+                items,
+                dumpHeader: header,
+                formatDump: formatFullTags,
+                filename: "tags.txt"
+            });
+        }
+
+        const { items, totalCount } = await getClient().tagManager.list(listOptions, paginationOpts);
+
+        if (totalCount < 1) {
+            return formatEmpty();
         }
 
         const s = totalCount === 1 ? "" : "s",
             footer = `${totalCount} total tag${s}`;
 
-        const userSubject = user === ctx.msg.author ? "You have" : `User \`${user.username}\` has`,
-            header = `${getEmoji("info")} ${userSubject} the following tags:`;
-
-        const fallbackItems = initialRes.items ?? [...(initialRes.newTags ?? []), ...(initialRes.oldTags ?? [])];
-
         return await PaginationUtil.paginate(ctx, {
             defaultLimit: TagListCommand.defaultLimit,
             initialData: {
-                ...initialRes,
-                items: fallbackItems,
-                totalCount
+                items,
+                totalCount,
+                page: paginationOpts.page
             },
 
-            fetch: async ({ page, limit, offset }) => {
-                return await getClient().tagManager.list(listOptions, { page, limit, offset });
-            },
+            fetch: async ({ page, limit, offset }) =>
+                await getClient().tagManager.list(listOptions, {
+                    page,
+                    limit,
+                    offset
+                }),
 
             render: (items, { page }) => {
                 const startIndex = (page - 1) * ctx.pageSize,
@@ -156,7 +137,7 @@ class TagListCommand {
             dumpHeader: header,
             formatDump: async () => {
                 const allTags = await getClient().tagManager.list(listOptions, { all: true });
-                return formatFullTags(allTags);
+                return formatFullTags(allTags.items);
             },
             filename: "tags.txt"
         });

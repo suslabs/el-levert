@@ -74,7 +74,7 @@ class TagSearchCommand {
             customLimit = Util.clamp(parsed, 1, TagSearchCommand.maxResultLimit);
         }
 
-        const pageSize = customLimit ?? paginationOpts.limit ?? TagSearchCommand.defaultResultLimit;
+        const pageSize = customLimit ?? paginationOpts.limit;
 
         if (isAll) {
             const { results: find } = await getClient().tagManager.search(t_name, {}, { all: true });
@@ -97,34 +97,32 @@ class TagSearchCommand {
             return `${header} **${find.join("**, **")}**`;
         }
 
-        const initialRes = await getClient().tagManager.search(
+        const { results, totalCount, other } = await getClient().tagManager.search(
             t_name,
             {},
-            { page: paginationOpts.page ?? 1, limit: pageSize }
+            { page: paginationOpts.page, limit: pageSize }
         );
-
-        const totalCount = initialRes.totalCount ?? initialRes.other?.total ?? initialRes.results?.length ?? 0;
 
         if (totalCount === 0) {
             return `${getEmoji("info")} Found **no** similar tags.`;
         }
 
-        const plus = initialRes.other?.oversized ? "+" : "",
+        const plus = other.oversized ? "+" : "",
             s = totalCount === 1 ? "" : "s",
             count = Util.formatNumber(totalCount) + plus,
             header = `${getEmoji("info")} Found **${count}** similar tag${s}:`;
 
         if (totalCount <= TagSearchCommand.defaultResultLimit && totalCount <= pageSize) {
-            return `${header} **${initialRes.results.join("**, **")}**`;
+            return `${header} **${results.join("**, **")}**`;
         }
 
         return await PaginationUtil.paginate(ctx, {
             initialData: {
-                items: initialRes.results,
+                items: results,
                 totalCount,
-                page: paginationOpts.page ?? 1
+                page: paginationOpts.page
             },
-            defaultLimit: pageSize,
+            limit: pageSize,
 
             fetch: async ({ page, limit, offset }) => {
                 return await getClient().tagManager.search(t_name, {}, { page, limit, offset });
@@ -136,8 +134,8 @@ class TagSearchCommand {
 
             dumpHeader: header,
             formatDump: async () => {
-                const { results } = await getClient().tagManager.search(t_name, {}, { all: true });
-                return results.join("\n");
+                const { results: dumpItems } = await getClient().tagManager.search(t_name, {}, { all: true });
+                return dumpItems.join("\n");
             },
             filename: "tags.txt"
         });

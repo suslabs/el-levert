@@ -16,8 +16,9 @@ function formatPathError(err) {
 async function evalBase(args, msg, options) {
     options = ObjectUtil.guaranteeObject(options);
 
-    let body = "",
-        downloaded = null;
+    const allowFilePath = options.allowFilePath ?? false;
+
+    let downloaded;
 
     try {
         downloaded = await getClient().tagManager.downloadBody(args, msg, "eval");
@@ -37,8 +38,10 @@ async function evalBase(args, msg, options) {
         }
     }
 
+    let body;
+
     if (downloaded === null) {
-        const parsedBody = options.allowFilePath
+        const parsedBody = allowFilePath
             ? await EmulationCommandUtil.resolveGuessedPathBody(args, {
                   name: "script"
               })

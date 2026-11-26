@@ -786,7 +786,7 @@ class Tag extends BaseStructure {
             }
         }
 
-        const argsList = ArrayUtil.guaranteeArray(args ?? []).filter(arg => !Util.empty(arg));
+        const argsList = ArrayUtil.guaranteeArray(args, null, true).filter(arg => !Util.empty(arg));
         this.args = argsList.join(this.constructor._argsSeparator);
 
         this._fetched = true;

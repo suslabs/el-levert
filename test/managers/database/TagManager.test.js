@@ -485,9 +485,8 @@ describe("Merged Branch Coverage", () => {
             await manager.add("tag-new", "body 1", "u1", { type: "text" });
 
             const res = await manager.list("u1");
-            expect(res.count).toBe(1);
-            expect(res.newTags.map(t => t.name)).toEqual(["tag-new"]);
-            expect(res.oldTags).toEqual([]);
+            expect(res.totalCount).toBe(1);
+            expect(res.items.map(tag => tag.name)).toEqual(["tag-new"]);
         });
 
         test("supports binary tags, hide/unhide operations, and quota limits", async () => {

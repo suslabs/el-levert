@@ -2,7 +2,6 @@ import { AxiosError } from "axios";
 import { bold, EmbedBuilder, escapeMarkdown, hideLinkEmbed, inlineCode, italic } from "discord.js";
 
 import NomiCodexClient from "../../ai/sources/NomiCodexClient.js";
-import PickerUtil from "./PickerUtil.js";
 
 import { OverclockingValues } from "../../structures/OverclockingValues.js";
 
@@ -12,9 +11,41 @@ import Util from "../Util.js";
 import ArrayUtil from "../ArrayUtil.js";
 import DiscordUtil from "../DiscordUtil.js";
 import ObjectUtil from "../ObjectUtil.js";
+import ListDetailView from "./ListDetailView.js";
+import PaginationUtil from "./PaginationUtil.js";
 import HTMLUtil from "../misc/HTMLUtil.js";
 
 import AIError from "../../errors/AIError.js";
+
+function formatText(html, limit) {
+    const str = HTMLUtil.stripTags(html);
+    return escapeMarkdown(typeof limit === "number" ? Util.trimString(str, limit, null, { tight: true }) : str);
+}
+
+function formatStats(eu, dur, tier) {
+    const time = Number.isFinite(dur) ? `${dur / OverclockingValues.ticksPerSecond}s` : "";
+
+    return [
+        Number.isFinite(eu) && eu !== 0 && `${eu} EU/t`,
+        time && `${time}${tier && tier !== "?" ? ` (${formatText(tier, 12)})` : ""}`
+    ].filter(Boolean);
+}
+
+function formatVariants(recipe, limit) {
+    const variants = recipe.variants ?? [];
+
+    if (Util.empty(variants)) {
+        return "";
+    }
+
+    const machines = ArrayUtil.unique(
+        variants.map(variant => variant.type).filter(type => type && type !== recipe.type)
+    );
+
+    return Util.empty(machines)
+        ? `+${variants.length} variant${Util.single(variants) ? "" : "s"}`
+        : `also ${formatText(machines.join(", "), limit)}`;
+}
 
 class RecipeView {
     static cardTimeout = 11 / Util.durationSeconds.milli;
@@ -37,7 +68,10 @@ class RecipeView {
                 `${inlineCode(`${command} <item> --uses`)} — recipes that consume the item`,
                 "",
                 "**Options**",
-                "`--expert` hard mode • `--light` light card • `--list` always list"
+                "`--expert` hard mode • `--light` light card • `--list` always list",
+                "",
+                "**Pagination**",
+                `${inlineCode("--page <num>")}, ${inlineCode("--limit <num>")}, ${inlineCode("--all")}`
             ].join("\n")
         );
     }
@@ -72,7 +106,7 @@ class RecipeView {
 
         if (error === NomiCodexClient.notFoundError || item == null) {
             return RecipeView.notice(
-                `:mag: No item found for ${inlineCode(this._text(this.query, 200))}${this._alternatives()}`
+                `:mag: No item found for ${inlineCode(formatText(this.query, 200))}${this._alternatives()}`
             );
         }
 
@@ -86,6 +120,8 @@ class RecipeView {
 
         const limits = ctx.handler?.getLimits().embed ?? [DiscordUtil.embedCharLimit];
 
+        const { all } = PaginationUtil.getPaginationOptions(ctx);
+
         if (!this.list && this.number !== null) {
             const entry = entries[this.number - 1];
 
@@ -94,17 +130,23 @@ class RecipeView {
             }
 
             return await this._renderItem(item, { entry, number: this.number }, count, limits);
-        } else if (!this.list && !this.uses && Util.single(entries)) {
+        } else if (!this.list && !all && !this.uses && Util.single(entries)) {
             return await this._renderItem(item, { entry: Util.first(entries), number: 1 }, count, limits);
         }
 
         const items = entries.map((entry, i) => ({ entry, number: i + 1 }));
 
-        return await PickerUtil.pick(ctx, {
+        return await PaginationUtil.paginate(ctx, {
             items,
-            getLabel: result => result.number,
-            renderList: (results, info) => this._renderList(item, results, info, limits),
-            renderItem: result => this._renderItem(item, result, count, limits)
+            maxLimit: ListDetailView.maxLimit,
+            render: (results, info) => this._renderList(item, results, info, limits),
+            controls: ListDetailView.createPicker(result => this._renderItem(item, result, count, limits), {
+                getLabel: result => result.number
+            }),
+
+            dumpHeader: bold(this._title(item.name, true)),
+            formatDump: allItems => this._formatLines(allItems).join("\n"),
+            filename: "recipes.md"
         });
     }
 
@@ -112,16 +154,11 @@ class RecipeView {
         return new EmbedBuilder().setColor(RecipeView.color);
     }
 
-    _text(html, limit) {
-        const str = HTMLUtil.stripTags(html);
-        return escapeMarkdown(typeof limit === "number" ? Util.trimString(str, limit, null, { tight: true }) : str);
-    }
-
     _alternatives(machine = null) {
         const names = (this.data.alternatives ?? [])
             .filter(alt => machine === null || alt.hasMachine)
             .slice(0, 5)
-            .map(alt => bold(this._text(alt.name, 100)));
+            .map(alt => bold(formatText(alt.name, 100)));
 
         if (Util.empty(names)) {
             return "";
@@ -133,17 +170,17 @@ class RecipeView {
     }
 
     _renderEmpty(item) {
-        const name = bold(this._text(item.name, 200));
-        const machine = this.data.machineFilter;
+        const name = bold(formatText(item.name, 200)),
+            machine = this.data.machineFilter;
 
         let description;
 
         if (this.uses) {
             description = `${name} isn't used as an input in any indexed recipe.`;
         } else if (machine) {
-            const machineName = this._text(machine, 100);
+            const machineName = formatText(machine, 100);
 
-            const types = this._text((item.types ?? []).join(", "), 600),
+            const types = formatText((item.types ?? []).join(", "), 600),
                 available = Util.empty(types) ? "" : `\nIt has recipes in: ${types}.`;
 
             description = `${name} has no ${bold(machineName)} recipes.${available}${this._alternatives(machineName)}`;
@@ -154,45 +191,20 @@ class RecipeView {
         return RecipeView.notice(`${getEmoji("info")} ${description}`);
     }
 
-    _stats(eu, dur, tier) {
-        const time = Number.isFinite(dur) ? `${dur / OverclockingValues.ticksPerSecond}s` : "";
-
-        return [
-            Number.isFinite(eu) && eu !== 0 && `${eu} EU/t`,
-            time && `${time}${tier && tier !== "?" ? ` (${this._text(tier, 12)})` : ""}`
-        ].filter(Boolean);
-    }
-
-    _variants(recipe, limit) {
-        const variants = recipe.variants ?? [];
-
-        if (Util.empty(variants)) {
-            return "";
-        }
-
-        const machines = ArrayUtil.unique(
-            variants.map(variant => variant.type).filter(type => type && type !== recipe.type)
-        );
-
-        return Util.empty(machines)
-            ? `+${variants.length} variant${Util.single(variants) ? "" : "s"}`
-            : `also ${this._text(machines.join(", "), limit)}`;
-    }
-
     _describeRecipe(recipe, limit) {
-        const name = recipe.itemName ? ` → ${bold(this._text(recipe.itemName, limit))}` : "";
-        const summary = [
-            `${this._text(recipe.type, limit)}${name}`,
-            ...this._stats(recipe.eu, recipe.dur, recipe.tier),
-            recipe.heat > 0 && `${recipe.heat}K`,
-            recipe.clean && "cleanroom",
-            this._variants(recipe, limit)
-        ]
-            .filter(Boolean)
-            .join(" • ");
+        const name = recipe.itemName ? ` → ${bold(formatText(recipe.itemName, limit))}` : "",
+            summary = [
+                `${formatText(recipe.type, limit)}${name}`,
+                ...formatStats(recipe.eu, recipe.dur, recipe.tier),
+                recipe.heat > 0 && `${recipe.heat}K`,
+                recipe.clean && "cleanroom",
+                formatVariants(recipe, limit)
+            ]
+                .filter(Boolean)
+                .join(" • ");
 
-        const inputs = recipe.ins ? `from ${bold(this._text(recipe.ins, limit))}` : "",
-            outputs = recipe.outs ? `→ ${bold(this._text(recipe.outs, limit))}` : "",
+        const inputs = recipe.ins ? `from ${bold(formatText(recipe.ins, limit))}` : "",
+            outputs = recipe.outs ? `→ ${bold(formatText(recipe.outs, limit))}` : "",
             io = [inputs, outputs].filter(Boolean).join(" ");
 
         return Util.empty(io) ? summary : `${summary}\n  ${io}`;
@@ -200,10 +212,11 @@ class RecipeView {
 
     _describeUse(use, limit) {
         const summary = [
-            `makes ${bold(this._text(use.n, limit))} — ${this._text(use.t, limit)}`,
-            ...this._stats(use.e, use.d)
+            `makes ${bold(formatText(use.n, limit))} — ${formatText(use.t, limit)}`,
+            ...formatStats(use.e, use.d)
         ].join(" • ");
-        const inputs = use.i ? ` from ${bold(this._text(use.i, limit))}` : "";
+
+        const inputs = use.i ? ` from ${bold(formatText(use.i, limit))}` : "";
 
         return `${summary}${inputs}`;
     }
@@ -214,7 +227,7 @@ class RecipeView {
 
     _machineSuffix() {
         const machine = this.data.machineFilter;
-        return !this.uses && machine ? ` (${this._text(machine, 60)})` : "";
+        return !this.uses && machine ? ` (${formatText(machine, 60)})` : "";
     }
 
     _title(name, showMachine = false) {
@@ -222,13 +235,14 @@ class RecipeView {
             suffix = showMachine ? this._machineSuffix() : "",
             limit = DiscordUtil.embedLimits.title - prefix.length - suffix.length;
 
-        name = Util.trimString(this._text(name), limit, null, { tight: true });
+        name = Util.trimString(formatText(name), limit, null, { tight: true });
         return `${prefix}${name}${suffix}`;
     }
 
     _result(title, description, [total, totalLines]) {
-        const embed = RecipeView._createEmbed().setTitle(title).setFooter({ text: this.footer }),
-            payload = { embeds: [embed] };
+        const embed = RecipeView._createEmbed().setTitle(title).setFooter({ text: this.footer });
+
+        const payload = { embeds: [embed] };
 
         if (DiscordUtil.embedComponentsOverSizeLimit({ ...embed.data, description }, { total, totalLines })) {
             Object.assign(payload, DiscordUtil.getFileAttach(description, "recipes.md"));
@@ -239,10 +253,14 @@ class RecipeView {
         return payload;
     }
 
+    _formatLines(results) {
+        return results.map(({ entry, number }) => `${inlineCode(number)} ${this._describeEntry(entry, 100)}`);
+    }
+
     _renderList(item, results, info, limits) {
         const { page, totalPages, totalCount } = info;
 
-        const lines = results.map(({ entry, number }) => `${inlineCode(number)} ${this._describeEntry(entry, 100)}`);
+        const lines = this._formatLines(results);
 
         if (totalPages > 1 && this.uses) {
             const last = results.at(-1).number,
@@ -254,7 +272,7 @@ class RecipeView {
         }
 
         if (!this.uses && this.data.hotChain && this.data.machineFilter) {
-            const machine = this._text(this.data.machineFilter, 60);
+            const machine = formatText(this.data.machineFilter, 60);
             lines.push(italic(`${getEmoji("info")} Showing the hot ingot — the ${machine} step.`));
         }
 
@@ -284,7 +302,7 @@ class RecipeView {
 
         const title = this._title(entry.itemName ?? item.name);
 
-        const name = bold(this._text(item.name, 200)),
+        const name = bold(formatText(item.name, 200)),
             separator = this.uses ? " " : " — ",
             position = italic(
                 `${this.label.toLowerCase()} ${number} of ${count}${this._machineSuffix()} • ${this.mode} mode`

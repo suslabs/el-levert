@@ -676,13 +676,11 @@ describe("Merged Branch Coverage", () => {
             expect(await run("list ghost")).toContain("User `ghost` has **no** tags");
 
             vi.spyOn(runtime.client.tagManager, "list").mockResolvedValueOnce({
-                count: 2,
-                newTags: [
+                totalCount: 2,
+                items: [
                     {
                         format: () => "alpha"
-                    }
-                ],
-                oldTags: [
+                    },
                     {
                         format: () => "beta"
                     }
@@ -708,6 +706,7 @@ describe("Merged Branch Coverage", () => {
 
             vi.spyOn(runtime.client.tagManager, "search").mockResolvedValueOnce({
                 results: [],
+                totalCount: 0,
                 other: {
                     oversized: false
                 }
@@ -716,6 +715,7 @@ describe("Merged Branch Coverage", () => {
 
             vi.spyOn(runtime.client.tagManager, "search").mockResolvedValueOnce({
                 results: ["alpha", "alpine"],
+                totalCount: 2,
                 other: {
                     oversized: true
                 }
@@ -729,6 +729,7 @@ describe("Merged Branch Coverage", () => {
                     },
                     (_, i) => `tag-${i}`
                 ),
+                totalCount: 41,
                 other: {
                     oversized: false
                 }
@@ -757,47 +758,59 @@ describe("Merged Branch Coverage", () => {
             expect(await run("leaderboard nope")).toContain("has **no** tags");
             expect(await run("leaderboard count nope")).toContain("Invalid limit");
 
-            vi.spyOn(runtime.client.tagManager, "leaderboard").mockResolvedValueOnce([]);
+            vi.spyOn(runtime.client.tagManager, "leaderboard").mockResolvedValueOnce({
+                items: [],
+                totalCount: 0
+            });
             expect(await run("leaderboard count")).toContain("There are **no** tags registered");
 
-            vi.spyOn(runtime.client.tagManager, "leaderboard").mockResolvedValueOnce([
-                {
-                    user: {
-                        username: "alex"
-                    },
-                    count: 2
-                }
-            ]);
+            vi.spyOn(runtime.client.tagManager, "leaderboard").mockResolvedValueOnce({
+                items: [
+                    {
+                        user: {
+                            username: "alex"
+                        },
+                        count: 2
+                    }
+                ],
+                totalCount: 1
+            });
 
             expect(await run("leaderboard count 1")).toMatchObject({
                 content: ":information_source: Tag count leaderboard:"
             });
 
-            vi.spyOn(runtime.client.tagManager, "leaderboard").mockResolvedValueOnce([
-                {
-                    user: {
-                        username: "alex"
-                    },
-                    quota: 1.5
-                }
-            ]);
+            vi.spyOn(runtime.client.tagManager, "leaderboard").mockResolvedValueOnce({
+                items: [
+                    {
+                        user: {
+                            username: "alex"
+                        },
+                        quota: 1.5
+                    }
+                ],
+                totalCount: 1
+            });
 
             expect(await run("leaderboard size 1")).toMatchObject({
                 content: ":information_source: Tag size leaderboard:"
             });
 
-            vi.spyOn(runtime.client.tagManager, "leaderboard").mockResolvedValueOnce([
-                {
-                    name: "alpha",
-                    count: 3,
-                    exists: true
-                },
-                {
-                    name: "beta",
-                    count: 2,
-                    exists: false
-                }
-            ]);
+            vi.spyOn(runtime.client.tagManager, "leaderboard").mockResolvedValueOnce({
+                items: [
+                    {
+                        name: "alpha",
+                        count: 3,
+                        exists: true
+                    },
+                    {
+                        name: "beta",
+                        count: 2,
+                        exists: false
+                    }
+                ],
+                totalCount: 2
+            });
 
             expect(await run("leaderboard usage 2")).toMatchObject({
                 content: ":information_source: Tag usage leaderboard:"

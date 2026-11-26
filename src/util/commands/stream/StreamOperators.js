@@ -75,7 +75,7 @@ async function resolveReferencedMessage(msg) {
 
     const client = getClient();
 
-    if (client === null || typeof client.fetchMessage !== "function") {
+    if (client === null) {
         return null;
     }
 
@@ -105,7 +105,7 @@ async function resolveMessageFromUrl(text) {
 
     const client = getClient();
 
-    if (client === null || typeof client.fetchMessage !== "function") {
+    if (client === null) {
         return null;
     }
 

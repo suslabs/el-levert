@@ -580,7 +580,7 @@ Examples:
 - `cleanroomcalc` / `crc <width>x<height>x<length>`: Calculates required filter casings, plascrete, and construction blocks for a GregTech cleanroom of given dimensions (e.g. `5x5x5`, `9x7x9`).
 - `stoik <reactants> -> <products>`: Balances chemical equations and verifies reaction stoichiometry.
 - `questbook` / `qb <questbook> <quest name or id> [--expert]`: Shows a quest from a modpack questbook (e.g. `%qb nfu steel age`), with its requirements and the questbook version. When several quests match, lists them with a button for each, ten per page; clicking one opens it in place and **Back** returns to the list. Quests too long for an embed are sent as a file. Add `--expert` for the expert mode questbook. Running it without arguments lists the available questbooks.
-- `rp <item> [machine] [--uses] [--expert] [--light] [--list]`: Looks up Nomifactory CEu recipes in NomiCodex. Use the buttons to browse pages and open recipe cards. Add a machine name to filter the recipes or use `--uses` to find recipes that consume the item.
+- `rp <item> [machine] [--uses] [--expert] [--light] [--list] [--page <num>] [--limit <num>] [--all]`: Looks up Nomifactory CEu recipes in NomiCodex. Use the buttons to browse pages and open recipe cards. Add a machine name to filter the recipes or use `--uses` to find recipes that consume the item. Use `--limit` to set the number of results per page or `--all` to export the full list.
 
 ### 10. AI assistant: `a` / `ai` / `ask`
 

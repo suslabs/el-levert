@@ -5,7 +5,7 @@ import { getClient, getConfig, getEmoji } from "../../LevertClient.js";
 import TagRevisionManager from "../../managers/database/revision/TagRevisionManager.js";
 
 import Util from "../../util/Util.js";
-import DateUtil from "../../util/misc/DateUtil.js";
+import DateUtil from "../../util/date/DateUtil.js";
 import RevisionAuditUtil from "../../util/commands/RevisionAuditUtil.js";
 import PaginationUtil from "../../util/commands/PaginationUtil.js";
 

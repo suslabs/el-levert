@@ -165,48 +165,31 @@ class TagLeaderboardCommand {
                     maxLimit: TagLeaderboardCommand.maxLimit
                 });
 
+                const filter = { user: user.id, onlyUsed: true },
+                    header = `${getEmoji("info")} ${userLabel} tag usage:`;
+
                 if (paginationOpts.all) {
-                    const stats = await getClient().tagManager.userLeaderboard(
-                        { user: user.id, onlyUsed: true },
-                        { all: true }
-                    );
+                    const stats = await getClient().tagManager.userLeaderboard(filter, { all: true });
 
                     if (stats === null) {
                         return `${getEmoji("info")} ${userSubject} **no** tags.`;
                     }
 
-                    if (Util.empty(stats.tags)) {
+                    if (Util.empty(stats.items)) {
                         return `${getEmoji("info")} ${userSubject} **no** tags with usage.`;
                     }
 
-                    const header = `${getEmoji("info")} ${userLabel} tag usage:`;
-
-                    return await PaginationUtil.paginate(ctx, {
-                        items: stats.tags,
-                        defaultLimit: TagLeaderboardCommand.defaultLimit,
-
-                        render: (items, { page }) => {
-                            const startIndex = (page - 1) * ctx.pageSize,
-                                desc = formatUserTags(items, startIndex, true);
-
-                            return {
-                                content: header,
-                                embeds: [new EmbedBuilder().setDescription(desc)]
-                            };
-                        },
-
+                    return await PaginationUtil.dumpAll(ctx, {
+                        items: stats.items,
                         dumpHeader: header,
                         formatDump: (items, discord = true) => formatUserTags(items, 0, discord),
                         filename: `usage_${user.username}.txt`
                     });
                 }
 
-                const initialRes = await getClient().tagManager.userLeaderboard(
-                    { user: user.id, onlyUsed: true },
-                    paginationOpts
-                );
+                const initialRes = await getClient().tagManager.userLeaderboard(filter, paginationOpts);
 
-                if (initialRes === null || initialRes.count <= 0) {
+                if (initialRes === null) {
                     return `${getEmoji("info")} ${userSubject} **no** tags.`;
                 }
 
@@ -214,23 +197,16 @@ class TagLeaderboardCommand {
                     return `${getEmoji("info")} ${userSubject} **no** tags with usage.`;
                 }
 
-                const header = `${getEmoji("info")} ${userLabel} tag usage:`;
-
                 return await PaginationUtil.paginate(ctx, {
                     initialData: {
-                        items: initialRes.tags,
+                        items: initialRes.items,
                         totalCount: initialRes.totalCount,
-                        page: paginationOpts.page ?? 1
+                        page: paginationOpts.page
                     },
                     defaultLimit: TagLeaderboardCommand.defaultLimit,
                     maxLimit: TagLeaderboardCommand.maxLimit,
 
-                    fetch: async ({ page, limit, offset }) => {
-                        return await getClient().tagManager.userLeaderboard(
-                            { user: user.id, onlyUsed: true },
-                            { page, limit, offset }
-                        );
-                    },
+                    fetch: page => getClient().tagManager.userLeaderboard(filter, page),
 
                     render: (items, { page }) => {
                         const startIndex = (page - 1) * ctx.pageSize,
@@ -244,11 +220,8 @@ class TagLeaderboardCommand {
 
                     dumpHeader: header,
                     formatDump: async (items, discord = true) => {
-                        const allStats = await getClient().tagManager.userLeaderboard(
-                            { user: user.id, onlyUsed: true },
-                            { all: true }
-                        );
-                        return formatUserTags(allStats.tags, 0, discord);
+                        const allStats = await getClient().tagManager.userLeaderboard(filter, { all: true });
+                        return formatUserTags(allStats.items, 0, discord);
                     },
                     filename: `usage_${user.username}.txt`
                 });
@@ -284,78 +257,52 @@ class TagLeaderboardCommand {
             customLimit = Util.clamp(parsedLimit, 1, TagLeaderboardCommand.maxLimit);
         }
 
-        const pageSize = customLimit ?? paginationOpts.limit ?? TagLeaderboardCommand.defaultLimit;
+        const pageSize = customLimit ?? paginationOpts.limit;
 
         const emptyDesc = isUses(l_type) ? "with usage" : "registered",
             emptyMsg = `${getEmoji("info")} There are **no** tags ${emptyDesc}.`;
 
-        if (paginationOpts.all) {
-            const allRes = await getClient().tagManager.leaderboard(
-                    { type: l_type, resolveUsers: false },
-                    { all: true }
-                ),
-                leaderboard = Array.isArray(allRes) ? allRes : (allRes?.items ?? []);
+        const filter = { type: l_type, resolveUsers: false },
+            header = `${getEmoji("info")} Tag ${l_type} leaderboard:`,
+            dumpLeaderboard = async (dumpItems, discord = true) => {
+                await getClient().tagManager.resolveLeaderboardUsers(dumpItems, l_type);
+                return formatLeaderboard(dumpItems, l_type, 0, discord);
+            };
 
-            if (Util.empty(leaderboard)) {
+        if (paginationOpts.all) {
+            const { items } = await getClient().tagManager.leaderboard(filter, { all: true });
+
+            if (Util.empty(items)) {
                 return emptyMsg;
             }
 
-            const header = `${getEmoji("info")} Tag ${l_type} leaderboard:`;
-
-            return await PaginationUtil.paginate(ctx, {
-                items: leaderboard,
-                defaultLimit: TagLeaderboardCommand.defaultLimit,
-
-                render: async (items, { page }) => {
-                    await getClient().tagManager.resolveLeaderboardUsers(items, l_type);
-
-                    const startIndex = (page - 1) * ctx.pageSize,
-                        desc = formatLeaderboard(items, l_type, startIndex, true);
-
-                    return {
-                        content: header,
-                        embeds: [new EmbedBuilder().setDescription(desc)]
-                    };
-                },
-
+            return await PaginationUtil.dumpAll(ctx, {
+                items,
                 dumpHeader: header,
-                formatDump: async (items, discord = true) => {
-                    await getClient().tagManager.resolveLeaderboardUsers(items, l_type);
-                    return formatLeaderboard(items, l_type, 0, discord);
-                },
+                formatDump: dumpLeaderboard,
                 filename: `leaderboard_${l_type}.txt`
             });
         }
 
-        const initialRes = await getClient().tagManager.leaderboard(
-            { type: l_type, resolveUsers: false },
-            { page: paginationOpts.page ?? 1, limit: pageSize }
-        );
+        const { items, totalCount } = await getClient().tagManager.leaderboard(filter, {
+            page: paginationOpts.page,
+            limit: pageSize
+        });
 
-        const items = Array.isArray(initialRes) ? initialRes : (initialRes?.items ?? []),
-            totalCount = initialRes?.totalCount ?? initialRes?.total ?? items.length;
-
-        if (totalCount === 0 || Util.empty(items)) {
+        if (totalCount === 0) {
             return emptyMsg;
         }
-
-        const header = `${getEmoji("info")} Tag ${l_type} leaderboard:`;
 
         return await PaginationUtil.paginate(ctx, {
             initialData: {
                 items,
                 totalCount,
-                page: paginationOpts.page ?? 1
+                page: paginationOpts.page
             },
-            defaultLimit: pageSize,
+            limit: pageSize,
             maxLimit: TagLeaderboardCommand.maxLimit,
 
-            fetch: async ({ page, limit, offset }) => {
-                return await getClient().tagManager.leaderboard(
-                    { type: l_type, resolveUsers: false },
-                    { page, limit, offset }
-                );
-            },
+            fetch: page => getClient().tagManager.leaderboard(filter, page),
 
             render: async (items, { page }) => {
                 await getClient().tagManager.resolveLeaderboardUsers(items, l_type);
@@ -371,14 +318,8 @@ class TagLeaderboardCommand {
 
             dumpHeader: header,
             formatDump: async (items, discord = true) => {
-                const allRes = await getClient().tagManager.leaderboard(
-                        { type: l_type, resolveUsers: false },
-                        { all: true }
-                    ),
-                    allLeaderboard = Array.isArray(allRes) ? allRes : (allRes?.items ?? []);
-
-                await getClient().tagManager.resolveLeaderboardUsers(allLeaderboard, l_type);
-                return formatLeaderboard(allLeaderboard, l_type, 0, discord);
+                const { items: allItems } = await getClient().tagManager.leaderboard(filter, { all: true });
+                return await dumpLeaderboard(allItems, discord);
             },
             filename: `leaderboard_${l_type}.txt`
         });

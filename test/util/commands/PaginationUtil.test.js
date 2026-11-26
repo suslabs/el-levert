@@ -1,8 +1,25 @@
-import { describe, expect, test, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import { EmbedBuilder } from "discord.js";
 
-import PaginationUtil from "../../../src/util/commands/PaginationUtil.js";
+import { cleanupRuntime, createRuntime } from "../../helpers/runtimeHarness.js";
+
 import DiscordUtil from "../../../src/util/DiscordUtil.js";
+
+let runtime;
+let PaginationUtil;
+
+beforeAll(async () => {
+    runtime = await createRuntime({ loadHandlers: true, loadManagers: false, loadVMs: false });
+    ({ default: PaginationUtil } = await import("../../../src/util/commands/PaginationUtil.js"));
+});
+
+afterAll(async () => {
+    await cleanupRuntime(runtime);
+});
+
+function parsedArgs(values = {}) {
+    return { results: new Map(Object.entries(values).map(([name, value]) => [name, { value }])) };
+}
 
 describe("PaginationUtil", () => {
     test("getPaginationArguments provides page, limit, and all options", () => {
@@ -29,18 +46,7 @@ describe("PaginationUtil", () => {
     test("getPaginationOptions resolves options from context", () => {
         const mockCtx = {
             commandName: "list",
-            arg: name => {
-                switch (name) {
-                    case "page":
-                        return 2;
-                    case "limit":
-                        return 15;
-                    case "all":
-                        return false;
-                    default:
-                        return undefined;
-                }
-            }
+            parseArgs: () => parsedArgs({ page: 2, limit: 15, all: false })
         };
 
         const opts = PaginationUtil.getPaginationOptions(mockCtx, { defaultLimit: 10, maxLimit: 50 });
@@ -54,7 +60,7 @@ describe("PaginationUtil", () => {
     test("getPaginationOptions detects _all alias in commandName", () => {
         const mockCtx = {
             commandName: "list_all",
-            arg: () => undefined
+            parseArgs: parsedArgs
         };
 
         const opts = PaginationUtil.getPaginationOptions(mockCtx);
@@ -173,7 +179,8 @@ describe("PaginationUtil", () => {
 
     test("paginate detects oversized embed on rendered page and converts to file attachment", async () => {
         const mockCtx = {
-            arg: () => undefined,
+            commandName: "list",
+            parseArgs: parsedArgs,
             handler: {
                 getLimits: () => ({
                     embed: [50, null]
@@ -215,12 +222,14 @@ describe("PaginationUtil", () => {
 
         const ctx = {
             isAuthor: true,
-            paginationSession: mainSession,
-            paginationSpec: mainSession.spec,
-            interaction: {
-                customId: "page:next:sess1",
-                isRepliable: () => true,
-                isModalSubmit: () => false
+            interactionContext: {
+                session: mainSession,
+                componentId: { prefix: "page", action: "next" },
+                interaction: {
+                    customId: "page:next:sess1",
+                    isRepliable: () => true,
+                    isModalSubmit: () => false
+                }
             },
             update: updateSpy
         };
@@ -231,6 +240,54 @@ describe("PaginationUtil", () => {
         expect(mainSession.page).toBe(2);
         expect(mainSession.context.page).toBe(2);
         expect(updateSpy).toHaveBeenCalledOnce();
+    });
+
+    test("uses supplied data only for its page and leaves the input spec intact", async () => {
+        const ctx = {
+            author: { id: "author" },
+            commandName: "list",
+            parseArgs: () => parsedArgs({ page: 2 }),
+            reply: vi.fn()
+        };
+        const spec = {
+            initialData: { page: 2, items: ["preloaded"], totalCount: 20 },
+            fetch: vi.fn(),
+            render: items => ({ content: items.join(", ") })
+        };
+        await PaginationUtil.paginate(ctx, spec);
+
+        expect(ctx.reply).toHaveBeenCalledWith(expect.objectContaining({ content: "preloaded" }), {});
+        expect(spec.fetch).not.toHaveBeenCalled();
+        expect(spec.initialData.page).toBe(2);
+    });
+
+    test("keeps the current page and controls when Discord rejects the update", async () => {
+        const activate = vi.fn();
+        const session = {
+            id: "session",
+            page: 1,
+            totalPages: 2,
+            pageSize: 1,
+            context: { page: 1 },
+            spec: {
+                items: ["first", "second"],
+                render: items => ({ content: items.join(", ") }),
+                controls: () => ({ rows: [], activate })
+            }
+        };
+        const ctx = {
+            isAuthor: true,
+            interactionContext: {
+                session,
+                componentId: { prefix: "page", action: "next" },
+                interaction: { isModalSubmit: () => false }
+            },
+            update: vi.fn().mockRejectedValue(new Error("Discord update failed"))
+        };
+
+        await expect(PaginationUtil.handleInteraction(ctx)).rejects.toThrow("Discord update failed");
+        expect(activate).not.toHaveBeenCalled();
+        expect(session.page).toBe(1);
     });
 
     test("handleInteraction does not mutate main session.page on ephemeral non-author interaction", async () => {
@@ -251,15 +308,19 @@ describe("PaginationUtil", () => {
         };
 
         const ctx = {
+            commandName: "list",
+            parseArgs: parsedArgs,
             isAuthor: false,
             isInteraction: true,
-            paginationSession: mainSession,
-            paginationSpec: mainSession.spec,
-            interaction: {
-                customId: "page:next:main_sess",
-                user: { id: "other_user" },
-                isRepliable: () => true,
-                isModalSubmit: () => false
+            interactionContext: {
+                session: mainSession,
+                componentId: { prefix: "page", action: "next" },
+                interaction: {
+                    customId: "page:next:main_sess",
+                    user: { id: "other_user" },
+                    isRepliable: () => true,
+                    isModalSubmit: () => false
+                }
             },
             clone: overrides => ({
                 ...ctx,
@@ -278,5 +339,134 @@ describe("PaginationUtil", () => {
         expect(updateSpy).not.toHaveBeenCalled();
         expect(replySpy).toHaveBeenCalledOnce();
         expect(replySpy.mock.calls[0][1]).toEqual({ ephemeral: true });
+    });
+
+    test("adds kebab-case aliases, falls back to ctx.arg and standard option names", () => {
+        const [pageArg, limitArg, allArg] = PaginationUtil.getPaginationArguments({
+            pageName: "questPage",
+            limitName: "pageSize",
+            allName: "showAll"
+        });
+
+        expect(pageArg.aliases).toEqual(["p", "quest-page"]);
+        expect(limitArg.aliases).toEqual(["l", "page-size"]);
+        expect(allArg.aliases).toEqual(["a", "show-all"]);
+
+        const legacyCtx = {
+            commandName: "items",
+            arg: name => ({ page: 3, limit: 20, all: true })[name]
+        };
+
+        expect(
+            PaginationUtil.getPaginationOptions(legacyCtx, {
+                pageName: "questPage",
+                limitName: "pageSize",
+                allName: "showAll"
+            })
+        ).toEqual({ page: 3, limit: 20, offset: 40, all: true });
+    });
+
+    test("supports array/total/count fetch results, clamps out-of-range fetch pages, and sets session.totalCount", async () => {
+        const ctx = {
+            author: { id: "author" },
+            commandName: "items",
+            parseArgs: () => parsedArgs({ page: 5 }),
+            reply: vi.fn()
+        };
+
+        const fetch = vi.fn(async ({ page }) => ({
+            items: page > 2 ? [] : Array.from({ length: 10 }, (_, i) => `p${page}-${i}`),
+            total: 20
+        }));
+
+        await PaginationUtil.paginate(ctx, {
+            limit: 10,
+            fetch,
+            render: (items, info) => ({ content: `${info.page}/${info.totalPages}:${items[0]}` })
+        });
+
+        expect(fetch).toHaveBeenCalledTimes(2);
+        expect(ctx.page).toBe(2);
+        expect(ctx.totalCount).toBe(20);
+        expect(ctx.paginationSession.totalCount).toBe(20);
+        expect(ctx.reply).toHaveBeenCalledWith(expect.objectContaining({ content: "2/2:p2-0" }), {});
+
+        const bareCtx = {
+            author: { id: "author" },
+            commandName: "items",
+            parseArgs: parsedArgs,
+            reply: vi.fn()
+        };
+
+        await expect(
+            PaginationUtil.paginate(bareCtx, {
+                fetch: async () => ["only-a", "only-b"],
+                render: (items, info) => `${info.totalCount}:${items.join(",")}`
+            })
+        ).resolves.toBe("2:only-a,only-b");
+    });
+
+    test("forwards targetPage to ephemeral ctx.arg/options and skips deferUpdate when non-repliable", async () => {
+        const deferUpdate = vi.fn();
+        const nonRepliableCtx = {
+            isAuthor: true,
+            interactionContext: {
+                session: { id: "s1", page: 1, totalPages: 2, spec: {} },
+                componentId: { prefix: "page", action: "prev" },
+                interaction: {
+                    isRepliable: () => false,
+                    isModalSubmit: () => false,
+                    replied: false,
+                    deferred: false,
+                    deferUpdate
+                }
+            }
+        };
+
+        await expect(PaginationUtil.handleInteraction(nonRepliableCtx)).resolves.toBe(true);
+        expect(deferUpdate).not.toHaveBeenCalled();
+
+        const seen = [];
+        const mainSession = {
+            id: "main_sess",
+            authorId: "author_user",
+            page: 1,
+            totalPages: 3,
+            pageSize: 2,
+            totalCount: 6,
+            spec: {
+                items: ["a", "b", "c", "d", "e", "f"],
+                render: (_items, _info, renderCtx) => {
+                    seen.push({
+                        pageArg: renderCtx.arg("page"),
+                        pageOpt: renderCtx.options.page
+                    });
+                    return { content: "ok" };
+                }
+            },
+            context: { page: 1 }
+        };
+
+        const ctx = {
+            commandName: "list",
+            arg: () => undefined,
+            options: {},
+            isAuthor: false,
+            interactionContext: {
+                session: mainSession,
+                componentId: { prefix: "page", action: "next" },
+                interaction: {
+                    customId: "page:next:main_sess",
+                    user: { id: "other_user" },
+                    isRepliable: () => true,
+                    isModalSubmit: () => false
+                }
+            },
+            clone: overrides => ({ ...ctx, ...overrides }),
+            reply: vi.fn()
+        };
+
+        await PaginationUtil.handleInteraction(ctx);
+        expect(seen).toEqual([{ pageArg: 2, pageOpt: 2 }]);
     });
 });

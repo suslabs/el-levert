@@ -4,8 +4,8 @@ import Sources from "../../ai/sources/Sources.js";
 import { getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import ListDetailView from "../../util/commands/ListDetailView.js";
 import PaginationUtil from "../../util/commands/PaginationUtil.js";
-import PickerUtil from "../../util/commands/PickerUtil.js";
 import RecipeView from "../../util/commands/RecipeView.js";
 import HTTPUtil from "../../util/vm/HTTPUtil.js";
 
@@ -18,11 +18,12 @@ const flags = Object.freeze({
     "--light": "light",
     "--list": "list"
 });
+
 const numberedItem = /\b(?:tier|mk|mark|level|stage|grade|class|rank|miners?)$/i;
 
 function parseQuery(parts) {
-    const options = { uses: false, expert: false, light: false, list: false };
-    const words = [];
+    const options = { uses: false, expert: false, light: false, list: false },
+        words = [];
 
     for (const part of parts) {
         const flag = typeof part === "string" && Object.hasOwn(flags, part) ? flags[part] : null;
@@ -35,6 +36,7 @@ function parseQuery(parts) {
     }
 
     const last = words.at(-1);
+
     let number = null;
 
     if (Util.multiple(words) && typeof last === "string" && /^\d+$/.test(last) && !numberedItem.test(words.at(-2))) {
@@ -50,10 +52,23 @@ class RecipeCommand {
     static info = {
         name: "rp",
         category: "util",
-        args: "<item> [machine] [--uses] [--expert] [--light] [--list]",
+        args: "<item> [machine] [--uses] [--expert] [--light] [--list] [--page <num>] [--limit <num>] [--all]",
         description: "Looks up Nomifactory CEu recipes and item uses in NomiCodex.",
-        usage: "- Add a machine name to filter results.\n- --uses: Find recipes that consume the item.\n- --expert: Look up expert mode recipes.\n- --light: Use the light theme for cards.\n- --list: Always show the result list.",
-        arguments: [Util.first(PaginationUtil.getPaginationArguments()), { name: "parts", kind: "list" }]
+        usage: `- Add a machine name to filter results.
+- --uses: Find recipes that consume the item.
+- --expert: Look up expert mode recipes.
+- --light: Use the light theme for cards.
+- --list: Always show the result list.
+- --page <num>: Page number of results (default: 1).
+- --limit <num>: Results per page (1-${ListDetailView.maxLimit}, default: ${PaginationUtil.defaultLimit}).
+- --all: Dump all matching results.`,
+        arguments: [
+            ...PaginationUtil.getPaginationArguments(),
+            {
+                name: "parts",
+                kind: "list"
+            }
+        ]
     };
 
     load() {
@@ -75,6 +90,7 @@ class RecipeCommand {
                 uses: args.uses,
                 timeout: RecipeCommand.searchTimeout
             });
+
             return await new RecipeView(this.source, data, { ...args, mode }).reply(ctx);
         } catch (err) {
             if (!(err instanceof AIError)) {
@@ -86,7 +102,7 @@ class RecipeCommand {
     }
 
     async interactionHandler(ctx) {
-        return await PickerUtil.handleInteraction(ctx);
+        return await ListDetailView.handleInteraction(ctx);
     }
 }
 

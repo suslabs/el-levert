@@ -10,6 +10,32 @@ import createuFuzzySearch from "../../util/search/uFuzzySearch.js";
 
 import QuestbookError from "../../errors/QuestbookError.js";
 
+function formatItem(item) {
+    return `${item.count}x ${item.id}${item.damage === 0 ? "" : `:${item.damage}`}`;
+}
+
+function formatFluid(fluid) {
+    return `${fluid.amount} mB ${fluid.name}`;
+}
+
+function getChapters(lines) {
+    const chapters = new Map();
+
+    for (const line of lines) {
+        for (const id of line.quests) {
+            const names = chapters.get(id);
+
+            if (typeof names === "undefined") {
+                chapters.set(id, [line.name]);
+            } else {
+                names.push(line.name);
+            }
+        }
+    }
+
+    return chapters;
+}
+
 class Questbook {
     static fieldWeights = {
         title: 3,
@@ -56,7 +82,7 @@ class Questbook {
         const book = this._getBook(mode),
             terms = Questbook._getWords(query);
 
-        const ranked = this._rankTitles(book, query, terms).map(match => match.quest),
+        const ranked = Questbook._rankTitles(book, query, terms).map(match => match.quest),
             partial = Questbook._findPartialTitles(book.list, terms);
 
         return ArrayUtil.unique([...ranked, ...partial]).slice(0, limit);
@@ -67,7 +93,7 @@ class Questbook {
             terms = Questbook._getWords(query);
 
         const [strong, weak] = ArrayUtil.split(
-            this._rankTitles(book, query, terms),
+            Questbook._rankTitles(book, query, terms),
             match => match.rank === Questbook.fuzzyRank
         );
 
@@ -136,31 +162,11 @@ class Questbook {
 
     static _taskPrefixRegex = /^bq_standard:/;
 
-    static _formatItem(item) {
-        return `${item.count}x ${item.id}${item.damage === 0 ? "" : `:${item.damage}`}`;
-    }
-
-    static _formatFluid(fluid) {
-        return `${fluid.amount} mB ${fluid.name}`;
-    }
-
     static _formatTask(task) {
         const type = task.type.replace(Questbook._taskPrefixRegex, ""),
-            reqs = [...task.items.map(Questbook._formatItem), ...task.fluids.map(Questbook._formatFluid)];
+            reqs = [...task.items.map(formatItem), ...task.fluids.map(formatFluid)];
 
         return Util.empty(reqs) ? type : `${type}: ${reqs.join(", ")}`;
-    }
-
-    static _getChapters(lines) {
-        const chapters = new Map();
-
-        for (const line of lines) {
-            for (const id of line.quests) {
-                chapters.set(id, [...(chapters.get(id) ?? []), line.name]);
-            }
-        }
-
-        return chapters;
     }
 
     static _createQuest(quest, chapters) {
@@ -180,7 +186,7 @@ class Questbook {
     }
 
     static _createQuests(book) {
-        const chapters = Questbook._getChapters(book.lines);
+        const chapters = getChapters(book.lines);
 
         return book.quests
             .filter(quest => chapters.has(quest.id))
@@ -194,7 +200,7 @@ class Questbook {
         return { index, version, list: quests, quests: new Map(quests.map(quest => [quest.id, quest])) };
     }
 
-    _rankTitles(book, query, terms) {
+    static _rankTitles(book, query, terms) {
         return Questbook.titleSearcher
             .search(book.list, query, { searchKey: "title" })
             .results.map(quest => ({ quest, rank: Questbook._getTitleRank(quest.title, query, terms) }))

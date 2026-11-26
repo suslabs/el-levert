@@ -1,22 +1,22 @@
 import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import ListDetailView from "../../util/commands/ListDetailView.js";
 import PaginationUtil from "../../util/commands/PaginationUtil.js";
-import PickerUtil from "../../util/commands/PickerUtil.js";
-import QuestbookUtil from "../../util/commands/QuestbookUtil.js";
 import QuestSearchUtil from "../../util/commands/QuestSearchUtil.js";
+import QuestbookUtil from "../../util/commands/QuestbookUtil.js";
 
 class QuestbookCommand {
     static info = {
         name: "questbook",
         aliases: ["qb"],
         category: "util",
-        args: "<questbook> <quest or id> [--expert] [--page <num>] [--all]",
+        args: "<questbook> <quest or id> [--expert] [--page <num>] [--limit <num>] [--all]",
         description:
             "Shows a quest from a modpack questbook by name or id. When several quests match, lists them with buttons to open each one.",
         usage: "- <questbook>: Which questbook to search (e.g. nfu).\n- <quest or id>: A quest name (fuzzy matched) or a quest id from the list.\n- --expert, -e: Search the expert mode questbook.",
         arguments: [
-            ...PaginationUtil.getPaginationArguments({ defaultLimit: QuestSearchUtil.pageSize }),
+            ...PaginationUtil.getPaginationArguments(),
             {
                 name: "expert",
                 kind: "option",
@@ -73,7 +73,7 @@ class QuestbookCommand {
     }
 
     async interactionHandler(ctx) {
-        return await PickerUtil.handleInteraction(ctx);
+        return await ListDetailView.handleInteraction(ctx);
     }
 }
 

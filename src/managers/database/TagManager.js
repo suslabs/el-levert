@@ -628,13 +628,15 @@ class TagManager extends DBManager {
             checkExisting: true
         });
 
-        const oldName = tag?.name;
-
         if (tag === null) {
             throw new TagError("Tag doesn't exist");
         } else if (tag.isFake) {
             throw new TagError("Cannot rename tag", tag.name);
-        } else if (validate.validateProvided) {
+        }
+
+        const oldName = tag.name;
+
+        if (validate.validateProvided) {
             this.checkName(oldName);
         }
 
@@ -926,37 +928,21 @@ class TagManager extends DBManager {
         options = ObjectUtil.guaranteeObject(options, "user");
         pagination = ObjectUtil.guaranteeObject(pagination, "limit");
 
-        const user = options.user;
-
-        const all = options.all ?? pagination.all ?? false;
+        const user = options.user,
+            all = options.all ?? pagination.all ?? false;
 
         const flag = all ? null : Tag.getFlag([false, "hidden"]);
 
         const totalCount = await this.tag_db.count(user, flag);
 
         if (totalCount === 0) {
-            return {
-                items: [],
-                totalCount: 0,
-                count: 0,
-                newTags: [],
-                oldTags: []
-            };
+            return { items: [], totalCount };
         }
 
-        const { limit, offset } = DatabaseUtil.resolvePagination(pagination, TagManager.defaultListLimit);
+        const { limit, offset } = DatabaseUtil.resolvePagination(pagination, TagManager.defaultListLimit),
+            items = await this.tag_db.list(user, flag, { limit, offset });
 
-        const tags = await this.tag_db.list(user, flag, { limit, offset });
-
-        const [newTags, oldTags] = ArrayUtil.split(tags, tag => tag.isOld);
-
-        return {
-            items: tags,
-            totalCount,
-            count: totalCount,
-            newTags,
-            oldTags
-        };
+        return { items, totalCount };
     }
 
     async count(user, flags) {
@@ -989,7 +975,6 @@ class TagManager extends DBManager {
 
         return {
             results: res.results,
-            items: res.results,
             totalCount: res.other.total ?? res.results.length,
             other: res.other
         };
@@ -1078,11 +1063,7 @@ class TagManager extends DBManager {
             await this.resolveLeaderboardUsers(leaderboard, type);
         }
 
-        return {
-            items: leaderboard,
-            leaderboard,
-            totalCount
-        };
+        return { items: leaderboard, totalCount };
     }
 
     async resolveLeaderboardUsers(leaderboard, type) {
@@ -1129,13 +1110,11 @@ class TagManager extends DBManager {
 
         const { limit, offset } = DatabaseUtil.resolvePagination(pagination, TagManager.defaultUserLeaderboardLimit);
 
-        const totalCount = await this.tag_db.topUserTagsTotal(user, { onlyUsed });
-
-        const tags = limit === 0 ? [] : await this.tag_db.topUserTags(user, { limit, offset, onlyUsed });
+        const totalCount = await this.tag_db.topUserTagsTotal(user, { onlyUsed }),
+            tags = limit === 0 ? [] : await this.tag_db.topUserTags(user, { limit, offset, onlyUsed });
 
         return {
             ...stats,
-            tags,
             items: tags,
             totalCount
         };
@@ -1165,7 +1144,7 @@ class TagManager extends DBManager {
         let fileUrl = msg.fileUrl,
             attachInfo = msg.attachInfo;
 
-        if (attach == null && !Util.nonemptyString(fileUrl)) {
+        if (attach === null && !Util.nonemptyString(fileUrl)) {
             const value = t_args?.trim() ?? "";
             attachInfo = DiscordUtil.parseAttachmentUrl(value);
 
@@ -1195,7 +1174,7 @@ class TagManager extends DBManager {
                 }
             );
 
-            const contentType = res.contentType.split(";")[0].trim().toLowerCase(),
+            const contentType = Util.first(res.contentType.split(";")).trim().toLowerCase(),
                 ext = (res.attachInfo?.ext ?? (attach?.name ? path.extname(attach.name) : "")).toLowerCase();
 
             const isBinary = binaryContentTypes.includes(contentType) && binaryExtensions.includes(ext),
@@ -1234,7 +1213,7 @@ class TagManager extends DBManager {
                 throw err;
             }
 
-            const trimmedArgs = (t_args = t_args?.trimEnd?.() ?? ""),
+            const trimmedArgs = t_args?.trimEnd() ?? "",
                 attachmentUrls = DiscordUtil.getAttachmentUrls(msg).join(" ");
 
             const body = trimmedArgs + (Util.empty(trimmedArgs) ? "" : " ") + attachmentUrls;
@@ -1243,7 +1222,7 @@ class TagManager extends DBManager {
     }
 
     emulateTag(options) {
-        options = TypeTester.isObject(options) ? options : {};
+        options = ObjectUtil.guaranteeObject(options);
 
         const owner = options.owner ?? getClient().owner;
 

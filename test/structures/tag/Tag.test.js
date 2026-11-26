@@ -3,7 +3,7 @@ import { Buffer } from "node:buffer";
 
 import { cleanupRuntime, createRuntime } from "../../helpers/runtimeHarness.js";
 
-import DateUtil from "../../../src/util/misc/DateUtil.js";
+import DateUtil from "../../../src/util/date/DateUtil.js";
 
 let runtime;
 let Tag;
