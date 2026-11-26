@@ -2,6 +2,16 @@ import { Buffer } from "node:buffer";
 
 import Util from "../util/Util.js";
 
+function* collectStrings(value) {
+    if (typeof value === "string") {
+        yield value;
+    } else if (value !== null && typeof value === "object") {
+        for (const child of Object.values(value)) {
+            yield* collectStrings(child);
+        }
+    }
+}
+
 class AIPromptGuard {
     static refusal =
         "I keep my private instructions and implementation details confidential. I can describe my public features or help draft an original prompt for your bot.";
@@ -25,7 +35,7 @@ class AIPromptGuard {
     }
 
     contains(value) {
-        const strings = Array.from(AIPromptGuard._strings(value));
+        const strings = Array.from(collectStrings(value));
         return (
             strings.some(text => this._containsText(text)) ||
             (Util.multiple(strings) && this._matches(strings.join(" ")))
@@ -42,16 +52,6 @@ class AIPromptGuard {
         /\b(?:how|exactly how)\s+(?:you|u|the bot|leveret)\s+(?:work|operate|are configured|are built)\s+internally\b/iu,
         /\b(?:show|print|paste|reveal|dump|output)\s+(?:me\s+)?(?:everything|all (?:the )?(?:text|messages|instructions))\s+(?:above|(?:from\s+)?before (?:my|this|the user))/iu
     ];
-
-    static *_strings(value) {
-        if (typeof value === "string") {
-            yield value;
-        } else if (value !== null && typeof value === "object") {
-            for (const child of Object.values(value)) {
-                yield* AIPromptGuard._strings(child);
-            }
-        }
-    }
 
     static *_phrases(text) {
         const normalized = text.normalize("NFKC").replace(AIPromptGuard._invisible, "").toLowerCase(),

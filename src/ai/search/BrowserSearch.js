@@ -14,14 +14,19 @@ class BrowserSearch extends SearchBackend {
     async search(query, limit, timeout) {
         const url = `${BrowserSearch.url}?${new URLSearchParams({ q: query, ia: "web" })}`;
 
-        const deadline = Date.now() + timeout;
+        const deadline = Util.createDeadline(timeout);
 
         const results = await this.browser.withPage(async page => {
-            const remaining = Math.max(1, deadline - Date.now()),
-                signal = AbortSignal.timeout(remaining);
+            const remaining = Util.getRemainingTime(deadline, -1, 1);
 
-            await page.goto(url, { waitUntil: "domcontentloaded", timeout: remaining });
-            await page.waitForSelector(BrowserSearch.resultSelector, { signal });
+            await page.goto(url, {
+                waitUntil: "domcontentloaded",
+                timeout: remaining === -1 ? 0 : remaining
+            });
+            await page.waitForSelector(
+                BrowserSearch.resultSelector,
+                remaining === -1 ? {} : { signal: AbortSignal.timeout(remaining) }
+            );
 
             // runs inside the page, so it can't use anything from this module
             return await page.$$eval(BrowserSearch.resultSelector, articles =>

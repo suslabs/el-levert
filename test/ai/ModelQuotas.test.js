@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import ModelQuotas from "../../src/ai/ModelQuotas.js";
+
 import Util from "../../src/util/Util.js";
 
 const second = 1 / Util.durationSeconds.milli;
@@ -27,7 +28,7 @@ describe("ModelQuotas", () => {
         expect(quotas.getActive("model#0")).toBeNull();
     });
 
-    test("backs off exponentially when Google gives no reset time", () => {
+    test("backs off exponentially when no reset time is given", () => {
         const quotas = new ModelQuotas(second, 5 * second);
 
         for (const delay of [second, 2 * second, 4 * second, 5 * second]) {
@@ -36,7 +37,7 @@ describe("ModelQuotas", () => {
         }
 
         const recover = quotas.acquire("model");
-        recover(null);
+        recover(true);
         expect(quotas.limit("model")).toBe(second);
     });
 
@@ -46,23 +47,30 @@ describe("ModelQuotas", () => {
         const release = quotas.acquire("model");
         quotas.limit("model", 39 * second, 429);
         vi.advanceTimersByTime(second);
-        release(null);
+        release(false);
 
         expect(quotas.limit("model", null, 503)).toBe(38 * second);
         expect(quotas.getActive("model")).toMatchObject({ hits: 1, status: 429 });
     });
 
-    test("allows one recovery attempt and preserves streaming backoff after a triage success", () => {
+    test("preserves streaming backoff on triage success and clears when a stream recovers", () => {
         const quotas = new ModelQuotas(second, 5 * second);
         quotas.limit("model", null, 503, true);
         expect(quotas.acquire("model")).toBeNull();
 
         vi.advanceTimersByTime(second);
-        const release = quotas.acquire("model");
+        const triageProbe = quotas.acquire("model");
         expect(quotas.acquire("model")).toBeNull();
 
-        release(false);
+        triageProbe(true, false);
 
         expect(quotas.limit("model", null, 503, true)).toBe(2 * second);
+
+        vi.advanceTimersByTime(2 * second);
+        const streamProbe = quotas.acquire("model");
+        streamProbe(true, true);
+
+        expect(quotas.has("model")).toBe(false);
+        expect(quotas.limit("model", null, 503, true)).toBe(second);
     });
 });

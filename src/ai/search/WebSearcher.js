@@ -31,10 +31,11 @@ class WebSearcher {
     }
 
     async search(query, limit, timeout) {
-        const deadline = Date.now() + timeout;
-        const results = await this._searchBackends(query, limit, deadline);
+        const deadline = Util.createDeadline(timeout);
 
-        const remaining = deadline - Date.now();
+        const results = await this._searchBackends(query, limit, deadline),
+            remaining = Util.getRemainingTime(deadline);
+
         return {
             query,
             results: await Promise.all(results.map((result, i) => this._readResult(result, i, remaining)))
@@ -49,13 +50,13 @@ class WebSearcher {
         let lastError = null;
 
         for (const [i, backend] of this.backends.entries()) {
-            const remaining = deadline - Date.now();
+            const remaining = Util.getRemainingTime(deadline);
 
-            if (remaining <= 0 && lastError !== null) {
+            if (remaining === 0 && lastError !== null) {
                 break;
             }
 
-            const timeout = Math.max(1, Math.ceil(remaining / (this.backends.length - i)));
+            const timeout = remaining === -1 ? -1 : Math.max(1, Math.ceil(remaining / (this.backends.length - i)));
 
             try {
                 return await backend.search(query, limit, timeout);
@@ -73,7 +74,7 @@ class WebSearcher {
     }
 
     async _readResult(result, i, timeout) {
-        if (i >= WebSearcher.readCount || timeout <= 0) {
+        if (i >= WebSearcher.readCount || timeout === 0) {
             return result;
         }
 

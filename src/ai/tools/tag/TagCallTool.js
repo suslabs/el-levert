@@ -10,6 +10,15 @@ import ArrayUtil from "../../../util/ArrayUtil.js";
 import DiscordUtil from "../../../util/DiscordUtil.js";
 import ToolParams from "../../../util/ai/ToolParams.js";
 
+function formatOutput(out) {
+    if (!TypeTester.isObject(out)) {
+        return String(out ?? "");
+    }
+
+    const embeds = (out.embeds ?? []).map(embed => DiscordUtil.stringifyEmbed(embed));
+    return [out.content, ...embeds].filter(Util.nonemptyString).join("\n");
+}
+
 class TagCallTool extends TagTool {
     static info = {
         name: "tag_call",
@@ -53,19 +62,10 @@ class TagCallTool extends TagTool {
 
         return {
             source: `tag:${tag.name}`,
-            output: Util.trimString(this._formatOutput(out), TagCallTool.maxOutputLength),
+            output: Util.trimString(formatOutput(out), TagCallTool.maxOutputLength),
             attached: files.map(file => file.name),
             communityMaintained: true
         };
-    }
-
-    _formatOutput(out) {
-        if (!TypeTester.isObject(out)) {
-            return String(out ?? "");
-        }
-
-        const embeds = (out.embeds ?? []).map(embed => DiscordUtil.stringifyEmbed(embed));
-        return [out.content, ...embeds].filter(Util.nonemptyString).join("\n");
     }
 }
 

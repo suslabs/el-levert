@@ -13,6 +13,11 @@ import LoggerUtil from "../../util/LoggerUtil.js";
 
 import AIError from "../../errors/AIError.js";
 
+function findFollowUp(args, followUps) {
+    const idx = Util.parseInt(Util.first(args));
+    return followUps[idx] ?? null;
+}
+
 class AIReply {
     static expectedErrors = new Set(["AIError", "AxiosError"]);
 
@@ -40,9 +45,21 @@ class AIReply {
     }
 
     static async handleInteraction(ctx) {
-        switch (AIReplyView.getAction(ctx.interaction.customId)) {
+        const { componentId, session } = ctx.interactionContext;
+
+        if (componentId.prefix !== AIReplyView.customIdPrefix) {
+            return false;
+        }
+
+        const { action } = session.spec;
+
+        if (componentId.action !== action) {
+            return false;
+        }
+
+        switch (action) {
             case AIReplyView.followUpAction:
-                return await AIReply._handleFollowUp(ctx);
+                return await AIReply._handleFollowUp(ctx, findFollowUp(componentId.args, session.spec.followUps));
             case AIReplyView.cancelAction:
                 return await AIReply._handleCancel(ctx);
             default:
@@ -82,10 +99,13 @@ class AIReply {
             this.ctx.disableTimeout();
         }
 
-        const cancelSession = this._createSession({ reply: this }, InteractionModes.authorOnly);
+        const cancelSession = this._createSession(
+            { action: AIReplyView.cancelAction, reply: this },
+            InteractionModes.authorOnly
+        );
 
         try {
-            return await this._run(question, history, unlimitedTime ? Infinity : aiManager.timeLimit, cancelSession);
+            return await this._run(question, history, unlimitedTime ? -1 : aiManager.timeLimit, cancelSession);
         } finally {
             getClient().interactionHandler.unregisterSession(cancelSession.id);
         }
@@ -96,13 +116,12 @@ class AIReply {
         await this.updater.close();
     }
 
-    static async _handleFollowUp(ctx) {
-        const session = ctx.interactionContext.session,
-            question = AIReplyView.getFollowUp(ctx.interaction.customId, session.spec.followUps);
-
+    static async _handleFollowUp(ctx, question) {
         if (question === null) {
             return false;
         }
+
+        const { session } = ctx.interactionContext;
 
         const reply = new AIReply(ctx),
             answer = () => reply.answer(question, session.spec.history);
@@ -157,7 +176,10 @@ class AIReply {
         ];
 
         const mode = getConfig().ai.followUpsAnyone ? InteractionModes.anyone : InteractionModes.authorOnly;
-        return this._createSession({ followUps: result.followUps, history: turns }, mode);
+        return this._createSession(
+            { action: AIReplyView.followUpAction, followUps: result.followUps, history: turns },
+            mode
+        );
     }
 
     async _run(question, history, timeLimit, cancelSession) {
@@ -193,8 +215,8 @@ class AIReply {
             return null;
         }
 
-        const session = this._createFollowUpSession(result, question, history);
-        const msg = await this.updater.finish(this.view.renderResult(result, session));
+        const session = this._createFollowUpSession(result, question, history),
+            msg = await this.updater.finish(this.view.renderResult(result, session));
         session?.setMessage(msg);
 
         return msg;

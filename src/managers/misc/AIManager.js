@@ -25,6 +25,16 @@ import ModuleUtil from "../../util/misc/ModuleUtil.js";
 import AIError from "../../errors/AIError.js";
 import ManagerError from "../../errors/ManagerError.js";
 
+async function loadBrowser(allowLocalhostRequests) {
+    const StealthBrowser = await ModuleUtil.loadOptionalModule(
+        ["puppeteer", "puppeteer-extra", "puppeteer-extra-plugin-stealth"],
+        import.meta.url,
+        "../../ai/browser/StealthBrowser.js"
+    );
+
+    return StealthBrowser === null ? null : new StealthBrowser(allowLocalhostRequests);
+}
+
 class AIManager extends Manager {
     static $name = "aiManager";
     static loadPriority = 4;
@@ -57,14 +67,14 @@ class AIManager extends Manager {
     async load() {
         const config = getConfig().ai;
 
-        this.maxSteps = config.maxSteps === -1 ? Infinity : config.maxSteps;
+        this.maxSteps = Util.normalizeLimit(config.maxSteps);
         this.quickMaxSteps = config.quickMaxSteps;
-        this.timeLimit = config.timeLimit;
+        this.timeLimit = Util.normalizeLimit(config.timeLimit);
         this.unlimitedTimeForAdmins = config.unlimitedTimeForAdmins;
 
         this.thinkingLevel = config.thinkingLevel;
         this.toolThinkingLevel = config.toolThinkingLevel ?? config.thinkingLevel;
-        this.requestTimeout = config.requestTimeout;
+        this.requestTimeout = Util.normalizeLimit(config.requestTimeout);
         this.maxToolOutput = config.maxToolOutput;
 
         this.rateLimiter = new RateLimiter(config.maxRequests, config.rateLimitWindow);
@@ -87,7 +97,7 @@ class AIManager extends Manager {
         this.tools = new AIToolRegistry();
         this.prompt = new AIPrompt(`${AIPromptGuard.instruction}\n\n${this.prompts.system}`);
         this.triage = new AITriage(this.prompts.triage);
-        this.browser = await AIManager._loadBrowser(config.allowLocalhostRequests);
+        this.browser = await loadBrowser(config.allowLocalhostRequests);
         this.pageReader = new PageReader(this.http, this.browser);
         this.webSearcher = new WebSearcher(this.http, this.browser, this.pageReader, this.keys);
 
@@ -97,6 +107,7 @@ class AIManager extends Manager {
 
     async unload() {
         this.rateLimiter.destroy();
+        this.router?.destroy();
         await this.browser?.close();
     }
 
@@ -111,16 +122,6 @@ class AIManager extends Manager {
         }
 
         return LoggerUtil.formatLog(value, undefined, undefined, this.redactLogText);
-    }
-
-    static async _loadBrowser(allowLocalhostRequests) {
-        const StealthBrowser = await ModuleUtil.loadOptionalModule(
-            ["puppeteer", "puppeteer-extra", "puppeteer-extra-plugin-stealth"],
-            import.meta.url,
-            "../../ai/browser/StealthBrowser.js"
-        );
-
-        return StealthBrowser === null ? null : new StealthBrowser(allowLocalhostRequests);
     }
 
     _createProviders(config) {

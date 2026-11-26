@@ -2,6 +2,10 @@ import * as Tools from "./tools/tools.js";
 
 import AIPhases from "../structures/ai/AIPhases.js";
 
+function isAvailable(tool, session) {
+    return session.toolPolicy.allows(tool.name) && tool.isAvailable(session);
+}
+
 class AIToolRegistry {
     static unknownToolEmoji = "❔";
 
@@ -14,7 +18,7 @@ class AIToolRegistry {
     }
 
     getAvailable(session) {
-        return Array.from(this.tools.values()).filter(tool => AIToolRegistry._isAvailable(tool, session));
+        return Array.from(this.tools.values()).filter(tool => isAvailable(tool, session));
     }
 
     getDeclarations(session) {
@@ -27,7 +31,7 @@ class AIToolRegistry {
 
     get(name, session) {
         const tool = this.tools.get(name);
-        return typeof tool !== "undefined" && AIToolRegistry._isAvailable(tool, session) ? tool : null;
+        return typeof tool !== "undefined" && isAvailable(tool, session) ? tool : null;
     }
 
     getLogName(name) {
@@ -56,10 +60,6 @@ class AIToolRegistry {
         }
 
         return await tool.execute(args, session);
-    }
-
-    static _isAvailable(tool, session) {
-        return session.toolPolicy.allows(tool.name) && tool.isAvailable(session);
     }
 }
 

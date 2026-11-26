@@ -11,6 +11,30 @@ import ToolParams from "../../../util/ai/ToolParams.js";
 
 import AIError from "../../../errors/AIError.js";
 
+function createMatcher(query, isRegex) {
+    let regex;
+
+    try {
+        regex = new RE2(isRegex ? query : RegexUtil.escapeRegex(query), "i");
+    } catch (err) {
+        throw new AIError(`Invalid regex: ${err.message}`);
+    }
+
+    if (regex.test("") || regex.test(" ")) {
+        throw new AIError("Match-all regex isn't allowed; use a real text query");
+    }
+
+    return regex;
+}
+
+function getSearchText(msg) {
+    const embedText = msg.embeds
+        .map(embed => DiscordUtil.stringifyEmbed(embed, { urls: false }))
+        .filter(Util.nonemptyString);
+
+    return [msg.content, ...embedText].join(" ");
+}
+
 class SearchMessagesTool extends MessageHistoryTool {
     static info = {
         name: "search_messages",
@@ -50,7 +74,7 @@ class SearchMessagesTool extends MessageHistoryTool {
             throw new AIError("query is required. For author/time-only filtering use fetch_recent_messages");
         }
 
-        const matcher = this._createMatcher(query, args.isRegex ?? false);
+        const matcher = createMatcher(query, args.isRegex ?? false);
 
         const limit = this.getLimit(args),
             scan = Util.clamp(
@@ -69,7 +93,7 @@ class SearchMessagesTool extends MessageHistoryTool {
 
         const matches = msgs
             .filter(msg => authorId === null || msg.author.id === authorId)
-            .filter(msg => matcher.test(this._getSearchText(msg)))
+            .filter(msg => matcher.test(getSearchText(msg)))
             .slice(0, limit);
 
         const out = {
@@ -83,30 +107,6 @@ class SearchMessagesTool extends MessageHistoryTool {
         }
 
         return out;
-    }
-
-    _createMatcher(query, isRegex) {
-        let regex;
-
-        try {
-            regex = new RE2(isRegex ? query : RegexUtil.escapeRegex(query), "i");
-        } catch (err) {
-            throw new AIError(`Invalid regex: ${err.message}`);
-        }
-
-        if (regex.test("") || regex.test(" ")) {
-            throw new AIError("Match-all regex isn't allowed; use a real text query");
-        }
-
-        return regex;
-    }
-
-    _getSearchText(msg) {
-        const embedText = msg.embeds
-            .map(embed => DiscordUtil.stringifyEmbed(embed, { urls: false }))
-            .filter(Util.nonemptyString);
-
-        return [msg.content, ...embedText].join(" ");
     }
 }
 

@@ -5,6 +5,48 @@ import { getClient, getConfig } from "../LevertClient.js";
 import Util from "../util/Util.js";
 import DiscordUtil from "../util/DiscordUtil.js";
 
+function runtimeLines(request, toolNames, effort) {
+    const author = request.author;
+
+    const lines = [
+        `- Current date/time (UTC): ${new Date().toISOString()}`,
+        `- Available tools: ${toolNames.join(", ")}`,
+        request.guild === null ? "- Location: direct messages" : "- Location: a Discord server",
+        `- Channel: ${channelMention(request.channel.id)}`,
+        `- Asking user mention: ${userMention(author.id)}`,
+        `- Command prefix: ${getConfig().cmdPrefix}`,
+        `- Effort: ${effort}`
+    ];
+
+    const questbooks = formatQuestbooks();
+
+    if (!Util.empty(questbooks)) {
+        lines.push(`- Questbooks: ${questbooks}`);
+    }
+
+    return lines;
+}
+
+function formatQuestbooks() {
+    const manager = getClient().questbookManager;
+
+    if (typeof manager === "undefined") {
+        return "";
+    }
+
+    return manager.names.map(name => `${name} (${manager.get(name).title})`).join(", ");
+}
+
+function attachments(msg) {
+    return msg === null
+        ? []
+        : DiscordUtil.getAttachments(msg).map(attach => ({
+              name: attach.name,
+              contentType: attach.contentType,
+              url: attach.url
+          }));
+}
+
 class AIPrompt {
     static maxReplyLength = 1200;
 
@@ -18,7 +60,7 @@ class AIPrompt {
     }
 
     build(request, toolNames, effort) {
-        const lines = AIPrompt._runtimeLines(request, toolNames, effort);
+        const lines = runtimeLines(request, toolNames, effort);
         return `${this.instructions}\n\n## RUNTIME CONTEXT\n${lines.join("\n")}`;
     }
 
@@ -26,7 +68,7 @@ class AIPrompt {
         const context = {
             serverName: request.guild?.name,
             askingUserName: request.author.globalName ?? request.author.username,
-            attachments: AIPrompt._attachments(request.msg)
+            attachments: attachments(request.msg)
         };
 
         if (request.replyMsg !== null) {
@@ -58,48 +100,6 @@ class AIPrompt {
         return notes.join("\n");
     }
 
-    static _runtimeLines(request, toolNames, effort) {
-        const author = request.author;
-
-        const lines = [
-            `- Current date/time (UTC): ${new Date().toISOString()}`,
-            `- Available tools: ${toolNames.join(", ")}`,
-            request.guild === null ? "- Location: direct messages" : "- Location: a Discord server",
-            `- Channel: ${channelMention(request.channel.id)}`,
-            `- Asking user mention: ${userMention(author.id)}`,
-            `- Command prefix: ${getConfig().cmdPrefix}`,
-            `- Effort: ${effort}`
-        ];
-
-        const questbooks = AIPrompt._formatQuestbooks();
-
-        if (!Util.empty(questbooks)) {
-            lines.push(`- Questbooks: ${questbooks}`);
-        }
-
-        return lines;
-    }
-
-    static _formatQuestbooks() {
-        const manager = getClient().questbookManager;
-
-        if (typeof manager === "undefined") {
-            return "";
-        }
-
-        return manager.names.map(name => `${name} (${manager.get(name).title})`).join(", ");
-    }
-
-    static _attachments(msg) {
-        return msg === null
-            ? []
-            : DiscordUtil.getAttachments(msg).map(attach => ({
-                  name: attach.name,
-                  contentType: attach.contentType,
-                  url: attach.url
-              }));
-    }
-
     static _replyContext(msg) {
         const embedText = msg.embeds.flatMap(embed => [
             embed.description,
@@ -111,7 +111,7 @@ class AIPrompt {
         return {
             authorId: msg.author.id,
             text: Util.trimString(parts.join("\n"), AIPrompt.maxReplyLength),
-            attachments: AIPrompt._attachments(msg)
+            attachments: attachments(msg)
         };
     }
 }

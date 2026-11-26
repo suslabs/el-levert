@@ -1,5 +1,6 @@
 import Util from "../../util/Util.js";
 import ArrayUtil from "../../util/ArrayUtil.js";
+import ObjectUtil from "../../util/ObjectUtil.js";
 import { isSuccessStatus } from "../../util/misc/HttpStatusCodes.js";
 import HTTPUtil from "../../util/vm/HTTPUtil.js";
 
@@ -30,9 +31,11 @@ class SearchBackend {
     }
 
     async request(config) {
+        config = ObjectUtil.guaranteeObject(config);
+
         const res = await this.http.request({
-            validateStatus: () => true,
-            ...config
+            ...config,
+            validateStatus: () => true
         });
 
         if (!isSuccessStatus(res.status)) {

@@ -11,6 +11,44 @@ import { httpStatusCodes, isServerErrorStatus, isSuccessStatus } from "../util/m
 
 import AIError from "../errors/AIError.js";
 
+function addUsage(state, model, usage) {
+    state.tokens += usage.tokens;
+    state.reasoning += usage.reasoning;
+
+    getLogger().debug(
+        `AI request to ${model} used ${Util.formatNumber(usage.tokens)} tokens (${Util.formatNumber(usage.cached)} cached).`
+    );
+}
+
+function isKeyRejected(status) {
+    return status === httpStatusCodes.UNAUTHORIZED || status === httpStatusCodes.FORBIDDEN;
+}
+
+function canCoolDown(status) {
+    return (
+        status === httpStatusCodes.TOO_MANY_REQUESTS ||
+        status === httpStatusCodes.PAYMENT_REQUIRED ||
+        status === httpStatusCodes.REQUEST_TIMEOUT ||
+        isServerErrorStatus(status)
+    );
+}
+
+function canFallback(status) {
+    return status === httpStatusCodes.NOT_FOUND || isKeyRejected(status) || canCoolDown(status);
+}
+
+function combineSignals(timeoutSignal, signal) {
+    return signal === null ? timeoutSignal : AbortSignal.any([timeoutSignal, signal]);
+}
+
+function getProviderKeyId(provider, keyIdx) {
+    return `${provider}#${keyIdx}`;
+}
+
+function getKeyId(spec, keyIdx) {
+    return `${spec.provider}:${spec.name}#${keyIdx}`;
+}
+
 class ModelRouter {
     static minTimeout = 1 / Util.durationSeconds.milli;
 
@@ -35,15 +73,19 @@ class ModelRouter {
         this.models = models;
 
         this.thinkingLevel = options.thinkingLevel;
-        this.requestTimeout = options.requestTimeout;
+        this.requestTimeout = Util.normalizeLimit(options.requestTimeout);
         this.redactLogText = options.redactLogText ?? LoggerUtil.redactText;
 
-        this.quotas = new ModelQuotas(options.modelCooldown ?? 0, options.maxModelCooldown ?? 0);
+        this.quotas = new ModelQuotas(options.modelCooldown ?? 0, options.maxModelCooldown ?? -1);
         this.rejectedKeys = new Map();
     }
 
     get endpoints() {
         return Array.from(this.providers.values(), provider => provider.endpoint);
+    }
+
+    destroy() {
+        this.quotas.destroy();
     }
 
     createState() {
@@ -74,48 +116,6 @@ class ModelRouter {
 
     static _timeoutErrors = new Set(["CanceledError", "AbortError"]);
 
-    static _addUsage(state, model, usage) {
-        state.tokens += usage.tokens;
-        state.reasoning += usage.reasoning;
-
-        getLogger().debug(
-            `AI request to ${model} used ${Util.formatNumber(usage.tokens)} tokens (${Util.formatNumber(usage.cached)} cached).`
-        );
-    }
-
-    static _isKeyRejected(status) {
-        return status === httpStatusCodes.UNAUTHORIZED || status === httpStatusCodes.FORBIDDEN;
-    }
-
-    static _canCoolDown(status) {
-        return (
-            status === httpStatusCodes.TOO_MANY_REQUESTS ||
-            status === httpStatusCodes.PAYMENT_REQUIRED ||
-            status === httpStatusCodes.REQUEST_TIMEOUT ||
-            isServerErrorStatus(status)
-        );
-    }
-
-    static _canFallback(status) {
-        return (
-            status === httpStatusCodes.NOT_FOUND ||
-            ModelRouter._isKeyRejected(status) ||
-            ModelRouter._canCoolDown(status)
-        );
-    }
-
-    static _combineSignals(timeoutSignal, signal) {
-        return signal === null ? timeoutSignal : AbortSignal.any([timeoutSignal, signal]);
-    }
-
-    static _getProviderKeyId(provider, keyIdx) {
-        return `${provider}#${keyIdx}`;
-    }
-
-    static _getKeyId(spec, keyIdx) {
-        return `${spec.provider}:${spec.name}#${keyIdx}`;
-    }
-
     _getSpec(state) {
         return this.models[state.modelIdx] ?? null;
     }
@@ -126,16 +126,17 @@ class ModelRouter {
 
     async _post(spec, keyIdx, body, options) {
         const provider = this._getProviderFor(spec);
+
         const stream = options.stream;
 
-        const request = provider.buildRequest(spec.name, provider.keys[keyIdx], body, options);
-        const res = await this.http.request({
-            ...request,
-            method: "post",
-            responseType: stream ? "stream" : "json",
-            signal: options.signal,
-            validateStatus: () => true
-        });
+        const request = provider.buildRequest(spec.name, provider.keys[keyIdx], body, options),
+            res = await this.http.request({
+                ...request,
+                method: "post",
+                responseType: stream ? "stream" : "json",
+                signal: options.signal,
+                validateStatus: () => true
+            });
 
         if (stream && !isSuccessStatus(res.status)) {
             const text = (await StreamUtil.read(res.data)).toString();
@@ -147,6 +148,7 @@ class ModelRouter {
 
     async _request(spec, keyIdx, body, state, options) {
         const provider = this._getProviderFor(spec);
+
         let res = await this._post(spec, keyIdx, body, options);
 
         if (options.thinkingLevel !== null && provider.isThinkingError(res)) {
@@ -165,28 +167,37 @@ class ModelRouter {
     }
 
     async _tryRequest(spec, keyIdx, body, state, options, stream, deadline) {
-        const controller = new AbortController();
-        const startTimer = () => {
-            const timeout = Util.clamp(deadline - Date.now(), ModelRouter.minTimeout, this.requestTimeout);
-            return setTimeout(() => controller.abort(), timeout);
-        };
+        const controller = new AbortController(),
+            startTimer = () => {
+                const timeout = Util.getRemainingTime(deadline, this.requestTimeout, ModelRouter.minTimeout);
+                return timeout === -1 ? null : setTimeout(() => controller.abort(), timeout);
+            };
 
         let timer = startTimer();
 
-        const onParts = options.onParts,
+        const onParts = options.onParts ?? null,
             refreshOnParts = parts => {
-                clearTimeout(timer);
+                if (timer !== null) {
+                    clearTimeout(timer);
+                }
+
                 timer = startTimer();
+
+                if (typeof onParts !== "function") {
+                    return;
+                }
+
                 return onParts(parts);
             };
 
         const signal = options.signal ?? null,
-            thinkingLevel = state.noThinking.has(spec.id) ? null : (options.thinkingLevel ?? this.thinkingLevel);
+            preferredLevel = options.thinkingLevel ?? this.thinkingLevel,
+            thinkingLevel = state.noThinking.has(spec.id) ? null : preferredLevel;
 
         const requestOptions = {
             stream,
             thinkingLevel,
-            signal: ModelRouter._combineSignals(controller.signal, signal),
+            signal: combineSignals(controller.signal, signal),
             onParts: refreshOnParts
         };
 
@@ -201,7 +212,9 @@ class ModelRouter {
 
             throw err;
         } finally {
-            clearTimeout(timer);
+            if (timer !== null) {
+                clearTimeout(timer);
+            }
         }
     }
 
@@ -209,21 +222,21 @@ class ModelRouter {
         const status = res?.status ?? null;
         state.lastStatus = status;
 
-        const message = res?.data?.error?.message;
-        const note = Util.nonemptyString(message) ? `: ${this.redactLogText(message)}` : "";
+        const message = res?.data?.error?.message,
+            note = Util.nonemptyString(message) ? `: ${this.redactLogText(message)}` : "";
 
-        if (ModelRouter._isKeyRejected(status)) {
-            this.rejectedKeys.set(ModelRouter._getProviderKeyId(spec.provider, keyIdx), status);
+        if (isKeyRejected(status)) {
+            this.rejectedKeys.set(getProviderKeyId(spec.provider, keyIdx), status);
             getLogger().error(
                 `AI key ${keyIdx + 1} for ${spec.provider} was rejected (HTTP ${status}${note}). Skipping it until the bot restarts.`
             );
             return;
         }
 
-        const keyId = ModelRouter._getKeyId(spec, keyIdx);
+        const keyId = getKeyId(spec, keyIdx);
         state.failed.add(keyId);
 
-        if (!ModelRouter._canCoolDown(status)) {
+        if (!canCoolDown(status)) {
             getLogger().warn(`AI model ${spec.id} ${reason} on key ${keyIdx + 1}${note}. Trying the next one.`);
             return;
         }
@@ -242,9 +255,9 @@ class ModelRouter {
         const keys = this._getProviderFor(spec).keys;
 
         for (let i = 0; i < keys.length; i++) {
-            const keyId = ModelRouter._getKeyId(spec, i);
+            const keyId = getKeyId(spec, i);
 
-            if (state.failed.has(keyId) || this.rejectedKeys.has(ModelRouter._getProviderKeyId(spec.provider, i))) {
+            if (state.failed.has(keyId) || this.rejectedKeys.has(getProviderKeyId(spec.provider, i))) {
                 continue;
             }
 
@@ -254,10 +267,10 @@ class ModelRouter {
                 continue;
             }
 
-            let recovered;
+            let recovered = false;
 
             try {
-                if (Date.now() >= deadline) {
+                if (Util.getRemainingTime(deadline) === 0) {
                     throw new AIError("Ran out of time");
                 }
 
@@ -271,7 +284,7 @@ class ModelRouter {
                     const { res, out } = attempt;
 
                     if (out === null) {
-                        if (!ModelRouter._canFallback(res.status)) {
+                        if (!canFallback(res.status)) {
                             throw this._createError(spec, res);
                         }
 
@@ -279,19 +292,19 @@ class ModelRouter {
                         continue;
                     }
 
-                    ModelRouter._addUsage(state, spec.id, out.usage);
+                    addUsage(state, spec.id, out.usage);
 
                     if (!stream || out.finishReason !== null) {
                         if (!state.models.includes(spec.id)) {
                             state.models.push(spec.id);
                         }
 
-                        recovered = stream;
+                        recovered = true;
                         return out;
                     }
 
-                    const { error } = out;
-                    const failure = typeof error?.code === "number" ? { status: error.code, data: { error } } : null;
+                    const { error } = out,
+                        failure = typeof error?.code === "number" ? { status: error.code, data: { error } } : null;
                     this._fail(state, spec, i, stream, "stopped mid-answer", failure);
                 }
 
@@ -299,7 +312,7 @@ class ModelRouter {
                     await options.onRestart();
                 }
             } finally {
-                release(recovered);
+                release(recovered, stream);
             }
         }
 
@@ -307,8 +320,8 @@ class ModelRouter {
     }
 
     _createError(spec, res) {
-        const provider = this._getProviderFor(spec);
-        const message = this.redactLogText(provider.getErrorMessage(res));
+        const provider = this._getProviderFor(spec),
+            message = this.redactLogText(provider.getErrorMessage(res));
 
         return new AIError(`${spec.id}: HTTP ${res.status} ${message}`.trim(), {
             model: spec.id,
@@ -324,17 +337,17 @@ class ModelRouter {
             const { keys } = this._getProviderFor(spec);
 
             for (const [i] of keys.entries()) {
-                const rejected = this.rejectedKeys.get(ModelRouter._getProviderKeyId(spec.provider, i));
+                const rejected = this.rejectedKeys.get(getProviderKeyId(spec.provider, i));
 
                 if (typeof rejected !== "undefined") {
                     rejectedStatus ??= rejected;
                     continue;
                 }
 
-                const limit = this.quotas.getActive(ModelRouter._getKeyId(spec, i));
+                const limit = this.quotas.getActive(getKeyId(spec, i));
 
                 if (limit === null) {
-                    const status = ModelRouter._isKeyRejected(state.lastStatus) ? null : state.lastStatus;
+                    const status = isKeyRejected(state.lastStatus) ? null : state.lastStatus;
                     return { status, retryIn: 0 };
                 } else if (soonest === null || limit.until < soonest.until) {
                     soonest = limit;
@@ -350,7 +363,7 @@ class ModelRouter {
     async _send(body, state, options, stream) {
         options = ObjectUtil.guaranteeObject(options);
 
-        const deadline = Date.now() + (options.timeLeft ?? Infinity);
+        const deadline = Util.createDeadline(options.timeLeft);
 
         for (; state.modelIdx < this.models.length; state.modelIdx++) {
             const spec = this.models[state.modelIdx],

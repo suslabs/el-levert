@@ -1,6 +1,18 @@
 import Util from "../../util/Util.js";
 import AIUtil from "../../util/ai/AIUtil.js";
 
+function normalizeArg(key, value) {
+    return key === "query" && typeof value === "string" ? AIUtil.normalizeQuery(value) : value;
+}
+
+function getKey(call) {
+    const args = Object.keys(call.args)
+        .sort()
+        .map(key => [key, normalizeArg(key, call.args[key])]);
+
+    return `${call.name}:${JSON.stringify(args)}`;
+}
+
 class AICallLedger {
     static repeatNote = "You already made this exact call; this is its result. Use it instead of calling again.";
     static budgetNote =
@@ -24,7 +36,7 @@ class AICallLedger {
     }
 
     async run(call, execute) {
-        const key = AICallLedger._getKey(call);
+        const key = getKey(call);
 
         if (this.results.has(key)) {
             return { repeated: true, note: AICallLedger.repeatNote, result: await this.results.get(key) };
@@ -45,18 +57,6 @@ class AICallLedger {
         this.found ||= AIUtil.hasFindings(res);
 
         return res;
-    }
-
-    static _normalize(key, value) {
-        return key === "query" && typeof value === "string" ? AIUtil.normalizeQuery(value) : value;
-    }
-
-    static _getKey(call) {
-        const args = Object.keys(call.args)
-            .sort()
-            .map(key => [key, AICallLedger._normalize(key, call.args[key])]);
-
-        return `${call.name}:${JSON.stringify(args)}`;
     }
 }
 

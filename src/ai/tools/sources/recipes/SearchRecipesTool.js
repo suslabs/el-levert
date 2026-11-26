@@ -13,6 +13,74 @@ import AIUtil from "../../../../util/ai/AIUtil.js";
 import HTMLUtil from "../../../../util/misc/HTMLUtil.js";
 import ToolParams from "../../../../util/ai/ToolParams.js";
 
+const wordRegex = /[^a-z0-9]+/;
+
+function getInitials(name) {
+    return name
+        .toLowerCase()
+        .split(wordRegex)
+        .filter(Util.nonemptyString)
+        .map(word => Util.first(word))
+        .join("");
+}
+
+function getItem(data, query) {
+    if (data.error === NomiCodexClient.notFoundError || data.item == null) {
+        return null;
+    }
+
+    const { id, name } = data.item,
+        item = { id, name: HTMLUtil.stripTags(name) };
+
+    query = AIUtil.normalizeQuery(query);
+    const matches = ` ${AIUtil.normalizeQuery(item.name)} `.includes(` ${query} `) || id?.toLowerCase() === query;
+
+    return matches ? item : null;
+}
+
+function countMachines(entries, getType) {
+    return Object.fromEntries(ArrayUtil.frequency(entries, entry => HTMLUtil.stripTags(getType(entry))));
+}
+
+function toSeconds(ticks) {
+    return ticks / OverclockingValues.ticksPerSecond;
+}
+
+function formatRecipe(recipe, itemId) {
+    const out = {
+        itemId: recipe.itemId ?? itemId,
+        idx: recipe.idx ?? null,
+        role: recipe.role,
+        machine: recipe.type,
+        euPerTick: recipe.eu,
+        seconds: toSeconds(recipe.dur),
+        tier: recipe.tier,
+        heat: recipe.heat,
+        cleanroom: recipe.clean ?? false,
+        inputs: HTMLUtil.stripTags(recipe.ins),
+        outputs: HTMLUtil.stripTags(recipe.outs)
+    };
+
+    const variants = recipe.variants ?? [];
+
+    if (!Util.empty(variants)) {
+        out.variants = variants.length;
+        out.alsoIn = ArrayUtil.unique(variants.map(variant => variant.type).filter(type => type !== recipe.type));
+    }
+
+    return out;
+}
+
+function formatUse(use) {
+    return {
+        makes: HTMLUtil.stripTags(use.n),
+        machine: use.t,
+        euPerTick: use.e,
+        seconds: toSeconds(use.d),
+        inputs: HTMLUtil.stripTags(use.i)
+    };
+}
+
 class SearchRecipesTool extends SourceTool {
     static info = {
         name: "search_recipes",
@@ -111,13 +179,13 @@ class SearchRecipesTool extends SourceTool {
         const matches = SearchRecipesTool._filterByMachine(entries, getType, machine),
             shown = matches.slice(0, SearchRecipesTool.maxResults);
 
-        out.machines = SearchRecipesTool._countMachines(entries, getType);
+        out.machines = countMachines(entries, getType);
 
         if (uses) {
-            out.uses = shown.map(use => SearchRecipesTool._formatUse(use));
+            out.uses = shown.map(use => formatUse(use));
             out.totalUses = matches.length;
         } else {
-            out.recipes = shown.map(recipe => SearchRecipesTool._formatRecipe(recipe, item.id));
+            out.recipes = shown.map(recipe => formatRecipe(recipe, item.id));
             out.totalRecipes = matches.length;
         }
 
@@ -128,22 +196,8 @@ class SearchRecipesTool extends SourceTool {
         return out;
     }
 
-    static _wordRegex = /[^a-z0-9]+/;
     static _fluidQualifier = /^(?:fluid|molten)\s+|\s+(?:fluid|\(fluid\))$/gi;
     static _materialForms = new Set(["dust", "ingot", "gem"]);
-
-    static _getItem(data, query) {
-        if (data.error === NomiCodexClient.notFoundError || data.item == null) {
-            return null;
-        }
-
-        const { id, name } = data.item;
-        const item = { id, name: HTMLUtil.stripTags(name) };
-
-        query = AIUtil.normalizeQuery(query);
-        const matches = ` ${AIUtil.normalizeQuery(item.name)} `.includes(` ${query} `) || id?.toLowerCase() === query;
-        return matches ? item : null;
-    }
 
     static _getMaterialForms(query, item, alternatives) {
         query = AIUtil.normalizeQuery(query);
@@ -153,6 +207,7 @@ class SearchRecipesTool extends SourceTool {
         }
 
         const prefix = `${query} `;
+
         const forms = alternatives.filter(name => {
             const normalized = AIUtil.normalizeQuery(name);
             return normalized.startsWith(prefix) && this._materialForms.has(normalized.slice(prefix.length));
@@ -161,22 +216,13 @@ class SearchRecipesTool extends SourceTool {
         return Util.empty(forms) ? [] : ArrayUtil.unique([...forms, `${item.name} (fluid)`]);
     }
 
-    static _getInitials(name) {
-        return name
-            .toLowerCase()
-            .split(SearchRecipesTool._wordRegex)
-            .filter(Util.nonemptyString)
-            .map(word => Util.first(word))
-            .join("");
-    }
-
     static _matchesMachine(type, machine) {
         const lowerType = HTMLUtil.stripTags(type).toLowerCase();
 
         machine = machine.toLowerCase();
         machine = SearchRecipesTool.machineAliases[machine] ?? machine;
 
-        return lowerType.includes(machine) || SearchRecipesTool._getInitials(lowerType) === machine;
+        return lowerType.includes(machine) || getInitials(lowerType) === machine;
     }
 
     static _filterByMachine(entries, getType, machine) {
@@ -185,49 +231,6 @@ class SearchRecipesTool extends SourceTool {
         }
 
         return entries.filter(entry => SearchRecipesTool._matchesMachine(getType(entry), machine));
-    }
-
-    static _countMachines(entries, getType) {
-        return Object.fromEntries(ArrayUtil.frequency(entries, entry => HTMLUtil.stripTags(getType(entry))));
-    }
-
-    static _toSeconds(ticks) {
-        return ticks / OverclockingValues.ticksPerSecond;
-    }
-
-    static _formatRecipe(recipe, itemId) {
-        const out = {
-            itemId: recipe.itemId ?? itemId,
-            idx: recipe.idx ?? null,
-            role: recipe.role,
-            machine: recipe.type,
-            euPerTick: recipe.eu,
-            seconds: SearchRecipesTool._toSeconds(recipe.dur),
-            tier: recipe.tier,
-            heat: recipe.heat,
-            cleanroom: recipe.clean ?? false,
-            inputs: HTMLUtil.stripTags(recipe.ins),
-            outputs: HTMLUtil.stripTags(recipe.outs)
-        };
-
-        const variants = recipe.variants ?? [];
-
-        if (!Util.empty(variants)) {
-            out.variants = variants.length;
-            out.alsoIn = ArrayUtil.unique(variants.map(variant => variant.type).filter(type => type !== recipe.type));
-        }
-
-        return out;
-    }
-
-    static _formatUse(use) {
-        return {
-            makes: HTMLUtil.stripTags(use.n),
-            machine: use.t,
-            euPerTick: use.e,
-            seconds: SearchRecipesTool._toSeconds(use.d),
-            inputs: HTMLUtil.stripTags(use.i)
-        };
     }
 
     async _search(query, uses, session, expert) {
@@ -240,14 +243,14 @@ class SearchRecipesTool extends SourceTool {
 
     async _resolveItem(query, uses, session, expert) {
         const data = await this._search(query, uses, session, expert),
-            item = SearchRecipesTool._getItem(data, query);
+            item = getItem(data, query);
 
         const fluidQuery = query.replace(SearchRecipesTool._fluidQualifier, "").trim(),
             fluid = fluidQuery !== query;
 
         if (item === null && fluid && Util.nonemptyString(fluidQuery)) {
             const fluidData = await this._search(fluidQuery, uses, session, expert),
-                fluidItem = SearchRecipesTool._getItem(fluidData, fluidQuery);
+                fluidItem = getItem(fluidData, fluidQuery);
 
             if (fluidItem?.id?.startsWith("f:")) {
                 return { data: fluidData, item: fluidItem, fluid };

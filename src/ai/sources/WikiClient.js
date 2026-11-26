@@ -71,9 +71,8 @@ class WikiClient {
     async read(title, options) {
         options = ObjectUtil.guaranteeObject(options);
 
-        const language = options.language ?? this.language;
-
-        const timeout = options.timeout ?? 0;
+        const language = options.language ?? this.language,
+            timeout = options.timeout ?? 0;
 
         const data = await this._query(
             language,

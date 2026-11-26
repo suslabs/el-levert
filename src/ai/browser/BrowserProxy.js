@@ -81,8 +81,8 @@ class BrowserProxy {
             return;
         }
 
-        const [, host, port] = authority;
-        const target = URL.canParse(`http://${host}:${port}`) ? new URL(`http://${host}:${port}`) : null;
+        const [, host, port] = authority,
+            target = URL.canParse(`http://${host}:${port}`) ? new URL(`http://${host}:${port}`) : null;
 
         if (target === null || Number(port) === 0) {
             socket.destroy();

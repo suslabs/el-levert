@@ -10,6 +10,26 @@ import ToolParams from "../../../util/ai/ToolParams.js";
 
 import AIError from "../../../errors/AIError.js";
 
+function formatUser(member, lower) {
+    const user = member.user,
+        names = [user.id, user.username, user.globalName, member.nickname, member.displayName];
+
+    return {
+        ...DiscordUtil.getUserSummary(user, member),
+        exactMatch: names.some(name => typeof name === "string" && name.toLowerCase() === lower)
+    };
+}
+
+function getNote(matches, exact) {
+    if (Util.empty(matches)) {
+        return "No users matched.";
+    } else if (Util.multiple(exact)) {
+        return "Several exact matches; ask which one is meant.";
+    } else {
+        return "Partial matches only.";
+    }
+}
+
 class FindUsersTool extends AITool {
     static info = {
         name: "find_users",
@@ -49,7 +69,7 @@ class FindUsersTool extends AITool {
         const found = await getClient().findUsers(query, { sv_id: session.request.guildId, limit });
 
         const lower = query.toLowerCase(),
-            matches = found.map(member => this._formatUser(member, lower));
+            matches = found.map(member => formatUser(member, lower));
 
         const exact = matches.filter(match => match.exactMatch);
 
@@ -57,30 +77,10 @@ class FindUsersTool extends AITool {
             return { matches: exact, note: "Unique exact match. Stop retrieval; do not web search." };
         }
 
-        return { matches, note: this._getNote(matches, exact) };
+        return { matches, note: getNote(matches, exact) };
     }
 
     static _mentionPrefixRegex = /^@/;
-
-    _formatUser(member, lower) {
-        const user = member.user,
-            names = [user.id, user.username, user.globalName, member.nickname, member.displayName];
-
-        return {
-            ...DiscordUtil.getUserSummary(user, member),
-            exactMatch: names.some(name => typeof name === "string" && name.toLowerCase() === lower)
-        };
-    }
-
-    _getNote(matches, exact) {
-        if (Util.empty(matches)) {
-            return "No users matched.";
-        } else if (Util.multiple(exact)) {
-            return "Several exact matches; ask which one is meant.";
-        } else {
-            return "Partial matches only.";
-        }
-    }
 }
 
 export default FindUsersTool;

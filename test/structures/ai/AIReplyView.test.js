@@ -73,7 +73,6 @@ describe("AIReplyView", () => {
             [button] = payload.components[0].toJSON().components;
 
         expect(button).toMatchObject({ label: "Cancel", style: ButtonStyle.Danger, custom_id: "ai:cancel:cancel-1" });
-        expect(AIReplyView.getAction(button.custom_id)).toBe(AIReplyView.cancelAction);
         expect(payload.attachments).toEqual([]);
     });
 
@@ -224,10 +223,6 @@ describe("AIReplyView", () => {
             ["1", `ai:followup:0:${session.id}`],
             ["2", `ai:followup:1:${session.id}`]
         ]);
-
-        expect(AIReplyView.getFollowUp(buttons[1].custom_id, followUps)).toBe("Two_?");
-        expect(AIReplyView.getFollowUp(`ai:followup:7:${session.id}`, followUps)).toBe(null);
-        expect(AIReplyView.getFollowUp(`snooze:1:${session.id}`, followUps)).toBe(null);
     });
 
     test("renders errors with a red border and no footer", () => {

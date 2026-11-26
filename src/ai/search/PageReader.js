@@ -5,6 +5,24 @@ import { isSuccessStatus } from "../../util/misc/HttpStatusCodes.js";
 
 import AIError from "../../errors/AIError.js";
 
+function toPage(data, contentType, isHtml) {
+    if (contentType.startsWith("image/")) {
+        throw new AIError("This URL is an image; use inspect_image");
+    } else if (isHtml) {
+        return HTMLUtil.toText(data);
+    }
+
+    return { title: "", text: String(data) };
+}
+
+// Evaluated in Chromium, so this function must be self-contained.
+function pageText(minLength) {
+    const doc = globalThis.document,
+        text = (doc.querySelector("main, article") ?? doc.body)?.innerText.trim() ?? "";
+
+    return text.length >= minLength ? { title: doc.title, text } : null;
+}
+
 class PageReader {
     static accept = "text/html,text/plain,application/json;q=0.9,*/*;q=0.5";
     static minTextLength = 200;
@@ -20,7 +38,7 @@ class PageReader {
             throw new AIError("Only absolute http(s) URLs are supported");
         }
 
-        const deadline = Date.now() + timeout;
+        const deadline = Util.createDeadline(timeout);
 
         const res = await this.http.request({
             url,
@@ -33,15 +51,15 @@ class PageReader {
         const contentType = HTTPUtil.getContentType(res.headers),
             isHtml = contentType.includes("html");
 
-        const original = isSuccessStatus(res.status) ? PageReader._toPage(res.data, contentType, isHtml) : null;
+        const original = isSuccessStatus(res.status) ? toPage(res.data, contentType, isHtml) : null;
 
         if (original !== null && (!isHtml || original.text.length >= PageReader.minTextLength)) {
             return original;
         }
 
-        const remaining = deadline - Date.now();
+        const remaining = Util.getRemainingTime(deadline);
 
-        if (this.browser !== null && remaining > 0) {
+        if (this.browser !== null && remaining !== 0) {
             try {
                 const rendered = await this._render(url, remaining);
 
@@ -62,26 +80,9 @@ class PageReader {
         throw new AIError(`HTTP ${res.status}`, res.status);
     }
 
-    static _toPage(data, contentType, isHtml) {
-        if (contentType.startsWith("image/")) {
-            throw new AIError("This URL is an image; use inspect_image");
-        } else if (isHtml) {
-            return HTMLUtil.toText(data);
-        }
-
-        return { title: "", text: String(data) };
-    }
-
-    // Evaluated in Chromium, so this function must be self-contained.
-    static _pageText(minLength) {
-        const doc = globalThis.document;
-        const text = (doc.querySelector("main, article") ?? doc.body)?.innerText.trim() ?? "";
-        return text.length >= minLength ? { title: doc.title, text } : null;
-    }
-
     static async _readRendered(page, timeout) {
         try {
-            const content = await page.waitForFunction(PageReader._pageText, { timeout }, PageReader.minTextLength);
+            const content = await page.waitForFunction(pageText, { timeout }, PageReader.minTextLength);
 
             try {
                 return await content.jsonValue();
@@ -93,21 +94,24 @@ class PageReader {
                 throw err;
             }
 
-            return await page.evaluate(PageReader._pageText, 0);
+            return await page.evaluate(pageText, 0);
         }
     }
 
     async _render(url, timeout) {
-        const deadline = Date.now() + timeout;
+        const deadline = Util.createDeadline(timeout);
 
         return await this.browser.withPage(async page => {
-            const remaining = deadline - Date.now();
+            const remaining = Util.getRemainingTime(deadline);
 
-            if (remaining <= 0) {
+            if (remaining === 0) {
                 throw new AIError("Timed out opening the page");
             }
 
-            const res = await page.goto(url, { waitUntil: "domcontentloaded", timeout: remaining });
+            const res = await page.goto(url, {
+                waitUntil: "domcontentloaded",
+                timeout: remaining === -1 ? 0 : remaining
+            });
 
             if (res === null || HTTPUtil.getHost(res.url()) === null) {
                 throw new AIError("The browser returned no HTTP page");
@@ -117,7 +121,7 @@ class PageReader {
                 throw new AIError("This URL is an image; use inspect_image");
             }
 
-            const wait = Math.max(1, Math.min(deadline - Date.now(), PageReader.renderWait));
+            const wait = Util.getRemainingTime(deadline, PageReader.renderWait, 1);
             return await PageReader._readRendered(page, wait);
         }, timeout);
     }

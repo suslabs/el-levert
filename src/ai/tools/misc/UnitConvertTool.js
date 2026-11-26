@@ -10,6 +10,14 @@ import ToolParams from "../../../util/ai/ToolParams.js";
 
 import AIError from "../../../errors/AIError.js";
 
+function toPerTick(value, unit) {
+    return unit.perSecond ? value / OverclockingValues.ticksPerSecond : value;
+}
+
+function fromPerTick(value, unit) {
+    return unit.perSecond ? value * OverclockingValues.ticksPerSecond : value;
+}
+
 class UnitConvertTool extends AITool {
     static info = {
         name: "unit_convert",
@@ -56,9 +64,9 @@ class UnitConvertTool extends AITool {
             );
         }
 
-        const perTick = this._toPerTick(args.value, from),
+        const perTick = toPerTick(args.value, from),
             converted = ConversionUtil.convertValue(perTick, from.unit, to.unit),
-            result = Util.round(this._fromPerTick(converted, to), UnitConvertTool.resultDigits);
+            result = Util.round(fromPerTick(converted, to), UnitConvertTool.resultDigits);
 
         const assumptions = [];
 
@@ -97,14 +105,6 @@ class UnitConvertTool extends AITool {
             unit,
             perSecond: typeof time !== "undefined" && time.startsWith("s")
         };
-    }
-
-    _toPerTick(value, unit) {
-        return unit.perSecond ? value / OverclockingValues.ticksPerSecond : value;
-    }
-
-    _fromPerTick(value, unit) {
-        return unit.perSecond ? value * OverclockingValues.ticksPerSecond : value;
     }
 }
 

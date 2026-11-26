@@ -10,6 +10,10 @@ import DiscordUtil from "../../../util/DiscordUtil.js";
 
 import AIError from "../../../errors/AIError.js";
 
+function resolveChannelId(text) {
+    return Util.first(DiscordUtil.findChannelIds(text)) ?? Util.first(DiscordUtil.findUserIds(text)) ?? null;
+}
+
 class MessageHistoryTool extends AITool {
     static pageSize = 100;
     static maxContentLength = 500;
@@ -21,9 +25,10 @@ class MessageHistoryTool extends AITool {
             pageSize = options.pageSize ?? MessageHistoryTool.pageSize;
 
         const request = session.request,
-            channelId = this._resolveChannelId(String(options.channelId ?? "")) ?? request.channel.id;
+            channelId = resolveChannelId(String(options.channelId ?? "")) ?? request.channel.id;
 
         const msgs = [];
+
         let before = options.before;
 
         for (let i = 0; i < pages; i++) {
@@ -68,10 +73,6 @@ class MessageHistoryTool extends AITool {
 
     parseUserId(id) {
         return Util.first(DiscordUtil.findUserIds(String(id ?? ""))) ?? null;
-    }
-
-    _resolveChannelId(text) {
-        return Util.first(DiscordUtil.findChannelIds(text)) ?? Util.first(DiscordUtil.findUserIds(text)) ?? null;
     }
 }
 

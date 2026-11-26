@@ -43,14 +43,19 @@ class AISession {
 
         const aiManager = getClient().aiManager;
 
+        const history = options.history ?? [],
+            onProgress = options.onProgress ?? null,
+            signal = options.signal ?? null,
+            timeLimit = Util.normalizeLimit(options.timeLimit ?? aiManager.timeLimit);
+
         this.request = request;
 
-        this.history = options.history ?? [];
-        this.onProgress = options.onProgress ?? null;
-        this.signal = options.signal ?? null;
+        this.history = history;
+        this.onProgress = onProgress;
+        this.signal = signal;
 
         this.startTime = Date.now();
-        this.deadline = this.startTime + (options.timeLimit ?? aiManager.timeLimit);
+        this.deadline = Util.createDeadline(timeLimit);
         this.state = aiManager.router.createState();
         this.effort = AIEfforts.research;
         this.toolPolicy = new AIToolPolicy();
@@ -74,7 +79,7 @@ class AISession {
     }
 
     get timeLeft() {
-        return this.deadline - Date.now();
+        return Util.getRemainingTime(this.deadline);
     }
 
     get phase() {
@@ -130,14 +135,16 @@ class AISession {
     }
 
     async generateText(body) {
-        const aiManager = getClient().aiManager,
-            out = await aiManager.router.generate(body, this.state, {
-                timeLeft: this.timeLeft,
-                signal: this.signal
-            });
+        const aiManager = getClient().aiManager;
 
-        const text = AIUtil.getText(out.parts).trim(),
-            structured = typeof body.generationConfig?.responseSchema !== "undefined";
+        const out = await aiManager.router.generate(body, this.state, {
+            timeLeft: this.timeLeft,
+            signal: this.signal
+        });
+
+        const text = AIUtil.getText(out.parts).trim();
+
+        const structured = typeof body.generationConfig?.responseSchema !== "undefined";
 
         if (!structured && aiManager.promptGuard.contains(text)) {
             throw new AIError(AIPromptGuard.refusal, { privateInstructions: true });
@@ -147,8 +154,16 @@ class AISession {
     }
 
     toolTimeout() {
-        const requestTimeout = getClient().aiManager.requestTimeout;
-        return Util.clamp(this.timeLeft - requestTimeout, AISession.minCallTime, requestTimeout);
+        const left = this.timeLeft,
+            requestTimeout = getClient().aiManager.requestTimeout;
+
+        if (left === -1) {
+            return requestTimeout;
+        } else if (requestTimeout === -1) {
+            return Math.max(AISession.minCallTime, left);
+        }
+
+        return Util.clamp(left - requestTimeout, AISession.minCallTime, requestTimeout);
     }
 
     resolveExpert(expert) {
@@ -202,8 +217,9 @@ class AISession {
     }
 
     async _triage() {
-        const aiManager = getClient().aiManager,
-            startTime = Date.now();
+        const aiManager = getClient().aiManager;
+
+        const startTime = Date.now();
 
         try {
             const triage = await aiManager.triage.classify(this, this.contents.slice(-AISession.triageTurns)),
@@ -259,8 +275,9 @@ class AISession {
     }
 
     async _checkRecipes(queries) {
-        const tools = getClient().aiManager.tools,
-            name = "search_recipes";
+        const tools = getClient().aiManager.tools;
+
+        const name = "search_recipes";
 
         if (tools.get(name, this) === null) {
             return this.toolPolicy.isExplicit ? null : "I couldn't check the pack's recipe data right now.";
@@ -294,17 +311,21 @@ class AISession {
     }
 
     async _respond() {
-        const aiManager = getClient().aiManager,
-            forcedTools = new Set();
+        const aiManager = getClient().aiManager;
 
-        let forcedTool = null,
-            answerOnly = false,
+        const forcedTools = new Set();
+
+        let forcedTool = null;
+
+        let answerOnly = false,
             rejectedRound = false;
 
-        for (let i = 0; i < this.maxSteps; i++) {
+        for (let i = 0; this.maxSteps === -1 || i < this.maxSteps; i++) {
             this._checkCancelled();
 
-            if (this.timeLeft < AISession.minCallTime) {
+            const left = this.timeLeft;
+
+            if (left !== -1 && left < AISession.minCallTime) {
                 throw new AIError("Ran out of time", { steps: this.steps.length });
             }
 
@@ -313,10 +334,15 @@ class AISession {
             const tools = aiManager.tools.getDeclarations(this),
                 names = tools.map(tool => tool.name);
 
-            const pending = this.toolPolicy.pending(names, this.calls),
-                reserve = Util.empty(pending) ? aiManager.requestTimeout : 2 * AISession.minCallTime;
+            const pending = this.toolPolicy.pending(names, this.calls);
 
-            const final = answerOnly || i === this.maxSteps - 1 || this.timeLeft < reserve || Util.empty(tools),
+            const hasRequestTimeout = aiManager.requestTimeout !== -1,
+                reserve =
+                    Util.empty(pending) && hasRequestTimeout ? aiManager.requestTimeout : 2 * AISession.minCallTime;
+
+            const lastStep = this.maxSteps !== -1 && i === this.maxSteps - 1,
+                outOfTime = left !== -1 && left < reserve,
+                final = answerOnly || lastStep || outOfTime || Util.empty(tools),
                 canAnswer = final || Util.empty(pending);
 
             const toolNote = this.toolPolicy.describe(names, pending, final),

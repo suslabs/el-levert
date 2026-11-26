@@ -22,8 +22,8 @@ class StealthBrowser {
 
     async withPage(callback, timeout) {
         try {
-            const browser = await this._getBrowser(timeout);
-            const context = await browser.createBrowserContext({ downloadBehavior: { policy: "deny" } });
+            const browser = await this._getBrowser(timeout),
+                context = await browser.createBrowserContext({ downloadBehavior: { policy: "deny" } });
 
             try {
                 const page = await context.newPage();
@@ -79,7 +79,11 @@ class StealthBrowser {
         }
 
         try {
-            return await puppeteer.launch({ headless: true, args, timeout });
+            return await puppeteer.launch({
+                headless: true,
+                args,
+                timeout: timeout != null && timeout > 0 ? timeout : 0
+            });
         } catch (err) {
             await this._proxy?.close();
             throw err;

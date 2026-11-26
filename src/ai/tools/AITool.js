@@ -10,6 +10,21 @@ import AIUtil from "../../util/ai/AIUtil.js";
 
 import AIError from "../../errors/AIError.js";
 
+function limitOutput(out) {
+    const text = JSON.stringify(out ?? null),
+        maxOutput = getClient().aiManager.maxToolOutput;
+
+    if (text.length <= maxOutput) {
+        return out;
+    }
+
+    return {
+        truncated: true,
+        found: AIUtil.hasFindings(out),
+        partial: text.slice(0, maxOutput)
+    };
+}
+
 class AITool {
     static info = null;
 
@@ -99,11 +114,10 @@ class AITool {
     }
 
     async _execute(args, session) {
-        const logger = getLogger(),
-            aiManager = getClient().aiManager;
+        const aiManager = getClient().aiManager;
 
-        if (logger.isDebugEnabled()) {
-            logger.debug(`AI tool "${this.name}" called with args:${aiManager.formatLog(args)}`);
+        if (getLogger().isDebugEnabled()) {
+            getLogger().debug(`AI tool "${this.name}" called with args:${aiManager.formatLog(args)}`);
         }
 
         const startTime = Date.now();
@@ -113,7 +127,7 @@ class AITool {
             out = await this._childExecute(args, session);
         } catch (err) {
             if (!AITool.expectedErrors.has(err.name)) {
-                logger.error(
+                getLogger().error(
                     `AI tool "${this.name}" failed (${LoggerUtil.formatErrorSummary(err, aiManager.redactLogText)}).`
                 );
             }
@@ -121,28 +135,13 @@ class AITool {
             out = { error: err.message };
         }
 
-        logger.debug(`AI tool "${this.name}" took ${AIUtil.formatElapsed(startTime)}.`);
+        getLogger().debug(`AI tool "${this.name}" took ${AIUtil.formatElapsed(startTime)}.`);
 
-        if (logger.isDebugEnabled()) {
-            logger.debug(`AI tool "${this.name}" returned:${aiManager.formatLog(out)}`);
+        if (getLogger().isDebugEnabled()) {
+            getLogger().debug(`AI tool "${this.name}" returned:${aiManager.formatLog(out)}`);
         }
 
-        return this._limitOutput(out);
-    }
-
-    _limitOutput(out) {
-        const text = JSON.stringify(out ?? null),
-            maxOutput = getClient().aiManager.maxToolOutput;
-
-        if (text.length <= maxOutput) {
-            return out;
-        }
-
-        return {
-            truncated: true,
-            found: AIUtil.hasFindings(out),
-            partial: text.slice(0, maxOutput)
-        };
+        return limitOutput(out);
     }
 }
 

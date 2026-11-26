@@ -4,6 +4,8 @@ import path from "node:path";
 
 import { afterEach, describe, expect, test, vi } from "vitest";
 
+import AIEfforts from "../../../src/structures/ai/AIEfforts.js";
+
 import { cleanupRuntime, createCommandRuntime } from "../../helpers/commandHarness.js";
 
 let runtime;
@@ -58,8 +60,11 @@ describe("AIManager", () => {
     test("offers quick questions only the tools that answer general facts and members", async () => {
         runtime = await createCommandRuntime({ config: { enableAI: true }, auth: { geminiKey: "test-key" } });
 
-        const tools = runtime.client.aiManager.tools,
-            session = { effort: "quick", expert: false, request: {}, toolPolicy: { allows: () => true } };
+        const tools = runtime.client.aiManager.tools;
+
+        const { default: AISession } = await import("../../../src/ai/AISession.js");
+        const session = new AISession({});
+        session.effort = AIEfforts.quick;
 
         expect(tools.getNames(session)).toEqual([
             "search_web",
@@ -72,7 +77,8 @@ describe("AIManager", () => {
         ]);
 
         expect(tools.get("search_tags", session)).toBeNull();
-        expect(tools.get("search_tags", { ...session, effort: "research" })).not.toBeNull();
+        session.effort = AIEfforts.research;
+        expect(tools.get("search_tags", session)).not.toBeNull();
     });
 
     test("fetches page text through the AI web tool", async () => {
@@ -86,13 +92,10 @@ describe("AIManager", () => {
             data: "First line. Second line."
         });
 
-        const session = {
-            effort: "quick",
-            expert: false,
-            request: {},
-            toolPolicy: { allows: () => true },
-            toolTimeout: () => manager.requestTimeout
-        };
+        const { default: AISession } = await import("../../../src/ai/AISession.js");
+        const session = new AISession({});
+        session.effort = AIEfforts.quick;
+
         const tool = manager.tools.get("fetch_web_page", session);
         const result = await tool.execute({ url }, session);
 
