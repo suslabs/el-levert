@@ -121,9 +121,7 @@ function stripCombiningMarks(str) {
 
 function normalizeText(str) {
     if (!onlyNormalChars(str)) {
-        for (const char of Object.keys(lookalikeCharsExps)) {
-            str = str.replace(lookalikeCharsExps[char], char);
-        }
+        str = Object.entries(lookalikeCharsExps).reduce((acc, [char, exp]) => acc.replace(exp, char), str);
     }
 
     return stripCombiningMarks(str.toLowerCase());

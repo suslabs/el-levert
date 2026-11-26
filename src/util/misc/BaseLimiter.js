@@ -42,10 +42,7 @@ class BaseLimiter extends TimedStore {
 
     sweepItems() {
         const now = Date.now();
-
-        for (const id of this.items.keys()) {
-            this._pruneKey(id, now, true);
-        }
+        this.items.forEach((_, id) => this._pruneKey(id, now, true));
     }
 
     prune(key, now) {
@@ -62,9 +59,7 @@ class BaseLimiter extends TimedStore {
             return;
         }
 
-        for (const id of this.items.keys()) {
-            this._pruneKey(id, time, false);
-        }
+        this.items.forEach((_, id) => this._pruneKey(id, time, false));
     }
 
     reset(key) {

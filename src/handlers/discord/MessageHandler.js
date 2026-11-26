@@ -514,13 +514,7 @@ class MessageHandler extends Handler {
             return MessageHandler._getFileSize(files);
         }
 
-        let total = 0;
-
-        for (const file of files) {
-            total += MessageHandler._getFileSize(file);
-        }
-
-        return total;
+        return files.reduce((total, file) => total + MessageHandler._getFileSize(file), 0);
     }
 
     static _rateLimiter = null;

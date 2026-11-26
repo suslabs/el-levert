@@ -82,11 +82,8 @@ const LoggerUtil = Object.freeze({
         /(\b(?:x[-_]api[-_]key|api[-_]?key|access[-_]?token|refresh[-_]?token|token|password|secret)["']?\s*[:=]\s*)(?:"[^"\r\n]*"|'[^'\r\n]*'|[^\s&#,;"'}]+)/gi,
 
     redactText(text, secrets = []) {
-        for (const secret of secrets) {
-            text = text.replaceAll(secret, LoggerUtil._redacted);
-        }
-
-        return text
+        return secrets
+            .reduce((str, secret) => str.replaceAll(secret, LoggerUtil._redacted), text)
             .replace(LoggerUtil._credential, LoggerUtil._redacted)
             .replace(LoggerUtil._bearer, `$1${LoggerUtil._redacted}`)
             .replace(LoggerUtil._credentialAssignment, `$1${LoggerUtil._redacted}`);

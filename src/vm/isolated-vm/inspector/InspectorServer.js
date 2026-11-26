@@ -80,9 +80,7 @@ class InspectorServer {
             return;
         }
 
-        for (const session of this._sessions.values()) {
-            session.close();
-        }
+        this._sessions.forEach(session => session.close());
 
         this._sessions.clear();
         this._sessionUsers.clear();

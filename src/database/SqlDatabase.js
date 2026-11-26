@@ -438,9 +438,7 @@ class SqlDatabase {
     }
 
     _resetQueryLoaders() {
-        for (const queryPath of this._queryLoaders.keys()) {
-            this._queryLoaders.set(queryPath, null);
-        }
+        this._queryLoaders.forEach((_, queryPath) => this._queryLoaders.set(queryPath, null));
     }
 
     async _unloadDatabase() {

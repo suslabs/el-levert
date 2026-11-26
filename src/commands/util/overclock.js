@@ -63,13 +63,7 @@ function resolveVoltage(ctx) {
         return directVoltage;
     }
 
-    for (const name of OverclockingValues.voltageNames) {
-        if (ctx.arg(name.toLowerCase()) === true) {
-            return name;
-        }
-    }
-
-    return null;
+    return OverclockingValues.voltageNames.find(name => ctx.arg(name.toLowerCase()) === true) ?? null;
 }
 
 function buildConfig(recipe, ctx) {

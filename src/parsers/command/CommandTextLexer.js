@@ -51,13 +51,7 @@ class CommandTextLexer {
     }
 
     _getSeparatorLength(idx) {
-        for (const separator of this.separators) {
-            if (separator && this.str.startsWith(separator, idx)) {
-                return separator.length;
-            }
-        }
-
-        return 0;
+        return this.separators.find(separator => separator && this.str.startsWith(separator, idx))?.length ?? 0;
     }
 
     _skipSeparators() {

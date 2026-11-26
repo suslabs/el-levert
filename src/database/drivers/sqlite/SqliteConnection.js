@@ -609,9 +609,9 @@ class SqliteConnection extends StatementDatabase(EventEmitter) {
             await this.loadExtension(extensionPath);
         }
 
-        for (const { name, callback, argc, deterministic } of this._customFunctions.values()) {
-            this.createFunction(name, callback, argc, deterministic);
-        }
+        this._customFunctions.forEach(({ name, callback, argc, deterministic }) =>
+            this.createFunction(name, callback, argc, deterministic)
+        );
 
         if (this.safeIntegers) {
             this.defaultSafeIntegers(true);

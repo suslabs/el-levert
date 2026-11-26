@@ -20,9 +20,7 @@ class EventLoop {
     }
 
     clearAll() {
-        for (const handle of this._pendingTimers.values()) {
-            clearTimeout(handle);
-        }
+        this._pendingTimers.forEach(handle => clearTimeout(handle));
 
         this._pendingTimers.clear();
 
