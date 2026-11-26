@@ -35,7 +35,7 @@ class Group extends BaseStructure {
     }
 
     formatUsers(full = false, discord = false) {
-        const spaces = discord ? "" : this._spaces;
+        const spaces = discord ? "" : Group._spaces;
 
         let title = this.format(full, discord),
             userFormat;

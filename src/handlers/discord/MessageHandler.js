@@ -529,9 +529,7 @@ class MessageHandler extends Handler {
         promise
             .then(res => {
                 if (signal.aborted && res != null) {
-                    const msgs = Array.isArray(res) ? res : [res];
-
-                    for (const msg of msgs) {
+                    for (const msg of ArrayUtil.guaranteeArray(res)) {
                         msg.delete().catch(_ => {});
                     }
                 }
@@ -688,7 +686,8 @@ class MessageHandler extends Handler {
     _applyLimits(data, options) {
         options = ObjectUtil.guaranteeObject(options);
 
-        const useConfig = options.useConfigLimits ?? this.useConfigLimits;
+        const useConfig = options.useConfigLimits ?? this.useConfigLimits,
+            defaultContent = options.defaultContent ?? null;
 
         const limitType = options.limitType ?? MessageLimitTypes.default,
             useTrim = limitType === MessageLimitTypes.trim;
@@ -702,8 +701,6 @@ class MessageHandler extends Handler {
                 content: MessageHandler._formatFileSizeOversized(filesSize, this._maxFileSize)
             };
         }
-
-        const defaultContent = options.defaultContent ?? null;
 
         if (limitType === MessageLimitTypes.none) {
             out.content = content ?? defaultContent;

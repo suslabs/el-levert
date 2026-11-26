@@ -12,6 +12,7 @@ class CommandContext extends TextCommandContext {
         perm: null,
         replyMsg: null,
         isEdit: false,
+        ephemeral: false,
         processingReplySent: false,
         interactionContext: null,
         previousContext: null
@@ -26,6 +27,7 @@ class CommandContext extends TextCommandContext {
         "perm",
         "replyMsg",
         "isEdit",
+        "ephemeral",
         "processingReplySent",
         "interactionContext",
         "previousContext"
@@ -84,6 +86,7 @@ class CommandContext extends TextCommandContext {
 
         context.replyMsg = overrides.replyMsg ?? this.replyMsg;
         context.isEdit = overrides.isEdit ?? this.isEdit;
+        context.ephemeral = overrides.ephemeral ?? this.ephemeral;
         context.processingReplySent = overrides.processingReplySent ?? this.processingReplySent;
         context._processingAborter = overrides._processingAborter ?? this._processingAborter;
         context.interactionContext = overrides.interactionContext ?? this.interactionContext;
@@ -92,11 +95,11 @@ class CommandContext extends TextCommandContext {
     }
 
     getReply() {
-        if (this.handler != null && typeof this.handler.getReply === "function") {
-            return this.handler.getReply(this.msg);
+        if (typeof this.handler?.getReply !== "function") {
+            return null;
         }
 
-        return null;
+        return this.handler.getReply(this.msg);
     }
 
     abortProcessing() {
@@ -111,14 +114,12 @@ class CommandContext extends TextCommandContext {
 
         this.processingReplySent = true;
 
-        if (this.handler != null) {
-            return await this.handler.reply(this.msg, data, {
+        return (
+            (await this.handler?.reply(this.msg, data, {
                 signal: this.processingSignal,
                 deleteOnAbort: true
-            });
-        }
-
-        return null;
+            })) ?? null
+        );
     }
 
     async reply(data, options) {

@@ -46,9 +46,11 @@ function logSendTime() {
 class PreviewHandler extends MessageHandler {
     static $name = "previewHandler";
 
-    constructor(enabaled) {
-        super(enabaled, true, false, {
-            minResponseTime: getConfig().minResponseTime + 0.5 / Util.durationSeconds.milli
+    constructor(enabled) {
+        const minResponseTime = Math.max(0, getConfig().minResponseTime);
+
+        super(enabled, true, false, {
+            minResponseTime: minResponseTime + 0.5 / Util.durationSeconds.milli
         });
     }
 

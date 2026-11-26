@@ -24,12 +24,10 @@ class Handler {
         this.handlesMessages ??= options.handlesMessages ?? false;
 
         const minResponseTime = options.minResponseTime ?? getConfig().minResponseTime,
-            invalidResponseTime = !Number.isFinite(minResponseTime) || minResponseTime <= 0;
-        this.minResponseTime = invalidResponseTime ? -1 : Math.round(minResponseTime);
+            globalTimeLimit = options.globalTimeLimit ?? getConfig().globalTimeLimit;
 
-        const globalTimeLimit = options.globalTimeLimit ?? getConfig().globalTimeLimit,
-            invalidTimeLimit = !Number.isFinite(globalTimeLimit) || globalTimeLimit <= 0;
-        this.globalTimeLimit = invalidTimeLimit ? -1 : Math.round(globalTimeLimit);
+        this.minResponseTime = Util.normalizeLimit(minResponseTime);
+        this.globalTimeLimit = Util.normalizeLimit(globalTimeLimit);
 
         this._childLoad = this.load;
         this.load = this._load.bind(this);

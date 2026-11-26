@@ -7,57 +7,61 @@ import { getConfig, getEmoji, getLogger } from "../../LevertClient.js";
 import Util from "../../util/Util.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 
-class ComponentSession {
-    static customIdSeparator = ":";
+import HandlerError from "../../errors/HandlerError.js";
 
-    static createCustomId(prefix, action, ...parts) {
-        return [prefix, action, ...parts].join(ComponentSession.customIdSeparator);
+class ComponentSession {
+    static createCustomId(prefix, action, sessionId, ...args) {
+        const parts = [prefix, action, ...args, sessionId].map(String);
+
+        if (parts.some(part => part.includes(ComponentSession._customIdSeparator))) {
+            throw new HandlerError("Component ID segments cannot contain colons.");
+        }
+
+        return parts.join(ComponentSession._customIdSeparator);
     }
 
     static parseCustomId(customId) {
-        if (!Util.nonemptyString(customId)) {
+        const parts = customId.split(ComponentSession._customIdSeparator);
+
+        if (parts.length < 3 || parts.some(part => Util.empty(part))) {
             return null;
         }
 
-        const parts = customId.split(ComponentSession.customIdSeparator),
-            [prefix, action] = parts;
+        const [prefix, action] = parts,
+            args = parts.slice(2, -1),
+            sessionId = Util.last(parts);
 
-        return {
-            prefix,
-            action: action ?? null,
-            args: parts.slice(2, -1),
-            sessionId: Util.last(parts)
-        };
+        return { prefix, action, args, sessionId };
     }
 
     constructor(ctx, options = {}) {
         options = ObjectUtil.guaranteeObject(options);
 
-        this.id = options.id ?? randomUUID().slice(0, 8);
-        this.ctx = ctx;
+        const id = options.id ?? randomUUID().slice(0, 8),
+            interactionMode = options.interactionMode ?? InteractionModes.ephemeralOthers,
+            timeout = options.timeout ?? getConfig()?.interactionTimeout ?? ComponentSession._defaultTimeout,
+            message = options.message ?? null,
+            onDestroy = options.onDestroy ?? null,
+            spec = options.spec ?? null;
+
+        this.id = id;
         this.context = ctx;
         this.command = ctx.command;
         this.authorId = ctx.author.id;
 
-        this.interactionMode = options.interactionMode ?? InteractionModes.ephemeralOthers;
+        this.interactionMode = interactionMode;
+        this.timeout = timeout;
+        this.onDestroy = onDestroy;
 
-        const config = getConfig(),
-            configTimeout = config != null ? config.interactionTimeout : null,
-            fallbackTimeout = (5 * Util.durationSeconds.minute) / Util.durationSeconds.milli;
-
-        this.timeout = options.timeout ?? configTimeout ?? fallbackTimeout;
-
-        this.onDestroy = options.onDestroy ?? null;
-
-        if (options.message != null) {
-            this.message = options.message;
+        if (message !== null) {
+            this.message = message;
         } else if (typeof ctx.getReply === "function") {
             this.message = ctx.getReply();
         } else {
             this.message = null;
         }
 
-        this.spec = options.spec ?? null;
+        this.spec = spec;
         this.active = true;
 
         this.setTimestamp();
@@ -68,7 +72,7 @@ class ComponentSession {
     }
 
     setMessage(message) {
-        this.message = message;
+        this.message = message ?? null;
     }
 
     setTimestamp(timestamp = Date.now()) {
@@ -80,29 +84,20 @@ class ComponentSession {
             return false;
         }
 
-        const interactionContext = commandContext.interactionContext ?? commandContext,
-            interaction = interactionContext.interaction ?? interactionContext;
+        const interactionContext = commandContext.interactionContext,
+            interaction = interactionContext.interaction;
 
-        if (this.message === null && interaction.message != null) {
-            this.message = interaction.message;
-        }
+        this.message ??= interaction.message ?? null;
 
-        const isAuthor = commandContext.isAuthor ?? interaction.user.id === this.authorId;
-
-        if (!isAuthor && this.interactionMode === InteractionModes.authorOnly) {
+        if (!commandContext.isAuthor && this.interactionMode === InteractionModes.authorOnly) {
             const warnMsg = `${getEmoji("warn")} Only the command caller can interact with this message.`;
 
             await interactionContext.reply(warnMsg, { ephemeral: true });
             return true;
         }
 
-        const command = this.command ?? commandContext.command;
-
-        let res = false;
-
-        if (command != null) {
+        const command = this.command ?? commandContext.command,
             res = await command.executeInteraction(commandContext, interactionContext);
-        }
 
         this.setTimestamp();
         return res;
@@ -127,6 +122,9 @@ class ComponentSession {
             await this.onDestroy(this);
         }
     }
+
+    static _customIdSeparator = ":";
+    static _defaultTimeout = (5 * Util.durationSeconds.minute) / Util.durationSeconds.milli;
 
     async _disableMessageComponents() {
         if (Util.empty(this.message.components)) {

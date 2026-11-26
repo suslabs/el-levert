@@ -8,6 +8,75 @@ import PositionalCommandReader from "../../parsers/command/reader/PositionalComm
 
 import Util from "../../util/Util.js";
 
+function parseArgs(data) {
+    const [subject, remaining] = PositionalCommandReader.split(data);
+
+    if (Util.empty(subject)) {
+        return null;
+    }
+
+    const [revisionText, extra] = PositionalCommandReader.split(remaining);
+
+    if (!Util.empty(extra)) {
+        return null;
+    }
+
+    if (Util.empty(revisionText)) {
+        return {
+            subject,
+            revisionId: null
+        };
+    }
+
+    const revisionId = Number(revisionText);
+
+    return Number.isInteger(revisionId) ? { subject, revisionId } : null;
+}
+
+async function getMembershipTarget(subject, ctx) {
+    if (Util.empty(subject)) {
+        return null;
+    }
+
+    const parts = subject.split("/");
+
+    if (parts.length !== 2 || Util.empty(parts[0]) || Util.empty(parts[1])) {
+        return null;
+    }
+
+    const userText = parts[0],
+        group = parts[1];
+
+    let userId = userText;
+
+    const sv_id = ctx.guildId,
+        find = Util.first(await getClient().findUsers(userText, sv_id ? { sv_id } : {}));
+
+    if (typeof find !== "undefined") {
+        userId = find.id;
+    }
+
+    return {
+        target: PermissionRevisionTargets.user,
+        user: userId,
+        group
+    };
+}
+
+async function getTarget(targetType, subject, ctx) {
+    switch (targetType) {
+        case "group":
+            return {
+                target: PermissionRevisionTargets.group,
+                name: subject
+            };
+        case "membership":
+            return await getMembershipTarget(subject, ctx);
+        default:
+            return null;
+    }
+}
+
 class PermRevertCommand {
     static info = {
         name: "revert",
@@ -40,7 +109,7 @@ class PermRevertCommand {
     }
 
     async handler(ctx) {
-        const args = this._parseArgs(ctx.arg("revertData"));
+        const args = parseArgs(ctx.arg("revertData"));
 
         if (args === null) {
             return `${getEmoji("info")} ${this.getArgsHelp("group group_name [revision_id] | membership user_id/group_name [revision_id]")}`;
@@ -49,7 +118,7 @@ class PermRevertCommand {
         const { revisionId, subject } = args,
             targetType = ctx.arg("targetType");
 
-        const target = await this._getTarget(targetType, subject, ctx);
+        const target = await getTarget(targetType, subject, ctx);
 
         if (target === null) {
             return targetType === "membership"
@@ -79,75 +148,6 @@ class PermRevertCommand {
 
             return `${getEmoji("warn")} ${err.message}.`;
         }
-    }
-
-    _parseArgs(data) {
-        const [subject, remaining] = PositionalCommandReader.split(data);
-
-        if (Util.empty(subject)) {
-            return null;
-        }
-
-        const [revisionText, extra] = PositionalCommandReader.split(remaining);
-
-        if (!Util.empty(extra)) {
-            return null;
-        }
-
-        if (Util.empty(revisionText)) {
-            return {
-                subject,
-                revisionId: null
-            };
-        }
-
-        const revisionId = Number(revisionText);
-
-        return Number.isInteger(revisionId) ? { subject, revisionId } : null;
-    }
-
-    async _getTarget(targetType, subject, ctx) {
-        switch (targetType) {
-            case "group":
-                return {
-                    target: PermissionRevisionTargets.group,
-                    name: subject
-                };
-            case "membership":
-                return await this._getMembershipTarget(subject, ctx);
-            default:
-                return null;
-        }
-    }
-
-    async _getMembershipTarget(subject, ctx) {
-        if (Util.empty(subject)) {
-            return null;
-        }
-
-        const parts = subject.split("/");
-
-        if (parts.length !== 2 || Util.empty(parts[0]) || Util.empty(parts[1])) {
-            return null;
-        }
-
-        const userText = parts[0],
-            group = parts[1];
-
-        let userId = userText;
-
-        const sv_id = ctx?.guildId,
-            find = Util.first(await getClient().findUsers(userText, sv_id ? { sv_id } : {}));
-
-        if (typeof find !== "undefined") {
-            userId = find.id;
-        }
-
-        return {
-            target: PermissionRevisionTargets.user,
-            user: userId,
-            group
-        };
     }
 }
 

@@ -34,6 +34,12 @@ const {
     Role
 } = discord;
 
+const activityTypes = new Map(
+    Object.entries(ActivityType)
+        .filter(([name, type]) => typeof type === "number" && name !== "Custom")
+        .map(([name, type]) => [name.toLowerCase(), type])
+);
+
 function normalizeAttachments(attachments) {
     attachments = ArrayUtil.guaranteeArray(attachments).filter(item => item != null);
 
@@ -352,29 +358,23 @@ class DiscordClient {
             throw new ClientError("Invalid activity config");
         }
 
-        let activityType = String(config.type ?? "")
+        const name = String(config.type ?? "")
                 .trim()
                 .toLowerCase(),
-            activityText = String(config.text ?? "").trim();
+            type = activityTypes.get(name);
 
-        activityType = TypeTester.normalizeEnum(
-            activityType,
-            DiscordClient._validActivityTypeNames,
-            "activity type",
-            ClientError,
-            {
-                message: value =>
-                    `Invalid activity type: ${value}. Valid types are: ${this.constructor._validActivityTypes.join(" ")}`
-            }
-        );
+        if (typeof type === "undefined") {
+            const valid = Array.from(activityTypes.values(), value => ActivityType[value]);
+            throw new ClientError(`Invalid activity type: ${name}. Valid types are: ${valid.join(" ")}`);
+        }
+
+        const activityText = String(config.text ?? "").trim();
 
         if (Util.empty(activityText)) {
             throw new ClientError("Invalid activity text");
         }
 
-        const presence = this.client.user.setActivity(activityText, {
-                type: DiscordClient._validActivityTypeNames.indexOf(activityType)
-            }),
+        const presence = this.client.user.setActivity(activityText, { type }),
             activity = Util.first(presence.activities);
 
         const setType = ActivityType[activity.type],
@@ -890,6 +890,9 @@ class DiscordClient {
         options = ObjectUtil.guaranteeObject(options, "sv_id");
         ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultUsersOptions);
 
+        fetchOptions = ObjectUtil.guaranteeObject(fetchOptions);
+        ObjectUtil.setValuesWithDefaults(fetchOptions, fetchOptions, this.constructor.defaultUsersFetchOptions);
+
         const sv_id = options.sv_id ?? options.guildId ?? options.guild?.id;
 
         let currentGuild = null;
@@ -900,7 +903,7 @@ class DiscordClient {
 
         let currentGuildId;
 
-        if (currentGuild != null) {
+        if (currentGuild !== null) {
             currentGuildId = currentGuild.id;
         } else if (typeof sv_id === "string") {
             currentGuildId = sv_id;
@@ -911,7 +914,7 @@ class DiscordClient {
         const allGuilds = Array.from(this.client.guilds.cache.values());
 
         const otherGuilds =
-            currentGuildId == null ? allGuilds : allGuilds.filter(guild => (guild.id ?? "") !== currentGuildId);
+            currentGuildId === null ? allGuilds : allGuilds.filter(guild => guild.id !== currentGuildId);
 
         const foundId = Util.first(DiscordUtil.findUserIds(query)),
             foundMention = Util.first(DiscordUtil.findMentions(query));
@@ -945,27 +948,24 @@ class DiscordClient {
             return [];
         }
 
-        fetchOptions = ObjectUtil.guaranteeObject(fetchOptions);
-        ObjectUtil.setValuesWithDefaults(fetchOptions, fetchOptions, this.constructor.defaultUsersFetchOptions);
-
-        if (currentGuild != null) {
-            const currentCached = this._getCachedGuildMembers(currentGuild);
-            const currentCachedRanked = this._rankMembers(currentCached, query, options.limit);
+        if (currentGuild !== null) {
+            const currentCached = this._getCachedGuildMembers(currentGuild),
+                currentCachedRanked = this._rankMembers(currentCached, query, options.limit);
 
             if (!Util.empty(currentCachedRanked)) {
                 return currentCachedRanked;
             }
 
-            const currentMembers = await this._searchGuildMembers(currentGuild, query, fetchOptions.limit);
-            const currentFetchedRanked = this._rankMembers(currentMembers, query, options.limit);
+            const currentMembers = await this._searchGuildMembers(currentGuild, query, fetchOptions.limit),
+                currentFetchedRanked = this._rankMembers(currentMembers, query, options.limit);
 
             if (!Util.empty(currentFetchedRanked)) {
                 return currentFetchedRanked;
             }
         }
 
-        const otherCached = otherGuilds.flatMap(guild => this._getCachedGuildMembers(guild));
-        const otherCachedRanked = this._rankMembers(otherCached, query, options.limit);
+        const otherCached = otherGuilds.flatMap(guild => this._getCachedGuildMembers(guild)),
+            otherCachedRanked = this._rankMembers(otherCached, query, options.limit);
 
         if (!Util.empty(otherCachedRanked)) {
             return otherCachedRanked;
@@ -989,17 +989,6 @@ class DiscordClient {
         this.botUsername = this.client.user.username;
 
         this.logger?.info(`The bot is online. Logged in as "${this.botUsername}".`);
-    }
-
-    static _validActivityTypes;
-    static _validActivityTypeNames;
-
-    static {
-        this._validActivityTypes = Object.entries(ActivityType)
-            .filter(([key, value]) => !isNaN(key) && value !== "Custom")
-            .map(([, value]) => value);
-
-        this._validActivityTypeNames = this._validActivityTypes.map(type => type.toLowerCase());
     }
 
     async _loadEvents() {
@@ -1079,8 +1068,8 @@ class DiscordClient {
         for (let i = 0; i < otherGuilds.length; i += windowSize) {
             const batch = otherGuilds.slice(i, i + windowSize);
 
-            const members = await Promise.all(batch.map(guild => this.fetchMember(guild, user_id)));
-            const member = members.find(Boolean);
+            const members = await Promise.all(batch.map(guild => this.fetchMember(guild, user_id))),
+                member = members.find(Boolean);
 
             if (member != null) {
                 return member;

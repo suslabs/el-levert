@@ -47,13 +47,13 @@ class InteractionHandler extends MessageHandler {
             return false;
         }
 
-        const sessionId = ComponentSession.parseCustomId(interaction.customId)?.sessionId;
+        const componentId = ComponentSession.parseCustomId(interaction.customId);
 
-        if (!Util.nonemptyString(sessionId)) {
+        if (componentId === null) {
             return false;
         }
 
-        const session = this.tracker.getSession(sessionId);
+        const session = this.tracker.getSession(componentId.sessionId);
 
         if (session === null || !session.active) {
             if (!interaction.replied && !interaction.deferred) {
@@ -69,6 +69,8 @@ class InteractionHandler extends MessageHandler {
 
         const interactionContext = new InteractionContext({
             interaction,
+            componentId,
+            action: componentId.action,
             handler: this,
             session,
             isAuthor

@@ -31,16 +31,14 @@ function logExecutionTime(elapsed) {
 }
 
 function logCommandOutput(cmd, out) {
-    const logger = getLogger();
-
-    if (!logger.isDebugEnabled()) {
+    if (!getLogger().isDebugEnabled()) {
         return;
     }
 
-    const redactText = getClient().aiManager?.redactLogText;
-    const output = DiscordUtil.formatMessageLog(out, undefined, undefined, { redactText });
+    const redactText = getClient().aiManager?.redactLogText,
+        output = DiscordUtil.formatMessageLog(out, undefined, undefined, { redactText });
 
-    logger.debug(`Command "${cmd.name}" returned:${output}`);
+    getLogger().debug(`Command "${cmd.name}" returned:${output}`);
 }
 
 class CommandHandler extends MessageHandler {
@@ -48,11 +46,13 @@ class CommandHandler extends MessageHandler {
     priority = 1;
 
     constructor(enabled) {
+        const globalTimeLimit = Util.normalizeLimit(getConfig().globalTimeLimit);
+
         super(enabled, true, true, {
-            userSweepInterval: 2 * getConfig().globalTimeLimit
+            userSweepInterval: globalTimeLimit === -1 ? 0 : 2 * globalTimeLimit
         });
 
-        this.commandWaitTime = getConfig().commandWaitTime;
+        this.commandWaitTime = Util.normalizeLimit(getConfig().commandWaitTime);
         this.replyTimeout = getConfig().interactionTimeout;
     }
 
@@ -319,7 +319,7 @@ class CommandHandler extends MessageHandler {
     }
 
     _startProcessingTimer(context) {
-        if (!Number.isFinite(this.commandWaitTime) || this.commandWaitTime <= 0) {
+        if (this.commandWaitTime === -1) {
             return null;
         }
 

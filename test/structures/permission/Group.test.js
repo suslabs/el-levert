@@ -16,7 +16,7 @@ describe("Group", () => {
 
         expect(group.users).toEqual([matchingUser]);
         expect(group.format(true, false)).toBe('Group "mods*" - Level 5');
-        expect(group.formatUsers(true, false)).toContain("Alex (100)");
+        expect(group.formatUsers(true, false)).toContain("\n    1. Alex (100)");
         expect(group.formatUsers(false, true)).toContain("**mods\\***");
     });
 });

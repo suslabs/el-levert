@@ -94,7 +94,10 @@ describe("InteractionHandler", () => {
         expect(result).toBe(true);
         expect(handleSpy).toHaveBeenCalledWith(
             expect.objectContaining({
-                interaction
+                interactionContext: expect.objectContaining({
+                    interaction,
+                    componentId: { prefix: "page", action: "next", args: [], sessionId: session.id }
+                })
             })
         );
     });
@@ -126,7 +129,10 @@ describe("InteractionHandler", () => {
         expect(result).toBe(true);
         expect(handleSpy).toHaveBeenCalledWith(
             expect.objectContaining({
-                interaction
+                interactionContext: expect.objectContaining({
+                    interaction,
+                    componentId: { prefix: "page", action: "modal", args: [], sessionId: session.id }
+                })
             })
         );
     });

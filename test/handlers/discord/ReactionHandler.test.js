@@ -84,24 +84,24 @@ describe("ReactionHandler", () => {
     });
 
     test("matches words outside code blocks and preserves their source order", () => {
-        expect(handler._getWordCounts("cleveret rabbit `leveret` leveret rabbit")).toEqual({
-            rabbit: 1,
-            leveret: 1
-        });
+        expect(handler._getReactionPlan("cleveret rabbit `leveret` leveret rabbit").words).toEqual([
+            "rabbit",
+            "leveret"
+        ]);
 
         expect(handler._getReactionPlan("rabbit ```leveret``` leveret").words).toEqual(["rabbit", "leveret"]);
         expect(handler._getReactionPlan("rabbit ```leveret``` leveret").emojis).toEqual([":D", ":)"]);
     });
 
     test("ignores emoticon parentheses and code blocks when counting unmatched parens", () => {
-        const onlyOpen = handler._countUnmatchedParens("(: hello :) ```((``` ((");
+        const onlyOpen = handler._getReactionPlan("(: hello :) ```((``` ((").parens;
         expect(onlyOpen).toEqual({
             left: 2,
             right: 0,
             total: 2
         });
 
-        const onlyClose = handler._countUnmatchedParens("```)))``` ) :-)");
+        const onlyClose = handler._getReactionPlan("```)))``` ) :-)").parens;
         expect(onlyClose).toEqual({
             left: 0,
             right: 1,
@@ -110,21 +110,21 @@ describe("ReactionHandler", () => {
     });
 
     test("does not treat alphabetical chars inside words as eyes in emoticons", () => {
-        const zigLinux = handler._countUnmatchedParens("(zig on linux)");
+        const zigLinux = handler._getReactionPlan("(zig on linux)").parens;
         expect(zigLinux).toEqual({
             left: 0,
             right: 0,
             total: 0
         });
 
-        const xbox = handler._countUnmatchedParens("(xbox)");
+        const xbox = handler._getReactionPlan("(xbox)").parens;
         expect(xbox).toEqual({
             left: 0,
             right: 0,
             total: 0
         });
 
-        const standalone = handler._countUnmatchedParens("x)");
+        const standalone = handler._getReactionPlan("x)").parens;
         expect(standalone).toEqual({
             left: 0,
             right: 0,

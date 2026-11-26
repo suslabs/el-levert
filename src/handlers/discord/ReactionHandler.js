@@ -63,6 +63,53 @@ function toStringArray(value) {
     return ArrayUtil.guaranteeArray(value, undefined, true).filter(Util.nonemptyString);
 }
 
+function getReactionEmoji(reaction) {
+    if (reaction == null) {
+        return null;
+    }
+
+    if (typeof reaction === "string") {
+        return reaction;
+    }
+
+    const emoji = reaction.emoji ?? reaction;
+
+    if (typeof emoji === "string") {
+        return emoji;
+    }
+
+    if (Util.nonemptyString(emoji?.name)) {
+        return emoji.id == null ? emoji.name : `${emoji.name}:${emoji.id}`;
+    }
+
+    if (Util.nonemptyString(emoji?.id)) {
+        return emoji.id;
+    }
+
+    return null;
+}
+
+function getReactMap(funnyWords) {
+    const reactMap = new Map();
+
+    for (const elem of funnyWords) {
+        const words = toStringArray(elem.word ?? elem.words).map(word => normalizeText(word).trim()),
+            emojis = toStringArray(elem.emoji ?? elem.emojis);
+
+        if (Util.empty(words) || Util.empty(emojis)) {
+            continue;
+        }
+
+        for (const word of words) {
+            if (Util.nonemptyString(word)) {
+                reactMap.set(word, emojis);
+            }
+        }
+    }
+
+    return reactMap;
+}
+
 class ReactionHandler extends Handler {
     static $name = "reactionHandler";
 
@@ -157,7 +204,7 @@ class ReactionHandler extends Handler {
         logRemove(msg);
         Benchmark.startTiming("reaction_remove");
 
-        let botId = getClient().client.user.id;
+        const botId = getClient().client.user.id;
         await this.reactionTracker.deleteWithCallback(msg, "reaction", react => react.users.remove(botId));
 
         logRemoveTime("reaction_remove");
@@ -175,57 +222,10 @@ class ReactionHandler extends Handler {
         );
     })();
 
-    static _getReactionEmoji(reaction) {
-        if (reaction == null) {
-            return null;
-        }
-
-        if (typeof reaction === "string") {
-            return reaction;
-        }
-
-        const emoji = reaction.emoji ?? reaction;
-
-        if (typeof emoji === "string") {
-            return emoji;
-        }
-
-        if (Util.nonemptyString(emoji?.name)) {
-            return emoji.id == null ? emoji.name : `${emoji.name}:${emoji.id}`;
-        }
-
-        if (Util.nonemptyString(emoji?.id)) {
-            return emoji.id;
-        }
-
-        return null;
-    }
-
-    static _getReactMap(funnyWords) {
-        const reactMap = new Map();
-
-        for (const elem of funnyWords) {
-            const words = toStringArray(elem.word ?? elem.words).map(word => normalizeText(word).trim()),
-                emojis = toStringArray(elem.emoji ?? elem.emojis);
-
-            if (Util.empty(words) || Util.empty(emojis)) {
-                continue;
-            }
-
-            for (const word of words) {
-                if (Util.nonemptyString(word)) {
-                    reactMap.set(word, emojis);
-                }
-            }
-        }
-
-        return reactMap;
-    }
-
     _setWords() {
         this.funnyWords = getClient().reactions.funnyWords;
 
-        this._reactMap = ReactionHandler._getReactMap(this.funnyWords);
+        this._reactMap = getReactMap(this.funnyWords);
         this._wordList = [...this._reactMap.keys()];
         this._wordRegex = RegexUtil.getWordRegex(this._wordList);
     }
@@ -384,7 +384,7 @@ class ReactionHandler extends Handler {
 
     _getReactionDiff(msg, nextEmojis) {
         const trackedReactions = this._getTrackedReactions(msg),
-            { removed, added } = ArrayUtil.diff(trackedReactions, nextEmojis, ReactionHandler._getReactionEmoji);
+            { removed, added } = ArrayUtil.diff(trackedReactions, nextEmojis, getReactionEmoji);
 
         return {
             removed,

@@ -17,6 +17,7 @@ class InteractionContext extends BaseCommandContext {
         message: null,
         customId: "",
         action: "",
+        componentId: null,
         isAuthor: true,
         ephemeral: false,
         updated: false
@@ -35,6 +36,7 @@ class InteractionContext extends BaseCommandContext {
         "message",
         "customId",
         "action",
+        "componentId",
         "isAuthor",
         "ephemeral",
         "updated"
@@ -58,6 +60,10 @@ class InteractionContext extends BaseCommandContext {
             this.customId = this.interaction.customId ?? "";
         }
 
+        if (this.componentId !== null && Util.empty(this.action)) {
+            this.action = this.componentId.action;
+        }
+
         if (typeof data.isAuthor === "undefined" && this.session != null && this.user != null) {
             this.isAuthor = this.user.id === this.session.authorId;
         }
@@ -78,15 +84,12 @@ class InteractionContext extends BaseCommandContext {
     async reply(data, options) {
         options = ObjectUtil.guaranteeObject(options);
 
-        if (this.ephemeral || (this.commandContext != null && this.commandContext.ephemeral)) {
+        if (this.ephemeral || this.commandContext?.ephemeral) {
             options.ephemeral ??= true;
         }
 
         this.markReplied();
-
-        if (this.handler != null) {
-            return await this.handler.interactionReply(this.interaction, data, options);
-        }
+        return await this.handler?.interactionReply(this.interaction, data, options);
     }
 
     async update(data, options) {
@@ -94,10 +97,7 @@ class InteractionContext extends BaseCommandContext {
 
         this.updated = true;
         this.markReplied();
-
-        if (this.handler != null) {
-            return await this.handler.interactionUpdate(this.interaction, data, options);
-        }
+        return await this.handler?.interactionUpdate(this.interaction, data, options);
     }
 
     async deferReply(options) {

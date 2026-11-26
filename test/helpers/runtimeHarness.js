@@ -200,6 +200,9 @@ function buildDefaultManagers() {
             allowed: () => false,
             maxLevel: async () => 0
         },
+        interactionHandler: {
+            registerSession: () => {}
+        },
         commandManager: {
             searchCommands: () => ({
                 subcmds: new Map([

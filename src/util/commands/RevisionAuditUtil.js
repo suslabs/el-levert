@@ -7,7 +7,7 @@ import { getClient } from "../../LevertClient.js";
 import Util from "../Util.js";
 import DiscordUtil from "../DiscordUtil.js";
 import ObjectUtil from "../ObjectUtil.js";
-import DateUtil from "../misc/DateUtil.js";
+import DateUtil from "../date/DateUtil.js";
 
 const RevisionAuditUtil = Object.freeze({
     formatUser: async (user, discord = false, options = {}) => {
@@ -138,18 +138,8 @@ const RevisionAuditUtil = Object.freeze({
     },
 
     parseRevisionId: value => {
-        if (typeof value === "number") {
-            return Number.isInteger(value) && value > 0 ? value : null;
-        }
-
-        value = value?.trim?.();
-
-        if (Util.empty(value)) {
-            return null;
-        }
-
-        const id = Util.parseInt(value);
-        return Number.isInteger(id) && id > 0 ? id : null;
+        value = typeof value === "number" ? value : Util.parseInt(value);
+        return Number.isInteger(value) && value > 0 ? value : null;
     },
 
     clearAudit: async (ctx, manager, isOwner, subjectText) => {

@@ -127,7 +127,7 @@ class CommandArgument {
     }
 
     _collectTypeIssues(result) {
-        return result.issue ? [result.issue] : [];
+        return [].concat(result.issue).filter(Boolean);
     }
 
     _validateRequired(issues, rules, value, input) {
