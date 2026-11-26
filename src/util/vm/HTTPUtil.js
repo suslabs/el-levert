@@ -178,7 +178,7 @@ const HTTPUtil = Object.freeze({
     },
 
     createFilesystemAdapter:
-        (maxDownloadSize = Infinity) =>
+        (maxDownloadSize = -1) =>
         async req => {
             let filePath;
 
@@ -189,7 +189,8 @@ const HTTPUtil = Object.freeze({
             }
 
             try {
-                const stat = await fs.stat(filePath);
+                const stat = await fs.stat(filePath),
+                    hasLimit = maxDownloadSize !== -1 && Number.isFinite(maxDownloadSize);
 
                 if (!stat.isFile()) {
                     throw createFileResponseError(
@@ -197,7 +198,7 @@ const HTTPUtil = Object.freeze({
                         httpStatusCodes.NOT_FOUND,
                         req
                     );
-                } else if (stat.size > maxDownloadSize) {
+                } else if (hasLimit && stat.size > maxDownloadSize) {
                     throw createFileResponseError(
                         `File size exceeds maximum download size of ${maxDownloadSize} bytes`,
                         httpStatusCodes.PAYLOAD_TOO_LARGE,
@@ -250,13 +251,10 @@ const HTTPUtil = Object.freeze({
         const allowLocalhostRequests = options.allowLocalhostRequests ?? false,
             allowFilesystemRequests = options.allowFilesystemRequests ?? false;
 
-        const maxUploadSize = options.maxUploadSize ?? Infinity,
-            maxDownloadSize = options.maxDownloadSize ?? Infinity;
+        const maxUploadSize = Util.normalizeLimit(options.maxUploadSize, { allowZero: true }),
+            maxDownloadSize = Util.normalizeLimit(options.maxDownloadSize, { allowZero: true });
 
-        const config = {
-            maxBodyLength: maxUploadSize,
-            maxContentLength: maxDownloadSize
-        };
+        const config = { maxBodyLength: maxUploadSize, maxContentLength: maxDownloadSize };
 
         if (!allowLocalhostRequests) {
             Object.assign(config, HTTPUtil.createSecureAgents());
@@ -281,6 +279,14 @@ const HTTPUtil = Object.freeze({
         const client = axios.create(config);
 
         client.interceptors.request.use(reqConfig => {
+            if (reqConfig.timeout != null && reqConfig.timeout <= 0) {
+                delete reqConfig.timeout;
+            }
+
+            if (maxUploadSize === -1) {
+                return reqConfig;
+            }
+
             let size = 0;
 
             if (reqConfig.data != null) {

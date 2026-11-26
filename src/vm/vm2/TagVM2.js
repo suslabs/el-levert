@@ -45,8 +45,8 @@ class TagVM2 extends VM {
 
         this.vmOptions = this.options.vmOptions ?? defaultVMOptions;
 
-        this.memLimit = getConfig().otherMemLimit;
-        this.timeLimit = getConfig().otherTimeLimit;
+        this.memLimit = Util.normalizeLimit(getConfig().otherMemLimit);
+        this.timeLimit = Util.normalizeLimit(getConfig().otherTimeLimit);
     }
 
     createProcPool() {

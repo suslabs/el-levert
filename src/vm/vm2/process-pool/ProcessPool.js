@@ -77,6 +77,9 @@ class VM2ProcPool {
             limits
         );
 
+        limits.memory = Util.normalizeLimit(limits.memory);
+        limits.time = Util.normalizeLimit(limits.time);
+
         this.limits = limits;
         this.limitError = null;
 
@@ -151,10 +154,13 @@ class VM2ProcPool {
         }
 
         const socket = net.createConnection(this.childProcess.socket),
-            timer = setTimeout(() => {
-                this.limitError = "Code execution took too long and was killed.";
-                this.kill();
-            }, this.limits.time);
+            timer =
+                this.limits.time === -1
+                    ? null
+                    : setTimeout(() => {
+                          this.limitError = "Code execution took too long and was killed.";
+                          this.kill();
+                      }, this.limits.time);
 
         VMUtil.sockWrite(socket, "script", {
             script: {
@@ -180,7 +186,9 @@ class VM2ProcPool {
 
             throw new VMError(limit ?? error);
         } finally {
-            clearTimeout(timer);
+            if (timer !== null) {
+                clearTimeout(timer);
+            }
         }
 
         if (data.error) {

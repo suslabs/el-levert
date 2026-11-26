@@ -65,6 +65,16 @@ class BaseConfigLoader extends JsonLoader {
             return val ?? (TypeTester.isObject(def) ? structuredClone(def) : def);
         }
 
+        if (def.limit) {
+            val = val ?? def.base ?? def.min ?? -1;
+
+            if (def.mult != null && typeof val === "number" && val > 0) {
+                val *= def.mult;
+            }
+
+            return Util.normalizeLimit(val, def);
+        }
+
         val = val ?? def.base ?? def.min ?? 0;
 
         if (def.mult != null) {

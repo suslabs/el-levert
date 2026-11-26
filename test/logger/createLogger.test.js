@@ -127,7 +127,14 @@ describe("createLogger", () => {
         );
 
         const linked = "2026-06-24-rotation-debug.log";
-        await fs.symlink(otherApp, path.join(tempDir, linked));
+        const linkPath = path.join(tempDir, linked);
+
+        if (process.platform === "win32") {
+            const linkTarget = await fs.mkdir(path.join(tempDir, "link-target"), { recursive: true });
+            await fs.symlink(linkTarget, linkPath, "junction");
+        } else {
+            await fs.symlink(otherApp, linkPath);
+        }
 
         const logger = createLogger({
             filename: path.join(tempDir, "rotation.log"),

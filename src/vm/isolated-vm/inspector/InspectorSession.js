@@ -36,7 +36,7 @@ class InspectorSession {
         this.url = options.url ?? "file://";
 
         this.logPackets = options.logPackets ?? false;
-        this.actionTimeout = options.actionTimeout ?? 0;
+        this.actionTimeout = Util.normalizeLimit(options.actionTimeout);
 
         this._inspectorContexts = [];
         this._inspectorSocket = null;
@@ -191,7 +191,7 @@ class InspectorSession {
     }
 
     startActionTimeout() {
-        if (this.mode !== "user" || !Number.isFinite(this.actionTimeout) || this.actionTimeout <= 0) {
+        if (this.mode !== "user" || this.actionTimeout === -1) {
             return;
         }
 

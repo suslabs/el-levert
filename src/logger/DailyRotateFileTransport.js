@@ -5,11 +5,15 @@ import winston from "winston";
 
 import Util from "../util/Util.js";
 import ObjectUtil from "../util/ObjectUtil.js";
-import DateUtil from "../util/misc/DateUtil.js";
+import DateUtil from "../util/date/DateUtil.js";
 
 import LoggerError from "../errors/LoggerError.js";
 
 const dayLength = Util.durationSeconds.day / Util.durationSeconds.milli;
+
+function getSuffix(name, ext, level) {
+    return level == null ? `-${name}${ext}` : `-${name}-${level}${ext}`;
+}
 
 class DailyRotateFileTransport extends winston.transports.File {
     constructor(options) {
@@ -23,15 +27,15 @@ class DailyRotateFileTransport extends winston.transports.File {
 
         const date = DateUtil.today();
 
-        const { dir, name, ext } = path.parse(logFile);
-        const suffix = DailyRotateFileTransport._getSuffix(name, ext, options.level);
+        const { dir, name, ext } = path.parse(logFile),
+            suffix = getSuffix(name, ext, options.level);
 
         super({ ...options, dirname: dir || ".", filename: `${date}${suffix}` });
 
         this._date = date;
         this._suffix = suffix;
-        this._debugSuffix = DailyRotateFileTransport._getSuffix(name, ext, "debug");
-        this._retentionDays = options.debugLogRetentionDays ?? -1;
+        this._debugSuffix = getSuffix(name, ext, "debug");
+        this._retentionDays = Util.normalizeLimit(options.debugLogRetentionDays);
 
         this._pruneDebugLogs();
     }
@@ -54,12 +58,8 @@ class DailyRotateFileTransport extends winston.transports.File {
 
     static _logDate = /^\d{4}-\d{2}-\d{2}$/;
 
-    static _getSuffix(name, ext, level) {
-        return level == null ? `-${name}${ext}` : `-${name}-${level}${ext}`;
-    }
-
     _pruneDebugLogs() {
-        if (this._retentionDays <= 0) {
+        if (this._retentionDays === -1) {
             return;
         }
 

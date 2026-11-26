@@ -191,8 +191,10 @@ describe("Merged Branch Coverage", () => {
                 service: "tests"
             });
 
-            expect(formatted.content).toContain("```js");
+            expect(formatted.content).toBe("");
+            expect(formatted.embeds[0].data.title).toBe("Error");
             expect(formatted.files).toHaveLength(1);
+            expect(formatted.files[0].attachment.toString()).toContain("y".repeat(2500));
 
             const closeSpy = vi.spyOn(transport, "close");
             transport._handleDiscordError(new Error("plain failure"));

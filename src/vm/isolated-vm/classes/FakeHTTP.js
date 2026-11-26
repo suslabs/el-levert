@@ -20,7 +20,7 @@ function initFakeAxios(options) {
         options = ObjectUtil.guaranteeObject(options);
 
         fakeAxios = HTTPUtil.createAxiosClient(options, VMError);
-        rateLimiter = new RateLimiter(options.maxRequests ?? Infinity, options.rateLimitWindow ?? 1000);
+        rateLimiter = new RateLimiter(options.maxRequests ?? -1, options.rateLimitWindow ?? 1000);
     }
 
     return fakeAxios;

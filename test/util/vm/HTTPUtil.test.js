@@ -1,5 +1,6 @@
 import http from "node:http";
 
+import { AxiosHeaders } from "axios";
 import { describe, expect, test } from "vitest";
 
 import HTTPUtil from "../../../src/util/vm/HTTPUtil.js";
@@ -75,5 +76,25 @@ describe("HTTPUtil", () => {
         );
         expect(HTTPUtil.getContentType({})).toBe("");
         expect(HTTPUtil.getContentType(undefined)).toBe("");
+    });
+
+    test("does not enforce size or timeout limits when set to -1", () => {
+        const client = HTTPUtil.createAxiosClient({ maxUploadSize: -1, maxDownloadSize: -1 });
+        expect(client.defaults.maxBodyLength).toBe(-1);
+        expect(client.defaults.maxContentLength).toBe(-1);
+
+        const reqConfig = client.interceptors.request.handlers[0].fulfilled({
+            data: "hello world",
+            timeout: -1
+        });
+        expect(reqConfig.timeout).toBeUndefined();
+
+        const boundedClient = HTTPUtil.createAxiosClient({ maxUploadSize: 5 });
+        expect(() =>
+            boundedClient.interceptors.request.handlers[0].fulfilled({
+                data: "hello world",
+                headers: new AxiosHeaders()
+            })
+        ).toThrow("Request body exceeds maximum upload size of 5 bytes");
     });
 });

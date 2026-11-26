@@ -95,6 +95,62 @@ describe("ConfigLoader", () => {
 
         expect(config2.maxQuota).toBe(-1);
         expect(config2.maxTagCount).toBe(-1);
+
+        const disabled = {
+            maxFileSize: 0,
+            commandRateLimit: -1,
+            commandRateLimitWindow: 0,
+            minResponseTime: 0,
+            globalTimeLimit: -1,
+            commandWaitTime: 0,
+            vmInspector: {
+                connectTimeout: 0,
+                userConnectTimeout: -2,
+                userActionTimeout: 0
+            },
+            vmHttp: {
+                maxUploadSize: 0,
+                maxDownloadSize: -1,
+                maxRequests: 0,
+                rateLimitWindow: 0
+            },
+            timeLimit: -5,
+            otherTimeLimit: 0,
+            reminderSendInterval: 0,
+            ai: {
+                timeLimit: 0,
+                requestTimeout: -1,
+                modelCooldown: 0,
+                maxModelCooldown: -1,
+                maxDownloadSize: 0,
+                rateLimitWindow: -1
+            }
+        };
+        loader.data = disabled;
+        loader._modify();
+
+        expect(disabled.maxFileSize).toBe(-1);
+        expect(disabled.commandRateLimit).toBe(-1);
+        expect(disabled.commandRateLimitWindow).toBe(-1);
+        expect(disabled.minResponseTime).toBe(-1);
+        expect(disabled.globalTimeLimit).toBe(-1);
+        expect(disabled.commandWaitTime).toBe(-1);
+        expect(disabled.vmInspector.connectTimeout).toBe(-1);
+        expect(disabled.vmInspector.userConnectTimeout).toBe(-1);
+        expect(disabled.vmInspector.userActionTimeout).toBe(-1);
+        expect(disabled.vmHttp.maxUploadSize).toBe(-1);
+        expect(disabled.vmHttp.maxDownloadSize).toBe(-1);
+        expect(disabled.vmHttp.maxRequests).toBe(-1);
+        expect(disabled.vmHttp.rateLimitWindow).toBe(-1);
+        expect(disabled.timeLimit).toBe(-1);
+        expect(disabled.otherTimeLimit).toBe(-1);
+        expect(disabled.reminderSendInterval).toBe(-1);
+        expect(disabled.ai.timeLimit).toBe(-1);
+        expect(disabled.ai.requestTimeout).toBe(-1);
+        expect(disabled.ai.modelCooldown).toBe(0);
+        expect(disabled.ai.maxModelCooldown).toBe(-1);
+        expect(disabled.ai.maxDownloadSize).toBe(-1);
+        expect(disabled.ai.rateLimitWindow).toBe(-1);
     });
 
     test("normalizes bridge bot formats into runtime regex config", () => {
@@ -176,6 +232,10 @@ describe("ConfigLoader", () => {
         unlimited.maxTagCount = -1;
         unlimited.memLimit = -1;
         unlimited.ai.maxSteps = -1;
+        unlimited.ai.modelCooldown = -1;
+        unlimited.ai.maxModelCooldown = -1;
+        unlimited.ai.maxRequests = -1;
+        unlimited.ai.rateLimitWindow = -1;
 
         expect(validate(unlimited)).toBe(true);
     });

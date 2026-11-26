@@ -11,6 +11,10 @@ import { isErrorCode } from "../../util/discord/ErrorCodes.js";
 
 import LoggerError from "../../errors/LoggerError.js";
 
+function getEmbedColor(level) {
+    return EmbedColors[level] ?? defaultColor;
+}
+
 class BaseDiscordTransport extends Transport {
     constructor(options) {
         options = ObjectUtil.guaranteeObject(options);
@@ -24,14 +28,17 @@ class BaseDiscordTransport extends Transport {
             throw new LoggerError("Child class must have a sendLog function");
         }
 
-        const charLimit = options.charLimit ?? DiscordUtil.embedCharLimit;
+        const charLimit = options.charLimit ?? DiscordUtil.embedCharLimit,
+            name = options.name ?? compName,
+            sendInterval = options.sendInterval ?? 0,
+            client = options.client ?? null;
+
         this.charLimit = Util.clamp(charLimit, 0, DiscordUtil.embedCharLimit);
+        this.name = name;
+        this.sendInterval = sendInterval;
 
-        this.name = options.name ?? compName;
-        this.sendInterval = options.sendInterval ?? 0;
-
-        this.client = options.client;
-        this._hasClient = options.client != null;
+        this.client = client;
+        this._hasClient = client !== null;
 
         this.initialized = false;
 
@@ -56,7 +63,7 @@ class BaseDiscordTransport extends Transport {
     log(info, callback) {
         setImmediate(() => this.emit("logged", info));
 
-        if (!this.initialized || info?.discord === false) {
+        if (!this.initialized || info.discord === false) {
             callback();
             return;
         }
@@ -82,24 +89,28 @@ class BaseDiscordTransport extends Transport {
 
     static _disableCodes = [];
 
-    static _getEmbedColor(level) {
-        return EmbedColors[level] ?? defaultColor;
-    }
-
     _formatLog(info) {
         let content = "",
-            fileContent = "",
-            embed = new EmbedBuilder();
+            fileContent = "";
 
-        embed.setTitle(Util.capitalize(info.level));
-        embed.setColor(BaseDiscordTransport._getEmbedColor(info.level));
+        const embed = new EmbedBuilder().setTitle(Util.capitalize(info.level)).setColor(getEmbedColor(info.level));
+
+        if (info.timestamp != null) {
+            const date = new Date(info.timestamp),
+                timestamp = Math.round(date.getTime() * Util.durationSeconds.milli),
+                formattedTimestamp = time(timestamp, TimestampStyles.RelativeTime);
+
+            embed.setTimestamp(date);
+            embed.setTitle(`${embed.data.title} | ${formattedTimestamp}`);
+        }
 
         if (info.stack != null) {
-            if (Util.overSizeLimits(info.stack, DiscordUtil.msgCharLimit)) {
-                const formattedStack = codeBlock("js", info.stack);
-                content += formattedStack;
+            const formattedStack = codeBlock("js", info.stack);
+
+            if (Util.overSizeLimits(formattedStack, DiscordUtil.msgCharLimit)) {
+                fileContent = `--- Error stack:\n${info.stack}\n`;
             } else {
-                fileContent += `--- Error stack:\n${info.stack}`;
+                content += formattedStack;
             }
         }
 
@@ -119,15 +130,6 @@ class BaseDiscordTransport extends Transport {
             });
         }
 
-        if (info.timestamp != null) {
-            const date = new Date(info.timestamp),
-                timestamp = Math.round(date.getTime() * Util.durationSeconds.milli),
-                formattedTimestamp = time(timestamp, TimestampStyles.RelativeTime);
-
-            embed.setTimestamp(date);
-            embed.setTitle(`${embed.data.title} | ${formattedTimestamp}`);
-        }
-
         if (this._hasClient) {
             const username = this.client.user.displayName,
                 avatar = this.client.user.displayAvatarURL();
@@ -138,13 +140,12 @@ class BaseDiscordTransport extends Transport {
             });
         }
 
-        const totalEmbedChars = DiscordUtil.getEmbedSize(embed);
+        const description = codeBlock(info.message);
 
-        if (info.message.length < this.charLimit - totalEmbedChars) {
-            const formattedMessage = codeBlock(info.message);
-            embed.setDescription(formattedMessage);
-        } else {
+        if (DiscordUtil.embedComponentsOverSizeLimit({ ...embed.data, description }, { total: this.charLimit })) {
             fileContent += `--- Log message:\n${info.message}`;
+        } else {
+            embed.setDescription(description);
         }
 
         const out = {

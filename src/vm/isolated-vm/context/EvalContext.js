@@ -44,11 +44,8 @@ class EvalContext {
         inspectorOptions = ObjectUtil.guaranteeObject(inspectorOptions);
         this.inspectorOptions = inspectorOptions;
 
-        const invalidMemLimit = !Number.isFinite(options.memLimit) || options.memLimit <= 0;
-        this.memLimit = invalidMemLimit ? -1 : Math.round(options.memLimit);
-
-        const invalidTimeLimit = !Number.isFinite(options.timeLimit) || options.timeLimit <= 0;
-        this.timeLimit = invalidTimeLimit ? -1 : Math.round(options.timeLimit);
+        this.memLimit = Util.normalizeLimit(options.memLimit);
+        this.timeLimit = Util.normalizeLimit(options.timeLimit);
 
         this.logContent = options.logContent ?? true;
 
@@ -214,6 +211,7 @@ class EvalContext {
 
     async _setupContext(values) {
         const { msg, tag, args, replyMsg } = values;
+
         const context = await this.isolate.createContext({
             inspector: this.enableInspector
         });

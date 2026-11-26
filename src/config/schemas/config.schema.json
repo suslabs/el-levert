@@ -365,11 +365,11 @@
                 },
                 "modelCooldown": {
                     "type": "number",
-                    "minimum": 0
+                    "anyOf": [{ "const": -1 }, { "minimum": 0 }]
                 },
                 "maxModelCooldown": {
                     "type": "number",
-                    "minimum": 0
+                    "anyOf": [{ "const": -1 }, { "minimum": 0 }]
                 },
                 "maxDownloadSize": {
                     "type": "number"
@@ -380,11 +380,11 @@
                 },
                 "maxRequests": {
                     "type": "integer",
-                    "minimum": 1
+                    "anyOf": [{ "const": -1 }, { "minimum": 1 }]
                 },
                 "rateLimitWindow": {
                     "type": "number",
-                    "minimum": 0
+                    "anyOf": [{ "const": -1 }, { "minimum": 0 }]
                 },
                 "followUpsAnyone": {
                     "type": "boolean"
@@ -399,6 +399,7 @@
             "required": [
                 "name",
                 "icon",
+                "packName",
                 "promptsPath",
                 "endpoints",
                 "models",

@@ -4,6 +4,7 @@ import ReturnCodes from "./ReturnCodes.js";
 
 import { getConfig } from "../../LevertClient.js";
 
+import Util from "../../util/Util.js";
 import HTTPUtil from "../../util/vm/HTTPUtil.js";
 
 import VMError from "../../errors/VMError.js";
@@ -13,8 +14,8 @@ class ExternalVM {
     static loadPriority = 3;
 
     constructor() {
-        this.memLimit = getConfig().otherMemLimit;
-        this.timeLimit = getConfig().otherTimeLimit;
+        this.memLimit = Util.normalizeLimit(getConfig().otherMemLimit);
+        this.timeLimit = Util.normalizeLimit(getConfig().otherTimeLimit);
 
         this.codes = ReturnCodes;
 
@@ -28,10 +29,16 @@ class ExternalVM {
         let res;
         const data = {
             source_code: code,
-            language_id: lang,
-            memory_limit: this.memLimit,
-            wall_time_limit: this.timeLimit
+            language_id: lang
         };
+
+        if (this.memLimit !== -1) {
+            data.memory_limit = this.memLimit;
+        }
+
+        if (this.timeLimit !== -1) {
+            data.wall_time_limit = this.timeLimit;
+        }
 
         if (typeof stdin !== "undefined") {
             data.stdin = stdin;
@@ -58,16 +65,38 @@ class ExternalVM {
 
     checkCode(token) {
         return new Promise((resolve, reject) => {
-            const interval = setInterval(async () => {
-                const status = (await axios.get(HTTPUtil.joinUrl(this.base, token, this.statusUrl))).data.status_id;
+            let timer = null;
 
-                if (!ReturnCodes.pending.has(status)) {
+            const interval = setInterval(async () => {
+                try {
+                    const status = (await axios.get(HTTPUtil.joinUrl(this.base, token, this.statusUrl))).data.status_id;
+
+                    if (!ReturnCodes.pending.has(status)) {
+                        clearInterval(interval);
+
+                        if (timer !== null) {
+                            clearTimeout(timer);
+                        }
+
+                        resolve(status);
+                    }
+                } catch (err) {
                     clearInterval(interval);
-                    resolve(status);
+
+                    if (timer !== null) {
+                        clearTimeout(timer);
+                    }
+
+                    reject(err);
                 }
             }, 200);
 
-            setTimeout(() => reject(new VMError("check timed out")), this.timeLimit * 2000);
+            if (this.timeLimit !== -1) {
+                timer = setTimeout(() => {
+                    clearInterval(interval);
+                    reject(new VMError("check timed out"));
+                }, this.timeLimit * 2000);
+            }
         });
     }
 

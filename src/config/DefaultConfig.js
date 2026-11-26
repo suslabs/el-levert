@@ -25,35 +25,35 @@ const DefaultConfig = Object.freeze({
     },
     maxFileSize: {
         base: 0,
-        min: 0,
+        limit: true,
         round: true,
         mult: Util.dataBytes.megabyte
     },
 
     commandRateLimit: {
-        min: 0,
+        limit: true,
         round: true
     },
     commandRateLimitWindow: {
-        min: 0,
+        limit: true,
         round: true,
         mult: 1 / Util.durationSeconds.milli
     },
 
     minResponseTime: {
-        min: 0,
+        limit: true,
         max: 10 / Util.durationSeconds.milli,
         round: true,
         mult: 1 / Util.durationSeconds.milli
     },
     globalTimeLimit: {
-        min: 0,
+        limit: true,
         round: true,
         mult: 1 / Util.durationSeconds.milli
     },
     commandWaitTime: {
         base: 0,
-        min: 0,
+        limit: true,
         round: true,
         mult: 1 / Util.durationSeconds.milli
     },
@@ -67,19 +67,19 @@ const DefaultConfig = Object.freeze({
     vmInspector: {
         connectTimeout: {
             base: 0,
-            min: 0,
+            limit: true,
             round: true,
             mult: 1 / Util.durationSeconds.milli
         },
         userConnectTimeout: {
             base: 0,
-            min: 0,
+            limit: true,
             round: true,
             mult: 1 / Util.durationSeconds.milli
         },
         userActionTimeout: {
             base: 0,
-            min: 0,
+            limit: true,
             round: true,
             mult: 1 / Util.durationSeconds.milli
         }
@@ -88,76 +88,77 @@ const DefaultConfig = Object.freeze({
     vmHttp: {
         maxUploadSize: {
             base: 0,
-            min: 0,
+            limit: true,
             round: true,
             mult: Util.dataBytes.megabyte
         },
         maxDownloadSize: {
             base: 0,
-            min: 0,
+            limit: true,
             round: true,
             mult: Util.dataBytes.megabyte
         },
         maxRequests: {
             base: 0,
-            min: 0,
+            limit: true,
             round: true
         },
         rateLimitWindow: {
             base: 0,
-            min: 0,
+            limit: true,
             round: true,
             mult: 1 / Util.durationSeconds.milli
         }
     },
 
     timeLimit: {
-        min: 0,
+        limit: true,
         round: true,
         mult: 1 / Util.durationSeconds.milli
     },
     otherTimeLimit: {
-        min: 0,
+        limit: true,
         round: true,
         mult: 1 / Util.durationSeconds.milli
     },
 
     ai: {
-        packName: "unspecified",
         timeLimit: {
-            min: 0,
+            limit: true,
             round: true,
             mult: 1 / Util.durationSeconds.milli
         },
         requestTimeout: {
-            min: 0,
+            limit: true,
             round: true,
             mult: 1 / Util.durationSeconds.milli
         },
         modelCooldown: {
-            min: 0,
+            limit: true,
+            allowZero: true,
             round: true,
             mult: 1 / Util.durationSeconds.milli
         },
         maxModelCooldown: {
-            min: 0,
+            limit: true,
+            allowZero: true,
             round: true,
             mult: 1 / Util.durationSeconds.milli
         },
         maxDownloadSize: {
-            min: 0,
+            limit: true,
             round: true,
             mult: Util.dataBytes.megabyte
         },
         rateLimitWindow: {
-            min: 0,
+            limit: true,
             round: true,
             mult: 1 / Util.durationSeconds.milli
         }
     },
 
     reminderSendInterval: {
-        min: 0,
+        limit: true,
         round: true,
         mult: 1 / Util.durationSeconds.milli
     }

@@ -72,8 +72,8 @@ class TagVM extends VM {
         values = ObjectUtil.guaranteeObject(values);
         options = ObjectUtil.guaranteeObject(options);
 
-        const parentContext = options.parentContext ?? null;
-        const logContent = options.logContent ?? parentContext?.logContent ?? true;
+        const parentContext = options.parentContext ?? null,
+            logContent = options.logContent ?? parentContext?.logContent ?? true;
 
         code = transpileScript(code, options);
 
@@ -99,8 +99,9 @@ class TagVM extends VM {
         Benchmark.startTiming("vm_script");
 
         let out,
-            outErr = null,
-            context = null,
+            outErr = null;
+
+        let context = null,
             pushed = false;
 
         try {
