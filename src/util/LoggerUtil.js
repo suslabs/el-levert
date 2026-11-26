@@ -67,8 +67,8 @@ const LoggerUtil = Object.freeze({
         }
 
         const raw = this[key];
-        const binary = LoggerUtil.formatBinary(raw) ?? LoggerUtil.formatBinary(value);
 
+        const binary = LoggerUtil.formatBinary(raw) ?? LoggerUtil.formatBinary(value);
         return binary ?? (typeof value === "string" ? redactText(value) : value);
     },
 
@@ -93,12 +93,13 @@ const LoggerUtil = Object.freeze({
     },
 
     formatErrorSummary(err, redactText = LoggerUtil.redactText) {
-        const type = err instanceof Error ? err.constructor.name : "Error";
-        const status = err?.response?.status ?? err?.status ?? err?.ref?.status ?? err?.ref;
+        const type = err instanceof Error ? err.constructor.name : "Error",
+            status = err?.response?.status ?? err?.status ?? err?.ref?.status ?? err?.ref;
 
-        const summary = Number.isInteger(status) && status >= 100 && status <= 599 ? `${type}, HTTP ${status}` : type;
-        const message = Util.nonemptyString(err?.message) ? redactText(err.message) : "";
-        return Util.empty(message) ? summary : `${summary}: ${message}`;
+        const summary = Number.isInteger(status) && status >= 100 && status <= 599 ? `${type}, HTTP ${status}` : type,
+            message = Util.nonemptyString(err?.message) ? redactText(err.message) : "";
+
+        return message === "" ? summary : `${summary}: ${message}`;
     },
 
     formatLog(str, splitLength = 80, maxLength = 1000, redactText = LoggerUtil.redactText) {
@@ -122,7 +123,7 @@ const LoggerUtil = Object.freeze({
                     return ` error: ${redactText(err.message)}`;
                 }
             case "string":
-                if (Util.empty(str)) {
+                if (str === "") {
                     return " none";
                 }
 

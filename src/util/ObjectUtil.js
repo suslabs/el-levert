@@ -118,7 +118,7 @@ const ObjectUtil = Object.freeze({
             keys = options.includes(AssignPropertyTypes.keys);
         }
 
-        if (Util.empty(options)) {
+        if (options.length < 1) {
             throw new UtilError("Invalid property options", options);
         } else if (keys) {
             return Object.assign(target, source);

@@ -251,7 +251,7 @@ let Util = {
 
         const content = str.slice(leading.length, str.length - trailing.length);
 
-        if (Util.empty(content)) {
+        if (content === "") {
             return str;
         } else {
             return leading + content[0].toUpperCase() + content.slice(1) + trailing;
@@ -266,7 +266,7 @@ let Util = {
 
         const content = str.slice(leading.length, str.length - trailing.length);
 
-        if (Util.empty(content)) {
+        if (content === "") {
             return str;
         } else {
             return leading + content[0].toLowerCase() + content.slice(1) + trailing;
@@ -322,7 +322,7 @@ let Util = {
             .filter(([start, end]) => end > start)
             .sort((a, b) => a[0] - b[0] || a[1] - b[1]);
 
-        if (Util.empty(normalized)) {
+        if (normalized.length < 1) {
             return str;
         }
 
@@ -557,7 +557,7 @@ let Util = {
     },
 
     nonemptyString: str => {
-        return typeof str === "string" && !Util.empty(str);
+        return typeof str === "string" && str.length > 0;
     },
 
     empty: val => {
@@ -640,6 +640,34 @@ let Util = {
         }
 
         return Util.round(num, digits);
+    },
+
+    normalizeLimit: (val, options) => {
+        options = ObjectUtil.guaranteeObject(options);
+
+        const allowZero = options.allowZero ?? false,
+            fallback = options.fallback ?? -1,
+            round = options.round ?? true,
+            min = options.min ?? null,
+            max = options.max ?? null;
+
+        if (!Number.isFinite(val) || (allowZero ? val < 0 : val <= 0)) {
+            return fallback;
+        }
+
+        if (round) {
+            val = Math.round(val);
+        }
+
+        if (!allowZero && val <= 0) {
+            return fallback;
+        }
+
+        if (min !== null || max !== null) {
+            val = Util.clamp(val, min, max);
+        }
+
+        return val === 0 ? 0 : val;
     },
 
     approxEquals: (a, b, epsilon = Number.EPSILON) => {
@@ -734,6 +762,27 @@ let Util = {
 
     validUrl: url => {
         return Util.validUrlRegex.test(url);
+    },
+
+    createDeadline: timeout => {
+        timeout = Util.normalizeLimit(timeout);
+        return timeout === -1 ? null : Date.now() + timeout;
+    },
+
+    getRemainingTime: (deadline, cap = -1, min = null) => {
+        const left = deadline === null ? -1 : Math.max(0, deadline - Date.now());
+
+        let out;
+
+        if (left === -1) {
+            out = cap;
+        } else if (cap === -1) {
+            out = left;
+        } else {
+            out = Math.min(left, cap);
+        }
+
+        return out === -1 || min === null ? out : Math.max(min, out);
     },
 
     timeDelta: (d1, d2, div = 1) => {

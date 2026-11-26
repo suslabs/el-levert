@@ -337,4 +337,37 @@ describe("Util", () => {
         expect(Util.sameValue([1, 2], [1, 2])).toBe(true);
         expect(Util.sameValue([1, 2], [1, 3])).toBe(false);
     });
+
+    test("normalizes numeric limits with normalizeLimit", () => {
+        expect(Util.normalizeLimit(150.6)).toBe(151);
+        expect(Util.normalizeLimit(0)).toBe(-1);
+        expect(Util.normalizeLimit(-5)).toBe(-1);
+        expect(Util.normalizeLimit(0.2)).toBe(-1);
+        expect(Util.normalizeLimit(Number.NaN)).toBe(-1);
+        expect(Util.normalizeLimit(Number.POSITIVE_INFINITY)).toBe(-1);
+        expect(Util.normalizeLimit("10")).toBe(-1);
+
+        expect(Util.normalizeLimit(0, { allowZero: true })).toBe(0);
+        expect(Util.normalizeLimit(-0, { allowZero: true })).toBe(0);
+        expect(Util.normalizeLimit(-0.4, { allowZero: true })).toBe(-1);
+        expect(Util.normalizeLimit(-1, { allowZero: true })).toBe(-1);
+        expect(Util.normalizeLimit(12.4, { allowZero: true, round: false })).toBe(12.4);
+        expect(Util.normalizeLimit(5000, { max: 1000 })).toBe(1000);
+        expect(Util.normalizeLimit(2, { min: 10 })).toBe(10);
+        expect(Util.normalizeLimit(-5, { fallback: 0 })).toBe(0);
+    });
+
+    test("creates deadlines and resolves remaining time with unlimited -1 bounds", () => {
+        expect(Util.createDeadline(-1)).toBeNull();
+        expect(Util.createDeadline(0)).toBeNull();
+
+        const deadline = Util.createDeadline(5000);
+        expect(deadline).toBeGreaterThan(Date.now());
+
+        expect(Util.getRemainingTime(null)).toBe(-1);
+        expect(Util.getRemainingTime(null, 2000)).toBe(2000);
+        expect(Util.getRemainingTime(Date.now() - 100)).toBe(0);
+        expect(Util.getRemainingTime(Date.now() - 100, 2000, 1)).toBe(1);
+        expect(Util.getRemainingTime(Date.now() + 5000, 2000, 1)).toBe(2000);
+    });
 });

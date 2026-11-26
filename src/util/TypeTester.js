@@ -235,7 +235,7 @@ const TypeTester = Object.freeze({
             }
         }
 
-        if (!Util.empty(invalid)) {
+        if (invalid.length > 0) {
             throw new errorClass(TypeTester._unknownEnumMessage(invalid[0], name, options), invalid);
         }
 

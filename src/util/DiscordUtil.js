@@ -20,7 +20,7 @@ import LoggerUtil from "./LoggerUtil.js";
 import TypeTester from "./TypeTester.js";
 import ObjectUtil from "./ObjectUtil.js";
 import ArrayUtil from "./ArrayUtil.js";
-import DateUtil from "./misc/DateUtil.js";
+import DateUtil from "./date/DateUtil.js";
 import HTTPUtil from "./vm/HTTPUtil.js";
 
 import EmbedCountAreas from "./EmbedCountAreas.js";
@@ -449,7 +449,7 @@ let DiscordUtil = {
 
         blocks.push(footerParts.join("\n"));
 
-        blocks = blocks.filter(part => !Util.empty(part));
+        blocks = blocks.filter(part => part !== "");
         return blocks.join("\n\n");
     },
 
@@ -704,7 +704,7 @@ let DiscordUtil = {
                 fieldViolations.value = [fieldSize.value, limits.fieldValue];
             }
 
-            if (!Util.empty(Object.keys(fieldViolations))) {
+            if (Object.keys(fieldViolations).length > 0) {
                 oversizedFields.push({
                     index: i,
                     ...fieldViolations
@@ -712,7 +712,7 @@ let DiscordUtil = {
             }
         }
 
-        if (!Util.empty(oversizedFields)) {
+        if (oversizedFields.length > 0) {
             oversized.fields = oversizedFields;
         }
 
@@ -747,7 +747,7 @@ let DiscordUtil = {
             }
         }
 
-        return Util.empty(Object.keys(oversized)) ? false : oversized;
+        return Object.keys(oversized).length < 1 ? false : oversized;
     },
 
     embedOverSizeLimit: (embed, charLimit, lineLimit, options) => {
@@ -817,7 +817,7 @@ let DiscordUtil = {
                     const part = str.slice(i, i + length);
 
                     if (part === pattern) {
-                        const hasContentAfter = !Util.empty(part.trim());
+                        const hasContentAfter = part.trim() !== "";
 
                         if (hasContentAfter) {
                             stack[stack.length - 1] === pattern ? stack.pop() : stack.push(pattern);
@@ -894,7 +894,7 @@ let DiscordUtil = {
     },
 
     getAttachments: msg => {
-        return Array.from(msg?.attachments?.values() ?? []);
+        return Array.from(msg.attachments?.values() ?? []);
     },
 
     getAttachmentUrls: msg => {
@@ -924,7 +924,7 @@ let DiscordUtil = {
 
         const [ctypePrefs, extensions] = ArrayUtil.split(ctypes, type => type.startsWith("."));
 
-        if (!Util.empty(extensions)) {
+        if (extensions.length > 0) {
             if (Util.empty(attachInfo?.ext)) {
                 throw new UtilError("Extension can only be validated for attachment URLs");
             }
@@ -933,7 +933,7 @@ let DiscordUtil = {
         }
 
         const checkContentType = contentType => {
-            if (Util.empty(ctypePrefs)) {
+            if (ctypePrefs.length < 1) {
                 return;
             }
 
@@ -948,8 +948,8 @@ let DiscordUtil = {
             checkContentType(attach.contentType);
         }
 
-        const res = await axios.request({ url, responseType: "stream" });
-        const contentType = attach?.contentType ?? res.headers["content-type"];
+        const res = await axios.request({ url, responseType: "stream" }),
+            contentType = attach?.contentType ?? res.headers["content-type"];
 
         if (attach == null) {
             try {
@@ -983,7 +983,7 @@ let DiscordUtil = {
             return LoggerUtil.formatLog(null, splitLength, maxLength);
         }
 
-        const payload = Array.isArray(data) && Util.single(data) ? Util.first(data) : data,
+        const payload = Array.isArray(data) && data.length === 1 ? Util.first(data) : data,
             normalized = DiscordUtil._formatMessagePayload(payload, options);
 
         return LoggerUtil.formatLog(normalized, splitLength, maxLength, redactText);
