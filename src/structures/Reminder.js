@@ -4,7 +4,7 @@ import BaseStructure from "./BaseStructure.js";
 
 import Util from "../util/Util.js";
 import DiscordUtil from "../util/DiscordUtil.js";
-import DateUtil from "../util/misc/DateUtil.js";
+import IntervalUtil from "../util/date/IntervalUtil.js";
 
 class Reminder extends BaseStructure {
     static defaultValues = {
@@ -38,8 +38,8 @@ class Reminder extends BaseStructure {
             return 0;
         }
 
-        const idx = DateUtil.getIntervalIndex(this.start, this.interval, date) + Number(next);
-        return this.end === null ? idx : Math.min(idx, DateUtil.getIntervalIndex(this.start, this.interval, this.end));
+        const idx = IntervalUtil.getIndex(this.start, this.interval, date) + Number(next);
+        return this.end === null ? idx : Math.min(idx, IntervalUtil.getIndex(this.start, this.interval, this.end));
     }
 
     getOccurrence(idx, next = false) {
@@ -49,10 +49,7 @@ class Reminder extends BaseStructure {
             return null;
         }
 
-        const occurrence = this.isRecurring
-            ? DateUtil.getIntervalOccurrence(this.start, this.interval, idx)
-            : this.start;
-
+        const occurrence = this.isRecurring ? IntervalUtil.getOccurrence(this.start, this.interval, idx) : this.start;
         return this.end === null || occurrence <= this.end ? occurrence : null;
     }
 
@@ -67,7 +64,7 @@ class Reminder extends BaseStructure {
         let format = this.getTimestamp(discord);
 
         if (this.isRecurring) {
-            format += ` (every ${DateUtil.formatInterval(this.interval)}`;
+            format += ` (every ${IntervalUtil.format(this.interval)}`;
 
             if (this.end !== null) {
                 format += ` until ${DiscordUtil.formatTimestamp(this.end, { discord, style: TimestampStyles.ShortDateTime })}`;

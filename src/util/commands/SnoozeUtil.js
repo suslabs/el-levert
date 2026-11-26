@@ -14,114 +14,68 @@ import InteractionModes from "../../structures/interaction/InteractionModes.js";
 import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../Util.js";
-import DateUtil from "../misc/DateUtil.js";
+import IntervalUtil from "../date/IntervalUtil.js";
 
-let SnoozeUtil = {
-    customIdPrefix: "snooze",
-
-    createSnoozeRow: sessionId => {
-        const snooze5m = new ButtonBuilder()
-                .setCustomId(ComponentSession.createCustomId(SnoozeUtil.customIdPrefix, "5m", sessionId))
-                .setLabel("5m")
-                .setStyle(ButtonStyle.Secondary),
-            snooze15m = new ButtonBuilder()
-                .setCustomId(ComponentSession.createCustomId(SnoozeUtil.customIdPrefix, "15m", sessionId))
-                .setLabel("15m")
-                .setStyle(ButtonStyle.Secondary),
-            snooze1h = new ButtonBuilder()
-                .setCustomId(ComponentSession.createCustomId(SnoozeUtil.customIdPrefix, "1h", sessionId))
-                .setLabel("1h")
-                .setStyle(ButtonStyle.Secondary),
-            snoozeCustom = new ButtonBuilder()
-                .setCustomId(ComponentSession.createCustomId(SnoozeUtil.customIdPrefix, "custom", sessionId))
-                .setLabel("Custom")
-                .setStyle(ButtonStyle.Secondary);
-
-        return new ActionRowBuilder().addComponents(snooze5m, snooze15m, snooze1h, snoozeCustom);
-    },
-
-    createSession: (user, reminder) => {
-        const snoozeCmd = getClient().commandManager.searchCommands("reminder").subcmds.get("snooze"),
-            ctx = snoozeCmd.createContext({ author: user });
+class SnoozeUtil {
+    static createSession(user, reminder) {
+        const client = getClient(),
+            command = client.commandManager.searchCommands("reminder").subcmds.get("snooze"),
+            ctx = command.createContext({ author: user });
 
         const session = new ComponentSession(ctx, {
             interactionMode: InteractionModes.authorOnly,
             spec: { reminder }
         });
 
-        ctx.snoozeSession = session;
-
-        const handler = getClient().interactionHandler;
-
-        if (handler != null) {
-            handler.registerSession(session);
-        }
-
+        client.interactionHandler.registerSession(session);
         return session;
-    },
+    }
 
-    handleInteraction: async ctx => {
-        const session = ctx.snoozeSession ?? ctx.interactionContext?.session,
-            reminder = session?.spec?.reminder,
-            interaction = ctx.interaction;
+    static createSnoozeRow(sessionId) {
+        const buttons = Array.from(SnoozeUtil._presets.keys(), duration =>
+            SnoozeUtil._createButton(sessionId, duration, duration, ButtonStyle.Secondary)
+        );
 
-        if (session == null || reminder == null || interaction == null) {
+        const custom = SnoozeUtil._createButton(sessionId, SnoozeUtil._customAction, "Custom", ButtonStyle.Primary);
+        return new ActionRowBuilder().addComponents(...buttons, custom);
+    }
+
+    static async handleInteraction(ctx) {
+        const { componentId, interaction, session } = ctx.interactionContext;
+
+        if (componentId.prefix !== SnoozeUtil._prefix) {
             return false;
         }
 
-        const action = ComponentSession.parseCustomId(interaction.customId)?.action;
+        const { action } = componentId;
 
-        let duration = null;
+        const isModal = interaction.isModalSubmit();
 
-        switch (action) {
-            case "custom":
-                const modal = new ModalBuilder()
-                    .setCustomId(ComponentSession.createCustomId(SnoozeUtil.customIdPrefix, "modal", session.id))
-                    .setTitle("Snooze Reminder");
-
-                const durationInput = new TextInputBuilder()
-                    .setCustomId("duration")
-                    .setLabel("Snooze duration (e.g. 10m, 2h, 1d)")
-                    .setStyle(TextInputStyle.Short)
-                    .setRequired(true);
-
-                const row = new ActionRowBuilder().addComponents(durationInput);
-                modal.addComponents(row);
-
-                await interaction.showModal(modal);
-                return true;
-            case "5m":
-                duration = (5 * Util.durationSeconds.minute) / Util.durationSeconds.milli;
-                break;
-            case "15m":
-                duration = (15 * Util.durationSeconds.minute) / Util.durationSeconds.milli;
-                break;
-            case "1h":
-                duration = Util.durationSeconds.hour / Util.durationSeconds.milli;
-                break;
-            case "modal":
-                const durationStr = interaction.fields.getTextInputValue("duration");
-                duration = DateUtil.parseInterval(durationStr);
-
-                if (duration === null || duration <= 0) {
-                    await interaction.reply({
-                        content: `${getEmoji("warn")} Invalid duration: \`${durationStr}\`.`,
-                        ephemeral: true
-                    });
-
-                    return true;
-                }
-
-                break;
-            default:
-                return false;
+        if (action === SnoozeUtil._customAction && !isModal) {
+            await SnoozeUtil._showModal(interaction, session.id);
+            return true;
         }
 
-        const snoozed = await getClient().reminderManager.snooze(interaction.user.id, reminder, duration);
+        let duration;
+
+        if (action === SnoozeUtil._modalAction && isModal) {
+            const input = interaction.fields.getTextInputValue(SnoozeUtil._durationField);
+            duration = IntervalUtil.parse(input);
+
+            if (duration === null) {
+                await ctx.reply(`${getEmoji("warn")} Invalid duration: \`${input}\`.`, { ephemeral: true });
+                return true;
+            }
+        } else if (!isModal && SnoozeUtil._presets.has(action)) {
+            duration = SnoozeUtil._presets.get(action);
+        } else {
+            return false;
+        }
+
+        const snoozed = await getClient().reminderManager.snooze(interaction.user.id, session.spec.reminder, duration);
         await session.destroy(true);
 
-        const format = snoozed.format(false),
-            content = `${getEmoji("info")} Reminder snoozed until ${format}.`;
+        const content = `${getEmoji("info")} Reminder snoozed until ${snoozed.format(false)}.`;
 
         if (interaction.replied || interaction.deferred) {
             await interaction.followUp({ content, ephemeral: true });
@@ -131,7 +85,40 @@ let SnoozeUtil = {
 
         return true;
     }
-};
 
-SnoozeUtil = Object.freeze(SnoozeUtil);
+    static _prefix = "snooze";
+    static _customAction = "custom";
+    static _modalAction = "modal";
+    static _durationField = "duration";
+
+    static _presets = new Map([
+        ["5m", (5 * Util.durationSeconds.minute) / Util.durationSeconds.milli],
+        ["15m", (15 * Util.durationSeconds.minute) / Util.durationSeconds.milli],
+        ["1h", Util.durationSeconds.hour / Util.durationSeconds.milli]
+    ]);
+
+    static _createButton(sessionId, action, label, style) {
+        return new ButtonBuilder()
+            .setCustomId(ComponentSession.createCustomId(SnoozeUtil._prefix, action, sessionId))
+            .setLabel(label)
+            .setStyle(style);
+    }
+
+    static async _showModal(interaction, sessionId) {
+        const input = new TextInputBuilder()
+            .setCustomId(SnoozeUtil._durationField)
+            .setLabel("Snooze duration (e.g. 10m, 2h, 1d)")
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder("e.g. 10m, 2h, 1d")
+            .setRequired(true);
+
+        const modal = new ModalBuilder()
+            .setCustomId(ComponentSession.createCustomId(SnoozeUtil._prefix, SnoozeUtil._modalAction, sessionId))
+            .setTitle("Snooze Reminder")
+            .addComponents(new ActionRowBuilder().addComponents(input));
+
+        await interaction.showModal(modal);
+    }
+}
+
 export default SnoozeUtil;

@@ -2,7 +2,8 @@ import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
 import DiscordUtil from "../../util/DiscordUtil.js";
-import DateUtil from "../../util/misc/DateUtil.js";
+import ReminderSchedule from "../../util/date/ReminderSchedule.js";
+import IntervalUtil from "../../util/date/IntervalUtil.js";
 
 const messageRegex = /(.+?)\s*(?:(?:(['"`])((?:[^\2\\]|\\.)*?)\2)|$)/;
 
@@ -61,11 +62,13 @@ class ReminderAddCommand {
             return `${getEmoji("info")} ${this.getArgsHelp()}`;
         }
 
-        if (Util.nonemptyString(every) && DateUtil.parseInterval(every, true) === null) {
+        const interval = Util.empty(every) ? null : IntervalUtil.parse(every, true);
+
+        if (Util.nonemptyString(every) && interval === null) {
             return `${getEmoji("warn")} Invalid recurring interval: \`${every}\`.`;
         }
 
-        const parsed = DateUtil.parseDateRecurring(date, every);
+        const parsed = ReminderSchedule.parse(date, interval);
 
         if (parsed === null) {
             return `${getEmoji("warn")} Invalid date: \`${date}\`.`;
@@ -138,7 +141,7 @@ class ReminderAddCommand {
         }
 
         const format = reminder.format(),
-            when = parsed.isRecurring && parsed.date <= Date.now() ? "shortly and then on" : "on";
+            when = reminder.isRecurring && parsed.date <= Date.now() ? "shortly and then on" : "on";
 
         return `${getEmoji("info")} You will be reminded ${when} ${format}`;
     }

@@ -1,7 +1,7 @@
 import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-import DateUtil from "../../util/misc/DateUtil.js";
+import DateUtil from "../../util/date/DateUtil.js";
 
 class UptimeCommand {
     static info = {

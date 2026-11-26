@@ -1,7 +1,7 @@
 import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-import DateUtil from "../../util/misc/DateUtil.js";
+import IntervalUtil from "../../util/date/IntervalUtil.js";
 import SnoozeUtil from "../../util/commands/SnoozeUtil.js";
 
 class ReminderSnoozeCommand {
@@ -41,9 +41,9 @@ class ReminderSnoozeCommand {
             return `${getEmoji("info")} ${this.getArgsHelp()}`;
         }
 
-        const duration = DateUtil.parseInterval(durationText);
+        const duration = IntervalUtil.parse(durationText);
 
-        if (duration === null || duration <= 0) {
+        if (duration === null) {
             return `${getEmoji("warn")} Invalid duration: \`${durationText}\`.`;
         }
 

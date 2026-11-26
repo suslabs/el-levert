@@ -42,7 +42,7 @@ class IntervalLoop {
     }
 
     _schedule() {
-        if (this.running && this._timer === null) {
+        if (this.running && this._timer === null && this.interval > 0) {
             this._timer = setTimeout(() => this._run(), this.interval);
         }
     }

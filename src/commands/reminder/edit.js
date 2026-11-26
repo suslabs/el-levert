@@ -1,7 +1,8 @@
 import { getClient, getEmoji } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
-import DateUtil from "../../util/misc/DateUtil.js";
+import ReminderSchedule from "../../util/date/ReminderSchedule.js";
+import IntervalUtil from "../../util/date/IntervalUtil.js";
 
 class ReminderEditCommand {
     static info = {
@@ -59,8 +60,8 @@ class ReminderEditCommand {
             return `${getEmoji("info")} ${this.getArgsHelp()}`;
         }
 
-        const index = idxRes.value,
-            dbIdx = index - 1;
+        const idx = idxRes.value,
+            dbIdx = idx - 1;
 
         const date = ctx.arg("date"),
             every = ctx.arg("every"),
@@ -79,7 +80,7 @@ class ReminderEditCommand {
             interval = null;
             end = null;
         } else if (Util.nonemptyString(every)) {
-            interval = DateUtil.parseInterval(every, true);
+            interval = IntervalUtil.parse(every, true);
 
             if (interval === null) {
                 return `${getEmoji("warn")} Invalid recurring interval: \`${every}\`.`;
@@ -87,7 +88,7 @@ class ReminderEditCommand {
         }
 
         if (Util.nonemptyString(date)) {
-            const parsed = DateUtil.parseDateRecurring(date, every);
+            const parsed = ReminderSchedule.parse(date, interval ?? null);
 
             if (parsed === null) {
                 return `${getEmoji("warn")} Invalid date: \`${date}\`.`;
@@ -95,7 +96,7 @@ class ReminderEditCommand {
 
             start = parsed.date;
 
-            if (parsed.isRecurring && !clearEvery) {
+            if (parsed.interval !== null && !clearEvery) {
                 interval = parsed.interval;
                 end = parsed.end;
             }
@@ -122,7 +123,7 @@ class ReminderEditCommand {
 
             switch (err.message) {
                 case "Reminder doesn't exist":
-                    return `${getEmoji("warn")} Reminder **${index}** doesn't exist.`;
+                    return `${getEmoji("warn")} Reminder **${idx}** doesn't exist.`;
                 case "Invalid start time":
                     return `${getEmoji("warn")} Can't set a reminder for a time in the past.`;
                 case "Invalid reminder interval":
@@ -135,7 +136,7 @@ class ReminderEditCommand {
         }
 
         const format = reminder.format();
-        return `${getEmoji("info")} Updated reminder **${index}**: ${format}`;
+        return `${getEmoji("info")} Updated reminder **${idx}**: ${format}`;
     }
 }
 

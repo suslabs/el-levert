@@ -13,7 +13,7 @@ import DatabaseUtil from "../../util/database/DatabaseUtil.js";
 import Benchmark from "../../util/misc/Benchmark.js";
 import IntervalLoop from "../../util/misc/IntervalLoop.js";
 import SnoozeUtil from "../../util/commands/SnoozeUtil.js";
-import DateUtil from "../../util/misc/DateUtil.js";
+import IntervalUtil from "../../util/date/IntervalUtil.js";
 
 import ReminderError from "../../errors/ReminderError.js";
 
@@ -33,7 +33,7 @@ class ReminderManager extends DBManager {
     constructor(enabled) {
         super(enabled, "reminder", "remind_db", ReminderDatabase);
 
-        this.sendInterval = getConfig().reminderSendInterval;
+        this.sendInterval = Util.normalizeLimit(getConfig().reminderSendInterval);
         this.maxMsgLength = Util.clamp(ReminderManager.maxMsgLength, 0, DiscordUtil.msgCharLimit - 500);
 
         this._sendLoop = new IntervalLoop(
@@ -114,9 +114,8 @@ class ReminderManager extends DBManager {
         options = ObjectUtil.guaranteeObject(options, "user");
         pagination = ObjectUtil.guaranteeObject(pagination, "limit");
 
-        const user = options.user;
-
-        const totalCount = await this.remind_db.count(user);
+        const user = options.user,
+            totalCount = await this.remind_db.count(user);
 
         if (totalCount === 0) {
             return {
@@ -125,9 +124,8 @@ class ReminderManager extends DBManager {
             };
         }
 
-        const { limit, offset } = DatabaseUtil.resolvePagination(pagination, ReminderManager.defaultListLimit);
-
-        const items = (await this.remind_db.fetch(user, { limit, offset })) ?? [];
+        const { limit, offset } = DatabaseUtil.resolvePagination(pagination, ReminderManager.defaultListLimit),
+            items = (await this.remind_db.fetch(user, { limit, offset })) ?? [];
 
         return {
             items,
@@ -149,14 +147,7 @@ class ReminderManager extends DBManager {
 
     async add(user, start, msg, validate = true, interval = null, end = null) {
         if (validate) {
-            if (!Number.isSafeInteger(start) || (interval === null && start < Date.now())) {
-                throw new ReminderError("Invalid start time", start);
-            } else if (interval !== null && !DateUtil.isValidInterval(interval)) {
-                throw new ReminderError("Invalid reminder interval", interval);
-            } else if (end !== null && (!Number.isInteger(end) || interval === null || end < start)) {
-                throw new ReminderError("Invalid reminder end time", end);
-            }
-
+            ReminderManager._validateSchedule(start, interval, end, interval === null);
             msg = this.checkMessage(msg);
         }
 
@@ -169,7 +160,7 @@ class ReminderManager extends DBManager {
         });
         await this.remind_db.add(reminder);
 
-        const intervalStr = reminder.isRecurring ? ` every ${DateUtil.formatInterval(reminder.interval)}` : "";
+        const intervalStr = reminder.isRecurring ? ` every ${IntervalUtil.format(reminder.interval)}` : "";
         getLogger().info(
             `Added reminder for user: ${user} starting: ${start}${intervalStr} with message:${LoggerUtil.formatLog(msg)}`
         );
@@ -200,29 +191,12 @@ class ReminderManager extends DBManager {
             nextStart = start ?? reminder.start;
 
         if (validate) {
-            if (start !== null && (!Number.isInteger(start) || start < Date.now())) {
-                throw new ReminderError("Invalid start time", start);
-            } else if (interval != null && !DateUtil.isValidInterval(interval)) {
-                throw new ReminderError("Invalid reminder interval", interval);
-            } else if (
-                end !== null &&
-                ((hasEnd && !Number.isInteger(end)) || nextInterval === null || end < nextStart)
-            ) {
-                throw new ReminderError("Invalid reminder end time", end);
-            }
+            ReminderManager._validateSchedule(nextStart, nextInterval, end, start !== null);
         }
 
-        if (start !== null) {
-            reminder.start = start;
-        }
-
-        if (typeof interval !== "undefined") {
-            reminder.interval = interval;
-        }
-
-        if (hasEnd || interval === null) {
-            reminder.end = end;
-        }
+        reminder.start = nextStart;
+        reminder.interval = nextInterval;
+        reminder.end = end;
 
         const result = await this.remind_db.update(reminder);
 
@@ -232,7 +206,7 @@ class ReminderManager extends DBManager {
 
         this._lastSentOccurrences.delete(reminder.id);
 
-        const intervalStr = reminder.isRecurring ? ` every ${DateUtil.formatInterval(reminder.interval)}` : "";
+        const intervalStr = reminder.isRecurring ? ` every ${IntervalUtil.format(reminder.interval)}` : "";
         getLogger().info(
             `Updated reminder: ${index} for user: ${user} starting: ${reminder.start}${intervalStr} with message:${LoggerUtil.formatLog(reminder.msg)}`
         );
@@ -385,6 +359,7 @@ class ReminderManager extends DBManager {
             reminder.getOccurrence(idx, true) !== null
                 ? "Recurring reminder; next occurrence: "
                 : "You set a reminder for ";
+
         const out = prefix + reminder.format();
         getLogger().info(`Sending reminder to ${DiscordUtil.formatUser(user)}...`);
 
@@ -419,6 +394,16 @@ class ReminderManager extends DBManager {
         this._lastSentOccurrences.clear();
     }
 
+    static _validateSchedule(start, interval, end, requireFuture) {
+        if (!Number.isSafeInteger(start) || (requireFuture && start < Date.now())) {
+            throw new ReminderError("Invalid start time", start);
+        } else if (interval !== null && !IntervalUtil.isValid(interval)) {
+            throw new ReminderError("Invalid reminder interval", interval);
+        } else if (end !== null && (!Number.isSafeInteger(end) || interval === null || end < start)) {
+            throw new ReminderError("Invalid reminder end time", end);
+        }
+    }
+
     async _completeOccurrence(reminder, idx) {
         const current = await this.remind_db.fetchById(reminder.id);
 
@@ -444,8 +429,11 @@ class ReminderManager extends DBManager {
 
         try {
             if (ReminderManager.areWeChecking && getLogger().isDebugEnabled()) {
-                const interval = Util.round(this.sendInterval * Util.durationSeconds.milli, 1);
-                getLogger().debug(`Checking reminders... (${interval}s)`);
+                const label =
+                    this.sendInterval === -1
+                        ? "manual"
+                        : `${Util.round(this.sendInterval * Util.durationSeconds.milli, 1)}s`;
+                getLogger().debug(`Checking reminders... (${label})`);
             }
 
             const reminders = await this.getPastReminders();
@@ -457,10 +445,11 @@ class ReminderManager extends DBManager {
             }
 
             getLogger().info(`Sending ${reminders.length} reminder(s)...`);
+
             const results = await Promise.allSettled(
-                reminders.map(({ reminder, idx }) => this.sendReminder(reminder, idx))
-            );
-            const failed = results.find(result => result.status === "rejected");
+                    reminders.map(({ reminder, idx }) => this.sendReminder(reminder, idx))
+                ),
+                failed = results.find(result => result.status === "rejected");
 
             if (typeof failed !== "undefined") {
                 throw failed.reason;

@@ -1,7 +1,7 @@
 import Reminder from "../../src/structures/Reminder.js";
 
 import Util from "../../src/util/Util.js";
-import DateUtil from "../../src/util/misc/DateUtil.js";
+import IntervalUtil from "../../src/util/date/IntervalUtil.js";
 
 describe("Reminder", () => {
     test("finds due and next occurrences without changing the schedule", () => {
@@ -98,7 +98,7 @@ describe("Reminder", () => {
         const mixed = new Reminder({ start, interval: "1M1D" });
         expect(mixed.getOccurrence(1)).toBe(feb + day);
         expect(mixed.getOccurrenceIndex(march + day * 2)).toBe(2);
-        expect(DateUtil.formatInterval("30D")).toBe("4 weeks, 2 days");
+        expect(IntervalUtil.format("30D")).toBe("4 weeks, 2 days");
     });
 
     test("keeps the local time across daylight saving changes", () => {
