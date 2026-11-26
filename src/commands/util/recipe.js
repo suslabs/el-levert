@@ -61,10 +61,12 @@ class RecipeCommand {
     }
 
     async handler(ctx) {
+        const command = `${this.prefix}${this.name}`;
+
         const args = parseQuery(ctx.arg("parts"));
 
         if (Util.empty(args.query)) {
-            return RecipeView.help(`${this.prefix}${this.name}`);
+            return RecipeView.help(command);
         }
 
         const mode = this.source.getMode(args.expert);
@@ -75,7 +77,7 @@ class RecipeCommand {
                 uses: args.uses,
                 timeout: RecipeCommand.searchTimeout
             });
-            return await new RecipeView(this.source, data, { ...args, mode }).reply(ctx);
+            return await new RecipeView(this.source, data, command, { ...args, mode }).reply(ctx);
         } catch (err) {
             if (!(err instanceof AIError)) {
                 throw err;
