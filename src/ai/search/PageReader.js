@@ -5,11 +5,14 @@ import { isSuccessStatus } from "../../util/misc/HttpStatusCodes.js";
 
 import AIError from "../../errors/AIError.js";
 
-function toPage(data, contentType, isHtml) {
+function toPage(data, contentType, isHtml, url) {
     if (contentType.startsWith("image/")) {
         throw new AIError("This URL is an image; use inspect_image");
     } else if (isHtml) {
-        return HTMLUtil.toText(data);
+        const page = HTMLUtil.toText(data),
+            images = HTMLUtil.extractImages(data, url);
+
+        return Util.empty(images) ? page : { ...page, images };
     }
 
     return { title: "", text: String(data) };
@@ -20,7 +23,43 @@ function pageText(minLength) {
     const doc = globalThis.document,
         text = (doc.querySelector("main, article") ?? doc.body)?.innerText.trim() ?? "";
 
-    return text.length >= minLength ? { title: doc.title, text } : null;
+    if (text.length < minLength) {
+        return null;
+    }
+
+    const urls = new Set(),
+        meta = doc.querySelectorAll("meta[property='og:image'], meta[name='twitter:image']");
+
+    for (const el of meta) {
+        const content = el.getAttribute("content");
+
+        if (content && /^https?:\/\//i.test(content) && !/\.svg(?:[?#]|$)/i.test(content)) {
+            urls.add(content);
+        }
+    }
+
+    const root = doc.querySelector("main, article") ?? doc.body;
+
+    for (const img of root?.querySelectorAll("img") ?? []) {
+        const src = img.currentSrc || img.src;
+
+        if (!src || !/^https?:\/\//i.test(src) || /\.svg(?:[?#]|$)/i.test(src)) {
+            continue;
+        }
+
+        if (img.naturalWidth > 0 && img.naturalWidth < 64 && img.naturalHeight > 0 && img.naturalHeight < 64) {
+            continue;
+        }
+
+        urls.add(src);
+
+        if (urls.size >= 8) {
+            break;
+        }
+    }
+
+    const images = Array.from(urls);
+    return { title: doc.title, text, ...(images.slice(0, 1).join("") ? { images } : {}) };
 }
 
 class PageReader {
@@ -51,7 +90,7 @@ class PageReader {
         const contentType = HTTPUtil.getContentType(res.headers),
             isHtml = contentType.includes("html");
 
-        const original = isSuccessStatus(res.status) ? toPage(res.data, contentType, isHtml) : null;
+        const original = isSuccessStatus(res.status) ? toPage(res.data, contentType, isHtml, url) : null;
 
         if (original !== null && (!isHtml || original.text.length >= PageReader.minTextLength)) {
             return original;

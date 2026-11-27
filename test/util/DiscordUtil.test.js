@@ -70,14 +70,33 @@ describe("DiscordUtil", () => {
     });
 
     test("identifies and parses attachment URLs", () => {
-        const url = "https://cdn.discordapp.com/attachments/123456789/987654321/image.png?ex=6500&is=6400&hm=abcd";
-        const bareUrl = "https://cdn.discordapp.com/attachments/123456789/987654321/image.png";
+        const url = "https://cdn.discordapp.com/attachments/123456789/987654321/image.png?ex=6500&is=6400&hm=abcd",
+            bareUrl = "https://cdn.discordapp.com/attachments/123456789/987654321/image.png",
+            proxyUrl =
+                "https://media.discordapp.net/attachments/123456789/987654321/image.png?is=6400&hm=abcd&ex=6500&format=webp&width=640&";
 
         expect(DiscordUtil.isAttachmentUrl(url)).toBe(true);
         expect(DiscordUtil.isAttachmentUrl(bareUrl)).toBe(true);
+        expect(DiscordUtil.isAttachmentUrl(proxyUrl)).toBe(true);
         expect(DiscordUtil.isAttachmentUrl("not a discord attachment")).toBe(false);
         expect(DiscordUtil.isAttachmentUrl("")).toBe(false);
         expect(DiscordUtil.isAttachmentUrl(null)).toBe(false);
+
+        expect(DiscordUtil.parseAttachmentUrl(proxyUrl)).toMatchObject({
+            subdomain: "media",
+            tld: "net",
+            serverId: "123456789",
+            channelId: "987654321",
+            file: "image.png",
+            ex: "6500",
+            is: "6400",
+            hm: "abcd"
+        });
+
+        expect(DiscordUtil.findAttachmentUrls(`[pic](${proxyUrl})`)).toHaveLength(1);
+        expect(DiscordUtil.findAttachmentUrls(`[pic](${proxyUrl})`)[0].search).toBe(
+            "?is=6400&hm=abcd&ex=6500&format=webp&width=640&"
+        );
 
         expect(DiscordUtil.hasAttachmentUrls(`Here is a file: ${bareUrl} check it out`)).toBe(true);
         expect(DiscordUtil.hasAttachmentUrls("no attachments here")).toBe(false);
@@ -85,6 +104,53 @@ describe("DiscordUtil", () => {
         expect(DiscordUtil.hasAttachmentUrls(null)).toBe(false);
 
         expect(DiscordUtil.parseAttachmentUrl("not a discord attachment")).toBeNull();
+    });
+
+    test("detects expired attachment URLs and refreshes links embedded in text", async () => {
+        const now = 1_750_000_000_000,
+            expiredHex = Math.floor((now - 60_000) / 1000).toString(16),
+            freshHex = Math.floor((now + 3_600_000) / 1000).toString(16);
+
+        const expiredUrl = `https://media.discordapp.net/attachments/1/2/old.png?ex=${expiredHex}&is=01&hm=aa&format=webp&`,
+            freshUrl = `https://cdn.discordapp.com/attachments/1/2/new.png?ex=${freshHex}&is=01&hm=bb`,
+            unsignedUrl = "https://cdn.discordapp.com/attachments/1/2/unsigned.png";
+
+        expect(DiscordUtil.isAttachmentExpired(expiredUrl, now)).toBe(true);
+        expect(DiscordUtil.isAttachmentExpired(unsignedUrl, now)).toBe(true);
+        expect(DiscordUtil.isAttachmentExpired(freshUrl, now)).toBe(false);
+        expect(DiscordUtil.isAttachmentExpired("https://example.com/a.png", now)).toBe(false);
+
+        const calls = [];
+        const rest = {
+            post: async (route, options) => {
+                calls.push({ route, urls: options.body.attachment_urls });
+                return {
+                    refreshed_urls: options.body.attachment_urls
+                        .filter(url => url.startsWith("https://cdn.discordapp.com/"))
+                        .map(url => ({
+                            original: url,
+                            refreshed: `${url.split("?")[0]}?ex=${freshHex}&is=02&hm=ff`
+                        }))
+                };
+            }
+        };
+
+        const out = await DiscordUtil.refreshAttachmentUrlsInText(
+            rest,
+            `Old [img](${expiredUrl}) and unsigned ${unsignedUrl} and fresh ${freshUrl}`,
+            { now }
+        );
+
+        expect(out).toBe(
+            `Old [img](https://cdn.discordapp.com/attachments/1/2/old.png?ex=${freshHex}&is=02&hm=ff) and unsigned https://cdn.discordapp.com/attachments/1/2/unsigned.png?ex=${freshHex}&is=02&hm=ff and fresh ${freshUrl}`
+        );
+        expect(calls).toEqual([
+            { route: "/attachments/refresh-urls", urls: [expiredUrl, unsignedUrl] },
+            {
+                route: "/attachments/refresh-urls",
+                urls: [`https://cdn.discordapp.com/attachments/1/2/old.png?ex=${expiredHex}&is=01&hm=aa`]
+            }
+        ]);
     });
 
     test("refreshes one or more attachment URLs in order and returns null for missing results", async () => {

@@ -50,4 +50,20 @@ describe("PageReader", () => {
         await expect(reader.read(url, 1000)).rejects.toThrow("use inspect_image");
         expect(browser.withPage).not.toHaveBeenCalled();
     });
+
+    test("extracts resolved non-tracking image URLs from HTML pages", async () => {
+        const browser = { withPage: vi.fn() },
+            html = [
+                '<head><meta property="og:image" content="/hero.png"></head>',
+                "<main><p>".concat("word ".repeat(60), "</p>"),
+                '<img src="https://cdn.example.com/diagram.webp?size=lg">',
+                '<img src="/icon.svg"><img src="/pixel.gif" width="1" height="1"></main>'
+            ].join("");
+
+        const reader = readerFor("text/html", html, browser);
+        const page = await reader.read("https://example.com/wiki/EBF", 1000);
+
+        expect(page.images).toEqual(["https://example.com/hero.png", "https://cdn.example.com/diagram.webp?size=lg"]);
+        expect(browser.withPage).not.toHaveBeenCalled();
+    });
 });

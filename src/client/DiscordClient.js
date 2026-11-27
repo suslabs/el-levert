@@ -16,6 +16,9 @@ const {
     Client,
 
     DiscordAPIError,
+    RESTJSONErrorCodes,
+    Routes,
+    makeURLSearchParams,
 
     GatewayIntentBits,
     Partials,
@@ -111,6 +114,13 @@ class DiscordClient {
     static defaultMessagesFetchOptions = {
         limit: 50
     };
+
+    static defaultSearchLimit = 25;
+    static maxSearchLimit = 25;
+    static maxSearchChannels = 500;
+    static maxSearchIndexWaitMs = (3 * Util.durationSeconds.second) / Util.durationSeconds.milli;
+    static readMessagePermissions =
+        PermissionsBitField.Flags.ViewChannel | PermissionsBitField.Flags.ReadMessageHistory;
 
     static defaultUserOptions = {
         cache: true
@@ -834,6 +844,231 @@ class DiscordClient {
         return messages;
     }
 
+    async searchMessages(sv_id, options) {
+        options = ObjectUtil.guaranteeObject(options);
+
+        const guild = await this.fetchGuild(sv_id);
+
+        if (guild === null) {
+            return null;
+        }
+
+        const checkAccess = options.checkAccess ?? false,
+            member = checkAccess ? await this.fetchMember(guild, options.user_id) : null;
+
+        if (checkAccess && member === null) {
+            return null;
+        }
+
+        const me = guild.members?.me ?? null,
+            requestedChannels = ArrayUtil.guaranteeArray(options.channelId ?? options.channelIds, null, true);
+
+        let channelIds;
+
+        if (!Util.empty(requestedChannels)) {
+            channelIds = [];
+
+            for (const ch_id of requestedChannels) {
+                const channel = await this.fetchChannel(ch_id, {
+                    checkAccess,
+                    user_id: options.user_id
+                });
+
+                const channelGuildId = channel?.guildId ?? channel?.guild?.id;
+
+                if (
+                    channel === null ||
+                    !channel.isTextBased() ||
+                    channelGuildId !== guild.id ||
+                    (checkAccess && !this._hasChannelAccess(channel, member, DiscordClient.readMessagePermissions)) ||
+                    (me !== null && !this._hasChannelAccess(channel, me, DiscordClient.readMessagePermissions))
+                ) {
+                    return null;
+                }
+
+                channelIds.push(channel.id);
+            }
+        } else if ((guild.channels?.cache?.size ?? 0) > 0) {
+            channelIds = [];
+
+            for (const channel of guild.channels.cache.values()) {
+                if (!channel.isTextBased()) {
+                    continue;
+                }
+
+                if (checkAccess && !this._hasChannelAccess(channel, member, DiscordClient.readMessagePermissions)) {
+                    continue;
+                }
+
+                if (me !== null && !this._hasChannelAccess(channel, me, DiscordClient.readMessagePermissions)) {
+                    continue;
+                }
+
+                channelIds.push(channel.id);
+            }
+
+            if (Util.empty(channelIds)) {
+                return {
+                    totalResults: 0,
+                    documentsIndexed: null,
+                    doingDeepHistoricalIndex: false,
+                    messages: []
+                };
+            }
+
+            channelIds = channelIds.slice(0, DiscordClient.maxSearchChannels);
+        } else {
+            channelIds = null;
+        }
+
+        const query = {
+            limit: Util.clamp(options.limit ?? DiscordClient.defaultSearchLimit, 1, DiscordClient.maxSearchLimit)
+        };
+
+        if (typeof options.offset === "number" && options.offset > 0) {
+            query.offset = Util.clamp(options.offset, 0, 9975);
+        }
+
+        if (Util.nonemptyString(options.content)) {
+            query.content = options.content.slice(0, 1024);
+        }
+
+        if (!Util.empty(channelIds)) {
+            query.channel_id = channelIds;
+        }
+
+        if (!Util.empty(options.authorIds)) {
+            query.author_id = options.authorIds.slice(0, 100);
+        }
+
+        if (!Util.empty(options.authorTypes)) {
+            query.author_type = options.authorTypes;
+        }
+
+        if (Util.nonemptyString(options.minId)) {
+            query.min_id = options.minId;
+        }
+
+        if (Util.nonemptyString(options.maxId)) {
+            query.max_id = options.maxId;
+        }
+
+        if (!Util.empty(options.has)) {
+            query.has = options.has;
+        }
+
+        if (typeof options.pinned === "boolean") {
+            query.pinned = options.pinned;
+        }
+
+        if (!Util.empty(options.mentions)) {
+            query.mentions = options.mentions.slice(0, 100);
+        }
+
+        if (Util.nonemptyString(options.sortBy)) {
+            query.sort_by = options.sortBy;
+        }
+
+        if (Util.nonemptyString(options.sortOrder)) {
+            query.sort_order = options.sortOrder;
+        }
+
+        if (typeof options.includeNsfw === "boolean") {
+            query.include_nsfw = options.includeNsfw;
+        }
+
+        const route = Routes.guildMessagesSearch(guild.id),
+            params = makeURLSearchParams(query);
+
+        let data = await this.client.rest.get(route, { query: params });
+
+        if (this._isSearchIndexPending(data)) {
+            const retryAfterMs = (data.retry_after ?? 0) / Util.durationSeconds.milli,
+                maxWait = Math.min(
+                    options.maxIndexWaitMs ?? DiscordClient.maxSearchIndexWaitMs,
+                    DiscordClient.maxSearchIndexWaitMs
+                );
+
+            if (retryAfterMs > 0 && retryAfterMs <= maxWait) {
+                await Util.delay(retryAfterMs, options.signal);
+                data = await this.client.rest.get(route, { query: params });
+            }
+        }
+
+        if (this._isSearchIndexPending(data)) {
+            throw new ClientError("Server message search index is still warming up", {
+                retryAfter: data.retry_after,
+                documentsIndexed: data.documents_indexed
+            });
+        }
+
+        const rawMessages = (data?.messages ?? []).flat().filter(Boolean),
+            messages = rawMessages.map(rawMsg => this._hydrateSearchMessage(guild, rawMsg));
+
+        return {
+            totalResults: data?.total_results ?? messages.length,
+            documentsIndexed: data?.documents_indexed ?? null,
+            doingDeepHistoricalIndex: Boolean(data?.doing_deep_historical_index),
+            messages
+        };
+    }
+
+    async refreshAttachmentText(text, options) {
+        if (!Util.nonemptyString(text) || !DiscordUtil.hasAttachmentUrls(text)) {
+            return text;
+        }
+
+        try {
+            return await DiscordUtil.refreshAttachmentUrlsInText(this.client.rest, text, options);
+        } catch (err) {
+            this.logger?.warn(`Failed to refresh attachment URLs in text: ${err.message}`);
+            return text;
+        }
+    }
+
+    async refreshAttachmentUrls(urls, options) {
+        options = ObjectUtil.guaranteeObject(options);
+        urls = ArrayUtil.guaranteeArray(urls);
+
+        if (Util.empty(urls)) {
+            return [];
+        }
+
+        const onlyExpired = options.onlyExpired ?? true,
+            targets = [];
+
+        for (const url of urls) {
+            if (DiscordUtil.isAttachmentUrl(url) && (!onlyExpired || DiscordUtil.isAttachmentExpired(url))) {
+                targets.push(DiscordUtil.normalizeAttachmentUrl(url));
+            }
+        }
+
+        const uniqueTargets = ArrayUtil.unique(targets);
+
+        if (Util.empty(uniqueTargets)) {
+            return urls;
+        }
+
+        try {
+            const refreshed = await DiscordUtil.refreshAttachmentUrls(this.client.rest, uniqueTargets),
+                resolved = new Map();
+
+            for (let i = 0; i < uniqueTargets.length; i++) {
+                if (Util.nonemptyString(refreshed[i])) {
+                    resolved.set(uniqueTargets[i], refreshed[i]);
+                }
+            }
+
+            return urls.map(url => {
+                const normalized = DiscordUtil.normalizeAttachmentUrl(url);
+                return resolved.get(normalized) ?? url;
+            });
+        } catch (err) {
+            this.logger?.warn(`Failed to refresh attachment URLs: ${err.message}`);
+            return urls;
+        }
+    }
+
     async findUserById(user_id, options) {
         options = ObjectUtil.guaranteeObject(options);
         ObjectUtil.setValuesWithDefaults(options, options, this.constructor.defaultUserOptions);
@@ -1125,6 +1360,34 @@ class DiscordClient {
         }
 
         return [];
+    }
+
+    _hasChannelAccess(channel, member, permissions) {
+        const target = DiscordUtil.isThreadChannel(channel) ? channel.parent : channel,
+            perms = target?.memberPermissions(member, true) ?? null;
+
+        return perms !== null && perms.has(permissions);
+    }
+
+    _isSearchIndexPending(data) {
+        return (
+            data?.code === RESTJSONErrorCodes.IndexNotYetAvailable ||
+            (typeof data?.retry_after === "number" && !Array.isArray(data?.messages))
+        );
+    }
+
+    _hydrateSearchMessage(guild, rawMsg) {
+        if (rawMsg instanceof Message) {
+            return rawMsg;
+        }
+
+        const channel = guild.channels?.cache?.get(rawMsg.channel_id) ?? null;
+
+        if (channel?.messages?._add != null) {
+            return channel.messages._add(rawMsg, false);
+        }
+
+        return new Message(this.client, { guild_id: guild.id, ...rawMsg });
     }
 }
 

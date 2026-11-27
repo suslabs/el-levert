@@ -57,7 +57,7 @@ class FetchRecentMessagesTool extends MessageHistoryTool {
         return {
             scanned: msgs.length,
             count: matches.length,
-            messages: matches.reverse().map(msg => this.formatMessage(msg))
+            messages: await this.formatMessages(matches.reverse())
         };
     }
 }

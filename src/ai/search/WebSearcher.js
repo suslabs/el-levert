@@ -6,6 +6,7 @@ import TavilySearch from "./TavilySearch.js";
 import { getLogger } from "../../LevertClient.js";
 
 import Util from "../../util/Util.js";
+import ArrayUtil from "../../util/ArrayUtil.js";
 import LoggerUtil from "../../util/LoggerUtil.js";
 import ObjectUtil from "../../util/ObjectUtil.js";
 import QuotaLimiter from "../../util/misc/QuotaLimiter.js";
@@ -31,6 +32,7 @@ class WebSearcher {
 
     static readCount = 3;
     static readLength = 1500;
+    static maxImages = 12;
 
     constructor(http, browser, pageReader, keys) {
         keys = ObjectUtil.guaranteeObject(keys);
@@ -57,13 +59,22 @@ class WebSearcher {
     async search(query, limit, timeout) {
         const deadline = Util.createDeadline(timeout);
 
-        const results = await this._searchBackends(query, limit, deadline),
+        const { results, backendImages } = await this._searchBackends(query, limit, deadline),
             remaining = Util.getRemainingTime(deadline);
 
-        return {
-            query,
-            results: await Promise.all(results.map((result, i) => this._readResult(result, i, remaining)))
-        };
+        const readResults = await Promise.all(results.map((result, i) => this._readResult(result, i, remaining))),
+            images = ArrayUtil.unique([...backendImages, ...readResults.flatMap(result => result.images ?? [])]).slice(
+                0,
+                WebSearcher.maxImages
+            );
+
+        const out = { query, results: readResults };
+
+        if (!Util.empty(images)) {
+            out.images = images;
+        }
+
+        return out;
     }
 
     destroy() {
@@ -123,12 +134,14 @@ class WebSearcher {
                 release = this.quotas.acquire(entry.id);
 
             try {
-                const results = await entry.backend.search(query, limit, timeout);
+                const raw = await entry.backend.search(query, limit, timeout),
+                    results = Array.isArray(raw) ? raw : ArrayUtil.guaranteeArray(raw?.results),
+                    backendImages = Array.isArray(raw) ? [] : ArrayUtil.guaranteeArray(raw?.images);
 
                 release(true);
 
                 if (!Util.empty(results) || i === candidates.length - 1) {
-                    return results;
+                    return { results, backendImages };
                 }
 
                 getLogger().warn(`Web search on ${entry.backend.name} returned no results.`);
@@ -160,8 +173,14 @@ class WebSearcher {
         }
 
         try {
-            const page = await this.pageReader.read(result.url, timeout);
-            return { ...result, content: Util.trimString(page.text, WebSearcher.readLength) };
+            const page = await this.pageReader.read(result.url, timeout),
+                out = { ...result, content: Util.trimString(page.text, WebSearcher.readLength) };
+
+            if (!Util.empty(page.images)) {
+                out.images = page.images;
+            }
+
+            return out;
         } catch (err) {
             if (!WebSearcher._canFallBack(err)) {
                 throw err;

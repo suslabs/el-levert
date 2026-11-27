@@ -20,15 +20,29 @@ import DiscordUtil from "../../util/DiscordUtil.js";
 import AIUtil from "../../util/ai/AIUtil.js";
 import { httpStatusCodes, isServerErrorStatus } from "../../util/misc/HttpStatusCodes.js";
 
+const httpUrlRegex = /^https?:\/\//i;
+
 function addImages(embed, images) {
     if (Util.empty(images)) {
         return [embed];
     }
 
-    const [first, ...rest] = images;
-    embed.setURL(first).setImage(first);
+    const [first, ...rest] = images,
+        hasExternalUrl = httpUrlRegex.test(first);
 
-    return [embed, ...rest.map(url => new EmbedBuilder().setURL(first).setImage(url))];
+    if (hasExternalUrl) {
+        embed.setURL(first);
+    }
+
+    embed.setImage(first);
+
+    return [
+        embed,
+        ...rest.map(url => {
+            const extra = new EmbedBuilder().setImage(url);
+            return hasExternalUrl ? extra.setURL(first) : extra;
+        })
+    ];
 }
 
 function formatStatus(emoji, status) {

@@ -46,13 +46,13 @@ class TagCallTool extends TagTool {
     }
 
     async execute(args, session) {
+        const rawArgs = ArrayUtil.guaranteeArray(args.args, null, true).join(" "),
+            tagArgs = await getClient().refreshAttachmentText(rawArgs);
+
         const tag = await this.fetchTag(args.name),
-            out = await getClient().tagManager.execute(
-                tag,
-                ArrayUtil.guaranteeArray(args.args, null, true).join(" "),
-                session.request.scriptValues,
-                { logContent: false }
-            );
+            out = await getClient().tagManager.execute(tag, tagArgs, session.request.scriptValues, {
+                logContent: false
+            });
 
         const files = TypeTester.isObject(out) ? (out.files ?? []) : [];
 
@@ -60,9 +60,11 @@ class TagCallTool extends TagTool {
             session.attachFile(file.name, file.attachment);
         }
 
+        const output = await getClient().refreshAttachmentText(formatOutput(out));
+
         return {
             source: `tag:${tag.name}`,
-            output: Util.trimString(formatOutput(out), TagCallTool.maxOutputLength),
+            output: Util.trimString(output, TagCallTool.maxOutputLength),
             attached: files.map(file => file.name),
             communityMaintained: true
         };

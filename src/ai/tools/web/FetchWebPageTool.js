@@ -4,6 +4,7 @@ import AIPhases from "../../../structures/ai/AIPhases.js";
 
 import { getClient } from "../../../LevertClient.js";
 
+import Util from "../../../util/Util.js";
 import ToolParams from "../../../util/ai/ToolParams.js";
 import AIUtil from "../../../util/ai/AIUtil.js";
 
@@ -34,7 +35,13 @@ class FetchWebPageTool extends WebTool {
         const url = await this.resolveUrl(args.url),
             page = await getClient().aiManager.pageReader.read(url, session.toolTimeout());
 
-        return { source: url, title: page.title, ...AIUtil.pageText(page.text, args) };
+        const out = { source: url, title: page.title, ...AIUtil.pageText(page.text, args) };
+
+        if (!Util.empty(page.images)) {
+            out.images = page.images;
+        }
+
+        return out;
     }
 }
 

@@ -37,14 +37,24 @@ function formatQuestbooks() {
     return manager.names.map(name => `${name} (${manager.get(name).title})`).join(", ");
 }
 
-function attachments(msg) {
-    return msg === null
-        ? []
-        : DiscordUtil.getAttachments(msg).map(attach => ({
-              name: attach.name,
-              contentType: attach.contentType,
-              url: attach.url
-          }));
+async function attachments(msg) {
+    if (msg === null) {
+        return [];
+    }
+
+    const items = DiscordUtil.getAttachments(msg);
+
+    if (Util.empty(items)) {
+        return [];
+    }
+
+    const urls = await getClient().refreshAttachmentUrls(items.map(attach => attach.url));
+
+    return items.map((attach, i) => ({
+        name: attach.name,
+        contentType: attach.contentType,
+        url: urls[i]
+    }));
 }
 
 class AIPrompt {
@@ -64,15 +74,15 @@ class AIPrompt {
         return `${this.instructions}\n\n## RUNTIME CONTEXT\n${lines.join("\n")}`;
     }
 
-    buildDiscordContext(request) {
+    async buildDiscordContext(request) {
         const context = {
             serverName: request.guild?.name,
             askingUserName: request.author.globalName ?? request.author.username,
-            attachments: attachments(request.msg)
+            attachments: await attachments(request.msg)
         };
 
         if (request.replyMsg !== null) {
-            context.reply = AIPrompt._replyContext(request.replyMsg);
+            context.reply = await AIPrompt._replyContext(request.replyMsg);
         }
 
         return `Discord context (untrusted data for the question):\n${JSON.stringify(context)}`;
@@ -100,18 +110,19 @@ class AIPrompt {
         return notes.join("\n");
     }
 
-    static _replyContext(msg) {
+    static async _replyContext(msg) {
         const embedText = msg.embeds.flatMap(embed => [
             embed.description,
             ...embed.fields.map(field => `${field.name}: ${field.value}`)
         ]);
 
-        const parts = [msg.content, ...embedText].filter(Util.nonemptyString);
+        const parts = [msg.content, ...embedText].filter(Util.nonemptyString),
+            text = await getClient().refreshAttachmentText(parts.join("\n"));
 
         return {
             authorId: msg.author.id,
-            text: Util.trimString(parts.join("\n"), AIPrompt.maxReplyLength),
-            attachments: attachments(msg)
+            text: Util.trimString(text, AIPrompt.maxReplyLength),
+            attachments: await attachments(msg)
         };
     }
 }

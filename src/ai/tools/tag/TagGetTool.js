@@ -36,12 +36,14 @@ class TagGetTool extends TagTool {
             throw new AIError(`Tag "${tag.name}" is a binary tag`);
         }
 
+        const body = await getClient().refreshAttachmentText(tag.body);
+
         return {
             source: `tag:${tag.name}`,
             name: tag.name,
             owner: tag.owner,
             isScript: tag.isScript,
-            body: Util.trimString(tag.body, TagGetTool.maxBodyLength),
+            body: Util.trimString(body, TagGetTool.maxBodyLength),
             communityMaintained: true
         };
     }

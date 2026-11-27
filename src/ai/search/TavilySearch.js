@@ -1,5 +1,9 @@
 import SearchBackend from "./SearchBackend.js";
 
+import Util from "../../util/Util.js";
+import ArrayUtil from "../../util/ArrayUtil.js";
+import HTTPUtil from "../../util/vm/HTTPUtil.js";
+
 class TavilySearch extends SearchBackend {
     static $name = "tavily";
     static keyName = "tavilyKey";
@@ -12,14 +16,27 @@ class TavilySearch extends SearchBackend {
     }
 
     async search(query, limit, timeout) {
-        const results = await this.searchJson(
-            TavilySearch.url,
-            { authorization: `Bearer ${this._key}` },
-            { query, max_results: limit, search_depth: "basic" },
+        const res = await this.request({
+            url: TavilySearch.url,
+            method: "post",
+            headers: { authorization: `Bearer ${this._key}` },
+            data: { query, max_results: limit, search_depth: "basic", include_images: true },
+            responseType: "json",
+            maxRedirects: 0,
             timeout
-        );
+        });
 
-        return results.map(result => this.formatResult(result.title, result.url, result.content ?? ""));
+        const results = ArrayUtil.guaranteeArray(res.data?.results)
+            .filter(result => typeof result?.url === "string" && HTTPUtil.getHost(result.url) !== null)
+            .slice(0, limit)
+            .map(result => this.formatResult(result.title, result.url, result.content ?? ""));
+
+        const rawImages = ArrayUtil.guaranteeArray(res.data?.images)
+            .map(entry => (typeof entry === "string" ? entry : entry?.url))
+            .filter(url => typeof url === "string" && HTTPUtil.getHost(url) !== null);
+
+        const images = ArrayUtil.unique(rawImages);
+        return Util.empty(images) ? results : { results, images };
     }
 }
 

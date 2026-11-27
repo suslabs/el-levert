@@ -19,7 +19,8 @@ const ErrorCodes = Object.freeze({
     invalidFormBody: [RESTJSONErrorCodes.InvalidFormBodyOrContentType],
 
     emptyMessage: [RESTJSONErrorCodes.CannotSendAnEmptyMessage],
-    nonTextChannel: [RESTJSONErrorCodes.CannotSendMessagesInNonTextChannel]
+    nonTextChannel: [RESTJSONErrorCodes.CannotSendMessagesInNonTextChannel],
+    searchIndexNotReady: [RESTJSONErrorCodes.IndexNotYetAvailable]
 });
 
 function isErrorCode(category, code) {

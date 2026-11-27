@@ -153,4 +153,44 @@ describe("WebSearcher", () => {
         });
         searcher.destroy();
     });
+
+    test("collects unique images from Tavily search and read web pages", async () => {
+        const http = {
+            request: vi.fn().mockResolvedValue({
+                status: 200,
+                data: {
+                    results: [{ title: "EBF", url: "https://example.com/ebf", content: "Guide" }],
+                    images: [{ url: "https://example.com/top.png" }, "https://example.com/shared.png"]
+                }
+            })
+        };
+        const reader = {
+            read: vi.fn().mockResolvedValue({
+                title: "EBF",
+                text: "Guide body",
+                images: ["https://example.com/shared.png", "https://example.com/page.jpg"]
+            })
+        };
+        const searcher = new WebSearcher(http, null, reader, { tavily: ["tavily-key"] });
+
+        await expect(searcher.search("ebf diagram", 3, 1000)).resolves.toMatchObject({
+            query: "ebf diagram",
+            images: ["https://example.com/top.png", "https://example.com/shared.png", "https://example.com/page.jpg"],
+            results: [
+                {
+                    title: "EBF",
+                    url: "https://example.com/ebf",
+                    content: "Guide body",
+                    images: ["https://example.com/shared.png", "https://example.com/page.jpg"]
+                }
+            ]
+        });
+
+        expect(http.request).toHaveBeenCalledWith(
+            expect.objectContaining({
+                data: expect.objectContaining({ include_images: true })
+            })
+        );
+        searcher.destroy();
+    });
 });

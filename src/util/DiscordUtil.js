@@ -213,7 +213,14 @@ let DiscordUtil = {
     },
 
     attachUrlRegex:
-        /(?<prefix>(?:(https?:)\/\/)?(cdn|media)\.discordapp\.(com|net)\/attachments\/(?<sv_id>\d+)\/(?<ch_id>\d+)\/(?<filename>[^/?#\s]+?)(?<ext>\.[^.?#\s]+)?(?=\?|\s|$))\??(?:ex=(?<ex>[0-9a-f]+)&is=(?<is>[0-9a-f]+)&hm=(?<hm>[0-9a-f]+))?/giu,
+        /(?<prefix>(?:(https?:)\/\/)?(cdn|media)\.discordapp\.(com|net)\/attachments\/(?<sv_id>\d+)\/(?<ch_id>\d+)\/(?<filename>[^/?#\s<>)"'`]+?)(?<ext>\.[^.?#\s<>)"'`]+)?(?=[?#\s<>)"'`]|$))(?<search>\?[^\s<>)"'`#]*)?/giu,
+
+    _hexParamRegex: /^[0-9a-f]+$/i,
+
+    _getHexParam: (params, key) => {
+        const value = params?.get(key);
+        return Util.nonemptyString(value) && DiscordUtil._hexParamRegex.test(value) ? value : undefined;
+    },
 
     _attachUrlMatchResult: match => {
         if (!match) {
@@ -223,7 +230,11 @@ let DiscordUtil = {
         const groups = match.groups;
 
         const filename = groups.filename,
-            ext = groups.ext ?? "";
+            ext = groups.ext ?? "",
+            search = groups.search ?? "";
+
+        const normalizedSearch = search.replaceAll("&amp;", "&"),
+            params = normalizedSearch.length > 1 ? new URLSearchParams(normalizedSearch.slice(1)) : null;
 
         return {
             prefix: groups.prefix,
@@ -238,10 +249,10 @@ let DiscordUtil = {
             ext,
             file: filename + ext,
 
-            search: groups.search ? "?" + groups.search : "",
-            ex: groups.ex,
-            is: groups.is,
-            hm: groups.hm
+            search,
+            ex: DiscordUtil._getHexParam(params, "ex"),
+            is: DiscordUtil._getHexParam(params, "is"),
+            hm: DiscordUtil._getHexParam(params, "hm")
         };
     },
 
@@ -276,17 +287,174 @@ let DiscordUtil = {
     },
 
     attachRefreshRoute: "/attachments/refresh-urls",
+    attachRefreshLimit: 50,
+    attachExpiryBufferMs: (5 * Util.durationSeconds.minute) / Util.durationSeconds.milli,
+
+    normalizeAttachmentUrl: url => {
+        if (!Util.nonemptyString(url)) {
+            return "";
+        }
+
+        const decoded = url.trim().replaceAll("&amp;", "&"),
+            info = DiscordUtil.parseAttachmentUrl(decoded);
+
+        if (info === null || Util.nonemptyString(info.protocol)) {
+            return decoded;
+        }
+
+        return `https://${decoded}`;
+    },
+
+    canonicalAttachmentUrl: input => {
+        const info = typeof input === "string" ? DiscordUtil.parseAttachmentUrl(input) : input;
+
+        if (info == null) {
+            return null;
+        }
+
+        const base = `https://cdn.discordapp.com/attachments/${info.serverId}/${info.channelId}/${info.file}`;
+
+        if (!Util.nonemptyString(info.ex) || !Util.nonemptyString(info.is) || !Util.nonemptyString(info.hm)) {
+            return base;
+        }
+
+        return `${base}?ex=${info.ex}&is=${info.is}&hm=${info.hm}`;
+    },
+
+    isAttachmentExpired: (input, now = Date.now(), bufferMs = DiscordUtil.attachExpiryBufferMs) => {
+        const info = typeof input === "string" ? DiscordUtil.parseAttachmentUrl(input) : input;
+
+        if (info == null) {
+            return false;
+        }
+
+        if (!Util.nonemptyString(info.ex) || !Util.nonemptyString(info.is) || !Util.nonemptyString(info.hm)) {
+            return true;
+        }
+
+        const expiresAt = Number.parseInt(info.ex, 16) / Util.durationSeconds.milli;
+        return !Number.isFinite(expiresAt) || expiresAt <= now + bufferMs;
+    },
+
+    _postAttachmentRefresh: async (rest, urls) => {
+        const refreshed = new Map();
+
+        for (let i = 0; i < urls.length; i += DiscordUtil.attachRefreshLimit) {
+            const batch = urls.slice(i, i + DiscordUtil.attachRefreshLimit);
+
+            const data = await rest.post(DiscordUtil.attachRefreshRoute, {
+                body: { attachment_urls: batch }
+            });
+
+            for (const entry of data?.refreshed_urls ?? []) {
+                refreshed.set(entry.original, entry.refreshed);
+            }
+        }
+
+        return refreshed;
+    },
 
     refreshAttachmentUrls: async (rest, urls) => {
         urls = ArrayUtil.guaranteeArray(urls);
 
-        const data = await rest.post(DiscordUtil.attachRefreshRoute, {
-            body: { attachment_urls: urls }
+        if (Util.empty(urls)) {
+            return [];
+        }
+
+        const normalizedUrls = urls.map(url => DiscordUtil.normalizeAttachmentUrl(url)),
+            requestUrls = normalizedUrls.filter(Util.nonemptyString);
+
+        if (Util.empty(requestUrls)) {
+            return normalizedUrls.map(() => null);
+        }
+
+        const refreshed = await DiscordUtil._postAttachmentRefresh(rest, requestUrls),
+            fallbackTargets = [];
+
+        for (const url of ArrayUtil.unique(requestUrls)) {
+            if (refreshed.get(url) != null) {
+                continue;
+            }
+
+            const canonical = DiscordUtil.canonicalAttachmentUrl(url);
+
+            if (Util.nonemptyString(canonical) && canonical !== url) {
+                fallbackTargets.push({ original: url, canonical });
+            }
+        }
+
+        if (!Util.empty(fallbackTargets)) {
+            const canonicalUrls = ArrayUtil.unique(fallbackTargets.map(target => target.canonical)),
+                fallbackRefreshed = await DiscordUtil._postAttachmentRefresh(rest, canonicalUrls);
+
+            for (const target of fallbackTargets) {
+                const resolved = fallbackRefreshed.get(target.canonical);
+
+                if (resolved != null) {
+                    refreshed.set(target.original, resolved);
+                }
+            }
+        }
+
+        return normalizedUrls.map(url => refreshed.get(url) ?? null);
+    },
+
+    refreshAttachmentUrlsInText: async (rest, text, options) => {
+        options = ObjectUtil.guaranteeObject(options);
+
+        if (rest == null || !Util.nonemptyString(text)) {
+            return text;
+        }
+
+        const onlyExpired = options.onlyExpired ?? true,
+            now = options.now ?? Date.now(),
+            matches = DiscordUtil.findAttachmentUrls(text);
+
+        if (Util.empty(matches)) {
+            return text;
+        }
+
+        const targets = [];
+
+        for (const info of matches) {
+            if (onlyExpired && !DiscordUtil.isAttachmentExpired(info, now)) {
+                continue;
+            }
+
+            const normalized = DiscordUtil.normalizeAttachmentUrl(info.prefix + info.search);
+
+            if (Util.nonemptyString(normalized)) {
+                targets.push(normalized);
+            }
+        }
+
+        const uniqueTargets = ArrayUtil.unique(targets);
+
+        if (Util.empty(uniqueTargets)) {
+            return text;
+        }
+
+        const refreshedList = await DiscordUtil.refreshAttachmentUrls(rest, uniqueTargets),
+            replacements = new Map();
+
+        for (let i = 0; i < uniqueTargets.length; i++) {
+            const resolved = refreshedList[i];
+
+            if (Util.nonemptyString(resolved)) {
+                replacements.set(uniqueTargets[i], resolved);
+            }
+        }
+
+        if (Util.empty(replacements)) {
+            return text;
+        }
+
+        DiscordUtil.attachUrlRegex.lastIndex = 0;
+
+        return text.replace(DiscordUtil.attachUrlRegex, match => {
+            const normalized = DiscordUtil.normalizeAttachmentUrl(match);
+            return replacements.get(normalized) ?? match;
         });
-
-        const refreshed = new Map(data.refreshed_urls.map(entry => [entry.original, entry.refreshed]));
-
-        return urls.map(url => refreshed.get(url) ?? null);
     },
 
     discordEpoch: 1420070400000,

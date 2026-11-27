@@ -582,36 +582,60 @@ describe("a command", () => {
         await expect(handler.execute(untracked)).resolves.toBe(false);
     });
 
-    test("runs scripts in the eval sandbox and reads history the user can access", async () => {
-        const fetchCalls = [];
+    test("runs scripts in the eval sandbox and reads and searches server history the user can access", async () => {
+        const fetchCalls = [],
+            searchCalls = [];
 
         const history = [
-            createDiscordMessage("the ebf is weird", {
+            createDiscordMessage("recent hello", {
                 id: "m-2",
-                url: "https://discord.com/channels/1/2/3",
+                url: "https://discord.com/channels/guild-1/channel-1/m-2",
                 createdAt: new Date(1)
             }),
             createDiscordMessage("unrelated", {
                 id: "m-1",
-                url: "https://discord.com/channels/1/2/4",
+                url: "https://discord.com/channels/guild-1/channel-1/m-1",
                 createdAt: new Date(0)
             })
         ];
 
+        const makeChannel = (id, name, allowed) => ({
+            id,
+            name,
+            guildId: "guild-1",
+            isTextBased: () => true,
+            memberPermissions: () => ({
+                has: () => allowed
+            })
+        });
+
+        const guild = {
+            id: "guild-1",
+            name: "Test Guild",
+            channels: {
+                cache: new Map([
+                    ["channel-1", makeChannel("channel-1", "general", true)],
+                    ["secret-1", makeChannel("secret-1", "mods", false)]
+                ])
+            }
+        };
+
         const script = [
             calls([
                 call("execute_javascript", { code: "const perSec = 144 * 20; perSec" }),
+                call("fetch_recent_messages", { limit: 10 }),
                 call("search_messages", { query: "ebf" }),
                 call("search_messages", { query: ".*", isRegex: true }),
                 call("get_asking_user", {})
             ]),
             answer(["2880."]),
-            extras([], ["https://discord.com/channels/1/2/3"])
+            extras([], ["https://discord.com/channels/guild-1/channel-1/3"])
         ];
 
         const bodies = await setup(script, {
             loadVMs: true,
             discordOverrides: {
+                fetchGuild: async () => guild,
                 fetchMessages: async (ch_id, options, fetchOptions) => {
                     fetchCalls.push({ ch_id, options, fetchOptions });
                     return new Map(history.map(msg => [msg.id, msg]));
@@ -619,22 +643,71 @@ describe("a command", () => {
             }
         });
 
+        vi.spyOn(runtime.client.client.rest, "get").mockImplementation(async (route, options) => {
+            searchCalls.push({
+                route,
+                query: Object.fromEntries(options.query.entries()),
+                channelIds: options.query.getAll("channel_id")
+            });
+
+            return {
+                total_results: 1,
+                doing_deep_historical_index: false,
+                messages: [
+                    [
+                        {
+                            id: "3",
+                            channel_id: "channel-1",
+                            content: "the ebf is weird",
+                            author: { id: "user-2", username: "bob", discriminator: "0", bot: false },
+                            attachments: [],
+                            embeds: [],
+                            mentions: [],
+                            mention_roles: [],
+                            mention_everyone: false,
+                            pinned: false,
+                            tts: false,
+                            type: 0,
+                            timestamp: new Date(1).toISOString()
+                        }
+                    ]
+                ]
+            };
+        });
+
         const recorder = createRecorder();
         await getCommand(runtime, "a").handler(createAskContext("compute it", recorder));
 
-        const [js, search, matchAll, user] = bodies[1].body.contents
+        const [js, recent, search, matchAll, user] = bodies[1].body.contents
             .at(-1)
             .parts.map(part => part.functionResponse.response);
 
         expect(js.output).toBe("2880");
+        expect(recent.count).toBe(2);
+        expect(search.totalResults).toBe(1);
         expect(search.count).toBe(1);
         expect(search.messages[0].content).toBe("the ebf is weird");
+        expect(search.messages[0].source).toBe("https://discord.com/channels/guild-1/channel-1/3");
         expect(matchAll.error).toContain("Match-all");
         expect(user).toMatchObject({ id: askerId, roles: ["Member"] });
 
         expect(fetchCalls[0].options).toEqual({ checkAccess: true, user_id: askerId });
+        expect(searchCalls).toEqual([
+            {
+                route: "/guilds/guild-1/messages/search",
+                query: {
+                    limit: "10",
+                    content: "ebf",
+                    channel_id: "channel-1",
+                    sort_by: "timestamp",
+                    sort_order: "desc",
+                    include_nsfw: "false"
+                },
+                channelIds: ["channel-1"]
+            }
+        ]);
         expect(embedOf(recorder.sent.at(-1)).description).toBe(
-            "2880.\n\nSources:\n1. https://discord.com/channels/1/2/3"
+            "2880.\n\nSources:\n1. https://discord.com/channels/guild-1/channel-1/3"
         );
     });
 
@@ -1470,6 +1543,93 @@ describe("a command", () => {
         expect(gone).toEqual({ error: "This Discord attachment no longer exists or can't be accessed" });
     });
 
+    test("refreshes expired media/proxy attachment URLs in inspect_image, show_image, history, and tags", async () => {
+        const script = [];
+        const png = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+
+        const mediaUrl =
+                "https://media.discordapp.net/attachments/1/2/pic.png?ex=00&is=00&hm=00&format=webp&width=640&",
+            tagOldUrl = "https://cdn.discordapp.com/attachments/1/2/tag.png?ex=00&is=00&hm=00",
+            histOldUrl = "https://cdn.discordapp.com/attachments/1/2/hist.png?ex=00&is=00&hm=00",
+            refreshes = [];
+
+        const bodies = await setup(script, {
+            routes: {
+                "GET /pic-fresh.png": () => ({ headers: { "content-type": "image/png" }, body: png }),
+                "HEAD /pic-fresh.png": () => ({ headers: { "content-type": "image/png" } })
+            },
+            discordOverrides: {
+                fetchMessages: async () =>
+                    new Map([
+                        [
+                            "m-1",
+                            createDiscordMessage(`see ${histOldUrl}`, {
+                                id: "m-1",
+                                url: "https://discord.com/channels/guild-1/channel-1/m-1",
+                                createdAt: new Date(1)
+                            })
+                        ]
+                    ])
+            }
+        });
+
+        await addTag(runtime, "imgtag", `cached image: ${tagOldUrl}`);
+
+        const canonicalMedia = "https://cdn.discordapp.com/attachments/1/2/pic.png?ex=00&is=00&hm=00";
+
+        vi.spyOn(runtime.client.client.rest, "post").mockImplementation(async (route, options) => {
+            refreshes.push(options.body.attachment_urls);
+
+            return {
+                refreshed_urls: options.body.attachment_urls
+                    .filter(url => url === canonicalMedia || url === tagOldUrl || url === histOldUrl)
+                    .map(url => ({
+                        original: url,
+                        refreshed:
+                            url === canonicalMedia
+                                ? `${server.url}/pic-fresh.png`
+                                : `${url.split("?")[0]}?ex=ffffff&is=01&hm=99`
+                    }))
+            };
+        });
+
+        script.push(
+            calls([
+                call("tag_get", { name: "imgtag" }),
+                call("fetch_recent_messages", { limit: 5 }),
+                call("inspect_image", { url: mediaUrl, prompt: "describe" }),
+                call("show_image", { url: mediaUrl })
+            ]),
+            {
+                json: {
+                    candidates: [{ content: { role: "model", parts: [{ text: "It is a test icon." }] } }],
+                    ...usage(10)
+                }
+            },
+            answer(["Done."]),
+            extras([], [])
+        );
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("check these images", recorder));
+
+        const [tagRes, histRes, inspectRes, showRes] = bodies[2].body.contents
+            .at(-1)
+            .parts.map(part => part.functionResponse.response);
+
+        expect(bodies[1].body.contents[0].parts[0].inlineData).toMatchObject({ mimeType: "image/png" });
+        expect(tagRes.body).toBe(
+            "cached image: https://cdn.discordapp.com/attachments/1/2/tag.png?ex=ffffff&is=01&hm=99"
+        );
+        expect(histRes.messages[0].content).toBe(
+            "see https://cdn.discordapp.com/attachments/1/2/hist.png?ex=ffffff&is=01&hm=99"
+        );
+        expect(inspectRes.description).toBe("It is a test icon.");
+        expect(showRes).toEqual({ shown: true });
+        expect(embedOf(recorder.sent.at(-1)).image.url).toBe(`${server.url}/pic-fresh.png`);
+        expect(refreshes.flat()).toContain(canonicalMedia);
+    });
+
     test("admins have no time limit when unlimitedTimeForAdmins is on", async () => {
         const script = [answer(["Took a while."]), extras([], [])];
 
@@ -2250,6 +2410,81 @@ describe("a command", () => {
 
         expect(script).toEqual([]);
         expect(embedOf(recorder.sent.at(-1)).image.url).toBe(`${server.url}/cat.png`);
+    });
+
+    test("fetches images found from web search/pages and attaches them to embeds and files reliably", async () => {
+        const script = [],
+            png = Buffer.from([0x89, 0x50, 0x4e, 0x47]),
+            jpg = Buffer.from([0xff, 0xd8, 0xff, 0xe0]);
+
+        let bodies;
+
+        bodies = await setup(script, {
+            ai: {
+                tavilyKey: "tavily-key"
+            },
+            auth: { geminiKey: "test-key", tavilyKey: "tavily-key" },
+            routes: {
+                "GET /guide.html": () => ({
+                    headers: { "content-type": "text/html" },
+                    body: `<title>Reactor Guide</title><main><img src="/diagram_ok.png"><p>${"cool ".repeat(60)}</p></main>`
+                }),
+                "HEAD /diagram_head_blocked.jpg": () => ({ status: 405 }),
+                "GET /diagram_head_blocked.jpg": () => ({
+                    headers: { "content-type": "application/octet-stream" },
+                    body: jpg
+                }),
+                "GET /diagram_ok.png": () => ({
+                    headers: { "content-type": "image/png" },
+                    body: png
+                })
+            }
+        });
+
+        const originalRequest = runtime.client.aiManager.http.request.bind(runtime.client.aiManager.http);
+
+        vi.spyOn(runtime.client.aiManager.http, "request").mockImplementation(async config => {
+            if (config.url === "https://api.tavily.com/search") {
+                return {
+                    status: 200,
+                    headers: {},
+                    data: {
+                        results: [
+                            { title: "Reactor Guide", url: `${server.url}/guide.html`, content: "Guide snippet" }
+                        ],
+                        images: [`${server.url}/diagram_head_blocked.jpg`]
+                    }
+                };
+            }
+
+            return await originalRequest(config);
+        });
+
+        script.push(
+            calls([call("search_web", { query: "reactor diagram" })]),
+            calls([
+                call("show_image", { url: `${server.url}/diagram_head_blocked.jpg` }),
+                call("attach_image", { url: `${server.url}/diagram_ok.png`, embed: true })
+            ]),
+            answer(["Here are the diagrams."]),
+            extras([], [])
+        );
+
+        const recorder = createRecorder();
+        await getCommand(runtime, "a").handler(createAskContext("find and attach reactor diagrams", recorder));
+
+        expect(script).toEqual([]);
+
+        const webRes = bodies[1].body.contents.at(-1).parts[0].functionResponse.response;
+        expect(webRes.images).toEqual([`${server.url}/diagram_head_blocked.jpg`, `${server.url}/diagram_ok.png`]);
+
+        const payload = recorder.sent.at(-1);
+        expect(payload.files.map(file => file.name).sort()).toEqual(["diagram_head_blocked.jpg", "diagram_ok.png"]);
+        expect(payload.embeds.map(embed => embed.data.image.url).sort()).toEqual([
+            "attachment://diagram_head_blocked.jpg",
+            "attachment://diagram_ok.png"
+        ]);
+        expect(payload.embeds[0].data.url).toBeUndefined();
     });
 
     test("reports that AI is unavailable when AIManager failed to initialize", async () => {

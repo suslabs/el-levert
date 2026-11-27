@@ -1,4 +1,5 @@
 import Util from "../Util.js";
+import ArrayUtil from "../ArrayUtil.js";
 
 const HTMLUtil = Object.freeze({
     entities: Object.freeze({
@@ -41,6 +42,76 @@ const HTMLUtil = Object.freeze({
     _spaceRegex: /[ \t\f\v\u00a0]+/g,
     _newlineRegex: / *\n[ \n]*/g,
     minMainLength: 1500,
+    maxExtractedImages: 8,
+
+    _metaImageRegex:
+        /<meta\b(?=[^>]*?(?:property|name)=["'](?:og:image(?::secure_url)?|twitter:image(?::src)?)["'])[^>]*?content=["']([^"']+)["'][^>]*>/gi,
+    _imgTagRegex: /<img\b[^>]*?>/gi,
+    _imgSrcRegex: /\b(?:src|data-src)=["']([^"']+)["']/i,
+    _tinyDimensionRegex: /\b(?:width|height)=["']?1(?:px)?["']?(?:\s|>|\/)/i,
+    _svgUrlRegex: /\.svg(?:[?#]|$)/i,
+
+    extractImages: (html, baseUrl, limit = HTMLUtil.maxExtractedImages) => {
+        if (!Util.nonemptyString(html)) {
+            return [];
+        }
+
+        const candidates = [];
+
+        HTMLUtil._metaImageRegex.lastIndex = 0;
+
+        for (const match of html.matchAll(HTMLUtil._metaImageRegex)) {
+            candidates.push(match[1]);
+        }
+
+        const cleanBody = html.replace(HTMLUtil._hiddenRegex, " ").replace(HTMLUtil._commentRegex, " ");
+
+        HTMLUtil._imgTagRegex.lastIndex = 0;
+
+        for (const match of cleanBody.matchAll(HTMLUtil._imgTagRegex)) {
+            const tag = match[0];
+
+            if (HTMLUtil._tinyDimensionRegex.test(tag)) {
+                continue;
+            }
+
+            const srcMatch = tag.match(HTMLUtil._imgSrcRegex);
+
+            if (srcMatch !== null) {
+                candidates.push(srcMatch[1]);
+            }
+        }
+
+        const urls = [];
+
+        for (const raw of candidates) {
+            const decoded = HTMLUtil.decodeEntities(raw).trim();
+
+            if (Util.empty(decoded) || decoded.startsWith("data:") || decoded.startsWith("javascript:")) {
+                continue;
+            }
+
+            let resolved;
+
+            try {
+                resolved = new URL(decoded, baseUrl);
+            } catch {
+                continue;
+            }
+
+            if (resolved.protocol !== "http:" && resolved.protocol !== "https:") {
+                continue;
+            }
+
+            const href = resolved.toString();
+
+            if (!HTMLUtil._svgUrlRegex.test(href)) {
+                urls.push(href);
+            }
+        }
+
+        return ArrayUtil.unique(urls).slice(0, limit);
+    },
 
     toText: html => {
         html = String(html);

@@ -47,20 +47,24 @@ class SearchTagsTool extends TagTool {
         const names = ArrayUtil.unique([...nameMatches, ...bodyMatches.map(match => match.name)]).slice(0, limit),
             tags = await Promise.all(names.map(name => tagManager.fetch(name)));
 
+        const visibleTags = tags.filter(tag => tag !== null && !tag.isBinary);
+
         return {
             query,
-            tags: tags.filter(tag => tag !== null && !tag.isBinary).map(tag => this._formatTag(tag))
+            tags: await Promise.all(visibleTags.map(tag => this._formatTag(tag)))
         };
     }
 
-    _formatTag(tag) {
+    async _formatTag(tag) {
+        const body = await getClient().refreshAttachmentText(tag.body);
+
         return {
             source: `tag:${tag.name}`,
             name: tag.name,
             isScript: tag.isScript,
             isAlias: tag.isAlias,
-            snippet: Util.trimString(tag.body, SearchTagsTool.snippetLength),
-            truncated: tag.body.length > SearchTagsTool.snippetLength,
+            snippet: Util.trimString(body, SearchTagsTool.snippetLength),
+            truncated: body.length > SearchTagsTool.snippetLength,
             communityMaintained: true
         };
     }

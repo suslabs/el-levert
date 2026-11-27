@@ -98,7 +98,7 @@ class AISession {
             return await this._refuseDisclosure();
         }
 
-        this._setQuestion(question);
+        await this._setQuestion(question);
 
         const triage = await this._triage();
 
@@ -129,7 +129,7 @@ class AISession {
         this.systemInstruction = { parts: [{ text: prompt }] };
 
         const last = Util.last(this.contents);
-        last.parts.push({ text: aiManager.prompt.buildDiscordContext(this.request) });
+        last.parts.push({ text: await aiManager.prompt.buildDiscordContext(this.request) });
 
         return await this._respond();
     }
@@ -203,17 +203,20 @@ class AISession {
         this.images.push(url);
     }
 
-    _setQuestion(question) {
+    async _setQuestion(question) {
         const promptGuard = getClient().aiManager.promptGuard;
 
-        const history = this.history.slice(-AISession.maxHistoryTurns).map(turn => {
-            const text = promptGuard.contains(turn.text)
-                ? AIPromptGuard.refusal
-                : Util.trimString(turn.text, AISession.maxTurnLength);
-            return { role: turn.role, parts: [{ text }] };
-        });
+        const history = await Promise.all(
+            this.history.slice(-AISession.maxHistoryTurns).map(async turn => {
+                const rawText = promptGuard.contains(turn.text) ? AIPromptGuard.refusal : turn.text,
+                    text = Util.trimString(await getClient().refreshAttachmentText(rawText), AISession.maxTurnLength);
 
-        this.contents = [...history, { role: "user", parts: [{ text: question }] }];
+                return { role: turn.role, parts: [{ text }] };
+            })
+        );
+
+        const refreshedQuestion = await getClient().refreshAttachmentText(question);
+        this.contents = [...history, { role: "user", parts: [{ text: refreshedQuestion }] }];
     }
 
     async _triage() {
