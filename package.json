@@ -23,7 +23,7 @@
         "ajv": "^8.20.0",
         "axios": "^1.16.0",
         "chrono-node": "2.9.1",
-        "discord.js": "^14.26.4",
+        "discord.js": "^14.28.1",
         "generic-pool": "^3.9.0",
         "isolated-vm": "^5.0.4",
         "re2": "^1.25.0",
